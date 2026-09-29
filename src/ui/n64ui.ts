@@ -1,0 +1,507 @@
+import stoneUrl from "../../assets/textures/ui_stone.png?url";
+import ridgeUrl from "../../assets/textures/ui_ridge.png?url";
+import goldUrl from "../../assets/textures/gold.png?url";
+import woodUrl from "../../assets/textures/wood.png?url";
+import leatherUrl from "../../assets/textures/leather.png?url";
+import brickUrl from "../../assets/textures/brick.png?url";
+import clothUrl from "../../assets/textures/cloth.png?url";
+import ironUrl from "../../assets/textures/iron.png?url";
+import parchUrl from "../../assets/textures/ui_parchment.png?url";
+import bannerUrl from "../../assets/textures/banner.png?url";
+import { engravedIcon } from "./icons";
+
+const nameUrls = import.meta.glob("../../assets/textures/names/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const nameArt: Record<string, HTMLImageElement> = {};
+for (const [p, u] of Object.entries(nameUrls)) {
+  const im = new Image();
+  im.src = u;
+  nameArt[p.split("/").pop()!.replace(".png", "")] = im;
+}
+export function nameImage(key: string): HTMLImageElement | null {
+  const im = nameArt[key];
+  return im && im.complete && im.naturalWidth ? im : null;
+}
+import { drawPlain, onHiLayer, textWidth } from "./font";
+
+const INK = "#0b0806";
+const imgs: Record<string, HTMLImageElement> = {};
+for (const [k, u] of Object.entries({ stone: stoneUrl, ridge: ridgeUrl, gold: goldUrl, wood: woodUrl, leather: leatherUrl, brick: brickUrl, cloth: clothUrl, iron: ironUrl, parch: parchUrl, banner: bannerUrl })) {
+  const im = new Image();
+  im.src = u;
+  imgs[k] = im;
+}
+
+function pattern(ctx: CanvasRenderingContext2D, key: string, scale = 1, ox = 0, oy = 0): CanvasPattern | string {
+  const im = imgs[key];
+  if (!im || !im.complete || !im.naturalWidth) return "#303030";
+  const p = ctx.createPattern(im, "repeat")!;
+  p.setTransform(new DOMMatrix().translate(ox, oy).scale(scale));
+  return p;
+}
+
+function withClip(ctx: CanvasRenderingContext2D, path: () => void, body: () => void): void {
+  ctx.save();
+  ctx.beginPath();
+  path();
+  ctx.clip();
+  body();
+  ctx.restore();
+}
+
+export function stoneBg(ctx: CanvasRenderingContext2D, W: number, H: number): void {
+  ctx.fillStyle = pattern(ctx, "stone", 1.5);
+  ctx.fillRect(0, 0, W, H);
+}
+
+export function texturedRect(ctx: CanvasRenderingContext2D, key: string, x: number, y: number, w: number, h: number, tint: string | null, r = 3, scale = 1): void {
+  withClip(ctx, () => ctx.roundRect(x, y, w, h, r), () => {
+    ctx.fillStyle = pattern(ctx, key, scale, x, y);
+    ctx.fillRect(x, y, w, h);
+    if (tint) {
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = tint;
+      ctx.fillRect(x, y, w, h);
+      ctx.globalCompositeOperation = "source-over";
+    }
+  });
+}
+
+export function ridgePanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string): void {
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.roundRect(x - 1.5, y - 1.5, w + 3, h + 3, 5);
+  ctx.fill();
+  texturedRect(ctx, "ridge", x, y, w, h, tint, 4, 0.75);
+  ctx.strokeStyle = "rgba(255,255,255,0.28)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 3.5);
+  ctx.stroke();
+}
+
+export function goldPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, text: string, scale = 0.85): void {
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.roundRect(x - 1.5, y - 1.5, w + 3, h + 3, (h + 3) / 2);
+  ctx.fill();
+  texturedRect(ctx, "gold", x, y, w, h, null, h / 2, h / 32);
+  ctx.strokeStyle = "rgba(255,248,200,0.7)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x + 1, y + 1, w - 2, h - 2, (h - 2) / 2);
+  ctx.stroke();
+  const tw = textWidth(text, scale, true);
+  drawPlain(ctx, text, x + (w - tw) / 2, y + (h - 10 * scale) / 2 + 0.5, "#2a1804", scale, true);
+}
+
+export function woodDisc(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  withClip(ctx, () => ctx.arc(cx, cy, r, 0, Math.PI * 2), () => {
+    ctx.fillStyle = pattern(ctx, "wood", r / 40, cx - r, cy - r);
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  });
+  ctx.strokeStyle = "rgba(20,10,4,0.55)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.72, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,220,160,0.25)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy + 1, r * 0.72, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+export function coin(ctx: CanvasRenderingContext2D, x: number, y: number, label: string, color: string, r = 7.5): void {
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x, y, r + 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#e8e8e8";
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, r - 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  const sc = r / 11;
+  shadowText(ctx, label, x - textWidth(label, sc, true) / 2, y - 5 * sc - 0.5, "#ffffff", sc, true);
+}
+
+export function shadowText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale = 1, num = false): void {
+  const d = Math.max(0.8, scale * 0.9);
+  drawPlain(ctx, s, x + d, y + d, INK, scale, num);
+  drawPlain(ctx, s, x, y, color, scale, num);
+}
+
+export function engraved(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, scale: number, base: string, num = true): void {
+  drawPlain(ctx, s, x, y + 1.2, "rgba(255,255,255,0.3)", scale, num);
+  drawPlain(ctx, s, x, y, base, scale, num);
+}
+
+export function goldArrow(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, s = 6): void {
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.moveTo(x + dir * (s + 1.5), y);
+  ctx.lineTo(x - dir * 1.5, y - s - 1.5);
+  ctx.lineTo(x - dir * 1.5, y + s + 1.5);
+  ctx.closePath();
+  ctx.fill();
+  withClip(ctx, () => {
+    ctx.moveTo(x + dir * s, y);
+    ctx.lineTo(x, y - s);
+    ctx.lineTo(x, y + s);
+    ctx.closePath();
+  }, () => {
+    ctx.fillStyle = pattern(ctx, "gold", 0.3, x - s, y - s);
+    ctx.fillRect(x - s - 2, y - s - 2, s * 2 + 4, s * 2 + 4);
+  });
+}
+
+export function band(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string, alpha = 1): void {
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = 1;
+}
+
+export function portraitBack(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string): void {
+  texturedRect(ctx, "leather", x, y, w, h, tint, 0, 1);
+}
+
+export function wall(ctx: CanvasRenderingContext2D, W: number, H: number): void {
+  ctx.fillStyle = pattern(ctx, "brick", 1.4);
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = "#6a6070";
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = "source-over";
+}
+
+export function woodFloor(ctx: CanvasRenderingContext2D, y: number, W: number, H: number, tint = "#8a6448"): void {
+  texturedRect(ctx, "wood", 0, y, W, H - y, tint, 0, 1.2);
+  band(ctx, 0, y, W, 2, INK, 0.8);
+}
+
+export function table(ctx: CanvasRenderingContext2D, W: number, H: number): void {
+  texturedRect(ctx, "wood", 0, 0, W, H, "#7a5a40", 0, 2.2);
+}
+
+export function beam(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  band(ctx, x + 2, y + h, w - 4, 3, INK, 0.45);
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
+  texturedRect(ctx, "wood", x, y, w, h, "#c89868", 0, 0.7);
+  band(ctx, x, y, w, 1, "#f0d0a0", 0.35);
+  for (const nx of [x + 6, x + w - 6]) {
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(nx, y + h / 2, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#8a8a90";
+    ctx.beginPath();
+    ctx.arc(nx, y + h / 2, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+export function artTitle(ctx: CanvasRenderingContext2D, key: string, fallback: string, cx: number, y: number, h: number): void {
+  const im = nameImage(key);
+  if (!im) {
+    paintedText(ctx, fallback, cx, y + (h - 11) / 2, "#f0c030", 1.15);
+    return;
+  }
+  const w = (im.naturalWidth / im.naturalHeight) * h;
+  onHiLayer(ctx, (t) => {
+    t.imageSmoothingEnabled = true;
+    t.drawImage(im, cx - w / 2, y, w, h);
+  });
+}
+
+export function paintedText(ctx: CanvasRenderingContext2D, s: string, cx: number, y: number, color: string, scale: number): void {
+  shadowText(ctx, s, cx - textWidth(s, scale, true) / 2, y, color, scale, true);
+}
+
+export function shieldPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + w / 2, y + h * 0.06, x + w, y);
+  ctx.lineTo(x + w, y + h * 0.42);
+  ctx.quadraticCurveTo(x + w, y + h * 0.82, x + w / 2, y + h);
+  ctx.quadraticCurveTo(x, y + h * 0.82, x, y + h * 0.42);
+  ctx.closePath();
+}
+
+export function shield(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, field: string, inner: (() => void) | null, rim: string): void {
+  withClip(ctx, () => shieldPath(ctx, x, y, w, h), () => {
+    ctx.fillStyle = pattern(ctx, "leather", 1, x, y);
+    ctx.fillRect(x, y, w, h);
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = field;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalCompositeOperation = "source-over";
+    inner?.();
+  });
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  shieldPath(ctx, x, y, w, h);
+  ctx.stroke();
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  shieldPath(ctx, x, y, w, h);
+  ctx.stroke();
+  for (const [rx, ry] of [[x + 3, y + 3.5], [x + w - 3, y + 3.5], [x + w / 2, y + h - 4]]) {
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+export function ribbon(ctx: CanvasRenderingContext2D, cx: number, y: number, w: number, h: number, text: string, scale: number, color = "#3a2410", art: HTMLImageElement | null = null): void {
+  const stain = art ? "rgba(60,30,12,0.78)" : "rgba(90,50,20,0.45)";
+  const x = cx - w / 2;
+  for (const side of [-1, 1]) {
+    const ex = side < 0 ? x - 5 : x + w + 5;
+    const ix = side < 0 ? x + 3 : x + w - 3;
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.moveTo(ix, y + 2.5);
+    ctx.lineTo(ex, y + 2.5);
+    ctx.lineTo(ex - side * 3, y + 2.5 + h / 2);
+    ctx.lineTo(ex, y + h + 2.5);
+    ctx.lineTo(ix, y + h + 2.5);
+    ctx.closePath();
+    ctx.fill();
+    withClip(ctx, () => {
+      ctx.moveTo(ix, y + 3.5);
+      ctx.lineTo(ex + side * -1, y + 3.5);
+      ctx.lineTo(ex - side * 3.8, y + 2.5 + h / 2);
+      ctx.lineTo(ex + side * -1, y + h + 1.5);
+      ctx.lineTo(ix, y + h + 1.5);
+      ctx.closePath();
+    }, () => {
+      ctx.fillStyle = pattern(ctx, "parch", 1, x, y);
+      ctx.fillRect(ex - 8, y, 16 + Math.abs(ix - ex), h + 6);
+      ctx.fillStyle = stain;
+      ctx.fillRect(ex - 8, y, 16 + Math.abs(ix - ex), h + 6);
+    });
+  }
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  texturedRect(ctx, "parch", x, y, w, h, null, 0, 1);
+  if (art) {
+    ctx.fillStyle = "rgba(60,30,12,0.7)";
+    ctx.fillRect(x, y, w, h);
+    const ah = h + 3;
+    const aw = Math.min(w - 2, (art.naturalWidth / art.naturalHeight) * ah);
+    const dh = aw * (art.naturalHeight / art.naturalWidth);
+    onHiLayer(ctx, (t) => {
+      t.imageSmoothingEnabled = true;
+      t.drawImage(art, cx - aw / 2, y + (h - dh) / 2, aw, dh);
+    });
+    return;
+  }
+  const tw = textWidth(text, scale, true);
+  drawPlain(ctx, text, cx - tw / 2, y + (h - 10 * scale) / 2 + 0.3, color, scale, true);
+}
+
+function notchPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, notch: number): void {
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w, y + h);
+  ctx.lineTo(x + w / 2, y + h - notch);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+}
+
+function pole(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 7, y - 3.5, w + 14, 6);
+  texturedRect(ctx, "wood", x - 6, y - 2.5, w + 12, 4, "#8a5a34", 1, 0.4);
+  for (const kx of [x - 7, x + w + 7]) {
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(kx, y - 0.5, 3.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = pattern(ctx, "gold", 0.2, kx, y);
+    ctx.beginPath();
+    ctx.arc(kx, y - 0.5, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = "#5a4020";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - 2, y - 2);
+  ctx.lineTo(x + w / 2, y - 14);
+  ctx.lineTo(x + w + 2, y - 2);
+  ctx.stroke();
+}
+
+export function banner(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string, notch = 10): void {
+  pole(ctx, x, y, w);
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  notchPath(ctx, x - 1.5, y, w + 3, h + 1.5, notch);
+  ctx.fill();
+  withClip(ctx, () => notchPath(ctx, x, y, w, h, notch), () => {
+    ctx.fillStyle = pattern(ctx, "banner", 0.5, x, y);
+    ctx.fillRect(x, y, w, h);
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = tint;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = "rgba(0,0,0,0.14)";
+    ctx.fillRect(x + w * 0.3, y, w * 0.1, h);
+    ctx.fillRect(x + w * 0.72, y, w * 0.08, h);
+    ctx.globalCompositeOperation = "source-over";
+    for (const ty of [y + 3, y + h - notch - 5]) {
+      ctx.fillStyle = pattern(ctx, "gold", 0.25, x, ty);
+      ctx.fillRect(x, ty, w, 2.5);
+    }
+  });
+}
+
+export function rolledBanner(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  pole(ctx, x, y, w);
+  ctx.fillStyle = INK;
+  ctx.fillRect(x + 1, y + 1, w - 2, 11);
+  texturedRect(ctx, "cloth", x + 2, y + 2, w - 4, 9, "#7a7266", 1, 0.9);
+  band(ctx, x + 2, y + 5, w - 4, 1, INK, 0.5);
+  band(ctx, x + 2, y + 8, w - 4, 1, INK, 0.35);
+  for (const tx of [x + w * 0.25, x + w * 0.75]) {
+    ctx.strokeStyle = "#c8a040";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(tx, y + 12);
+    ctx.lineTo(tx, y + 19);
+    ctx.stroke();
+    ctx.fillStyle = "#c8a040";
+    ctx.fillRect(tx - 1.5, y + 18, 3, 4);
+  }
+}
+
+export function waxSeal(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, color: string, glyph: string): void {
+  const blob = (rr: number) => {
+    for (let k = 0; k <= 36; k++) {
+      const a = (k / 36) * Math.PI * 2;
+      const q = rr * (1 + 0.09 * Math.sin(a * 7) + 0.05 * Math.sin(a * 3 + 1));
+      if (k === 0) ctx.moveTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q);
+      else ctx.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q);
+    }
+    ctx.closePath();
+  };
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  blob(r + 1.3);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  blob(r);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.68, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,200,180,0.3)";
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.arc(cx, cy + 0.8, r * 0.68, 0, Math.PI * 2);
+  ctx.stroke();
+  engravedIcon(ctx, glyph, cx, cy, r * 0.95, "rgba(40,0,0,0.75)");
+}
+
+export function scroll(ctx: CanvasRenderingContext2D, cx: number, y: number, w: number, h: number): void {
+  const x = cx - w / 2;
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
+  texturedRect(ctx, "parch", x, y, w, h, null, 0, 1);
+  for (const ex of [x - 6, x + w - 3]) {
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.roundRect(ex - 1.5, y - 5.5, 12, h + 11, 4);
+    ctx.fill();
+    texturedRect(ctx, "parch", ex, y - 4, 9, h + 8, "#b89868", 3, 1);
+    band(ctx, ex + 5.5, y - 4, 1, h + 8, "#5a3a18", 0.6);
+  }
+}
+
+export function pennant(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, label: string): void {
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y - 17);
+  ctx.stroke();
+  ctx.strokeStyle = "#a07840";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y - 17);
+  ctx.stroke();
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 18);
+  ctx.lineTo(x + 17, y - 13);
+  ctx.lineTo(x, y - 7.5);
+  ctx.closePath();
+  ctx.fill();
+  withClip(ctx, () => {
+    ctx.moveTo(x + 0.8, y - 16.8);
+    ctx.lineTo(x + 14.5, y - 13);
+    ctx.lineTo(x + 0.8, y - 9);
+    ctx.closePath();
+  }, () => {
+    ctx.fillStyle = pattern(ctx, "cloth", 0.5, x, y);
+    ctx.fillRect(x, y - 18, 16, 12);
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y - 18, 16, 12);
+    ctx.globalCompositeOperation = "source-over";
+  });
+  drawPlain(ctx, label, x + 2.5, y - 16.3, "#ffffff", 0.55, true);
+}
+
+export function pin(ctx: CanvasRenderingContext2D, x: number, y: number, color: string): void {
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x, y, 3.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillRect(x - 1.5, y - 1.5, 1.2, 1.2);
+}
+
+export function parchment(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  band(ctx, x + 3, y + 4, w, h, INK, 0.4);
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  texturedRect(ctx, "parch", x, y, w, h, null, 0, 1.3);
+  ctx.strokeStyle = "rgba(110,70,30,0.45)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+}
+
+const logo = new Image();
+logo.src = `${import.meta.env.BASE_URL}loading/logo.png`;
+
+export function drawLogo(ctx: CanvasRenderingContext2D, cx: number, y: number, h: number): void {
+  if (!logo.complete || !logo.naturalWidth) {
+    paintedText(ctx, "GRUDGE", cx, y + h / 2 - 12, "#c83020", 2.4);
+    return;
+  }
+  const w = (logo.naturalWidth / logo.naturalHeight) * h;
+  const smooth = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(logo, cx - w / 2, y, w, h);
+  ctx.imageSmoothingEnabled = smooth;
+}

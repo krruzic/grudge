@@ -1,0 +1,359 @@
+{
+  "notes": "Action names follow the GameCube layout. Profiles are matched in order against Gamepad.id (case-insensitive substring). Button entries are Gamepad.buttons indices. Axis entries read Gamepad.axes; min/max remap the raw range to 0..1 for analog triggers. GameCube indices are a best guess for Mayflash/WUP-028 style adapters; verify with the on-screen pad debug overlay (Start+Z toggles it) and edit here.",
+  "stickDeadzone": 0.2,
+  "cstickFlickThreshold": 0.7,
+  "profiles": [
+    {
+      "id": "gc_adapter_uinput",
+      "match": [
+        "wii u gamecube adapter port",
+        "standard gamecube controller",
+        "wavebird gamecube controller"
+      ],
+      "stick": {
+        "x": {
+          "axis": 0
+        },
+        "y": {
+          "axis": 1
+        }
+      },
+      "cstick": {
+        "x": {
+          "axis": 3
+        },
+        "y": {
+          "axis": 4
+        }
+      },
+      "buttons": {
+        "a": [
+          0
+        ],
+        "b": [
+          3
+        ],
+        "x": [
+          1
+        ],
+        "y": [
+          2
+        ],
+        "dodge": [
+          4
+        ],
+        "r": [
+          5
+        ],
+        "z": [
+          6
+        ],
+        "start": [
+          7
+        ],
+        "up": [
+          8
+        ],
+        "down": [
+          9
+        ],
+        "left": [
+          10
+        ],
+        "right": [
+          11
+        ]
+      },
+      "axisButtons": {
+        "block": {
+          "axis": 2,
+          "min": -1,
+          "max": 1,
+          "threshold": 0.3
+        }
+      }
+    },
+    {
+      "id": "gamecube",
+      "match": [
+        "gamecube",
+        "0079-1846",
+        "0079-1844",
+        "0079-1843",
+        "057e-0337",
+        "mayflash"
+      ],
+      "stick": {
+        "x": {
+          "axis": 0
+        },
+        "y": {
+          "axis": 1
+        }
+      },
+      "cstick": {
+        "x": {
+          "axis": 5
+        },
+        "y": {
+          "axis": 2
+        }
+      },
+      "buttons": {
+        "a": [
+          1
+        ],
+        "b": [
+          2
+        ],
+        "x": [
+          0
+        ],
+        "y": [
+          3
+        ],
+        "z": [
+          7
+        ],
+        "r": [
+          5
+        ],
+        "dodge": [
+          4
+        ],
+        "start": [
+          9
+        ],
+        "up": [
+          12
+        ],
+        "down": [
+          13
+        ],
+        "left": [
+          14
+        ],
+        "right": [
+          15
+        ]
+      },
+      "axisButtons": {
+        "block": {
+          "axis": 3,
+          "min": -1,
+          "max": 1,
+          "threshold": 0.3
+        }
+      }
+    },
+    {
+      "id": "switch_pro",
+      "match": [
+        "pro controller",
+        "057e-2009"
+      ],
+      "stick": {
+        "x": {
+          "axis": 0
+        },
+        "y": {
+          "axis": 1
+        }
+      },
+      "cstick": {
+        "x": {
+          "axis": 2
+        },
+        "y": {
+          "axis": 3
+        }
+      },
+      "buttons": {
+        "a": [
+          1
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          3
+        ],
+        "y": [
+          2
+        ],
+        "z": [
+          5
+        ],
+        "r": [
+          7
+        ],
+        "block": [
+          6
+        ],
+        "dodge": [
+          4
+        ],
+        "start": [
+          9
+        ],
+        "up": [
+          12
+        ],
+        "down": [
+          13
+        ],
+        "left": [
+          14
+        ],
+        "right": [
+          15
+        ]
+      },
+      "axisButtons": {}
+    },
+    {
+      "id": "standard",
+      "match": [
+        ""
+      ],
+      "stick": {
+        "x": {
+          "axis": 0
+        },
+        "y": {
+          "axis": 1
+        }
+      },
+      "cstick": {
+        "x": {
+          "axis": 2
+        },
+        "y": {
+          "axis": 3
+        }
+      },
+      "buttons": {
+        "a": [
+          1
+        ],
+        "b": [
+          0
+        ],
+        "x": [
+          3
+        ],
+        "y": [
+          2
+        ],
+        "z": [
+          5
+        ],
+        "r": [
+          7
+        ],
+        "block": [
+          6
+        ],
+        "dodge": [
+          4
+        ],
+        "start": [
+          9
+        ],
+        "up": [
+          12
+        ],
+        "down": [
+          13
+        ],
+        "left": [
+          14
+        ],
+        "right": [
+          15
+        ]
+      },
+      "axisButtons": {}
+    }
+  ],
+  "keyboard": {
+    "notes": "KeyboardEvent.code per action. Keyboard+mouse takes the first free player slot on any mapped key or mouse button. Left mouse = X (build menu), drag while held = C-stick flick; right mouse drag = C-stick (army orders).",
+    "stick": {
+      "up": [
+        "KeyW"
+      ],
+      "down": [
+        "KeyS"
+      ],
+      "left": [
+        "KeyA"
+      ],
+      "right": [
+        "KeyD"
+      ]
+    },
+    "cstick": {
+      "up": [
+        "ArrowUp"
+      ],
+      "down": [
+        "ArrowDown"
+      ],
+      "left": [
+        "ArrowLeft"
+      ],
+      "right": [
+        "ArrowRight"
+      ]
+    },
+    "buttons": {
+      "a": [
+        "KeyE",
+        "KeyJ"
+      ],
+      "b": [
+        "KeyQ",
+        "KeyK"
+      ],
+      "block": [
+        "KeyZ",
+        "ShiftLeft",
+        "ShiftRight"
+      ],
+      "r": [
+        "KeyX",
+        "KeyL"
+      ],
+      "z": [
+        "KeyC",
+        "KeyI"
+      ],
+      "x": [
+        "KeyF"
+      ],
+      "y": [
+        "KeyR"
+      ],
+      "dodge": [
+        "Space"
+      ],
+      "start": [
+        "Enter",
+        "Escape"
+      ],
+      "up": [
+        "Digit1"
+      ],
+      "down": [
+        "Digit2"
+      ],
+      "left": [
+        "Digit3"
+      ],
+      "right": [
+        "Digit4"
+      ]
+    },
+    "mouseFlickPx": 26
+  }
+}

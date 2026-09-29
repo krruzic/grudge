@@ -1,0 +1,246 @@
+import { Kind, type Terrain } from "./terrain.ts";
+import type { Vec2 } from "./types.ts";
+
+const DIRS: [number, number, number][] = [
+  [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+  [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
+];
+
+const CLEAR_RING: [number, number][] = Array.from({ length: 8 }, (_, k) => [Math.cos((k * Math.PI) / 4) * 0.6, Math.sin((k * Math.PI) / 4) * 0.6]);
+
+export class NavGrid {
+  readonly w: number;
+  readonly d: number;
+  readonly walk: Uint8Array;
+  readonly h: Float32Array;
+  readonly cost: Float32Array;
+  readonly blocked: Uint8Array;
+  private g: Float32Array;
+  private came: Int32Array;
+  private stamp: Uint32Array;
+  private closed: Uint32Array;
+  private gen = 1;
+
+  constructor(private t: Terrain, maxStep: number, private maxSlope: number) {
+    this.w = t.width;
+    this.d = t.depth;
+    const n = this.w * this.d;
+    this.walk = new Uint8Array(n);
+    this.h = new Float32Array(n);
+    this.cost = new Float32Array(n);
+    this.blocked = new Uint8Array(n);
+    this.g = new Float32Array(n);
+    this.came = new Int32Array(n);
+    this.stamp = new Uint32Array(n);
+    this.closed = new Uint32Array(n);
+    this.maxStep = maxStep;
+    for (let i = 0; i < n; i++) this.computeCell(i);
+  }
+
+  private maxStep: number;
+
+  private computeCell(i: number): void {
+    const t = this.t;
+    const cx = i % this.w;
+    const cz = Math.floor(i / this.w);
+    const x = cx + 0.5;
+    const z = cz + 0.5;
+    const hc = t.heightAt(x, z);
+    this.h[i] = hc;
+    let ok = Number.isFinite(hc);
+    if (ok) {
+      for (const [ox, oz] of [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35]]) {
+        if (!(t.slopeAt(x + ox, z + oz) <= this.maxSlope)) { ok = false; break; }
+      }
+    }
+    this.walk[i] = ok ? 1 : 0;
+    this.cost[i] = t.kinds[i] === Kind.Ford ? 1.8 : 1;
+  }
+
+  recompute(cells: number[]): void {
+    const done = new Set<number>();
+    for (const c of cells) {
+      const cx = c % this.w;
+      const cz = Math.floor(c / this.w);
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const i = this.index(cx + dx, cz + dz);
+          if (i >= 0 && !done.has(i)) { done.add(i); this.computeCell(i); }
+        }
+      }
+    }
+  }
+
+  index(cx: number, cz: number): number {
+    return cx >= 0 && cz >= 0 && cx < this.w && cz < this.d ? cz * this.w + cx : -1;
+  }
+
+  open(i: number): boolean {
+    return i >= 0 && this.walk[i] === 1 && this.blocked[i] === 0;
+  }
+
+  passable(a: number, b: number): boolean {
+    if (!this.open(a) || !this.open(b)) return false;
+    const flat = this.t.kinds[a] === Kind.Bridge || this.t.kinds[b] === Kind.Bridge;
+    return Math.abs(this.h[a] - this.h[b]) <= (flat ? this.maxStep * 0.85 : this.maxSlope + 0.1);
+  }
+
+  setBlocked(x: number, z: number, r: number, on: boolean): void {
+    for (let cz = Math.floor(z - r); cz <= Math.floor(z + r); cz++) {
+      for (let cx = Math.floor(x - r); cx <= Math.floor(x + r); cx++) {
+        const i = this.index(cx, cz);
+        if (i < 0) continue;
+        if (Math.hypot(cx + 0.5 - x, cz + 0.5 - z) > r) continue;
+        this.blocked[i] = on ? Math.min(255, this.blocked[i] + 1) : Math.max(0, this.blocked[i] - 1);
+      }
+    }
+  }
+
+  nearestOpen(x: number, z: number, maxR = 8, y?: number): number {
+    const cx0 = Math.floor(x);
+    const cz0 = Math.floor(z);
+    let best = -1;
+    let bestD = Infinity;
+    for (let r = 0; r <= maxR; r++) {
+      for (let cz = cz0 - r; cz <= cz0 + r; cz++) {
+        for (let cx = cx0 - r; cx <= cx0 + r; cx++) {
+          if (Math.max(Math.abs(cx - cx0), Math.abs(cz - cz0)) !== r) continue;
+          const i = this.index(cx, cz);
+          if (!this.open(i)) continue;
+          if (y !== undefined && Math.abs(this.h[i] - y) > this.maxStep * 1.2) continue;
+          const d = Math.hypot(cx + 0.5 - x, cz + 0.5 - z);
+          if (d < bestD) { bestD = d; best = i; }
+        }
+      }
+      if (best >= 0) return best;
+    }
+    return -1;
+  }
+
+  lineClear(a: Vec2, b: Vec2): boolean {
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len = Math.hypot(dx, dz);
+    const steps = Math.ceil(len / 0.25);
+    let prev = this.index(Math.floor(a.x), Math.floor(a.z));
+    for (let s = 1; s <= steps; s++) {
+      const f = s / steps;
+      const px = a.x + dx * f;
+      const pz = a.z + dz * f;
+      const i = this.index(Math.floor(px), Math.floor(pz));
+      if (i !== prev) {
+        if (prev >= 0 && this.open(prev) && !this.passable(prev, i)) return false;
+        if (!this.open(i)) return false;
+        prev = i;
+      }
+      for (const [ox, oz] of CLEAR_RING) {
+        const j = this.index(Math.floor(px + ox), Math.floor(pz + oz));
+        if (!this.open(j) || Math.abs(this.h[j] - this.h[i]) > this.maxStep * 1.5) return false;
+      }
+    }
+    return true;
+  }
+
+  findPath(from: Vec2, to: Vec2, fromY?: number): Vec2[] | null {
+    let start = this.index(Math.floor(from.x), Math.floor(from.z));
+    if (!this.open(start) || (fromY !== undefined && Math.abs(this.h[start] - fromY) > this.maxStep * 1.2)) {
+      start = this.nearestOpen(from.x, from.z, 3, fromY);
+      if (start < 0) start = this.nearestOpen(from.x, from.z, 3);
+    }
+    let goal = this.index(Math.floor(to.x), Math.floor(to.z));
+    if (!this.open(goal)) goal = this.nearestOpen(to.x, to.z, 6);
+    if (start < 0 || goal < 0) return null;
+    if (start === goal) return [{ x: to.x, z: to.z }];
+
+    const gen = ++this.gen;
+    const W = this.w;
+    const gx = goal % W;
+    const gz = (goal / W) | 0;
+    const heur = (i: number) => {
+      const dx = Math.abs((i % W) - gx);
+      const dz = Math.abs(((i / W) | 0) - gz);
+      return Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz);
+    };
+    const heap: number[] = [];
+    const f: number[] = [];
+    const push = (i: number, fv: number) => {
+      heap.push(i);
+      f.push(fv);
+      let k = heap.length - 1;
+      while (k > 0) {
+        const p = (k - 1) >> 1;
+        if (f[p] <= f[k]) break;
+        [heap[p], heap[k]] = [heap[k], heap[p]];
+        [f[p], f[k]] = [f[k], f[p]];
+        k = p;
+      }
+    };
+    const pop = (): number => {
+      const top = heap[0];
+      const li = heap.pop()!;
+      const lf = f.pop()!;
+      if (heap.length) {
+        heap[0] = li;
+        f[0] = lf;
+        let k = 0;
+        for (;;) {
+          const l = k * 2 + 1;
+          const r = l + 1;
+          let m = k;
+          if (l < heap.length && f[l] < f[m]) m = l;
+          if (r < heap.length && f[r] < f[m]) m = r;
+          if (m === k) break;
+          [heap[m], heap[k]] = [heap[k], heap[m]];
+          [f[m], f[k]] = [f[k], f[m]];
+          k = m;
+        }
+      }
+      return top;
+    };
+    this.stamp[start] = gen;
+    this.g[start] = 0;
+    this.came[start] = -1;
+    push(start, heur(start));
+    let found = false;
+    let iter = 0;
+    while (heap.length && iter++ < 20000) {
+      const cur = pop();
+      if (this.closed[cur] === gen) continue;
+      this.closed[cur] = gen;
+      if (cur === goal) { found = true; break; }
+      const cx = cur % W;
+      const cz = (cur / W) | 0;
+      for (const [dx, dz, dc] of DIRS) {
+        const n = this.index(cx + dx, cz + dz);
+        if (n < 0 || this.closed[n] === gen || !this.passable(cur, n)) continue;
+        if (dx !== 0 && dz !== 0) {
+          if (!this.passable(cur, this.index(cx + dx, cz)) || !this.passable(cur, this.index(cx, cz + dz))) continue;
+        }
+        const ng = this.g[cur] + dc * (this.cost[cur] + this.cost[n]) * 0.5 + Math.max(0, this.h[n] - this.h[cur]) * 0.3;
+        if (this.stamp[n] !== gen || ng < this.g[n]) {
+          this.stamp[n] = gen;
+          this.g[n] = ng;
+          this.came[n] = cur;
+          push(n, ng + heur(n));
+        }
+      }
+    }
+    if (!found) return null;
+    const cells: number[] = [];
+    for (let c = goal; c >= 0; c = this.came[c]) cells.push(c);
+    cells.reverse();
+    const pts = cells.map((c) => ({ x: (c % W) + 0.5, z: ((c / W) | 0) + 0.5 }));
+    pts[pts.length - 1] = this.open(this.index(Math.floor(to.x), Math.floor(to.z))) ? { x: to.x, z: to.z } : pts[pts.length - 1];
+    const out: Vec2[] = [];
+    let anchor: Vec2 = from;
+    let k = 0;
+    while (k < pts.length) {
+      let j = Math.min(pts.length - 1, k + 12);
+      while (j > k && !this.lineClear(anchor, pts[j])) j--;
+      out.push(pts[j]);
+      anchor = pts[j];
+      k = j + 1;
+    }
+    return out;
+  }
+}

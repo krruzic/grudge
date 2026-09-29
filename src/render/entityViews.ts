@@ -1,0 +1,806 @@
+import * as THREE from "three";
+import type { World } from "../sim/world";
+import type { Entity } from "../sim/types";
+import type { HeroModels } from "./heroModels";
+import type { StructureModels } from "./structureModels";
+import { structurePlaceholder, unitPlaceholder } from "./kit";
+import { blobShadow } from "./placeholders";
+import type { CombatFx } from "./combatFx";
+import type { UnitModels } from "./unitModels";
+import { ballistaMesh, syncBallista } from "./ballista";
+import { drawText, fontReady, textWidth } from "../ui/font";
+import { padButton } from "../ui/hud";
+
+interface Bar {
+  group: THREE.Group;
+  fg: THREE.Sprite;
+  ghost: THREE.Sprite;
+  width: number;
+  color: THREE.Color;
+  frac: number;
+  ghostFrac: number;
+  holdUntil: number;
+}
+
+interface View {
+  kind: Entity["kind"];
+  root: THREE.Group;
+  body: THREE.Object3D;
+  weapon?: THREE.Object3D;
+  spin?: THREE.Object3D;
+  level2?: THREE.Object3D;
+  mixer?: THREE.AnimationMixer;
+  actions: Map<string, THREE.AnimationAction>;
+  current?: string;
+  bar: Bar;
+  ring?: THREE.Mesh;
+  shield?: THREE.Mesh;
+  blockFx?: THREE.Mesh;
+  lastAction?: object | null;
+  seen: boolean;
+  wasDead?: boolean;
+  stealthed?: boolean;
+  mark?: THREE.Sprite;
+  markKind?: string;
+  lastAttack?: number;
+  hitUntil?: number;
+  deadAt?: number;
+  mats: THREE.MeshLambertMaterial[];
+  flash: number;
+  joltX: number;
+  joltZ: number;
+  freeze: number;
+  stepDist: number;
+  trailT?: number;
+  lastX?: number;
+  lastZ?: number;
+  rank?: number;
+  badge?: THREE.Sprite;
+  framed?: boolean;
+}
+
+const red = new THREE.Color(1, 0.15, 0.1);
+
+const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "shoot", "hit", "death", "dodge", "attack"]);
+
+const KIND_ANIM: Record<string, string> = {
+  slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", hex: "cast", repair: "cast",
+  turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", shoot: "shoot",
+  banner: "cast", rally: "cast", works: "cast", ballista: "cast",
+  dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
+};
+
+const white = new THREE.Color(1, 1, 1);
+
+function hintTex(rows: [string, string, string][]): THREE.CanvasTexture {
+  const cv = document.createElement("canvas");
+  cv.width = 256;
+  cv.height = 40 * rows.length + 8;
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const draw = () => {
+    const c = cv.getContext("2d")!;
+    c.clearRect(0, 0, cv.width, cv.height);
+    c.save();
+    c.scale(4, 4);
+    rows.forEach(([btn, color, label], k) => {
+      const y = 2 + k * 10;
+      const lw = textWidth(label, 0.8) + 18;
+      const x0 = (64 - lw) / 2;
+      c.fillStyle = "rgba(10,8,6,0.72)";
+      c.fillRect(x0 - 2, y, lw + 4, 9);
+      padButton(c, x0 + 5, y + 4.5, 3.8, color, btn);
+      drawText(c, label, x0 + 12, y + 1, "#ffffff", 0.8);
+    });
+    c.restore();
+    t.needsUpdate = true;
+  };
+  draw();
+  fontReady.then(draw);
+  return t;
+}
+const HINTS = {
+  build: new THREE.SpriteMaterial({ map: hintTex([["X", "#5a5a66", "PRODUCE"], ["Y", "#5a5a66", "TOWER"]]), depthTest: false, transparent: true }),
+  upgrade: new THREE.SpriteMaterial({ map: hintTex([["X", "#5a5a66", "UPGRADE"]]), depthTest: false, transparent: true }),
+};
+
+function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 32;
+  const c = cv.getContext("2d")!;
+  c.lineJoin = c.lineCap = "round";
+  draw(c);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const MARKS: Record<string, THREE.SpriteMaterial> = {
+  hex: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.arc(16, 16, 12, 0, Math.PI * 2);
+    c.fillStyle = "#1a0822"; c.fill();
+    c.strokeStyle = "#c060ff"; c.lineWidth = 3; c.stroke();
+    c.beginPath(); c.moveTo(16, 7); c.lineTo(16, 25); c.moveTo(9, 12); c.lineTo(23, 20); c.moveTo(23, 12); c.lineTo(9, 20);
+    c.strokeStyle = "#e0a8ff"; c.lineWidth = 2.5; c.stroke();
+  }) }),
+  cowed: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.moveTo(6, 8); c.lineTo(26, 8); c.lineTo(16, 26); c.closePath();
+    c.fillStyle = "#9a9aa2"; c.fill();
+    c.strokeStyle = "#101014"; c.lineWidth = 3; c.stroke();
+  }) }),
+  opening: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath();
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2 - Math.PI / 2;
+      const r = k % 2 ? 5 : 13;
+      c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r);
+    }
+    c.closePath();
+    c.fillStyle = "#ffd040"; c.fill();
+    c.strokeStyle = "#3a2008"; c.lineWidth = 2.5; c.stroke();
+  }) }),
+};
+
+function rankTex(rank: number): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = c.height = 32;
+  const ctx = c.getContext("2d")!;
+  ctx.lineJoin = "miter";
+  const chevron = (y: number) => {
+    ctx.beginPath();
+    ctx.moveTo(6, y + 7);
+    ctx.lineTo(16, y);
+    ctx.lineTo(26, y + 7);
+    ctx.lineTo(26, y + 12);
+    ctx.lineTo(16, y + 5);
+    ctx.lineTo(6, y + 12);
+    ctx.closePath();
+    ctx.fillStyle = "#1a1208";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#1a1208";
+    ctx.stroke();
+    ctx.fillStyle = "#ffcc33";
+    ctx.fill();
+  };
+  if (rank >= 3) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const r = i % 2 === 0 ? 14 : 6;
+      ctx.lineTo(16 + Math.cos(a) * r, 17 + Math.sin(a) * r);
+    }
+    ctx.closePath();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#1a1208";
+    ctx.stroke();
+    ctx.fillStyle = "#ffcc33";
+    ctx.fill();
+  } else if (rank === 2) {
+    chevron(6);
+    chevron(15);
+  } else {
+    chevron(10);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter;
+  return t;
+}
+const rankTexes = [1, 2, 3].map(rankTex);
+
+function makeBar(width: number, color: THREE.Color, y: number): Bar {
+  const group = new THREE.Group();
+  group.position.y = y;
+  const bg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x101010, depthTest: false, transparent: true, opacity: 0.85 }));
+  bg.scale.set(width + 0.08, 0.2, 1);
+  bg.renderOrder = 20;
+  const fg = new THREE.Sprite(new THREE.SpriteMaterial({ color, depthTest: false }));
+  fg.center.set(0, 0.5);
+  fg.position.x = -width / 2;
+  fg.scale.set(width, 0.13, 1);
+  fg.renderOrder = 22;
+  const ghost = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xfff0d0, depthTest: false }));
+  ghost.center.set(0, 0.5);
+  ghost.position.x = -width / 2;
+  ghost.scale.set(width, 0.13, 1);
+  ghost.renderOrder = 21;
+  group.add(bg, ghost, fg);
+  return { group, fg, ghost, width, color: color.clone(), frac: 1, ghostFrac: 1, holdUntil: 0 };
+}
+
+function setBar(bar: Bar, frac: number, dt = 0, time = 0, pulse = false): void {
+  const f = Math.max(0, Math.min(1, frac));
+  if (f < bar.frac - 1e-4) bar.holdUntil = time + 0.35;
+  if (f > bar.ghostFrac) bar.ghostFrac = f;
+  bar.frac = f;
+  if (time >= bar.holdUntil) bar.ghostFrac = Math.max(f, bar.ghostFrac - dt * 0.8);
+  bar.fg.scale.x = Math.max(0.001, bar.width * f);
+  bar.ghost.scale.x = Math.max(0.001, bar.width * bar.ghostFrac);
+  const m = bar.fg.material;
+  if (pulse && f < 0.3 && f > 0) m.color.copy(bar.color).lerp(red, 0.5 + 0.5 * Math.sin(time * 14));
+  else m.color.copy(bar.color);
+}
+
+export function markSilhouette(obj: THREE.Object3D, team: number): void {
+  obj.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) || o.userData.noSil) return;
+    o.layers.enable(1 + team);
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      m.stencilWrite = true;
+      m.stencilRef = 1;
+      m.stencilFunc = THREE.AlwaysStencilFunc;
+      m.stencilZPass = THREE.ReplaceStencilOp;
+    }
+  });
+}
+
+export class EntityViews {
+  readonly root = new THREE.Group();
+  private views = new Map<number, View>();
+  private rings = new Map<number, THREE.Mesh>();
+  private padMarkers: THREE.Mesh[] = [];
+  private padHints: THREE.Sprite[] = [];
+  humans: boolean[] = [];
+  hints = true;
+  menus: boolean[] = [];
+  private corpses: { v: View; at: number }[] = [];
+
+  constructor(
+    private world: World,
+    private teamColors: THREE.Color[],
+    private heroes: HeroModels,
+    private structures: StructureModels,
+    private heroScale: number,
+    private fx: CombatFx,
+    private units: UnitModels,
+  ) {
+    for (const p of world.pads) {
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(1.7, 2.0, 24),
+        new THREE.MeshBasicMaterial({ color: 0xffd060, transparent: true, opacity: 0.0, depthWrite: false, side: THREE.DoubleSide }),
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(p.x, world.groundY(p.x, p.z) + 0.3, p.z);
+      m.renderOrder = 3;
+      this.root.add(m);
+      this.padMarkers.push(m);
+      const hint = new THREE.Sprite(HINTS.build);
+      hint.renderOrder = 33;
+      hint.visible = false;
+      hint.position.set(p.x, world.groundY(p.x, p.z) + 4.4, p.z);
+      this.root.add(hint);
+      this.padHints.push(hint);
+    }
+  }
+
+  heroPoints(): THREE.Vector3[] {
+    const out: THREE.Vector3[] = [];
+    for (const v of this.views.values()) if (v.kind === "hero" && v.framed !== false && v.seen) out.push(v.root.position.clone());
+    return out;
+  }
+
+  private createView(e: Entity): View {
+    const team = this.teamColors[e.team];
+    const root = new THREE.Group();
+    let body: THREE.Object3D;
+    let mixer: THREE.AnimationMixer | undefined;
+    let actions = new Map<string, THREE.AnimationAction>();
+    let bar: Bar;
+    const view: Partial<View> = {};
+    if (e.hero) {
+      const player = e.hero.player;
+      const inst = this.heroes.create(e.hero.type, team, `P${player + 1}`);
+      inst.root.scale.setScalar(this.heroScale);
+      root.add(inst.root);
+      body = inst.body;
+      mixer = inst.mixer;
+      actions = inst.actions;
+      bar = makeBar(1.3, team, 2.2 * this.heroScale + 0.2);
+      markSilhouette(body, e.team);
+      const bf = new THREE.Mesh(
+        new THREE.RingGeometry(0.35, 0.75, 6),
+        new THREE.MeshBasicMaterial({ color: team.clone().lerp(white, 0.6), transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
+      );
+      bf.position.set(0, 1.0, 0.75);
+      bf.visible = false;
+      body.add(bf);
+      view.blockFx = bf;
+    } else if (e.unit) {
+      const inst = this.units.create(e.unit.type, team, e.team);
+      let g: THREE.Object3D;
+      if (inst) {
+        g = new THREE.Group();
+        g.add(inst.body);
+        body = inst.body;
+        mixer = inst.mixer;
+        actions = inst.actions;
+      } else {
+        g = unitPlaceholder(e.unit.type, team);
+        body = g.getObjectByName("body")!;
+        view.weapon = g.getObjectByName("weapon");
+      }
+      root.add(g, blobShadow(e.radius * 1.2));
+      g.scale.setScalar(inst ? 1.3 : e.unit.type === "heavy" ? 1.45 : 1.4);
+      markSilhouette(g, e.team);
+      bar = makeBar(e.unit.type === "heavy" ? 1.1 : 0.8, team, e.unit.type === "heavy" ? 2.3 : 1.7);
+      bar.group.visible = false;
+    } else {
+      const st = e.structure!;
+      if (st.type === "core") {
+        body = this.structures.create("core", team);
+        const sh = new THREE.Mesh(
+          new THREE.SphereGeometry(3.0, 16, 10),
+          new THREE.MeshBasicMaterial({ color: team.clone().lerp(white, 0.4), transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }),
+        );
+        sh.position.y = 1.4;
+        root.add(sh);
+        view.shield = sh;
+        view.spin = body.getObjectByName("crystal") ?? undefined;
+        bar = makeBar(3, team, 5.2);
+      } else {
+        body = st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
+        body.traverse((o) => {
+          if (!view.spin && o.name.startsWith("spin")) view.spin = o;
+          if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
+        });
+        body.rotation.y = e.transform.facing;
+        bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(2.2, team, 5.0);
+        this.fx.buildFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
+      }
+      root.add(body);
+    }
+    root.add(bar.group);
+    this.root.add(root);
+    const mats: THREE.MeshLambertMaterial[] = [];
+    body.traverse((o) => {
+      if (!(o instanceof THREE.Mesh) || o.userData.outline) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (m instanceof THREE.MeshLambertMaterial && !mats.includes(m)) {
+          m.userData.baseEmissive ??= m.emissive.clone();
+          mats.push(m);
+        }
+      }
+    });
+    const v: View = {
+      kind: e.kind, root, body, mixer, actions, bar, seen: true,
+      weapon: view.weapon, spin: view.spin, level2: view.level2, shield: view.shield, blockFx: view.blockFx,
+      mats, flash: 0, joltX: 0, joltZ: 0, freeze: 0, stepDist: 0,
+    };
+    if (e.unit) this.fx.spawnFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
+    return v;
+  }
+
+  private play(v: View, name: string, timeScale = 1, restart = false): boolean {
+    const next = v.actions.get(name) ?? (name.startsWith("attack_") ? v.actions.get("attack_a") : undefined);
+    if (!next) return false;
+    next.timeScale = timeScale;
+    if (v.current === name && !restart) return true;
+    const prev = v.current ? v.actions.get(v.current) : undefined;
+    const once = ONE_SHOT.has(name);
+    next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+    next.clampWhenFinished = once;
+    next.reset().play();
+    if (prev && prev !== next) prev.crossFadeTo(next, name === "hit" ? 0.04 : 0.1, false);
+    v.current = name;
+    return true;
+  }
+
+  private clipLen(v: View, name: string): number {
+    return v.actions.get(name)?.getClip().duration ?? 0.5;
+  }
+
+  onRankUp(id: number): void {
+    const v = this.views.get(id);
+    if (v) v.flash = 0.3;
+  }
+
+  onImpact(id: number, src: number | undefined, fx: number | undefined, fz: number | undefined, big: boolean): void {
+    const v = this.views.get(id);
+    if (!v) return;
+    v.flash = big ? 0.14 : 0.09;
+    if (v.kind === "structure") return;
+    const e = this.world.get(id);
+    if (e && fx !== undefined && fz !== undefined) {
+      const dx = e.transform.pos.x - fx;
+      const dz = e.transform.pos.z - fz;
+      const d = Math.hypot(dx, dz) || 1;
+      const k = (big ? 0.45 : 0.22) * (v.kind === "hero" ? 1 : 0.8);
+      v.joltX = (dx / d) * k;
+      v.joltZ = (dz / d) * k;
+    }
+    const heroHit = v.kind === "hero" || (src !== undefined && this.views.get(src)?.kind === "hero");
+    if (heroHit) {
+      const stop = big ? 0.13 : 0.06;
+      v.freeze = Math.max(v.freeze, stop);
+      const sv = src !== undefined ? this.views.get(src) : undefined;
+      if (sv) sv.freeze = Math.max(sv.freeze, stop);
+    }
+  }
+
+  onHit(id: number): void {
+    const v = this.views.get(id);
+    if (!v?.mixer || v.kind !== "unit") return;
+    if (v.current === "attack" || v.current === "death") return;
+    this.play(v, "hit", 1.6, true);
+    v.hitUntil = performance.now() / 1000 + 0.25;
+  }
+
+  private footsteps(e: Entity, v: View): void {
+    const x = e.transform.pos.x;
+    const z = e.transform.pos.z;
+    if (v.lastX !== undefined && v.lastZ !== undefined) {
+      const d = Math.hypot(x - v.lastX, z - v.lastZ);
+      if (d < 2) v.stepDist += d;
+    }
+    v.lastX = x;
+    v.lastZ = z;
+    const hero = !!e.hero;
+    const stride = hero ? 1.5 : e.unit?.type === "heavy" ? 1.3 : 1.0;
+    if (v.stepDist < stride) return;
+    v.stepDist = 0;
+    if (!hero && Math.random() < 0.5) return;
+    const big = hero ? this.heroScale * (e.radius > 0.8 ? 0.9 : 0.6) : e.unit?.type === "heavy" ? 0.7 : 0.45;
+    const water = this.world.groundY(x, z) < e.transform.y - 0.5;
+    if (water) return;
+    this.fx.dust(x, e.transform.y, z, big, hero ? 2 : 1, 0.7);
+  }
+
+  private applyImpact(v: View, dt: number, frozen: boolean): void {
+    if (v.joltX || v.joltZ) {
+      const shake = frozen ? (Math.random() - 0.5) * 0.08 : 0;
+      v.root.position.x += v.joltX + shake;
+      v.root.position.z += v.joltZ;
+      const decay = Math.exp(-dt * 18);
+      v.joltX *= decay;
+      v.joltZ *= decay;
+      if (Math.abs(v.joltX) + Math.abs(v.joltZ) < 0.005) v.joltX = v.joltZ = 0;
+    }
+    if (v.flash > 0 || v.mats[0]?.userData.flashing) {
+      v.flash = Math.max(0, v.flash - dt);
+      const k = v.flash > 0 ? 1 : 0;
+      for (const m of v.mats) {
+        const base = m.userData.baseEmissive as THREE.Color;
+        if (k) m.emissive.setRGB(0.9, 0.9, 0.9);
+        else m.emissive.copy(base);
+        m.userData.flashing = k > 0;
+      }
+    }
+  }
+
+  private rangeRing(e: Entity): THREE.Mesh {
+    const st = e.structure!;
+    const r = st.range;
+    const n = 72;
+    const pos = new Float32Array((n + 1) * 2 * 3);
+    const cx = e.transform.pos.x;
+    const cz = e.transform.pos.z;
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      for (let k = 0; k < 2; k++) {
+        const rr = k ? r : r - 0.18;
+        const x = cx + Math.cos(a) * rr;
+        const z = cz + Math.sin(a) * rr;
+        const j = (i * 2 + k) * 3;
+        pos[j] = x;
+        pos[j + 1] = this.world.groundY(x, z) + 0.12;
+        pos[j + 2] = z;
+      }
+    }
+    const idx: number[] = [];
+    for (let i = 0; i < n; i++) {
+      if (st.type === "support" && i % 3 === 2) continue;
+      const a = i * 2;
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    const color = this.teamColors[e.team].clone().lerp(white, st.type === "damage" ? 0.1 : st.type === "control" ? 0.35 : 0.6);
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, fog: false,
+    }));
+    m.renderOrder = 4;
+    return m;
+  }
+
+  sync(alpha: number, dt: number, time: number): void {
+    const w = this.world;
+    for (const v of this.views.values()) v.seen = false;
+    for (const e of w.entities) {
+      if (!e.alive && !e.hero) continue;
+      let v = this.views.get(e.id);
+      if (!v) {
+        v = this.createView(e);
+        this.views.set(e.id, v);
+      }
+      v.seen = true;
+      const t = e.transform;
+      v.root.position.set(
+        t.prevPos.x + (t.pos.x - t.prevPos.x) * alpha,
+        t.prevY + (t.y - t.prevY) * alpha,
+        t.prevPos.z + (t.pos.z - t.prevPos.z) * alpha,
+      );
+      let d = t.facing - t.prevFacing;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      const facing = t.prevFacing + d * alpha;
+      setBar(v.bar, e.hp / e.maxHp, dt, time, !!e.hero);
+
+      const frozen = v.freeze > 0;
+      const adt = frozen ? 0 : dt;
+      v.freeze = Math.max(0, v.freeze - dt);
+      if (e.hero) this.syncHero(e, v, facing, adt, time);
+      else if (e.unit) this.syncUnit(e, v, facing, time, adt);
+      else this.syncStructure(e, v, time);
+      if (e.kind !== "structure" && e.alive) this.footsteps(e, v);
+      if (e.kind !== "structure") this.syncMark(e, v, time);
+      this.applyImpact(v, dt, frozen);
+    }
+    const nowS = performance.now() / 1000;
+    for (let i = this.corpses.length - 1; i >= 0; i--) {
+      const c = this.corpses[i];
+      c.v.mixer?.update(dt);
+      const k = (nowS - c.at) / 1.6;
+      if (k > 0.6) c.v.root.position.y -= dt * 0.8;
+      if (k >= 1) {
+        this.root.remove(c.v.root);
+        this.corpses.splice(i, 1);
+      }
+    }
+    for (const [id, v] of this.views) {
+      if (v.seen) continue;
+      if (v.kind === "unit" && v.mixer && v.actions.has("death")) {
+        this.play(v, "death", 1.2, true);
+        v.bar.group.visible = false;
+        this.corpses.push({ v, at: nowS });
+      } else this.root.remove(v.root);
+      this.views.delete(id);
+      const ring = this.rings.get(id);
+      if (ring) {
+        this.root.remove(ring);
+        ring.geometry.dispose();
+        this.rings.delete(id);
+      }
+    }
+    this.syncPads(time);
+  }
+
+  private syncMark(e: Entity, v: View, time: number): void {
+    const t = this.world.time;
+    const kind = !e.alive ? "" : e.hero && t < e.hero.openingUntil ? "opening" : t < e.status.hexUntil ? "hex" : t < e.status.cowedUntil ? "cowed" : "";
+    if (kind !== v.markKind) {
+      v.markKind = kind;
+      if (v.mark) { v.root.remove(v.mark); v.mark = undefined; }
+      if (kind) {
+        v.mark = new THREE.Sprite(MARKS[kind]);
+        v.mark.renderOrder = 32;
+        v.root.add(v.mark);
+      }
+    }
+    if (v.mark) {
+      const s = (e.hero ? 0.75 : 0.55) * (1 + Math.sin(time * 6) * 0.08);
+      v.mark.scale.set(s, s, 1);
+      v.mark.position.y = v.bar.group.position.y + (e.hero ? 0.55 : 0.4);
+    }
+  }
+
+  private syncHero(e: Entity, v: View, facing: number, dt: number, time: number): void {
+    const h = e.hero!;
+    const w = this.world;
+    if (h.dead) {
+      if (!v.wasDead) {
+        v.wasDead = true;
+        v.deadAt = w.time;
+        if (!this.play(v, "death", 1, true)) v.root.visible = false;
+      }
+      if (w.time - (v.deadAt ?? 0) > 2.5) {
+        v.root.visible = false;
+        v.framed = false;
+      }
+      v.mixer?.update(dt);
+      return;
+    }
+    v.framed = true;
+    if (v.wasDead) {
+      v.wasDead = false;
+      v.root.visible = true;
+      this.play(v, "idle", 1, true);
+      this.fx.spawnFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
+    }
+    v.root.visible = w.time >= e.status.invulnUntil || h.action?.name === "dodge" || h.action?.name === "z" || Math.floor(time * 12) % 2 === 0;
+    v.body.rotation.y = facing;
+    const a = h.action;
+    if (a && a !== v.lastAction) {
+      let anim = "idle";
+      if (a.kind === "combo") {
+        anim = ["attack_a", "attack_b", "attack_c"][a.combo % 3];
+        const hit = (w.heroDef(h.type).abilities.a as { hits?: { range?: number; projectile?: unknown }[] }).hits?.[a.combo % 3];
+        if (hit && !hit.projectile) {
+          const p = v.root.position;
+          this.fx.slash(p.x, p.y, p.z, facing, e.team, a.combo % 3, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
+        }
+      }
+      else if (a.name === "dodge") {
+        anim = "dodge";
+        this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.8, 5, 2.2);
+      }
+      else if (a.name === "hit") anim = "hit";
+      else anim = KIND_ANIM[a.kind] ?? "cast";
+      const len = this.clipLen(v, anim);
+      const scale = anim === "block" || anim === "idle" ? 1 : len / Math.max(0.15, Math.min(a.dur, 1.2));
+      this.play(v, anim, scale, true);
+    }
+    v.lastAction = a;
+    if (a && (a.name === "dodge" || a.kind === "dash" || a.kind === "leap" || a.kind === "flurry" || a.kind === "blink")) {
+      v.trailT = (v.trailT ?? 0) - dt;
+      if (v.trailT <= 0) {
+        v.trailT = 0.035;
+        const p = v.root.position;
+        this.fx.trail(p.x, p.y + 1.1 * this.heroScale + v.body.position.y, p.z, e.team, 1.2 * this.heroScale);
+      }
+    }
+    if (!a) {
+      const speed = Math.hypot(h.vel.x, h.vel.z);
+      if (h.blocking) this.play(v, "block");
+      else if (speed > 0.8) this.play(v, "run", Math.max(0.6, speed / h.speed) * 1.2);
+      else this.play(v, "idle");
+    }
+    v.body.rotation.x = 0;
+    let lift = 0;
+    if (a?.kind === "quake" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 1.8;
+    if (a?.kind === "leap" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 2.6;
+    v.body.position.y = lift;
+    const stealth = w.time < e.status.stealthUntil;
+    if (stealth !== v.stealthed) {
+      v.stealthed = stealth;
+      v.body.traverse((o) => {
+        if (!(o instanceof THREE.Mesh)) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) {
+          m.transparent = stealth;
+          m.opacity = stealth ? 0.3 : 1;
+          m.needsUpdate = true;
+        }
+      });
+    }
+    if (v.blockFx) v.blockFx.visible = h.blocking;
+    if (w.time < e.status.stunUntil) v.body.rotation.z = Math.sin(time * 20) * 0.08;
+    else v.body.rotation.z = 0;
+    v.mixer?.update(dt);
+  }
+
+  private syncUnit(e: Entity, v: View, facing: number, time: number, dt: number): void {
+    const u = e.unit!;
+    const w = this.world;
+    v.root.rotation.y = facing;
+    v.bar.group.visible = e.hp < e.maxHp;
+    if (u.rank !== (v.rank ?? 0)) {
+      v.rank = u.rank;
+      if (!v.badge) {
+        v.badge = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true }));
+        v.badge.renderOrder = 23;
+        v.badge.scale.set(0.6, 0.6, 1);
+        v.badge.position.y = v.bar.group.position.y + 0.32;
+        v.root.add(v.badge);
+      }
+      v.badge.material.map = rankTexes[Math.min(3, u.rank) - 1];
+      v.badge.material.needsUpdate = true;
+      v.badge.visible = u.rank > 0;
+    }
+    if (v.mixer) {
+      if (u.attackAnimAt !== v.lastAttack && w.time - u.attackAnimAt < 0.3) {
+        v.lastAttack = u.attackAnimAt;
+        const clip = v.actions.get("attack")?.getClip();
+        this.play(v, "attack", clip ? clip.duration / Math.min(0.6, u.cooldown * 0.8) : 1, true);
+      } else if ((v.hitUntil ?? 0) <= performance.now() / 1000 && (v.current !== "attack" || w.time - u.attackAnimAt > Math.min(0.6, u.cooldown * 0.8))) {
+        if (u.moving) this.play(v, "walk", (u.speed * w.speedMul(e)) / 3.2);
+        else this.play(v, "idle");
+      }
+      v.body.rotation.x = w.time < e.status.stunUntil ? 0.25 : 0;
+      v.root.scale.setScalar(w.time < e.status.buffUntil ? 1.08 : 1);
+      v.mixer.update(dt);
+      return;
+    }
+    const phase = time * (u.type === "heavy" ? 7 : 11) + e.id;
+    v.body.position.y = u.moving ? Math.abs(Math.sin(phase)) * 0.09 : 0;
+    v.body.rotation.z = u.moving ? Math.sin(phase) * 0.07 : 0;
+    if (v.weapon) {
+      const k = (w.time - u.attackAnimAt) / 0.3;
+      v.weapon.rotation.x = k >= 0 && k < 1 ? -Math.sin(k * Math.PI) * (u.type === "ranged" ? 0.4 : 1.7) : 0;
+    }
+    v.body.rotation.x = w.time < e.status.stunUntil ? 0.25 : 0;
+    const buff = w.time < e.status.buffUntil;
+    v.root.scale.setScalar(buff ? 1.08 : 1);
+  }
+
+  private syncStructure(e: Entity, v: View, time: number): void {
+    const st = e.structure!;
+    const w = this.world;
+    if (st.type === "core") {
+      if (v.shield) {
+        v.shield.visible = st.shielded && !w.isSudden();
+        v.shield.scale.setScalar(1 + Math.sin(time * 2) * 0.02);
+      }
+      if (v.spin) {
+        v.spin.rotation.y = time * 0.8 + e.team;
+      }
+      v.bar.group.visible = true;
+      return;
+    }
+    v.bar.group.visible = e.hp < e.maxHp || !st.ready;
+    if (st.siege) {
+      const age = w.time - st.builtAt;
+      v.body.scale.set(1, Math.min(1, 0.2 + age * 2), 1);
+      syncBallista(v.body, e.transform.facing, w.time - st.lastFireAt, time, 1 / 60);
+      return;
+    }
+    const sd = w.data.structures;
+    const k = st.ready ? 1 : Math.min(1, (w.time - st.builtAt) / sd.buildSeconds);
+    v.body.scale.set(1, 0.25 + 0.75 * k, 1);
+    if (v.level2) v.level2.visible = st.level > 1;
+    const fired = w.time - st.lastFireAt;
+    if (v.spin) {
+      if (st.type === "damage") {
+        v.spin.rotation.y = time * 1.5;
+        v.spin.userData.baseY ??= v.spin.position.y;
+        v.spin.position.y = v.spin.userData.baseY + Math.sin(time * 2.2) * 0.12;
+        v.spin.scale.setScalar(fired < 0.2 ? 1.5 : 1);
+      } else if (st.type === "control") v.spin.rotation.y = time * (fired < 0.4 ? 8 : 1.2);
+      else if (st.type === "support") {
+        v.spin.userData.baseY ??= v.spin.position.y;
+        v.spin.position.y = v.spin.userData.baseY + Math.sin(time * 2) * 0.15;
+        v.spin.rotation.y = time;
+      } else if (st.type === "foundry") v.spin.rotation.z = time * 3;
+      else if (st.type === "range") v.spin.rotation.y = Math.sin(time * 2) * 0.3;
+      else if (st.type === "barracks") v.spin.rotation.y = Math.sin(time * 2) * 0.3;
+    }
+    if (st.ready && (st.type === "damage" || st.type === "control" || st.type === "support")) {
+      const key = e.id;
+      const ring = this.rings.get(key);
+      const want = Math.round(st.range * 100);
+      if (!ring || ring.userData.r !== want) {
+        if (ring) {
+          this.root.remove(ring);
+          ring.geometry.dispose();
+        }
+        const r = this.rangeRing(e);
+        r.userData.r = want;
+        this.rings.set(key, r);
+        this.root.add(r);
+      }
+    }
+  }
+
+  private syncPads(time: number): void {
+    const w = this.world;
+    const heroes = w.entities.filter((e) => e.hero && e.alive);
+    w.pads.forEach((p, i) => {
+      const m = this.padMarkers[i];
+      const mat = m.material as THREE.MeshBasicMaterial;
+      let near: Entity | undefined;
+      for (const h of heroes) {
+        if (Math.hypot(h.transform.pos.x - p.x, h.transform.pos.z - p.z) <= w.data.structures.padRadius) near = h;
+      }
+      const st = p.structureId ? w.get(p.structureId) : undefined;
+      const buildable = near && (!st ? p.zone === "neutral" || p.side === near.team : st.team === near.team && st.structure!.level < 2);
+      if (buildable && near) {
+        mat.color.copy(this.teamColors[near.team]).lerp(white, 0.4);
+        mat.opacity = 0.55 + Math.sin(time * 8) * 0.3;
+      } else if (!st && (p.zone === "neutral")) {
+        mat.color.set(0xffd060);
+        mat.opacity = 0.25;
+      } else {
+        mat.opacity = 0;
+      }
+      m.visible = mat.opacity > 0.01;
+      const hint = this.padHints[i];
+      const human = !!near && !!this.humans[near.hero!.player];
+      hint.visible = this.hints && !!buildable && human && !this.menus[near!.hero!.player];
+      if (hint.visible) {
+        const up = !!st;
+        hint.material = up ? HINTS.upgrade : HINTS.build;
+        const s = 1 + Math.sin(time * 3) * 0.03;
+        hint.scale.set(4 * s, (up ? 4 * 48 / 256 : 4 * 88 / 256) * s, 1);
+      }
+    });
+  }
+}

@@ -1,0 +1,642 @@
+{
+  "tiers": {
+    "health": {
+      "low": 600,
+      "mid": 800,
+      "high": 1000
+    },
+    "speed": {
+      "low": 5.0,
+      "mid": 6.0,
+      "high": 7.0
+    },
+    "damage": {
+      "low": 0.8,
+      "mid": 1.0,
+      "high": 1.25
+    }
+  },
+  "baseline": {
+    "radius": 0.7,
+    "height": 1.6,
+    "turnRate": 14,
+    "accel": 40,
+    "stepHeight": 0.6,
+    "maxSlope": 1.05,
+    "respawnSeconds": 6,
+    "blockMoveMul": 0.4,
+    "blockFrontalMul": 0.25,
+    "dodgeSpeed": 13,
+    "dodgeSeconds": 0.32,
+    "dodgeCooldown": 0.9,
+    "superMax": 100,
+    "superPerDamageDealt": 0.06,
+    "superPerDamageTaken": 0.04,
+    "hitStunSeconds": 0.18,
+    "comboCooldown": 0.7,
+    "commanderPriority": 3,
+    "cowedDamageMul": 0.75
+  },
+  "heroes": {
+    "warlord": {
+      "name": "Warlord",
+      "blurb": "Brute. Slam cows and slows; Quake crushes the slowed. Warcry refreshes Slam.",
+      "health": "high",
+      "speed": "mid",
+      "damage": "mid",
+      "defaultBuild": "barracks",
+      "hooks": {
+        "auraRadius": 7,
+        "auraDamageMul": 1.15,
+        "heavyStatMul": 1.25
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 42,
+              "range": 2.4,
+              "arcDeg": 120,
+              "dur": 0.36,
+              "hitAt": 0.16,
+              "lunge": 3.0,
+              "knockback": 1.5
+            },
+            {
+              "damage": 42,
+              "range": 2.4,
+              "arcDeg": 120,
+              "dur": 0.36,
+              "hitAt": 0.16,
+              "lunge": 3.0,
+              "knockback": 1.5
+            },
+            {
+              "damage": 70,
+              "range": 2.7,
+              "arcDeg": 150,
+              "dur": 0.55,
+              "hitAt": 0.28,
+              "lunge": 4.5,
+              "knockback": 6
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight"
+        },
+        "b": {
+          "kind": "slam",
+          "damage": 85,
+          "radius": 3.2,
+          "offset": 1.4,
+          "dur": 0.7,
+          "hitAt": 0.42,
+          "cooldown": 5,
+          "knockback": 7,
+          "slowMul": 0.5,
+          "slowSeconds": 1.5,
+          "anim": "attack_a",
+          "bot": "fight",
+          "botRange": 3.2,
+          "cowSeconds": 3
+        },
+        "r": {
+          "kind": "warcry",
+          "radius": 10,
+          "damageMul": 1.35,
+          "speedMul": 1.25,
+          "seconds": 6,
+          "cooldown": 16,
+          "dur": 0.5,
+          "anim": "idle",
+          "bot": "allies",
+          "resetB": true
+        },
+        "z": {
+          "kind": "quake",
+          "damage": 220,
+          "structureDamage": 140,
+          "radius": 6,
+          "stunSeconds": 1.2,
+          "knockback": 9,
+          "dur": 1.0,
+          "hitAt": 0.7,
+          "anim": "attack_a",
+          "bot": "fight",
+          "botRange": 4,
+          "vsSlowedMul": 1.5,
+          "stunBonus": 0.6
+        }
+      },
+      "botRange": 1.8
+    },
+    "engineer": {
+      "name": "Engineer",
+      "blurb": "Cheaper structures and upgrades. Repairs. Raises siege works and a ballista to perch on them.",
+      "health": "mid",
+      "speed": "mid",
+      "damage": "low",
+      "defaultBuild": "damage",
+      "botRange": 1.8,
+      "hooks": {
+        "costMul": 0.8,
+        "upgradeCostMul": 0.6
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 41,
+              "range": 2.2,
+              "arcDeg": 120,
+              "dur": 0.36,
+              "hitAt": 0.16,
+              "lunge": 2.5,
+              "knockback": 1.2
+            },
+            {
+              "damage": 41,
+              "range": 2.2,
+              "arcDeg": 120,
+              "dur": 0.36,
+              "hitAt": 0.16,
+              "lunge": 2.5,
+              "knockback": 1.2
+            },
+            {
+              "damage": 65,
+              "range": 2.5,
+              "arcDeg": 150,
+              "dur": 0.504,
+              "hitAt": 0.24,
+              "lunge": 3.5,
+              "knockback": 3.5999999999999996
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight"
+        },
+        "b": {
+          "kind": "repair",
+          "anim": "attack_a",
+          "radius": 6,
+          "heal": 350,
+          "damage": 40,
+          "dur": 0.6,
+          "hitAt": 0.3,
+          "cooldown": 8,
+          "bot": "repair"
+        },
+        "r": {
+          "kind": "works",
+          "anim": "attack_a",
+          "size": 2,
+          "height": 1.5,
+          "length": 5,
+          "width": 0.5,
+          "range": 5,
+          "seconds": 25,
+          "dur": 0.7,
+          "hitAt": 0.45,
+          "cooldown": 20,
+          "bot": "works",
+          "botRange": 12
+        },
+        "z": {
+          "kind": "ballista",
+          "anim": "attack_a",
+          "hp": 180,
+          "damage": 80,
+          "range": 11,
+          "cooldown": 1.8,
+          "seconds": 30,
+          "perchMul": 1.25,
+          "vs": {
+            "grunt": 0.6,
+            "ranged": 1.0,
+            "heavy": 1.3,
+            "hero": 1.1,
+            "structure": 0.8
+          },
+          "dur": 0.8,
+          "hitAt": 0.5,
+          "bot": "fight",
+          "botRange": 8
+        }
+      }
+    },
+    "raider": {
+      "name": "Raider",
+      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills reset Leap.",
+      "health": "low",
+      "speed": "high",
+      "damage": "mid",
+      "defaultBuild": "barracks",
+      "botRange": 1.6,
+      "hooks": {
+        "flankMul": 1.5,
+        "awayProductionMul": 0.85,
+        "awayRadius": 28,
+        "stepHeight": 1.4,
+        "maxSlope": 2.2,
+        "killResetsB": 1
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 34,
+              "range": 2.0,
+              "arcDeg": 110,
+              "dur": 0.26,
+              "hitAt": 0.1,
+              "lunge": 3.5,
+              "knockback": 1.0
+            },
+            {
+              "damage": 34,
+              "range": 2.0,
+              "arcDeg": 110,
+              "dur": 0.26,
+              "hitAt": 0.1,
+              "lunge": 3.5,
+              "knockback": 1.0
+            },
+            {
+              "damage": 55,
+              "range": 2.3,
+              "arcDeg": 140,
+              "dur": 0.364,
+              "hitAt": 0.15000000000000002,
+              "lunge": 4.8999999999999995,
+              "knockback": 3.0
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight"
+        },
+        "b": {
+          "kind": "leap",
+          "anim": "attack_a",
+          "range": 8,
+          "damage": 70,
+          "radius": 2.2,
+          "dur": 0.55,
+          "hitAt": 0.5,
+          "cooldown": 5,
+          "knockback": 4,
+          "bot": "fight",
+          "botRange": 7
+        },
+        "r": {
+          "kind": "stealth",
+          "anim": "idle",
+          "seconds": 4,
+          "speedMul": 1.3,
+          "ambushMul": 2.0,
+          "dur": 0.3,
+          "hitAt": 0.1,
+          "cooldown": 14,
+          "bot": "approach",
+          "botRange": 12
+        },
+        "z": {
+          "kind": "dash",
+          "anim": "attack_a",
+          "range": 10,
+          "damage": 180,
+          "width": 1.4,
+          "dur": 0.45,
+          "hitAt": 0.02,
+          "bot": "fight",
+          "botRange": 8,
+          "structureDamage": 120,
+          "knockback": 6,
+          "executeBelow": 0.4,
+          "executeMul": 1.4
+        }
+      }
+    },
+    "summoner": {
+      "name": "Summoner",
+      "blurb": "Necromancer. Hex marks foes: minions hit them harder and the hexed dead rise to serve.",
+      "health": "low",
+      "speed": "mid",
+      "damage": "low",
+      "defaultBuild": "range",
+      "botRange": 6,
+      "hooks": {
+        "productionMul": 1.1,
+        "hexMinionMul": 1.3,
+        "raiseMax": 5,
+        "raiseSeconds": 15
+      },
+      "abilities": {
+        "a": {
+          "kind": "shoot",
+          "anim": "attack_a",
+          "damage": 24,
+          "range": 9,
+          "speed": 16,
+          "dur": 0.45,
+          "hitAt": 0.22,
+          "cooldown": 0,
+          "bot": "fight",
+          "botRange": 8.5
+        },
+        "b": {
+          "kind": "hex",
+          "anim": "attack_a",
+          "damage": 70,
+          "radius": 2.6,
+          "range": 8,
+          "delay": 0.9,
+          "slowMul": 0.5,
+          "slowSeconds": 1.5,
+          "dur": 0.5,
+          "hitAt": 0.3,
+          "cooldown": 7,
+          "bot": "fight",
+          "botRange": 8,
+          "hexSeconds": 6
+        },
+        "r": {
+          "kind": "summon",
+          "anim": "attack_a",
+          "units": {
+            "grunt": 2
+          },
+          "seconds": 15,
+          "dur": 0.6,
+          "hitAt": 0.4,
+          "cooldown": 24,
+          "bot": "fight",
+          "botRange": 10
+        },
+        "z": {
+          "kind": "summon",
+          "anim": "attack_a",
+          "units": {
+            "grunt": 2,
+            "heavy": 1,
+            "ranged": 1
+          },
+          "seconds": 30,
+          "dur": 0.9,
+          "hitAt": 0.6,
+          "bot": "fight",
+          "botRange": 10,
+          "hexRadius": 7
+        }
+      }
+    },
+    "duelist": {
+      "name": "Duelist",
+      "blurb": "Fencer. A clean parry resets Dash and opens a critical strike. Flurry punishes the stunned.",
+      "health": "mid",
+      "speed": "mid",
+      "damage": "high",
+      "defaultBuild": "damage",
+      "botRange": 1.8,
+      "hooks": {
+        "heroDamageMul": 1.05
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 36,
+              "range": 2.4,
+              "arcDeg": 100,
+              "dur": 0.3,
+              "hitAt": 0.12,
+              "lunge": 3.5,
+              "knockback": 1.0
+            },
+            {
+              "damage": 36,
+              "range": 2.4,
+              "arcDeg": 100,
+              "dur": 0.3,
+              "hitAt": 0.12,
+              "lunge": 3.5,
+              "knockback": 1.0
+            },
+            {
+              "damage": 58,
+              "range": 2.6999999999999997,
+              "arcDeg": 130,
+              "dur": 0.42,
+              "hitAt": 0.18,
+              "lunge": 4.8999999999999995,
+              "knockback": 3.0
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight"
+        },
+        "b": {
+          "kind": "dash",
+          "anim": "attack_a",
+          "range": 6,
+          "damage": 70,
+          "width": 1.2,
+          "dur": 0.3,
+          "hitAt": 0.02,
+          "cooldown": 5,
+          "knockback": 3,
+          "bot": "fight",
+          "botRange": 5.5
+        },
+        "r": {
+          "kind": "parry",
+          "anim": "idle",
+          "window": 0.6,
+          "counter": 110,
+          "stunSeconds": 0.8,
+          "dur": 0.6,
+          "hitAt": 0.0,
+          "cooldown": 7,
+          "bot": "defend",
+          "openingSeconds": 2.5,
+          "openingMul": 1.5
+        },
+        "z": {
+          "kind": "flurry",
+          "anim": "attack_a",
+          "count": 7,
+          "interval": 0.14,
+          "damage": 45,
+          "range": 3.2,
+          "arcDeg": 160,
+          "dur": 1.2,
+          "hitAt": 0.1,
+          "lunge": 1.5,
+          "bot": "fight",
+          "botRange": 2.8,
+          "vsStunnedMul": 1.4
+        }
+      }
+    },
+    "warden": {
+      "name": "Warden",
+      "blurb": "Keeper. Walls come with snares at each end; snares inside the Thorn zone re-arm.",
+      "health": "high",
+      "speed": "mid",
+      "damage": "low",
+      "defaultBuild": "control",
+      "botRange": 2.2,
+      "hooks": {
+        "controlTowerMul": 1.5,
+        "speedMul": 0.92
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 44,
+              "range": 2.8,
+              "arcDeg": 90,
+              "dur": 0.4,
+              "hitAt": 0.18,
+              "lunge": 2.0,
+              "knockback": 1.0
+            },
+            {
+              "damage": 44,
+              "range": 2.8,
+              "arcDeg": 90,
+              "dur": 0.4,
+              "hitAt": 0.18,
+              "lunge": 2.0,
+              "knockback": 1.0
+            },
+            {
+              "damage": 70,
+              "range": 3.0999999999999996,
+              "arcDeg": 120,
+              "dur": 0.5599999999999999,
+              "hitAt": 0.27,
+              "lunge": 2.8,
+              "knockback": 3.0
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight"
+        },
+        "b": {
+          "kind": "trap",
+          "anim": "attack_a",
+          "range": 4,
+          "radius": 1.3,
+          "damage": 70,
+          "stunSeconds": 1.4,
+          "arm": 0.5,
+          "seconds": 30,
+          "dur": 0.45,
+          "hitAt": 0.25,
+          "cooldown": 4,
+          "max": 3,
+          "bot": "fight",
+          "botRange": 5
+        },
+        "r": {
+          "kind": "wall",
+          "anim": "attack_a",
+          "length": 6,
+          "offset": 2.5,
+          "seconds": 8,
+          "dur": 0.5,
+          "hitAt": 0.3,
+          "cooldown": 15,
+          "bot": "defend",
+          "endTraps": true
+        },
+        "z": {
+          "kind": "zone",
+          "anim": "attack_a",
+          "radius": 6,
+          "dps": 35,
+          "slowMul": 0.4,
+          "seconds": 6,
+          "dur": 0.7,
+          "hitAt": 0.4,
+          "bot": "fight",
+          "botRange": 5,
+          "rearmSeconds": 2
+        }
+      }
+    },
+    "herald": {
+      "name": "Herald",
+      "role": "commander",
+      "blurb": "2v2 commander. Carries the house banner, rallies troops, gives orders.",
+      "health": "low",
+      "speed": "high",
+      "damage": "low",
+      "defaultBuild": "barracks",
+      "botRange": 6,
+      "hooks": {
+        "commandAuraRadius": 6,
+        "commandAuraSpeed": 1.15
+      },
+      "abilities": {
+        "a": {
+          "kind": "shoot",
+          "anim": "attack_a",
+          "damage": 14,
+          "range": 8,
+          "speed": 18,
+          "dur": 0.5,
+          "hitAt": 0.25,
+          "cooldown": 0.3,
+          "bot": "fight",
+          "botRange": 7
+        },
+        "b": {
+          "kind": "banner",
+          "anim": "attack_a",
+          "range": 6,
+          "seconds": 30,
+          "dur": 0.45,
+          "hitAt": 0.25,
+          "cooldown": 6,
+          "bot": "banner"
+        },
+        "r": {
+          "kind": "warcry",
+          "anim": "attack_a",
+          "radius": 7,
+          "damageMul": 1.15,
+          "speedMul": 1.3,
+          "seconds": 5,
+          "dur": 0.5,
+          "hitAt": 0.2,
+          "cooldown": 14,
+          "bot": "allies"
+        },
+        "z": {
+          "kind": "rally",
+          "anim": "attack_a",
+          "radius": 9,
+          "healFrac": 0.4,
+          "guardMul": 0.7,
+          "seconds": 4,
+          "dur": 0.6,
+          "hitAt": 0.3,
+          "bot": "allies"
+        }
+      }
+    }
+  }
+}

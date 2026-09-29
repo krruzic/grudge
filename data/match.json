@@ -1,0 +1,42 @@
+{
+  "tickRate": 30,
+  "maxTicksPerFrame": 5,
+  "matchSeconds": 360,
+  "suddenDeathSeconds": 60,
+  "suddenDeath": {
+    "productionMul": 1.6,
+    "costMul": 0.6,
+    "unitDamageMul": 1.7
+  },
+  "economy": {
+    "start": 200,
+    "income": 3.5,
+    "bounty": {
+      "hero": 60,
+      "structure": 50,
+      "coreDamagePer100": 0
+    },
+    "refundOnUpgradeLoss": 0
+  },
+  "catchUp": {
+    "resourceScale": 250,
+    "structureWeight": 0.35,
+    "incomeBoost": 0.35,
+    "productionBoost": 0.25
+  },
+  "terrain": {
+    "highGroundDelta": 1.0,
+    "highGroundRangeMul": 1.2,
+    "uphillMissChance": 0.25,
+    "slopeThreshold": 0.28,
+    "fordSpeedMul": 0.6,
+    "wallHeight": 2.6,
+    "eyeHeight": 1.0
+  },
+  "directives": {
+    "holdLeash": 9,
+    "followRadius": 3.5,
+    "followLeash": 9,
+    "followEngage": 10
+  }
+}

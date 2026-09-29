@@ -1,0 +1,35 @@
+{
+  "lowResHeight": 480,
+  "colorBits": 8,
+  "dither": 0,
+  "pitchDeg": 42,
+  "fovDeg": 46,
+  "minViewWidth": 28,
+  "viewMargin": 14,
+  "skyZenith": "#2f7fd6",
+  "skyHorizon": "#d8e4ee",
+  "fogColor": "#b4c8dc",
+  "fogNearFactor": 1.1,
+  "fogFarFactor": 2.8,
+  "sunColor": "#fff0d0",
+  "sunIntensity": 2.4,
+  "sunDir": [
+    -0.75,
+    0.85,
+    0.3
+  ],
+  "shadowMapSize": 2048,
+  "ambientSky": "#b8d4ff",
+  "ambientGround": "#6a5a3a",
+  "ambientIntensity": 1.35,
+  "teamColors": [
+    "#2a5cff",
+    "#ff2a2a"
+  ],
+  "saturation": 1.12,
+  "heroScale": 1.5,
+  "vignette": 0.1,
+  "viBlur": 0,
+  "shadows": false,
+  "outlines": false
+}

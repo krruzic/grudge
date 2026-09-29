@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Grudge</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      canvas { display: block; width: 100vw; height: 100vh; }
+      :root { --ink: #0b0806; }
+      #ui, #ui * { box-sizing: border-box; }
+      #ui {
+        position: fixed; inset: 0; pointer-events: none; color: #fff;
+        font: 900 18px "Arial Black", "Verdana", sans-serif; letter-spacing: 1px;
+        text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 3px 3px 0 var(--ink);
+      }
+      #pads {
+        position: fixed; left: 8px; bottom: 8px; color: #fff;
+        font: bold 14px monospace; text-shadow: 2px 2px 0 #000; white-space: pre;
+      }
+      .hudui { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: auto; }
+      @keyframes blink { 50% { opacity: 0.25; } }
+      #boot { position: fixed; inset: 0; z-index: 10; background: #000; overflow: hidden; }
+      #boot::after { content: ""; position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 0.4s steps(5); pointer-events: none; }
+      #boot.gone::after { opacity: 1; }
+      #boot.out { opacity: 0; transition: opacity 0.4s steps(5); }
+      #boot.out .frame { display: none; }
+      #boot .frame { position: absolute; left: 50%; top: 50%; width: min(100vw, 177.78vh); height: min(56.25vw, 100vh); transform: translate(-50%, -50%); }
+      #boot .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: bootin 0.5s steps(5) both; }
+      #boot .logo { position: absolute; left: 50%; top: 2.5%; width: 34%; transform: translateX(-50%); animation: bootin 0.5s 0.15s steps(5) both; }
+      #boot .load { position: absolute; right: 4%; bottom: 5%; height: 11%; display: flex; align-items: center; gap: 1.2vh; }
+      #boot .load img { height: 80%; animation: nowblink 1.4s steps(1) infinite; filter: drop-shadow(0.4vh 0.4vh 0 #0b0806); }
+      #boot .coin { height: 90%; aspect-ratio: 1; perspective: 30vh; }
+      #boot .coin i { display: block; width: 100%; height: 100%; border-radius: 50%; box-sizing: border-box;
+        background: url(/loading/gold.png) center / 180% auto; border: 0.55vh solid #3a2206;
+        box-shadow: inset 0 0 0 0.5vh #c89830, inset 0 0 0 0.9vh #6a4410, 0.4vh 0.4vh 0 #0b0806;
+        animation: coin 1.1s steps(16) infinite; }
+      @keyframes nowblink { 70% { opacity: 0; } }
+      @keyframes coin { to { transform: rotateY(360deg); } }
+      @keyframes bootin { from { opacity: 0; } }
+    </style>
+  </head>
+  <body>
+    <div id="boot">
+      <div class="frame">
+        <img class="art" src="/loading/art.png" alt="" />
+        <img class="logo" src="/loading/logo.png" alt="Grudge" />
+        <div class="load"><div class="coin"><i></i></div><img src="/loading/now.png" alt="Now loading" /></div>
+      </div>
+    </div>
+    <div id="ui"></div>
+    <div id="pads"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

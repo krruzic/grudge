@@ -1,0 +1,1053 @@
+{
+  "name": "Grudgeholm Crossing",
+  "blurb": "Two river channels split the field. Hold the long island, wade the fords and fight over the neutral pads.",
+  "emblem": "river",
+  "width": 96,
+  "depth": 48,
+  "mirror": "x",
+  "rimHeight": 4.5,
+  "waterLevel": -0.5,
+  "notes": "Authored for the left half (x < 48) and mirrored across x = 48. Height ops run on the (width+1)x(depth+1) vertex grid in order: noise, then shapes (rect or circle, target y or dy, soft edge width in meters, mode max|min|set|add; edge 0 makes a cliff). Cell ops set kinds: wall (style castle|ruin|rim), water (becomes ground where the terrain rises above the water line), ford, bridge (flat deck at y). Flags: dirt, paving, grass (tall grass hides units). Props with solid=true block their cell.",
+  "ops": [
+    {
+      "op": "noise",
+      "amp": 0.45,
+      "scale": 0.11,
+      "seed": 3
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": -10,
+      "z": -10,
+      "w": 116,
+      "h": 11,
+      "y": 4.5,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 2.5
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": -10,
+      "z": 47,
+      "w": 116,
+      "h": 11,
+      "y": 4.5,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 2.5
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": -10,
+      "z": -10,
+      "w": 11,
+      "h": 70,
+      "y": 4.5,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 2.5
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 6,
+      "z": 5,
+      "r": 1.5,
+      "y": 1.3,
+      "edge": 3.5,
+      "mode": "max",
+      "wobble": 1.5
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 24,
+      "z": 7,
+      "r": 5,
+      "y": 3.0,
+      "edge": 4,
+      "mode": "max",
+      "wobble": 1.5
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 15,
+      "z": 1,
+      "w": 6,
+      "h": 6,
+      "y": 3.0,
+      "edge": 0,
+      "mode": "max",
+      "wobble": 0.0
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 22,
+      "z": 19,
+      "w": 7,
+      "h": 10,
+      "y": 1.8,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 1.2
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 16,
+      "z": 20,
+      "r": 1,
+      "y": 0.9,
+      "edge": 4,
+      "mode": "max",
+      "wobble": 1.5
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 31,
+      "z": 31,
+      "r": 1.5,
+      "y": 1.2,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 1.5
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 18,
+      "z": 42,
+      "r": 3,
+      "y": 2.4,
+      "edge": 4,
+      "mode": "max",
+      "wobble": 1.5
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 27,
+      "z": 36,
+      "r": 2,
+      "y": 1.0,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 1.5
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 38.5,
+      "z": 2,
+      "w": 12,
+      "h": 44,
+      "y": 0.8,
+      "edge": 2.5,
+      "mode": "set",
+      "wobble": 1.0
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 48,
+      "z": 24,
+      "r": 2,
+      "y": 1.7,
+      "edge": 3.5,
+      "mode": "max",
+      "wobble": 0.8
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 43,
+      "z": 9,
+      "r": 1.5,
+      "y": 1.2,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 1.0
+    },
+    {
+      "op": "shape",
+      "shape": "circle",
+      "x": 43,
+      "z": 39,
+      "r": 1.5,
+      "y": 1.2,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 1.0
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 35,
+      "z": -5,
+      "w": 4,
+      "h": 60,
+      "y": -2.2,
+      "edge": 1.2,
+      "mode": "min",
+      "wobble": 0.8
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 30.5,
+      "z": 21.5,
+      "w": 3,
+      "h": 5,
+      "y": -0.6,
+      "edge": 5,
+      "mode": "set",
+      "wobble": 0.4
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 33.5,
+      "z": 21,
+      "w": 6,
+      "h": 6,
+      "y": -0.62,
+      "edge": 4,
+      "mode": "set",
+      "wobble": 0.4
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 39,
+      "z": 6,
+      "w": 2.5,
+      "h": 4,
+      "y": 1.0,
+      "edge": 2,
+      "mode": "set",
+      "wobble": 0.3
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 39,
+      "z": 40,
+      "w": 2.5,
+      "h": 2,
+      "y": 0.45,
+      "edge": 2,
+      "mode": "set",
+      "wobble": 0.3
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 29,
+      "z": 5,
+      "w": 6,
+      "h": 6,
+      "y": 1.0,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 0.8
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 31,
+      "z": 39,
+      "w": 4,
+      "h": 4,
+      "y": 0.45,
+      "edge": 2,
+      "mode": "set",
+      "wobble": 0.8
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 1,
+      "z": 12,
+      "w": 12,
+      "h": 24,
+      "y": 0.8,
+      "edge": 0,
+      "mode": "set"
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 16,
+      "z": 20,
+      "w": 3,
+      "h": 8,
+      "y": 0.8,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 0.8
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 5,
+      "z": 5,
+      "w": 5,
+      "h": 4,
+      "y": 0.8,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 0.8
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 5,
+      "z": 39,
+      "w": 5,
+      "h": 4,
+      "y": 0.8,
+      "edge": 3,
+      "mode": "max",
+      "wobble": 0.8
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 14,
+      "z": 9,
+      "w": 1,
+      "h": 30,
+      "y": -1.4,
+      "edge": 0,
+      "mode": "min"
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 1,
+      "z": 10,
+      "w": 14,
+      "h": 1,
+      "y": -1.4,
+      "edge": 0,
+      "mode": "min"
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 1,
+      "z": 37,
+      "w": 14,
+      "h": 1,
+      "y": -1.4,
+      "edge": 0,
+      "mode": "min"
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 37,
+      "z": 15.5,
+      "w": 12,
+      "h": 1,
+      "y": -0.62,
+      "edge": 2.5,
+      "mode": "set",
+      "wobble": 0.7
+    },
+    {
+      "op": "shape",
+      "shape": "rect",
+      "x": 37,
+      "z": 31.5,
+      "w": 12,
+      "h": 1,
+      "y": -0.62,
+      "edge": 2.5,
+      "mode": "set",
+      "wobble": 0.7
+    },
+    {
+      "op": "wall",
+      "style": "rim",
+      "x": 0,
+      "z": 0,
+      "w": 96,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "rim",
+      "x": 0,
+      "z": 47,
+      "w": 96,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "rim",
+      "x": 0,
+      "z": 0,
+      "w": 1,
+      "h": 48
+    },
+    {
+      "op": "water",
+      "x": 35,
+      "z": 1,
+      "w": 4,
+      "h": 46
+    },
+    {
+      "op": "ford",
+      "x": 32,
+      "z": 21,
+      "w": 8,
+      "h": 6
+    },
+    {
+      "op": "ford",
+      "x": 37,
+      "z": 14,
+      "w": 12,
+      "h": 4
+    },
+    {
+      "op": "ford",
+      "x": 37,
+      "z": 30,
+      "w": 12,
+      "h": 4
+    },
+    {
+      "op": "bridge",
+      "style": "stone",
+      "y": 1.0,
+      "x": 35,
+      "z": 6,
+      "w": 5,
+      "h": 4
+    },
+    {
+      "op": "bridge",
+      "style": "wood",
+      "y": 0.45,
+      "x": 35,
+      "z": 40,
+      "w": 5,
+      "h": 2
+    },
+    {
+      "op": "water",
+      "x": 13,
+      "z": 9,
+      "w": 3,
+      "h": 30
+    },
+    {
+      "op": "water",
+      "x": 1,
+      "z": 9,
+      "w": 12,
+      "h": 3
+    },
+    {
+      "op": "water",
+      "x": 1,
+      "z": 36,
+      "w": 12,
+      "h": 3
+    },
+    {
+      "op": "bridge",
+      "style": "wood",
+      "y": 0.8,
+      "x": 13,
+      "z": 20,
+      "w": 3,
+      "h": 8
+    },
+    {
+      "op": "bridge",
+      "style": "wood",
+      "y": 0.8,
+      "x": 6,
+      "z": 9,
+      "w": 3,
+      "h": 3
+    },
+    {
+      "op": "bridge",
+      "style": "wood",
+      "y": 0.8,
+      "x": 6,
+      "z": 36,
+      "w": 3,
+      "h": 3
+    },
+    {
+      "op": "paving",
+      "x": 1,
+      "z": 12,
+      "w": 12,
+      "h": 24
+    },
+    {
+      "op": "wall",
+      "style": "castle",
+      "x": 1,
+      "z": 12,
+      "w": 5,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "castle",
+      "x": 9,
+      "z": 12,
+      "w": 4,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "castle",
+      "x": 1,
+      "z": 35,
+      "w": 5,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "castle",
+      "x": 9,
+      "z": 35,
+      "w": 4,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "castle",
+      "x": 12,
+      "z": 12,
+      "w": 1,
+      "h": 8
+    },
+    {
+      "op": "wall",
+      "style": "castle",
+      "x": 12,
+      "z": 28,
+      "w": 1,
+      "h": 8
+    },
+    {
+      "op": "dirt",
+      "x": 15,
+      "z": 22,
+      "w": 20,
+      "h": 4
+    },
+    {
+      "op": "dirt",
+      "x": 6,
+      "z": 1,
+      "w": 3,
+      "h": 9
+    },
+    {
+      "op": "dirt",
+      "x": 6,
+      "z": 38,
+      "w": 3,
+      "h": 3
+    },
+    {
+      "op": "dirt",
+      "x": 6,
+      "z": 40,
+      "w": 29,
+      "h": 2
+    },
+    {
+      "op": "dirt",
+      "x": 13,
+      "z": 7,
+      "w": 22,
+      "h": 3
+    },
+    {
+      "op": "dirt",
+      "x": 39,
+      "z": 23,
+      "w": 9,
+      "h": 2
+    },
+    {
+      "op": "dirt",
+      "x": 47,
+      "z": 10,
+      "w": 1,
+      "h": 28
+    },
+    {
+      "op": "dirt",
+      "x": 39,
+      "z": 7,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "op": "dirt",
+      "x": 39,
+      "z": 40,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 44,
+      "z": 20,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 44,
+      "z": 27,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "op": "grass",
+      "x": 40,
+      "z": 13,
+      "w": 3,
+      "h": 4
+    },
+    {
+      "op": "grass",
+      "x": 40,
+      "z": 31,
+      "w": 3,
+      "h": 4
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 18,
+      "z": 17,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 18,
+      "z": 30,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 22,
+      "z": 19,
+      "w": 3,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 27,
+      "z": 19,
+      "w": 2,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 22,
+      "z": 28,
+      "w": 2,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 27,
+      "z": 28,
+      "w": 2,
+      "h": 1
+    },
+    {
+      "op": "wall",
+      "style": "ruin",
+      "x": 28,
+      "z": 20,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "op": "grass",
+      "x": 15,
+      "z": 28,
+      "w": 6,
+      "h": 7
+    },
+    {
+      "op": "grass",
+      "x": 26,
+      "z": 14,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "op": "grass",
+      "x": 30,
+      "z": 29,
+      "w": 4,
+      "h": 6
+    },
+    {
+      "op": "grass",
+      "x": 22,
+      "z": 42,
+      "w": 10,
+      "h": 5
+    },
+    {
+      "op": "grass",
+      "x": 2,
+      "z": 1,
+      "w": 4,
+      "h": 6
+    },
+    {
+      "op": "grass",
+      "x": 29,
+      "z": 1,
+      "w": 5,
+      "h": 4
+    }
+  ],
+  "props": [
+    {
+      "type": "arch",
+      "x": 7.5,
+      "z": 12.5,
+      "rot": 0
+    },
+    {
+      "type": "arch",
+      "x": 7.5,
+      "z": 35.5,
+      "rot": 0
+    },
+    {
+      "type": "arch",
+      "x": 12.5,
+      "z": 24,
+      "rot": 90
+    },
+    {
+      "type": "tower",
+      "x": 1.5,
+      "z": 12.5,
+      "solid": true
+    },
+    {
+      "type": "tower",
+      "x": 12.5,
+      "z": 12.5,
+      "solid": true
+    },
+    {
+      "type": "tower",
+      "x": 1.5,
+      "z": 35.5,
+      "solid": true
+    },
+    {
+      "type": "tower",
+      "x": 12.5,
+      "z": 35.5,
+      "solid": true
+    },
+    {
+      "type": "banner",
+      "x": 11.5,
+      "z": 19.5
+    },
+    {
+      "type": "banner",
+      "x": 11.5,
+      "z": 28.5
+    },
+    {
+      "type": "torch",
+      "x": 16.5,
+      "z": 19.5
+    },
+    {
+      "type": "torch",
+      "x": 16.5,
+      "z": 28.5
+    },
+    {
+      "type": "arch",
+      "x": 26,
+      "z": 19.5,
+      "rot": 0
+    },
+    {
+      "type": "arch",
+      "x": 25.5,
+      "z": 28.5,
+      "rot": 0,
+      "ruined": true
+    },
+    {
+      "type": "pine",
+      "x": 16.5,
+      "z": 41.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 19.5,
+      "z": 43.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 20.5,
+      "z": 40.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 24.5,
+      "z": 45.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 27.5,
+      "z": 44.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 30.5,
+      "z": 45.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 33.5,
+      "z": 32.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 16.5,
+      "z": 32.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 19.5,
+      "z": 34.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 3.5,
+      "z": 4.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 2.5,
+      "z": 8.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 3.5,
+      "z": 43.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 8.5,
+      "z": 45.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 17.5,
+      "z": 12.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 32.5,
+      "z": 2.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 26.5,
+      "z": 3.5,
+      "solid": true
+    },
+    {
+      "type": "pine",
+      "x": 21.5,
+      "z": 4.5,
+      "solid": true
+    },
+    {
+      "type": "rock",
+      "x": 14.5,
+      "z": 3.5,
+      "solid": true
+    },
+    {
+      "type": "rock",
+      "x": 14.5,
+      "z": 6.5,
+      "solid": true,
+      "scale": 1.3
+    },
+    {
+      "type": "rock",
+      "x": 33.5,
+      "z": 18.5,
+      "solid": true
+    },
+    {
+      "type": "rock",
+      "x": 22.5,
+      "z": 34.5,
+      "solid": true
+    },
+    {
+      "type": "rock",
+      "x": 28.5,
+      "z": 12.5,
+      "solid": true
+    },
+    {
+      "type": "crate",
+      "x": 10.5,
+      "z": 14.5,
+      "solid": true
+    },
+    {
+      "type": "crate",
+      "x": 2.5,
+      "z": 33.5,
+      "solid": true
+    },
+    {
+      "type": "statue",
+      "x": 48,
+      "z": 24,
+      "solid": true
+    },
+    {
+      "type": "rock",
+      "x": 45.5,
+      "z": 19.5,
+      "solid": true
+    },
+    {
+      "type": "rock",
+      "x": 45.5,
+      "z": 28.5,
+      "solid": true,
+      "scale": 1.2
+    },
+    {
+      "type": "tree",
+      "x": 40.5,
+      "z": 4.5,
+      "solid": true
+    },
+    {
+      "type": "tree",
+      "x": 40.5,
+      "z": 43.5,
+      "solid": true
+    },
+    {
+      "type": "arch",
+      "x": 43.5,
+      "z": 24,
+      "rot": 90,
+      "ruined": true
+    }
+  ],
+  "cores": [
+    {
+      "team": 0,
+      "x": 5,
+      "z": 24
+    }
+  ],
+  "pads": [
+    {
+      "zone": "home",
+      "x": 9,
+      "z": 17
+    },
+    {
+      "zone": "home",
+      "x": 9,
+      "z": 31
+    },
+    {
+      "zone": "home",
+      "x": 9.5,
+      "z": 24
+    },
+    {
+      "zone": "forward",
+      "x": 24,
+      "z": 8
+    },
+    {
+      "zone": "forward",
+      "x": 25,
+      "z": 35
+    },
+    {
+      "zone": "neutral",
+      "x": 48,
+      "z": 13
+    },
+    {
+      "zone": "neutral",
+      "x": 48,
+      "z": 35
+    }
+  ],
+  "spawns": [
+    {
+      "team": 0,
+      "x": 7.5,
+      "z": 27
+    }
+  ]
+}

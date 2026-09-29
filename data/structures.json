@@ -1,0 +1,127 @@
+{
+  "notes": "Costs, stats and upgrade multipliers. Tower range comes from the pad zone (zoneRange) times the type's rangeMul.",
+  "padRadius": 3.2,
+  "buildSeconds": 2.5,
+  "buildStartHpFrac": 0.3,
+  "structureRadius": 1.3,
+  "zoneRange": {
+    "home": 11,
+    "forward": 10,
+    "neutral": 11.5
+  },
+  "core": {
+    "hp": 2500,
+    "radius": 1.8
+  },
+  "types": {
+    "damage": {
+      "name": "Damage Tower",
+      "class": "tower",
+      "cost": 100,
+      "upgradeCost": 75,
+      "hp": 750,
+      "rangeMul": 1.0,
+      "damage": 55,
+      "cooldown": 1.1,
+      "projectile": {
+        "speed": 24,
+        "ballistic": false,
+        "losTolerance": 0.3
+      },
+      "vs": {
+        "grunt": 0.45,
+        "ranged": 1.0,
+        "heavy": 1.0,
+        "hero": 1.4,
+        "structure": 0
+      },
+      "upgrade": {
+        "hp": 1.4,
+        "damage": 1.5
+      }
+    },
+    "control": {
+      "name": "Control Tower",
+      "class": "tower",
+      "cost": 100,
+      "upgradeCost": 75,
+      "hp": 850,
+      "rangeMul": 0.72,
+      "damage": 14,
+      "cooldown": 2.4,
+      "slowMul": 0.5,
+      "slowSeconds": 2.0,
+      "knockback": 3.5,
+      "vs": {
+        "grunt": 1.2,
+        "ranged": 1.2,
+        "heavy": 0.5,
+        "hero": 0.8,
+        "structure": 0
+      },
+      "upgrade": {
+        "hp": 1.4,
+        "damage": 1.5,
+        "range": 1.15
+      }
+    },
+    "support": {
+      "name": "Support Tower",
+      "class": "tower",
+      "cost": 100,
+      "upgradeCost": 75,
+      "hp": 700,
+      "rangeMul": 0.75,
+      "heal": 16,
+      "heroHealMul": 0.5,
+      "damageMul": 1.15,
+      "cooldown": 0.5,
+      "upgrade": {
+        "hp": 1.4,
+        "heal": 1.6
+      }
+    },
+    "barracks": {
+      "name": "Barracks",
+      "class": "production",
+      "cost": 125,
+      "upgradeCost": 100,
+      "hp": 880,
+      "unit": "grunt",
+      "cadence": 8,
+      "upgrade": {
+        "hp": 1.3,
+        "cadence": 0.7,
+        "unitStat": 1.2
+      }
+    },
+    "range": {
+      "name": "Range",
+      "class": "production",
+      "cost": 125,
+      "upgradeCost": 100,
+      "hp": 800,
+      "unit": "ranged",
+      "cadence": 12,
+      "upgrade": {
+        "hp": 1.3,
+        "cadence": 0.7,
+        "unitStat": 1.2
+      }
+    },
+    "foundry": {
+      "name": "Foundry",
+      "class": "production",
+      "cost": 125,
+      "upgradeCost": 100,
+      "hp": 1040,
+      "unit": "heavy",
+      "cadence": 20,
+      "upgrade": {
+        "hp": 1.3,
+        "cadence": 0.7,
+        "unitStat": 1.2
+      }
+    }
+  }
+}
