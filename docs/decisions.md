@@ -341,3 +341,7 @@
 - Smash glove details: the player tag sits in the middle of the hand, tinted in the player colour. The held seal draws behind the pinching fingers. The hand opens over a portrait or a seal it can take.
 - Warden walls use `wallblock.png` (Poly Haven `medieval_blocks_03`, via Blender MCP). Engineer planks, rails and posts use the photo wood texture. `worldBox` rescales box UVs to metres so tall blocks aren't stretched.
 - World-space pad hints are scaled down from 7 to 4 units wide.
+
+## 2 VS 2 allies and combo cooldown
+- Rule `partners` ("2 VS 2 ALLIES": CHAMPIONS or COMMANDERS, default champions). It applies to both teams; it's never a per-team choice. With champions, slots 3 and 4 pick heroes on the select screen like 1 and 2, spawn as full heroes, and get normal (non-commander) controls. The HUD adds a second super meter per team and opens whichever teammate's build menu is active. `npm run sim -- --mode 2v2 --partners heroes` covers it headless.
+- Basic combos had no cooldown, so lunging hits plus hit-stun made escape impossible. Now `baseline.comboCooldown` (0.7s) applies after the finisher, and half of it if the chain is dropped early; chaining inside a combo is unaffected. Raider vs Warlord moved from about 80/20 to 58/42 over 12 matches.
