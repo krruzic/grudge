@@ -171,6 +171,9 @@ const FILLS: Record<string, Draw> = {
     c.moveTo(0, -0.9); c.lineTo(0.75, -0.6); c.lineTo(0.65, 0.2); c.quadraticCurveTo(0.4, 0.7, 0, 0.9);
     c.quadraticCurveTo(-0.4, 0.7, -0.65, 0.2); c.lineTo(-0.75, -0.6); c.closePath();
   },
+  peak: (c) => {
+    c.moveTo(-0.95, 0.8); c.lineTo(-0.35, -0.35); c.lineTo(-0.15, -0.05); c.lineTo(0.2, -0.85); c.lineTo(0.95, 0.8); c.closePath();
+  },
   castle: (c) => {
     c.moveTo(-0.85, 0.85); c.lineTo(-0.85, -0.55); c.lineTo(-0.6, -0.55); c.lineTo(-0.6, -0.3); c.lineTo(-0.35, -0.3); c.lineTo(-0.35, -0.55);
     c.lineTo(-0.2, -0.55); c.lineTo(-0.2, -0.85); c.lineTo(0.05, -0.85); c.lineTo(0.05, -0.6); c.lineTo(0.2, -0.6); c.lineTo(0.2, -0.85);

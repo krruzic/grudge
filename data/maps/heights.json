@@ -1,0 +1,776 @@
+{
+ "name": "Grudgecrag Heights",
+ "blurb": "Three roads to war: a high ridge for ambushers, the relic crag in the middle, and a slow reed marsh. Pick your lane.",
+ "emblem": "peak",
+ "width": 80,
+ "depth": 56,
+ "mirror": "x",
+ "rimHeight": 4.5,
+ "waterLevel": -0.5,
+ "notes": "Authored for the left half (x < 40) and mirrored across x = 40 by tools/mapgen-heights.py. Top: a high ridge (y 2.8) reached by a ramp from each base's north gate; its south face is a cliff you can drop off onto the middle field. Middle: the crag (y 2.2) with ramps east and west, cliffs north and south; the relic's home is on top. Bottom: a wadeable marsh with deep pools, a winding boardwalk and a reed island with the south neutral pad. A ruined wall separates the middle from the marsh, with one gap per side.",
+ "ops": [
+  {
+   "op": "noise",
+   "amp": 0.3,
+   "scale": 0.12,
+   "seed": 11
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": -10,
+   "z": -10,
+   "w": 100,
+   "h": 11,
+   "y": 4.5,
+   "edge": 3,
+   "mode": "max",
+   "wobble": 2.5
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": -10,
+   "z": 55,
+   "w": 100,
+   "h": 11,
+   "y": 4.5,
+   "edge": 3,
+   "mode": "max",
+   "wobble": 2.5
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": -10,
+   "z": -10,
+   "w": 11,
+   "h": 76,
+   "y": 4.5,
+   "edge": 3,
+   "mode": "max",
+   "wobble": 2.5
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 1,
+   "z": 13,
+   "w": 39,
+   "h": 26,
+   "y": 0.35,
+   "edge": 2,
+   "mode": "set",
+   "wobble": 1.0
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 16,
+   "z": 1,
+   "w": 48,
+   "h": 10,
+   "y": 2.8,
+   "edge": 0,
+   "mode": "max"
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 4,
+   "z": 2,
+   "w": 12,
+   "h": 9,
+   "y": 2.8,
+   "edge": 4.5,
+   "mode": "max",
+   "wobble": 0.6
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 30,
+   "z": 5,
+   "r": 2.2,
+   "y": 3.3,
+   "edge": 2,
+   "mode": "max",
+   "wobble": 0.8
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 1,
+   "z": 19,
+   "w": 12,
+   "h": 18,
+   "y": 1.0,
+   "edge": 0,
+   "mode": "set"
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 5,
+   "z": 14,
+   "w": 5,
+   "h": 5,
+   "y": 1.0,
+   "edge": 3.5,
+   "mode": "max",
+   "wobble": 0.4
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 5,
+   "z": 37,
+   "w": 5,
+   "h": 3,
+   "y": 1.0,
+   "edge": 3,
+   "mode": "max",
+   "wobble": 0.4
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 13,
+   "z": 25,
+   "w": 3,
+   "h": 6,
+   "y": 1.0,
+   "edge": 3.5,
+   "mode": "max",
+   "wobble": 0.4
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 33,
+   "z": 22,
+   "w": 14,
+   "h": 12,
+   "y": 2.2,
+   "edge": 0,
+   "mode": "max"
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 26,
+   "z": 25,
+   "w": 7,
+   "h": 6,
+   "y": 2.2,
+   "edge": 5,
+   "mode": "max",
+   "wobble": 0.5
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 14,
+   "z": 41,
+   "w": 52,
+   "h": 14,
+   "y": -0.62,
+   "edge": 2,
+   "mode": "set",
+   "wobble": 1.2
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 5,
+   "z": 40,
+   "w": 10,
+   "h": 8,
+   "y": 0.3,
+   "edge": 3,
+   "mode": "max",
+   "wobble": 0.8
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 40,
+   "z": 46,
+   "r": 3.2,
+   "y": 0.55,
+   "edge": 1.5,
+   "mode": "max",
+   "wobble": 0.8
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 24,
+   "z": 51,
+   "r": 2.2,
+   "y": 0.45,
+   "edge": 1.5,
+   "mode": "max",
+   "wobble": 0.8
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 31,
+   "z": 44,
+   "r": 1.6,
+   "y": 0.4,
+   "edge": 1.2,
+   "mode": "max",
+   "wobble": 0.6
+  },
+  {
+   "op": "wall",
+   "style": "rim",
+   "x": 0,
+   "z": 0,
+   "w": 80,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "rim",
+   "x": 0,
+   "z": 55,
+   "w": 80,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "rim",
+   "x": 0,
+   "z": 0,
+   "w": 1,
+   "h": 56
+  },
+  {
+   "op": "water",
+   "x": 14,
+   "z": 41,
+   "w": 26,
+   "h": 14
+  },
+  {
+   "op": "water",
+   "x": 33,
+   "z": 41,
+   "w": 4,
+   "h": 3,
+   "deep": true
+  },
+  {
+   "op": "water",
+   "x": 19,
+   "z": 53,
+   "w": 4,
+   "h": 2,
+   "deep": true
+  },
+  {
+   "op": "bridge",
+   "style": "wood",
+   "y": 0.2,
+   "x": 15,
+   "z": 46,
+   "w": 10,
+   "h": 2
+  },
+  {
+   "op": "bridge",
+   "style": "wood",
+   "y": 0.2,
+   "x": 25,
+   "z": 46,
+   "w": 2,
+   "h": 5
+  },
+  {
+   "op": "bridge",
+   "style": "wood",
+   "y": 0.2,
+   "x": 27,
+   "z": 49,
+   "w": 10,
+   "h": 2
+  },
+  {
+   "op": "bridge",
+   "style": "wood",
+   "y": 0.35,
+   "x": 37,
+   "z": 49,
+   "w": 6,
+   "h": 2
+  },
+  {
+   "op": "grass",
+   "x": 38,
+   "z": 43,
+   "w": 4,
+   "h": 2
+  },
+  {
+   "op": "grass",
+   "x": 22,
+   "z": 50,
+   "w": 3,
+   "h": 3
+  },
+  {
+   "op": "grass",
+   "x": 30,
+   "z": 43,
+   "w": 2,
+   "h": 2
+  },
+  {
+   "op": "paving",
+   "x": 1,
+   "z": 19,
+   "w": 12,
+   "h": 18
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 1,
+   "z": 19,
+   "w": 5,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 9,
+   "z": 19,
+   "w": 4,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 1,
+   "z": 36,
+   "w": 5,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 9,
+   "z": 36,
+   "w": 4,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 12,
+   "z": 19,
+   "w": 1,
+   "h": 7
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 12,
+   "z": 30,
+   "w": 1,
+   "h": 7
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 15,
+   "z": 39,
+   "w": 11,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 30,
+   "z": 39,
+   "w": 10,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 36,
+   "z": 21,
+   "w": 2,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 36,
+   "z": 34,
+   "w": 2,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 34,
+   "z": 23,
+   "w": 1,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 34,
+   "z": 32,
+   "w": 1,
+   "h": 1
+  },
+  {
+   "op": "grass",
+   "x": 20,
+   "z": 2,
+   "w": 5,
+   "h": 4
+  },
+  {
+   "op": "grass",
+   "x": 33,
+   "z": 7,
+   "w": 5,
+   "h": 3
+  },
+  {
+   "op": "grass",
+   "x": 17,
+   "z": 30,
+   "w": 4,
+   "h": 5
+  },
+  {
+   "op": "grass",
+   "x": 24,
+   "z": 14,
+   "w": 5,
+   "h": 3
+  },
+  {
+   "op": "dirt",
+   "x": 10,
+   "z": 3,
+   "w": 30,
+   "h": 3
+  },
+  {
+   "op": "dirt",
+   "x": 13,
+   "z": 27,
+   "w": 13,
+   "h": 2
+  },
+  {
+   "op": "dirt",
+   "x": 26,
+   "z": 27,
+   "w": 14,
+   "h": 2
+  },
+  {
+   "op": "dirt",
+   "x": 6,
+   "z": 10,
+   "w": 3,
+   "h": 9
+  },
+  {
+   "op": "dirt",
+   "x": 6,
+   "z": 37,
+   "w": 3,
+   "h": 4
+  },
+  {
+   "op": "dirt",
+   "x": 9,
+   "z": 46,
+   "w": 6,
+   "h": 2
+  }
+ ],
+ "props": [
+  {
+   "type": "arch",
+   "x": 7.5,
+   "z": 19.5,
+   "rot": 0
+  },
+  {
+   "type": "arch",
+   "x": 7.5,
+   "z": 36.5,
+   "rot": 0
+  },
+  {
+   "type": "arch",
+   "x": 12.5,
+   "z": 28,
+   "rot": 90
+  },
+  {
+   "type": "tower",
+   "x": 1.5,
+   "z": 19.5,
+   "solid": true
+  },
+  {
+   "type": "tower",
+   "x": 12.5,
+   "z": 19.5,
+   "solid": true
+  },
+  {
+   "type": "tower",
+   "x": 1.5,
+   "z": 36.5,
+   "solid": true
+  },
+  {
+   "type": "tower",
+   "x": 12.5,
+   "z": 36.5,
+   "solid": true
+  },
+  {
+   "type": "banner",
+   "x": 4,
+   "z": 21
+  },
+  {
+   "type": "banner",
+   "x": 4,
+   "z": 35
+  },
+  {
+   "type": "torch",
+   "x": 10.5,
+   "z": 26
+  },
+  {
+   "type": "torch",
+   "x": 10.5,
+   "z": 31
+  },
+  {
+   "type": "crate",
+   "x": 3,
+   "z": 24,
+   "solid": true
+  },
+  {
+   "type": "statue",
+   "x": 3,
+   "z": 32,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 35.5,
+   "z": 25.5,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 35.5,
+   "z": 30.5,
+   "solid": true
+  },
+  {
+   "type": "torch",
+   "x": 33.5,
+   "z": 26
+  },
+  {
+   "type": "torch",
+   "x": 33.5,
+   "z": 30
+  },
+  {
+   "type": "tower",
+   "x": 40.5,
+   "z": 3.5,
+   "solid": true
+  },
+  {
+   "type": "banner",
+   "x": 38,
+   "z": 8
+  },
+  {
+   "type": "rock",
+   "x": 27,
+   "z": 9,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 18,
+   "z": 9,
+   "solid": true
+  },
+  {
+   "type": "pine",
+   "x": 22,
+   "z": 4
+  },
+  {
+   "type": "pine",
+   "x": 35,
+   "z": 3
+  },
+  {
+   "type": "pine",
+   "x": 26,
+   "z": 2
+  },
+  {
+   "type": "pine",
+   "x": 2.5,
+   "z": 3
+  },
+  {
+   "type": "pine",
+   "x": 3,
+   "z": 12
+  },
+  {
+   "type": "tree",
+   "x": 2,
+   "z": 44
+  },
+  {
+   "type": "tree",
+   "x": 3,
+   "z": 51
+  },
+  {
+   "type": "tree",
+   "x": 10,
+   "z": 53
+  },
+  {
+   "type": "tree",
+   "x": 15,
+   "z": 17
+  },
+  {
+   "type": "tree",
+   "x": 29,
+   "z": 16
+  },
+  {
+   "type": "tree",
+   "x": 21,
+   "z": 37
+  },
+  {
+   "type": "tree",
+   "x": 29,
+   "z": 36
+  },
+  {
+   "type": "rock",
+   "x": 17,
+   "z": 19,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 28,
+   "z": 20,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 31,
+   "z": 37,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 23,
+   "z": 23,
+   "solid": true
+  },
+  {
+   "type": "crate",
+   "x": 16,
+   "z": 47
+  },
+  {
+   "type": "torch",
+   "x": 40.5,
+   "z": 44
+  },
+  {
+   "type": "rock",
+   "x": 30,
+   "z": 52
+  }
+ ],
+ "cores": [
+  {
+   "team": 0,
+   "x": 5,
+   "z": 28
+  }
+ ],
+ "pads": [
+  {
+   "zone": "home",
+   "x": 9,
+   "z": 22.5
+  },
+  {
+   "zone": "home",
+   "x": 9,
+   "z": 33.5
+  },
+  {
+   "zone": "home",
+   "x": 9.5,
+   "z": 28
+  },
+  {
+   "zone": "forward",
+   "x": 20,
+   "z": 23
+  },
+  {
+   "zone": "forward",
+   "x": 11,
+   "z": 44
+  },
+  {
+   "zone": "neutral",
+   "x": 40,
+   "z": 6
+  },
+  {
+   "zone": "neutral",
+   "x": 40,
+   "z": 46
+  }
+ ],
+ "spawns": [
+  {
+   "team": 0,
+   "x": 7.5,
+   "z": 31
+  }
+ ]
+}
