@@ -1,5 +1,6 @@
 import { GcAdapter } from "./gcadapter";
 import { PRO2_PRODUCT, PRO2_VENDOR, ProCon2 } from "./procon2";
+import { ProCon2Waker } from "./procon2wake";
 export type ButtonAction =
   | "a" | "b" | "x" | "y" | "z" | "r" | "block" | "dodge" | "start"
   | "up" | "down" | "left" | "right";
@@ -80,6 +81,7 @@ export class Gamepads {
   readonly players: PadState[];
   readonly gc = new GcAdapter();
   readonly pro = new ProCon2();
+  readonly proWake = new ProCon2Waker(() => {});
   private slots: (number | null)[];
 
   private keys = new Set<string>();
@@ -97,6 +99,7 @@ export class Gamepads {
     ]);
     window.addEventListener("keydown", (e) => {
       if (e.code === "KeyG") void this.requestHid();
+      if (e.code === "KeyP" && !this.typing) void this.proWake.request();
       if (!mapped.has(e.code)) return;
       e.preventDefault();
       this.keys.add(e.code);

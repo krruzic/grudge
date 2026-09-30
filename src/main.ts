@@ -612,8 +612,8 @@ async function start(): Promise<void> {
     const viaDriver = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
     const nativeGc = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
     const gcText = viaDriver || nativeGc ? "GAMECUBE ADAPTER CONNECTED" : pads.gc.status.startsWith("LINUX") ? pads.gc.status : pads.gc.connected ? `GAMECUBE ADAPTER READY · ${pads.gc.ports.filter((p) => p.connected).length} CONTROLLER(S)` : pads.gc.status;
-    const proText = pads.pro.count ? `${pads.pro.count} PRO CONTROLLER${pads.pro.count > 1 ? "S" : ""}` : pads.pro.status;
-    screens.adapterStatus = [gcText, proText].filter(Boolean).join(" · ") || "PRESS G TO CONNECT A GAMECUBE ADAPTER OR SWITCH 2 PRO CONTROLLER";
+    const proText = pads.pro.count ? `${pads.pro.count} PRO CONTROLLER${pads.pro.count > 1 ? "S" : ""}` : pads.proWake.woken ? "PRO CONTROLLER AWAKE · PRESS G" : pads.pro.status || pads.proWake.status;
+    screens.adapterStatus = [gcText, proText].filter(Boolean).join(" · ") || "G: GAMECUBE ADAPTER · P: WAKE A SWITCH 2 PRO CONTROLLER";
     screens.adapterDebug = pads.gc.debug();
     screens.draw(ctx, pixel.w, pixel.h, now);
     if (state === "menu") menus.draw(ctx, pixel.w, pixel.h, now);
