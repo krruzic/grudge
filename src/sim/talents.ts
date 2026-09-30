@@ -81,7 +81,7 @@ export function learn(w: World, e: Entity, choice: number): void {
   h.picks.shift();
   recompute(w, e);
   const p = e.transform;
-  w.emit({ type: "learned", id: e.id, name: t.name, x: p.pos.x, y: p.y, z: p.pos.z, team: e.team });
+  w.emit({ type: "learned", id: e.id, name: t.name, icon: t.id, x: p.pos.x, y: p.y, z: p.pos.z, team: e.team });
 }
 
 export function gainXp(w: World, e: Entity | null | undefined, amount: number): void {

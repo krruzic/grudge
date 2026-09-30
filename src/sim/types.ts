@@ -379,7 +379,7 @@ export type SimEvent =
   | { type: "callout"; x: number; y: number; z: number; team: number; text: string; owner: number }
   | { type: "repair"; x: number; y: number; z: number; team: number; radius: number; fixed: { x: number; y: number; z: number; amount: number; h: number }[] }
   | { type: "levelup"; id: number; level: number; x: number; y: number; z: number; team: number }
-  | { type: "learned"; id: number; name: string; x: number; y: number; z: number; team: number }
+  | { type: "learned"; id: number; name: string; icon: string; x: number; y: number; z: number; team: number }
   | { type: "chain"; pts: number[]; team: number }
   | { type: "pull"; x: number; y: number; z: number; radius: number; team: number }
   | { type: "shieldBreak"; x: number; y: number; z: number; team: number; burst: boolean }

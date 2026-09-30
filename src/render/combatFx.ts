@@ -406,6 +406,19 @@ const slashTex = canvasTex(64, (ctx, s) => {
   ctx.stroke();
 });
 
+const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const talentTex = new Map<string, THREE.Texture>();
+function talentTexture(id: string): THREE.Texture | null {
+  const hit = talentTex.get(id);
+  if (hit) return hit;
+  const url = Object.entries(talentUrls).find(([p]) => p.endsWith(`/${id}.png`))?.[1];
+  if (!url) return null;
+  const t = new THREE.TextureLoader().load(url);
+  t.colorSpace = THREE.SRGBColorSpace;
+  talentTex.set(id, t);
+  return t;
+}
+
 const missTex = textTex("MISS", "#e0e0e0");
 const koTex = textTex("K.O.!", "#ff5a3a");
 const chunkGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -901,8 +914,10 @@ export class CombatFx {
         break;
       }
       case "learned": {
-        const { tex, aspect } = calloutTex(`★ ${ev.name}`, "#ffe890");
+        const { tex, aspect } = calloutTex(ev.name, "#ffe890");
         this.floatSprite(tex, aspect, ev.x, ev.y + 4.4, ev.z, 0.65, 2.2);
+        const it = talentTexture(ev.icon);
+        if (it) this.floatSprite(it, 1, ev.x, ev.y + 5.6, ev.z, 1.5, 2.2);
         this.burst(ev.x, ev.y + 2.5, ev.z, starTex, 0xffd060, 10, 0.5, 0.8, 1.2, true, 1.5);
         break;
       }

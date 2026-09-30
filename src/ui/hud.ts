@@ -321,6 +321,33 @@ interface Cross {
   until: number;
 }
 
+const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const talentImgs = new Map<string, HTMLImageElement>();
+for (const [p, url] of Object.entries(talentUrls)) {
+  const im = new Image();
+  im.src = url;
+  talentImgs.set(p.split("/").pop()!.replace(".png", ""), im);
+}
+
+export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number, dim = false): void {
+  const im = talentImgs.get(id);
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 1, y - 1, size + 2, size + 2);
+  texturedRect(ctx, "stone", x, y, size, size, dim ? "#5a5048" : "#b8a888", 0, 0.5);
+  if (im?.complete && im.naturalWidth) {
+    ctx.globalAlpha = dim ? 0.35 : 1;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(im, x, y, size, size);
+  } else {
+    ctx.fillStyle = dim ? "#6a6058" : "#ffe890";
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function hudWrap(s: string, width: number, scale: number): string[] {
   const out: string[] = [];
   let line = "";
@@ -591,21 +618,26 @@ export class Hud {
       const bw = 34;
       meter(ctx, right ? ax(lw + 4, bw) : ax(lw + 4), y + 2, bw, 2, frac, next === undefined ? "#ffd040" : "#8ad8ff");
       let px = lw + 4 + bw + 5;
+      y += 7;
+      px = 0;
+      const isz = 11;
       for (const slot of ["a", "b"] as const) {
-        const got = learned(w, e, slot).length;
+        const got = learned(w, e, slot);
         const key = slot.toUpperCase();
-        const kx = right ? ax(px, 5) : ax(px);
-        drawText(ctx, key, kx, y, "#d8d0c0", 0.6, true);
+        drawText(ctx, key, right ? ax(px, 5) : ax(px), y + 2, "#d8d0c0", 0.6, true);
         for (let k = 0; k < 2; k++) {
-          ctx.fillStyle = INK;
-          const cx = (right ? ax(px + 7 + k * 5, 3) : ax(px + 7 + k * 5)) + 1.5;
-          ctx.fillRect(cx - 2, y + 1, 4, 4);
-          ctx.fillStyle = k < got ? "#ffd040" : "#3a3440";
-          ctx.fillRect(cx - 1.5, y + 1.5, 3, 3);
+          const ix = right ? ax(px + 7 + k * (isz + 2), isz) : ax(px + 7 + k * (isz + 2));
+          if (got[k]) talentIcon(ctx, got[k].id, ix, y, isz);
+          else {
+            ctx.fillStyle = INK;
+            ctx.fillRect(ix - 1, y - 1, isz + 2, isz + 2);
+            ctx.fillStyle = "#2a2430";
+            ctx.fillRect(ix, y, isz, isz);
+          }
         }
-        px += 20;
+        px += 7 + 2 * (isz + 2) + 5;
       }
-      y += 8;
+      y += isz + 3;
       if (h.picks.length && Math.floor(now * 3) % 3 !== 0) {
         const msg = `LEVEL UP! HOLD Y · FLICK C`;
         drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.62)) : ax(0), y, "#ffe060", 0.62);
@@ -726,18 +758,21 @@ export class Hud {
     const hero = w.getAny(heroId);
     const opt = hero ? options(w, hero) : null;
     if (!opt) return;
-    const cw = 96;
+    const cw = 104;
     const x0 = right ? Math.max(4, cx - 64 - cw * 2 - 6) : Math.min(W - cw * 2 - 10, cx + 64);
-    opt.list.forEach((o, k) => {
+    const isz = 40;
+    const cards = opt.list.map((o) => ({ o, lines: hudWrap(o.desc, cw - 10, 0.62).slice(0, 5) }));
+    const h = isz + 22 + Math.max(...cards.map((c) => c.lines.length)) * 8;
+    const y = Math.max(40, Math.min(cy - h / 2, 236 - h));
+    cards.forEach(({ o, lines }, k) => {
       const x = x0 + k * (cw + 6);
-      const lines = hudWrap(o.desc, cw - 10, 0.55).slice(0, 4);
-      const h = 18 + lines.length * 7;
-      const y = cy - h / 2 - 6;
       parchment(ctx, x, y, cw, h);
-      const tag = k === 0 ? "LEFT" : "RIGHT";
-      drawText(ctx, tag, x + 5, y + 4, "#8a1810", 0.5);
-      drawText(ctx, o.name, x + 5 + textWidth(tag, 0.5) + 4, y + 4, "#3a2410", 0.6);
-      lines.forEach((l, j) => drawText(ctx, l, x + 5, y + 13 + j * 7, "#4a3018", 0.55));
+      talentIcon(ctx, o.id, x + (cw - isz) / 2, y + 5, isz);
+      const tag = k === 0 ? "◀ LEFT" : "RIGHT ▶";
+      drawText(ctx, k === 0 ? "LEFT" : "RIGHT", k === 0 ? x + 4 : x + cw - 4 - textWidth("RIGHT", 0.55), y + 4, "#8a1810", 0.55);
+      void tag;
+      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, 0.72) / 2, y + isz + 8, "#3a2410", 0.72);
+      lines.forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, 0.62) / 2, y + isz + 18 + j * 8, "#4a3018", 0.62));
     });
   }
 
