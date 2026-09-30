@@ -77,9 +77,9 @@ async function start(): Promise<void> {
   let readySince = -1;
 
   const save = new Save();
-  const newWorld = (heroes: string[], count = 2, rules = false): World => {
+  const newWorld = (heroes: string[], count = 2, rules = false, partners = false): World => {
     const w = new World(maps[mapIndex].data, rules ? applyRules(data, save.data.rules) : data, seed++);
-    for (let p = 0; p < count; p++) w.spawnHero(p < 2 || (rules && save.data.rules.partners === 1) ? heroes[p] ?? roster[0] : commanderType, p, p % 2);
+    for (let p = 0; p < count; p++) w.spawnHero(p < 2 || partners || (rules && save.data.rules.partners === 1) ? heroes[p] ?? roster[0] : commanderType, p, p % 2);
     return w;
   };
 
@@ -437,7 +437,7 @@ async function start(): Promise<void> {
     const hs = (params.get("heroes") ?? "").split(",").filter((h) => roster.includes(h));
     players = params.get("mode") === "2v2" ? 4 : 2;
     setupControl(Array(players).fill(false));
-    show(newWorld([hs[0] ?? randomHero(), hs[1] ?? hs[0] ?? randomHero()], players));
+    show(newWorld([hs[0] ?? randomHero(), hs[1] ?? hs[0] ?? randomHero(), ...hs.slice(2)], players, false, params.has("partners")));
     state = "match";
     screens.set("none");
     hud.show(true);

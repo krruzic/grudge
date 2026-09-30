@@ -78,7 +78,9 @@ export function playerTag(label: string, teamColor: THREE.Color): THREE.Sprite {
   ctx.font = "bold 12px monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#fff";
+  const hsl = { h: 0, s: 0, l: 0 };
+  teamColor.getHSL(hsl);
+  ctx.fillStyle = hsl.l > 0.5 && hsl.h > 0.1 && hsl.h < 0.55 ? "#101010" : "#fff";
   ctx.fillText(label, 16, 9);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;

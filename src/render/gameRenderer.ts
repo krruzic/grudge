@@ -35,6 +35,7 @@ export interface RenderConfig {
   ambientGround: string;
   ambientIntensity: number;
   teamColors: string[];
+  playerColors: string[];
   saturation: number;
   heroScale: number;
   vignette: number;
@@ -214,7 +215,7 @@ export class GameRenderer {
     this.structureModels = structures;
     this.combatFx = new CombatFx(this.teamColors);
     this.combatFx.world = world;
-    this.entityViews = new EntityViews(world, this.teamColors, heroes, structures, cfg.heroScale, this.combatFx, unitModels);
+    this.entityViews = new EntityViews(world, this.teamColors, heroes, structures, cfg.heroScale, this.combatFx, unitModels, cfg.playerColors.map((c) => new THREE.Color(c)));
     this.setWorld(world);
     this.silMats = this.teamColors.map((c) => new THREE.MeshBasicMaterial({
       color: c.clone().multiplyScalar(0.8),
@@ -291,7 +292,7 @@ export class GameRenderer {
     this.combatFx = new CombatFx(this.teamColors);
     this.combatFx.world = world;
     this.relicView.fx = this.combatFx;
-    this.entityViews = new EntityViews(world, this.teamColors, this.heroModels, this.structureModels, this.cfg.heroScale, this.combatFx, this.unitModels);
+    this.entityViews = new EntityViews(world, this.teamColors, this.heroModels, this.structureModels, this.cfg.heroScale, this.combatFx, this.unitModels, this.cfg.playerColors.map((c) => new THREE.Color(c)));
     this.entityViews.humans = this.humanList;
     this.entityViews.hints = this.hints;
     this.scene.add(this.entityViews.root, this.combatFx.root);

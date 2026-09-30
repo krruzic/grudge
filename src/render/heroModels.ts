@@ -117,7 +117,7 @@ export class HeroModels {
     );
   }
 
-  create(type: string, team: THREE.Color, label: string): HeroInstance {
+  create(type: string, team: THREE.Color, label: string, mark: THREE.Color = team, dye: THREE.Color = team): HeroInstance {
     const root = new THREE.Group();
     const gltf = this.gltfs.get(type);
     let body: THREE.Object3D;
@@ -134,7 +134,7 @@ export class HeroModels {
           let c = teamMat.get(m);
           if (!c) {
             c = toLambert(m);
-            if (m.name.startsWith("team")) (c as THREE.MeshLambertMaterial).color.copy(dyeColor(team));
+            if (m.name.startsWith("team")) (c as THREE.MeshLambertMaterial).color.copy(dyeColor(dye));
             teamMat.set(m, c);
           }
           return c;
@@ -146,13 +146,13 @@ export class HeroModels {
         for (const clip of gltf.animations) actions.set(clip.name, mixer.clipAction(clip));
       }
     } else {
-      body = warlordPlaceholder(team);
+      body = warlordPlaceholder(dye);
       body.traverse((o) => {
         if (o instanceof THREE.Mesh) o.castShadow = true;
       });
     }
     addOutline(body);
-    root.add(blobShadow(), body, footRing(team), playerTag(label, team));
+    root.add(blobShadow(), body, footRing(mark), playerTag(label, mark));
     return { root, body, mixer, actions };
   }
 }

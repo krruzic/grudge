@@ -365,6 +365,7 @@ export class EntityViews {
     private heroScale: number,
     private fx: CombatFx,
     private units: UnitModels,
+    private playerColors: THREE.Color[] = [],
   ) {
     for (const p of world.pads) {
       const m = new THREE.Mesh(
@@ -421,7 +422,9 @@ export class EntityViews {
     const view: Partial<View> = {};
     if (e.hero) {
       const player = e.hero.player;
-      const inst = this.heroes.create(e.hero.type, team, `P${player + 1}`);
+      const pc = this.playerColors[player] ?? team;
+      const twin = this.world.players.some((q) => q.team === e.team && q.player < player && q.heroType === e.hero!.type);
+      const inst = this.heroes.create(e.hero.type, team, `P${player + 1}`, pc, twin ? team.clone().lerp(pc, 0.7) : undefined);
       inst.root.scale.setScalar(this.heroScale);
       root.add(inst.root);
       body = inst.body;
