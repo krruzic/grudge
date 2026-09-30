@@ -13,25 +13,18 @@ import talentData from "../../data/talents.json";
 type TNode = { id: string; next?: TNode[] };
 const TREES = (talentData as unknown as { heroes: Record<string, { a: TNode[]; b: TNode[] }> }).heroes;
 
-function drawTree(ctx: CanvasRenderingContext2D, hero: string, x: number, y: number, w: number, maxH: number): number {
+function drawTree(ctx: CanvasRenderingContext2D, hero: string, slot: "a" | "b", x: number, y: number, right: boolean): void {
   const tree = TREES[hero];
-  if (!tree) return 0;
-  const gap = 2;
-  const big = Math.floor(Math.min((w - 7 - gap * 6) / 3, (maxH - 6) / 2));
-  const small = Math.floor((big - 1) / 2);
-  x += Math.max(0, (w - (7 + 2 * (big + small + gap * 3))) / 2);
-  let yy = y;
-  for (const slot of ["a", "b"] as const) {
-    drawText(ctx, slot.toUpperCase(), x, yy + big / 2 - 3, "#f8e8c0", 0.6, true);
-    let xx = x + 7;
-    tree[slot].forEach((t1) => {
-      talentIcon(ctx, t1.id, xx, yy, big);
-      (t1.next ?? []).forEach((t2, k) => talentIcon(ctx, t2.id, xx + big + gap, yy + k * (small + 1), small));
-      xx += big + gap + small + gap * 2;
-    });
-    yy += big + 3;
-  }
-  return yy - y;
+  if (!tree) return;
+  const big = 9;
+  const small = 5;
+  tree[slot].forEach((t1, r) => {
+    const yy = y + r * (big + 3);
+    const bx = right ? x + small + 1 : x;
+    const sx = right ? x : x + big + 1;
+    talentIcon(ctx, t1.id, bx, yy, big, false, true);
+    (t1.next ?? []).forEach((t2, k) => talentIcon(ctx, t2.id, sx, yy + k * (small - 1), small - 1, false, true));
+  });
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -456,8 +449,7 @@ export class Screens {
     const hy = y + 26;
     const hasTree = !commander && !!TREES[s.hero];
     const hh = h - notch - 50;
-    if (hasTree) this.portraits?.drop(i);
-    else if (showHero && this.portraits) {
+    if (showHero && this.portraits) {
       const cv = this.portraits.stage(i, s.hero, team, s.ready);
       const k = Math.min((w + 30) / cv.width, (hh + 14) / cv.height);
       const dw = cv.width * k;
@@ -468,7 +460,10 @@ export class Screens {
       paintedText(ctx, "?", x + w / 2, hy + hh / 2 - 18, "#6a4a28", 3.4);
     }
     this.kindPlaque(ctx, i, x + w / 2, y + 18, s);
-    if (hasTree) drawTree(ctx, s.hero, x + 4, hy + 4, w - 8, h - notch - 22 - 3 - hy + y - 4);
+    if (hasTree) {
+      drawTree(ctx, s.hero, "a", x + 4, hy + 10, false);
+      drawTree(ctx, s.hero, "b", x + w - 4 - 15, hy + 10, true);
+    }
     const name = (showHero ? def?.name ?? s.hero : "RANDOM").toUpperCase();
     const ry = y + h - notch - 22;
     ribbon(ctx, x + w / 2, ry, w + 6, 11, name, Math.min(0.8, (w + 2) / Math.max(1, textWidth(name, 1, true))), undefined, showHero ? nameImage(s.hero) : null);

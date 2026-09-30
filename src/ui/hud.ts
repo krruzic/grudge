@@ -330,7 +330,7 @@ for (const [p, url] of Object.entries(talentUrls)) {
   talentImgs.set(p.split("/").pop()!.replace(".png", ""), im);
 }
 
-export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number, dim = false): void {
+export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number, dim = false, low = false): void {
   const im = talentImgs.get(id);
   ctx.save();
   ctx.fillStyle = INK;
@@ -338,7 +338,8 @@ export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number,
   texturedRect(ctx, "stone", x, y, size, size, dim ? "#5a5048" : "#b8a888", 0, 0.5);
   if (im?.complete && im.naturalWidth) {
     const a = dim ? 0.35 : 1;
-    onHiLayer(ctx, (c) => {
+    const draw = low ? (f: (c: CanvasRenderingContext2D) => void) => f(ctx) : (f: (c: CanvasRenderingContext2D) => void) => onHiLayer(ctx, f);
+    draw((c) => {
       c.save();
       c.globalAlpha *= a;
       c.imageSmoothingEnabled = false;
