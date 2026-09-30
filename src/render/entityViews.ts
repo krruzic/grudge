@@ -62,6 +62,7 @@ interface View {
   lastZ?: number;
   rank?: number;
   badge?: THREE.Sprite;
+  hands?: { hand: THREE.Object3D; arm: THREE.Object3D; last: THREE.Vector3 }[];
   framed?: boolean;
 }
 
@@ -609,7 +610,7 @@ export class EntityViews {
       const k = v.flash > 0 ? 1 : 0;
       for (const m of v.mats) {
         const base = m.userData.baseEmissive as THREE.Color;
-        if (k) m.emissive.setRGB(0.9, 0.9, 0.9);
+        if (k) m.emissive.setRGB(0.6, 0.58, 0.52);
         else m.emissive.copy(base);
         m.userData.flashing = k > 0;
       }
@@ -818,7 +819,8 @@ export class EntityViews {
       if (a.kind === "combo") {
         anim = ["attack_a", "attack_b", "attack_c"][a.combo % 3];
         const hit = (w.heroDef(h.type).abilities.a as { hits?: { range?: number; projectile?: unknown }[] }).hits?.[a.combo % 3];
-        if (hit && !hit.projectile) {
+        if (hit && !hit.projectile) this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.5, a.combo % 3 === 1 ? 4 : 2, 1.6);
+        if (hit && !hit.projectile && h.type !== "warden") {
           const p = v.root.position;
           this.fx.slash(p.x, p.y, p.z, facing, e.team, a.combo % 3, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
         }
@@ -870,6 +872,40 @@ export class EntityViews {
     if (w.time < e.status.stunUntil) v.body.rotation.z = Math.sin(time * 20) * 0.08;
     else v.body.rotation.z = 0;
     v.mixer?.update(dt);
+    if (a && a.kind === "combo" && a.t > a.hitAt * 0.45 && a.t < a.hitAt + 0.07) this.swingTrail(e, v);
+  }
+
+  private swingTrail(e: Entity, v: View): void {
+    if (!v.hands) {
+      v.hands = [];
+      for (const side of ["R", "L"]) {
+        const hand = v.body.getObjectByName(`hand_${side}`);
+        const arm = v.body.getObjectByName(`forearm_${side}`);
+        if (hand && arm) v.hands.push({ hand, arm, last: new THREE.Vector3() });
+      }
+    }
+    if (!v.hands.length) return;
+    v.root.updateMatrixWorld(true);
+    let best = v.hands[0];
+    let moved = -1;
+    const tmp = new THREE.Vector3();
+    for (const hd of v.hands) {
+      hd.hand.getWorldPosition(tmp);
+      const d = tmp.distanceToSquared(hd.last);
+      if (d > moved) { moved = d; best = hd; }
+    }
+    const a = new THREE.Vector3();
+    const b = new THREE.Vector3();
+    for (const hd of v.hands) {
+      hd.hand.getWorldPosition(tmp);
+      hd.last.copy(tmp);
+    }
+    best.hand.getWorldPosition(a);
+    best.arm.getWorldPosition(b);
+    a.addScaledVector(tmp.subVectors(a, b), 0.35);
+    const warden = e.hero?.type === "warden";
+    const c = warden ? new THREE.Color(0xd8ffc0) : this.teamColors[e.team].clone().lerp(new THREE.Color(1, 1, 1), 0.6);
+    this.fx.handTrail(`h${e.id}`, a, b, c);
   }
 
   private syncUnit(e: Entity, v: View, facing: number, time: number, dt: number): void {

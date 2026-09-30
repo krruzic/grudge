@@ -1124,7 +1124,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         id: w.newId(), team: e.team, ownerId: e.id, x: t.pos.x, z: t.pos.z, radius: def.radius ?? 6,
         until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4,
       });
-      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 6, team: e.team });
+      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true });
       return;
     }
     default:

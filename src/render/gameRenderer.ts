@@ -287,10 +287,10 @@ export class GameRenderer {
     this.scene.add(this.relicView.root);
     if (this.hazards) this.scene.remove(this.hazards.root);
     this.world = world;
-    this.hazards = new HazardViews(world, this.teamColors);
-    this.scene.add(this.hazards.root);
     this.combatFx = new CombatFx(this.teamColors);
     this.combatFx.world = world;
+    this.hazards = new HazardViews(world, this.teamColors, this.combatFx);
+    this.scene.add(this.hazards.root);
     this.relicView.fx = this.combatFx;
     this.entityViews = new EntityViews(world, this.teamColors, this.heroModels, this.structureModels, this.cfg.heroScale, this.combatFx, this.unitModels, this.cfg.playerColors.map((c) => new THREE.Color(c)));
     this.entityViews.humans = this.humanList;

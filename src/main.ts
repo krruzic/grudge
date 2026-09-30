@@ -382,8 +382,14 @@ async function start(): Promise<void> {
     }
   };
 
+  const dbg = { freeze: false, adv: 0, clock: 0, puppet: [] as (Command | null)[] };
   const commandsFor = (): Command[] =>
     Array.from({ length: players }, (_, i) => {
+      const pz = dbg.puppet[i];
+      if (pz) {
+        dbg.puppet[i] = { moveX: pz.moveX, moveZ: pz.moveZ, block: pz.block };
+        return pz;
+      }
       const m = mappers[i];
       if (m) return m.take();
       const b = bots[i];
@@ -486,7 +492,7 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot, frames: netFrames.length, remotes: [...remotes.values()].map((r) => r.slot) }; } };
+  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, bots: () => bots, pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot, frames: netFrames.length, remotes: [...remotes.values()].map((r) => r.slot) }; } };
 
   let last = performance.now();
   let acc = 0;
@@ -641,9 +647,15 @@ async function start(): Promise<void> {
   };
 
   const frame = (nowMs: number): void => {
-    const now = nowMs / 1000;
-    const dt = Math.min(0.25, (nowMs - last) / 1000);
+    let now = nowMs / 1000;
+    let dt = Math.min(0.25, (nowMs - last) / 1000);
     last = nowMs;
+    if (dbg.freeze) {
+      dt = dbg.adv;
+      dbg.adv = 0;
+      dbg.clock += dt;
+      now = dbg.clock;
+    }
 
     pads.poll();
     pumpNet(now);

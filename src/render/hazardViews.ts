@@ -1,7 +1,11 @@
 import woodUrl from "../../assets/textures/wood.png?url";
 import blockUrl from "../../assets/textures/wallblock.png?url";
+import barkUrl from "../../assets/textures/moss_bark.png?url";
 import * as THREE from "three";
 import type { World } from "../sim/world";
+import { composite, WARDEN } from "./fxKit";
+import type { FxHost } from "./fxParts";
+import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -14,7 +18,48 @@ const woodTex = tex(woodUrl);
 const blockTex = tex(blockUrl);
 const WOOD = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xf0d4b0 });
 const WOOD_DARK = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xa08060 });
-const STONE = new THREE.MeshLambertMaterial({ map: blockTex, color: 0xe8e0d4 });
+void blockTex;
+const MOSS_STONE = new THREE.MeshLambertMaterial({
+  map: composite(128, (g, img) => {
+    g.fillStyle = "#2e2e28";
+    g.fillRect(0, 0, 128, 128);
+    g.drawImage(img(WARDEN.stone), -5, -5, 138, 138);
+  }),
+  flatShading: true,
+});
+const MOSS_TUFT = new THREE.MeshBasicMaterial({ map: WARDEN.moss, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
+const FLOWER = new THREE.MeshBasicMaterial({ map: WARDEN.flower, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
+const vineTex = new THREE.TextureLoader().load(barkUrl);
+vineTex.colorSpace = THREE.SRGBColorSpace;
+vineTex.wrapS = vineTex.wrapT = THREE.RepeatWrapping;
+vineTex.repeat.set(4, 1);
+const VINE = new THREE.MeshLambertMaterial({ map: vineTex, color: 0xa8b870, flatShading: true });
+const BRAMBLE_DECAL = composite(256, (g, img) => {
+  const gr = g.createRadialGradient(128, 128, 10, 128, 128, 126);
+  gr.addColorStop(0, "rgba(34,24,12,0.85)");
+  gr.addColorStop(0.75, "rgba(44,34,18,0.6)");
+  gr.addColorStop(1, "rgba(44,34,18,0)");
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 256, 256);
+  g.drawImage(img(WARDEN.roots), 8, 8, 240, 240);
+  g.globalAlpha = 0.9;
+  g.drawImage(img(WARDEN.wreath), 14, 14, 228, 228);
+});
+function crossQuad(mat: THREE.Material, w: number, h: number, n = 2): THREE.Group {
+  const g = new THREE.Group();
+  for (let i = 0; i < n; i++) {
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+    q.rotation.y = (i / n) * Math.PI;
+    q.position.y = h / 2;
+    g.add(q);
+  }
+  return g;
+}
+const thornGeo = new THREE.ConeGeometry(0.06, 0.3, 4);
+const thornBig = new THREE.ConeGeometry(0.1, 0.7, 5);
+const LEAF_A = new THREE.MeshBasicMaterial({ map: WARDEN.leaf, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
+const LEAF_B = new THREE.MeshBasicMaterial({ map: WARDEN.leafAutumn, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
+const easeBack = (t: number) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
 
 function worldBox(w: number, h: number, d: number): THREE.BoxGeometry {
   const g = new THREE.BoxGeometry(w, h, d);
@@ -117,7 +162,9 @@ export class HazardViews {
   private zones = new Map<number, THREE.Object3D>();
   private mods = new Map<number, THREE.Object3D>();
 
-  constructor(private world: World, private teamColors: THREE.Color[]) {}
+  private now = 0;
+
+  constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {}
 
   private trapMesh(team: number): THREE.Object3D {
     const g = new THREE.Group();
@@ -157,11 +204,82 @@ export class HazardViews {
       }
     };
     if (style === "bramble") {
-      scatter(Math.round(r * 5), () => {
-        const th = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6 + Math.random() * 0.5, 4), THORN);
-        th.rotation.set((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8);
-        return th;
-      }, 0.25);
+      decal.material = new THREE.MeshBasicMaterial({ map: BRAMBLE_DECAL, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+      const grow = (o: THREE.Object3D, x: number, z: number) => {
+        o.userData.delay = (Math.hypot(x, z) / r) * 0.55 + Math.random() * 0.1;
+        o.userData.grow = true;
+        o.scale.setScalar(0.001);
+        g.add(o);
+      };
+      const arches = Math.round(r * 3.2);
+      for (let i = 0; i < arches; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.sqrt(Math.random()) * r * 0.85;
+        const x = Math.cos(a) * d;
+        const z = Math.sin(a) * d;
+        const t = Math.random() * Math.PI * 2;
+        const len = 1.2 + Math.random() * 1.4;
+        const hgt = 0.55 + Math.random() * 0.75;
+        const A = new THREE.Vector3(-Math.cos(t) * len / 2, gy(x - Math.cos(t) * len / 2, z - Math.sin(t) * len / 2) - 0.1, -Math.sin(t) * len / 2);
+        const B = new THREE.Vector3(Math.cos(t) * len / 2, gy(x + Math.cos(t) * len / 2, z + Math.sin(t) * len / 2) - 0.1, Math.sin(t) * len / 2);
+        const M = A.clone().add(B).multiplyScalar(0.5);
+        M.y += hgt * 2;
+        const curve = new THREE.QuadraticBezierCurve3(A, M, B);
+        const arch = new THREE.Group();
+        arch.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.1 + Math.random() * 0.05, 6, false), VINE));
+        for (let k = 0; k < 2; k++) {
+          const lf = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42), k ? LEAF_B : LEAF_A);
+          lf.position.copy(curve.getPoint(0.3 + Math.random() * 0.4)).add(new THREE.Vector3(0, 0.08, 0));
+          lf.rotation.set(-1.1 + Math.random() * 0.6, Math.random() * 6, Math.random() - 0.5);
+          arch.add(lf);
+        }
+        for (let k = 0; k < 7; k++) {
+          const u = 0.12 + (k / 5) * 0.76;
+          const p = curve.getPoint(u);
+          const tan = curve.getTangent(u);
+          const side = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.2, Math.random() - 0.5).cross(tan).normalize();
+          const th = new THREE.Mesh(thornGeo, THORN);
+          th.position.copy(p).addScaledVector(side, 0.12);
+          th.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), side);
+          arch.add(th);
+        }
+        arch.position.set(x, 0, z);
+        grow(arch, x, z);
+      }
+      for (let i = 0; i < Math.round(r * 1.2); i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.sqrt(Math.random()) * r * 0.8;
+        const x = Math.cos(a) * d;
+        const z = Math.sin(a) * d;
+        const clump = new THREE.Group();
+        for (let k = 0; k < 5; k++) {
+          const sp = new THREE.Mesh(thornBig, THORN);
+          const ta = (k / 5) * Math.PI * 2 + Math.random();
+          sp.position.set(Math.cos(ta) * 0.15, 0.3, Math.sin(ta) * 0.15);
+          sp.rotation.set(Math.sin(ta) * 0.5, 0, -Math.cos(ta) * 0.5);
+          clump.add(sp);
+        }
+        clump.position.set(x, gy(x, z) - 0.05, z);
+        grow(clump, x, z);
+      }
+      for (let i = 0; i < Math.round(r * 1.2); i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.sqrt(Math.random()) * r * 0.85;
+        const x = Math.cos(a) * d;
+        const z = Math.sin(a) * d;
+        const f = crossQuad(FLOWER, 0.34, 0.34);
+        f.position.set(x, gy(x, z) + 0.02, z);
+        f.rotation.y = Math.random() * 3;
+        grow(f, x, z);
+      }
+      for (let i = 0; i < 4; i++) {
+        const w = new THREE.Sprite(new THREE.SpriteMaterial({ map: WARDEN.wisp, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }));
+        w.name = "wisp";
+        w.userData.phase = (i / 4) * Math.PI * 2;
+        w.userData.rad = r * (0.35 + Math.random() * 0.45);
+        w.scale.setScalar(0.55);
+        g.add(w);
+      }
     } else if (style === "bones") {
       scatter(Math.round(r * 4), () => {
         const b = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.8 + Math.random() * 0.6, 5), BONE);
@@ -249,13 +367,25 @@ export class HazardViews {
         }
       } else {
         const y = this.world.terrain.groundHeight(x, z);
-        const block = new THREE.Mesh(worldBox(1.0, 2.2, 1.0), STONE);
-        block.position.set(x, y + 1.0, z);
+        const cell = new THREE.Group();
+        cell.position.set(x, y, z);
+        const block = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 1.0), MOSS_STONE);
+        block.position.y = 1.0;
         block.rotation.y = (Math.random() - 0.5) * 0.2;
-        g.add(block);
-        const cap = new THREE.Mesh(worldBox(0.7, 0.4, 0.7), STONE);
-        cap.position.set(x + (Math.random() - 0.5) * 0.2, y + 2.3, z);
-        g.add(cap);
+        cell.add(block);
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.45, 0.72), MOSS_STONE);
+        cap.position.set((Math.random() - 0.5) * 0.2, 2.3, (Math.random() - 0.5) * 0.1);
+        cap.rotation.y = Math.random() * 0.6;
+        cell.add(cap);
+        for (let t = 0; t < 2; t++) {
+          const tuft = crossQuad(MOSS_TUFT, 0.6, 0.4);
+          tuft.position.set((Math.random() - 0.5) * 0.6, 2.05 + (t ? 0.48 : 0), (Math.random() - 0.5) * 0.6);
+          tuft.rotation.y = Math.random() * 3;
+          cell.add(tuft);
+        }
+        cell.userData.baseY = y;
+        cell.userData.delay = Math.abs(k - (m.cells.length - 1) / 2) * 0.05;
+        g.add(cell);
       }
     });
     return g;
@@ -264,22 +394,48 @@ export class HazardViews {
   handle(ev: { type: string; id?: number }): void {
     if (ev.type === "mod" && ev.id !== undefined) {
       const obj = this.modMesh(ev.id);
+      const m = this.world.mods.find((k) => k.id === ev.id);
       if (obj) {
-        obj.scale.y = 0.01;
+        obj.userData.born = this.now;
+        obj.userData.wall = m?.kind === "wall";
+        if (!obj.userData.wall) obj.scale.y = 0.01;
+        else if (this.fx) {
+          const c0 = obj.children[0]?.position;
+          const c1 = obj.children[obj.children.length - 1]?.position;
+          const dx = c1 && c0 ? c1.x - c0.x : 1;
+          const dz = c1 && c0 ? c1.z - c0.z : 0;
+          const dl = Math.hypot(dx, dz) || 1;
+          for (const c of obj.children) wardenWallBlock(this.fx, c.position.x, c.userData.baseY, c.position.z, c.userData.delay, dz / dl, -dx / dl);
+        }
         this.mods.set(ev.id, obj);
         this.root.add(obj);
       }
     } else if (ev.type === "modEnd" && ev.id !== undefined) {
       const obj = this.mods.get(ev.id);
       if (obj) {
-        this.root.remove(obj);
         this.mods.delete(ev.id);
+        if (obj.userData.wall && this.fx) {
+          for (const c of obj.children) wardenWallCrumble(this.fx, c.position.x, c.userData.baseY, c.position.z);
+          this.dying.push({ obj, at: this.now });
+        } else this.root.remove(obj);
       }
     }
   }
 
+  private dying: { obj: THREE.Object3D; at: number }[] = [];
+
   sync(time: number, dt: number): void {
+    this.now = time;
     const w = this.world;
+    this.dying = this.dying.filter(({ obj, at }) => {
+      const k = (time - at) / 0.5;
+      for (const c of obj.children) {
+        c.position.y = c.userData.baseY - 2.7 * Math.min(1, k * k);
+        c.rotation.z = Math.sin(time * 40 + c.position.x) * 0.04;
+      }
+      if (k >= 1) this.root.remove(obj);
+      return k < 1;
+    });
     for (const m of w.mods) if (!this.mods.has(m.id)) this.handle({ type: "mod", id: m.id });
     for (const id of [...this.mods.keys()]) if (!w.mods.some((m) => m.id === id)) this.handle({ type: "modEnd", id });
     const seenT = new Set<number>();
@@ -305,13 +461,39 @@ export class HazardViews {
         this.cy = w.groundY(z.x, z.z);
         o = this.zoneMesh(z.team, z.radius, z.style);
         o.position.set(z.x, this.cy, z.z);
-        o.scale.setScalar(0.1);
+        o.userData.born = time;
+        o.userData.bramble = (z.style ?? "bramble") === "bramble";
+        o.scale.setScalar(o.userData.bramble ? 1 : 0.1);
+        if (o.userData.bramble && this.fx) wardenBrambleCast(this.fx, z.x, this.cy, z.z, z.radius);
         this.zones.set(z.id, o);
         this.root.add(o);
       }
       const left = z.until - w.time;
-      const s = Math.min(1, o.scale.x + dt * 5) * (left < 0.4 ? left / 0.4 : 1);
-      o.scale.setScalar(Math.max(0.01, s));
+      if (o.userData.bramble) {
+        const age = time - o.userData.born;
+        for (const c of o.children) {
+          if (c.userData.grow) {
+            const t = age - c.userData.delay;
+            if (t > 0 && !c.userData.popped) {
+              c.userData.popped = true;
+              if (this.fx && c.children.length > 2) wardenSprout(this.fx, o.position.x + c.position.x, o.position.y + c.position.y, o.position.z + c.position.z);
+            }
+            const e = t <= 0 ? 0.001 : t >= 0.3 ? 1 : easeBack(t / 0.3);
+            const out = left < 0.6 ? Math.max(0.001, left / 0.6) : 1;
+            c.scale.set(Math.max(0.001, e) * (0.6 + 0.4 * out), Math.max(0.001, e * out), Math.max(0.001, e) * (0.6 + 0.4 * out));
+            c.rotation.z = Math.sin(time * 1.3 + c.position.x) * 0.04;
+          } else if (c.name === "wisp") {
+            const a = c.userData.phase + time * 0.6;
+            c.position.set(Math.cos(a) * c.userData.rad, 0.6 + Math.sin(time * 2 + c.userData.phase) * 0.3, Math.sin(a) * c.userData.rad);
+            (c as THREE.Sprite).material.opacity = 0.7 * Math.min(1, age * 2, left / 0.6);
+          }
+        }
+        const dm = (o.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+        dm.opacity = Math.min(1, age * 3, left / 0.6);
+      } else {
+        const s = Math.min(1, o.scale.x + dt * 5) * (left < 0.4 ? left / 0.4 : 1);
+        o.scale.setScalar(Math.max(0.01, s));
+      }
       const spin = o.getObjectByName("spin");
       if (spin) {
         spin.rotation.y += dt * (z.style === "sinkhole" ? 1.6 : 0.2);
@@ -331,6 +513,18 @@ export class HazardViews {
       }
     }
     for (const [id, o] of this.zones) if (!seenZ.has(id)) { this.root.remove(o); this.zones.delete(id); }
-    for (const o of this.mods.values()) o.scale.y = Math.min(1, o.scale.y + dt * 6);
+    for (const o of this.mods.values()) {
+      if (!o.userData.wall) {
+        o.scale.y = Math.min(1, o.scale.y + dt * 6);
+        continue;
+      }
+      for (const c of o.children) {
+        const t = time - o.userData.born - c.userData.delay;
+        const e = t <= 0 ? 0 : t >= 0.26 ? 1 : easeBack(t / 0.26);
+        c.position.y = c.userData.baseY - 2.7 * (1 - e);
+        c.visible = t > 0;
+        c.rotation.z = t > 0 && t < 0.3 ? Math.sin(t * 90) * 0.03 : 0;
+      }
+    }
   }
 }

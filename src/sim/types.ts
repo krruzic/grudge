@@ -358,7 +358,7 @@ export type SimEvent =
   | { type: "spawn"; id: number }
   | { type: "rankUp"; id: number; rank: number; x: number; y: number; z: number; team: number }
   | { type: "build"; id: number; padIndex: number; team: number; upgrade: boolean }
-  | { type: "slam"; x: number; y: number; z: number; radius: number; team: number }
+  | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean }
   | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number }
   | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number }
   | { type: "heal"; x: number; y: number; z: number; team: number }
