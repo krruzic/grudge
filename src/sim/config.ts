@@ -28,6 +28,8 @@ export interface AbilityDef {
   damageMul?: number;
   speedMul?: number;
   callout?: string;
+  shots?: { damage: number; splash?: number; splashDamage?: number; slowMul?: number; slowSeconds?: number; dur?: number; hitAt?: number }[];
+  comboCooldown?: number;
   seconds?: number;
   stunSeconds?: number;
   bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "never";

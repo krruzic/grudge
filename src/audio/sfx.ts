@@ -141,6 +141,7 @@ export class Audio {
           if (!this.allow("shot", 3)) break;
           if (ev.style === "ballista") { this.tone("sine", 180, 60, 0.18, 0.4, pan); this.hiss(900, 1.5, 0.12, 0.2, pan); }
           else if (ev.style === "arrow") this.hiss(3500, 3, 0.09, 0.1, pan, "bandpass", 0, 1500);
+          else if (ev.style === "orb") { this.tone("sawtooth", 300, 120, 0.35, 0.1, pan); this.tone("sine", 700, 250, 0.35, 0.09, pan); }
           else if (ev.style === "magic") { this.tone("sawtooth", 900, 300, 0.2, 0.07, pan); this.tone("sine", 1200, 600, 0.2, 0.08, pan); }
           else this.tone("square", 1200, 200, 0.15, 0.06, pan);
           break;

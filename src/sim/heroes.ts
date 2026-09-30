@@ -205,6 +205,16 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
         h.comboUntil = w.time + hit.dur + (ab.a.comboWindow ?? 0.35);
         const cd = b.comboCooldown ?? 0;
         h.cooldowns.a = h.comboUntil + (idx === hits.length - 1 ? cd : cd * 0.5);
+      } else if (ab.a.shots) {
+        const shots = ab.a.shots;
+        const idx = w.time < h.comboUntil ? h.comboIndex % shots.length : 0;
+        const sh = shots[idx];
+        const [dx, dz] = aim(w, e, cmd, (ab.a.range ?? 9) + 1);
+        begin(e, "a", "shoot", sh.dur ?? ab.a.dur ?? 0.4, sh.hitAt ?? ab.a.hitAt ?? 0.15, dx, dz, idx);
+        h.comboIndex = idx + 1;
+        const end = sh.dur ?? ab.a.dur ?? 0.4;
+        h.comboUntil = idx === shots.length - 1 ? 0 : w.time + end + (ab.a.comboWindow ?? 0.5);
+        h.cooldowns.a = w.time + end + (idx === shots.length - 1 ? ab.a.comboCooldown ?? 0.3 : 0);
       } else {
         startAbility(w, e, "a", cmd);
         if (ab.a.cooldown) h.cooldowns.a = w.time + ab.a.cooldown;
@@ -573,8 +583,13 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     }
     case "shoot": {
       const target = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, def.range ?? 8);
-      if (target) w.fireProjectile(e, target, (def.damage ?? 30) * mul, def.speed ?? 15, false, "magic", 1.6, true);
-      else w.fireAtPoint(e, t.pos.x + a.dirX * (def.range ?? 8), t.pos.z + a.dirZ * (def.range ?? 8), def.speed ?? 15, "magic", 1.6);
+      const sh = a.name === "a" && def.shots ? def.shots[a.combo] : undefined;
+      const dmg = (sh?.damage ?? def.damage ?? 30) * mul;
+      const splash = sh?.splash ? { radius: sh.splash, damage: (sh.splashDamage ?? 30) * mul, slowMul: sh.slowMul ?? 1, slowSeconds: sh.slowSeconds ?? 0 } : undefined;
+      const style = splash ? "orb" : "magic";
+      const speed = (def.speed ?? 15) * (splash ? 0.8 : 1);
+      if (target) w.fireProjectile(e, target, dmg, speed, false, style, 1.6, true, splash);
+      else w.fireAtPoint(e, t.pos.x + a.dirX * (def.range ?? 8), t.pos.z + a.dirZ * (def.range ?? 8), speed, style, 1.6, splash);
       return;
     }
     case "hex": {

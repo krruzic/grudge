@@ -1233,10 +1233,10 @@ export class CombatFx {
       if (!s) {
         const c = this.teamColors[p.team];
         const col = p.style === "arrow" || p.style === "ballista" ? new THREE.Color(0xfff0c0)
-          : p.style === "magic" ? c.clone().lerp(new THREE.Color(0.8, 0.3, 1), 0.6)
+          : p.style === "magic" || p.style === "orb" ? c.clone().lerp(new THREE.Color(0.8, 0.3, 1), 0.6)
           : c.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
         s = this.sprite(glowTex, col, true, 1);
-        s.scale.setScalar(p.style === "arrow" ? 0.45 : p.style === "ballista" ? 0.8 : p.style === "magic" ? 1.4 : 1.1);
+        s.scale.setScalar(p.style === "arrow" ? 0.45 : p.style === "ballista" ? 0.8 : p.style === "magic" ? 1.4 : p.style === "orb" ? 2.4 : 1.1);
         this.projViews.set(p.id, s);
       }
       const t = Math.min(1, p.prevT + (p.t - p.prevT) * alpha);
@@ -1248,6 +1248,10 @@ export class CombatFx {
         y += d * 0.35 * 4 * t * (1 - t);
       }
       s.position.set(x, y, z);
+      if (p.style === "orb") {
+        s.material.rotation += 0.3;
+        if (Math.random() < 0.6) this.burst(x, y, z, starTex, 0xd080ff, 1, 0.5, 0.35, 0.3, true, 0.2);
+      }
     }
     for (const [id, s] of this.projViews) {
       if (!seen.has(id)) {

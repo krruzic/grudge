@@ -233,6 +233,7 @@ export interface Projectile {
   style: string;
   prevT: number;
   canMiss: boolean;
+  splash?: { radius: number; damage: number; slowMul: number; slowSeconds: number };
 }
 
 export interface Pad {

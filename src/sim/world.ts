@@ -995,7 +995,7 @@ export class World {
     }
   }
 
-  fireProjectile(src: Entity, target: Entity, damage: number, speed: number, ballistic: boolean, style: string, fromHeight: number, canMiss = true): void {
+  fireProjectile(src: Entity, target: Entity, damage: number, speed: number, ballistic: boolean, style: string, fromHeight: number, canMiss = true, splash?: Projectile["splash"]): void {
     const sp = src.transform;
     const tp = target.transform;
     const d = this.dist(src, target);
@@ -1014,10 +1014,11 @@ export class World {
       damage,
       style,
       canMiss,
+      splash,
     });
   }
 
-  fireAtPoint(src: Entity, x: number, z: number, speed: number, style: string, fromHeight: number): void {
+  fireAtPoint(src: Entity, x: number, z: number, speed: number, style: string, fromHeight: number, splash?: Projectile["splash"]): void {
     const sp = src.transform;
     const d = Math.hypot(x - sp.pos.x, z - sp.pos.z);
     this.emit({ type: "shot", style, x: sp.pos.x, y: sp.y + fromHeight, z: sp.pos.z });
@@ -1025,7 +1026,7 @@ export class World {
       id: this.nextId++, team: src.team, sourceId: src.id, targetId: 0,
       from: { x: sp.pos.x, y: sp.y + fromHeight, z: sp.pos.z },
       to: { x, y: this.groundY(x, z) + 0.5, z },
-      t: 0, prevT: 0, dur: Math.max(0.15, d / speed), ballistic: false, damage: 0, style, canMiss: false,
+      t: 0, prevT: 0, dur: Math.max(0.15, d / speed), ballistic: false, damage: 0, style, canMiss: false, splash,
     });
   }
 
@@ -1042,7 +1043,21 @@ export class World {
       if (p.t >= 1) {
         this.projectiles.splice(i, 1);
         const src = this.getAny(p.sourceId) ?? null;
-        if (target) this.damage(src && src.alive ? src : null, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: 0.8, canMiss: p.canMiss });
+        const who = src && src.alive ? src : null;
+        if (target) this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss });
+        if (p.splash) {
+          const sp = p.splash;
+          this.emit({ type: "telegraph", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: sp.radius, team: p.team, seconds: 0.05 });
+          for (const o of this.entities.slice()) {
+            if (!o.alive || o.team === p.team || o === target || o.kind === "structure") continue;
+            if (Math.hypot(o.transform.pos.x - p.to.x, o.transform.pos.z - p.to.z) - o.radius > sp.radius) continue;
+            this.damage(who, o, sp.damage, { fromX: p.to.x, fromZ: p.to.z, knockback: 2.5, slowMul: sp.slowMul, slowSeconds: sp.slowSeconds });
+          }
+          if (target?.alive) {
+            target.status.slowMul = sp.slowMul;
+            target.status.slowUntil = this.time + sp.slowSeconds;
+          }
+        }
       }
     }
   }
