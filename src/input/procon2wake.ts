@@ -100,9 +100,10 @@ export class ProCon2Waker {
       const inp = eps.find((e) => e.direction === "in")?.endpointNumber ?? 2;
       for (const cmd of [...WAKE, led(this.woken)]) {
         await d.transferOut(out, new Uint8Array(cmd));
-        await Promise.race([d.transferIn(inp, 64), new Promise((r) => setTimeout(r, 60))]).catch(() => {});
+        await d.transferIn(inp, 64);
       }
       await d.releaseInterface(iface.interfaceNumber).catch(() => {});
+      await d.close().catch(() => {});
       this.woken++;
       this.status = "PRO CONTROLLER AWAKE";
       this.onWoke();

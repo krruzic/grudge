@@ -105,38 +105,36 @@ export class ProCon2 {
     this.reports++;
     const v = e.data;
     const off = e.reportId ? 1 : 0;
-    if (v.byteLength + off < 17) return;
+    if (v.byteLength + off < 12) return;
     const b = (k: number) => v.getUint8(k - off);
     const p = this.pads[i];
     p.connected = true;
-    const b5 = b(5);
-    const b6 = b(6);
-    const b7 = b(7);
-    const b8 = b(8);
-    p.y = !!(b5 & 0x01);
-    p.x = !!(b5 & 0x02);
-    p.b = !!(b5 & 0x04);
-    p.a = !!(b5 & 0x08);
-    p.r = !!(b5 & 0x40);
-    p.zr = !!(b5 & 0x80);
-    p.minus = !!(b6 & 0x01);
-    p.plus = !!(b6 & 0x02);
-    p.rs = !!(b6 & 0x04);
-    p.ls = !!(b6 & 0x08);
-    p.c = !!(b6 & 0x40);
-    p.down = !!(b7 & 0x01);
-    p.up = !!(b7 & 0x02);
-    p.right = !!(b7 & 0x04);
-    p.left = !!(b7 & 0x08);
-    p.l = !!(b7 & 0x40);
-    p.zl = !!(b7 & 0x80);
-    p.gr = !!(b8 & 0x01);
-    p.gl = !!(b8 & 0x02);
+    const bits = b(3) | (b(4) << 8) | (b(5) << 16);
+    const on = (n: number) => !!(bits & (1 << n));
+    p.b = on(0);
+    p.a = on(1);
+    p.y = on(2);
+    p.x = on(3);
+    p.zr = on(4);
+    p.r = on(5);
+    p.plus = on(6);
+    p.rs = on(7);
+    p.down = on(8);
+    p.right = on(9);
+    p.left = on(10);
+    p.up = on(11);
+    p.zl = on(12);
+    p.l = on(13);
+    p.minus = on(14);
+    p.ls = on(15);
+    p.c = false;
+    p.gl = false;
+    p.gr = false;
     const raw: [number, number, number, number] = [
-      b(11) | ((b(12) & 0x0f) << 8),
-      (b(12) >> 4) | (b(13) << 4),
-      b(14) | ((b(15) & 0x0f) << 8),
-      (b(15) >> 4) | (b(16) << 4),
+      b(6) | ((b(7) & 0x0f) << 8),
+      (b(7) >> 4) | (b(8) << 4),
+      b(9) | ((b(10) & 0x0f) << 8),
+      (b(10) >> 4) | (b(11) << 4),
     ];
     if (!this.centers[i]) this.centers[i] = raw.map((x) => (Math.abs(x - 2048) < 500 ? x : 2048)) as [number, number, number, number];
     const c = this.centers[i]!;
