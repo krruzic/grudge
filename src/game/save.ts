@@ -57,6 +57,8 @@ export type Row<T> = { key: keyof T; label: string; values: number[]; fmt: (v: n
 
 const onOff = (v: number) => (v ? "ON" : "OFF");
 
+export const CAMERA_NAMES = ["SHARED VIEW", "SPLIT · AUTO ZOOM", "SPLIT · D-PAD ZOOM"];
+
 export const RULE_ROWS: Row<Rules>[] = [
   { key: "minutes", label: "MATCH LENGTH", values: [3, 4, 6, 8, 10, 15], fmt: (v) => `${v} MIN`, blurb: "TIME BEFORE THE BELL TOLLS." },
   { key: "sudden", label: "SUDDEN DEATH", values: [0, 30, 60, 120], fmt: (v) => (v ? `${v} SEC` : "NONE"), blurb: "EXTRA TIME WHERE ALL IS CHEAPER AND DEADLIER." },
@@ -72,7 +74,7 @@ export const OPTION_ROWS: Row<Options>[] = [
   { key: "music", label: "MUSIC", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF THE MINSTRELS." },
   { key: "sound", label: "SOUND", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF STEEL AND SPELLS." },
   { key: "shake", label: "SCREEN SHAKE", values: [1, 0], fmt: onOff, blurb: "THE GROUND TREMBLES WHEN BLOWS LAND." },
-  { key: "split", label: "SPLIT SCREEN", values: [1, 0], fmt: onOff, blurb: "EACH PLAYER GETS THEIR OWN VIEW OF THE FIELD." },
+  { key: "split", label: "CAMERA", values: [1, 2, 0], fmt: (v) => CAMERA_NAMES[v], blurb: "SPLIT: EACH PLAYER GETS A VIEW. AUTO ZOOM FOLLOWS THE FIGHT; D-PAD ZOOM USES LEFT/RIGHT." },
   { key: "hints", label: "BUTTON HINTS", values: [1, 0], fmt: onOff, blurb: "SHOW BUILD HINTS ABOVE PADS." },
 ];
 

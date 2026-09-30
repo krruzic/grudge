@@ -134,7 +134,8 @@ async function start(): Promise<void> {
     const o = save.data.options;
     audio.setLevels(o.music / 10, o.sound / 10);
     view.shakeMul = o.shake;
-    view.splitOn = o.split === 1;
+    view.camMode = o.split;
+    screens.cameraMode = o.split;
     view.setHints(!!o.hints);
   };
   applyOptions();
@@ -466,6 +467,12 @@ async function start(): Promise<void> {
           if (id === "mode") {
             setMode(!twoVtwo);
             audio.ui("ok");
+          } else if (id === "camera") {
+            const order = [1, 2, 0];
+            save.data.options.split = order[(order.indexOf(save.data.options.split) + 1) % order.length];
+            save.write();
+            applyOptions();
+            audio.ui("ok");
           } else if (id === "kind") {
             if (slots[i].cpu && present(i)) makeHuman(i);
             else if (!slots[i].cpu) { makeCpu(i); slots[i].autoCpu = false; }
@@ -554,6 +561,10 @@ async function start(): Promise<void> {
         if (!m) return;
         const h = world.heroForPlayer(i);
         m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h));
+        if (view.camMode === 2 && !commanderSlot(i)) {
+          if (p.pressed.left) view.zoomStep(i, 1);
+          if (p.pressed.right) view.zoomStep(i, -1);
+        }
       });
       view.setMenus(mappers.map((m) => !!m && m.ui.buildMenu !== "closed"));
     } else if (state === "paused") {

@@ -322,7 +322,7 @@ export class GameRenderer {
     this.camInit = st.init;
   }
 
-  private aimCamera(cam: THREE.PerspectiveCamera, st: { focus: THREE.Vector3; width: number; init: boolean }, points: THREE.Vector3[], dt: number, minWidth: number): void {
+  private aimCamera(cam: THREE.PerspectiveCamera, st: { focus: THREE.Vector3; width: number; init: boolean }, points: THREE.Vector3[], dt: number, minWidth: number, maxWidth = Infinity, margin = this.cfg.viewMargin): void {
     const cfg = this.cfg;
     const t = this.world.terrain;
     const pitch = THREE.MathUtils.degToRad(cfg.pitchDeg);
@@ -337,9 +337,9 @@ export class GameRenderer {
     const focus = min.clone().add(max).multiplyScalar(0.5);
 
     const depthToWidth = (aspect / Math.sin(pitch)) * 1.25;
-    const need = Math.max(max.x - min.x, (max.z - min.z) * depthToWidth) + cfg.viewMargin;
+    const need = Math.max(max.x - min.x, (max.z - min.z) * depthToWidth) + margin;
     const fullMap = Math.max(t.width, t.depth * depthToWidth) + 4;
-    const width = THREE.MathUtils.clamp(need, minWidth, Math.max(minWidth, fullMap));
+    const width = THREE.MathUtils.clamp(need, minWidth, Math.max(minWidth, Math.min(maxWidth, fullMap)));
 
     if (width < t.width) focus.x = THREE.MathUtils.clamp(focus.x, width / 2, t.width - width / 2);
     else focus.x = t.width / 2;
@@ -361,16 +361,23 @@ export class GameRenderer {
     cam.userData.fogFar = dist * cfg.fogFarFactor;
   }
 
-  splitOn = true;
+  camMode = 1;
   private merged = false;
-  private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroId: number }[] = [];
+  private zoomSteps = [14, 18, 22, 27, 33];
+  private zoomIndex = new Map<number, number>();
+  private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroIds: number[]; player: number }[] = [];
 
   get splitCount(): number {
-    return this.splitViews.length;
+    return this.splitViews.length > 1 ? this.splitViews.length : 0;
+  }
+
+  zoomStep(player: number, dir: number): void {
+    const i = this.zoomIndex.get(player) ?? 2;
+    this.zoomIndex.set(player, Math.max(0, Math.min(this.zoomSteps.length - 1, i + dir)));
   }
 
   private syncSplit(): void {
-    const humans = this.splitOn ? this.world.players.filter((p) => this.humanList[p.player]) : [];
+    const humans = this.camMode ? this.world.players.filter((p) => this.humanList[p.player]) : [];
     humans.sort((a, b) => (humans.length === 2 ? a.team - b.team : 0) || a.player - b.player);
     const ids = humans.map((p) => p.heroId);
     const pts = ids.map((id) => this.entityViews.heroPoint(id));
@@ -378,19 +385,63 @@ export class GameRenderer {
     for (const a of pts) for (const b of pts) if (a && b) spread = Math.max(spread, a.distanceTo(b));
     if (spread > this.cfg.splitNear + 2) this.merged = false;
     else if (spread < this.cfg.splitNear - 3 && pts.every(Boolean)) this.merged = true;
-    const want = ids.length >= 2 && !this.merged ? ids : [];
-    if (want.length === this.splitViews.length && want.every((id, i) => this.splitViews[i].heroId === id)) return;
-    this.splitViews = want.map((heroId) => ({
-      cam: new THREE.PerspectiveCamera(this.cfg.fovDeg, 1, this.camera.near, this.camera.far),
-      st: { focus: new THREE.Vector3(), width: this.cfg.splitViewWidth, init: false },
-      heroId,
-    }));
+    const groups: { ids: number[]; player: number }[] = !ids.length ? [] : ids.length === 1 || this.merged ? [{ ids, player: humans[0].player }] : humans.map((p) => ({ ids: [p.heroId], player: p.player }));
+    const same = groups.length === this.splitViews.length && groups.every((g, i) => g.ids.join() === this.splitViews[i].heroIds.join());
+    if (same) return;
+    const prev = this.splitViews;
+    this.splitViews = groups.map((g) => {
+      const old = prev.find((v) => v.heroIds.includes(g.ids[0]));
+      return {
+        cam: old?.cam ?? new THREE.PerspectiveCamera(this.cfg.fovDeg, 1, this.camera.near, this.camera.far),
+        st: old?.st ?? { focus: new THREE.Vector3(), width: this.cfg.splitViewWidth, init: false },
+        heroIds: g.ids,
+        player: g.player,
+      };
+    });
+  }
+
+  private frameView(sv: { heroIds: number[]; player: number }): { pts: THREE.Vector3[]; min: number; max: number; margin: number } {
+    const w = this.world;
+    const pts: THREE.Vector3[] = [];
+    const heroes = sv.heroIds.map((id) => w.getAny(id)).filter((e) => !!e);
+    for (const id of sv.heroIds) {
+      const p = this.entityViews.heroPoint(id);
+      if (p) pts.push(p);
+    }
+    if (!pts.length) {
+      const sp = w.spawnPoint(heroes[0]?.team ?? 0);
+      return { pts: [new THREE.Vector3(sp.x, 0, sp.z)], min: this.cfg.splitViewWidth, max: this.cfg.splitViewWidth, margin: 0 };
+    }
+    if (this.camMode === 2) {
+      const z = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2];
+      return { pts, min: z, max: Math.max(z, 40), margin: 4 };
+    }
+    const alive = heroes.filter((h) => h.alive);
+    let fight = false;
+    for (const o of w.entities) {
+      if (!o.alive || o.kind === "structure") continue;
+      if (alive.some((h) => h.team !== o.team && w.dist(h, o) < 9)) {
+        fight = true;
+        pts.push(new THREE.Vector3(o.transform.pos.x, o.transform.y, o.transform.pos.z));
+      }
+    }
+    let towers = false;
+    for (const o of w.entities) {
+      if (!o.alive || !o.structure || o.structure.siege) continue;
+      if (alive.some((h) => w.dist(h, o) < 13)) {
+        towers = true;
+        pts.push(new THREE.Vector3(o.transform.pos.x, o.transform.y, o.transform.pos.z));
+      }
+    }
+    const min = fight ? 18 : towers ? 24 : 21;
+    return { pts, min, max: 34, margin: fight ? 6 : 8 };
   }
 
   private splitRects(w: number, h: number): [number, number, number, number][] {
     const n = this.splitViews.length;
     const hw = Math.floor(w / 2);
     const hh = Math.floor(h / 2);
+    if (n === 1) return [[0, 0, w, h]];
     if (n === 2) return [[0, 0, hw, h], [hw, 0, w - hw, h]];
     return [[0, hh, hw, h - hh], [hw, h - hh, w - hw, hh], [0, 0, hw, hh], [hw, 0, w - hw, hh]];
   }
@@ -468,11 +519,8 @@ export class GameRenderer {
           cam = sv.cam;
           cam.aspect = w / h;
           cam.updateProjectionMatrix();
-          const me = this.entityViews.heroPoint(sv.heroId);
-          const hero = this.world.getAny(sv.heroId);
-          const home = hero ? this.world.spawnPoint(hero.team) : { x: 0, z: 0 };
-          const pts = me ? [me, ...all.filter((p) => p.distanceTo(me) < this.cfg.splitNear)] : [new THREE.Vector3(home.x, 0, home.z)];
-          this.aimCamera(cam, sv.st, pts, dt, this.cfg.splitViewWidth);
+          const f = this.frameView(sv);
+          this.aimCamera(cam, sv.st, f.pts, dt, f.min, f.max, f.margin);
         } else {
           cam = this.camera;
           cam.aspect = w / h;
@@ -495,7 +543,8 @@ export class GameRenderer {
   }
 
   worldToScreen(x: number, y: number, z: number): { x: number; y: number } {
-    const v = new THREE.Vector3(x, y, z).project(this.camera);
+    const cam = this.splitViews.length === 1 ? this.splitViews[0].cam : this.camera;
+    const v = new THREE.Vector3(x, y, z).project(cam);
     return { x: (v.x * 0.5 + 0.5) * window.innerWidth, y: (-v.y * 0.5 + 0.5) * window.innerHeight };
   }
 }

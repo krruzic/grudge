@@ -1,4 +1,5 @@
 import type { World } from "../sim/world";
+import { CAMERA_NAMES } from "../game/save";
 import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from "../sim/terrain";
 import { drawNum, drawPlain, drawText, occlude, textWidth } from "./font";
 import { box, padButton, PAD } from "./hud";
@@ -137,6 +138,7 @@ export class Screens {
   private heroes: Record<string, HeroInfo> = {};
   private roster: string[] = [];
   private twoVtwo = false;
+  cameraMode = 1;
   private results: World | null = null;
 
   constructor(private teamColors: string[]) {}
@@ -204,7 +206,7 @@ export class Screens {
       const rows: [string, string][] = [
         ["STICK", "MOVE"], ["A", "ATTACK · HOLDING A BOMB: THROW"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
         ["L", "BLOCK · L + A: SHOVE · L + X / L + SMASH: DODGE"], ["C", "WHOLE ARMY: UP PUSH · DOWN HOLD · LEFT FOLLOW · RIGHT HUNT"],
-        ["X", "HOLD + C: CALL 3 TROOPS · AT PAD: OUTPOSTS / UPGRADE"], ["Y", "AT PAD: TOWERS · AT YOUR KEEP: SHOP (BOMB, SHIELD, CANNON)"], ["L + C", "HOLD L: FLICK TROOPS, THEN FLICK ORDERS"], ["D-PAD", "COMMANDER GROUPS"],
+        ["X", "HOLD + C: CALL 3 TROOPS · AT PAD: OUTPOSTS / UPGRADE"], ["Y", "AT PAD: TOWERS · AT YOUR KEEP: SHOP (BOMB, SHIELD, CANNON)"], ["L + C", "HOLD L: FLICK TROOPS, THEN FLICK ORDERS"], ["D-PAD", "LEFT/RIGHT: ZOOM (D-PAD CAMERA) · COMMANDER GROUPS"],
       ];
       const bw = 300;
       const bx = Math.round((W - bw) / 2);
@@ -232,6 +234,10 @@ export class Screens {
     artTitle(ctx, "t_champion", "CHOOSE YOUR CHAMPION", W / 2, 3, 14);
     ribbon(ctx, W - 38, 4, 46, 11, this.twoVtwo ? "2 VS 2" : "1 VS 1", 0.55, undefined, nameImage(this.twoVtwo ? "t_2v2" : "t_1v1"));
     this.hit("mode", W - 38 - 28, 1, 56, 17);
+    const cam = CAMERA_NAMES[this.cameraMode] ?? CAMERA_NAMES[1];
+    const cw = Math.max(64, textWidth(cam, 0.5) + 18);
+    ribbon(ctx, 8 + cw / 2, 4, cw, 11, cam, 0.5);
+    this.hit("camera", 4, 1, cw + 8, 17);
 
     const n = this.roster.length;
     const sw = 38;
