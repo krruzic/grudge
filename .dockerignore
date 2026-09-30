@@ -1,0 +1,11 @@
+node_modules
+dist
+release
+.git
+.sudo
+.env
+.venv-tripo
+.online-url
+__pycache__
+Dockerfile
+.dockerignore

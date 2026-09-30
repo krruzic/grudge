@@ -11,16 +11,17 @@
     "bake-map": "node --experimental-transform-types --no-warnings tools/bake-map.ts",
     "sim": "node --experimental-transform-types --no-warnings tools/sim.ts",
     "release": "tsc --noEmit && vite build --outDir release --emptyOutDir && vite preview --outDir release --port 5200 --strictPort --host",
-    "online": "node tools/online.mjs"
+    "online": "node tools/online.mjs",
+    "serve": "node --no-warnings tools/server.ts"
   },
   "dependencies": {
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",
     "@types/ws": "^8.18.2",
     "typescript": "^7.0.2",
-    "vite": "^8.3.1",
-    "ws": "^8.22.0"
+    "vite": "^8.3.1"
   }
 }

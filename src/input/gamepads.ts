@@ -105,6 +105,7 @@ export class Gamepads {
       this.keys.add(e.code);
       this.tapped.add(e.code);
       this.keyTouched = true;
+      this.kbHold = false;
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
     window.addEventListener("blur", () => {
@@ -121,6 +122,7 @@ export class Gamepads {
       if (e.button === 0) { this.mouse.left = true; this.tapped.add("Mouse0"); }
       if (e.button === 2) { this.mouse.right = true; this.tapped.add("Mouse2"); }
       this.keyTouched = true;
+      this.kbHold = false;
     });
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) this.mouse.left = false;
@@ -147,7 +149,24 @@ export class Gamepads {
   }
 
   claimKeyboard(): void {
-    this.keyTouched = true;
+    if (!this.kbHold) this.keyTouched = true;
+  }
+
+  private kbHold = false;
+  private waitRelease = new Set<number>();
+
+  release(slot: number): void {
+    const idx = this.slots[slot];
+    if (idx === null || idx === undefined) return;
+    if (idx === KEYBOARD) {
+      this.kbHold = true;
+      this.keyTouched = false;
+      this.keys.clear();
+      this.tapped.clear();
+      this.mouse.left = this.mouse.right = false;
+    } else this.waitRelease.add(idx);
+    this.slots[slot] = null;
+    this.players[slot] = emptyState();
   }
 
   typing = false;
@@ -259,6 +278,12 @@ export class Gamepads {
     return found;
   }
 
+  private held(id: number, on: boolean): boolean {
+    if (!this.waitRelease.has(id)) return false;
+    if (!on) this.waitRelease.delete(id);
+    return true;
+  }
+
   private assignSlots(pads: (Gamepad | null)[]): void {
     for (let s = 0; s < this.slots.length; s++) {
       const idx = this.slots[s];
@@ -272,13 +297,17 @@ export class Gamepads {
     const nativeGc = pads.some((pad) => !!pad?.connected && /gamecube (adapter port|controller)|wup-028/i.test(pad.id));
     this.gc.ports.forEach((gp, p) => {
       if (nativeGc || !gp.connected || this.slots.includes(GC_BASE - p)) return;
-      if (!(gp.a || gp.b || gp.x || gp.y || gp.z || gp.start)) return;
+      const on = gp.a || gp.b || gp.x || gp.y || gp.z || gp.start;
+      if (this.held(GC_BASE - p, on)) return;
+      if (!on) return;
       const free = this.slots.indexOf(null);
       if (free >= 0) this.slots[free] = GC_BASE - p;
     });
     this.pro.pads.forEach((gp, i) => {
       if (!gp.connected || this.slots.includes(PRO_BASE - i)) return;
-      if (!(gp.a || gp.b || gp.x || gp.y || gp.plus || gp.zr || gp.r)) return;
+      const on = gp.a || gp.b || gp.x || gp.y || gp.plus || gp.zr || gp.r;
+      if (this.held(PRO_BASE - i, on)) return;
+      if (!on) return;
       const free = this.slots.indexOf(null);
       if (free >= 0) this.slots[free] = PRO_BASE - i;
     });
@@ -290,6 +319,7 @@ export class Gamepads {
       if (!pad?.connected || this.slots.includes(pad.index)) continue;
       if (/product: 2069/i.test(pad.id) && !/virtual/i.test(pad.id)) continue;
       const anyInput = pad.buttons.some((b) => b.pressed);
+      if (this.held(pad.index, anyInput)) continue;
       const free = this.slots.indexOf(null);
       if (free >= 0 && anyInput) this.slots[free] = pad.index;
     }

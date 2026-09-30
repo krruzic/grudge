@@ -705,6 +705,7 @@ async function start(): Promise<void> {
       cursors.setScale(pixel.w, pixel.h);
       if (!twoVtwo && [0, 1, 2, 3].filter(present).length >= 3) setMode(true);
       slots.forEach((sl, i) => {
+        sl.local = pads.players[i].connected;
         if (present(i) && sl.cpu && sl.autoCpu) { sl.autoCpu = false; makeHuman(i); }
         if (!present(i) && !sl.cpu) { makeCpu(i); sl.autoCpu = true; }
       });
@@ -722,7 +723,10 @@ async function start(): Promise<void> {
         } else if (act.type === "button") {
           const [id, arg] = act.id.split(":");
           const i = Number(arg);
-          if (id === "mode") {
+          if (id === "unplug") {
+            pads.release(i);
+            audio.ui("back");
+          } else if (id === "mode") {
             setMode(!twoVtwo);
             audio.ui("ok");
           } else if (id === "add") {

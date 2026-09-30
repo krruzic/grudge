@@ -42,6 +42,7 @@ export interface SelectSlot {
   level: number;
   autoCpu?: boolean;
   tag?: string | null;
+  local?: boolean;
 }
 
 type HeroInfo = { name: string; blurb: string; abilities?: Record<string, { kind: string }> };
@@ -452,6 +453,18 @@ export class Screens {
     if (!s.cpu && !commander) {
       this.hit(`tag:${i}`, x + 4, y + 3, w - 8, 13);
       if (tagHot) shadowText(ctx, "SIGN NAME", x + w / 2 - textWidth("SIGN NAME", 0.42) / 2, y - 7, "#f8e8c0", 0.42);
+    }
+    if (human && s.local) {
+      const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `unplug:${i}`);
+      const ux = x + w - 10;
+      const uy = y + 1;
+      ctx.fillStyle = "#1a120a";
+      ctx.fillRect(ux - 1, uy - 1, 9, 9);
+      ctx.fillStyle = uHot ? "#b83020" : "#6a3a24";
+      ctx.fillRect(ux, uy, 7, 7);
+      shadowText(ctx, "X", ux + 3.5 - textWidth("X", 0.5) / 2, uy + 1, uHot ? "#fff4b0" : "#e8d8b8", 0.5);
+      this.hit(`unplug:${i}`, ux - 2, uy - 2, 11, 11);
+      if (uHot) shadowText(ctx, "UNPLUG · ANY BUTTON REJOINS", Math.max(2, x + w / 2 - textWidth("UNPLUG · ANY BUTTON REJOINS", 0.42) / 2), y - 7, "#f8e8c0", 0.42);
     }
 
     const def = this.heroes[s.hero];

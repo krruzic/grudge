@@ -5,6 +5,7 @@ import { join } from "node:path";
 const URL_FILE = join(process.cwd(), ".online-url");
 
 export function publicUrl(): string {
+  if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL;
   try {
     return existsSync(URL_FILE) ? readFileSync(URL_FILE, "utf8").trim() : "";
   } catch {
