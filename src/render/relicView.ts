@@ -3,7 +3,7 @@ import type { World } from "../sim/world";
 import type { StructureModels } from "./structureModels";
 import goldUrl from "../../assets/textures/gold.png?url";
 import ironUrl from "../../assets/textures/iron.png?url";
-import { starTex, targetTex } from "./combatFx";
+import { starTex, targetTex, type CombatFx } from "./combatFx";
 
 const ironTex = new THREE.TextureLoader().load(ironUrl);
 ironTex.colorSpace = THREE.SRGBColorSpace;
@@ -23,7 +23,11 @@ function bombMesh(): THREE.Group {
   spark.position.set(0.1, 1.18, 0);
   spark.scale.setScalar(0.45);
   spark.name = "spark";
-  g.add(ball, cap, fuse, spark);
+  const warn = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0xff3010, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  warn.rotation.x = -Math.PI / 2;
+  warn.position.y = 0.05;
+  warn.name = "warn";
+  g.add(ball, cap, fuse, spark, warn);
   return g;
 }
 
@@ -50,6 +54,9 @@ export class RelicView {
   private carried = new Map<number, THREE.Group>();
   private planted: THREE.Group[] = [];
   private reticles = new Map<number, THREE.Mesh>();
+  private flying: THREE.Group[] = [];
+  private smokeT = 0;
+  fx: CombatFx | null = null;
 
   constructor(private world: World, models: StructureModels, private teamColors: THREE.Color[], private heroScale: number) {
     const src = models.create("grudge", new THREE.Color(1, 1, 1));
@@ -136,15 +143,40 @@ export class RelicView {
       this.planted.push(g);
       this.root.add(g);
     }
+    const thrown = w.arena.thrown;
+    while (this.flying.length < thrown.length) {
+      const g = bombMesh();
+      this.flying.push(g);
+      this.root.add(g);
+    }
+    this.flying.forEach((g, i) => {
+      const b = thrown[i];
+      g.visible = !!b;
+      if (!b) return;
+      const k = Math.min(1, (w.time - b.start) / b.dur);
+      g.position.set(b.fromX + (b.toX - b.fromX) * k, b.fromY + (b.toY - b.fromY) * k + Math.sin(k * Math.PI) * 3, b.fromZ + (b.toZ - b.fromZ) * k);
+      g.rotation.set(k * 9, 0, k * 5);
+      g.scale.setScalar(0.8);
+    });
+    this.smokeT -= 1 / 60;
+    const puff = this.smokeT <= 0;
+    if (puff) this.smokeT = 0.07;
     this.planted.forEach((g, i) => {
       const b = bombs[i];
       g.visible = !!b;
       if (!b) return;
       const left = b.at - w.time;
+      const total = b.targetId ? w.data.match.arena.shop.bomb.fuse : w.data.match.arena.shop.bomb.groundFuse;
+      const heat = Math.max(0, Math.min(1, 1 - left / total));
+      if (puff && this.fx && Math.random() < 0.35 + heat * 0.65) this.fx.smoke(b.x + 0.1, b.y + 1.2, b.z, heat);
+      g.rotation.z = heat > 0.6 ? Math.sin(this.t * 40) * 0.12 * heat : 0;
       const beat = left < 1 ? 14 : left < 2 ? 8 : 4;
       const on = Math.sin(this.t * beat * Math.PI) > 0;
       g.position.set(b.x, b.y, b.z);
-      g.scale.setScalar(1 + (on ? 0.12 : 0) + Math.max(0, 1 - left) * 0.25);
+      g.scale.setScalar(1.35 + (on ? 0.14 : 0) + heat * 0.3);
+      const warn = g.getObjectByName("warn") as THREE.Mesh;
+      warn.scale.setScalar((w.data.match.arena.shop.bomb.splash / g.scale.x) * (0.3 + 0.7 * heat));
+      (warn.material as THREE.MeshBasicMaterial).opacity = (on ? 0.35 : 0.18) * (0.4 + heat);
       const sp = g.getObjectByName("spark") as THREE.Sprite;
       sp.scale.setScalar(on ? 0.7 : 0.4);
       (sp.material as THREE.SpriteMaterial).color.set(on ? 0xff5020 : 0xffc040);

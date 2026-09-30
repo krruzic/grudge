@@ -818,6 +818,27 @@ export class CombatFx {
     this.shake = Math.max(this.shake, 0.7);
   }
 
+  smoke(x: number, y: number, z: number, heat: number): void {
+    const s = this.sprite(puffTex, heat > 0.7 ? 0x5a4a44 : 0x6a6660, false, 0.7);
+    s.position.set(x + (Math.random() - 0.5) * 0.2, y, z + (Math.random() - 0.5) * 0.2);
+    const sz = 0.4 + heat * 0.5;
+    const drift = (Math.random() - 0.5) * 0.8;
+    this.items.push({
+      obj: s, t: 0, dur: 0.9 + heat * 0.5,
+      tick: (k, dt) => {
+        s.position.y += dt * (1.2 + heat);
+        s.position.x += dt * drift;
+        s.scale.setScalar(sz * (1 + k * 2));
+        s.material.opacity = 0.65 * (1 - k);
+      },
+    });
+    if (heat > 0.5 && Math.random() < heat * 0.5) {
+      const f = this.sprite(starTex, 0xff9030, true, 0.9);
+      f.position.set(x, y, z);
+      this.items.push({ obj: f, t: 0, dur: 0.15, tick: (k) => { f.scale.setScalar(0.5 + k * 0.4); f.material.opacity = 0.9 * (1 - k); } });
+    }
+  }
+
   buildFx(x: number, y: number, z: number, team: number): void {
     this.burst(x, y + 0.4, z, puffTex, 0xd8c8a8, 10, 1.4, 0.8, 2.5, false, 0.6);
     this.flash(x, y + 1.5, z, glowTex, this.teamColors[team], 4, 0.4);

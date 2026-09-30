@@ -388,3 +388,10 @@
 
 ## Split screen
 - With two or more human players each gets a view that follows their hero at a fixed close zoom (side by side for two, quadrants for three or four; the fourth quadrant of three shows the whole fight). When all human heroes are within about 9m of each other the views merge into one shared camera, and split again past 14m. Option SPLIT SCREEN turns it off.
+
+## Second playtest polish
+- A no longer goes dead after a combo: while the combo cools down (now 0.5s), A throws a single quick jab at 55% damage with no chain.
+- Match-wide callouts (BOMB DROPPED, CANNON FIRE...) are small and sit under the clock. Only FIGHT! and the winner stay big. Team messages sit above that team's C-stick cross; "NEED" messages get a coin and a shake.
+- The HUD shows a relic or bomb badge next to the B/R buttons for whoever on that team carries one.
+- Bombs can be thrown with A (8m arc, aimed with the stick). Landing on an enemy tower sticks it there (3s, destroys it). Landing anywhere else it sits on the ground for 3s, smoking harder and flashing a red blast circle that grows, then blows up (90 to foes, 220 to buildings in 3.2m).
+- Switch 2 Pro Controller (057e:2069) over WebHID, after the controller has been woken over USB by an external script. Press G to grant access; the layout follows SDL's Switch 2 driver (buttons at bytes 5–8, 12-bit sticks at 11–16). A attack, B secondary, X/Y as on GameCube, R special, ZR super, L block, ZL or left-stick click dodge, + pause, right stick = C. The kernel's hid-generic copy of the pad is ignored. `tools/procon2/99-procon2-hidraw.rules` lets the browser open its hidraw node.

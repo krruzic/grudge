@@ -101,7 +101,14 @@
         "cost": 180,
         "fuse": 3,
         "coreDamage": 350,
-        "plantReach": 1.4
+        "plantReach": 1.4,
+        "throwRange": 8,
+        "throwSeconds": 0.6,
+        "groundFuse": 3,
+        "stickReach": 1.6,
+        "splash": 3.2,
+        "splashDamage": 90,
+        "structureSplash": 220
       },
       "ward": {
         "cost": 150,

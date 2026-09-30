@@ -202,7 +202,7 @@ export class Screens {
     else if (this.which === "pause") {
       paintedText(ctx, "PAUSE", W / 2, 30, "#f0c030", 1.6);
       const rows: [string, string][] = [
-        ["STICK", "MOVE"], ["A", "ATTACK"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
+        ["STICK", "MOVE"], ["A", "ATTACK · HOLDING A BOMB: THROW"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
         ["L", "BLOCK · L + A: SHOVE · L + X / L + SMASH: DODGE"], ["C", "WHOLE ARMY: UP PUSH · DOWN HOLD · LEFT FOLLOW · RIGHT HUNT"],
         ["X", "HOLD + C: CALL 3 TROOPS · AT PAD: OUTPOSTS / UPGRADE"], ["Y", "AT PAD: TOWERS · AT YOUR KEEP: SHOP (BOMB, SHIELD, CANNON)"], ["L + C", "HOLD L: FLICK TROOPS, THEN FLICK ORDERS"], ["D-PAD", "COMMANDER GROUPS"],
       ];

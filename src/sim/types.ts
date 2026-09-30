@@ -58,6 +58,7 @@ export interface HeroAction {
   toX?: number;
   toZ?: number;
   hitIds?: number[];
+  jab?: boolean;
 }
 
 export interface HeroState {

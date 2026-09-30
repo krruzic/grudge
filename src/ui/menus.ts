@@ -452,7 +452,7 @@ export class Menus {
     const ph = H - 52;
     parchment(ctx, px, py, pw, ph);
     const pad: [string, string][] = [
-      ["STICK", "MOVE"], ["A", "ATTACK"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
+      ["STICK", "MOVE"], ["A", "ATTACK · HOLDING A BOMB: THROW"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
       ["L", "BLOCK · L+A SHOVE · L+X DODGE"], ["C", "WHOLE ARMY: PUSH / HOLD / FOLLOW / HUNT"],
       ["X", "CALL 3 TROOPS · AT PAD: OUTPOSTS"], ["Y", "AT PAD: TOWERS · AT KEEP: SHOP"], ["L + C", "HOLD L, FLICK TROOPS, FLICK ORDER"], ["D-PAD", "COMMANDER GROUPS"], ["START", "PAUSE"],
     ];

@@ -321,6 +321,12 @@ export class Bot {
       const target = best ?? w.core(1 - me.team);
       if (target) {
         this.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
+        if (w.dist(me, target) < w.data.match.arena.shop.bomb.throwRange - 1 && this.rand() < 0.3) {
+          const dx = target.transform.pos.x - me.transform.pos.x;
+          const dz = target.transform.pos.z - me.transform.pos.z;
+          me.transform.facing = Math.atan2(dx, dz);
+          this.wantAttack = true;
+        }
         return true;
       }
     }

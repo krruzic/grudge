@@ -166,6 +166,73 @@ function cArrow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, 
   ctx.restore();
 }
 
+function bombIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, now: number): void {
+  ctx.save();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(x + r * 0.5, y - r * 0.6);
+  ctx.quadraticCurveTo(x + r * 1.1, y - r * 1.4, x + r * 1.3, y - r * 1.2);
+  ctx.stroke();
+  ctx.strokeStyle = "#d8c088";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x, y, r + 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#3a3a44";
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#8a8a98";
+  ctx.beginPath();
+  ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  const on = Math.floor(now * 10) % 2 === 0;
+  ctx.fillStyle = on ? "#fff0a0" : "#ff7020";
+  ctx.beginPath();
+  ctx.arc(x + r * 1.3, y - r * 1.2, on ? 1.6 : 1.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function relicIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.save();
+  const horn = (s: number) => {
+    ctx.beginPath();
+    ctx.moveTo(x + s * r * 0.45, y - r * 0.3);
+    ctx.quadraticCurveTo(x + s * r * 1.5, y - r * 0.4, x + s * r * 1.3, y - r * 1.4);
+    ctx.quadraticCurveTo(x + s * r * 1.05, y - r * 0.75, x + s * r * 0.4, y - r * 0.75);
+    ctx.closePath();
+  };
+  for (const pass of [0, 1]) {
+    ctx.fillStyle = pass ? "#f0d070" : INK;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = INK;
+    horn(-1);
+    if (pass) ctx.fill(); else ctx.stroke();
+    horn(1);
+    if (pass) ctx.fill(); else ctx.stroke();
+  }
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.ellipse(x, y, r * 0.75 + 0.9, r + 0.9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#a8682a";
+  ctx.beginPath();
+  ctx.ellipse(x, y, r * 0.75, r, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#e8a850";
+  ctx.beginPath();
+  ctx.ellipse(x - r * 0.2, y - r * 0.3, r * 0.25, r * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - r * 0.45, y + r * 0.35, r * 0.25, r * 0.2);
+  ctx.fillRect(x + r * 0.2, y + r * 0.35, r * 0.25, r * 0.2);
+  ctx.restore();
+}
+
 function coinIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
   ctx.save();
   ctx.fillStyle = INK;
@@ -271,7 +338,10 @@ export class Hud {
     this.visible = on;
   }
 
-  banner_(text: string, now: number, seconds = 2.2): void {
+  private bannerBig = false;
+
+  banner_(text: string, now: number, seconds = 2.2, big = false): void {
+    this.bannerBig = big;
     this.banner = text;
     this.bannerAt = now;
     this.bannerUntil = now + seconds;
@@ -309,12 +379,15 @@ export class Hud {
   private drawBanner(ctx: CanvasRenderingContext2D, W: number, now: number): void {
     const age = now - this.bannerAt;
     const left = this.bannerUntil - now;
-    const pop = age < 0.12 ? 1.6 - (age / 0.12) * 0.6 : 1;
-    const s = 3.6 * pop;
+    const pop = age < 0.12 ? 1.4 - (age / 0.12) * 0.4 : 1;
+    const big = this.bannerBig;
+    const base = big ? 3.6 : 1.35;
+    const s = base * pop;
     const tw = textWidth(this.banner, s, true);
     ctx.save();
     ctx.globalAlpha = Math.min(1, left * 5);
-    drawNum(ctx, this.banner, Math.round((W - tw) / 2), 96 - (s - 3.6) * 5, "#ffffff", s);
+    const y = big ? 96 - (s - base) * 5 : MARGIN_Y + 29 - (s - base) * 4;
+    drawNum(ctx, this.banner, Math.round((W - tw) / 2), y, "#ffffff", s);
     ctx.restore();
   }
 
@@ -464,16 +537,26 @@ export class Hud {
         }
       });
     }
+    let bxc = 44;
+    for (const p of w.players) {
+      const e = w.getAny(p.heroId);
+      if (!e?.hero || e.team !== t || !e.alive) continue;
+      const relic = w.arena.carrying(e);
+      if (!relic && !e.hero.bomb) continue;
+      const lab = relic ? "GRUDGE" : "A THROW";
+      const lw = textWidth(lab, 0.7);
+      const tag = w.players.filter((q) => q.team === t).length > 1 ? `P${p.player + 1} ` : "";
+      const tw = tag ? textWidth(tag, 0.7) : 0;
+      const bw = 12 + tw + lw;
+      const x = right ? ax(bxc, bw) : ax(bxc);
+      if (relic) relicIcon(ctx, x + 5, y + 6.5, 3.6);
+      else bombIcon(ctx, x + 5, y + 7, 3.6, now);
+      if (tag) drawText(ctx, tag, x + 12, y + 3, "#d8d0c0", 0.7);
+      drawText(ctx, lab, x + 12 + tw, y + 3, relic ? (Math.floor(now * 3) % 2 ? "#ffe890" : "#ffffff") : "#ffc0a0", 0.7);
+      bxc += bw + 6;
+    }
     y += 18;
 
-    const nt = this.notices[t];
-    if (now < nt.until) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, (nt.until - now) * 3);
-      const tw = textWidth(nt.text, 0.85);
-      drawText(ctx, nt.text, ax(0, tw), y, "#ffb8a0", 0.85);
-      ctx.restore();
-    }
 
     const slot = w.players.find((p) => p.team === t && !p.commander);
     const cmd = w.players.find((p) => p.team === t && p.commander);
@@ -484,6 +567,23 @@ export class Hud {
     const menuHero = opener?.heroId;
     const crossY = H - 58;
     const crossX = right ? W - MARGIN_X - 62 : MARGIN_X + 62;
+    const nt = this.notices[t];
+    if (now < nt.until) {
+      const age = 2 - (nt.until - now);
+      const jolt = age < 0.25 ? Math.sin(age * 60) * (1 - age / 0.25) * 2.5 : 0;
+      const money = nt.text.startsWith("NEED");
+      const s = money ? 1 : 0.85;
+      const tw = textWidth(nt.text, s);
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, (nt.until - now) * 3);
+      if (money) {
+        const cw = 9;
+        const bx = Math.round(crossX - (tw + cw) / 2 + jolt);
+        coinIcon(ctx, bx + 3.5, crossY - 43.5, 3.5);
+        drawText(ctx, nt.text, bx + cw, crossY - 48, "#ff7060", s);
+      } else drawText(ctx, nt.text, Math.round(crossX - tw / 2 + jolt), crossY - 48, "#ffd0a0", s);
+      ctx.restore();
+    }
     const aimer = w.players.map((p) => w.getAny(p.heroId)).find((e) => e?.team === t && e.hero?.aim);
     if (aimer?.hero?.aim) {
       const left = Math.max(0, Math.ceil(aimer.hero.aim.until - w.time));

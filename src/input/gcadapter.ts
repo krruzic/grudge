@@ -90,6 +90,10 @@ export class GcAdapter {
     return !!this.device;
   }
 
+  async adopt(d: HIDDeviceLike): Promise<void> {
+    if (!this.device && d.vendorId === VENDOR && d.productId === PRODUCT) await this.open(d);
+  }
+
   async request(): Promise<void> {
     const hid = (navigator as unknown as { hid?: HIDLike }).hid;
     if (!hid || this.device) return;

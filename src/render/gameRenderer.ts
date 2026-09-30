@@ -289,6 +289,7 @@ export class GameRenderer {
     this.scene.add(this.hazards.root);
     this.combatFx = new CombatFx(this.teamColors);
     this.combatFx.world = world;
+    this.relicView.fx = this.combatFx;
     this.entityViews = new EntityViews(world, this.teamColors, this.heroModels, this.structureModels, this.cfg.heroScale, this.combatFx, this.unitModels);
     this.entityViews.humans = this.humanList;
     this.entityViews.hints = this.hints;

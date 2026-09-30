@@ -173,6 +173,17 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     } else if (cmd.secondary && ready(e, "b", w.time) && !act) {
       startAbility(w, e, "b", cmd);
       h.cooldowns.b = w.time + (ab.b.cooldown ?? 4);
+    } else if (cmd.attack && h.bomb && !act) {
+      const sh = w.data.match.arena.shop.bomb;
+      const [dx, dz] = aim(w, e, cmd, sh.throwRange);
+      begin(e, "a", "throw", 0.34, 0.14, dx, dz);
+    } else if (cmd.attack && ab.a.kind === "combo" && !act && !chaining(w, e) && !ready(e, "a", w.time)) {
+      const hit = ab.a.hits![0];
+      const [dx, dz] = aim(w, e, cmd, hit.range + 1.5);
+      const j = begin(e, "a", "combo", hit.dur * 0.85, hit.hitAt * 0.85, dx, dz, 0);
+      j.jab = true;
+      h.comboIndex = 0;
+      h.comboUntil = 0;
     } else if (cmd.attack && (!act || canChainCombo) && (chaining(w, e) || ready(e, "a", w.time))) {
       if (ab.a.kind === "combo") {
         const hits = ab.a.hits!;
@@ -329,11 +340,27 @@ function fire(w: World, e: Entity, a: HeroAction): void {
   const mul = w.damageMulOf(e);
   if (a.kind === "combo") {
     const hit = ab.a.hits![a.combo];
-    arcHit(w, e, a.dirX, a.dirZ, hit.range, hit.arcDeg, hit.damage * mul, hit.knockback, a.combo === 2);
+    if (a.jab) arcHit(w, e, a.dirX, a.dirZ, hit.range, hit.arcDeg, hit.damage * mul * 0.55, hit.knockback * 0.5, false);
+    else arcHit(w, e, a.dirX, a.dirZ, hit.range, hit.arcDeg, hit.damage * mul, hit.knockback, a.combo === (ab.a.hits!.length - 1));
     return;
   }
   if (a.name === "shove") {
     shoveHit(w, e, a);
+    return;
+  }
+  if (a.kind === "throw") {
+    const sh = w.data.match.arena.shop.bomb;
+    let range = sh.throwRange;
+    for (const o of w.entities) {
+      if (!o.alive || !o.structure || o.team === e.team || o.neutral) continue;
+      const dx = o.transform.pos.x - t.pos.x;
+      const dz = o.transform.pos.z - t.pos.z;
+      const along = dx * a.dirX + dz * a.dirZ;
+      if (along <= 0 || along > sh.throwRange + o.radius) continue;
+      if (Math.abs(dx * a.dirZ - dz * a.dirX) > o.radius + 1) continue;
+      range = Math.min(range, Math.max(1, along - o.radius * 0.5));
+    }
+    w.arena.throwBomb(e, t.pos.x + a.dirX * range, t.pos.z + a.dirZ * range);
     return;
   }
   if (a.name === "dodge" || a.name === "hit") return;

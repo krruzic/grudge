@@ -69,7 +69,7 @@ const KIND_ANIM: Record<string, string> = {
   slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", hex: "cast", repair: "cast",
   turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
   banner: "cast", rally: "cast", works: "cast", ballista: "cast",
-  shove: "attack_a", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
+  shove: "attack_a", throw: "attack_b", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
 };
 
 const white = new THREE.Color(1, 1, 1);

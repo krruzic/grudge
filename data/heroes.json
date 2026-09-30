@@ -33,7 +33,7 @@
     "superPerDamageDealt": 0.06,
     "superPerDamageTaken": 0.04,
     "hitStunSeconds": 0.18,
-    "comboCooldown": 0.7,
+    "comboCooldown": 0.5,
     "commanderPriority": 3,
     "cowedDamageMul": 0.75,
     "shove": {

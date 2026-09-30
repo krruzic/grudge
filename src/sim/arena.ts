@@ -25,6 +25,19 @@ export interface CannonShot {
   team: number;
 }
 
+export interface ThrownBomb {
+  fromX: number;
+  fromZ: number;
+  fromY: number;
+  toX: number;
+  toZ: number;
+  toY: number;
+  start: number;
+  dur: number;
+  ownerId: number;
+  team: number;
+}
+
 export interface Bomb {
   x: number;
   z: number;
@@ -42,6 +55,7 @@ export class Arena {
   readonly relic: Relic;
   readonly shots: CannonShot[] = [];
   readonly bombs: Bomb[] = [];
+  readonly thrown: ThrownBomb[] = [];
   private nextCannon: number;
   private nextOgre: number;
   private nextWave: number;
@@ -402,9 +416,56 @@ export class Arena {
     return true;
   }
 
+  throwBomb(e: Entity, tx: number, tz: number): void {
+    const w = this.w;
+    const sh = w.data.match.arena.shop.bomb;
+    if (!e.hero?.bomb) return;
+    e.hero.bomb = false;
+    const p = e.transform.pos;
+    const x = Math.max(1, Math.min(w.terrain.width - 1, tx));
+    const z = Math.max(1, Math.min(w.terrain.depth - 1, tz));
+    this.thrown.push({ fromX: p.x, fromZ: p.z, fromY: e.transform.y + 2.2, toX: x, toZ: z, toY: w.groundY(x, z), start: w.time, dur: sh.throwSeconds, ownerId: e.id, team: e.team });
+    w.emit({ type: "shot", style: "throw", x: p.x, y: e.transform.y + 2, z: p.z });
+  }
+
+  private landBomb(b: ThrownBomb): void {
+    const w = this.w;
+    const sh = w.data.match.arena.shop.bomb;
+    let target: Entity | undefined;
+    let best = Infinity;
+    for (const o of w.entities) {
+      if (!o.alive || !o.structure || o.team === b.team || o.neutral || o.structure.siege) continue;
+      const d = Math.hypot(o.transform.pos.x - b.toX, o.transform.pos.z - b.toZ) - o.radius;
+      if (d <= sh.stickReach && d < best) { best = d; target = o; }
+    }
+    let x = b.toX;
+    let z = b.toZ;
+    if (target) {
+      const dx = b.toX - target.transform.pos.x;
+      const dz = b.toZ - target.transform.pos.z;
+      const dl = Math.hypot(dx, dz) || 1;
+      x = target.transform.pos.x + (dx / dl) * (target.radius + 0.2);
+      z = target.transform.pos.z + (dz / dl) * (target.radius + 0.2);
+    } else if (!Number.isFinite(w.terrain.heightAt(x, z))) {
+      const p = this.snap(x, z);
+      x = p.x;
+      z = p.z;
+    }
+    const fuse = target ? sh.fuse : sh.groundFuse;
+    this.bombs.push({ x, z, y: w.groundY(x, z), targetId: target?.id ?? 0, ownerId: b.ownerId, team: b.team, at: w.time + fuse });
+    w.emit({ type: "bomb", state: "planted", x, y: w.groundY(x, z), z, team: b.team, fuse });
+    if (target) w.emit({ type: "notice", team: target.team, text: "BOMB ON YOUR TOWER!" });
+  }
+
   private updateBombs(): void {
     const w = this.w;
     const sh = w.data.match.arena.shop.bomb;
+    for (let i = this.thrown.length - 1; i >= 0; i--) {
+      const b = this.thrown[i];
+      if (w.time - b.start < b.dur) continue;
+      this.thrown.splice(i, 1);
+      this.landBomb(b);
+    }
     for (const p of w.players) {
       const e = w.get(p.heroId);
       if (!e?.hero?.bomb || !e.alive) continue;
@@ -430,16 +491,20 @@ export class Arena {
       const owner = w.get(b.ownerId) ?? null;
       w.emit({ type: "bomb", state: "boom", x: b.x, y: b.y, z: b.z, team: b.team, fuse: 0 });
       w.emit({ type: "cannonHit", x: b.x, y: b.y, z: b.z, radius: 3.4 });
-      const t = w.get(b.targetId);
+      const t = b.targetId ? w.get(b.targetId) : undefined;
       if (t?.alive && t.structure) {
         if (t.structure.type === "core") w.damage(owner, t, sh.coreDamage, { big: true, structureDamage: sh.coreDamage });
         else w.damage(owner, t, t.hp + t.maxHp, { big: true, structureDamage: t.hp + t.maxHp });
       }
       for (const o of w.entities.slice()) {
-        if (!o.alive || o.structure || o.team === b.team) continue;
+        if (!o.alive || o.team === b.team || o === t) continue;
         const d = Math.hypot(o.transform.pos.x - b.x, o.transform.pos.z - b.z) - o.radius;
-        if (d > 3) continue;
-        w.damage(owner, o, 60, { knockback: 9, fromX: b.x, fromZ: b.z, big: true, stun: 0.3 });
+        if (d > sh.splash) continue;
+        if (o.structure) {
+          if (!b.targetId) w.damage(owner, o, sh.structureSplash, { big: true, structureDamage: sh.structureSplash });
+          continue;
+        }
+        w.damage(owner, o, sh.splashDamage, { knockback: 9, fromX: b.x, fromZ: b.z, big: true, stun: 0.3 });
       }
     }
   }

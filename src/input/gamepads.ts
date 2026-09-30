@@ -1,4 +1,5 @@
 import { GcAdapter } from "./gcadapter";
+import { PRO2_PRODUCT, PRO2_VENDOR, ProCon2 } from "./procon2";
 export type ButtonAction =
   | "a" | "b" | "x" | "y" | "z" | "r" | "block" | "dodge" | "start"
   | "up" | "down" | "left" | "right";
@@ -35,6 +36,9 @@ export interface InputConfig {
 
 const KEYBOARD = -1;
 const GC_BASE = -10;
+const PRO_BASE = -20;
+const isGc = (idx: number | null) => idx !== null && idx <= GC_BASE && idx > PRO_BASE;
+const isPro = (idx: number | null) => idx !== null && idx <= PRO_BASE;
 
 export interface PadState {
   connected: boolean;
@@ -75,6 +79,7 @@ function radialDeadzone(x: number, y: number, dz: number): [number, number] {
 export class Gamepads {
   readonly players: PadState[];
   readonly gc = new GcAdapter();
+  readonly pro = new ProCon2();
   private slots: (number | null)[];
 
   private keys = new Set<string>();
@@ -91,7 +96,7 @@ export class Gamepads {
       ...Object.values(kb.stick).flat(), ...Object.values(kb.cstick).flat(), ...Object.values(kb.buttons).flat() as string[],
     ]);
     window.addEventListener("keydown", (e) => {
-      if (e.code === "KeyG" && !this.gc.connected) void this.gc.request();
+      if (e.code === "KeyG") void this.requestHid();
       if (!mapped.has(e.code)) return;
       e.preventDefault();
       this.keys.add(e.code);
@@ -118,6 +123,20 @@ export class Gamepads {
       if (e.button === 0) this.mouse.left = false;
       if (e.button === 2) this.mouse.right = false;
     });
+  }
+
+  async requestHid(): Promise<void> {
+    const hid = (navigator as unknown as { hid?: { requestDevice(o: unknown): Promise<{ vendorId: number; productId: number }[]> } }).hid;
+    if (!hid) return;
+    try {
+      const ds = await hid.requestDevice({ filters: [{ vendorId: 0x057e, productId: 0x0337 }, { vendorId: PRO2_VENDOR, productId: PRO2_PRODUCT }] });
+      for (const d of ds) {
+        if (ProCon2.matches(d as never)) await this.pro.open(d as never);
+        else if (!this.gc.connected) await this.gc.adopt(d as never);
+      }
+    } catch (err) {
+      console.warn("hid request failed", err);
+    }
   }
 
   keyboardSlot(): number {
@@ -172,6 +191,34 @@ export class Gamepads {
     st.padId = "Keyboard";
   }
 
+  private pollPro(st: PadState, i: number): void {
+    const g = this.pro.pads[i];
+    [st.stickX, st.stickY] = radialDeadzone(g.stickX, g.stickY, this.config.stickDeadzone);
+    [st.cX, st.cY] = radialDeadzone(g.cX, g.cY, this.config.stickDeadzone);
+    const prevHeld = st.held;
+    const held = emptyButtons();
+    held.a = g.a;
+    held.b = g.b;
+    held.x = g.x;
+    held.y = g.y;
+    held.z = g.zr;
+    held.r = g.r;
+    held.block = g.l;
+    held.dodge = g.zl || g.ls;
+    held.start = g.plus;
+    held.up = g.up;
+    held.down = g.down;
+    held.left = g.left;
+    held.right = g.right;
+    const pressed = emptyButtons();
+    for (const a of ACTIONS) pressed[a] = held[a] && !prevHeld[a];
+    st.held = held;
+    st.pressed = pressed;
+    st.connected = true;
+    st.profile = "procon2";
+    st.padId = `Switch 2 Pro ${i + 1}`;
+  }
+
   private pollGc(st: PadState, port: number): void {
     const g = this.gc.ports[port];
     [st.stickX, st.stickY] = radialDeadzone(g.stickX, g.stickY, this.config.stickDeadzone);
@@ -216,7 +263,8 @@ export class Gamepads {
     }
     for (let s = 0; s < this.slots.length; s++) {
       const idx = this.slots[s];
-      if (idx !== null && idx <= GC_BASE && !this.gc.ports[GC_BASE - idx]?.connected) this.slots[s] = null;
+      if (isGc(idx) && !this.gc.ports[GC_BASE - idx!]?.connected) this.slots[s] = null;
+      if (isPro(idx) && !this.pro.pads[PRO_BASE - idx!]?.connected) this.slots[s] = null;
     }
     const nativeGc = pads.some((pad) => !!pad?.connected && /gamecube (adapter port|controller)|wup-028/i.test(pad.id));
     this.gc.ports.forEach((gp, p) => {
@@ -225,12 +273,19 @@ export class Gamepads {
       const free = this.slots.indexOf(null);
       if (free >= 0) this.slots[free] = GC_BASE - p;
     });
+    this.pro.pads.forEach((gp, i) => {
+      if (!gp.connected || this.slots.includes(PRO_BASE - i)) return;
+      if (!(gp.a || gp.b || gp.x || gp.y || gp.plus || gp.zr || gp.r)) return;
+      const free = this.slots.indexOf(null);
+      if (free >= 0) this.slots[free] = PRO_BASE - i;
+    });
     if (this.keyTouched && !this.slots.includes(KEYBOARD)) {
       const free = this.slots.indexOf(null);
       if (free >= 0) this.slots[free] = KEYBOARD;
     }
     for (const pad of pads) {
       if (!pad?.connected || this.slots.includes(pad.index)) continue;
+      if (/product: 2069/i.test(pad.id) && !/virtual/i.test(pad.id)) continue;
       const anyInput = pad.buttons.some((b) => b.pressed);
       const free = this.slots.indexOf(null);
       if (free >= 0 && anyInput) this.slots[free] = pad.index;
@@ -247,8 +302,12 @@ export class Gamepads {
         this.pollKeyboard(st);
         continue;
       }
-      if (idx !== null && idx <= GC_BASE) {
-        this.pollGc(st, GC_BASE - idx);
+      if (isPro(idx)) {
+        this.pollPro(st, PRO_BASE - idx!);
+        continue;
+      }
+      if (isGc(idx)) {
+        this.pollGc(st, GC_BASE - idx!);
         continue;
       }
       const pad = idx === null ? null : pads[idx];
