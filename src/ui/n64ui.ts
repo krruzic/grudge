@@ -10,16 +10,57 @@ import parchUrl from "../../assets/textures/ui_parchment.png?url";
 import bannerUrl from "../../assets/textures/banner.png?url";
 import { engravedIcon } from "./icons";
 
-const nameUrls = import.meta.glob("../../assets/textures/names/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
-const nameArt: Record<string, HTMLImageElement> = {};
-for (const [p, u] of Object.entries(nameUrls)) {
-  const im = new Image();
-  im.src = u;
-  nameArt[p.split("/").pop()!.replace(".png", "")] = im;
+import titleFontUrl from "../../assets/ui/titlefont.png?url";
+import titleFontMeta from "../../assets/ui/titlefont.json";
+
+const KEY_TEXT: Record<string, string> = {
+  t_champion: "CHOOSE YOUR CHAMPION", t_field: "CHOOSE THE FIELD", t_rules: "RULES OF COMBAT", t_records: "HALL OF GRUDGES",
+  t_tag: "SIGN YOUR NAME", t_1v1: "1 VS 1", t_2v2: "2 VS 2", t_host: "HOST A BATTLE", t_join: "JOIN A BATTLE",
+  m_fight: "FIGHT", m_network: "VERSUS ONLINE", m_rules: "RULES", m_records: "RECORDS", m_options: "OPTIONS", m_controls: "CONTROLS", m_loading: "NOW LOADING",
+};
+type TGlyph = { x: number; w: number; h: number; top: number };
+const TF = titleFontMeta as { cap: number; glyphs: Record<string, TGlyph> };
+const titleFont = new Image();
+titleFont.src = titleFontUrl;
+const titleCache = new Map<string, HTMLCanvasElement>();
+
+export function titleArt(text: string): HTMLCanvasElement | null {
+  if (!titleFont.complete || !titleFont.naturalWidth) return null;
+  const s = text.toUpperCase();
+  const hit = titleCache.get(s);
+  if (hit) return hit;
+  const cap = TF.cap;
+  const space = cap * 0.34;
+  const track = -cap * 0.04;
+  let w = 0;
+  for (const ch of s) w += ch === " " ? space : (TF.glyphs[ch]?.w ?? space) + track;
+  const pad = 4;
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(w - track + pad * 2);
+  c.height = Math.ceil(cap * 1.25 + pad * 2);
+  const g = c.getContext("2d")!;
+  let x = pad;
+  let n = 0;
+  for (const ch of s) {
+    if (ch === " ") {
+      x += space;
+      continue;
+    }
+    const gl = TF.glyphs[ch];
+    if (!gl) {
+      x += space;
+      continue;
+    }
+    const wob = ((n++ * 37) % 7 - 3) * 0.012 * cap;
+    g.drawImage(titleFont, gl.x, 0, gl.w, gl.h, x, pad + gl.top + wob, gl.w, gl.h);
+    x += gl.w + track;
+  }
+  titleCache.set(s, c);
+  return c;
 }
-export function nameImage(key: string): HTMLImageElement | null {
-  const im = nameArt[key];
-  return im && im.complete && im.naturalWidth ? im : null;
+
+export function nameImage(key: string): HTMLCanvasElement | null {
+  return titleArt(KEY_TEXT[key] ?? key.replace(/^[tm]_/, "").replace(/_/g, " "));
 }
 import { drawPlain, onHiLayer, textWidth } from "./font";
 
@@ -215,9 +256,10 @@ export function artTitle(ctx: CanvasRenderingContext2D, key: string, fallback: s
     paintedText(ctx, fallback, cx, y + (h - 11) / 2, "#f0c030", 1.15);
     return;
   }
-  const w = (im.naturalWidth / im.naturalHeight) * h;
+  const w = (im.width / im.height) * h;
   onHiLayer(ctx, (t) => {
     t.imageSmoothingEnabled = true;
+    t.imageSmoothingQuality = "high";
     t.drawImage(im, cx - w / 2, y, w, h);
   });
 }
@@ -264,7 +306,7 @@ export function shield(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   }
 }
 
-export function ribbon(ctx: CanvasRenderingContext2D, cx: number, y: number, w: number, h: number, text: string, scale: number, color = "#3a2410", art: HTMLImageElement | null = null): void {
+export function ribbon(ctx: CanvasRenderingContext2D, cx: number, y: number, w: number, h: number, text: string, scale: number, color = "#3a2410", art: HTMLCanvasElement | null = null): void {
   const stain = art ? "rgba(60,30,12,0.78)" : "rgba(90,50,20,0.45)";
   const x = cx - w / 2;
   for (const side of [-1, 1]) {
@@ -300,8 +342,8 @@ export function ribbon(ctx: CanvasRenderingContext2D, cx: number, y: number, w: 
     ctx.fillStyle = "rgba(60,30,12,0.7)";
     ctx.fillRect(x, y, w, h);
     const ah = h + 3;
-    const aw = Math.min(w - 2, (art.naturalWidth / art.naturalHeight) * ah);
-    const dh = aw * (art.naturalHeight / art.naturalWidth);
+    const aw = Math.min(w - 2, (art.width / art.height) * ah);
+    const dh = aw * (art.height / art.width);
     onHiLayer(ctx, (t) => {
       t.imageSmoothingEnabled = true;
       t.drawImage(art, cx - aw / 2, y + (h - dh) / 2, aw, dh);

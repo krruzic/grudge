@@ -47,7 +47,7 @@ function artWord(ctx: CanvasRenderingContext2D, key: string, fallback: string, c
     ctx.globalAlpha = 1;
     return textWidth(fallback, 1.1, true);
   }
-  const w = (im.naturalWidth / im.naturalHeight) * h;
+  const w = (im.width / im.height) * h;
   onHiLayer(ctx, (t) => {
     t.imageSmoothingEnabled = true;
     t.drawImage(im, cx - w / 2, y, w, h);

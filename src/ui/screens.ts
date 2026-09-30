@@ -13,11 +13,11 @@ import talentData from "../../data/talents.json";
 type TNode = { id: string; next?: TNode[] };
 const TREES = (talentData as unknown as { heroes: Record<string, { a: TNode[]; b: TNode[] }> }).heroes;
 
-function drawTree(ctx: CanvasRenderingContext2D, hero: string, slot: "a" | "b", x: number, y: number, right: boolean): void {
+function drawTree(ctx: CanvasRenderingContext2D, hero: string, slot: "a" | "b", x: number, y: number, right: boolean, k = 1): void {
   const tree = TREES[hero];
   if (!tree) return;
-  const big = 9;
-  const small = 5;
+  const big = Math.round(13 * k);
+  const small = Math.round(8 * k);
   tree[slot].forEach((t1, r) => {
     const yy = y + r * (big + 3);
     const bx = right ? x + small + 1 : x;
@@ -461,8 +461,11 @@ export class Screens {
     }
     this.kindPlaque(ctx, i, x + w / 2, y + 18, s);
     if (hasTree) {
-      drawTree(ctx, s.hero, "a", x + 4, hy + 10, false);
-      drawTree(ctx, s.hero, "b", x + w - 4 - 15, hy + 10, true);
+      const tw = w >= 100 ? 1 : 0.7;
+      ctx.save();
+      drawTree(ctx, s.hero, "a", x + 4, hy + 8, false, tw);
+      drawTree(ctx, s.hero, "b", x + w - 4 - Math.round((13 + 8) * tw), hy + 8, true, tw);
+      ctx.restore();
     }
     const name = (showHero ? def?.name ?? s.hero : "RANDOM").toUpperCase();
     const ry = y + h - notch - 22;
