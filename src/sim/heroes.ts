@@ -238,7 +238,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       const n = Math.floor((a.t - a.hitAt) / (adef.interval ?? 0.15)) + 1;
       while (a.t >= a.hitAt && a.combo < Math.min(n, adef.count ?? 5)) {
         a.combo++;
-        arcHit(w, e, a.dirX, a.dirZ, adef.range ?? 3, adef.arcDeg ?? 150, (adef.damage ?? 40) * w.damageMulOf(e), a.combo === (adef.count ?? 5) ? 3 : 0.4, a.combo === (adef.count ?? 5), adef.vsStunnedMul);
+        flurryHit(w, e, a, adef);
       }
     }
     if (!a.fired && a.t >= a.hitAt) {
@@ -332,6 +332,31 @@ export function updateBoomerangs(w: World): void {
       const dmg = o.structure ? b.damage * 0.6 : b.damage;
       w.damage(owner, o, dmg, { knockback: 3, fromX: b.x - b.dirX, fromZ: b.z - b.dirZ, big: true, structureDamage: o.structure ? dmg : undefined });
     }
+  }
+}
+
+function flurryHit(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
+  const t = e.transform;
+  const last = a.combo === (def.count ?? 5);
+  const range = def.range ?? 3;
+  const cosArc = Math.cos((((def.arcDeg ?? 150) / 2) * Math.PI) / 180);
+  const seen = (a.pinned ??= {});
+  for (const o of w.entities.slice()) {
+    if (!o.alive || o.team === e.team) continue;
+    const dx = o.transform.pos.x - t.pos.x;
+    const dz = o.transform.pos.z - t.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d - o.radius > range) continue;
+    if (d > 0.3 && (dx * a.dirX + dz * a.dirZ) / d < cosArc) continue;
+    if (Math.abs(o.transform.y - t.y) > 2.5) continue;
+    const prev = seen[o.id];
+    if (prev && Math.hypot(o.transform.pos.x - prev[0], o.transform.pos.z - prev[1]) > 0.6) continue;
+    const mul = prev ? 1 : 2.5;
+    const side = dx * a.dirZ - dz * a.dirX >= 0 ? 1 : -1;
+    const kx = a.dirZ * side * 0.8 + a.dirX * 0.35;
+    const kz = -a.dirX * side * 0.8 + a.dirZ * 0.35;
+    w.damage(e, o, (def.damage ?? 40) * mul * w.damageMulOf(e), { knockback: 5, fromX: o.transform.pos.x - kx, fromZ: o.transform.pos.z - kz, canMiss: true, big: last, vsStunnedMul: def.vsStunnedMul });
+    seen[o.id] = [o.transform.pos.x, o.transform.pos.z];
   }
 }
 

@@ -1054,6 +1054,7 @@ export class World {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i];
         const b = list[j];
+        if (a.team !== b.team && (a.hero?.action?.kind === "flurry" || b.hero?.action?.kind === "flurry")) continue;
         const pa = a.transform.pos;
         const pb = b.transform.pos;
         const dx = pb.x - pa.x;

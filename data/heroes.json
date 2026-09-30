@@ -497,7 +497,7 @@
           "arcDeg": 160,
           "dur": 1.2,
           "hitAt": 0.1,
-          "lunge": 1.5,
+          "lunge": 6,
           "bot": "fight",
           "botRange": 2.8,
           "vsStunnedMul": 1.4,

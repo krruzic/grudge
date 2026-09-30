@@ -268,6 +268,88 @@ const runeTex = canvasTex(128, (ctx, s) => {
   ctx.fillRect(c + 2, c + 6, 2, 6);
 });
 
+const crackTex = canvasTex(128, (ctx, s) => {
+  const c = s / 2;
+  ctx.lineCap = "round";
+  const branch = (x: number, y: number, a: number, len: number, w: number) => {
+    let px = x;
+    let py = y;
+    const steps = 5;
+    for (let k = 0; k < steps; k++) {
+      const na = a + (Math.random() - 0.5) * 0.7;
+      const nx = px + Math.cos(na) * (len / steps);
+      const ny = py + Math.sin(na) * (len / steps);
+      ctx.lineWidth = w * (1 - k / steps) + 1;
+      ctx.strokeStyle = "rgba(24,16,10,0.9)";
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(nx, ny);
+      ctx.stroke();
+      if (k === 2 && Math.random() < 0.6) branch(nx, ny, na + (Math.random() < 0.5 ? 0.6 : -0.6), len * 0.35, w * 0.5);
+      px = nx;
+      py = ny;
+    }
+  };
+  for (let k = 0; k < 9; k++) branch(c, c, (k / 9) * Math.PI * 2 + Math.random() * 0.3, c - 6, 5);
+  ctx.fillStyle = "rgba(24,16,10,0.85)";
+  ctx.beginPath();
+  ctx.arc(c, c, 9, 0, Math.PI * 2);
+  ctx.fill();
+});
+
+const frostTex = canvasTex(128, (ctx, s) => {
+  const c = s / 2;
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = "rgba(10,30,60,0.6)";
+  ctx.beginPath();
+  ctx.arc(c, c, c - 6, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#bfe8ff";
+  ctx.stroke();
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    const x = c + Math.cos(a) * (c - 6);
+    const y = c + Math.sin(a) * (c - 6);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.fillStyle = "#e8f8ff";
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.lineTo(0, -4);
+    ctx.lineTo(4, 0);
+    ctx.lineTo(0, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#1a3050";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+});
+
+const emblemTex = canvasTex(128, (ctx, s) => {
+  const c = s / 2;
+  ctx.fillStyle = "rgba(255,220,120,0.18)";
+  ctx.beginPath();
+  ctx.arc(c, c, c - 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(40,24,6,0.8)";
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#ffd860";
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(c, c - 30); ctx.lineTo(c + 24, c - 20); ctx.lineTo(c + 20, c + 10); ctx.lineTo(c, c + 30); ctx.lineTo(c - 20, c + 10); ctx.lineTo(c - 24, c - 20); ctx.closePath();
+  ctx.fillStyle = "#f0e0b0"; ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = "#3a2408"; ctx.stroke();
+  ctx.fillStyle = "#40c040";
+  ctx.fillRect(c - 4, c - 16, 8, 30);
+  ctx.fillRect(c - 15, c - 5, 30, 8);
+});
+
 const missTex = textTex("MISS", "#e0e0e0");
 const koTex = textTex("K.O.!", "#ff5a3a");
 const chunkGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -656,9 +738,7 @@ export class CombatFx {
         break;
       }
       case "slam":
-        this.ring(ev.x, ev.y, ev.z, new THREE.Color(0xffe0a0), ev.radius, 0.35);
-        this.burst(ev.x, ev.y + 0.2, ev.z, puffTex, 0xb09878, 10, 1.1, 0.7, ev.radius * 1.2, false, 0.6);
-        this.shake = Math.max(this.shake, ev.radius > 4 ? 0.6 : 0.3);
+        this.slamFx(ev.x, ev.y, ev.z, ev.radius);
         break;
       case "warcry": {
         const c = this.teamColors[ev.team];
@@ -679,15 +759,14 @@ export class CombatFx {
         break;
       }
       case "rally": {
-        const c = this.teamColors[ev.team];
-        this.ring(ev.x, ev.y, ev.z, new THREE.Color(0xffe8a0), ev.radius, 0.7);
-        this.ring(ev.x, ev.y, ev.z, c, ev.radius * 0.6, 0.5);
+        this.decal(emblemTex, ev.x, ev.y, ev.z, ev.radius, 1.4, 0.25, 0.6);
         this.flash(ev.x, ev.y + 2, ev.z, glowTex, 0xffe8a0, 5, 0.6);
         this.burst(ev.x, ev.y + 1, ev.z, plusTex, 0xffffff, 12, 1, 1.2, ev.radius * 0.7, false, 1.2);
         break;
       }
       case "pulse":
-        this.ring(ev.x, ev.y, ev.z, new THREE.Color(0x7fc8ff), ev.radius, 0.5);
+        this.decal(frostTex, ev.x, ev.y, ev.z, ev.radius, 0.6, 0.6, 0);
+        this.burst(ev.x, ev.y + 0.4, ev.z, starTex, 0xbfe8ff, 8, 0.4, 0.5, ev.radius * 0.8, true, 0.6);
         break;
       case "heal":
         this.burst(ev.x, ev.y + 1.5, ev.z, plusTex, 0xffffff, 2, 0.5, 0.9, 1.2, false, 1.2);
@@ -724,7 +803,9 @@ export class CombatFx {
         this.shake = Math.max(this.shake, 0.25);
         break;
       case "blink":
-        this.burst(ev.x, ev.y + 0.8, ev.z, puffTex, 0x606070, 12, 1.4, 0.8, 2, false, 0.5);
+        this.burst(ev.x, ev.y + 0.8, ev.z, puffTex, 0x3a3a44, 22, 2.2, 1.6, 2.4, false, 0.5);
+        this.burst(ev.x, ev.y + 1.4, ev.z, puffTex, 0x6a6a78, 12, 1.6, 1.3, 1.6, false, 0.9);
+        this.flash(ev.x, ev.y + 1, ev.z, glowTex, 0x9a90c0, 3, 0.2);
         break;
       case "cannonWarn":
         this.cannonWarn(ev.x, ev.y, ev.z, ev.radius, ev.seconds);
@@ -927,6 +1008,54 @@ export class CombatFx {
     });
     this.items.push({ obj: hand, t: 0, dur: 0.46, tick: () => {} });
     this.after(0.6, () => tex.dispose());
+  }
+
+  private decal(tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, grow: number, spin: number): void {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.rotation.z = Math.random() * Math.PI * 2;
+    m.position.set(x, y + 0.12, z);
+    this.root.add(m);
+    const rz = m.rotation.z;
+    this.items.push({
+      obj: m, t: 0, dur,
+      tick: (k) => {
+        m.scale.setScalar(radius * Math.min(1, grow > 0 ? k * dur / grow : 1));
+        m.rotation.z = rz + k * spin;
+        (m.material as THREE.MeshBasicMaterial).opacity = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+      },
+    });
+  }
+
+  private slamFx(x: number, y: number, z: number, radius: number): void {
+    this.decal(crackTex, x, y, z, radius * 1.05, 1.8, 0.08, 0);
+    this.burst(x, y + 0.2, z, puffTex, 0xb09878, 10 + Math.round(radius * 2), 1.2, 0.8, radius * 1.1, false, 0.6);
+    this.debris(x, y, z, [0x7a6a52, 0x5a4c3a, 0x8a7a66], Math.round(radius * 2), 0.2 + radius * 0.03, 3 + radius);
+    if (radius >= 4.5) {
+      const spikes = Math.round(radius * 1.6);
+      for (let k = 0; k < spikes; k++) {
+        const a = (k / spikes) * Math.PI * 2 + Math.random() * 0.4;
+        const d = radius * (0.45 + Math.random() * 0.5);
+        const sx = x + Math.cos(a) * d;
+        const sz = z + Math.sin(a) * d;
+        const h = 0.8 + Math.random() * 1.1;
+        const rock = new THREE.Mesh(new THREE.ConeGeometry(0.35 + Math.random() * 0.2, h, 5), new THREE.MeshLambertMaterial({ color: 0x8a7a66, flatShading: true, transparent: true }));
+        rock.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * 3, (Math.random() - 0.5) * 0.5);
+        const gy = this.world ? this.world.groundY(sx, sz) : y;
+        this.root.add(rock);
+        this.items.push({
+          obj: rock, t: 0, dur: 1.6,
+          tick: (k2) => {
+            const up = k2 < 0.12 ? k2 / 0.12 : k2 > 0.75 ? 1 - (k2 - 0.75) / 0.25 : 1;
+            rock.position.set(sx, gy - h / 2 + h * up, sz);
+          },
+        });
+      }
+    }
+    this.shake = Math.max(this.shake, radius > 4 ? 0.6 : 0.3);
   }
 
   private repair(ev: Extract<SimEvent, { type: "repair" }>): void {

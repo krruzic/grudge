@@ -59,6 +59,7 @@ export interface HeroAction {
   toZ?: number;
   hitIds?: number[];
   jab?: boolean;
+  pinned?: Record<number, [number, number]>;
 }
 
 export interface HeroState {
