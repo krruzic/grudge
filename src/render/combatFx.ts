@@ -6,7 +6,9 @@ import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
 import { FX } from "./fxKit";
-import { wardenHit, wardenPrick, wardenSlap } from "./wardenFx";
+import { wardenSlap } from "./wardenFx";
+import { KITS, type HeroKit } from "./kits";
+import "./heroFx";
 import { Ribbon, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
 
 const woodTex = new THREE.TextureLoader().load(woodUrl);
@@ -766,6 +768,14 @@ export class CombatFx implements FxHost {
   }
 
   handle(ev: SimEvent): void {
+    const sid = "src" in ev ? ev.src : undefined;
+    const se = sid !== undefined ? this.world?.getAny(sid) : undefined;
+    const sk = se?.hero ? KITS[se.hero.type] : undefined;
+    if (ev.type === "act") {
+      if (se && sk?.act) sk.act(this, ev, se);
+      return;
+    }
+    if (ev.type !== "hit" && se && sk?.event?.(this, ev, se)) return;
     switch (ev.type) {
       case "hit":
         if (ev.blocked) {
@@ -777,17 +787,14 @@ export class CombatFx implements FxHost {
           const dx = ev.fx !== undefined ? ev.x - ev.fx : Math.random() - 0.5;
           const dz = ev.fz !== undefined ? ev.z - ev.fz : Math.random() - 0.5;
           const heroInvolved = !!tgt?.hero || !!src?.hero;
-          if (src?.hero?.type === "warden") {
-            const d = Math.hypot(src.transform.pos.x - ev.x, src.transform.pos.z - ev.z);
-            const inZone = this.world?.zones.some((zn) => zn.ownerId === src.id && Math.hypot(zn.x - ev.x, zn.z - ev.z) <= zn.radius + 0.5);
-            if (d <= 3.9) wardenHit(this, ev.x, ev.y, ev.z, dx, dz, ev.big);
-            else if (inZone) wardenPrick(this, ev.x, ev.y, ev.z);
-          } else {
+          const kit = src?.hero ? KITS[src.hero.type] : undefined;
+          const custom = !!kit?.hit && kit.hit(this, ev, src!, dx, dz);
+          if (!custom) {
             this.flash(ev.x, ev.y + 0.2, ev.z, starTex, 0xffffff, ev.big ? 2.4 : 1.2, ev.big ? 0.22 : 0.14);
             const sc = src ? this.teamColors[src.team].clone().lerp(new THREE.Color(1, 0.9, 0.6), 0.6) : new THREE.Color(1, 0.9, 0.6);
             this.sparks(ev.x, ev.y + 0.2, ev.z, dx, dz, sc, ev.big ? 9 : heroInvolved ? 5 : 3, ev.big ? 9 : 6);
           }
-          if (ev.big && src?.hero?.type === "warden") {
+          if (ev.big && custom) {
             this.shake = Math.max(this.shake, 0.22);
           } else if (ev.big) {
             this.burst(ev.x, ev.y, ev.z, starTex, 0xffd080, 5, 0.4, 0.3, 4, true, 1);
@@ -837,7 +844,7 @@ export class CombatFx implements FxHost {
         break;
       }
       case "slam":
-        if (!ev.zone) this.slamFx(ev.x, ev.y, ev.z, ev.radius);
+        this.slamFx(ev.x, ev.y, ev.z, ev.radius);
         break;
       case "warcry": {
         const c = this.teamColors[ev.team];
@@ -1454,7 +1461,9 @@ export class CombatFx implements FxHost {
     this.flash(x, y + 0.8, z, glowTex, this.teamColors[team], 2.2, 0.3);
   }
 
+  private frameDt = 1 / 60;
   update(dt: number): void {
+    this.frameDt = dt;
     this.clock += dt;
     for (let i = this.pending.length - 1; i >= 0; i--) {
       if (this.pending[i].at <= this.clock) {
@@ -1472,8 +1481,8 @@ export class CombatFx implements FxHost {
         this.root.remove(f.obj);
         f.obj.traverse((o) => {
           const m = (o as THREE.Mesh).material as THREE.Material | undefined;
-          if (m && m !== ballMat && !SHARED_MAT.has(m)) m.dispose();
-          if (o instanceof THREE.Mesh && !SHARED_CHUNK_GEOS.has(o.geometry) && !SHARED_PLANE_GEOS.has(o.geometry) && o.geometry !== chunkGeo && o.geometry !== ballGeo && !SHARED_GEO.has(o.geometry)) o.geometry.dispose();
+          if (m && m !== ballMat && !SHARED_MAT.has(m) && !m.userData.keep) m.dispose();
+          if (o instanceof THREE.Mesh && !o.geometry.userData.model && !SHARED_CHUNK_GEOS.has(o.geometry) && !SHARED_PLANE_GEOS.has(o.geometry) && o.geometry !== chunkGeo && o.geometry !== ballGeo && !SHARED_GEO.has(o.geometry)) o.geometry.dispose();
         });
         this.items.splice(i, 1);
       }
@@ -1495,6 +1504,14 @@ export class CombatFx implements FxHost {
     for (const p of world.projectiles) {
       seen.add(p.id);
       let s = this.projViews.get(p.id);
+      const pk = !s ? KITS[world.getAny(p.sourceId)?.hero?.type ?? ""] : undefined;
+      const custom = pk?.projectile?.(this, p.style) ?? null;
+      if (!s && custom) {
+        s = custom as THREE.Sprite;
+        s.userData.kit = pk;
+        this.root.add(s);
+        this.projViews.set(p.id, s);
+      }
       if (!s) {
         const c = this.teamColors[p.team];
         const col = p.style === "arrow" || p.style === "ballista" ? new THREE.Color(0xfff0c0)
@@ -1512,6 +1529,12 @@ export class CombatFx implements FxHost {
         const d = Math.hypot(p.to.x - p.from.x, p.to.z - p.from.z);
         y += d * 0.35 * 4 * t * (1 - t);
       }
+      const kitOf = s.userData.kit as HeroKit | undefined;
+      if (kitOf) {
+        s.position.set(x, y, z);
+        kitOf.projectileTick?.(this, s, x, y, z, this.frameDt);
+        continue;
+      }
       s.position.set(x, y, z);
       if (p.style === "orb") {
         s.material.rotation += 0.3;
@@ -1521,7 +1544,7 @@ export class CombatFx implements FxHost {
     for (const [id, s] of this.projViews) {
       if (!seen.has(id)) {
         this.root.remove(s);
-        s.material.dispose();
+        s.traverse((o) => ((o as THREE.Sprite).material as THREE.Material | undefined)?.dispose());
         this.projViews.delete(id);
       }
     }

@@ -263,7 +263,7 @@ export class World {
         const r = this.heroDef(src.hero.type).abilities.r;
         m *= r.openingMul ?? 1.5;
         src.hero.openingUntil = 0;
-        this.emit({ type: "parry", x: target.transform.pos.x, y: target.transform.y + 1, z: target.transform.pos.z, team: src.team });
+        this.emit({ type: "parry", x: target.transform.pos.x, y: target.transform.y + 1, z: target.transform.pos.z, team: src.team, src: src.id });
       }
     }
     return m;
@@ -567,7 +567,7 @@ export class World {
     if (target.hero?.action?.kind === "parry" && target.hero.action.t <= (this.heroDef(target.hero.type).abilities.r.window ?? 0.5)) {
       const r = this.heroDef(target.hero.type).abilities.r;
       const pfx = allFx(this, target);
-      this.emit({ type: "parry", ...ev, team: target.team });
+      this.emit({ type: "parry", ...ev, team: target.team, src: target.id });
       target.hero.action.t = target.hero.action.dur;
       if (src && src.kind !== "structure" && this.dist(src, target) < 5) {
         const pc = pfx.parryCounter;

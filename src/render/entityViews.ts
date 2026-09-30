@@ -1,3 +1,4 @@
+import { KITS } from "./kits";
 import * as THREE from "three";
 import { builderRate, padNear } from "../sim/structures";
 import type { World } from "../sim/world";
@@ -851,7 +852,7 @@ export class EntityViews {
         anim = ["attack_a", "attack_b", "attack_c"][a.combo % 3];
         const hit = (w.heroDef(h.type).abilities.a as { hits?: { range?: number; projectile?: unknown }[] }).hits?.[a.combo % 3];
         if (hit && !hit.projectile) this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.5, a.combo % 3 === 1 ? 4 : 2, 1.6);
-        if (hit && !hit.projectile && h.type !== "warden") {
+        if (hit && !hit.projectile && !KITS[h.type]?.trail) {
           const p = v.root.position;
           this.fx.slash(p.x, p.y, p.z, facing, e.team, a.combo % 3, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
         }
@@ -934,8 +935,9 @@ export class EntityViews {
     best.hand.getWorldPosition(a);
     best.arm.getWorldPosition(b);
     a.addScaledVector(tmp.subVectors(a, b), 0.35);
-    const warden = e.hero?.type === "warden";
-    const c = warden ? new THREE.Color(0xd8ffc0) : this.teamColors[e.team].clone().lerp(new THREE.Color(1, 1, 1), 0.6);
+    const kit = e.hero ? KITS[e.hero.type] : undefined;
+    if (kit?.trailWidth) a.addScaledVector(tmp.subVectors(a, b), kit.trailWidth);
+    const c = kit?.trail !== undefined ? new THREE.Color(kit.trail) : this.teamColors[e.team].clone().lerp(new THREE.Color(1, 1, 1), 0.6);
     this.fx.handTrail(`h${e.id}`, a, b, c);
   }
 

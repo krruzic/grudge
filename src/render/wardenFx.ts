@@ -2,6 +2,7 @@ import * as THREE from "three";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
 import { FX, WARDEN } from "./fxKit";
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
+import { KITS } from "./kits";
 
 const LEAVES = [WARDEN.leaf, WARDEN.leaf, WARDEN.leafAutumn];
 const barkTex = new THREE.TextureLoader().load(barkUrl);
@@ -253,3 +254,18 @@ export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r:
   emit(h, { tex: WARDEN.wisp, n: 10, x, y: gy + 0.5, z, size: [0.5, 0.8], life: [1.2, 1.8], speed: [1, r * 0.5], flatSpread: true, up: [1, 2.5], drag: 1.5, additive: true, jitter: r });
   h.shake = Math.max(h.shake, 0.3);
 }
+
+KITS.warden = {
+  trail: 0xd8ffc0,
+  hit(h, ev, src, dx, dz) {
+    const d = Math.hypot(src.transform.pos.x - ev.x, src.transform.pos.z - ev.z);
+    const inZone = h.world?.zones.some((zn) => zn.ownerId === src.id && Math.hypot(zn.x - ev.x, zn.z - ev.z) <= zn.radius + 0.5);
+    if (d <= 3.9) wardenHit(h, ev.x, ev.y, ev.z, dx, dz, ev.big);
+    else if (inZone) wardenPrick(h, ev.x, ev.y, ev.z);
+    else return false;
+    return true;
+  },
+  event(_h, ev) {
+    return ev.type === "slam" && !!ev.zone;
+  },
+};

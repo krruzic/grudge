@@ -1,6 +1,12 @@
 import * as THREE from "three";
 import commonUrl from "../../assets/fx/common.png?url";
 import wardenUrl from "../../assets/fx/warden.png?url";
+import warlordUrl from "../../assets/fx/warlord.png?url";
+import engineerUrl from "../../assets/fx/engineer.png?url";
+import raiderUrl from "../../assets/fx/raider.png?url";
+import summonerUrl from "../../assets/fx/summoner.png?url";
+import duelistUrl from "../../assets/fx/duelist.png?url";
+import heraldUrl from "../../assets/fx/herald.png?url";
 
 const CELL = 128;
 const COLS = 4;
@@ -34,6 +40,12 @@ function sheet(url: string, count: number): THREE.CanvasTexture[] {
 
 const C = sheet(commonUrl, 16);
 const W = sheet(wardenUrl, 16);
+const WL = sheet(warlordUrl, 16);
+const EN = sheet(engineerUrl, 16);
+const RA = sheet(raiderUrl, 16);
+const SU = sheet(summonerUrl, 16);
+const DU = sheet(duelistUrl, 16);
+const HE = sheet(heraldUrl, 16);
 
 export const fxReady = Promise.all(waits).then(() => undefined);
 
@@ -86,4 +98,34 @@ export const WARDEN = {
   thorn: W[13],
   flower: W[14],
   rune: W[15],
+};
+
+export const WARLORD = {
+  rage: WL[0], slab: WL[1], lavaCrack: WL[2], shout: WL[3], helm: WL[4], dust: WL[5], ember: WL[6], spike: WL[7],
+  ring: WL[8], swoosh: WL[9], pebbles: WL[10], impact: WL[11], horn: WL[12], lavaGlow: WL[13], crackRing: WL[14], rune: WL[15],
+};
+
+export const ENGINEER = {
+  gear: EN[0], gearSmall: EN[1], weld: EN[2], steam: EN[3], nut: EN[4], spring: EN[5], wrench: EN[6], plank: EN[7],
+  rivet: EN[8], arc: EN[9], oilSmoke: EN[10], clang: EN[11], ring: EN[12], blueprint: EN[13], shards: EN[14], heal: EN[15],
+};
+
+export const RAIDER = {
+  smoke: RA[0], shadow: RA[1], poison: RA[2], slash: RA[3], cross: RA[4], glint: RA[5], knife: RA[6], drop: RA[7],
+  darkSlash: RA[8], dashStreak: RA[9], bubble: RA[10], smokeRing: RA[11], skull: RA[12], afterimage: RA[13], dust: RA[14], vortex: RA[15],
+};
+
+export const SUMMONER = {
+  orb: SU[0], crystal: SU[1], sparkle: SU[2], ghost: SU[3], bones: SU[4], hex: SU[5], flame: SU[6], soulFlame: SU[7],
+  graveHand: SU[8], trail: SU[9], burst: SU[10], smoke: SU[11], skull: SU[12], bolt: SU[13], eyes: SU[14], circle: SU[15],
+};
+
+export const DUELIST = {
+  glint: DU[0], rapier: DU[1], crescent: DU[2], feather: DU[3], sparkle: DU[4], clash: DU[5], speed: DU[6], fleur: DU[7],
+  ribbon: DU[8], star: DU[9], crossed: DU[10], petal: DU[11], gust: DU[12], parryRing: DU[13], crit: DU[14], cut: DU[15],
+};
+
+export const HERALD = {
+  beams: HE[0], fleur: HE[1], horn: HE[2], flag: HE[3], halo: HE[4], coin: HE[5], rays: HE[6], heal: HE[7],
+  shield: HE[8], laurel: HE[9], blast: HE[10], arrow: HE[11], plume: HE[12], star: HE[13], dust: HE[14], crown: HE[15],
 };

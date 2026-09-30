@@ -358,34 +358,35 @@ export type SimEvent =
   | { type: "spawn"; id: number }
   | { type: "rankUp"; id: number; rank: number; x: number; y: number; z: number; team: number }
   | { type: "build"; id: number; padIndex: number; team: number; upgrade: boolean }
-  | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean }
-  | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number }
+  | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean; src?: number }
+  | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number; src?: number }
   | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number }
-  | { type: "heal"; x: number; y: number; z: number; team: number }
-  | { type: "banner"; team: number; x: number; y: number; z: number; until: number }
-  | { type: "rally"; x: number; y: number; z: number; radius: number; team: number }
+  | { type: "heal"; x: number; y: number; z: number; team: number; src?: number }
+  | { type: "banner"; team: number; x: number; y: number; z: number; until: number; src?: number }
+  | { type: "rally"; x: number; y: number; z: number; radius: number; team: number; src?: number }
   | { type: "directive"; team: number; unitType: UnitType | "all"; dir: Directive }
   | { type: "notice"; team: number; text: string }
-  | { type: "telegraph"; x: number; y: number; z: number; radius: number; team: number; seconds: number }
-  | { type: "blink"; x: number; y: number; z: number; team: number }
-  | { type: "parry"; x: number; y: number; z: number; team: number }
+  | { type: "telegraph"; x: number; y: number; z: number; radius: number; team: number; seconds: number; src?: number }
+  | { type: "blink"; x: number; y: number; z: number; team: number; src?: number }
+  | { type: "act"; src: number; slot: string; kind: string; phase: "start" | "fire"; x: number; y: number; z: number; dirX: number; dirZ: number; combo: number; toX?: number; toZ?: number }
+  | { type: "parry"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "mod"; id: number }
   | { type: "shot"; style: string; x: number; y: number; z: number }
   | { type: "modEnd"; id: number }
   | { type: "cannonWarn"; x: number; y: number; z: number; radius: number; seconds: number }
   | { type: "cannonHit"; x: number; y: number; z: number; radius: number }
   | { type: "relic"; state: "taken" | "dropped" | "shrined" | "stolen" | "home"; team: number; player: number; x: number; y: number; z: number }
-  | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean; style?: string }
+  | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean; style?: string; src?: number }
   | { type: "bomb"; state: "planted" | "boom"; x: number; y: number; z: number; team: number; fuse: number }
   | { type: "callout"; x: number; y: number; z: number; team: number; text: string; owner: number }
-  | { type: "repair"; x: number; y: number; z: number; team: number; radius: number; fixed: { x: number; y: number; z: number; amount: number; h: number }[] }
+  | { type: "repair"; x: number; y: number; z: number; team: number; radius: number; fixed: { x: number; y: number; z: number; amount: number; h: number }[]; src?: number }
   | { type: "levelup"; id: number; level: number; x: number; y: number; z: number; team: number }
   | { type: "learned"; id: number; name: string; icon: string; x: number; y: number; z: number; team: number }
   | { type: "chain"; pts: number[]; team: number }
   | { type: "pull"; x: number; y: number; z: number; radius: number; team: number }
   | { type: "shieldBreak"; x: number; y: number; z: number; team: number; burst: boolean }
-  | { type: "charge"; x: number; y: number; z: number; team: number }
-  | { type: "shove"; x: number; y: number; z: number; team: number }
+  | { type: "charge"; x: number; y: number; z: number; team: number; src?: number }
+  | { type: "shove"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "fall"; x: number; y: number; z: number }
   | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };
 

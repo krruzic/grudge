@@ -70,7 +70,7 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   if (slot === "b" && def.fx?.charge) {
     const c = begin(e, slot, "charge", 0.62, 0.42, dx, dz);
     c.hitIds = [];
-    w.emit({ type: "charge", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team });
+    w.emit({ type: "charge", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, src: e.id });
     if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
     return;
   }
@@ -109,6 +109,7 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
     a.hitIds = [];
     e.status.invulnUntil = w.time + a.dur;
   }
+  w.emit({ type: "act", src: e.id, slot, kind: def.kind, phase: "start", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, dirX: dx, dirZ: dz, combo: 0, toX: a.toX, toZ: a.toZ });
 }
 
 export function updateHero(w: World, e: Entity, cmd: Command): void {
@@ -471,7 +472,7 @@ function shoveHit(w: World, e: Entity, a: HeroAction): void {
     w.damage(e, o, sv.damage * w.damageMulOf(e), { knockback: sv.knockback * heavy, fromX: t.pos.x - a.dirX, fromZ: t.pos.z - a.dirZ, stun: sv.stun * heavy, big: true });
     any = true;
   }
-  w.emit({ type: "shove", x: t.pos.x + a.dirX, y: t.y, z: t.pos.z + a.dirZ, team: any ? e.team : -1 });
+  w.emit({ type: "shove", x: t.pos.x + a.dirX, y: t.y, z: t.pos.z + a.dirZ, team: any ? e.team : -1, src: e.id });
 }
 
 function dashHits(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
@@ -492,7 +493,7 @@ function slamAt(w: World, e: Entity, cx: number, cz: number, radius: number, def
   const fx = def.fx;
   const once = (x: number, z: number, scale: number) => {
     if (fx?.pull) pullTo(w, e, x, z, radius + 1.5);
-    w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius, team: e.team });
+    w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius, team: e.team, src: e.id });
     aoe(w, e, x, z, radius, def, mul * scale);
   };
   once(cx, cz, 1);
@@ -530,7 +531,7 @@ function hexLand(w: World, e: Entity, x: number, z: number, def: AbilityDef, mul
   const fx = def.fx;
   const r = def.radius ?? 2.5;
   if (fx?.pull) pullTo(w, e, x, z, r + 2);
-  w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius: r, team: e.team });
+  w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius: r, team: e.team, src: e.id });
   for (const o of w.entities.slice()) {
     if (!o.alive || o.team === e.team) continue;
     if (Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) - o.radius > r) continue;
@@ -588,7 +589,7 @@ function endDash(w: World, e: Entity, a: HeroAction): void {
     const mul = w.damageMulOf(e);
     w.later(fx.afterimage, () => {
       if (!e.alive) return;
-      w.emit({ type: "reach", x: x0, y: w.groundY(x0, z0), z: z0, tx: x1, tz: z1, team: e.team, hit: false, style: "afterimage" });
+      w.emit({ type: "reach", x: x0, y: w.groundY(x0, z0), z: z0, tx: x1, tz: z1, team: e.team, hit: false, style: "afterimage", src: e.id });
       dashLine(w, e, x0, z0, x1, z1, def, mul);
     });
   }
@@ -597,6 +598,7 @@ function endDash(w: World, e: Entity, a: HeroAction): void {
 function fire(w: World, e: Entity, a: HeroAction): void {
   const ab = abilities(w, e);
   const t = e.transform;
+  w.emit({ type: "act", src: e.id, slot: a.name, kind: a.kind, phase: "fire", x: t.pos.x, y: t.y, z: t.pos.z, dirX: a.dirX, dirZ: a.dirZ, combo: a.combo, toX: a.toX, toZ: a.toZ });
   const mul = w.damageMulOf(e);
   if (a.kind === "combo") {
     const hit = ab.a.hits![a.combo];
@@ -655,7 +657,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     case "leap": {
       const r = def.radius ?? 5;
       if (def.fx?.pull) pullTo(w, e, t.pos.x, t.pos.z, r + 1.5);
-      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: r, team: e.team });
+      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: r, team: e.team, src: e.id });
       const hit = aoe(w, e, t.pos.x, t.pos.z, r, def, mul);
       if (a.name === "b") {
         markTargets(w, e, hit);
@@ -665,7 +667,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       return;
     }
     case "quake": {
-      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 5, team: e.team });
+      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 5, team: e.team, src: e.id });
       aoe(w, e, t.pos.x, t.pos.z, def.radius ?? 5, def, mul);
       return;
     }
@@ -686,7 +688,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       }
       const until = w.time + (def.seconds ?? 30);
       w.teams[e.team].banner = { x: bx, z: bz, until };
-      w.emit({ type: "banner", team: e.team, x: bx, y: w.groundY(bx, bz), z: bz, until });
+      w.emit({ type: "banner", team: e.team, x: bx, y: w.groundY(bx, bz), z: bz, until, src: e.id });
       for (const u of w.entities) {
         if (u.unit && u.team === e.team) u.unit.repathAt = 0;
       }
@@ -694,7 +696,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     }
     case "rally": {
       const r = def.radius ?? 9;
-      w.emit({ type: "rally", x: t.pos.x, y: t.y, z: t.pos.z, radius: r, team: e.team });
+      w.emit({ type: "rally", x: t.pos.x, y: t.y, z: t.pos.z, radius: r, team: e.team, src: e.id });
       for (const o of w.entities) {
         if (!o.alive || o.team !== e.team || o.kind === "structure") continue;
         if (w.dist(e, o) > r) continue;
@@ -703,12 +705,12 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         o.status.slowUntil = 0;
         o.status.guardUntil = w.time + (def.seconds ?? 4);
         o.status.guardMul = def.guardMul ?? 0.7;
-        w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: e.team });
+        w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: e.team, src: e.id });
       }
       return;
     }
     case "warcry": {
-      w.emit({ type: "warcry", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 8, team: e.team });
+      w.emit({ type: "warcry", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 8, team: e.team, src: e.id });
       if (def.resetB) e.hero!.cooldowns.b = w.time;
       for (const o of w.entities) {
         if (!o.alive || o.team !== e.team || o.kind === "structure") continue;
@@ -746,7 +748,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         const hz = z + a.dirZ * (ec?.step ?? 0) * k;
         const at = delay + (ec?.delay ?? 0) * k;
         const scale = k === 0 ? 1 : ec?.scale ?? 1;
-        w.emit({ type: "telegraph", x: hx, y: w.groundY(hx, hz), z: hz, radius: def.radius ?? 2.5, team: e.team, seconds: at });
+        w.emit({ type: "telegraph", x: hx, y: w.groundY(hx, hz), z: hz, radius: def.radius ?? 2.5, team: e.team, seconds: at, src: e.id });
         w.later(at, () => { if (e.alive) hexLand(w, e, hx, hz, def, mul * scale); });
       }
       return;
@@ -764,10 +766,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
           }
         }
       }
-      w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: 3, team: e.team, seconds: 0.35 });
+      w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: 3, team: e.team, seconds: 0.35, src: e.id });
       if (def.hexRadius) {
         const hexSec = w.heroDef(e.hero!.type).abilities.b.hexSeconds ?? 6;
-        w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.hexRadius, team: e.team, seconds: 0.5 });
+        w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.hexRadius, team: e.team, seconds: 0.5, src: e.id });
         for (const o of w.entities) {
           if (!o.alive || o.team === e.team || o.kind === "structure" || w.dist(e, o) > def.hexRadius) continue;
           o.status.hexUntil = w.time + hexSec;
@@ -782,7 +784,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       e.status.buffUntil = w.time + (def.seconds ?? 4);
       e.status.buffSpeedMul = def.speedMul ?? 1.3;
       e.status.buffDamageMul = 1;
-      w.emit({ type: "blink", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team });
+      w.emit({ type: "blink", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, src: e.id });
       return;
     }
     case "repair": {
@@ -808,7 +810,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
       }
       if (fx?.zoneAfter) zoneAt(w, e, t.pos.x, t.pos.z, r, fx.zoneAfter);
-      w.emit({ type: "repair", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, radius: def.radius ?? 6, fixed });
+      w.emit({ type: "repair", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, radius: def.radius ?? 6, fixed, src: e.id });
       if (!fixed.length) w.emit({ type: "notice", team: e.team, text: "NOTHING TO REPAIR IN REACH" });
       return;
     }
@@ -917,7 +919,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         if (plat.includes(oi)) o.transform.y = top;
       }
       w.emit({ type: "mod", id: m.id });
-      w.emit({ type: "slam", x: cx, y: top, z: cz, radius: 2, team: e.team });
+      w.emit({ type: "slam", x: cx, y: top, z: cz, radius: 2, team: e.team, src: e.id });
       return;
     }
     case "ballista": {
@@ -1084,7 +1086,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       }
       const tx = t.pos.x + a.dirX * len;
       const tz = t.pos.z + a.dirZ * len;
-      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx, tz, team: e.team, hit: victims.length > 0, style: fx?.pull ? "vine" : undefined });
+      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx, tz, team: e.team, hit: victims.length > 0, style: fx?.pull ? "vine" : undefined, src: e.id });
       for (const o of victims) {
         const hit = w.damage(e, o, (def.damage ?? 70) * mul, {
           knockback: fx?.pull ? 0 : def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, slowMul: def.slowMul, slowSeconds: def.slowSeconds, big: true,
@@ -1099,7 +1101,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
       }
       if (fx?.splinter) {
-        w.emit({ type: "slam", x: tx, y: w.groundY(tx, tz), z: tz, radius: fx.splinter.radius, team: e.team });
+        w.emit({ type: "slam", x: tx, y: w.groundY(tx, tz), z: tz, radius: fx.splinter.radius, team: e.team, src: e.id });
         for (const o of w.entities.slice()) {
           if (!o.alive || o.team === e.team || o.structure) continue;
           if (Math.hypot(o.transform.pos.x - tx, o.transform.pos.z - tz) - o.radius > fx.splinter.radius) continue;
@@ -1124,7 +1126,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         id: w.newId(), team: e.team, ownerId: e.id, x: t.pos.x, z: t.pos.z, radius: def.radius ?? 6,
         until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4,
       });
-      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true });
+      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true, src: e.id });
       return;
     }
     default:
