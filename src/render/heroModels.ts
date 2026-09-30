@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { blobShadow, footRing, playerTag, warlordPlaceholder } from "./placeholders";
+import { blobShadow, footRing, markModel, playerTag, warlordPlaceholder } from "./placeholders";
 
 export const outlineConfig = { enabled: true };
 
@@ -72,6 +72,7 @@ function withOutlineNormals(geo: THREE.BufferGeometry): THREE.BufferGeometry {
     out[i * 3 + 2] = v.z;
   }
   g.setAttribute("outlineNormal", new THREE.BufferAttribute(out, 3));
+  g.userData.model = true;
   smoothed.set(geo, g);
   return g;
 }
@@ -109,7 +110,9 @@ export class HeroModels {
     await Promise.all(
       Object.entries(urls).map(async ([type, url]) => {
         try {
-          this.gltfs.set(type, await loader.loadAsync(url));
+          const g = await loader.loadAsync(url);
+          markModel(g.scene);
+          this.gltfs.set(type, g);
         } catch (err) {
           console.warn(`hero model ${type} failed to load, using placeholder`, err);
         }

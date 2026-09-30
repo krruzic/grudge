@@ -1,3 +1,4 @@
+import { markModel } from "./placeholders";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -18,7 +19,9 @@ export class UnitModels {
     await Promise.all(
       Object.entries(urls).map(async ([k, url]) => {
         try {
-          this.gltfs.set(k, await loader.loadAsync(url));
+          const g = await loader.loadAsync(url);
+          markModel(g.scene);
+          this.gltfs.set(k, g);
         } catch (err) {
           console.warn(`unit model ${k} failed to load`, err);
         }

@@ -282,6 +282,8 @@ export class GameRenderer {
 
   setWorld(world: World): void {
     this.scene.remove(this.entityViews.root, this.combatFx.root);
+    this.entityViews.dispose();
+    this.hazards?.dispose();
     if (this.relicView) this.scene.remove(this.relicView.root);
     this.relicView = new RelicView(world, this.structureModels, this.teamColors, this.cfg.heroScale);
     this.scene.add(this.relicView.root);
@@ -302,6 +304,8 @@ export class GameRenderer {
   get teamColorList(): THREE.Color[] {
     return this.teamColors;
   }
+
+  private fullSize = new THREE.Vector2();
 
   private resize(): void {
     const w = window.innerWidth;
@@ -592,9 +596,10 @@ export class GameRenderer {
         this.drawScene(cam, viewer);
       });
       this.renderer.setScissorTest(false);
-      this.renderer.setViewport(0, 0, tw, th);
-      this.renderer.setScissor(0, 0, tw, th);
     }
+    const full = this.renderer.getSize(this.fullSize);
+    this.renderer.setViewport(0, 0, full.x, full.y);
+    this.renderer.setScissor(0, 0, full.x, full.y);
     this.renderer.setRenderTarget(this.lowTarget);
     this.renderer.render(this.postScene, this.postCam);
     this.renderer.setRenderTarget(null);

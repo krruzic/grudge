@@ -56,6 +56,7 @@ export function titleArt(text: string): HTMLCanvasElement | null {
     g.drawImage(titleFont, gl.x, 0, gl.w, gl.h, x, pad + gl.top + wob, gl.w, gl.h);
     x += gl.w + track;
   }
+  c.addEventListener("contextlost", () => titleCache.clear());
   titleCache.set(s, c);
   return c;
 }

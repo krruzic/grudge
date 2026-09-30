@@ -27,6 +27,14 @@ export function warlordPlaceholder(teamColor: THREE.Color): THREE.Group {
   return g;
 }
 
+export function markModel(o: THREE.Object3D): THREE.Object3D {
+  o.traverse((m) => {
+    const g = (m as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
+    if (g) g.userData.model = true;
+  });
+  return o;
+}
+
 let blobTex: THREE.Texture | undefined;
 
 export function blobShadow(radius = 0.75): THREE.Mesh {
@@ -84,6 +92,7 @@ export function playerTag(label: string, teamColor: THREE.Color): THREE.Sprite {
   ctx.fillText(label, 16, 9);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.userData.owned = true;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
   s.scale.set(0.9, 0.45, 1);
   s.position.y = 2.75;

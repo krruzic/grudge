@@ -112,6 +112,23 @@ const HINTS = {
   shop: new THREE.SpriteMaterial({ map: hintTex([["Y", "#5a5a66", "SHOP"]]), depthTest: false, transparent: true }),
 };
 
+const SHARED_VIEW_MATS = new Set<THREE.Material>(Object.values(HINTS));
+export function disposeTree(root: THREE.Object3D, shared: Set<THREE.Material> = SHARED_VIEW_MATS): void {
+  root.traverse((o) => {
+    if (o instanceof THREE.SkinnedMesh) o.skeleton.dispose();
+    const geo = (o as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
+    if (geo && !geo.userData.model && !(o instanceof THREE.Sprite)) geo.dispose();
+    const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+    if (!m) return;
+    for (const mat of Array.isArray(m) ? m : [m]) {
+      if (shared.has(mat)) continue;
+      const map = (mat as THREE.SpriteMaterial).map;
+      if (map?.userData.owned) map.dispose();
+      mat.dispose();
+    }
+  });
+}
+
 function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const cv = document.createElement("canvas");
   cv.width = cv.height = 32;
@@ -149,6 +166,7 @@ const hexShieldTex = (() => {
   return t;
 })();
 const domeGeo = new THREE.IcosahedronGeometry(1, 1);
+domeGeo.userData.model = true;
 const gearMat = new THREE.SpriteMaterial({ depthTest: false, map: (() => {
   const cv = document.createElement("canvas");
   cv.width = cv.height = 32;
@@ -251,6 +269,7 @@ const MARKS: Record<string, THREE.SpriteMaterial> = {
     c.strokeStyle = "#3a2008"; c.lineWidth = 2.5; c.stroke();
   }) }),
 };
+for (const m of [...Object.values(MARKS), gearMat]) SHARED_VIEW_MATS.add(m);
 
 function rankTex(rank: number): THREE.CanvasTexture {
   const c = document.createElement("canvas");
@@ -402,7 +421,15 @@ export class EntityViews {
     }
   }
 
-  heroPoint(id: number): THREE.Vector3 | null {
+  dispose(): void {
+    for (const v of this.views.values()) disposeTree(v.root);
+    for (const c of this.corpses) disposeTree(c.v.root);
+    for (const r of this.rings.values()) r.geometry.dispose();
+    this.views.clear();
+    this.corpses = [];
+  }
+
+    heroPoint(id: number): THREE.Vector3 | null {
     const v = this.views.get(id);
     return v && v.framed !== false && v.seen ? v.root.position.clone() : null;
   }
@@ -697,6 +724,7 @@ export class EntityViews {
       if (k > 0.6) c.v.root.position.y -= dt * 0.8;
       if (k >= 1) {
         this.root.remove(c.v.root);
+        disposeTree(c.v.root);
         this.corpses.splice(i, 1);
       }
     }
@@ -706,7 +734,10 @@ export class EntityViews {
         this.play(v, "death", 1.2, true);
         v.bar.group.visible = false;
         this.corpses.push({ v, at: nowS });
-      } else this.root.remove(v.root);
+      } else {
+        this.root.remove(v.root);
+        disposeTree(v.root);
+      }
       this.views.delete(id);
       const ring = this.rings.get(id);
       if (ring) {

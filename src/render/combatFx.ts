@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { World } from "../sim/world";
 import type { SimEvent } from "../sim/types";
-import { drawNum, drawText, fontReady, textWidth } from "../ui/font";
+import { drawNum, drawText, fontReady, onTextLost, textWidth } from "../ui/font";
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
@@ -99,10 +99,20 @@ function textTex(text: string, color: string): THREE.CanvasTexture {
   return t;
 }
 const numCache = new Map<string, THREE.CanvasTexture>();
+onTextLost(() => {
+  for (const t of numCache.values()) t.dispose();
+  numCache.clear();
+  for (const v of calloutCache.values()) v.tex.dispose();
+  calloutCache.clear();
+});
 function numberTex(text: string, color: string): THREE.CanvasTexture {
   const key = `${text}|${color}`;
   const hit = numCache.get(key);
-  if (hit) return hit;
+  if (hit) {
+    numCache.delete(key);
+    numCache.set(key, hit);
+    return hit;
+  }
   const c = document.createElement("canvas");
   c.width = 128;
   c.height = 32;
@@ -110,8 +120,12 @@ function numberTex(text: string, color: string): THREE.CanvasTexture {
   drawNum(ctx, text, (128 - textWidth(text, 2.6, true)) / 2, 2, color, 2.6);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
-  if (numCache.size > 400) numCache.clear();
   numCache.set(key, t);
+  if (numCache.size > 120) {
+    const old = numCache.keys().next().value!;
+    numCache.get(old)!.dispose();
+    numCache.delete(old);
+  }
   return t;
 }
 

@@ -156,6 +156,18 @@ const ZONE_TEX: Record<string, THREE.CanvasTexture> = {
   }),
 };
 
+const KEEP_GEO = new Set<THREE.BufferGeometry>([thornGeo, thornBig]);
+const KEEP_MAT = new Set<THREE.Material>([WOOD, WOOD_DARK, THORN, BONE, ROCK, IRON, COPPER, MOSS_STONE, MOSS_TUFT, FLOWER, VINE, LEAF_A, LEAF_B]);
+function free(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (mesh.geometry && !KEEP_GEO.has(mesh.geometry) && !(o instanceof THREE.Sprite)) mesh.geometry.dispose();
+    const m = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    if (!m) return;
+    for (const mat of Array.isArray(m) ? m : [m]) if (!KEEP_MAT.has(mat)) mat.dispose();
+  });
+}
+
 export class HazardViews {
   readonly root = new THREE.Group();
   private traps = new Map<number, THREE.Object3D>();
@@ -163,6 +175,14 @@ export class HazardViews {
   private mods = new Map<number, THREE.Object3D>();
 
   private now = 0;
+
+  dispose(): void {
+    for (const o of [...this.traps.values(), ...this.zones.values(), ...this.mods.values(), ...this.dying.map((d) => d.obj)]) free(o);
+    this.traps.clear();
+    this.zones.clear();
+    this.mods.clear();
+    this.dying = [];
+  }
 
   constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {}
 
@@ -417,7 +437,10 @@ export class HazardViews {
         if (obj.userData.wall && this.fx) {
           for (const c of obj.children) wardenWallCrumble(this.fx, c.position.x, c.userData.baseY, c.position.z);
           this.dying.push({ obj, at: this.now });
-        } else this.root.remove(obj);
+        } else {
+          this.root.remove(obj);
+          free(obj);
+        }
       }
     }
   }
@@ -433,7 +456,10 @@ export class HazardViews {
         c.position.y = c.userData.baseY - 2.7 * Math.min(1, k * k);
         c.rotation.z = Math.sin(time * 40 + c.position.x) * 0.04;
       }
-      if (k >= 1) this.root.remove(obj);
+      if (k >= 1) {
+        this.root.remove(obj);
+        free(obj);
+      }
       return k < 1;
     });
     for (const m of w.mods) if (!this.mods.has(m.id)) this.handle({ type: "mod", id: m.id });
@@ -450,7 +476,7 @@ export class HazardViews {
       }
       o.rotation.y = time * (w.time < t.armAt ? 6 : 0.5);
     }
-    for (const [id, o] of this.traps) if (!seenT.has(id)) { this.root.remove(o); this.traps.delete(id); }
+    for (const [id, o] of this.traps) if (!seenT.has(id)) { this.root.remove(o); free(o); this.traps.delete(id); }
     const seenZ = new Set<number>();
     for (const z of w.zones) {
       seenZ.add(z.id);
@@ -512,7 +538,7 @@ export class HazardViews {
         arc.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0), 10, 0.05, 3, false);
       }
     }
-    for (const [id, o] of this.zones) if (!seenZ.has(id)) { this.root.remove(o); this.zones.delete(id); }
+    for (const [id, o] of this.zones) if (!seenZ.has(id)) { this.root.remove(o); free(o); this.zones.delete(id); }
     for (const o of this.mods.values()) {
       if (!o.userData.wall) {
         o.scale.y = Math.min(1, o.scale.y + dt * 6);
