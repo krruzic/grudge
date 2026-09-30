@@ -262,7 +262,7 @@ export class Gamepads {
   private assignSlots(pads: (Gamepad | null)[]): void {
     for (let s = 0; s < this.slots.length; s++) {
       const idx = this.slots[s];
-      if (idx !== null && idx !== KEYBOARD && !pads[idx]?.connected) this.slots[s] = null;
+      if (idx !== null && idx >= 0 && !pads[idx]?.connected) this.slots[s] = null;
     }
     for (let s = 0; s < this.slots.length; s++) {
       const idx = this.slots[s];
@@ -350,6 +350,7 @@ export class Gamepads {
     this.players.forEach((p, i) => {
       lines.push(`P${i + 1}: ${p.connected ? `${p.profile}  ${p.padId}` : "press any button to join"}`);
     });
+    this.pro.last.forEach((l, i) => lines.push(`PRO ${i + 1}: ${l}`));
     for (const pad of pads) {
       if (!pad) continue;
       const axes = pad.axes.map((a, i) => `${i}:${a.toFixed(2)}`).join(" ");

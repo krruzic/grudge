@@ -59,6 +59,7 @@ export class ProCon2 {
   private centers: ([number, number, number, number] | null)[] = [];
   status = "";
   reports = 0;
+  last: string[] = [];
 
   constructor() {
     const hid = (navigator as unknown as { hid?: HIDLike }).hid;
@@ -105,6 +106,9 @@ export class ProCon2 {
     this.reports++;
     const v = e.data;
     const off = e.reportId ? 1 : 0;
+    const hex: string[] = [];
+    for (let k = 0; k < Math.min(14, v.byteLength); k++) hex.push(v.getUint8(k).toString(16).padStart(2, "0"));
+    this.last[i] = `id ${e.reportId} len ${v.byteLength} ${hex.join(" ")}`;
     if (v.byteLength + off < 12) return;
     const b = (k: number) => v.getUint8(k - off);
     const p = this.pads[i];
@@ -143,5 +147,6 @@ export class ProCon2 {
     p.stickY = -ax(1);
     p.cX = ax(2);
     p.cY = -ax(3);
+    this.last[i] += ` · L ${p.stickX.toFixed(2)},${p.stickY.toFixed(2)} C ${p.cX.toFixed(2)},${p.cY.toFixed(2)}`;
   }
 }
