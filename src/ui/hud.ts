@@ -407,16 +407,21 @@ export class Hud {
     else if (r.state === "carried") {
       const c = w.getAny(r.carrier);
       col = c ? this.teamColors[c.team] : col;
-      text = r.channel > 0 ? `CRACKING THE KEEP · ${Math.ceil(cfg.channelSeconds - r.channel)}` : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE`;
+      text = r.channel > 0 ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}` : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE · TAKE IT HOME`;
+    } else if (r.state === "shrined") {
+      const s = w.get(r.shrineId);
+      const where = s?.structure?.type === "core" ? "KEEP" : "TOWER";
+      col = this.teamColors[r.team] ?? col;
+      text = r.channel > 0 ? `STEALING THE GRUDGE · ${Math.ceil(cfg.stealSeconds - r.channel)}` : `${r.team === 0 ? "BLUE" : "RED"} HOLDS THE GRUDGE · ${where}`;
     } else {
       const left = Math.max(0, Math.ceil(cfg.returnSeconds - (w.time - r.since)));
       text = `GRUDGE LOOSE · ${left}`;
     }
     const y = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
-    const flash = r.state === "carried" || r.state === "dropped" ? Math.floor(now * 3) % 2 === 0 : false;
+    const flash = r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0) ? Math.floor(now * 3) % 2 === 0 : false;
     drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
     if (r.state === "waiting" || !this.locate) return;
-    const lift = r.state === "carried" ? 4.5 : 1.5;
+    const lift = r.state === "carried" ? 4.5 : r.state === "shrined" ? 6 : 1.5;
     const sp = this.locate(r.x, r.y + lift, r.z);
     const k = W / window.innerWidth;
     const sx = sp.x * k;

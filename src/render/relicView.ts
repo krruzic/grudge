@@ -192,8 +192,26 @@ export class RelicView {
     const altarTop = w.groundY(home.x, home.z) + 0.62;
     this.relic.visible = true;
     this.arrow.visible = r.state === "home" || r.state === "dropped";
-    this.ring.visible = r.state === "carried";
+    this.ring.visible = r.state === "carried" || r.state === "shrined";
     this.shadow.visible = r.state === "dropped";
+    if (r.state === "shrined") {
+      const s = w.get(r.shrineId);
+      if (!s) return;
+      const keep = s.structure?.type === "core";
+      const top = s.transform.y + (keep ? 5.8 : 5.0);
+      const steal = r.channel > 0;
+      const shake = steal ? Math.sin(this.t * 40) * 0.08 * (1 + r.channel) : 0;
+      this.relic.position.set(s.transform.pos.x + shake, top + Math.sin(this.t * 1.8) * 0.1, s.transform.pos.z);
+      this.relic.rotation.set(0, this.t * 0.8, 0);
+      this.relic.scale.setScalar(keep ? 1.3 : 1.1);
+      const col = this.teamColors[r.team] ?? new THREE.Color(1, 1, 1);
+      const m = this.ring.material as THREE.MeshBasicMaterial;
+      m.color.copy(col).lerp(new THREE.Color(1, 0.85, 0.3), 0.45);
+      if (steal && Math.floor(this.t * 8) % 2 === 0) m.color.set(0xff3020);
+      this.ring.position.set(s.transform.pos.x, s.transform.y + 0.12, s.transform.pos.z);
+      this.ring.scale.setScalar((keep ? 3.2 : 2.4) * (1 + Math.sin(this.t * 3) * 0.05));
+      return;
+    }
     if (r.state === "carried") {
       const c = w.getAny(r.carrier);
       if (!c) return;

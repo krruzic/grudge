@@ -643,12 +643,18 @@ export class CombatFx {
         if (ev.state === "taken" || ev.state === "dropped") {
           this.flash(ev.x, ev.y + 1.2, ev.z, starTex, 0xffd060, 3.5, 0.3);
           this.burst(ev.x, ev.y + 1, ev.z, starTex, 0xffc040, 10, 0.6, 0.6, 3, true, 1.2);
-        } else if (ev.state === "delivered" || ev.state === "cracked") {
-          this.flash(ev.x, ev.y + 2, ev.z, starTex, 0xffe080, 10, 0.6);
-          this.burst(ev.x, ev.y + 2, ev.z, starTex, 0xffb030, 30, 1.2, 1.2, 7, true, 3);
-          this.debris(ev.x, ev.y + 1.5, ev.z, [0xc89a40, 0x6a5040, 0x8a7a68], 14, 0.3, 7);
-          this.ring(ev.x, ev.y, ev.z, new THREE.Color(0xffd060), 8, 0.9);
-          this.shake = Math.max(this.shake, 0.8);
+        } else if (ev.state === "shrined") {
+          const c = (this.teamColors[ev.team] ?? new THREE.Color(1, 1, 1)).clone().lerp(new THREE.Color(0xffd060), 0.5);
+          this.flash(ev.x, ev.y + 4, ev.z, starTex, 0xffe080, 8, 0.5);
+          this.burst(ev.x, ev.y + 4, ev.z, starTex, 0xffc040, 24, 0.9, 1.3, 4, true, 2.5);
+          this.ring(ev.x, ev.y, ev.z, c, 6, 0.8);
+          this.ring(ev.x, ev.y, ev.z, new THREE.Color(0xffd060), 3.5, 0.6);
+          this.shake = Math.max(this.shake, 0.35);
+        } else if (ev.state === "stolen") {
+          this.flash(ev.x, ev.y + 4, ev.z, starTex, 0xffffff, 6, 0.4);
+          this.burst(ev.x, ev.y + 3, ev.z, puffTex, 0x6a5a4a, 16, 1.2, 0.9, 4, false, 1.5);
+          this.debris(ev.x, ev.y + 3, ev.z, [0xc89a40, 0x8a7a68], 8, 0.22, 5);
+          this.shake = Math.max(this.shake, 0.4);
         } else if (ev.state === "home") {
           this.burst(ev.x, ev.y + 1.5, ev.z, starTex, 0xffd060, 12, 0.6, 1, 2, true, 2);
         }

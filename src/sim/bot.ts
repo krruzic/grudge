@@ -147,8 +147,19 @@ export class Bot {
     if (shopDone) return;
     const relic = w.arena.relic;
     if (w.arena.carrying(me)) {
-      const core = w.core(1 - me.team);
-      if (core) this.goal = { x: core.transform.pos.x, z: core.transform.pos.z };
+      let best: Entity | undefined;
+      let bd = Infinity;
+      for (const o of w.entities) {
+        if (!o.alive || o.team !== me.team || !w.arena.isTowerOrKeep(o)) continue;
+        const d = w.dist(me, o);
+        if (d < bd) { bd = d; best = o; }
+      }
+      if (best) this.goal = { x: best.transform.pos.x, z: best.transform.pos.z };
+      return;
+    }
+    const enemyShrine = w.arena.shrineOf(1 - me.team);
+    if (enemyShrine && !lowHp && w.dist(me, enemyShrine) < 22 && !(ehAlive && dHero < 5)) {
+      this.goal = { x: enemyShrine.transform.pos.x, z: enemyShrine.transform.pos.z };
       return;
     }
     if ((relic.state === "home" || relic.state === "dropped") && !lowHp) {

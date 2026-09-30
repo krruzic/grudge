@@ -227,6 +227,10 @@ export class Audio {
           if (ev.state === "taken") [523, 659, 784, 1047].forEach((f, i) => this.tone("triangle", f, f, 0.18, 0.1, pan, i * 0.06));
           else if (ev.state === "dropped") [784, 622, 523, 392].forEach((f, i) => this.tone("triangle", f, f * 0.98, 0.16, 0.1, pan, i * 0.06));
           else if (ev.state === "home") this.tone("sine", 392, 784, 0.6, 0.08, pan);
+          else if (ev.state === "stolen") {
+            [659, 523, 440, 330].forEach((f, i) => this.tone("sawtooth", f, f * 0.97, 0.22, 0.07, pan, i * 0.08));
+            this.hiss(900, 0.6, 0.5, 0.3, pan, "lowpass", 0, 200);
+          }
           else {
             this.tone("sine", 70, 25, 1.4, 0.8, pan);
             this.hiss(700, 0.4, 1.4, 0.6, pan, "lowpass", 0, 80);

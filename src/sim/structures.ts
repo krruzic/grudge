@@ -193,6 +193,7 @@ export function updateStructure(w: World, e: Entity): void {
     return;
   }
 
+  const boost = w.arena.towerBoost(e);
   if (st.type === "damage") {
     let best: Entity | null = null;
     let bestScore = Infinity;
@@ -201,7 +202,7 @@ export function updateStructure(w: World, e: Entity): void {
       if (!o.alive || o.team === e.team || o.status.hidden) continue;
       if (o.structure && !siege && !o.structure.siege) continue;
       const d = w.dist(e, o) - o.radius;
-      if (d > st.range * w.rangeMul(e, o)) continue;
+      if (d > st.range * boost.range * w.rangeMul(e, o)) continue;
       const score = d - (o.hero ? 100 : 0) - (o.structure?.siege ? 60 : 0) - (siege && o.structure ? 40 : 0);
       if (score >= bestScore) continue;
       if (!w.los(e, o, def.projectile?.losTolerance ?? 0.3, 3.2)) continue;
@@ -215,7 +216,7 @@ export function updateStructure(w: World, e: Entity): void {
     if (siege) e.transform.facing = e.transform.prevFacing = Math.atan2(best.transform.pos.x - e.transform.pos.x, best.transform.pos.z - e.transform.pos.z);
     const cls = best.structure?.siege ? "heavy" : w.classOf(best);
     const vs = (siege ? siege.vs[cls] : def.vs?.[cls]) ?? 1;
-    w.fireProjectile(e, best, st.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2);
+    w.fireProjectile(e, best, st.damage * boost.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2);
     st.lastFireAt = w.time;
     st.nextAction = w.time + (siege ? siege.cooldown : def.cooldown ?? 1);
     return;
@@ -223,16 +224,16 @@ export function updateStructure(w: World, e: Entity): void {
 
   if (st.type === "control") {
     const cm = w.teamHooks(e.team).controlTowerMul ?? 1;
-    const targets = w.enemiesNear(e, st.range, (o) => o.kind !== "structure");
+    const targets = w.enemiesNear(e, st.range * boost.range, (o) => o.kind !== "structure");
     if (!targets.length) {
       st.nextAction = w.time + 0.2;
       return;
     }
-    w.emit({ type: "pulse", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, radius: st.range, team: e.team });
+    w.emit({ type: "pulse", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, radius: st.range * boost.range, team: e.team });
     for (const o of targets) {
       const vs = def.vs?.[w.classOf(o)] ?? 1;
       const slow = 1 - Math.min(0.85, (1 - (def.slowMul ?? 0.5)) * Math.min(1, vs) * cm);
-      w.damage(e, o, st.damage * vs * cm, { knockback: (def.knockback ?? 3) * Math.min(1, vs), slowMul: slow, slowSeconds: def.slowSeconds });
+      w.damage(e, o, st.damage * boost.damage * vs * cm, { knockback: (def.knockback ?? 3) * Math.min(1, vs), slowMul: slow, slowSeconds: def.slowSeconds });
     }
     st.lastFireAt = w.time;
     st.nextAction = w.time + (def.cooldown ?? 2);

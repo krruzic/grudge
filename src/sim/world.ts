@@ -428,7 +428,10 @@ export class World {
       this.teams[0].unitCount = units[0];
       this.teams[1].unitCount = units[1];
     }
-    for (const t of this.teams) t.resource += eco.income * (1 + t.catchUp * cu.incomeBoost) * dt;
+    this.teams.forEach((t, team) => {
+      const tithe = this.arena.heldBy(team) ? this.data.match.arena.relic.incomeMul : 1;
+      t.resource += eco.income * (1 + t.catchUp * cu.incomeBoost) * tithe * dt;
+    });
   }
 
   private updateStatusMods(): void {

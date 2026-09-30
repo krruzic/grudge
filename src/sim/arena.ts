@@ -4,7 +4,10 @@ import { spawnUnit } from "./structures.ts";
 import { moveToward } from "./units.ts";
 
 export interface Relic {
-  state: "waiting" | "home" | "carried" | "dropped";
+  state: "waiting" | "home" | "carried" | "dropped" | "shrined";
+  shrineId: number;
+  team: number;
+  stealer: number;
   x: number;
   z: number;
   y: number;
@@ -69,7 +72,7 @@ export class Arena {
     this.home = this.snap((a.x + b.x) / 2, (a.z + b.z) / 2);
     w.nav.setBlocked(this.home.x, this.home.z, 1.2, true);
     const cfg = w.data.match.arena;
-    this.relic = { state: "waiting", x: this.home.x, z: this.home.z, y: w.groundY(this.home.x, this.home.z), carrier: 0, since: cfg.relic.firstSeconds, lockId: 0, lockUntil: 0, channel: 0 };
+    this.relic = { state: "waiting", x: this.home.x, z: this.home.z, y: w.groundY(this.home.x, this.home.z), carrier: 0, since: cfg.relic.firstSeconds, lockId: 0, lockUntil: 0, channel: 0, shrineId: 0, team: -1, stealer: 0 };
     this.nextCannon = cfg.cannon.firstSeconds;
     this.nextOgre = cfg.ogre.firstSeconds;
     this.nextWave = w.data.units.waves.firstSeconds;
@@ -155,18 +158,19 @@ export class Arena {
       r.x = c.transform.pos.x;
       r.z = c.transform.pos.z;
       r.y = c.transform.y;
-      const core = w.core(1 - c.team);
-      if (core && w.dist(c, core) <= core.radius + cfg.deliverReach) {
+      const shrine = this.shrineNear(c);
+      if (shrine) {
         if (r.channel === 0 && w.time - this.crackNoticeAt > 4) {
           this.crackNoticeAt = w.time;
-          w.emit({ type: "notice", team: -1, text: `P${c.hero!.player + 1} IS CRACKING THE KEEP!` });
+          w.emit({ type: "notice", team: -1, text: `P${c.hero!.player + 1} IS ENSHRINING THE GRUDGE` });
         }
         r.channel += w.dt;
-        if (r.channel >= cfg.channelSeconds) {
-          r.channel = 0;
-          this.deliver(c, core);
-        }
+        if (r.channel >= cfg.enshrineSeconds) this.enshrine(c, shrine);
       } else r.channel = 0;
+      return;
+    }
+    if (r.state === "shrined") {
+      this.updateShrine();
       return;
     }
     if (r.state === "dropped" && w.time - r.since > cfg.returnSeconds) {
@@ -218,31 +222,113 @@ export class Arena {
     w.emit({ type: "notice", team: -1, text: "GRUDGE DROPPED!" });
   }
 
-  private deliver(c: Entity, core: Entity): void {
+  isTowerOrKeep(o: Entity): boolean {
+    const st = o.structure;
+    if (!st || st.siege || !st.ready) return false;
+    return st.type === "core" || this.w.data.structures.types[st.type].class === "tower";
+  }
+
+  private shrineNear(c: Entity): Entity | null {
+    const w = this.w;
+    const reach = w.data.match.arena.relic.deliverReach;
+    let best: Entity | null = null;
+    let bd = Infinity;
+    for (const o of w.entities) {
+      if (!o.alive || o.team !== c.team || !this.isTowerOrKeep(o)) continue;
+      const d = w.dist(c, o) - o.radius;
+      if (d <= reach && d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+
+  shrineOf(team: number): Entity | null {
+    const r = this.relic;
+    if (r.state !== "shrined" || r.team !== team) return null;
+    return this.w.get(r.shrineId) ?? null;
+  }
+
+  heldBy(team: number): boolean {
+    const r = this.relic;
+    if (r.state === "shrined") return r.team === team;
+    return false;
+  }
+
+  towerBoost(e: Entity): { damage: number; range: number } {
+    const r = this.relic;
+    const cfg = this.w.data.match.arena.relic;
+    if (r.state === "shrined" && r.shrineId === e.id && e.structure?.type !== "core") return { damage: cfg.towerDamageMul, range: cfg.towerRangeMul };
+    return { damage: 1, range: 1 };
+  }
+
+  private enshrine(c: Entity, s: Entity): void {
+    const w = this.w;
+    const r = this.relic;
+    const sp = s.transform;
+    r.state = "shrined";
+    r.shrineId = s.id;
+    r.team = c.team;
+    r.carrier = 0;
+    r.channel = 0;
+    r.stealer = 0;
+    r.since = w.time;
+    r.x = sp.pos.x;
+    r.z = sp.pos.z;
+    r.y = sp.y;
+    const where = s.structure!.type === "core" ? "KEEP" : "TOWER";
+    w.emit({ type: "relic", state: "shrined", team: c.team, player: c.hero!.player, x: sp.pos.x, y: sp.y, z: sp.pos.z });
+    w.emit({ type: "notice", team: -1, text: `${c.team === 0 ? "BLUE" : "RED"} ENSHRINES THE GRUDGE IN A ${where}` });
+  }
+
+  private updateShrine(): void {
     const w = this.w;
     const r = this.relic;
     const cfg = w.data.match.arena.relic;
-    const enemy = core.team;
-    const cp = core.transform;
-    if (core.structure!.shielded && !w.isSudden()) {
-      core.structure!.ward = 0;
-      core.structure!.shielded = false;
-      w.emit({ type: "relic", state: "cracked", team: c.team, player: c.hero!.player, x: cp.pos.x, y: cp.y, z: cp.pos.z });
-      w.emit({ type: "notice", team: -1, text: "SHIELD CRACKED!" });
-    } else {
-      const dmg = Math.round(core.maxHp * cfg.coreDamageFrac);
-      core.hp -= dmg;
-      w.teams[c.team].coreDamageDealt += dmg;
-      w.emit({ type: "hit", x: cp.pos.x, y: cp.y + 2, z: cp.pos.z, team: enemy, big: true, id: core.id, amount: dmg, src: c.id });
-      w.emit({ type: "relic", state: "delivered", team: c.team, player: c.hero!.player, x: cp.pos.x, y: cp.y, z: cp.pos.z });
-      w.emit({ type: "notice", team: -1, text: "GRUDGE DELIVERED!" });
-      if (core.hp <= 0) w.kill(core, c);
+    const s = w.get(r.shrineId);
+    if (!s || !s.alive) {
+      const p = this.snap(r.x + 1.5, r.z);
+      r.state = "dropped";
+      r.x = p.x;
+      r.z = p.z;
+      r.y = w.groundY(p.x, p.z);
+      r.since = w.time;
+      r.lockId = 0;
+      r.team = -1;
+      r.shrineId = 0;
+      w.emit({ type: "relic", state: "dropped", team: -1, player: -1, x: r.x, y: r.y, z: r.z });
+      w.emit({ type: "notice", team: -1, text: "THE SHRINE FELL · GRUDGE LOOSE!" });
+      return;
     }
-    r.state = "waiting";
-    r.carrier = 0;
-    r.since = w.time + cfg.respawnSeconds;
-    r.x = this.home.x;
-    r.z = this.home.z;
+    if (s.structure!.type === "core" && !w.isSudden()) {
+      const st = s.structure!;
+      st.ward = Math.min(w.data.structures.core.ward, (st.ward ?? 0) + cfg.keepWardRegen * w.dt);
+      st.shielded = (st.ward ?? 0) > 0;
+    }
+    let thief: Entity | null = null;
+    let bd = Infinity;
+    for (const p of w.players) {
+      const e = w.get(p.heroId);
+      if (!e || !e.alive || e.hero?.dead || e.team === r.team) continue;
+      const d = w.dist(e, s) - s.radius;
+      if (d <= cfg.stealReach && d < bd) { bd = d; thief = e; }
+    }
+    if (!thief || thief.id !== r.stealer || w.time - thief.hero!.combatAt < 0.05) {
+      if (thief && thief.id !== r.stealer) w.emit({ type: "notice", team: r.team, text: "YOUR GRUDGE IS BEING STOLEN!" });
+      r.stealer = thief?.id ?? 0;
+      r.channel = 0;
+      return;
+    }
+    r.channel += w.dt;
+    if (r.channel < cfg.stealSeconds) return;
+    const sp = s.transform;
+    r.state = "carried";
+    r.carrier = thief.id;
+    r.team = -1;
+    r.shrineId = 0;
+    r.stealer = 0;
+    r.channel = 0;
+    r.since = w.time;
+    w.emit({ type: "relic", state: "stolen", team: thief.team, player: thief.hero!.player, x: sp.pos.x, y: sp.y, z: sp.pos.z });
+    w.emit({ type: "notice", team: -1, text: `P${thief.hero!.player + 1} STOLE THE GRUDGE!` });
   }
 
   private updateCannon(): void {

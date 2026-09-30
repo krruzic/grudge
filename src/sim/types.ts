@@ -293,7 +293,7 @@ export type SimEvent =
   | { type: "modEnd"; id: number }
   | { type: "cannonWarn"; x: number; y: number; z: number; radius: number; seconds: number }
   | { type: "cannonHit"; x: number; y: number; z: number; radius: number }
-  | { type: "relic"; state: "taken" | "dropped" | "delivered" | "cracked" | "home"; team: number; player: number; x: number; y: number; z: number }
+  | { type: "relic"; state: "taken" | "dropped" | "shrined" | "stolen" | "home"; team: number; player: number; x: number; y: number; z: number }
   | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean }
   | { type: "bomb"; state: "planted" | "boom"; x: number; y: number; z: number; team: number; fuse: number }
   | { type: "shove"; x: number; y: number; z: number; team: number }
