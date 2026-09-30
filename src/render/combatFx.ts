@@ -5,6 +5,26 @@ import { drawNum, drawText, fontReady, textWidth } from "../ui/font";
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
+import woodUrl from "../../assets/textures/wood.png?url";
+
+const woodTex = new THREE.TextureLoader().load(woodUrl);
+woodTex.colorSpace = THREE.SRGBColorSpace;
+const woodMat = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xe8c8a0, flatShading: true });
+const hammerHeadMat = new THREE.MeshLambertMaterial({ map: null, color: 0x70707a, flatShading: true });
+const plankGeo = new THREE.BoxGeometry(1.1, 0.12, 0.32);
+const handleGeo = new THREE.CylinderGeometry(0.07, 0.08, 1.1, 5);
+const headGeo = new THREE.BoxGeometry(0.55, 0.3, 0.3);
+function hammerMesh(): THREE.Group {
+  const g = new THREE.Group();
+  const handle = new THREE.Mesh(handleGeo, woodMat);
+  handle.position.y = 0.55;
+  const head = new THREE.Mesh(headGeo, hammerHeadMat);
+  head.position.y = 1.1;
+  g.add(handle, head);
+  return g;
+}
+const SHARED_GEO = new Set<THREE.BufferGeometry>([plankGeo, handleGeo, headGeo]);
+const SHARED_MAT = new Set<THREE.Material>([woodMat, hammerHeadMat]);
 
 const barkTex = new THREE.TextureLoader().load(barkUrl);
 barkTex.colorSpace = THREE.SRGBColorSpace;
@@ -187,6 +207,66 @@ function calloutTex(text: string, color: string): { tex: THREE.CanvasTexture; as
   calloutCache.set(key, out);
   return out;
 }
+
+const gearTex = canvasTex(128, (ctx, s) => {
+  const c = s / 2;
+  const teeth = 16;
+  ctx.beginPath();
+  for (let k = 0; k < teeth * 2; k++) {
+    const a0 = (k / (teeth * 2)) * Math.PI * 2;
+    const a1 = ((k + 1) / (teeth * 2)) * Math.PI * 2;
+    const r = k % 2 ? c - 4 : c - 11;
+    ctx.lineTo(c + Math.cos(a0) * r, c + Math.sin(a0) * r);
+    ctx.lineTo(c + Math.cos(a1) * r, c + Math.sin(a1) * r);
+  }
+  ctx.closePath();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(20,14,8,0.85)";
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#f0c860";
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(c, c, c - 22, 0, Math.PI * 2);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(240,200,96,0.6)";
+  ctx.stroke();
+});
+
+const runeTex = canvasTex(128, (ctx, s) => {
+  const c = s / 2;
+  ctx.fillStyle = "rgba(60,10,80,0.45)";
+  ctx.beginPath();
+  ctx.arc(c, c, c - 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "rgba(10,0,16,0.9)";
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#c070ff";
+  ctx.stroke();
+  ctx.beginPath();
+  for (let k = 0; k < 5; k++) {
+    const a = (k * 4 * Math.PI) / 5 - Math.PI / 2;
+    ctx.lineTo(c + Math.cos(a) * (c - 12), c + Math.sin(a) * (c - 12));
+  }
+  ctx.closePath();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#e0b0ff";
+  ctx.stroke();
+  ctx.fillStyle = "#e8d8f0";
+  ctx.beginPath();
+  ctx.arc(c, c - 4, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(c - 7, c + 4, 14, 8);
+  ctx.fillStyle = "#1a0826";
+  ctx.beginPath();
+  ctx.arc(c - 5, c - 5, 3.5, 0, Math.PI * 2);
+  ctx.arc(c + 5, c - 5, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(c - 4, c + 6, 2, 6);
+  ctx.fillRect(c + 2, c + 6, 2, 6);
+});
 
 const missTex = textTex("MISS", "#e0e0e0");
 const koTex = textTex("K.O.!", "#ff5a3a");
@@ -582,10 +662,15 @@ export class CombatFx {
         break;
       case "warcry": {
         const c = this.teamColors[ev.team];
-        this.ring(ev.x, ev.y, ev.z, c, ev.radius, 0.6);
-        this.flash(ev.x, ev.y + 1.6, ev.z, glowTex, c, 4, 0.5);
+        const hot = new THREE.Color(0xff8a30);
+        for (let k = 0; k < 3; k++) this.after(k * 0.12, () => this.ring(ev.x, ev.y + 0.2, ev.z, hot.clone().lerp(c, 0.3), ev.radius, 0.55));
+        this.flash(ev.x, ev.y + 2.2, ev.z, starTex, 0xffb060, 4, 0.35);
+        this.burst(ev.x, ev.y + 2, ev.z, starTex, 0xff9030, 10, 0.5, 0.6, 3, true, 2.5);
         break;
       }
+      case "repair":
+        this.repair(ev);
+        break;
       case "banner": {
         const c = this.teamColors[ev.team];
         this.ring(ev.x, ev.y, ev.z, c, 2.5, 0.4);
@@ -610,23 +695,27 @@ export class CombatFx {
       case "build":
         break;
       case "telegraph": {
-        const c = this.teamColors[ev.team].clone().lerp(new THREE.Color(0.7, 0.2, 1), 0.5);
         const m = new THREE.Mesh(
-          new THREE.CircleGeometry(1, 24),
-          new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }),
+          new THREE.PlaneGeometry(2, 2),
+          new THREE.MeshBasicMaterial({ map: runeTex, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
         );
         m.rotation.x = -Math.PI / 2;
-        m.position.set(ev.x, ev.y + 0.25, ev.z);
+        m.position.set(ev.x, ev.y + 0.14, ev.z);
         this.root.add(m);
         const r = ev.radius;
         this.items.push({
-          obj: m, t: 0, dur: ev.seconds,
+          obj: m, t: 0, dur: ev.seconds + 0.25,
           tick: (k) => {
-            m.scale.setScalar(r * (0.2 + 0.8 * k));
-            (m.material as THREE.MeshBasicMaterial).opacity = 0.25 + 0.35 * k;
+            const u = Math.min(1, k * (ev.seconds + 0.25) / 0.2);
+            m.scale.setScalar(r * u);
+            m.rotation.z = -k * 2;
+            (m.material as THREE.MeshBasicMaterial).opacity = k > 0.85 ? (1 - k) / 0.15 : 0.95;
           },
         });
-        this.ring(ev.x, ev.y, ev.z, c, r, ev.seconds);
+        this.after(ev.seconds, () => {
+          this.flash(ev.x, ev.y + 1, ev.z, glowTex, 0xc060ff, r * 2.2, 0.35);
+          this.burst(ev.x, ev.y + 0.5, ev.z, puffTex, 0x6a2a8a, 12, 1.2, 0.8, r, false, 1.4);
+        });
         break;
       }
       case "parry":
@@ -840,6 +929,87 @@ export class CombatFx {
     this.after(0.6, () => tex.dispose());
   }
 
+  private repair(ev: Extract<SimEvent, { type: "repair" }>): void {
+    const gear = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.MeshBasicMaterial({ map: gearTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    gear.rotation.x = -Math.PI / 2;
+    gear.position.set(ev.x, ev.y + 0.12, ev.z);
+    this.root.add(gear);
+    this.items.push({
+      obj: gear, t: 0, dur: 1.1,
+      tick: (k) => {
+        gear.scale.setScalar(ev.radius * (0.35 + 0.65 * Math.min(1, k * 4)));
+        gear.rotation.z = k * 2.5;
+        (gear.material as THREE.MeshBasicMaterial).opacity = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+      },
+    });
+    const slam = hammerMesh();
+    slam.position.set(ev.x + 0.6, ev.y, ev.z);
+    slam.scale.setScalar(1.3);
+    this.root.add(slam);
+    this.items.push({
+      obj: slam, t: 0, dur: 0.45,
+      tick: (k) => {
+        slam.rotation.z = k < 0.4 ? 1.4 * (1 - k / 0.4) : 0;
+        slam.visible = k < 0.9;
+      },
+    });
+    this.after(0.18, () => {
+      this.sparks(ev.x + 1.2, ev.y + 0.3, ev.z, 1, 0, 0xffd070, 6, 7);
+      this.sparks(ev.x + 1.2, ev.y + 0.3, ev.z, -1, 0, 0xffd070, 6, 7);
+      this.burst(ev.x + 1.2, ev.y + 0.2, ev.z, puffTex, 0xc8b898, 6, 0.9, 0.5, 1.5, false, 0.4);
+      this.shake = Math.max(this.shake, 0.18);
+    });
+    ev.fixed.forEach((f, n) => {
+      for (let p = 0; p < 3; p++) {
+        const plank = new THREE.Mesh(plankGeo, woodMat);
+        const sx = ev.x;
+        const sz = ev.z;
+        const ty = f.y + f.h * (0.35 + p * 0.22);
+        const spin = (Math.random() - 0.5) * 8;
+        const off = (p - 1) * 0.5;
+        this.root.add(plank);
+        this.items.push({
+          obj: plank, t: 0, dur: 1.6 + n * 0.1,
+          tick: (k) => {
+            const fly = Math.min(1, k / 0.35);
+            const x = sx + (f.x + off - sx) * fly;
+            const z = sz + (f.z + 1.1 - sz) * fly;
+            const y = ev.y + 1 + (ty - ev.y - 1) * fly + Math.sin(fly * Math.PI) * 2;
+            plank.position.set(x, y, z);
+            plank.rotation.set(fly < 1 ? k * spin : 0, fly < 1 ? k * spin * 0.7 : 0, fly < 1 ? 0 : (p - 1) * 0.25);
+            plank.visible = k < 0.92;
+          },
+        });
+      }
+      const ham = hammerMesh();
+      ham.scale.setScalar(1.2);
+      this.root.add(ham);
+      let strikes = 0;
+      this.items.push({
+        obj: ham, t: 0, dur: 1.5 + n * 0.1,
+        tick: (k) => {
+          const u = Math.max(0, (k * 1.5 - 0.5) / 0.9);
+          ham.visible = k * 1.5 > 0.45 && k < 0.95;
+          const beat = (u * 3) % 1;
+          ham.position.set(f.x + 0.9, f.y + f.h * 0.55, f.z + 1.3);
+          ham.rotation.set(0, 0, 0.3 + Math.max(0, 1 - beat * 2.5) * -1.3 + beat * 1.3);
+          const hitN = Math.floor(u * 3 + 0.4);
+          if (u > 0 && hitN > strikes && strikes < 3) {
+            strikes = hitN;
+            this.sparks(f.x + 0.3, f.y + f.h * 0.55 + 0.9, f.z + 1.3, -1, 0.5, 0xffe080, 5, 6);
+          }
+        },
+      });
+      this.after(0.9 + n * 0.1, () => {
+        if (f.amount > 0) this.number(f.x, f.y + f.h - 0.6, f.z, f.amount, "#7dff7a", true);
+        this.burst(f.x, f.y + f.h * 0.6, f.z, plusTex, 0xffffff, 6, 0.6, 0.9, 1.6, false, 1.4);
+      });
+    });
+  }
+
   private after(seconds: number, run: () => void): void {
     this.pending.push({ at: this.clock + Math.max(0, seconds), run });
   }
@@ -917,8 +1087,8 @@ export class CombatFx {
         this.root.remove(f.obj);
         f.obj.traverse((o) => {
           const m = (o as THREE.Mesh).material as THREE.Material | undefined;
-          if (m && m !== ballMat) m.dispose();
-          if (o instanceof THREE.Mesh && o.geometry !== chunkGeo && o.geometry !== ballGeo) o.geometry.dispose();
+          if (m && m !== ballMat && !SHARED_MAT.has(m)) m.dispose();
+          if (o instanceof THREE.Mesh && o.geometry !== chunkGeo && o.geometry !== ballGeo && !SHARED_GEO.has(o.geometry)) o.geometry.dispose();
         });
         this.items.splice(i, 1);
       }

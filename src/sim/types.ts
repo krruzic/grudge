@@ -315,6 +315,7 @@ export type SimEvent =
   | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean }
   | { type: "bomb"; state: "planted" | "boom"; x: number; y: number; z: number; team: number; fuse: number }
   | { type: "callout"; x: number; y: number; z: number; team: number; text: string; owner: number }
+  | { type: "repair"; x: number; y: number; z: number; team: number; radius: number; fixed: { x: number; y: number; z: number; amount: number; h: number }[] }
   | { type: "shove"; x: number; y: number; z: number; team: number }
   | { type: "fall"; x: number; y: number; z: number }
   | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };

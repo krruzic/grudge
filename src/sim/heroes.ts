@@ -578,10 +578,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
           }
         }
       }
-      w.emit({ type: "warcry", x: t.pos.x, y: t.y, z: t.pos.z, radius: 3, team: e.team });
+      w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: 3, team: e.team, seconds: 0.35 });
       if (def.hexRadius) {
         const hexSec = w.heroDef(e.hero!.type).abilities.b.hexSeconds ?? 6;
-        w.emit({ type: "pulse", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.hexRadius, team: e.team });
+        w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.hexRadius, team: e.team, seconds: 0.5 });
         for (const o of w.entities) {
           if (!o.alive || o.team === e.team || o.kind === "structure" || w.dist(e, o) > def.hexRadius) continue;
           o.status.hexUntil = w.time + hexSec;
@@ -600,16 +600,19 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       return;
     }
     case "repair": {
-      w.emit({ type: "warcry", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 6, team: e.team });
+      const fixed: { x: number; y: number; z: number; amount: number; h: number }[] = [];
       for (const o of w.entities.slice()) {
         if (!o.alive || w.dist(e, o) - o.radius > (def.radius ?? 6)) continue;
         if (o.team === e.team && o.structure) {
+          const before = o.hp;
           w.heal(o, def.heal ?? 200);
-          w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: e.team });
+          fixed.push({ x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, amount: Math.round(o.hp - before), h: o.structure.type === "core" ? 4.5 : 3.6 });
         } else if (o.team !== e.team && o.kind !== "structure") {
           w.damage(e, o, (def.damage ?? 30) * mul, { knockback: 3 });
         }
       }
+      w.emit({ type: "repair", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, radius: def.radius ?? 6, fixed });
+      if (!fixed.length) w.emit({ type: "notice", team: e.team, text: "NOTHING TO REPAIR IN REACH" });
       return;
     }
     case "turret": {

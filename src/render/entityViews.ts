@@ -119,6 +119,42 @@ function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTextu
   return t;
 }
 const MARKS: Record<string, THREE.SpriteMaterial> = {
+  stun: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    for (const [x, y, r] of [[8, 14, 6], [24, 12, 6], [16, 24, 5]]) {
+      c.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * Math.PI * 2 - Math.PI / 2;
+        const rr = k % 2 ? r * 0.45 : r;
+        c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      }
+      c.closePath();
+      c.fillStyle = "#ffe040"; c.fill();
+      c.strokeStyle = "#3a2408"; c.lineWidth = 2; c.stroke();
+    }
+  }) }),
+  buff: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.arc(16, 16, 13, 0, Math.PI * 2);
+    c.fillStyle = "#3a0806"; c.fill();
+    c.strokeStyle = "#ff6a2a"; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.moveTo(16, 5); c.lineTo(23, 14); c.lineTo(19, 14); c.lineTo(19, 26); c.lineTo(13, 26); c.lineTo(13, 14); c.lineTo(9, 14); c.closePath();
+    c.fillStyle = "#ffb040"; c.fill();
+    c.strokeStyle = "#3a0806"; c.lineWidth = 1.5; c.stroke();
+  }) }),
+  slow: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.arc(16, 16, 13, 0, Math.PI * 2);
+    c.fillStyle = "#081a2a"; c.fill();
+    c.strokeStyle = "#60c0ff"; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.moveTo(16, 26); c.lineTo(23, 17); c.lineTo(19, 17); c.lineTo(19, 6); c.lineTo(13, 6); c.lineTo(13, 17); c.lineTo(9, 17); c.closePath();
+    c.fillStyle = "#a8e0ff"; c.fill();
+    c.strokeStyle = "#081a2a"; c.lineWidth = 1.5; c.stroke();
+  }) }),
+  guard: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.moveTo(16, 3); c.lineTo(28, 8); c.lineTo(26, 20); c.lineTo(16, 29); c.lineTo(6, 20); c.lineTo(4, 8); c.closePath();
+    c.fillStyle = "#d8d0b8"; c.fill();
+    c.strokeStyle = "#1a1408"; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.moveTo(16, 7); c.lineTo(16, 25); c.moveTo(8, 12); c.lineTo(24, 12);
+    c.strokeStyle = "#b02010"; c.lineWidth = 3; c.stroke();
+  }) }),
   hex: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
     c.beginPath(); c.arc(16, 16, 12, 0, Math.PI * 2);
     c.fillStyle = "#1a0822"; c.fill();
@@ -608,7 +644,9 @@ export class EntityViews {
 
   private syncMark(e: Entity, v: View, time: number): void {
     const t = this.world.time;
-    const kind = !e.alive ? "" : e.hero && t < e.hero.openingUntil ? "opening" : t < e.status.hexUntil ? "hex" : t < e.status.cowedUntil ? "cowed" : "";
+    const s = e.status;
+    const kind = !e.alive ? "" : t < s.stunUntil ? "stun" : e.hero && t < e.hero.openingUntil ? "opening" : t < s.hexUntil ? "hex"
+      : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : t < s.buffUntil && s.buffDamageMul > 1 ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
     if (kind !== v.markKind) {
       v.markKind = kind;
       if (v.mark) { v.root.remove(v.mark); v.mark = undefined; }
@@ -621,7 +659,9 @@ export class EntityViews {
     if (v.mark) {
       const s = (e.hero ? 0.75 : 0.55) * (1 + Math.sin(time * 6) * 0.08);
       v.mark.scale.set(s, s, 1);
-      v.mark.position.y = v.bar.group.position.y + (e.hero ? 0.55 : 0.4);
+      const high = !!e.hero && (this.world.arena.carrying(e) || e.hero.bomb);
+      v.mark.position.y = e.hero ? (high ? 3.2 : 2.45) * this.heroScale : v.bar.group.position.y + 0.4;
+      if (v.markKind === "stun") v.mark.material.rotation = time * 5;
     }
   }
 

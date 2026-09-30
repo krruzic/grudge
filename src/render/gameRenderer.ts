@@ -365,7 +365,7 @@ export class GameRenderer {
 
   camMode = 1;
   private merged = false;
-  private zoomSteps = [14, 18, 22, 27, 33];
+  private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90];
   private zoomIndex = new Map<number, number>();
   private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroIds: number[]; player: number }[] = [];
 
@@ -428,7 +428,7 @@ export class GameRenderer {
     }
     if (this.camMode === 2) {
       const z = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2];
-      return { pts, min: z, max: Math.max(z, 40), margin: 4 };
+      return { pts, min: z, max: z, margin: 4 };
     }
     const alive = heroes.filter((h) => h.alive);
     let fight = false;
@@ -449,7 +449,7 @@ export class GameRenderer {
     }
     const zf = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2] / this.zoomSteps[2];
     const min = (fight ? 18 : towers ? 24 : 21) * zf;
-    return { pts, min, max: Math.max(min, 34 * zf), margin: (fight ? 6 : 8) * zf };
+    return { pts, min, max: Math.max(min, 34 * Math.max(1, zf)), margin: (fight ? 6 : 8) * zf };
   }
 
   private splitRects(w: number, h: number): [number, number, number, number][] {
