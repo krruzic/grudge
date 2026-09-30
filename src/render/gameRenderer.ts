@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RelicView } from "./relicView";
 import type { World } from "../sim/world";
 import type { Terrain } from "../sim/terrain";
 import type { MapView } from "./mapView";
@@ -273,8 +274,13 @@ export class GameRenderer {
     this.entityViews.menus = open;
   }
 
+  private relicView: RelicView | null = null;
+
   setWorld(world: World): void {
     this.scene.remove(this.entityViews.root, this.combatFx.root);
+    if (this.relicView) this.scene.remove(this.relicView.root);
+    this.relicView = new RelicView(world, this.structureModels, this.teamColors, this.cfg.heroScale);
+    this.scene.add(this.relicView.root);
     if (this.hazards) this.scene.remove(this.hazards.root);
     this.world = world;
     this.hazards = new HazardViews(world, this.teamColors);
@@ -362,6 +368,7 @@ export class GameRenderer {
     }
     this.world.events.length = 0;
     this.entityViews.sync(alpha, dt, this.time);
+    this.relicView?.sync(alpha, dt);
     this.combatFx.syncProjectiles(this.world, alpha);
     this.combatFx.syncBanners(this.world, performance.now() / 1000);
     this.combatFx.update(dt);

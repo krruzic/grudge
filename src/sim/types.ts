@@ -44,7 +44,7 @@ export interface Status {
 }
 
 export interface HeroAction {
-  name: "a" | "b" | "r" | "z" | "dodge" | "hit";
+  name: "a" | "b" | "r" | "z" | "dodge" | "hit" | "shove";
   t: number;
   dur: number;
   hitAt: number;
@@ -81,6 +81,8 @@ export interface HeroState {
   stepHeight: number;
   maxSlope: number;
   openingUntil: number;
+  combatAt: number;
+  actionEndAt: number;
 }
 
 export interface UnitState {
@@ -133,6 +135,7 @@ export interface Entity {
   structure?: StructureState;
   expiresAt?: number;
   owner?: number;
+  neutral?: boolean;
 }
 
 export interface Trap {
@@ -238,6 +241,7 @@ export interface TeamState {
   unitCount: number;
   commanderOrderAt: number;
   banner: { x: number; z: number; until: number } | null;
+  callReadyAt: number;
 }
 
 export interface Command {
@@ -250,6 +254,7 @@ export interface Command {
   special?: boolean;
   super?: boolean;
   build?: StructureType | "default" | "upgrade";
+  call?: UnitType;
   directive?: { type: UnitType | "all"; dir: Directive };
 }
 
@@ -273,7 +278,13 @@ export type SimEvent =
   | { type: "parry"; x: number; y: number; z: number; team: number }
   | { type: "mod"; id: number }
   | { type: "shot"; style: string; x: number; y: number; z: number }
-  | { type: "modEnd"; id: number };
+  | { type: "modEnd"; id: number }
+  | { type: "cannonWarn"; x: number; y: number; z: number; radius: number; seconds: number }
+  | { type: "cannonHit"; x: number; y: number; z: number; radius: number }
+  | { type: "relic"; state: "taken" | "dropped" | "delivered" | "cracked" | "home"; team: number; player: number; x: number; y: number; z: number }
+  | { type: "shove"; x: number; y: number; z: number; team: number }
+  | { type: "fall"; x: number; y: number; z: number }
+  | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };
 
 export interface MatchState {
   time: number;

@@ -8,6 +8,7 @@ import { UNIT_TYPES } from "./types.ts";
 import { updateHero } from "./heroes.ts";
 import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
+import { Arena } from "./arena.ts";
 
 export type { Vec2, Entity, Command } from "./types.ts";
 
@@ -96,7 +97,7 @@ export class World {
           holdPoint: { grunt: { ...hold }, ranged: { ...hold }, heavy: { ...hold } },
           focus: { grunt: 0, ranged: 0, heavy: 0 },
         },
-        coreDamageDealt: 0, kills: 0, structuresBuilt: 0, structuresLost: 0, heroKills: 0, catchUp: 0, unitCount: 0, commanderOrderAt: -99, banner: null,
+        coreDamageDealt: 0, kills: 0, structuresBuilt: 0, structuresLost: 0, heroKills: 0, catchUp: 0, unitCount: 0, commanderOrderAt: -99, banner: null, callReadyAt: 0,
       });
     }
     for (const c of this.terrain.cores) {
@@ -109,7 +110,10 @@ export class World {
       this.teams[team].coreId = e.id;
       this.nav.setBlocked(c.x, c.z, data.structures.core.radius + 0.4, true);
     }
+    this.arena = new Arena(this);
   }
+
+  readonly arena: Arena;
 
   private defaultHold(team: number): Vec2 {
     const c = this.terrain.cores.find((k) => k.team === team) ?? { x: 10, z: 24 };
@@ -186,7 +190,7 @@ export class World {
       speed: tiers.speed[def.speed] * (def.hooks.speedMul ?? 1),
       damageMul: tiers.damage[def.damage],
       vel: { x: 0, z: 0 },
-      action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0,
+      action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99,
       dead: false, respawnAt: 0, lastTargetId: 0, lastTargetAt: -99, anim: "idle", animStart: 0,
       stepHeight: def.hooks.stepHeight ?? b.stepHeight,
       maxSlope: def.hooks.maxSlope ?? b.maxSlope,
@@ -313,6 +317,7 @@ export class World {
       if (!e) continue;
       const cmd = commands[slot.player] ?? { moveX: 0, moveZ: 0 };
       if (e.alive && cmd.build) tryBuild(this, e, cmd.build);
+      if (e.alive && cmd.call) this.arena.callSquad(e, cmd.call);
       if (cmd.directive) {
         const ts = this.teams[slot.team];
         if (slot.commander) {
@@ -324,6 +329,7 @@ export class World {
       }
       updateHero(this, e, cmd);
     }
+    this.arena.update();
     const list = this.entities.slice();
     for (const e of list) {
       if (!e.alive) continue;
@@ -542,6 +548,8 @@ export class World {
       return false;
     }
     if (src) src.status.lastAttackAt = this.time;
+    if (target.hero) target.hero.combatAt = this.time;
+    if (src?.hero && target.hero) src.hero.combatAt = this.time;
     if (opts.canMiss && src) {
       const tr = this.data.match.terrain;
       if (tp.y - src.transform.y >= tr.highGroundDelta && this.rng() < tr.uphillMissChance) {
@@ -570,6 +578,14 @@ export class World {
         }
       }
       if (hk.heroDamageMul && target.hero && src.hero) amount *= hk.heroDamageMul;
+      if (!target.structure) {
+        const pos = this.data.match.positional;
+        const dx = src.transform.pos.x - tp.pos.x;
+        const dz = src.transform.pos.z - tp.pos.z;
+        const dot = (Math.sin(tp.facing) * dx + Math.cos(tp.facing) * dz) / (Math.hypot(dx, dz) || 1);
+        if (dot < -0.3 && !hk.flankMul) amount *= pos.backstabMul;
+        if (src.status.hidden) amount *= pos.ambushMul;
+      }
     }
     amount *= this.synergyMul(src, target, opts);
     if (this.time < target.status.guardUntil) amount *= target.status.guardMul;
@@ -651,7 +667,10 @@ export class World {
     const tp = target.transform;
     this.onKillSynergy(target, src);
     const bounty = this.data.match.economy.bounty;
-    const killerTeam = src ? src.team : 1 - target.team;
+    const kt = src ? src.team : 1 - target.team;
+    const killerTeam = kt === 0 || kt === 1 ? kt : -1;
+    const nobody = { resource: 0, heroKills: 0, kills: 0 };
+    const killer = killerTeam >= 0 ? this.teams[killerTeam] : nobody;
     target.hp = 0;
     this.emit({
       type: "death", id: target.id, kind: target.kind, x: tp.pos.x, y: tp.y, z: tp.pos.z, team: target.team,
@@ -663,16 +682,21 @@ export class World {
       target.hero.dead = true;
       target.hero.action = null;
       target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds;
-      this.teams[killerTeam].resource += bounty.hero;
-      this.teams[killerTeam].heroKills++;
+      killer.resource += bounty.hero;
+      killer.heroKills++;
       return;
     }
     target.alive = false;
     if (src?.unit && src.alive && src.team !== target.team) this.promote(src, target.unit ? 1 : this.data.units.veterancy.structureKillValue);
     if (target.unit) {
       const vet = this.data.units.veterancy;
-      this.teams[killerTeam].resource += this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank;
-      this.teams[killerTeam].kills++;
+      if (target.neutral) {
+        killer.resource += this.data.match.arena.ogre.bounty;
+        if (killerTeam >= 0) this.emit({ type: "notice", team: -1, text: "THE OGRE FALLS" });
+        return;
+      }
+      killer.resource += this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank;
+      killer.kills++;
       return;
     }
     const st = target.structure!;
@@ -688,7 +712,7 @@ export class World {
     const pad = this.pads[st.padIndex];
     pad.structureId = 0;
     this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius, false);
-    this.teams[killerTeam].resource += bounty.structure;
+    killer.resource += bounty.structure;
     this.teams[target.team].structuresLost++;
     if (pad.zone === "home" && pad.side === target.team) {
       if (!this.teams[target.team].homeLost) this.emit({ type: "notice", team: target.team, text: "CORE SHIELD DOWN" });
@@ -708,12 +732,53 @@ export class World {
     const cx = Math.floor(e.transform.pos.x);
     const cz = Math.floor(e.transform.pos.z);
     if (this.terrain.kindAt(cx, cz) === Kind.Ford) m *= this.data.match.terrain.fordSpeedMul;
+    if (e.hero) m *= this.pacingMul(e);
     if (e.unit) {
       const def = this.data.units.types[e.unit.type];
       if (def.slopeSpeedMul < 1 && this.slopeAt(e.transform.pos.x, e.transform.pos.z) > this.data.match.terrain.slopeThreshold) {
         m *= def.slopeSpeedMul;
       }
     }
+    return m;
+  }
+
+  turf(e: Entity): "home" | "tower" | "enemyTower" | "field" {
+    const pc = this.data.match.pacing;
+    const p = e.transform.pos;
+    let own = false;
+    for (const o of this.entities) {
+      if (!o.alive || !o.structure || !o.structure.range || o.structure.type === "core") continue;
+      if (this.data.structures.types[o.structure.type as keyof typeof this.data.structures.types]?.class !== "tower") continue;
+      const d = Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z);
+      if (d > o.structure.range * pc.towerReach) continue;
+      if (o.team !== e.team) return "enemyTower";
+      own = true;
+    }
+    if (own) return "tower";
+    const mine = this.get(this.teams[e.team]?.coreId ?? -1);
+    const theirs = this.get(this.teams[1 - e.team]?.coreId ?? -1);
+    if (mine && theirs) {
+      const dm = Math.hypot(mine.transform.pos.x - p.x, mine.transform.pos.z - p.z);
+      const dt = Math.hypot(theirs.transform.pos.x - p.x, theirs.transform.pos.z - p.z);
+      if (dm < dt) return "home";
+    }
+    return "field";
+  }
+
+  calm(e: Entity): boolean {
+    return !!e.hero && this.time - e.hero.combatAt >= this.data.match.pacing.calmSeconds;
+  }
+
+  pacingMul(e: Entity): number {
+    const pc = this.data.match.pacing;
+    const h = e.hero!;
+    let m = 1;
+    const turf = this.turf(e);
+    if (turf === "home" || turf === "tower") m *= pc.homeSpeedMul;
+    else if (turf === "enemyTower") m *= pc.towerIntruderMul;
+    if (this.calm(e)) m *= pc.calmSpeedMul;
+    if (this.time - h.actionEndAt < pc.commitSeconds) m *= pc.commitMul;
+    if (this.arena.carrying(e)) m *= this.data.match.arena.relic.carrySpeedMul;
     return m;
   }
 
@@ -729,8 +794,10 @@ export class World {
     const step = e.hero?.stepHeight ?? b.stepHeight;
     const maxSlope = e.hero?.maxSlope ?? b.maxSlope;
     const hc = this.terrain.heightAt(x, z);
-    if (!Number.isFinite(hc) || Math.abs(hc - e.transform.y) > step) return false;
-    if (this.terrain.slopeAt(x, z) > maxSlope) return false;
+    if (!Number.isFinite(hc)) return false;
+    const falling = this.knocked && hc < e.transform.y - step;
+    if (!falling && Math.abs(hc - e.transform.y) > step) return false;
+    if (!falling && this.terrain.slopeAt(x, z) > maxSlope && !(this.knocked && hc < e.transform.y)) return false;
     return !this.hitsStructure(e, x, z);
   }
 
@@ -765,6 +832,11 @@ export class World {
   }
 
   private hitsStructure(e: Entity, x: number, z: number): boolean {
+    const ah = this.arena?.home;
+    if (ah) {
+      const d = Math.hypot(ah.x - x, ah.z - z);
+      if (d < 1.15 + e.radius * 0.8 && d < Math.hypot(ah.x - e.transform.pos.x, ah.z - e.transform.pos.z)) return true;
+    }
     for (const s of this.entities) {
       if (!s.alive || s.kind !== "structure" || s === e) continue;
       const d = Math.hypot(s.transform.pos.x - x, s.transform.pos.z - z);
@@ -824,7 +896,7 @@ export class World {
       t.pos.z = z;
       this.pushOut(e);
       const h = this.terrain.heightAt(t.pos.x, t.pos.z);
-      if (!Number.isFinite(h) || Math.abs(h - t.y) > (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) + 0.05) {
+      if (!Number.isFinite(h) || (Math.abs(h - t.y) > (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) + 0.05 && !(this.knocked && h < t.y))) {
         t.pos.x = ox;
         t.pos.z = oz;
         return false;
@@ -882,12 +954,25 @@ export class World {
     t.facing += Math.max(-maxTurn, Math.min(maxTurn, d));
   }
 
+  private knocked = false;
+
   private applyKnockback(dt: number): void {
+    const pos = this.data.match.positional;
     for (const e of this.entities) {
       if (!e.alive || e.kind === "structure") continue;
       const s = e.status;
       if (Math.abs(s.kvx) + Math.abs(s.kvz) < 0.05) { s.kvx = s.kvz = 0; continue; }
+      const y0 = e.transform.y;
+      this.knocked = Math.hypot(s.kvx, s.kvz) >= pos.knockDropMin;
       this.moveBy(e, s.kvx * dt, s.kvz * dt);
+      this.knocked = false;
+      const drop = y0 - e.transform.y;
+      if (drop >= pos.fallMin) {
+        e.transform.prevY = y0;
+        this.emit({ type: "fall", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z });
+        this.damage(null, e, e.maxHp * pos.fallDamageFrac * Math.min(2, drop / pos.fallMin), { stun: pos.fallStun, fromX: e.transform.pos.x, fromZ: e.transform.pos.z });
+        if (!e.alive) continue;
+      }
       const decay = Math.exp(-dt * 8);
       s.kvx *= decay;
       s.kvz *= decay;

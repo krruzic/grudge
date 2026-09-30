@@ -120,6 +120,8 @@ async function start(): Promise<void> {
   const hud = new Hud(teamCss);
   const screens = new Screens(teamCss);
   screens.portraits = new Portraits(heroes, view.teamColorList);
+  screens.portraits.units = unitModels;
+  hud.portraits = screens.portraits;
   screens.portraits.setMaps(mapViews.map((mv, i) => ({ root: mv.root, width: maps[i].data.width, depth: maps[i].data.depth })));
   const padsEl = document.getElementById("pads")!;
   const audio = new Audio();
@@ -243,7 +245,12 @@ async function start(): Promise<void> {
   let overAt = -1;
 
   const setupControl = (humans: boolean[], levels: number[] = []) => {
-    mappers = humans.map((h, i) => (h ? new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i)) : null));
+    mappers = humans.map((h, i) => {
+      if (!h) return null;
+      const m = new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i));
+      if (inputData.smashDodge) m.smash = inputData.smashDodge;
+      return m;
+    });
     bots = humans.map((h, i) => (h ? null : new Bot(i, [0.5, 0.75, 0.95][(levels[i] ?? 2) - 1] ?? 0.75, seed + i)));
     view.setHumans(humans);
   };
@@ -596,6 +603,7 @@ async function start(): Promise<void> {
     if (state !== "select" && state !== "map" && !(state === "menu" && menus.page !== "main")) view.render(state === "paused" ? 0 : acc / world.dt, state === "paused" ? 0 : dt);
     const ctx = pixel.begin();
     const uiList = mappers.map((m) => m?.ui ?? null);
+    hud.locate = (x, y, z) => view.worldToScreen(x, y, z);
     hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
     screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : mapIndex);
     if (state === "select") screens.portraits?.renderStages();

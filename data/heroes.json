@@ -6,9 +6,9 @@
       "high": 1000
     },
     "speed": {
-      "low": 5.0,
-      "mid": 6.0,
-      "high": 7.0
+      "low": 4.0,
+      "mid": 4.8,
+      "high": 5.6
     },
     "damage": {
       "low": 0.8,
@@ -35,7 +35,17 @@
     "hitStunSeconds": 0.18,
     "comboCooldown": 0.7,
     "commanderPriority": 3,
-    "cowedDamageMul": 0.75
+    "cowedDamageMul": 0.75,
+    "shove": {
+      "range": 2.3,
+      "arcDeg": 120,
+      "damage": 12,
+      "knockback": 15,
+      "stun": 0.45,
+      "cooldown": 2.5,
+      "dur": 0.42,
+      "hitAt": 0.14
+    }
   },
   "heroes": {
     "warlord": {

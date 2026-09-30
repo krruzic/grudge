@@ -6,6 +6,10 @@ const DIRS: [number, number, number][] = [
   [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
 ];
 
+const SLOPE_SAMPLES: [number, number][] = [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35], [0.42, 0.42], [-0.42, 0.42], [0.42, -0.42], [-0.42, -0.42]];
+const PLAN_SLOPE = 0.9;
+const LINE_SLOPE = 0.95;
+
 const CLEAR_RING: [number, number][] = Array.from({ length: 8 }, (_, k) => [Math.cos((k * Math.PI) / 4) * 0.6, Math.sin((k * Math.PI) / 4) * 0.6]);
 
 export class NavGrid {
@@ -49,8 +53,8 @@ export class NavGrid {
     this.h[i] = hc;
     let ok = Number.isFinite(hc);
     if (ok) {
-      for (const [ox, oz] of [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35]]) {
-        if (!(t.slopeAt(x + ox, z + oz) <= this.maxSlope)) { ok = false; break; }
+      for (const [ox, oz] of SLOPE_SAMPLES) {
+        if (!(t.slopeAt(x + ox, z + oz) <= this.maxSlope * PLAN_SLOPE)) { ok = false; break; }
       }
     }
     this.walk[i] = ok ? 1 : 0;
@@ -128,6 +132,7 @@ export class NavGrid {
       const px = a.x + dx * f;
       const pz = a.z + dz * f;
       const i = this.index(Math.floor(px), Math.floor(pz));
+      if (!(this.t.slopeAt(px, pz) <= this.maxSlope * LINE_SLOPE)) return false;
       if (i !== prev) {
         if (prev >= 0 && this.open(prev) && !this.passable(prev, i)) return false;
         if (!this.open(i)) return false;
@@ -203,11 +208,15 @@ export class NavGrid {
     push(start, heur(start));
     let found = false;
     let iter = 0;
+    let best = start;
+    let bestH = heur(start);
     while (heap.length && iter++ < 20000) {
       const cur = pop();
       if (this.closed[cur] === gen) continue;
       this.closed[cur] = gen;
       if (cur === goal) { found = true; break; }
+      const hc = heur(cur);
+      if (hc < bestH) { bestH = hc; best = cur; }
       const cx = cur % W;
       const cz = (cur / W) | 0;
       for (const [dx, dz, dc] of DIRS) {
@@ -225,12 +234,13 @@ export class NavGrid {
         }
       }
     }
-    if (!found) return null;
+    if (!found && best === start) return null;
+    const end = found ? goal : best;
     const cells: number[] = [];
-    for (let c = goal; c >= 0; c = this.came[c]) cells.push(c);
+    for (let c = end; c >= 0; c = this.came[c]) cells.push(c);
     cells.reverse();
     const pts = cells.map((c) => ({ x: (c % W) + 0.5, z: ((c / W) | 0) + 0.5 }));
-    pts[pts.length - 1] = this.open(this.index(Math.floor(to.x), Math.floor(to.z))) ? { x: to.x, z: to.z } : pts[pts.length - 1];
+    if (found) pts[pts.length - 1] = this.open(this.index(Math.floor(to.x), Math.floor(to.z))) ? { x: to.x, z: to.z } : pts[pts.length - 1];
     const out: Vec2[] = [];
     let anchor: Vec2 = from;
     let k = 0;

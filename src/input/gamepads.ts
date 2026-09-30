@@ -184,7 +184,7 @@ export class Gamepads {
     held.y = g.y;
     held.z = g.z;
     held.r = g.r;
-    held.dodge = g.l;
+    held.dodge = false;
     held.block = g.lAnalog > 0.3;
     held.start = g.start;
     held.up = g.up;

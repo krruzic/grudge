@@ -186,6 +186,42 @@ export class Audio {
         case "blink":
           this.hiss(4000, 1, 0.3, 0.15, pan, "highpass");
           break;
+        case "cannonWarn": {
+          if (!this.allow("cannonWarn", 2)) break;
+          const fly = Math.min(1.3, ev.seconds * 0.6);
+          this.tone("square", 70, 70, 0.08, 0.12, pan);
+          this.hiss(300, 0.6, 0.25, 0.35, pan, "lowpass", 0.02, 90);
+          this.tone("sine", 2400, 700, fly, 0.06, pan, ev.seconds - fly);
+          break;
+        }
+        case "cannonHit":
+          if (!this.allow("cannonHit", 2)) break;
+          this.tone("sine", 110, 28, 0.9, 0.8, pan);
+          this.hiss(900, 0.4, 1.1, 0.7, pan, "lowpass", 0, 90);
+          this.hiss(3000, 0.8, 0.25, 0.25, pan, "bandpass", 0.02, 600);
+          break;
+        case "shove":
+          this.hiss(700, 0.8, 0.14, ev.team >= 0 ? 0.35 : 0.15, pan, "lowpass", 0, 200);
+          if (ev.team >= 0) this.tone("sine", 160, 60, 0.15, 0.3, pan);
+          break;
+        case "fall":
+          this.tone("triangle", 700, 150, 0.3, 0.08, pan);
+          this.tone("sine", 90, 40, 0.2, 0.4, pan, 0.28);
+          break;
+        case "squad":
+          [196, 262, 330].forEach((f, i) => this.tone("square", f, f, 0.14, 0.07, pan, i * 0.08));
+          this.hiss(500, 0.6, 0.35, 0.18, pan, "lowpass", 0.1);
+          break;
+        case "relic":
+          if (ev.state === "taken") [523, 659, 784, 1047].forEach((f, i) => this.tone("triangle", f, f, 0.18, 0.1, pan, i * 0.06));
+          else if (ev.state === "dropped") [784, 622, 523, 392].forEach((f, i) => this.tone("triangle", f, f * 0.98, 0.16, 0.1, pan, i * 0.06));
+          else if (ev.state === "home") this.tone("sine", 392, 784, 0.6, 0.08, pan);
+          else {
+            this.tone("sine", 70, 25, 1.4, 0.8, pan);
+            this.hiss(700, 0.4, 1.4, 0.6, pan, "lowpass", 0, 80);
+            [262, 330, 392, 523, 659].forEach((f, i) => this.tone("sawtooth", f, f, 0.5, 0.06, 0, 0.3 + i * 0.07));
+          }
+          break;
         case "mod":
           this.hiss(300, 0.5, 0.4, 0.3, 0, "lowpass");
           this.tone("square", 120, 90, 0.3, 0.06, 0);

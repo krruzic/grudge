@@ -51,7 +51,7 @@ def grunt(images):
     c.decal((0, -0.29, 1.0), 0.42, 0.3, "face_goblin", "head", curve=0.06)
     for sx in (-1, 1):
         c.lathe([(0.0, 0.0), (0.07, 0.04), (0.05, 0.22), (0.0, 0.34)], (0.22 * sx, 0.0, 1.02), GB, "head", segs=4, sy=0.35, rot=(0.0, 1.3 * sx, 0.0))
-    c.lathe([(0.0, 1.06), (0.27, 1.06), (0.28, 1.12), (0.22, 1.24), (0.1, 1.36), (0.0, 1.42)], (0, -0.02, 0), "iron", "head", segs=7, sx=1.1)
+    c.lathe([(0.0, 1.06), (0.27, 1.06), (0.28, 1.12), (0.22, 1.24), (0.1, 1.36), (0.0, 1.42)], (0, -0.02, 0), T, "head", segs=7, sx=1.1)
     c.tbox((0.06, 0.04), (0.04, 0.04), 0.2, (0, -0.29, 0.94), "iron", "head")
     c.lathe([(0.17, 0.5), (0.22, 0.6), (0.22, 0.74), (0.16, 0.86)], (0, 0, 0), "leather", "chest", segs=7, sy=0.85, shade=(0.8, 0.6, 0.45))
     c.tbox((0.3, 0.04), (0.26, 0.04), 0.46, (0, -0.2, 0.32), C, "chest", rot=(0.05, 0, 0))
@@ -114,7 +114,7 @@ def heavy(images):
     OG = "grey_ogre"
     c.lathe([(0.0, 1.28), (0.26, 1.3), (0.3, 1.42), (0.28, 1.56), (0.0, 1.6)], (0, -0.2, 0), OG, "head", segs=7, sx=1.1)
     c.decal((0, -0.52, 1.4), 0.46, 0.3, "face_ogre", "head", curve=0.06)
-    c.lathe([(0.31, 1.5), (0.32, 1.68), (0.29, 1.74), (0.0, 1.76)], (0, -0.2, 0), "iron", "head", segs=7, sx=1.1, shade=(0.9, 0.6, 0.45))
+    c.lathe([(0.31, 1.5), (0.32, 1.68), (0.29, 1.74), (0.0, 1.76)], (0, -0.2, 0), T, "head", segs=7, sx=1.1)
     c.lathe([(0.36, 0.72), (0.5, 0.9), (0.58, 1.1), (0.56, 1.3), (0.34, 1.42), (0.0, 1.44)], (0, 0.04, 0), OG, "chest", segs=8, sy=0.8)
     for sx in (-1, 1):
         c.tbox((0.34, 0.06), (0.36, 0.06), 0.3, (0.18 * sx, -0.44, 1.02), "iron", "chest", rot=(0.15, 0, 0))
@@ -165,7 +165,45 @@ def clips(heavy_unit=False):
     }
 
 
-BUILDERS = {"grunt": grunt, "ranged": ranged, "heavy": heavy}
+def ogre(images):
+    B = rig(0.74, 1.4, 1.9, 0.6, 0.26, 0.5)
+    c = charkit.Char("ogre", images)
+    OG = "ogre"
+    c.lathe([(0.0, 1.36), (0.3, 1.38), (0.34, 1.52), (0.3, 1.68), (0.14, 1.78), (0.0, 1.8)], (0, -0.3, 0), OG, "head", segs=7, sx=1.15)
+    c.decal((0, -0.64, 1.56), 0.52, 0.36, "face_ogre", "head", curve=0.08)
+    for sx in (-1, 1):
+        c.lathe([(0.0, 0.0), (0.08, 0.05), (0.06, 0.2), (0.0, 0.3)], (0.3 * sx, -0.3, 1.58), OG, "head", segs=4, sy=0.4, rot=(0.0, 1.35 * sx, 0.0))
+        c.cone(0.05, 0.0, 0.18, (0.13 * sx, -0.6, 1.44), "bone", "head", segs=4, rot=(0.3, 0, 0))
+    c.lathe([(0.0, 1.72), (0.1, 1.76), (0.07, 1.86), (0.0, 1.96)], (0, -0.24, 0), "leather", "head", segs=5, shade=(0.3, 0.2, 0.15))
+    c.lathe([(0.4, 0.7), (0.56, 0.9), (0.64, 1.1), (0.6, 1.28), (0.36, 1.4), (0.0, 1.42)], (0, 0.06, 0), OG, "chest", segs=8, sy=0.82)
+    c.lathe([(0.3, 0.64), (0.5, 0.78), (0.52, 0.94), (0.0, 0.98)], (0, -0.12, 0), OG, "chest", segs=7, sy=0.8, shade=(0.92, 0.9, 0.85))
+    for i in range(7):
+        a = (i - 3) * 0.32
+        c.cone(0.05, 0.0, 0.2, (math.sin(a) * 0.42, -0.42 + abs(math.sin(a)) * 0.16, 1.18 - abs(a) * 0.05), "bone", "chest", segs=4, rot=(math.pi * 0.95, 0, a))
+    c.box((1.3, 0.07, 0.07), (0, -0.4, 1.28), "leather", "chest", rot=(0.05, 0, 0), shade=(0.5, 0.35, 0.25))
+    c.tbox((0.5, 0.5), (0.34, 0.4), 0.2, (-0.6, 0.02, 1.34), "moss_bark", "chest", rot=(0, -0.35, 0))
+    c.box((0.08, 0.6, 0.08), (-0.6, 0.0, 1.3), "leather", "chest", rot=(0.7, 0, 0.2), shade=(0.5, 0.35, 0.25))
+    c.lathe([(0.44, 0.6), (0.48, 0.7), (0.46, 0.8)], (0, 0.04, 0), "leather", "hips", segs=8, sy=0.82, shade=(0.45, 0.32, 0.25))
+    c.tbox((0.44, 0.06), (0.36, 0.06), 0.46, (0, -0.4, 0.3), "leather", "hips", shade=(0.62, 0.45, 0.32), rot=(-0.08, 0, 0))
+    c.tbox((0.46, 0.06), (0.4, 0.06), 0.42, (0, 0.42, 0.32), "leather", "hips", shade=(0.62, 0.45, 0.32), rot=(0.08, 0, 0))
+    for side, sx in (("R", -1), ("L", 1)):
+        a0, a1, _ = B[f"arm_{side}"]
+        t0, t1, _ = B[f"thigh_{side}"]
+        c.limb(a0, a1, 0.19, 0.15, OG, f"arm_{side}", segs=6)
+        c.ico(0.2, (a0[0] + 0.04 * sx, a0[1], a0[2] + 0.02), OG, f"arm_{side}")
+        c.lathe([(0.16, 0.0), (0.18, 0.16), (0.15, 0.2)], (a1[0], a1[1], a1[2] + 0.1), "leather", f"arm_{side}", segs=6, shade=(0.55, 0.4, 0.3))
+        c.ico(0.17, (a1[0], a1[1] - 0.02, a1[2] - 0.04), OG, f"arm_{side}")
+        c.limb(t0, t1, 0.18, 0.15, OG, f"thigh_{side}", segs=6)
+    feet(c, B, OG, (0.8, 0.8, 0.75), w=0.3, l=0.44)
+    hx, hy, hz = B["arm_R"][1]
+    c.lathe([(0.07, 0.0), (0.09, 0.4), (0.16, 0.85), (0.2, 1.1), (0.14, 1.25), (0.0, 1.3)], (hx, hy + 0.25, hz - 0.1), "moss_bark", "arm_R", segs=6, rot=(math.pi / 2, 0, 0))
+    for k in range(3):
+        a = k * 2.1
+        c.cone(0.05, 0.0, 0.18, (hx + math.cos(a) * 0.18, hy - 0.72, hz - 0.1 + math.sin(a) * 0.18), "iron", "arm_R", segs=4, rot=(0, a, math.pi / 2))
+    return c, B
+
+
+BUILDERS = {"grunt": grunt, "ranged": ranged, "heavy": heavy, "ogre": ogre}
 
 
 def build_one(name, images):
@@ -182,7 +220,7 @@ def build_one(name, images):
     ch, bones = BUILDERS[name](images)
     tris = ch.tri_count()
     mesh, arm = ch.build(bones, coll)
-    cl = anims.unit_clips(1.3 if name == "heavy" else 1.0)
+    cl = anims.unit_clips(1.5 if name == "ogre" else 1.3 if name == "heavy" else 1.0)
     if name == "ranged":
         cl["attack"] = {"bones": {
             "arm_L": [(0, (0, 0, 0)), (3, (-85, 0, -10)), (9, (-85, 0, -10)), (12, (0, 0, 0))],

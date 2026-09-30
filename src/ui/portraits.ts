@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { HeroModels } from "../render/heroModels";
+import type { UnitModels } from "../render/unitModels";
 
 interface Stage {
   key: string;
@@ -65,6 +66,34 @@ export class Portraits {
     const ctx = out.getContext("2d")!;
     ctx.clearRect(0, 0, w, h);
     ctx.drawImage(this.renderer.domElement, 0, 0);
+  }
+
+  units: UnitModels | null = null;
+
+  unitIcon(type: string, team: number): HTMLCanvasElement | null {
+    const key = `unit:${type}:${team}`;
+    let c = this.icons.get(key);
+    if (c) return c;
+    const inst = this.units?.create(type, this.teamColors[team], team);
+    if (!inst) return null;
+    c = document.createElement("canvas");
+    const root = new THREE.Group();
+    root.add(inst.body);
+    inst.actions.get("idle")?.play();
+    inst.mixer.update(0.01);
+    root.rotation.y = 0.35;
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(inst.body);
+    const height = Math.max(0.5, box.max.y - box.min.y);
+    const center = box.getCenter(new THREE.Vector3());
+    const headY = box.max.y - height * 0.24;
+    const dist = height * 1.1;
+    this.camera.position.set(center.x + dist * 0.12, headY + height * 0.04, center.z + dist);
+    this.camera.lookAt(center.x, headY - height * 0.03, center.z);
+    this.camera.fov = 30;
+    this.shoot(root, ICON, ICON, c);
+    this.icons.set(key, c);
+    return c;
   }
 
   icon(type: string): HTMLCanvasElement {

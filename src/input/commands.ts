@@ -1,19 +1,24 @@
 import type { PadState } from "./gamepads";
 import type { Command, Directive, StructureType, UnitType } from "../sim/types";
-import { UNIT_TYPES } from "../sim/types";
 
 type Flick = "up" | "down" | "left" | "right";
 
 const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "hold", left: "follow", right: "nearest" };
 const TOWER_BY_FLICK: Partial<Record<Flick, StructureType>> = { up: "damage", left: "control", right: "support" };
 const PROD_BY_FLICK: Partial<Record<Flick, StructureType>> = { left: "barracks", up: "range", right: "foundry" };
+const CALL_BY_FLICK: Partial<Record<Flick, UnitType>> = { left: "grunt", up: "ranged", right: "heavy" };
 
 export interface MapperUi {
-  buildMenu: "closed" | "prod" | "tower";
+  buildMenu: "closed" | "prod" | "tower" | "call";
   typeSelect: UnitType | null;
   commander: boolean;
   group: UnitType | "all";
+  orderStage: "none" | "pick" | "order";
+  orderGroup: UnitType | "all";
+  lastOrderAt: number;
 }
+
+const GROUP_BY_FLICK: Record<Flick, UnitType | "all"> = { up: "ranged", left: "grunt", right: "heavy", down: "all" };
 
 const GROUPS: (UnitType | "all")[] = ["all", "grunt", "ranged", "heavy"];
 
@@ -23,16 +28,18 @@ export class CommandMapper {
   private xDown = false;
   private xUsed = false;
   private yDown = false;
+  private lAt = 0;
   private tDown = false;
   private tUsed = false;
   private mouseRightWas = false;
-  private yIndex = 0;
-  private yNext = 0;
   readonly ui: MapperUi;
   private groupIndex = 0;
+  private restAt = -99;
+  private smashArmed = true;
+  smash = { from: 0.3, to: 0.85, within: 0.12 };
 
-  constructor(private flickThreshold: number, commander = false, private cycleSeconds = 0.55) {
-    this.ui = { buildMenu: "closed", typeSelect: null, commander, group: "all" };
+  constructor(private flickThreshold: number, commander = false) {
+    this.ui = { buildMenu: "closed", typeSelect: null, commander, group: "all", orderStage: "none", orderGroup: "all", lastOrderAt: -99 };
   }
 
   private flick(p: PadState): Flick | null {
@@ -57,6 +64,16 @@ export class CommandMapper {
     if (p.pressed.r) c.special = true;
     if (p.pressed.z && !p.held.start) c.super = true;
     if (p.pressed.dodge) c.dodge = true;
+    const blockDodge = p.pressed.x && p.held.block && p.profile !== "keyboard";
+    if (blockDodge) c.dodge = true;
+    const sm = Math.hypot(p.stickX, p.stickY);
+    if (sm < this.smash.from) {
+      this.restAt = now;
+      this.smashArmed = true;
+    } else if (sm >= this.smash.to && this.smashArmed && p.profile !== "keyboard") {
+      this.smashArmed = false;
+      if (p.held.block && now - this.restAt <= this.smash.within) c.dodge = true;
+    }
 
     if (this.ui.commander) {
       if (p.pressed.right || p.pressed.left) {
@@ -69,30 +86,31 @@ export class CommandMapper {
     const mr = !!p.mouseRight;
     const mrPressed = mr && !this.mouseRightWas;
     this.mouseRightWas = mr;
-    if (p.pressed.x) {
+    if (p.pressed.x && !blockDodge) {
       this.xDown = true;
       this.xUsed = false;
       this.tDown = false;
-      this.ui.buildMenu = "prod";
+      this.ui.buildMenu = atPad ? "prod" : "call";
     }
     if (atPad && !this.xDown && (p.pressed.y || mrPressed)) {
       this.tDown = true;
       this.tUsed = false;
       this.ui.buildMenu = "tower";
-    } else if (p.pressed.y && !this.tDown) {
+    }
+    const holdL = !!p.held.block;
+    if (holdL && !this.yDown) {
       this.yDown = true;
-      this.yIndex = 0;
-      this.yNext = now + this.cycleSeconds;
+      this.lAt = now;
     }
-    if (this.yDown && p.held.y && now >= this.yNext) {
-      this.yIndex = (this.yIndex + 1) % UNIT_TYPES.length;
-      this.yNext = now + this.cycleSeconds;
-    }
-    this.ui.typeSelect = this.yDown ? UNIT_TYPES[this.yIndex] : null;
+    if (this.yDown && holdL && this.ui.orderStage === "none" && !this.xDown && !this.tDown && now - this.lAt >= 0.3 && !p.held.a) this.ui.orderStage = "pick";
 
     const f = this.flick(p);
     if (f) {
-      if (this.xDown) {
+      if (this.xDown && this.ui.buildMenu === "call") {
+        if (f !== "down") c.call = CALL_BY_FLICK[f];
+        this.xUsed = true;
+        this.ui.buildMenu = "closed";
+      } else if (this.xDown) {
         if (f !== "down") c.build = PROD_BY_FLICK[f];
         this.xUsed = true;
         this.ui.buildMenu = "closed";
@@ -100,15 +118,21 @@ export class CommandMapper {
         if (f !== "down") c.build = TOWER_BY_FLICK[f];
         this.tUsed = true;
         this.ui.buildMenu = "closed";
+      } else if (this.yDown && this.ui.orderStage !== "order") {
+        this.ui.orderGroup = GROUP_BY_FLICK[f];
+        this.ui.orderStage = "order";
       } else if (this.yDown) {
-        c.directive = { type: UNIT_TYPES[this.yIndex], dir: DIRECTIVE_BY_FLICK[f] };
+        c.directive = { type: this.ui.orderGroup, dir: DIRECTIVE_BY_FLICK[f] };
+        this.ui.lastOrderAt = now;
       } else {
         c.directive = { type: this.ui.commander ? this.ui.group : "all", dir: DIRECTIVE_BY_FLICK[f] };
+        this.ui.lastOrderAt = now;
       }
     }
 
     if (this.xDown && !p.held.x) {
-      if (!this.xUsed) c.build = "default";
+      if (!this.xUsed && this.ui.buildMenu === "call") c.call = "grunt";
+      else if (!this.xUsed) c.build = "default";
       this.xDown = false;
       this.ui.buildMenu = "closed";
     }
@@ -117,7 +141,12 @@ export class CommandMapper {
       this.tDown = false;
       if (this.ui.buildMenu === "tower") this.ui.buildMenu = "closed";
     }
-    if (this.yDown && !p.held.y) this.yDown = false;
+    if (this.yDown && !holdL) {
+      this.yDown = false;
+      this.ui.orderStage = "none";
+      this.ui.orderGroup = "all";
+    }
+    this.ui.typeSelect = this.yDown && this.ui.orderStage === "order" && this.ui.orderGroup !== "all" ? this.ui.orderGroup : null;
   }
 
   take(): Command {

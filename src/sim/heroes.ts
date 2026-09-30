@@ -132,10 +132,16 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     return;
   }
 
+  if (w.arena.carrying(e)) cmd = { ...cmd, attack: false, secondary: false, special: false, super: false, dodge: false, build: undefined };
   const act = h.action;
   const canChainCombo = act?.name === "a" && act.kind === "combo" && act.fired && w.time < h.comboUntil;
   if (!act || canChainCombo) {
-    if (cmd.dodge && ready(e, "dodge", w.time) && !act) {
+    const sv = b.shove;
+    if (cmd.attack && cmd.block && !act && ready(e, "shove", w.time)) {
+      const [dx, dz] = aim(w, e, cmd, sv.range + 1);
+      begin(e, "shove", "shove", sv.dur, sv.hitAt, dx, dz);
+      h.cooldowns.shove = w.time + sv.cooldown;
+    } else if (cmd.dodge && ready(e, "dodge", w.time) && !act) {
       const mag = Math.hypot(cmd.moveX, cmd.moveZ);
       const dx = mag > 0.2 ? cmd.moveX / mag : Math.sin(t.facing);
       const dz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);
@@ -203,11 +209,19 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       a.fired = true;
       fire(w, e, a);
     }
-    if (a.t >= a.dur) h.action = null;
+    if (a.t >= a.dur) {
+      if (a.kind !== "dodge" && a.name !== "hit") h.actionEndAt = w.time;
+      h.action = null;
+    }
     h.blocking = false;
     return;
   }
 
+  const pc = w.data.match.pacing;
+  if (e.hp < e.maxHp && w.calm(e)) {
+    const turf = w.turf(e);
+    if (turf === "home" || turf === "tower") e.hp = Math.min(e.maxHp, e.hp + e.maxHp * pc.homeRegenFrac * dt);
+  }
   h.blocking = !!cmd.block;
   const mul = w.speedMul(e) * (h.blocking ? b.blockMoveMul : 1);
   const tx = cmd.moveX * h.speed * mul;
@@ -242,6 +256,27 @@ function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, 
     if (Math.abs(o.transform.y - t.y) > 2.5) continue;
     w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul });
   }
+}
+
+function shoveHit(w: World, e: Entity, a: HeroAction): void {
+  const sv = w.data.heroes.baseline.shove;
+  const t = e.transform;
+  const cosArc = Math.cos(((sv.arcDeg / 2) * Math.PI) / 180);
+  let any = false;
+  for (const o of w.entities.slice()) {
+    if (!o.alive || o.team === e.team || o.structure) continue;
+    const dx = o.transform.pos.x - t.pos.x;
+    const dz = o.transform.pos.z - t.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d - o.radius > sv.range) continue;
+    if (d > 0.3 && (dx * a.dirX + dz * a.dirZ) / d < cosArc) continue;
+    if (Math.abs(o.transform.y - t.y) > 2) continue;
+    if (o.hero) o.hero.blocking = false;
+    const heavy = o.neutral ? 0.35 : 1;
+    w.damage(e, o, sv.damage * w.damageMulOf(e), { knockback: sv.knockback * heavy, fromX: t.pos.x - a.dirX, fromZ: t.pos.z - a.dirZ, stun: sv.stun * heavy, big: true });
+    any = true;
+  }
+  w.emit({ type: "shove", x: t.pos.x + a.dirX, y: t.y, z: t.pos.z + a.dirZ, team: any ? e.team : -1 });
 }
 
 function dashHits(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
@@ -280,6 +315,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
   if (a.kind === "combo") {
     const hit = ab.a.hits![a.combo];
     arcHit(w, e, a.dirX, a.dirZ, hit.range, hit.arcDeg, hit.damage * mul, hit.knockback, a.combo === 2);
+    return;
+  }
+  if (a.name === "shove") {
+    shoveHit(w, e, a);
     return;
   }
   if (a.name === "dodge" || a.name === "hit") return;

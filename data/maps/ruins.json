@@ -7,7 +7,7 @@
   "mirror": "diag",
   "rimHeight": 4.5,
   "waterLevel": -6,
-  "notes": "Square, mirrored across the diagonal x = z. Author the half where x < z (team 0 keeps the bottom-left corner). Rects mirror by swapping x/z and w/h; points swap x/z; prop rot becomes 90 - rot. Pits are impassable holes.",
+  "notes": "Square, mirrored across the diagonal x = z. Author the half where x < z (team 0 keeps the bottom-left corner). Rects mirror by swapping x/z and w/h; points swap x/z; prop rot becomes 90 - rot. Pits are impassable holes. Each base has two gates: the corner toward the centre and a back gate in the side wall onto the outer lane.",
   "cores": [
     {
       "team": 0,
@@ -30,11 +30,6 @@
       "zone": "forward",
       "x": 15.5,
       "z": 24.5
-    },
-    {
-      "zone": "neutral",
-      "x": 20,
-      "z": 20
     }
   ],
   "spawns": [
@@ -192,7 +187,15 @@
       "x": 14,
       "z": 30,
       "w": 1,
-      "h": 9
+      "h": 3
+    },
+    {
+      "op": "wall",
+      "style": "castle",
+      "x": 14,
+      "z": 36,
+      "w": 1,
+      "h": 3
     },
     {
       "op": "wall",

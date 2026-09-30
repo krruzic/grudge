@@ -453,12 +453,12 @@ export class Menus {
     parchment(ctx, px, py, pw, ph);
     const pad: [string, string][] = [
       ["STICK", "MOVE"], ["A", "ATTACK"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
-      ["L", "BLOCK · CLICK STICK: DODGE"], ["C", "ARMY ORDERS: PUSH / HOLD / FOLLOW / HUNT"],
-      ["X", "AT PAD: PRODUCE / UPGRADE"], ["Y", "AT PAD: TOWERS · ELSE UNIT TYPE"], ["D-PAD", "COMMANDER GROUPS"], ["START", "PAUSE"],
+      ["L", "BLOCK · L+A SHOVE · L+X DODGE"], ["C", "WHOLE ARMY: PUSH / HOLD / FOLLOW / HUNT"],
+      ["X", "CALL 3 TROOPS · AT PAD: OUTPOSTS"], ["Y", "AT PAD: TOWERS (3 AT MOST)"], ["L + C", "HOLD L, FLICK TROOPS, FLICK ORDER"], ["D-PAD", "COMMANDER GROUPS"], ["START", "PAUSE"],
     ];
     const keys: [string, string][] = [
-      ["WASD", "MOVE"], ["E", "ATTACK"], ["Q", "SECONDARY"], ["X", "SPECIAL"], ["C", "SUPER"], ["Z", "BLOCK"], ["SPACE", "DODGE"],
-      ["F / L-MOUSE", "PRODUCE AT PAD"], ["R / R-MOUSE", "TOWERS AT PAD"], ["R-DRAG", "ARMY ORDERS"], ["1 - 4", "COMMANDER GROUPS"], ["ENTER", "PAUSE"],
+      ["WASD", "MOVE"], ["E", "ATTACK"], ["Q", "SECONDARY"], ["X", "SPECIAL"], ["C", "SUPER"], ["Z", "BLOCK · Z + E: SHOVE"], ["SPACE", "DODGE"],
+      ["F / L-MOUSE", "CALL TROOPS · OUTPOSTS AT PAD"], ["R / R-MOUSE", "TOWERS AT PAD"], ["R-DRAG", "WHOLE ARMY ORDERS"], ["Z + ARROWS", "PICK TROOPS, THEN ORDER"], ["1 - 4", "COMMANDER GROUPS"], ["ENTER", "PAUSE"],
     ];
     const colW = pw / 2;
     drawPlain(ctx, "CONTROLLER", px + 12, py + 7, "#8a1810", 0.7, true);

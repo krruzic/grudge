@@ -106,6 +106,7 @@ export interface HeroData {
     hitStunSeconds: number;
     commanderPriority: number;
     comboCooldown?: number;
+    shove: { range: number; arcDeg: number; damage: number; knockback: number; stun: number; cooldown: number; dur: number; hitAt: number };
   };
   heroes: Record<string, HeroDef>;
 }
@@ -141,6 +142,7 @@ export interface VeterancyDef {
 
 export interface UnitData {
   popCap: number;
+  squads: { size: number; cost: Record<UnitType, number>; cooldown: number; forwardStatMul: number };
   separationPush: number;
   repathSeconds: number;
   hiddenRevealSeconds: number;
@@ -178,6 +180,7 @@ export interface StructureData {
   structureRadius: number;
   zoneRange: Record<string, number>;
   core: { hp: number; radius: number };
+  towerLimit: number;
   types: Record<StructureType, StructureDef>;
 }
 
@@ -197,6 +200,22 @@ export interface MatchData {
     fordSpeedMul: number;
     wallHeight: number;
     eyeHeight: number;
+  };
+  positional: { backstabMul: number; ambushMul: number; fallMin: number; fallDamageFrac: number; fallStun: number; knockDropMin: number };
+  arena: {
+    relic: { pickupRadius: number; deliverReach: number; coreDamageFrac: number; carrySpeedMul: number; returnSeconds: number; respawnSeconds: number; dropLockSeconds: number; firstSeconds: number };
+    cannon: { firstSeconds: number; everySeconds: number; volleys: number; spacing: number; warnSeconds: number; radius: number; damage: number; structureDamage: number; knockback: number; spread: number };
+    ogre: { firstSeconds: number; respawnSeconds: number; hp: number; damage: number; speed: number; radius: number; aggro: number; range: number; cooldown: number; knockback: number; bounty: number; leash: number };
+  };
+  pacing: {
+    homeSpeedMul: number;
+    homeRegenFrac: number;
+    towerReach: number;
+    towerIntruderMul: number;
+    calmSeconds: number;
+    calmSpeedMul: number;
+    commitSeconds: number;
+    commitMul: number;
   };
   directives: { holdLeash: number; followRadius: number; followLeash: number; followEngage: number };
 }

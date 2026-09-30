@@ -345,3 +345,27 @@
 ## 2 VS 2 allies and combo cooldown
 - Rule `partners` ("2 VS 2 ALLIES": CHAMPIONS or COMMANDERS, default champions). It applies to both teams; it's never a per-team choice. With champions, slots 3 and 4 pick heroes on the select screen like 1 and 2, spawn as full heroes, and get normal (non-commander) controls. The HUD adds a second super meter per team and opens whichever teammate's build menu is active. `npm run sim -- --mode 2v2 --partners heroes` covers it headless.
 - Basic combos had no cooldown, so lunging hits plus hit-stun made escape impossible. Now `baseline.comboCooldown` (0.7s) applies after the finisher, and half of it if the chain is dropped early; chaining inside a combo is unaffected. Raider vs Warlord moved from about 80/20 to 58/42 over 12 matches.
+
+## Map, helmet and pathing fixes
+- Ruins bases get a back gate: the east wall splits at z30–32 / z36–38 (mirrored for team 1). The centre neutral pad is gone because the relic altar sits there. Crossing loses its centre obelisk for the same reason.
+- Grunt and brute helmets use `team_paint`, so the army reads by team from above.
+- Pathing: the crossing hill ramp is wider, nav samples slope at 9 points and `findPath` returns a partial path to the closest reachable cell. Bots skip waypoints in their own cell and repath after 1s without progress. Stuck heroes on crossing went from 208 to 6 events.
+
+## Army orders on a GameCube pad
+- Y + C needed claw grip. Hold L (block), flick C to pick a group (left grunts, up archers, right brutes, down all), then keep flicking to give that group orders; let go of L to return to the whole army. A plain C flick still orders everyone. The cross shows "WHICH TROOPS?" then "ORDER GRUNTS", and a wood plaque in each bottom corner lists every unit type's standing order with live counts and a head icon rendered from its GLB.
+- The GameCube pad has no stick click, so dodge is L + X or L + a smash flick of the stick (rest to full inside 0.12s). Keyboard keeps Space.
+
+## Pacing: slower, safer, less MOBA
+- Everything moves about 20% slower. On your own half or inside your tower range you move 20% faster and regenerate 2% HP/s once out of combat. Enemy heroes in your tower range move 15% slower. After 2.5s without hero combat you move 15% faster. Finishing an attack slows you for 0.35s, so a chaser can't swing and keep pace.
+- No automatic waves. X away from a pad calls a squad of 3 (grunts 60, archers 80, brutes 110, 3s muster). They spawn at the nearest outpost of that type (the old barracks/range/foundry, now 90 gold, level 2 gives veteran stats) or at your keep. Soldier cap is 8 and units have ~1.9x HP and 1.4x damage, so every soldier matters. Old saves with an out-of-range cap reset to the default.
+- Position matters: hits from behind deal 1.35x, attacks from tall grass 1.3x. Strong knockback can push units and heroes off ledges; falls over 1.1m hurt (10% max HP, more for bigger drops) and stun.
+- L + A shoves: short cone, heavy knockback, brief stun, breaks guard, and knocks the relic loose.
+- Each hero may keep 3 towers alive (6 per team in 2v2), which keeps bases from becoming static lanes.
+
+## The Grudge relic
+- A horned bronze bull idol (Poly Haven `bull_head`, CC0) decimated to 900 tris with its form and a warm key light baked into a 128px, 15-bit texture (`tools/blender/build_relic.py`). It sits on a stepped stone altar with gold-capped posts in the map centre (`assets/structures/grudge.glb`).
+- It wakes at 0:15. A hero picks it up by walking over it. The carrier moves at 62% speed and can't attack, dodge or build. Carrying it to the enemy keep cracks the core shield permanently, or deals 15% core HP if the shield is already down. Then it returns to the altar after 20s. Death, stun or a shove drops it; a dropped relic returns home after 14s. The HUD names the carrier and points to the relic when it's off screen.
+
+## Arena events
+- Cannon fire every 38s from 0:50: up to 5 shots aimed near soldiers and heroes. Each gets a red target ring for 2.6s that pulses faster and fills as impact nears, and a whistle. An iron ball arcs in trailing smoke with a growing shadow, then hits for 110 (60 to towers) with knockback, a fireball, smoke, dirt, sparks and a scorch mark that fades over 9s.
+- A wild ogre wakes at 1:50 beside the centre and returns 100s after it dies. It attacks whoever is nearest (heroes, soldiers of either side), leashes to its lair and heals there, and pays 80 gold. It's its own low-poly model (mossy hide, bone necklace, spiked tree-trunk club) so it never reads as a brute.

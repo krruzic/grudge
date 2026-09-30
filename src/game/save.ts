@@ -59,7 +59,7 @@ const onOff = (v: number) => (v ? "ON" : "OFF");
 export const RULE_ROWS: Row<Rules>[] = [
   { key: "minutes", label: "MATCH LENGTH", values: [3, 4, 6, 8, 10, 15], fmt: (v) => `${v} MIN`, blurb: "TIME BEFORE THE BELL TOLLS." },
   { key: "sudden", label: "SUDDEN DEATH", values: [0, 30, 60, 120], fmt: (v) => (v ? `${v} SEC` : "NONE"), blurb: "EXTRA TIME WHERE ALL IS CHEAPER AND DEADLIER." },
-  { key: "popCap", label: "SOLDIER CAP", values: [6, 10, 14, 20, 30], fmt: String, blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD." },
+  { key: "popCap", label: "SOLDIER CAP", values: [4, 6, 8, 10, 12], fmt: String, blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD." },
   { key: "startGold", label: "STARTING GOLD", values: [0, 100, 200, 400, 800], fmt: String, blurb: "GOLD IN THE COFFERS AT THE FIRST HORN." },
   { key: "goldRate", label: "GOLD RATE", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST THE COFFERS FILL." },
   { key: "respawn", label: "HERO RETURNS", values: [3, 6, 10, 15], fmt: (v) => `${v} SEC`, blurb: "HOW LONG A FALLEN CHAMPION STAYS DOWN." },
@@ -74,7 +74,7 @@ export const OPTION_ROWS: Row<Options>[] = [
   { key: "hints", label: "BUTTON HINTS", values: [1, 0], fmt: onOff, blurb: "SHOW BUILD HINTS ABOVE PADS." },
 ];
 
-export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 14, startGold: 200, goldRate: 1, respawn: 6, mercy: 1, partners: 1 };
+export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 8, startGold: 200, goldRate: 1, respawn: 6, mercy: 1, partners: 1 };
 export const DEFAULT_OPTIONS: Options = { music: 7, sound: 8, shake: 1, hints: 1 };
 
 const KEY = "grudge.save.v1";
@@ -95,6 +95,7 @@ export class Save {
       if (raw) {
         const p = JSON.parse(raw) as Partial<SaveData>;
         d = { ...d, ...p, rules: { ...DEFAULT_RULES, ...p.rules }, options: { ...DEFAULT_OPTIONS, ...p.options } };
+        for (const row of RULE_ROWS) if (!row.values.includes(d.rules[row.key])) d.rules[row.key] = DEFAULT_RULES[row.key];
       }
     } catch {
       d = fresh();

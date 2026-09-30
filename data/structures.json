@@ -84,7 +84,7 @@
     "barracks": {
       "name": "Barracks",
       "class": "production",
-      "cost": 125,
+      "cost": 90,
       "upgradeCost": 100,
       "hp": 880,
       "unit": "grunt",
@@ -98,7 +98,7 @@
     "range": {
       "name": "Range",
       "class": "production",
-      "cost": 125,
+      "cost": 90,
       "upgradeCost": 100,
       "hp": 800,
       "unit": "ranged",
@@ -112,7 +112,7 @@
     "foundry": {
       "name": "Foundry",
       "class": "production",
-      "cost": 125,
+      "cost": 90,
       "upgradeCost": 100,
       "hp": 1040,
       "unit": "heavy",
@@ -123,5 +123,6 @@
         "unitStat": 1.2
       }
     }
-  }
+  },
+  "towerLimit": 3
 }

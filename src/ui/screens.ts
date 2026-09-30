@@ -203,8 +203,8 @@ export class Screens {
       paintedText(ctx, "PAUSE", W / 2, 30, "#f0c030", 1.6);
       const rows: [string, string][] = [
         ["STICK", "MOVE"], ["A", "ATTACK"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
-        ["L", "BLOCK  ·  CLICK STICK: DODGE"], ["C", "ARMY: UP PUSH · DOWN HOLD · SIDES FOLLOW / HUNT"],
-        ["X", "AT PAD: PRODUCTION (TAP: DEFAULT / UPGRADE)"], ["Y", "AT PAD: TOWERS · ELSEWHERE HOLD: UNIT TYPE"], ["D-PAD", "COMMANDER GROUPS"],
+        ["L", "BLOCK · L + A: SHOVE · L + X / L + SMASH: DODGE"], ["C", "WHOLE ARMY: UP PUSH · DOWN HOLD · LEFT FOLLOW · RIGHT HUNT"],
+        ["X", "HOLD + C: CALL 3 TROOPS · AT PAD: OUTPOSTS / UPGRADE"], ["Y", "AT PAD: TOWERS (3 AT MOST)"], ["L + C", "HOLD L: FLICK TROOPS, THEN FLICK ORDERS"], ["D-PAD", "COMMANDER GROUPS"],
       ];
       const bw = 300;
       const bx = Math.round((W - bw) / 2);

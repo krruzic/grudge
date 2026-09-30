@@ -21,6 +21,7 @@ export class Bot {
   private path: Vec2[] = [];
   private pathGoal: Vec2 | null = null;
   private repathAt = 0;
+  private progress = { x: 0, z: 0, t: 0 };
   private thinkAt = 0;
   private directiveAt = 0;
   private lastDirective: Directive | null = null;
@@ -35,6 +36,8 @@ export class Bot {
   private wantZ = false;
   private wantDodge = false;
   private wantBlock = false;
+  private callAt = 0;
+  private callIndex = 0;
 
   constructor(readonly player: number, private skill = 0.8, seed = 7) {
     this.seed = seed * 9973 + player * 131;
@@ -72,7 +75,14 @@ export class Bot {
             this.pathGoal = { ...this.goal };
             this.repathAt = w.time + 1;
           }
-          while (this.path.length > 1 && (Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.25 || (Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.9 && w.nav.lineClear(p, this.path[1])))) this.path.shift();
+          const sameCell = (q: Vec2) => Math.floor(q.x) === Math.floor(p.x) && Math.floor(q.z) === Math.floor(p.z);
+          while (this.path.length > 1 && (sameCell(this.path[0]) || Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.25 || (Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.9 && w.nav.lineClear(p, this.path[1])))) this.path.shift();
+          if (Math.hypot(p.x - this.progress.x, p.z - this.progress.z) > 0.5) this.progress = { x: p.x, z: p.z, t: w.time };
+          else if (w.time - this.progress.t > 1 && !me.hero?.action) {
+            if (this.path.length > 1) this.path.shift();
+            this.repathAt = w.time + 0.5;
+            this.progress = { x: p.x, z: p.z, t: w.time };
+          }
           if (this.path.length) wp = this.path[0];
         }
         const dx = wp.x - p.x;
@@ -80,6 +90,17 @@ export class Bot {
         const d = Math.hypot(dx, dz) || 1;
         cmd.moveX = dx / d;
         cmd.moveZ = dz / d;
+      }
+    }
+    if (w.time >= this.callAt) {
+      this.callAt = w.time + 1.5 + this.rand() * 2;
+      const order = ["grunt", "grunt", "ranged", "heavy"] as const;
+      const type = order[this.callIndex % order.length];
+      const ts = w.teams[me.team];
+      const cost = w.data.units.squads.cost[type];
+      if (ts.resource >= cost + (this.buildType ? 60 : 0) && ts.unitCount < w.data.units.popCap) {
+        cmd.call = type;
+        this.callIndex++;
       }
     }
     if (this.buildPad && this.buildType && Math.hypot(this.buildPad.x - me.transform.pos.x, this.buildPad.z - me.transform.pos.z) < 2.2) {
@@ -115,6 +136,27 @@ export class Bot {
     const dHero = ehAlive ? w.dist(me, enemyHero!) : Infinity;
     const lowHp = me.hp < me.maxHp * 0.3;
 
+    const relic = w.arena.relic;
+    if (w.arena.carrying(me)) {
+      const core = w.core(1 - me.team);
+      if (core) this.goal = { x: core.transform.pos.x, z: core.transform.pos.z };
+      return;
+    }
+    if ((relic.state === "home" || relic.state === "dropped") && !lowHp) {
+      const dr = Math.hypot(relic.x - p.x, relic.z - p.z);
+      if (dr < 14 || (relic.state === "home" && !(ehAlive && dHero < 6))) {
+        this.goal = { x: relic.x, z: relic.z };
+        if (dr > 3) return;
+      }
+    }
+    if (relic.state === "carried" && relic.carrier === enemyHero?.id && ehAlive && dHero < 16) {
+      this.goal = { x: enemyHero!.transform.pos.x, z: enemyHero!.transform.pos.z };
+      if (dHero < 2.2) {
+        this.wantAttack = true;
+        this.wantBlock = this.rand() < 0.5;
+      }
+      if (dHero > 2.5) return;
+    }
     if (lowHp && dHero < 10) {
       const sp = w.spawnPoint(me.team);
       this.goal = sp;

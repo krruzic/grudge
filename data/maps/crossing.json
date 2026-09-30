@@ -69,7 +69,7 @@
       "z": 7,
       "r": 5,
       "y": 3.0,
-      "edge": 4,
+      "edge": 6,
       "mode": "max",
       "wobble": 1.5
     },
@@ -958,12 +958,6 @@
       "type": "crate",
       "x": 2.5,
       "z": 33.5,
-      "solid": true
-    },
-    {
-      "type": "statue",
-      "x": 48,
-      "z": 24,
       "solid": true
     },
     {

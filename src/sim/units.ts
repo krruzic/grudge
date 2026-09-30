@@ -1,5 +1,6 @@
 import type { World } from "./world.ts";
 import type { Entity, Vec2 } from "./types.ts";
+import { updateOgre } from "./arena.ts";
 
 function slotOffset(slot: number, base: number): Vec2 {
   const a = slot * 2.39996;
@@ -14,6 +15,10 @@ function attackable(w: World, o: Entity): boolean {
 }
 
 export function updateUnit(w: World, e: Entity): void {
+  if (e.neutral) {
+    updateOgre(w, e);
+    return;
+  }
   const u = e.unit!;
   const def = w.data.units.types[u.type];
   const dirs = w.data.match.directives;
@@ -124,7 +129,7 @@ export function updateUnit(w: World, e: Entity): void {
   }
 }
 
-function moveToward(w: World, e: Entity, goal: Vec2, stopDist: number): void {
+export function moveToward(w: World, e: Entity, goal: Vec2, stopDist: number): void {
   const u = e.unit!;
   const p = e.transform.pos;
   const dist = Math.hypot(goal.x - p.x, goal.z - p.z);

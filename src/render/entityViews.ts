@@ -67,7 +67,7 @@ const KIND_ANIM: Record<string, string> = {
   slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", hex: "cast", repair: "cast",
   turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", shoot: "shoot",
   banner: "cast", rally: "cast", works: "cast", ballista: "cast",
-  dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
+  shove: "attack_a", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
 };
 
 const white = new THREE.Color(1, 1, 1);
@@ -306,7 +306,7 @@ export class EntityViews {
       body.add(bf);
       view.blockFx = bf;
     } else if (e.unit) {
-      const inst = this.units.create(e.unit.type, team, e.team);
+      const inst = this.units.create(e.neutral ? "ogre" : e.unit.type, team, e.team);
       let g: THREE.Object3D;
       if (inst) {
         g = new THREE.Group();
@@ -320,10 +320,10 @@ export class EntityViews {
         view.weapon = g.getObjectByName("weapon");
       }
       root.add(g, blobShadow(e.radius * 1.2));
-      g.scale.setScalar(inst ? 1.3 : e.unit.type === "heavy" ? 1.45 : 1.4);
+      g.scale.setScalar((inst ? 1.3 : e.unit.type === "heavy" ? 1.45 : 1.4) * (e.neutral ? 1.55 : 1));
       markSilhouette(g, e.team);
-      bar = makeBar(e.unit.type === "heavy" ? 1.1 : 0.8, team, e.unit.type === "heavy" ? 2.3 : 1.7);
-      bar.group.visible = false;
+      bar = e.neutral ? makeBar(2, team, 4.4) : makeBar(e.unit.type === "heavy" ? 1.1 : 0.8, team, e.unit.type === "heavy" ? 2.3 : 1.7);
+      bar.group.visible = !!e.neutral;
     } else {
       const st = e.structure!;
       if (st.type === "core") {

@@ -1,6 +1,8 @@
 import type { World } from "../sim/world";
 import { setTextLayer } from "./font";
-import type { Directive, UnitType } from "../sim/types";
+import { UNIT_TYPES, type Directive, type UnitType } from "../sim/types";
+import type { Portraits } from "./portraits";
+import { texturedRect } from "./n64ui";
 import type { MapperUi } from "../input/commands";
 import { buildCost, padNear } from "../sim/structures";
 import { drawNum, drawText, textWidth } from "./font";
@@ -290,6 +292,7 @@ export class Hud {
     if (this.banner && now < this.bannerUntil) this.drawBanner(ctx, W, now);
     if (!this.visible) return;
     this.drawClock(ctx, W, w, now);
+    this.drawRelic(ctx, W, H, w, now);
     for (let t = 0; t < 2; t++) this.drawTeam(ctx, W, H, w, ui, t, now);
   }
 
@@ -302,6 +305,64 @@ export class Hud {
     ctx.save();
     ctx.globalAlpha = Math.min(1, left * 5);
     drawNum(ctx, this.banner, Math.round((W - tw) / 2), 96 - (s - 3.6) * 5, "#ffffff", s);
+    ctx.restore();
+  }
+
+  locate: ((x: number, y: number, z: number) => { x: number; y: number }) | null = null;
+
+  private drawRelic(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number): void {
+    const r = w.arena.relic;
+    const cfg = w.data.match.arena.relic;
+    let text: string;
+    let col = "#ffd870";
+    if (r.state === "waiting") {
+      const left = Math.ceil(r.since - w.time);
+      text = `THE GRUDGE WAKES IN ${left}`;
+      col = "#c8b890";
+    } else if (r.state === "home") text = "THE GRUDGE AWAITS";
+    else if (r.state === "carried") {
+      const c = w.getAny(r.carrier);
+      col = c ? this.teamColors[c.team] : col;
+      text = `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE`;
+    } else {
+      const left = Math.max(0, Math.ceil(cfg.returnSeconds - (w.time - r.since)));
+      text = `GRUDGE LOOSE · ${left}`;
+    }
+    const y = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
+    const flash = r.state === "carried" || r.state === "dropped" ? Math.floor(now * 3) % 2 === 0 : false;
+    drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
+    if (r.state === "waiting" || !this.locate) return;
+    const lift = r.state === "carried" ? 4.5 : 1.5;
+    const sp = this.locate(r.x, r.y + lift, r.z);
+    const k = W / window.innerWidth;
+    const sx = sp.x * k;
+    const sy = sp.y * (H / window.innerHeight);
+    const pad = 12;
+    if (sx >= pad && sx <= W - pad && sy >= pad + 24 && sy <= H - pad) return;
+    const cx = W / 2;
+    const cy = H / 2;
+    const dx = sx - cx;
+    const dy = sy - cy;
+    const s = Math.min((W / 2 - pad) / Math.max(1e-3, Math.abs(dx)), (H / 2 - pad) / Math.max(1e-3, Math.abs(dy)));
+    const ex = cx + dx * s;
+    const ey = Math.max(pad + 24, cy + dy * s);
+    const ang = Math.atan2(dy, dx);
+    const bob = Math.sin(now * 8) * 1.5;
+    ctx.save();
+    ctx.translate(ex - Math.cos(ang) * bob, ey - Math.sin(ang) * bob);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(7, 0);
+    ctx.lineTo(-5, -6);
+    ctx.lineTo(-2, 0);
+    ctx.lineTo(-5, 6);
+    ctx.closePath();
+    ctx.fillStyle = INK;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    ctx.fillStyle = col;
+    ctx.fill();
     ctx.restore();
   }
 
@@ -416,24 +477,68 @@ export class Hud {
       return;
     }
     const o = this.orders[t];
-    const selType = mui?.typeSelect ?? (cui && cui.group !== "all" ? cui.group : null);
-    const showType = selType ?? (now < o.until ? o.type : null);
-    if (showType) {
-      const dir = showType === "all" ? o.dir : ts.directives[showType];
-      const order: Directive[] = ["push", "follow", "nearest", "hold"];
-      const alpha = selType ? 1 : Math.min(1, (o.until - now) * 2.5);
-      this.drawCross(ctx, crossX, crossY, {
-        title: TYPE_NAME[showType],
-        items: order.map((d) => [DIR_NAME[d], ""]),
-        lit: order.indexOf(dir),
-        until: 0,
-      }, right, alpha);
+    this.drawOrders(ctx, W, H, w, t, right, now);
+    const picker = w.players.filter((p) => p.team === t).map((p) => ui[p.player]).find((u) => u && u.orderStage !== "none");
+    const order: Directive[] = ["push", "follow", "nearest", "hold"];
+    const orderCross = (group: UnitType | "all", lit: number, alpha: number) =>
+      this.drawCross(ctx, crossX, crossY, { title: `ORDER ${TYPE_NAME[group]}`, items: order.map((d) => [DIR_NAME[d], ""]), lit, until: 0 }, right, alpha);
+    if (picker?.orderStage === "pick") {
+      this.drawCross(ctx, crossX, crossY, { title: "WHICH TROOPS?", items: [["ARCHERS", ""], ["GRUNTS", ""], ["BRUTES", ""], ["ALL", ""]], lit: -1, until: 0 }, right, 1);
+    } else if (picker?.orderStage === "order") {
+      const g = picker.orderGroup;
+      const cur = g === "all" ? (UNIT_TYPES.every((k) => ts.directives[k] === ts.directives.grunt) ? ts.directives.grunt : null) : ts.directives[g];
+      orderCross(g, cur ? order.indexOf(cur) : -1, 1);
+    } else if (cui && cui.group !== "all") {
+      orderCross(cui.group, order.indexOf(ts.directives[cui.group]), 1);
+    } else if (now < o.until) {
+      orderCross(o.type, order.indexOf(o.dir), Math.min(1, (o.until - now) * 2.5));
     }
+    void mui;
+  }
+
+  portraits: Portraits | null = null;
+
+  private drawOrders(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, t: number, right: boolean, now: number): void {
+    const ts = w.teams[t];
+    const o = this.orders[t];
+    const counts: Record<UnitType, number> = { grunt: 0, ranged: 0, heavy: 0 };
+    for (const e of w.entities) if (e.alive && e.unit && e.team === t) counts[e.unit.type]++;
+    const cw = 40;
+    const pw = cw * 3 + 4;
+    const ph = 17;
+    const x0 = right ? W - MARGIN_X - pw : MARGIN_X;
+    const y0 = H - ph - 6;
+    ctx.fillStyle = INK;
+    ctx.fillRect(x0 - 1, y0 - 1, pw + 2, ph + 2);
+    texturedRect(ctx, "wood", x0, y0, pw, ph, "#6a4a30", 0, 0.6);
+    const flash = now < o.until - 1.2;
+    UNIT_TYPES.forEach((k, i) => {
+      const cx = x0 + 2 + i * cw;
+      const hit = flash && (o.type === "all" || o.type === k);
+      if (hit) {
+        ctx.fillStyle = "rgba(255,220,120,0.35)";
+        ctx.fillRect(cx, y0 + 1, cw, ph - 2);
+      }
+      const icon = this.portraits?.unitIcon(k, t);
+      if (icon) ctx.drawImage(icon, cx - 1, y0 - 1, 17, 17);
+      const word = DIR_NAME[ts.directives[k]];
+      drawText(ctx, word, cx + 16, y0 + 2, hit ? "#ffe070" : "#f0e4c8", 0.62, true);
+      const n = String(counts[k]);
+      drawText(ctx, n, cx + 16, y0 + 9, "#c8b890", 0.55, true);
+    });
   }
 
   private buildCross(w: World, team: number, heroId: number, mui: MapperUi): Cross | null {
     const hero = w.getAny(heroId);
     if (!hero?.alive) return null;
+    if (mui.buildMenu === "call") {
+      const ts = w.teams[team];
+      const sq = w.data.units.squads;
+      const k = (u: UnitType) => String(Math.round(sq.cost[u] * w.costMul()));
+      const full = ts.unitCount >= w.data.units.popCap;
+      const title = full ? "ARMY FULL" : w.time < ts.callReadyAt ? "MUSTERING..." : `CALL ${Math.min(sq.size, w.data.units.popCap - ts.unitCount)} TROOPS`;
+      return { title, items: [["ARCHERS", k("ranged")], ["GRUNTS", k("grunt")], ["BRUTES", k("heavy")], ["CANCEL", ""]], lit: -1, until: 0 };
+    }
     const pad = padNear(w, hero);
     if (!pad) return { title: "NO PAD HERE", items: [["", ""], ["", ""], ["", ""], ["", ""]], lit: -1, until: 0 };
     const c = (k: Parameters<typeof buildCost>[1]) => String(buildCost(w, k, false, team));
@@ -444,7 +549,7 @@ export class Hud {
     }
     return mui.buildMenu === "tower"
       ? { title: "TOWERS", items: [["DAMAGE", c("damage")], ["CONTROL", c("control")], ["SUPPORT", c("support")], ["CANCEL", ""]], lit: -1, until: 0 }
-      : { title: "PRODUCE", items: [["RANGE", c("range")], ["BARRACKS", c("barracks")], ["FOUNDRY", c("foundry")], ["CANCEL", ""]], lit: -1, until: 0 };
+      : { title: "OUTPOSTS", items: [["RANGE", c("range")], ["BARRACKS", c("barracks")], ["FOUNDRY", c("foundry")], ["CANCEL", ""]], lit: -1, until: 0 };
   }
 
   private drawCross(ctx: CanvasRenderingContext2D, x: number, y: number, c: Cross, right: boolean, alpha: number): void {

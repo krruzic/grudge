@@ -24,7 +24,8 @@
   "ambientIntensity": 1.35,
   "teamColors": [
     "#2a5cff",
-    "#ff2a2a"
+    "#ff2a2a",
+    "#9a9068"
   ],
   "saturation": 1.12,
   "heroScale": 1.5,

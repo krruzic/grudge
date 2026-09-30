@@ -38,5 +38,61 @@
     "followRadius": 3.5,
     "followLeash": 9,
     "followEngage": 10
+  },
+  "pacing": {
+    "homeSpeedMul": 1.2,
+    "homeRegenFrac": 0.02,
+    "towerReach": 1.0,
+    "towerIntruderMul": 0.85,
+    "calmSeconds": 2.5,
+    "calmSpeedMul": 1.15,
+    "commitSeconds": 0.35,
+    "commitMul": 0.6
+  },
+  "positional": {
+    "backstabMul": 1.35,
+    "ambushMul": 1.3,
+    "fallMin": 1.1,
+    "fallDamageFrac": 0.1,
+    "fallStun": 0.5,
+    "knockDropMin": 2.5
+  },
+  "arena": {
+    "relic": {
+      "pickupRadius": 2.1,
+      "deliverReach": 2.6,
+      "coreDamageFrac": 0.15,
+      "carrySpeedMul": 0.62,
+      "returnSeconds": 14,
+      "respawnSeconds": 20,
+      "dropLockSeconds": 1.0,
+      "firstSeconds": 15
+    },
+    "cannon": {
+      "firstSeconds": 50,
+      "everySeconds": 38,
+      "volleys": 5,
+      "spacing": 0.35,
+      "warnSeconds": 2.6,
+      "radius": 2.8,
+      "damage": 110,
+      "structureDamage": 60,
+      "knockback": 10,
+      "spread": 6
+    },
+    "ogre": {
+      "firstSeconds": 110,
+      "respawnSeconds": 100,
+      "hp": 1600,
+      "damage": 80,
+      "speed": 2.8,
+      "radius": 0.95,
+      "aggro": 9,
+      "range": 1.6,
+      "cooldown": 1.7,
+      "knockback": 11,
+      "bounty": 80,
+      "leash": 16
+    }
   }
 }

@@ -3,6 +3,12 @@ import type { World } from "../sim/world";
 import type { SimEvent } from "../sim/types";
 import { drawNum, fontReady, textWidth } from "../ui/font";
 import { dyeColor } from "./heroModels";
+import ironUrl from "../../assets/textures/iron.png?url";
+
+const ironTex = new THREE.TextureLoader().load(ironUrl);
+ironTex.colorSpace = THREE.SRGBColorSpace;
+const ballGeo = new THREE.IcosahedronGeometry(0.5, 1);
+const ballMat = new THREE.MeshLambertMaterial({ map: ironTex, color: 0x6a6660, flatShading: true });
 
 function canvasTex(size: number, draw: (ctx: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
   const c = document.createElement("canvas");
@@ -93,11 +99,70 @@ const streakTex = canvasTex(32, (ctx, s) => {
   ctx.fillRect(0, s / 2 - 2, s, 4);
 });
 
+const targetTex = canvasTex(64, (ctx, s) => {
+  const c = s / 2;
+  ctx.imageSmoothingEnabled = false;
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "rgba(20,4,0,0.85)";
+  ctx.beginPath();
+  ctx.arc(c, c, c - 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#ff3a1a";
+  ctx.beginPath();
+  ctx.arc(c, c, c - 4, 0, Math.PI * 2);
+  ctx.stroke();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    ctx.save();
+    ctx.translate(c + Math.cos(a) * (c - 10), c + Math.sin(a) * (c - 10));
+    ctx.rotate(a + Math.PI / 2);
+    ctx.fillStyle = "rgba(20,4,0,0.85)";
+    ctx.beginPath();
+    ctx.moveTo(-6, -4);
+    ctx.lineTo(6, -4);
+    ctx.lineTo(0, 5);
+    ctx.fill();
+    ctx.fillStyle = "#ffd23a";
+    ctx.beginPath();
+    ctx.moveTo(-4, -3);
+    ctx.lineTo(4, -3);
+    ctx.lineTo(0, 3);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = "#ff3a1a";
+  ctx.fillRect(c - 1, c - 7, 2, 14);
+  ctx.fillRect(c - 7, c - 1, 14, 2);
+});
+
+const fillTex = canvasTex(32, (ctx, s) => {
+  ctx.fillStyle = "#ff4a1a";
+  ctx.beginPath();
+  ctx.arc(s / 2, s / 2, s / 2 - 1, 0, Math.PI * 2);
+  ctx.fill();
+  for (let y = 0; y < s; y += 2) {
+    ctx.clearRect(0, y, s, 1);
+  }
+});
+
+const scorchTex = canvasTex(64, (ctx, s) => {
+  const c = s / 2;
+  for (let i = 0; i < 90; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.pow(Math.random(), 0.6) * (c - 4);
+    const sz = 3 + Math.random() * 8 * (1 - r / c);
+    ctx.fillStyle = `rgba(${18 + Math.random() * 20},${12 + Math.random() * 12},${8 + Math.random() * 8},${0.55 + Math.random() * 0.4})`;
+    ctx.fillRect(Math.round(c + Math.cos(a) * r - sz / 2), Math.round(c + Math.sin(a) * r - sz / 2), Math.round(sz), Math.round(sz));
+  }
+});
+
 const missTex = textTex("MISS", "#e0e0e0");
 const koTex = textTex("K.O.!", "#ff5a3a");
 const chunkGeo = new THREE.BoxGeometry(1, 1, 1);
 const blockTex = textTex("BLOCK", "#9fd8ff");
 const parryTex = textTex("PARRY!", "#ffe070");
+const fallTex = textTex("FALL!", "#ffb050");
 const rankTexes = ["VETERAN", "ELITE", "HEROIC"].map((t) => textTex(t, "#ffcc33"));
 
 interface Fx {
@@ -541,7 +606,148 @@ export class CombatFx {
       case "blink":
         this.burst(ev.x, ev.y + 0.8, ev.z, puffTex, 0x606070, 12, 1.4, 0.8, 2, false, 0.5);
         break;
+      case "cannonWarn":
+        this.cannonWarn(ev.x, ev.y, ev.z, ev.radius, ev.seconds);
+        break;
+      case "cannonHit":
+        this.cannonHit(ev.x, ev.y, ev.z, ev.radius);
+        break;
+      case "shove":
+        this.burst(ev.x, ev.y + 0.9, ev.z, puffTex, 0xd8ccb0, 6, 0.9, 0.35, 2.2, false, 0.3);
+        if (ev.team >= 0) {
+          this.flash(ev.x, ev.y + 1, ev.z, starTex, 0xffffff, 2.2, 0.18);
+          this.shake = Math.max(this.shake, 0.2);
+        }
+        break;
+      case "fall":
+        this.burst(ev.x, ev.y + 0.2, ev.z, puffTex, 0xb09878, 10, 1.2, 0.7, 2.4, false, 0.5);
+        this.debris(ev.x, ev.y, ev.z, [0x7a6a52, 0x5a4c3a], 5, 0.18, 3);
+        this.label(ev.x, ev.y + 1.4, ev.z, fallTex);
+        this.shake = Math.max(this.shake, 0.3);
+        break;
+      case "squad": {
+        const c = this.teamColors[ev.team];
+        this.burst(ev.x, ev.y + 0.3, ev.z, puffTex, 0xd8c8a8, 12, 1.4, 0.8, 2.6, false, 0.7);
+        this.ring(ev.x, ev.y, ev.z, c, 3, 0.5);
+        break;
+      }
+      case "relic": {
+        if (ev.state === "taken" || ev.state === "dropped") {
+          this.flash(ev.x, ev.y + 1.2, ev.z, starTex, 0xffd060, 3.5, 0.3);
+          this.burst(ev.x, ev.y + 1, ev.z, starTex, 0xffc040, 10, 0.6, 0.6, 3, true, 1.2);
+        } else if (ev.state === "delivered" || ev.state === "cracked") {
+          this.flash(ev.x, ev.y + 2, ev.z, starTex, 0xffe080, 10, 0.6);
+          this.burst(ev.x, ev.y + 2, ev.z, starTex, 0xffb030, 30, 1.2, 1.2, 7, true, 3);
+          this.debris(ev.x, ev.y + 1.5, ev.z, [0xc89a40, 0x6a5040, 0x8a7a68], 14, 0.3, 7);
+          this.ring(ev.x, ev.y, ev.z, new THREE.Color(0xffd060), 8, 0.9);
+          this.shake = Math.max(this.shake, 0.8);
+        } else if (ev.state === "home") {
+          this.burst(ev.x, ev.y + 1.5, ev.z, starTex, 0xffd060, 12, 0.6, 1, 2, true, 2);
+        }
+        break;
+      }
     }
+  }
+
+  private cannonWarn(x: number, y: number, z: number, radius: number, seconds: number): void {
+    const decal = (tex: THREE.Texture, lift: number, opacity: number, additive: boolean) => {
+      const m = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, polygonOffset: true, polygonOffsetFactor: -2 }),
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, y + lift, z);
+      this.root.add(m);
+      return m;
+    };
+    const ring = decal(targetTex, 0.12, 0.95, false);
+    const fill = decal(fillTex, 0.1, 0.35, true);
+    this.items.push({
+      obj: ring, t: 0, dur: seconds,
+      tick: (k) => {
+        const intro = Math.min(1, k * seconds / 0.18);
+        ring.scale.setScalar(radius * (1.6 - 0.6 * intro));
+        ring.rotation.z = k * seconds * 1.4;
+        const pulse = 0.5 + 0.5 * Math.sin(k * seconds * (6 + k * 18));
+        (ring.material as THREE.MeshBasicMaterial).opacity = 0.65 + 0.35 * pulse;
+      },
+    });
+    this.items.push({
+      obj: fill, t: 0, dur: seconds,
+      tick: (k) => {
+        fill.scale.setScalar(Math.max(0.01, radius * k));
+        (fill.material as THREE.MeshBasicMaterial).opacity = 0.25 + 0.35 * k;
+      },
+    });
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.55, 12),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false }),
+    );
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.set(x, y + 0.14, z);
+    this.root.add(shadow);
+    const fly = Math.min(1.3, seconds * 0.6);
+    this.items.push({
+      obj: shadow, t: 0, dur: seconds,
+      tick: (k) => {
+        const f = Math.max(0, (k * seconds - (seconds - fly)) / fly);
+        (shadow.material as THREE.MeshBasicMaterial).opacity = f * 0.55;
+        shadow.scale.setScalar(0.4 + f * 0.8);
+      },
+    });
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const sx = x + side * 26;
+    const sz = z - 14 + Math.random() * 6;
+    this.after(seconds - fly, () => {
+      const ball = new THREE.Mesh(ballGeo, ballMat);
+      this.root.add(ball);
+      let puffT = 0;
+      this.items.push({
+        obj: ball, t: 0, dur: fly,
+        tick: (k, dt) => {
+          ball.position.set(sx + (x - sx) * k, y + 0.5 + 22 * (1 - k) * (0.35 + 0.65 * (1 - k)) + 3 * Math.sin(k * Math.PI) * (1 - k), sz + (z - sz) * k);
+          ball.rotation.x += dt * 9;
+          ball.rotation.z += dt * 5;
+          puffT -= dt;
+          if (puffT <= 0) {
+            puffT = 0.035;
+            const p = this.sprite(puffTex, 0x4a4440, false, 0.7);
+            p.position.copy(ball.position);
+            const sz0 = 0.6 + Math.random() * 0.3;
+            this.items.push({ obj: p, t: 0, dur: 0.7, tick: (q) => { p.scale.setScalar(sz0 * (1 + q * 1.5)); p.material.opacity = 0.6 * (1 - q); } });
+          }
+        },
+      });
+    });
+  }
+
+  private after(seconds: number, run: () => void): void {
+    this.pending.push({ at: this.clock + Math.max(0, seconds), run });
+  }
+
+  private cannonHit(x: number, y: number, z: number, radius: number): void {
+    this.flash(x, y + 1.2, z, starTex, 0xfff0b0, radius * 3.2, 0.35);
+    this.flash(x, y + 1, z, glowTex, 0xff7a20, radius * 2.6, 0.7);
+    this.burst(x, y + 0.8, z, puffTex, 0xff8a30, 10, 2.2, 0.55, radius * 0.8, false, 2.2);
+    this.burst(x, y + 1.2, z, puffTex, 0xffd060, 6, 1.6, 0.35, radius * 0.5, true, 2.8);
+    this.burst(x, y + 0.6, z, starTex, 0xff8a20, 16, 1.4, 0.5, radius * 1.4, true, 2.5);
+    this.burst(x, y + 0.8, z, puffTex, 0x3a3430, 18, 2.2, 1.8, radius * 0.9, false, 1.8);
+    this.burst(x, y + 0.3, z, puffTex, 0xa89478, 12, 1.6, 1.1, radius * 1.5, false, 0.4);
+    this.debris(x, y, z, [0x6a5a44, 0x4a3e30, 0x807060, 0x3a3a3a], 14, 0.28, 7);
+    this.sparks(x, y + 0.5, z, 1, 0, 0xffc060, 6, 12);
+    this.sparks(x, y + 0.5, z, -1, 0, 0xffc060, 6, 12);
+    this.ring(x, y, z, new THREE.Color(0xffc080), radius * 1.3, 0.4);
+    const scorch = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.MeshBasicMaterial({ map: scorchTex, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
+    );
+    scorch.rotation.x = -Math.PI / 2;
+    scorch.rotation.z = Math.random() * Math.PI * 2;
+    scorch.position.set(x, y + 0.08, z);
+    scorch.scale.setScalar(radius * 0.9);
+    this.root.add(scorch);
+    this.items.push({ obj: scorch, t: 0, dur: 9, tick: (k) => { (scorch.material as THREE.MeshBasicMaterial).opacity = 0.9 * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3); } });
+    this.shake = Math.max(this.shake, 0.7);
   }
 
   buildFx(x: number, y: number, z: number, team: number): void {
@@ -570,8 +776,8 @@ export class CombatFx {
       if (k >= 1) {
         this.root.remove(f.obj);
         const m = (f.obj as THREE.Mesh).material as THREE.Material | undefined;
-        m?.dispose();
-        if (f.obj instanceof THREE.Mesh && f.obj.geometry !== chunkGeo) f.obj.geometry.dispose();
+        if (m !== ballMat) m?.dispose();
+        if (f.obj instanceof THREE.Mesh && f.obj.geometry !== chunkGeo && f.obj.geometry !== ballGeo) f.obj.geometry.dispose();
         this.items.splice(i, 1);
       }
     }
