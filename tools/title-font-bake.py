@@ -13,27 +13,48 @@ d = np.sqrt(((a - bg) ** 2).sum(-1))
 alpha = np.clip((d - 50) / 50, 0, 1)
 k = np.minimum(a[..., 0] - a[..., 1], a[..., 2] - a[..., 1])
 alpha *= np.clip((90 - k) / 40, 0, 1)
-ncol = len(rows[0])
-cw, ch = W / ncol, H / len(rows)
+from scipy import ndimage
+lab, n = ndimage.label(alpha > 0.5)
+objs = ndimage.find_objects(lab)
+comps = []
+for i, sl in enumerate(objs):
+    ys, xs = sl
+    area = (lab[sl] == i + 1).sum()
+    if area < 60:
+        continue
+    comps.append([xs.start, xs.stop, ys.start, ys.stop, area, {i + 1}])
+rh = H / len(rows)
 glyphs = {}
+own = {}
 for r, row in enumerate(rows):
-    boxes = []
-    for c, g in enumerate(row):
-        x0, y0 = int(c * cw), int(r * ch)
-        cell = alpha[y0:int(y0 + ch), x0:int(x0 + cw)]
-        ys, xs = np.where(cell > 0.5)
-        boxes.append((g, x0, y0, xs.min(), xs.max() + 1, ys.min(), ys.max() + 1))
-    tall = [b for b in boxes if b[0].isalnum()]
-    top = int(np.median([b[5] + b[2] for b in tall]))
-    bot = int(np.median([b[6] + b[2] for b in tall]))
-    for g, x0, y0, cx0, cx1, cy0, cy1 in boxes:
-        glyphs[g] = (x0 + cx0, y0 + cy0, cx1 - cx0, cy1 - cy0, (y0 + cy0 - top) / (bot - top), bot - top)
+    band = [c for c in comps if r * rh <= (c[2] + c[3]) / 2 < (r + 1) * rh]
+    band.sort(key=lambda c: c[0])
+    merged = []
+    for c in band:
+        if merged and c[0] < merged[-1][1] - 4:
+            m = merged[-1]
+            merged[-1] = [min(m[0], c[0]), max(m[1], c[1]), min(m[2], c[2]), max(m[3], c[3]), m[4] + c[4], m[5] | c[5]]
+        else:
+            merged.append([c[0], c[1], c[2], c[3], c[4], set(c[5])])
+    if len(merged) > len(row):
+        merged.sort(key=lambda c: -c[4])
+        merged = sorted(merged[:len(row)], key=lambda c: c[0])
+    assert len(merged) == len(row), (row, len(merged))
+    tall = [m for m, g in zip(merged, row) if g.isalnum()]
+    top = int(np.median([m[2] for m in tall]))
+    bot = int(np.median([m[3] for m in tall]))
+    for (x0, x1, y0, y1, _, ids), g in zip(merged, row):
+        glyphs[g] = (x0, y0, x1 - x0, y1 - y0, (y0 - top) / (bot - top), bot - top)
+        own[g] = ids
 out_w = 0
 pieces = []
 for g, (x, y, w, h, off, cap) in glyphs.items():
     s = CAP / cap
     rgb = Image.fromarray(a[y:y + h, x:x + w].astype(np.uint8))
-    al = Image.fromarray((alpha[y:y + h, x:x + w] * 255).astype(np.uint8))
+    sub = alpha[y:y + h, x:x + w].copy()
+    near = ndimage.binary_dilation(np.isin(lab[y:y + h, x:x + w], list(own[g])), iterations=3)
+    sub *= near
+    al = Image.fromarray((sub * 255).astype(np.uint8))
     tw, th = max(1, round(w * s)), max(1, round(h * s))
     im = Image.merge("RGBA", (*rgb.resize((tw, th), Image.LANCZOS).split(), al.resize((tw, th), Image.LANCZOS)))
     arr = np.asarray(im).astype(np.int32)

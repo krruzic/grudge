@@ -30,8 +30,8 @@ export function titleArt(text: string): HTMLCanvasElement | null {
   const hit = titleCache.get(s);
   if (hit) return hit;
   const cap = TF.cap;
-  const space = cap * 0.34;
-  const track = -cap * 0.04;
+  const space = cap * 0.3;
+  const track = cap * 0.02;
   let w = 0;
   for (const ch of s) w += ch === " " ? space : (TF.glyphs[ch]?.w ?? space) + track;
   const pad = 4;
@@ -51,7 +51,8 @@ export function titleArt(text: string): HTMLCanvasElement | null {
       x += space;
       continue;
     }
-    const wob = ((n++ * 37) % 7 - 3) * 0.012 * cap;
+    const wob = 0;
+    n++;
     g.drawImage(titleFont, gl.x, 0, gl.w, gl.h, x, pad + gl.top + wob, gl.w, gl.h);
     x += gl.w + track;
   }
