@@ -1,4 +1,16 @@
 import { networkInterfaces } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const URL_FILE = join(process.cwd(), ".online-url");
+
+export function publicUrl(): string {
+  try {
+    return existsSync(URL_FILE) ? readFileSync(URL_FILE, "utf8").trim() : "";
+  } catch {
+    return "";
+  }
+}
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -47,7 +59,7 @@ export class NetRelay {
     const port = this.port || Number((req.headers.host ?? "").split(":")[1] ?? 0);
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store");
-    res.end(JSON.stringify({ hosting: !!this.host, players: this.peers.size, addrs: lanAddresses(port) }));
+    res.end(JSON.stringify({ hosting: !!this.host, players: this.peers.size, addrs: lanAddresses(port), public: publicUrl() }));
   }
 
   private send(ws: WebSocket, msg: unknown): void {
@@ -69,7 +81,7 @@ export class NetRelay {
         role = "host";
         me = { ws, id: 0, name: String(m.name ?? "HOST") };
         this.host = me;
-        return this.send(ws, { t: "hosting", addrs: lanAddresses(port) });
+        return this.send(ws, { t: "hosting", addrs: lanAddresses(port), public: publicUrl() });
       }
       if (!role && m.t === "join") {
         if (!this.host) return this.send(ws, { t: "error", msg: "NOBODY IS HOSTING YET" });

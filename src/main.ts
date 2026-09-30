@@ -210,6 +210,7 @@ async function start(): Promise<void> {
   let lobbySentAt = 0;
   let desync = false;
   let hostAddrs: string[] = [];
+  let hostPublic = "";
   const present = (i: number) => pads.players[i].connected || i < forceJoin || remoteAt(i) >= 0;
   const padsForCursors = () => pads.players.map((p, i) => (i < forceJoin && !p.connected ? { ...p, connected: true } : p));
   const slotActive = (i: number) => i < 2 || twoVtwo;
@@ -474,7 +475,7 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV) (window as unknown as { grudge: unknown }).grudge = { pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot, frames: netFrames.length, remotes: [...remotes.values()].map((r) => r.slot) }; } };
+  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot, frames: netFrames.length, remotes: [...remotes.values()].map((r) => r.slot) }; } };
 
   let last = performance.now();
   let acc = 0;
@@ -546,6 +547,7 @@ async function start(): Promise<void> {
       if (m.t === "hosting") {
         netMode = "host";
         hostAddrs = (m.addrs as string[]) ?? [];
+        hostPublic = String(m.public ?? "");
         menus.netBusy = false;
         menus.netStatus = "";
         state = "select";
@@ -918,7 +920,8 @@ async function start(): Promise<void> {
     if (state === "menu") menus.draw(ctx, pixel.w, pixel.h, now);
     if (netMode === "host" && (state === "select" || state === "map")) {
       const joined = [...remotes.values()].filter((r) => r.slot >= 0).length;
-      const t = `ONLINE · ${joined} FRIEND${joined === 1 ? "" : "S"} JOINED · OTHERS OPEN ${hostAddrs[0] ? `http://${hostAddrs[0]}` : location.host} > VERSUS ONLINE > JOIN`;
+      const where = hostPublic ? hostPublic : hostAddrs[0] ? `http://${hostAddrs[0]}` : location.host;
+      const t = `ONLINE · ${joined} FRIEND${joined === 1 ? "" : "S"} JOINED · OTHERS OPEN ${where} > VERSUS ONLINE > JOIN`;
       drawText(ctx, t, Math.round((pixel.w - textWidth(t, 0.6)) / 2), pixel.h - 9, "#f8e8a0", 0.6);
     }
     if (netMode !== "off" && (state === "match" || state === "paused")) {
