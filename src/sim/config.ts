@@ -73,6 +73,8 @@ export interface TalentData {
 
 export interface AbilityDef {
   kind: string;
+  variance?: number;
+  crit?: number;
   fx?: TalentFx;
   anim: string;
   hits?: HitDef[];
@@ -283,6 +285,7 @@ export interface MatchData {
     };
     ogre: { firstSeconds: number; respawnSeconds: number; hp: number; damage: number; speed: number; radius: number; aggro: number; range: number; cooldown: number; knockback: number; bounty: number; leash: number };
   };
+  rolls: { variance: number; critChance: number; critMul: number };
   pacing: {
     homeSpeedMul: number;
     homeRegenFrac: number;

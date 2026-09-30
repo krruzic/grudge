@@ -38,6 +38,7 @@ export interface DamageOpts {
   vsStunnedMul?: number;
   executeBelow?: number;
   executeMul?: number;
+  tick?: boolean;
 }
 
 export interface PlayerSlot {
@@ -617,6 +618,20 @@ export class World {
       }
     }
     amount *= this.synergyMul(src, target, opts);
+    let crit = false;
+    if (src?.hero && !opts.tick) {
+      const rl = this.data.match.rolls;
+      const act = src.hero.action;
+      const ab = act && (act.name === "a" || act.name === "b" || act.name === "r" || act.name === "z") ? abilities(this, src)[act.name] : undefined;
+      const hit = ab?.hits?.[act!.combo] as { variance?: number; crit?: number } | undefined;
+      const v = hit?.variance ?? ab?.variance ?? rl.variance;
+      const cc = hit?.crit ?? ab?.crit ?? rl.critChance;
+      amount *= 1 + (this.rng() * 2 - 1) * v;
+      if (this.rng() < cc) {
+        crit = true;
+        amount *= rl.critMul;
+      }
+    }
     if (this.time < target.status.guardUntil) amount *= target.status.guardMul;
     if (src && src.kind !== "structure") {
       if (this.time < src.status.stealthUntil) {
@@ -696,7 +711,7 @@ export class World {
       src.hero.lastTargetAt = this.time;
     }
     if (target.structure?.type === "core" && src) this.teams[src.team].coreDamageDealt += amount;
-    this.emit({ type: "hit", ...ev, team: target.team, big: !!opts.big || amount >= 50, blocked, id: target.id, amount, src: src?.id, fx, fz });
+    this.emit({ type: "hit", ...ev, team: target.team, big: !!opts.big || crit || amount >= 50, blocked, id: target.id, amount, src: src?.id, fx, fz, crit });
 
     if (!blocked && target.kind !== "structure" && fx !== undefined && fz !== undefined) {
       const kb = (opts.knockback ?? 0) * (1 - (target.unit ? this.data.units.types[target.unit.type].knockbackResist ?? 0 : 0));
@@ -1193,7 +1208,7 @@ export class World {
         if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
         o.status.slowMul = Math.min(o.status.slowUntil > t ? o.status.slowMul : 1, z.slowMul);
         o.status.slowUntil = t + 0.3;
-        if (tickDmg) this.damage(owner, o, z.dps * 0.5, { fromX: z.x, fromZ: z.z });
+        if (tickDmg) this.damage(owner, o, z.dps * 0.5, { fromX: z.x, fromZ: z.z, tick: true });
       }
     }
     for (let i = this.delayed.length - 1; i >= 0; i--) {

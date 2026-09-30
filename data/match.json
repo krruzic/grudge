@@ -127,5 +127,10 @@
         "spread": 2.6
       }
     }
+  },
+  "rolls": {
+    "variance": 0.12,
+    "critChance": 0.07,
+    "critMul": 1.5
   }
 }

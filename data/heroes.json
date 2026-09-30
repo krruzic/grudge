@@ -80,7 +80,8 @@
               "dur": 0.82,
               "hitAt": 0.46,
               "lunge": 2.5,
-              "knockback": 8.0
+              "knockback": 8.0,
+              "variance": 0.25
             }
           ],
           "comboWindow": 0.4,
@@ -102,7 +103,8 @@
           "bot": "fight",
           "botRange": 3.2,
           "cowSeconds": 1.5,
-          "callout": "GROUND SLAM \u00b7 SLOWS"
+          "callout": "GROUND SLAM \u00b7 SLOWS",
+          "variance": 0.2
         },
         "r": {
           "kind": "warcry",
@@ -131,7 +133,8 @@
           "botRange": 4,
           "vsSlowedMul": 1.5,
           "stunBonus": 0.6,
-          "callout": "EARTHQUAKE \u00b7 STUNS"
+          "callout": "EARTHQUAKE \u00b7 STUNS",
+          "variance": 0.3
         }
       },
       "botRange": 1.8
@@ -176,7 +179,8 @@
           ],
           "comboWindow": 0.4,
           "anim": "attack_a",
-          "bot": "fight"
+          "bot": "fight",
+          "variance": 0.2
         },
         "b": {
           "kind": "repair",
@@ -289,7 +293,9 @@
           ],
           "comboWindow": 0.4,
           "anim": "attack_a",
-          "bot": "fight"
+          "bot": "fight",
+          "crit": 0.12,
+          "variance": 0.18
         },
         "b": {
           "kind": "leap",
@@ -332,7 +338,9 @@
           "knockback": 6,
           "executeBelow": 0.4,
           "executeMul": 1.4,
-          "callout": "EXECUTE DASH"
+          "callout": "EXECUTE DASH",
+          "crit": 0.3,
+          "variance": 0.1
         }
       }
     },
@@ -380,7 +388,8 @@
             }
           ],
           "comboWindow": 0.6,
-          "comboCooldown": 0.3
+          "comboCooldown": 0.3,
+          "variance": 0.25
         },
         "b": {
           "kind": "hex",
@@ -397,7 +406,8 @@
           "bot": "fight",
           "botRange": 8,
           "hexSeconds": 6,
-          "callout": "HEX \u00b7 SLAIN FOES RISE FOR YOU"
+          "callout": "HEX \u00b7 SLAIN FOES RISE FOR YOU",
+          "variance": 0.2
         },
         "r": {
           "kind": "summon",
@@ -476,7 +486,8 @@
           ],
           "comboWindow": 0.4,
           "anim": "attack_a",
-          "bot": "fight"
+          "bot": "fight",
+          "crit": 0.15
         },
         "b": {
           "kind": "dash",
@@ -490,7 +501,8 @@
           "knockback": 3,
           "bot": "fight",
           "botRange": 5.5,
-          "callout": "LUNGE"
+          "callout": "LUNGE",
+          "crit": 0.25
         },
         "r": {
           "kind": "parry",
@@ -520,7 +532,8 @@
           "bot": "fight",
           "botRange": 2.8,
           "vsStunnedMul": 1.4,
-          "callout": "BLADE FLURRY"
+          "callout": "BLADE FLURRY",
+          "crit": 0.12
         }
       }
     },
@@ -561,7 +574,9 @@
           ],
           "comboWindow": 0.4,
           "anim": "attack_a",
-          "bot": "fight"
+          "bot": "fight",
+          "variance": 0.08,
+          "crit": 0.05
         },
         "b": {
           "kind": "reach",
@@ -576,7 +591,8 @@
           "cooldown": 4.5,
           "bot": "fight",
           "botRange": 8,
-          "callout": "LONG ARM SLAP"
+          "callout": "LONG ARM SLAP",
+          "variance": 0.2
         },
         "r": {
           "kind": "wall",

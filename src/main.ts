@@ -900,7 +900,7 @@ async function start(): Promise<void> {
         ticks++;
       }
       if (!netFrames.length) acc = Math.min(acc, world.dt);
-    } else if (state === "match" || state === "title" || state === "menu" || state === "select" || state === "map" || state === "results" || state === "lobby") {
+    } else if (state === "match" || state === "title" || (state === "menu" && menus.page === "main") || state === "results" || state === "lobby") {
       const hosting = netMode === "host" && state === "match";
       acc += dt;
       let ticks = 0;

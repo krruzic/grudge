@@ -23,7 +23,7 @@ const jobs = {
     model: "fal-ai/nano-banana-pro/edit",
     input: {
       prompt:
-        "Using these six exact characters as reference (same outfits, colours, proportions and faces), paint box-art key art for a 1998 Nintendo 64 " +
+        "Using these six exact characters as reference (same outfits, colours, proportions and faces: an orc warlord with a horned helm and spiked club, a bearded dwarf engineer in goggles and a yellow apron, a goblin raider with twin daggers and a black hood, a purple-robed hooded summoner with glowing eyes and a staff, a duelist in a wide-brimmed hat with a rapier, and a walking tree warden with leafy shoulders), paint box-art key art for a 1998 Nintendo 64 " +
         "medieval tournament brawler. The six champions stand in a loose heroic group on a trampled jousting field at dusk, torn blue and red " +
         "tournament banners on poles behind them, a wooden palisade and a distant stone keep, warm low sun. Keep the chunky low-poly N64 character look " +
         "with visible painted textures, like a pre-rendered promotional render from that era. No text, no logo, no UI, no border. Leave the upper third " +

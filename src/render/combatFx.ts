@@ -9,7 +9,7 @@ import { FX } from "./fxKit";
 import { wardenSlap } from "./wardenFx";
 import { KITS, type HeroKit } from "./kits";
 import "./heroFx";
-import { Ribbon, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
+import { emit, Ribbon, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
 
 const woodTex = new THREE.TextureLoader().load(woodUrl);
 woodTex.colorSpace = THREE.SRGBColorSpace;
@@ -432,6 +432,7 @@ const chunkGeo = new THREE.BoxGeometry(1, 1, 1);
 const blockTex = textTex("BLOCK", "#9fd8ff");
 const parryTex = textTex("PARRY!", "#ffe070");
 const fallTex = textTex("FALL!", "#ffb050");
+const critTex = textTex("CRIT!", "#ffe040");
 const rankTexes = ["VETERAN", "ELITE", "HEROIC"].map((t) => textTex(t, "#ffcc33"));
 
 interface Fx {
@@ -519,10 +520,10 @@ export class CombatFx implements FxHost {
     });
   }
 
-  private number(x: number, y: number, z: number, amount: number, color: string, big: boolean): void {
+  private number(x: number, y: number, z: number, amount: number, color: string, big: boolean, mul = 1): void {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: numberTex(String(amount), color), transparent: true, depthTest: false }));
     s.renderOrder = 31;
-    const base = big ? 1.5 : 1.0;
+    const base = (big ? 1.5 : 1.0) * mul;
     const vx = (Math.random() - 0.5) * 1.2;
     s.position.set(x, y + 1.6, z);
     this.root.add(s);
@@ -803,9 +804,15 @@ export class CombatFx implements FxHost {
           } else if (tgt?.hero) {
             this.shake = Math.max(this.shake, 0.08);
           }
+          if (ev.crit) {
+            this.label(ev.x, ev.y + 1.3, ev.z, critTex);
+            emit(this, { tex: FX.burst, n: 1, x: ev.x, y: ev.y + 0.4, z: ev.z, color: 0xffe070, size: [2.6, 2.6], grow: 1.3, life: [0.16, 0.16], speed: [0, 0], additive: true, order: 8 });
+            emit(this, { tex: FX.twinkle, n: 6, x: ev.x, y: ev.y + 0.4, z: ev.z, size: [0.35, 0.55], life: [0.3, 0.45], speed: [4, 7], gravity: 8, additive: true });
+            this.shake = Math.max(this.shake, 0.3);
+          }
           if (ev.amount && (tgt?.hero || tgt?.structure || src?.hero)) {
-            const color = tgt?.hero ? "#ff6a4a" : ev.big ? "#ffd84a" : "#ffffff";
-            this.number(ev.x, ev.y, ev.z, ev.amount, color, ev.big || !!tgt?.hero);
+            const color = ev.crit ? "#ffe040" : tgt?.hero ? "#ff6a4a" : ev.big ? "#ffd84a" : "#ffffff";
+            this.number(ev.x, ev.y, ev.z, ev.amount, color, ev.big || !!tgt?.hero, ev.crit ? 1.5 : 1);
           }
         }
         break;
@@ -1450,6 +1457,14 @@ export class CombatFx implements FxHost {
       f.position.set(x, y, z);
       this.items.push({ obj: f, t: 0, dur: 0.15, tick: (k) => { f.scale.setScalar(0.5 + k * 0.4); f.material.opacity = 0.9 * (1 - k); } });
     }
+  }
+
+  regen(x: number, y: number, z: number): void {
+    const s = this.sprite(plusTex, 0x90ff90, false, 0.9);
+    const ox = (Math.random() - 0.5) * 1.2;
+    const oz = (Math.random() - 0.5) * 1.2;
+    s.position.set(x + ox, y + 0.8 + Math.random() * 1.2, z + oz);
+    this.items.push({ obj: s, t: 0, dur: 0.9, tick: (k, dt) => { s.position.y += dt * 1.4; s.scale.setScalar(0.32 * (1 - k * 0.3)); s.material.opacity = 0.9 * (1 - k); } });
   }
 
   buildFx(x: number, y: number, z: number, team: number): void {

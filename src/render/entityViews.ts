@@ -901,6 +901,10 @@ export class EntityViews {
       });
     }
     if (v.blockFx) v.blockFx.visible = h.blocking;
+    if (e.hp < e.maxHp && !v.stealthed && w.calm(e) && Math.random() < dt * 5) {
+      const turf = w.turf(e);
+      if (turf === "home" || turf === "tower") this.fx.regen(v.root.position.x, v.root.position.y, v.root.position.z);
+    }
     if (w.time < e.status.stunUntil) v.body.rotation.z = Math.sin(time * 20) * 0.08;
     else v.body.rotation.z = 0;
     v.mixer?.update(dt);

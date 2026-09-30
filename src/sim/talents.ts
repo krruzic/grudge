@@ -284,7 +284,7 @@ export function tickStatus(w: World): void {
     if (s.shield > 0 && t >= s.shieldUntil) s.shield = 0;
     if (tick && t < s.bleedUntil && s.bleedStacks > 0) {
       const owner = w.get(s.bleedOwner) ?? null;
-      w.damage(owner, e, s.bleedDps * s.bleedStacks * 0.5, { fromX: e.transform.pos.x, fromZ: e.transform.pos.z });
+      w.damage(owner, e, s.bleedDps * s.bleedStacks * 0.5, { fromX: e.transform.pos.x, fromZ: e.transform.pos.z, tick: true });
     }
     const h = e.hero;
     if (!h) continue;

@@ -352,7 +352,7 @@ export interface Command {
 }
 
 export type SimEvent =
-  | { type: "hit"; x: number; y: number; z: number; team: number; big: boolean; blocked?: boolean; id?: number; amount?: number; src?: number; fx?: number; fz?: number }
+  | { type: "hit"; x: number; y: number; z: number; team: number; big: boolean; blocked?: boolean; id?: number; amount?: number; src?: number; fx?: number; fz?: number; crit?: boolean }
   | { type: "miss"; x: number; y: number; z: number }
   | { type: "death"; id: number; kind: Entity["kind"]; x: number; y: number; z: number; team: number; big: boolean }
   | { type: "spawn"; id: number }
