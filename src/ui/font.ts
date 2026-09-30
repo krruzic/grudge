@@ -1,4 +1,4 @@
-import atlasUrl from "../../assets/fonts/n64font.png?url";
+import atlasUrl from "../../assets/fonts/n64font_hi.png?url";
 import meta from "../../assets/fonts/n64font.json";
 
 type Glyph = { x: number; y: number; w: number; adv: number; ox: number };
@@ -7,6 +7,7 @@ const BASE = 10;
 const INK = "#0b0806";
 const TRACK = 0;
 const MIN_SCALE = 0.64;
+const HK = 6;
 const eff = (scale: number) => Math.max(MIN_SCALE, scale);
 
 let markReady: () => void = () => {};
@@ -85,7 +86,7 @@ function stamp(g: CanvasRenderingContext2D, src: HTMLCanvasElement, s: string, d
   let pen = dx;
   for (const ch of s) {
     const gl = glyph(ch);
-    g.drawImage(src, gl.x, gl.y, gl.w, meta.h, Math.round(pen - gl.ox), dy, gl.w, meta.h);
+    g.drawImage(src, gl.x * HK, gl.y * HK, gl.w * HK, meta.h * HK, Math.round((pen - gl.ox) * HK), dy * HK, gl.w * HK, meta.h * HK);
     pen += gl.adv + TRACK;
   }
 }
@@ -110,8 +111,8 @@ function render(s: string, color: string, edge: boolean, shadow: boolean): HTMLC
   const soft = !edge && !shadow;
   let c = cache.get(key);
   if (c) return c;
-  const w = Math.ceil(rawWidth(s)) + PADX * 2 + 3;
-  const h = meta.h + PADY * 2 + 2;
+  const w = (Math.ceil(rawWidth(s)) + PADX * 2 + 3) * HK;
+  const h = (meta.h + PADY * 2 + 2) * HK;
   c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -123,7 +124,7 @@ function render(s: string, color: string, edge: boolean, shadow: boolean): HTMLC
     g.globalAlpha = 1;
   }
   if (edge) g.drawImage(layer(w, h, lineMask!, s, PADX, PADY, INK), 0, 0);
-  const grad = g.createLinearGradient(0, PADY + 2, 0, PADY + meta.base);
+  const grad = g.createLinearGradient(0, (PADY + 2) * HK, 0, (PADY + meta.base) * HK);
   grad.addColorStop(0, shade(col, edge ? 0.35 : 0.12));
   grad.addColorStop(0.55, shade(col, 0));
   grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
@@ -159,41 +160,19 @@ export function onHiLayer(ctx: CanvasRenderingContext2D, fn: (c: CanvasRendering
   hiCtx.restore();
 }
 
-const sharp = new Map<HTMLCanvasElement, Map<number, HTMLCanvasElement>>();
-function upscaled(c: HTMLCanvasElement, n: number): HTMLCanvasElement {
-  if (n <= 1) return c;
-  let byN = sharp.get(c);
-  if (!byN) {
-    if (sharp.size > 1200) sharp.clear();
-    byN = new Map();
-    sharp.set(c, byN);
-  }
-  let u = byN.get(n);
-  if (!u) {
-    u = document.createElement("canvas");
-    u.width = c.width * n;
-    u.height = c.height * n;
-    const g = u.getContext("2d")!;
-    g.imageSmoothingEnabled = false;
-    g.drawImage(c, 0, 0, u.width, u.height);
-    byN.set(n, u);
-  }
-  return u;
-}
-
 function blit(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale: number, edge: boolean, shadow: boolean): void {
   if (!fillMask || !s) return;
   const c = render(s, color, edge, shadow);
   scale = eff(scale);
   const k = (BASE * scale) / meta.px;
   onHiLayer(ctx, (t) => {
-    const m = t.getTransform();
-    const dev = k * Math.hypot(m.a, m.b);
-    const src = upscaled(c, Math.max(1, Math.floor(dev)));
     const smooth = t.imageSmoothingEnabled;
+    const q = t.imageSmoothingQuality;
     t.imageSmoothingEnabled = true;
-    t.drawImage(src, x - PADX * k, y - PADY * k - 0.5 * scale, c.width * k, c.height * k);
+    t.imageSmoothingQuality = "high";
+    t.drawImage(c, x - PADX * k, y - PADY * k - 0.5 * scale, (c.width / HK) * k, (c.height / HK) * k);
     t.imageSmoothingEnabled = smooth;
+    t.imageSmoothingQuality = q;
   });
 }
 
