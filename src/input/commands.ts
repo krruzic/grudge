@@ -3,7 +3,7 @@ import type { Command, Directive, ShopItem, StructureType, UnitType } from "../s
 
 type Flick = "up" | "down" | "left" | "right";
 
-const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "hold", left: "follow", right: "nearest" };
+const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "hold", left: "follow", right: "defend" };
 const TOWER_BY_FLICK: Partial<Record<Flick, StructureType>> = { up: "damage", left: "control" };
 const PROD_BY_FLICK: Partial<Record<Flick, StructureType>> = { left: "barracks", up: "range", right: "foundry" };
 const SHOP_BY_FLICK: Partial<Record<Flick, ShopItem>> = { up: "bomb", left: "ward", right: "cannon" };
@@ -11,15 +11,11 @@ const CALL_BY_FLICK: Partial<Record<Flick, UnitType>> = { left: "grunt", up: "ra
 
 export interface MapperUi {
   buildMenu: "closed" | "prod" | "tower" | "call" | "shop";
-  typeSelect: UnitType | null;
   commander: boolean;
   group: UnitType | "all";
-  orderStage: "none" | "pick" | "order";
-  orderGroup: UnitType | "all";
+  groupAt: number;
   lastOrderAt: number;
 }
-
-const GROUP_BY_FLICK: Record<Flick, UnitType | "all"> = { up: "ranged", left: "grunt", right: "heavy", down: "all" };
 
 const GROUPS: (UnitType | "all")[] = ["all", "grunt", "ranged", "heavy"];
 
@@ -28,8 +24,6 @@ export class CommandMapper {
   private armed = true;
   private xDown = false;
   private xUsed = false;
-  private yDown = false;
-  private lAt = 0;
   private tDown = false;
   private tUsed = false;
   private mouseRightWas = false;
@@ -40,7 +34,7 @@ export class CommandMapper {
   smash = { from: 0.3, to: 0.85, within: 0.12 };
 
   constructor(private flickThreshold: number, commander = false) {
-    this.ui = { buildMenu: "closed", typeSelect: null, commander, group: "all", orderStage: "none", orderGroup: "all", lastOrderAt: -99 };
+    this.ui = { buildMenu: "closed", commander, group: "all", groupAt: -99, lastOrderAt: -99 };
   }
 
   private flick(p: PadState): Flick | null {
@@ -76,11 +70,12 @@ export class CommandMapper {
       if (p.held.block && now - this.restAt <= this.smash.within) c.dodge = true;
     }
 
+    if (p.pressed.right || p.pressed.left) {
+      this.groupIndex = (this.groupIndex + (p.pressed.right ? 1 : GROUPS.length - 1)) % GROUPS.length;
+      this.ui.group = GROUPS[this.groupIndex];
+      this.ui.groupAt = now;
+    }
     if (this.ui.commander) {
-      if (p.pressed.right || p.pressed.left) {
-        this.groupIndex = (this.groupIndex + (p.pressed.right ? 1 : GROUPS.length - 1)) % GROUPS.length;
-        this.ui.group = GROUPS[this.groupIndex];
-      }
       if (p.pressed.up) c.directive = { type: this.ui.group, dir: "focus" };
       if (p.pressed.down) c.directive = { type: this.ui.group, dir: "hold" };
     }
@@ -98,13 +93,6 @@ export class CommandMapper {
       this.tUsed = false;
       this.ui.buildMenu = atPad ? "tower" : "shop";
     }
-    const holdL = !!p.held.block;
-    if (holdL && !this.yDown) {
-      this.yDown = true;
-      this.lAt = now;
-    }
-    if (this.yDown && holdL && this.ui.orderStage === "none" && !this.xDown && !this.tDown && now - this.lAt >= 0.3 && !p.held.a) this.ui.orderStage = "pick";
-
     const f = this.flick(p);
     if (f) {
       if (this.xDown && this.ui.buildMenu === "call") {
@@ -123,14 +111,8 @@ export class CommandMapper {
         if (f !== "down") c.build = TOWER_BY_FLICK[f];
         this.tUsed = true;
         this.ui.buildMenu = "closed";
-      } else if (this.yDown && this.ui.orderStage !== "order") {
-        this.ui.orderGroup = GROUP_BY_FLICK[f];
-        this.ui.orderStage = "order";
-      } else if (this.yDown) {
-        c.directive = { type: this.ui.orderGroup, dir: DIRECTIVE_BY_FLICK[f] };
-        this.ui.lastOrderAt = now;
       } else {
-        c.directive = { type: this.ui.commander ? this.ui.group : "all", dir: DIRECTIVE_BY_FLICK[f] };
+        c.directive = { type: this.ui.group, dir: DIRECTIVE_BY_FLICK[f] };
         this.ui.lastOrderAt = now;
       }
     }
@@ -146,12 +128,6 @@ export class CommandMapper {
       this.tDown = false;
       if (this.ui.buildMenu === "tower" || this.ui.buildMenu === "shop") this.ui.buildMenu = "closed";
     }
-    if (this.yDown && !holdL) {
-      this.yDown = false;
-      this.ui.orderStage = "none";
-      this.ui.orderGroup = "all";
-    }
-    this.ui.typeSelect = this.yDown && this.ui.orderStage === "order" && this.ui.orderGroup !== "all" ? this.ui.orderGroup : null;
   }
 
   take(): Command {

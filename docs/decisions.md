@@ -401,3 +401,10 @@
 - Auto zoom frames your hero plus anything relevant: enemies within 9m pull the camera in to about 18m wide, towers and keeps within 13m widen it to include them (up to 34m), otherwise it rests at 21m. D-pad zoom lets each player step through five fixed widths with D-pad left (out) and right (in).
 - Commanders always get a fixed wide view (58m across, closer than the old full-map zoom) framing their whole army, since they run the battlefield rather than one fight.
 - Hero health bars and P-tags moved from above the head to just below the foot ring, so the relic and bomb carried overhead are never hidden.
+
+## Army orders, third pass
+- Hold L + C is gone: L is block, and a two-step "pick troops then order" gesture was too much for a pickup game.
+- C-stick flicks give one of four orders to whoever currently obeys: up ATTACK (march on the enemy keep), left FOLLOW (stay with me), right DEFEND (fall back and guard our keep), down HOLD (stay where I am or at the banner). HUNT left the pad; bots still use it.
+- D-pad left/right chooses who obeys: ALL, GRUNTS, ARCHERS, BRUTES. It sticks until changed, the matching column of the standing-orders plaque glows, and the cross title says ORDER ARMY / ORDER GRUNTS... A hint appears for a moment whenever it changes.
+- The order cross now always sits faintly in the corner as a legend, with the current order lit, and brightens when you give an order or change who obeys.
+- D-pad zoom moved to up/down. Keyboard: arrows or right-drag give orders, 3/4 choose who obeys, 1/2 zoom.

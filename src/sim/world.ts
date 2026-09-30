@@ -363,6 +363,7 @@ export class World {
     for (const t of types) {
       d[t] = dir;
       if (dir === "hold") d.holdPoint[t] = this.rallyPoint(team) ?? { x: hero.transform.pos.x, z: hero.transform.pos.z };
+      if (dir === "defend") d.holdPoint[t] = this.defaultHold(team);
       if (dir === "focus") d.focus[t] = focusId;
     }
     for (const u of this.entities) {

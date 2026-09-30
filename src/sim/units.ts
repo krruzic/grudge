@@ -40,7 +40,7 @@ export function updateUnit(w: World, e: Entity): void {
   } else if (directive === "push" || directive === "focus") {
     const core = w.core(1 - e.team);
     if (core) goal = { x: core.transform.pos.x, z: core.transform.pos.z };
-  } else if (directive === "hold") {
+  } else if (directive === "hold" || directive === "defend") {
     const hp = team.directives.holdPoint[u.type];
     const off = slotOffset(u.slot, 1.0);
     anchor = hp;

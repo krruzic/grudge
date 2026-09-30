@@ -562,8 +562,8 @@ async function start(): Promise<void> {
         const h = world.heroForPlayer(i);
         m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h));
         if (view.camMode === 2 && !commanderSlot(i)) {
-          if (p.pressed.left) view.zoomStep(i, 1);
-          if (p.pressed.right) view.zoomStep(i, -1);
+          if (p.pressed.down) view.zoomStep(i, 1);
+          if (p.pressed.up) view.zoomStep(i, -1);
         }
       });
       view.setMenus(mappers.map((m) => !!m && m.ui.buildMenu !== "closed"));

@@ -7,7 +7,7 @@ export type UnitType = "grunt" | "ranged" | "heavy";
 export const UNIT_TYPES: UnitType[] = ["grunt", "ranged", "heavy"];
 export type StructureType = "damage" | "control" | "support" | "barracks" | "range" | "foundry";
 export const STRUCTURE_TYPES: StructureType[] = ["damage", "control", "support", "barracks", "range", "foundry"];
-export type Directive = "push" | "hold" | "follow" | "nearest" | "focus";
+export type Directive = "push" | "hold" | "follow" | "nearest" | "focus" | "defend";
 export type TargetClass = UnitType | "hero" | "structure";
 export type PadZone = "home" | "forward" | "neutral";
 

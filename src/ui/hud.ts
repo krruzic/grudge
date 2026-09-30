@@ -10,7 +10,7 @@ import { drawNum, drawText, textWidth } from "./font";
 export const INK = "#0b0806";
 export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828", z: "#8a8a94", r: "#8a8a94" };
 
-const DIR_NAME: Record<Directive, string> = { push: "PUSH", hold: "HOLD", follow: "FOLLOW", nearest: "HUNT", focus: "SIEGE" };
+const DIR_NAME: Record<Directive, string> = { push: "ATTACK", hold: "HOLD", follow: "FOLLOW", nearest: "HUNT", focus: "SIEGE", defend: "DEFEND" };
 const TYPE_NAME: Record<UnitType | "all", string> = { grunt: "GRUNTS", ranged: "ARCHERS", heavy: "BRUTES", all: "ARMY" };
 const MARGIN_X = 14;
 const MARGIN_Y = 10;
@@ -599,28 +599,39 @@ export class Hud {
       return;
     }
     const o = this.orders[t];
-    this.drawOrders(ctx, W, H, w, t, right, now);
-    const picker = w.players.filter((p) => p.team === t).map((p) => ui[p.player]).find((u) => u && u.orderStage !== "none");
-    const order: Directive[] = ["push", "follow", "nearest", "hold"];
-    const orderCross = (group: UnitType | "all", lit: number, alpha: number) =>
-      this.drawCross(ctx, crossX, crossY, { title: `ORDER ${TYPE_NAME[group]}`, items: order.map((d) => [DIR_NAME[d], ""]), lit, until: 0 }, right, alpha);
-    if (picker?.orderStage === "pick") {
-      this.drawCross(ctx, crossX, crossY, { title: "WHICH TROOPS?", items: [["ARCHERS", ""], ["GRUNTS", ""], ["BRUTES", ""], ["ALL", ""]], lit: -1, until: 0 }, right, 1);
-    } else if (picker?.orderStage === "order") {
-      const g = picker.orderGroup;
-      const cur = g === "all" ? (UNIT_TYPES.every((k) => ts.directives[k] === ts.directives.grunt) ? ts.directives.grunt : null) : ts.directives[g];
-      orderCross(g, cur ? order.indexOf(cur) : -1, 1);
-    } else if (cui && cui.group !== "all") {
-      orderCross(cui.group, order.indexOf(ts.directives[cui.group]), 1);
-    } else if (now < o.until) {
-      orderCross(o.type, order.indexOf(o.dir), Math.min(1, (o.until - now) * 2.5));
+    const team = w.players.filter((p) => p.team === t).sort((a, b) => Number(b.commander) - Number(a.commander));
+    const picker = team.map((p) => ui[p.player]).find((u) => !!u) ?? null;
+    const group = picker?.group ?? "all";
+    this.drawOrders(ctx, W, H, w, t, right, now, picker ? group : null);
+    if (!picker) {
+      if (now < o.until) this.orderCross(ctx, crossX, crossY, w, t, o.type, right, Math.min(1, (o.until - now) * 2.5), now, false);
+      return;
     }
+    const recent = Math.max(picker.lastOrderAt, picker.groupAt);
+    const fresh = now - recent < 1.6;
+    this.orderCross(ctx, crossX, crossY, w, t, group, right, fresh ? 1 : 0.5, now, now - picker.groupAt < 1.6);
     void mui;
+    void cui;
+  }
+
+  private orderCross(ctx: CanvasRenderingContext2D, x: number, y: number, w: World, t: number, group: UnitType | "all", right: boolean, alpha: number, now: number, groupHint: boolean): void {
+    const ts = w.teams[t];
+    const order: Directive[] = ["push", "follow", "defend", "hold"];
+    const cur = group === "all" ? (UNIT_TYPES.every((k) => ts.directives[k] === ts.directives.grunt) ? ts.directives.grunt : null) : ts.directives[group];
+    const lit = cur ? order.indexOf(cur) : -1;
+    this.drawCross(ctx, x, y, { title: `ORDER ${TYPE_NAME[group]}`, items: order.map((d) => [DIR_NAME[d], ""]), lit, until: 0 }, right, alpha);
+    if (groupHint) {
+      const hint = "D-PAD LEFT / RIGHT: WHO OBEYS";
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, alpha + 0.2) * (Math.floor(now * 4) % 2 ? 1 : 0.85);
+      drawText(ctx, hint, Math.round(x - textWidth(hint, 0.6) / 2), y + 22, "#ffe070", 0.6);
+      ctx.restore();
+    }
   }
 
   portraits: Portraits | null = null;
 
-  private drawOrders(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, t: number, right: boolean, now: number): void {
+  private drawOrders(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, t: number, right: boolean, now: number, selected: UnitType | "all" | null): void {
     const ts = w.teams[t];
     const o = this.orders[t];
     const counts: Record<UnitType, number> = { grunt: 0, ranged: 0, heavy: 0 };
@@ -636,6 +647,10 @@ export class Hud {
     const flash = now < o.until - 1.2;
     UNIT_TYPES.forEach((k, i) => {
       const cx = x0 + 2 + i * cw;
+      if (selected && (selected === "all" || selected === k)) {
+        ctx.fillStyle = "rgba(255,200,90,0.22)";
+        ctx.fillRect(cx, y0 + 1, cw, ph - 2);
+      }
       const hit = flash && (o.type === "all" || o.type === k);
       if (hit) {
         ctx.fillStyle = "rgba(255,220,120,0.35)";
