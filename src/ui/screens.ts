@@ -1,5 +1,5 @@
 import type { World } from "../sim/world";
-import { CAMERA_NAMES } from "../game/save";
+import { CAMERA_NAMES, RULE_ROWS, type Row, type Rules } from "../game/save";
 import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from "../sim/terrain";
 import { drawNum, drawPlain, drawText, occlude, textWidth } from "./font";
 import { box, padButton, PAD } from "./hud";
@@ -26,6 +26,26 @@ export interface SelectSlot {
 }
 
 type HeroInfo = { name: string; blurb: string; abilities?: Record<string, { kind: string }> };
+
+export interface LobbySlot {
+  hero: string;
+  ready: boolean;
+  cpu: boolean;
+  name: string | null;
+  remote: number;
+  active: boolean;
+  commander: boolean;
+}
+
+export interface LobbyView {
+  rules: Rules;
+  twoVtwo: boolean;
+  map: string;
+  phase: string;
+  slots: LobbySlot[];
+  me: number;
+  status: string;
+}
 
 function center(ctx: CanvasRenderingContext2D, W: number, s: string, y: number, color: string, scale = 1): void {
   drawText(ctx, s, Math.round((W - textWidth(s, scale)) / 2), y, color, scale);
@@ -125,7 +145,8 @@ export function wrap(s: string, width: number, scale = 1): string[] {
 }
 
 export class Screens {
-  private which: "title" | "select" | "map" | "results" | "pause" | "none" = "none";
+  private which: "title" | "select" | "map" | "results" | "pause" | "lobby" | "none" = "none";
+  lobby: LobbyView | null = null;
   private maps: MapData[] = [];
   portraits: Portraits | null = null;
   cursors: MenuCursors | null = null;
@@ -143,7 +164,7 @@ export class Screens {
 
   constructor(private teamColors: string[]) {}
 
-  set(which: "title" | "select" | "map" | "results" | "pause" | "none"): void {
+  set(which: "title" | "select" | "map" | "results" | "pause" | "lobby" | "none"): void {
     this.which = which;
   }
 
@@ -169,6 +190,10 @@ export class Screens {
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
     if (this.which === "none") return;
+    if (this.which === "lobby") {
+      if (this.lobby) this.drawLobby(ctx, W, H, this.lobby, Math.floor(now * 2) % 2 === 0);
+      return;
+    }
     if (this.which !== "select") {
       ctx.fillStyle = this.which === "map" ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.4)";
       ctx.fillRect(0, 0, W, H);
@@ -224,6 +249,60 @@ export class Screens {
       const it: [string, string][] = [["S", "RESUME"], ["Z", "QUIT TO MENU"]];
       prompt(ctx, Math.round((W - promptWidth(it)) / 2), 216, it);
     } else if (this.which === "results" && this.results) this.drawResults(ctx, W, this.results, blink);
+  }
+
+  private drawLobby(ctx: CanvasRenderingContext2D, W: number, H: number, lb: LobbyView, blink: boolean): void {
+    wall(ctx, W, H);
+    woodFloor(ctx, H - 22, W, H);
+    beam(ctx, 4, 2, W - 8, 17);
+    artTitle(ctx, "t_join", "JOIN A BATTLE", W / 2, 3, 14);
+    const lw = Math.round((W - 30) * 0.46);
+    const lx = 10;
+    const ty = 26;
+    const rows = RULE_ROWS as Row<Rules>[];
+    const lh = 16 + rows.length * 10 + 6;
+    parchment(ctx, lx, ty, lw, lh);
+    drawPlain(ctx, "THE HOST'S RULES", lx + lw / 2 - textWidth("THE HOST'S RULES", 0.62) / 2, ty + 6, "#8a1810", 0.62, true);
+    rows.forEach((r, i) => {
+      const y = ty + 17 + i * 10;
+      drawPlain(ctx, r.label, lx + 9, y, "#3a2410", 0.55, true);
+      const v = r.fmt(lb.rules[r.key] as number);
+      drawPlain(ctx, v, lx + lw - 9 - textWidth(v, 0.58, true), y, "#6a1810", 0.58, true);
+    });
+    const rx = lx + lw + 10;
+    const rw = W - rx - 10;
+    const ph = lh;
+    parchment(ctx, rx, ty, rw, ph);
+    const head = `${lb.twoVtwo ? "2 VS 2" : "1 VS 1"}  ·  ${lb.map}`;
+    drawPlain(ctx, head, rx + rw / 2 - textWidth(head, 0.62) / 2, ty + 6, "#8a1810", 0.62, true);
+    const list = lb.slots.map((s, i) => ({ s, i })).filter(({ s }) => s.active);
+    const rh = Math.min(26, Math.floor((ph - 20) / Math.max(1, list.length)));
+    list.forEach(({ s, i }, k) => {
+      const y = ty + 17 + k * rh;
+      const mine = i === lb.me;
+      const team = this.teamColors[i % 2];
+      band(ctx, rx + 6, y, rw - 12, rh - 3, team, mine ? 0.35 : 0.18);
+      const icon = s.commander ? null : this.portraits?.icon(s.hero);
+      const isz = rh - 5;
+      if (icon) ctx.drawImage(icon, rx + 8, y + 1, isz, isz);
+      const who = mine ? "YOU" : s.cpu ? "CPU" : s.remote === 0 ? s.name ?? "HOST" : s.name ?? "GUEST";
+      drawPlain(ctx, `P${i + 1} ${who}`, rx + 12 + isz, y + 2, mine ? "#8a1810" : "#3a2410", 0.6, true);
+      const hero = s.commander ? "COMMANDER" : this.heroes[s.hero]?.name ?? s.hero.toUpperCase();
+      drawPlain(ctx, hero, rx + 12 + isz, y + 11, "#3a2410", 0.58, true);
+      const st = s.cpu ? "" : s.ready ? "READY" : "CHOOSING";
+      if (st) drawPlain(ctx, st, rx + rw - 10 - textWidth(st, 0.55, true), y + 6, s.ready ? "#2a6a18" : "#8a6a30", 0.55, true);
+      if (mine && !s.ready && !s.commander) {
+        goldArrow(ctx, rx + 5, y + rh / 2 - 1, -1, 4);
+        goldArrow(ctx, rx + rw - 5, y + rh / 2 - 1, 1, 4);
+      }
+    });
+    const status = lb.status || (lb.phase === "match" ? "A MATCH IS UNDER WAY · YOU'LL JOIN THE NEXT ONE" : "WAITING FOR THE HOST TO START");
+    if (blink || !lb.status) center(ctx, W, status, ty + lh + 8, "#f0e4c8", 0.72);
+    const it: [string, string][] = [["A", "READY"], ["B", "LEAVE"]];
+    const pw = promptWidth(it, 0.75);
+    const hint = "STICK: CHAMPION";
+    drawText(ctx, hint, Math.round((W - pw - textWidth(hint, 0.7) - 10) / 2), H - 16, "#f0e4c8", 0.7);
+    prompt(ctx, Math.round((W - pw + textWidth(hint, 0.7) + 10) / 2), H - 17, it, 0.75);
   }
 
   private drawSelect(ctx: CanvasRenderingContext2D, W: number, H: number, _now: number, blink: boolean): void {

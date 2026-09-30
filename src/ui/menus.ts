@@ -6,7 +6,7 @@ import type { Hit, MenuCursors } from "./cursor";
 import type { Portraits } from "./portraits";
 import { DEFAULT_OPTIONS, DEFAULT_RULES, MAX_TAG, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
 
-export type Page = "main" | "rules" | "options" | "records" | "controls";
+export type Page = "main" | "network" | "rules" | "options" | "records" | "controls";
 export interface Nav {
   dx: number;
   dy: number;
@@ -21,7 +21,7 @@ export interface Pointer {
   click: boolean;
   right: boolean;
 }
-export type MenuResult = "fight" | "title" | "options" | null;
+export type MenuResult = "fight" | "title" | "options" | "host" | "join" | "leave" | null;
 
 const INK = "#0b0806";
 const BROWN = "#3a2410";
@@ -29,12 +29,13 @@ const LIGHT = "#f8e8c0";
 const TEAM_TEXT = ["#1c3aa8", "#a81c1c"];
 const ITEMS = [
   { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, OR TWO AGAINST TWO WITH COMMANDERS." },
+  { art: "m_network", label: "VERSUS ONLINE", blurb: "PLAY OVER THE HOUSE NETWORK. ONE MACHINE HOSTS, FRIENDS OPEN ITS PAGE AND JOIN." },
   { art: "m_rules", label: "RULES", blurb: "SET THE TERMS OF COMBAT: TIME, GOLD, SOLDIERS AND MERCY." },
   { art: "m_records", label: "RECORDS", blurb: "EVERY VICTORY AND DEFEAT, WRITTEN DOWN BY NAME AND BY CHAMPION." },
   { art: "m_options", label: "OPTIONS", blurb: "MUSIC, SOUND, SCREEN SHAKE AND BUTTON HINTS." },
   { art: "m_controls", label: "CONTROLS", blurb: "HOW TO FIGHT, BUILD AND COMMAND YOUR ARMY." },
 ];
-const PAGES: Page[] = ["main", "rules", "records", "options", "controls"];
+const PAGES: Page[] = ["main", "network", "rules", "records", "options", "controls"];
 const TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".split("");
 
@@ -115,6 +116,7 @@ export class Menus {
 
   private rowCount(): number {
     if (this.page === "main") return ITEMS.length;
+    if (this.page === "network") return 2;
     if (this.page === "rules") return RULE_ROWS.length + 1;
     if (this.page === "options") return OPTION_ROWS.length + 2;
     if (this.page === "records") return this.tab === 0 ? this.roster.length : this.tab === 1 ? this.save.tagNames().length : this.save.data.log.length;
@@ -157,6 +159,10 @@ export class Menus {
     if (nav.a) act = "a";
     if (nav.b || ptr.right || act === "back") {
       sound("back");
+      if (this.page === "network" && this.netBusy) {
+        this.netBusy = false;
+        return "leave";
+      }
       if (this.page === "main") return "title";
       const from = this.page;
       this.page = "main";
@@ -173,6 +179,13 @@ export class Menus {
         this.tab = 0;
         this.scrollTop = 0;
         this.confirm = "";
+      }
+      return null;
+    }
+    if (this.page === "network") {
+      if (act === "a" && !this.netBusy) {
+        sound("ok");
+        return this.focus === 0 ? "host" : "join";
       }
       return null;
     }
@@ -235,7 +248,8 @@ export class Menus {
       wall(ctx, W, H);
       woodFloor(ctx, H - 22, W, H);
       beam(ctx, 4, 2, W - 8, 17);
-      if (this.page === "rules") this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, ["RESTORE DEFAULTS"]);
+      if (this.page === "network") this.drawNetwork(ctx, W, H, now);
+      else if (this.page === "rules") this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, ["RESTORE DEFAULTS"]);
       else if (this.page === "options") this.drawRows(ctx, W, H, "m_options", "OPTIONS", OPTION_ROWS as Row<object>[], this.save.data.options, ["RESTORE DEFAULTS", "ERASE ALL RECORDS"]);
       else if (this.page === "records") this.drawRecords(ctx, W, H);
       else this.drawControls(ctx, W, H);
@@ -275,6 +289,42 @@ export class Menus {
       drawPlain(ctx, t, rcx - textWidth(t, 0.52) / 2, sy + 47, "#8a1810", 0.52);
     }
     const p: [string, string][] = [["A", "SELECT"], ["B", "BACK"]];
+    prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
+  }
+
+  netStatus = "";
+  netBusy = false;
+  netAddrs: string[] = [];
+
+  private drawNetwork(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
+    artTitle(ctx, "m_network", "VERSUS ONLINE", W / 2, 3, 14);
+    const pw = Math.min(260, W - 40);
+    const px = Math.round((W - pw) / 2);
+    const py = 30;
+    const opts: [string, string, string][] = [
+      ["t_host", "HOST A BATTLE", "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS."],
+      ["t_join", "JOIN A BATTLE", "JOIN THE MACHINE THAT SERVED THIS PAGE. YOU WILL SEE ITS RULES BEFORE THE FIGHT."],
+    ];
+    opts.forEach(([art, label, blurb], k) => {
+      const y = py + k * 46;
+      const hot = k === this.focus;
+      band(ctx, px + 2, y + 2, pw, 40, INK, 0.4);
+      ctx.fillStyle = INK;
+      ctx.fillRect(px - 1, y - 1, pw + 2, 42);
+      texturedRect(ctx, "stone", px, y, pw, 40, hot ? "#e8c070" : "#9a9080", 0, 0.5);
+      artWord(ctx, art, label, W / 2 + (hot ? 3 : 0), y + 4, hot ? 17 : 15, hot ? 1 : 0.7);
+      if (hot) goldArrow(ctx, px + 12, y + 12, 1, 5);
+      wrap(blurb, pw - 24, 0.52).slice(0, 2).forEach((l, j) => drawText(ctx, l, W / 2 - textWidth(l, 0.52) / 2, y + 23 + j * 7, hot ? "#fff0c8" : "#d8ccb0", 0.52));
+      this.hit(`row:${k}`, px, y, pw, 40);
+    });
+    const sy = py + 96;
+    const lines = [this.netStatus, ...this.netAddrs.map((a) => `FRIENDS OPEN  http://${a}`)].filter(Boolean);
+    if (lines.length) {
+      const sh = 12 + lines.length * 9;
+      parchment(ctx, px, sy, pw, sh);
+      lines.forEach((l, j) => drawPlain(ctx, l, W / 2 - textWidth(l, 0.58) / 2, sy + 6 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
+    }
+    const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "SELECT"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
