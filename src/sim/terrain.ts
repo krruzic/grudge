@@ -33,6 +33,7 @@ export interface CellOp extends Rect {
   op: "wall" | "water" | "ford" | "bridge" | "dirt" | "paving" | "grass" | "pit";
   style?: string;
   y?: number;
+  deep?: boolean;
 }
 
 export type MapOp = ShapeOp | NoiseOp | CellOp;
@@ -84,6 +85,7 @@ export enum Kind {
 export const FLAG_DIRT = 1;
 export const FLAG_PAVING = 2;
 export const FLAG_GRASS = 4;
+export const FLAG_DEEP = 8;
 
 function smooth(t: number): number {
   t = Math.min(1, Math.max(0, t));
@@ -180,7 +182,7 @@ export class Terrain {
           switch (op.op) {
             case "wall": this.kinds[i] = Kind.Wall; this.styles[i] = op.style ?? "castle"; break;
             case "pit": this.kinds[i] = Kind.Wall; this.styles[i] = "pit"; break;
-            case "water": this.kinds[i] = Kind.Water; break;
+            case "water": this.kinds[i] = Kind.Water; if (op.deep) this.flags[i] |= FLAG_DEEP; break;
             case "ford": this.kinds[i] = Kind.Ford; break;
             case "bridge": this.kinds[i] = Kind.Bridge; this.deck[i] = op.y ?? 0; this.styles[i] = op.style ?? "wood"; break;
             case "dirt": this.flags[i] |= FLAG_DIRT; break;
@@ -304,8 +306,10 @@ export class Terrain {
     const cx = Math.floor(x);
     const cz = Math.floor(z);
     const kind = this.kindAt(cx, cz);
-    if (kind === Kind.Wall || kind === Kind.Water || kind === Kind.Prop) return Number.POSITIVE_INFINITY;
+    if (kind === Kind.Wall || kind === Kind.Prop) return Number.POSITIVE_INFINITY;
     if (kind === Kind.Bridge) return this.deck[this.index(cx, cz)];
+    if (kind === Kind.Water && (this.flags[this.index(cx, cz)] & FLAG_DEEP)) return Number.POSITIVE_INFINITY;
+    if (kind === Kind.Water) return Math.max(this.groundHeight(x, z), this.waterLevel - 0.35);
     return this.groundHeight(x, z);
   }
 

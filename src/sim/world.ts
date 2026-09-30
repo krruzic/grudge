@@ -745,7 +745,9 @@ export class World {
     if (this.time < s.buffUntil) m *= s.buffSpeedMul;
     const cx = Math.floor(e.transform.pos.x);
     const cz = Math.floor(e.transform.pos.z);
-    if (this.terrain.kindAt(cx, cz) === Kind.Ford) m *= this.data.match.terrain.fordSpeedMul;
+    const kind = this.terrain.kindAt(cx, cz);
+    if (kind === Kind.Ford) m *= this.data.match.terrain.fordSpeedMul;
+    else if (kind === Kind.Water) m *= this.data.match.terrain.fordSpeedMul * 0.8;
     if (e.hero) m *= this.pacingMul(e);
     if (e.unit) {
       const def = this.data.units.types[e.unit.type];
@@ -809,7 +811,7 @@ export class World {
     const maxSlope = e.hero?.maxSlope ?? b.maxSlope;
     const hc = this.terrain.heightAt(x, z);
     if (!Number.isFinite(hc)) return false;
-    const falling = this.knocked && hc < e.transform.y - step;
+    const falling = (this.knocked || !!e.hero) && hc < e.transform.y - step;
     if (!falling && Math.abs(hc - e.transform.y) > step) return false;
     if (!falling && this.terrain.slopeAt(x, z) > maxSlope && !(hc < e.transform.y - 0.01)) return false;
     return !this.hitsStructure(e, x, z);
@@ -910,7 +912,7 @@ export class World {
       t.pos.z = z;
       this.pushOut(e);
       const h = this.terrain.heightAt(t.pos.x, t.pos.z);
-      if (!Number.isFinite(h) || (Math.abs(h - t.y) > (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) + 0.05 && !(this.knocked && h < t.y))) {
+      if (!Number.isFinite(h) || (Math.abs(h - t.y) > (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) + 0.05 && !((this.knocked || !!e.hero) && h < t.y))) {
         t.pos.x = ox;
         t.pos.z = oz;
         return false;

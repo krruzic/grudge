@@ -58,7 +58,7 @@ export class NavGrid {
       }
     }
     this.walk[i] = ok ? 1 : 0;
-    this.cost[i] = t.kinds[i] === Kind.Ford ? 1.8 : 1;
+    this.cost[i] = t.kinds[i] === Kind.Ford ? 1.8 : t.kinds[i] === Kind.Water ? 3.5 : 1;
   }
 
   recompute(cells: number[]): void {
