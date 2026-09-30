@@ -368,6 +368,9 @@ export class Screens {
       for (const [i, bx] of [[2, 14], [3, W - 14 - 40]] as const) {
         rolledBanner(ctx, bx, by, 40);
         this.portraits?.drop(i);
+        const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `add:${i}`);
+        for (const [line, dy] of [["+ ADD", 17], ["CPU", 25]] as const) shadowText(ctx, line, bx + 20 - textWidth(line, 0.55) / 2, by + dy, hot ? "#fff4b0" : "#c8bca0", 0.55);
+        this.hit(`add:${i}`, bx - 2, by - 2, 44, 38);
       }
       const t = this.heroPartners ? "2 VS 2: FOUR CHAMPIONS" : "COMMANDERS: 2 VS 2";
       shadowText(ctx, t, W / 2 - textWidth(t, 0.5) / 2, floorY - 11, "#b8b0a0", 0.5);
@@ -429,6 +432,12 @@ export class Screens {
     if (!s || !active) {
       rolledBanner(ctx, x, y, w);
       this.portraits?.drop(i);
+      if (s) {
+        const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `add:${i}`);
+        const t = "+ ADD CPU";
+        shadowText(ctx, t, x + w / 2 - textWidth(t, 0.55) / 2, y + 18, hot ? "#fff4b0" : "#c8bca0", 0.55);
+        this.hit(`add:${i}`, x, y - 2, w, 30);
+      }
       return;
     }
     const commander = i >= 2 && !this.heroPartners;

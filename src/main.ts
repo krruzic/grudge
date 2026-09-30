@@ -699,6 +699,9 @@ async function start(): Promise<void> {
           if (id === "mode") {
             setMode(!twoVtwo);
             audio.ui("ok");
+          } else if (id === "add") {
+            setMode(true);
+            audio.ui("ok");
           } else if (id === "camera") {
             const order = [1, 2, 0];
             save.data.options.split = order[(order.indexOf(save.data.options.split) + 1) % order.length];
