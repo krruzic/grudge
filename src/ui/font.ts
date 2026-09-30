@@ -160,6 +160,30 @@ export function onHiLayer(ctx: CanvasRenderingContext2D, fn: (c: CanvasRendering
   hiCtx.restore();
 }
 
+const SOFT = 2.2;
+const soft = new Map<HTMLCanvasElement, Map<number, HTMLCanvasElement>>();
+function softened(c: HTMLCanvasElement, k: number): HTMLCanvasElement {
+  const key = Math.round(k * 20);
+  let byK = soft.get(c);
+  if (!byK) {
+    if (soft.size > 1500) soft.clear();
+    byK = new Map();
+    soft.set(c, byK);
+  }
+  let o = byK.get(key);
+  if (!o) {
+    o = document.createElement("canvas");
+    o.width = Math.max(1, Math.round((c.width / HK) * k * SOFT));
+    o.height = Math.max(1, Math.round((c.height / HK) * k * SOFT));
+    const g = o.getContext("2d")!;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(c, 0, 0, o.width, o.height);
+    byK.set(key, o);
+  }
+  return o;
+}
+
 function blit(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale: number, edge: boolean, shadow: boolean): void {
   if (!fillMask || !s) return;
   const c = render(s, color, edge, shadow);
@@ -170,7 +194,7 @@ function blit(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, co
     const q = t.imageSmoothingQuality;
     t.imageSmoothingEnabled = true;
     t.imageSmoothingQuality = "high";
-    t.drawImage(c, x - PADX * k, y - PADY * k - 0.5 * scale, (c.width / HK) * k, (c.height / HK) * k);
+    t.drawImage(softened(c, k), x - PADX * k, y - PADY * k - 0.5 * scale, (c.width / HK) * k, (c.height / HK) * k);
     t.imageSmoothingEnabled = smooth;
     t.imageSmoothingQuality = q;
   });
