@@ -83,6 +83,8 @@ export interface HeroState {
   openingUntil: number;
   combatAt: number;
   actionEndAt: number;
+  bomb: boolean;
+  aim: { x: number; z: number; until: number } | null;
 }
 
 export interface UnitState {
@@ -117,6 +119,9 @@ export interface StructureState {
   damage: number;
   lastFireAt: number;
   shielded: boolean;
+  ward?: number;
+  progress?: number;
+  upgrading?: boolean;
   siege?: { cooldown: number; vs: Partial<Record<string, number>>; modId: number };
 }
 
@@ -217,6 +222,7 @@ export interface Pad {
   zone: PadZone;
   side: number;
   structureId: number;
+  rubbleUntil: number;
 }
 
 export interface TeamDirectives {
@@ -242,7 +248,10 @@ export interface TeamState {
   commanderOrderAt: number;
   banner: { x: number; z: number; until: number } | null;
   callReadyAt: number;
+  wardReadyAt: number;
 }
+
+export type ShopItem = "bomb" | "ward" | "cannon";
 
 export interface Command {
   moveX: number;
@@ -255,6 +264,8 @@ export interface Command {
   super?: boolean;
   build?: StructureType | "default" | "upgrade";
   call?: UnitType;
+  buy?: ShopItem;
+  aimAt?: Vec2;
   directive?: { type: UnitType | "all"; dir: Directive };
 }
 
@@ -282,6 +293,8 @@ export type SimEvent =
   | { type: "cannonWarn"; x: number; y: number; z: number; radius: number; seconds: number }
   | { type: "cannonHit"; x: number; y: number; z: number; radius: number }
   | { type: "relic"; state: "taken" | "dropped" | "delivered" | "cracked" | "home"; team: number; player: number; x: number; y: number; z: number }
+  | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean }
+  | { type: "bomb"; state: "planted" | "boom"; x: number; y: number; z: number; team: number; fuse: number }
   | { type: "shove"; x: number; y: number; z: number; team: number }
   | { type: "fall"; x: number; y: number; z: number }
   | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };

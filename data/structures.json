@@ -1,7 +1,7 @@
 {
   "notes": "Costs, stats and upgrade multipliers. Tower range comes from the pad zone (zoneRange) times the type's rangeMul.",
   "padRadius": 3.2,
-  "buildSeconds": 2.5,
+  "buildSeconds": 10,
   "buildStartHpFrac": 0.3,
   "structureRadius": 1.3,
   "zoneRange": {
@@ -10,8 +10,9 @@
     "neutral": 11.5
   },
   "core": {
-    "hp": 2500,
-    "radius": 1.8
+    "hp": 4000,
+    "radius": 1.8,
+    "ward": 1500
   },
   "types": {
     "damage": {
@@ -19,9 +20,9 @@
       "class": "tower",
       "cost": 100,
       "upgradeCost": 75,
-      "hp": 750,
+      "hp": 620,
       "rangeMul": 1.0,
-      "damage": 55,
+      "damage": 34,
       "cooldown": 1.1,
       "projectile": {
         "speed": 24,
@@ -32,12 +33,12 @@
         "grunt": 0.45,
         "ranged": 1.0,
         "heavy": 1.0,
-        "hero": 1.4,
+        "hero": 0.8,
         "structure": 0
       },
       "upgrade": {
         "hp": 1.4,
-        "damage": 1.5
+        "damage": 1.3
       }
     },
     "control": {
@@ -124,5 +125,13 @@
       }
     }
   },
-  "towerLimit": 3
+  "towerLimit": 3,
+  "upgradeSeconds": 12,
+  "rubbleSeconds": 20,
+  "builderRadius": 3.6,
+  "builderRates": {
+    "hero": 1.0,
+    "unit": 0.4,
+    "max": 2.0
+  }
 }

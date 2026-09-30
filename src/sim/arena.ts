@@ -1,5 +1,5 @@
 import type { World } from "./world.ts";
-import type { Entity, UnitType, Vec2 } from "./types.ts";
+import type { Entity, ShopItem, UnitType, Vec2 } from "./types.ts";
 import { spawnUnit } from "./structures.ts";
 import { moveToward } from "./units.ts";
 
@@ -12,6 +12,7 @@ export interface Relic {
   since: number;
   lockId: number;
   lockUntil: number;
+  channel: number;
 }
 
 export interface CannonShot {
@@ -21,6 +22,17 @@ export interface CannonShot {
   at: number;
   warnAt: number;
   radius: number;
+  team: number;
+}
+
+export interface Bomb {
+  x: number;
+  z: number;
+  y: number;
+  targetId: number;
+  ownerId: number;
+  team: number;
+  at: number;
 }
 
 export const NEUTRAL = 2;
@@ -29,9 +41,12 @@ export class Arena {
   readonly home: Vec2;
   readonly relic: Relic;
   readonly shots: CannonShot[] = [];
+  readonly bombs: Bomb[] = [];
   private nextCannon: number;
   private nextOgre: number;
+  private nextWave: number;
   ogreId = 0;
+  private crackNoticeAt = -99;
 
   constructor(private w: World) {
     const cores = w.terrain.cores;
@@ -40,9 +55,10 @@ export class Arena {
     this.home = this.snap((a.x + b.x) / 2, (a.z + b.z) / 2);
     w.nav.setBlocked(this.home.x, this.home.z, 1.2, true);
     const cfg = w.data.match.arena;
-    this.relic = { state: "waiting", x: this.home.x, z: this.home.z, y: w.groundY(this.home.x, this.home.z), carrier: 0, since: cfg.relic.firstSeconds, lockId: 0, lockUntil: 0 };
+    this.relic = { state: "waiting", x: this.home.x, z: this.home.z, y: w.groundY(this.home.x, this.home.z), carrier: 0, since: cfg.relic.firstSeconds, lockId: 0, lockUntil: 0, channel: 0 };
     this.nextCannon = cfg.cannon.firstSeconds;
     this.nextOgre = cfg.ogre.firstSeconds;
+    this.nextWave = w.data.units.waves.firstSeconds;
   }
 
   private snap(x: number, z: number): Vec2 {
@@ -60,6 +76,46 @@ export class Arena {
     this.updateRelic();
     this.updateCannon();
     this.updateOgreSpawn();
+    this.updateWaves();
+    this.updateBombs();
+  }
+
+  private updateWaves(): void {
+    const w = this.w;
+    const wv = w.data.units.waves;
+    if (w.time < this.nextWave) return;
+    this.nextWave = w.time + wv.everySeconds;
+    const grow = 1 + wv.growPerMinute * (w.time / 60);
+    for (let team = 0; team < 2; team++) {
+      const ts = w.teams[team];
+      const core = w.core(team);
+      if (!core) continue;
+      const list: { type: UnitType; from: Entity; stat: number }[] = wv.core.map((type) => ({ type, from: core, stat: grow }));
+      for (const o of w.entities) {
+        if (!o.alive || o.team !== team || !o.structure?.ready || o.structure.type === "core") continue;
+        const def = w.data.structures.types[o.structure.type];
+        if (def.class !== "production" || !def.unit) continue;
+        const up = o.structure.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
+        for (let k = 0; k < o.structure.level; k++) list.push({ type: def.unit, from: o, stat: grow * up });
+      }
+      let n = 0;
+      for (const item of list) {
+        if (ts.unitCount >= w.data.units.popCap) break;
+        const p = this.frontOf(item.from, team, n++);
+        spawnUnit(w, team, item.type, p.x, p.z, item.stat);
+      }
+    }
+  }
+
+  private frontOf(from: Entity, team: number, i: number): Vec2 {
+    const w = this.w;
+    const enemy = w.core(1 - team);
+    const dx = (enemy?.transform.pos.x ?? w.terrain.width / 2) - from.transform.pos.x;
+    const dz = (enemy?.transform.pos.z ?? w.terrain.depth / 2) - from.transform.pos.z;
+    const dl = Math.hypot(dx, dz) || 1;
+    const out = from.radius + 1.6;
+    const side = ((i % 3) - 1) * 0.9;
+    return { x: from.transform.pos.x + (dx / dl) * out - (dz / dl) * side, z: from.transform.pos.z + (dz / dl) * out + (dx / dl) * side };
   }
 
   private updateRelic(): void {
@@ -86,7 +142,17 @@ export class Arena {
       r.z = c.transform.pos.z;
       r.y = c.transform.y;
       const core = w.core(1 - c.team);
-      if (core && w.dist(c, core) <= core.radius + cfg.deliverReach) this.deliver(c, core);
+      if (core && w.dist(c, core) <= core.radius + cfg.deliverReach) {
+        if (r.channel === 0 && w.time - this.crackNoticeAt > 4) {
+          this.crackNoticeAt = w.time;
+          w.emit({ type: "notice", team: -1, text: `P${c.hero!.player + 1} IS CRACKING THE KEEP!` });
+        }
+        r.channel += w.dt;
+        if (r.channel >= cfg.channelSeconds) {
+          r.channel = 0;
+          this.deliver(c, core);
+        }
+      } else r.channel = 0;
       return;
     }
     if (r.state === "dropped" && w.time - r.since > cfg.returnSeconds) {
@@ -126,6 +192,7 @@ export class Arena {
     if (r.state !== "carried") return;
     const p = this.snap(x, z);
     r.state = "dropped";
+    r.channel = 0;
     r.x = p.x;
     r.z = p.z;
     r.y = w.groundY(p.x, p.z);
@@ -144,7 +211,7 @@ export class Arena {
     const enemy = core.team;
     const cp = core.transform;
     if (core.structure!.shielded && !w.isSudden()) {
-      w.teams[enemy].homeLost = true;
+      core.structure!.ward = 0;
       core.structure!.shielded = false;
       w.emit({ type: "relic", state: "cracked", team: c.team, player: c.hero!.player, x: cp.pos.x, y: cp.y, z: cp.pos.z });
       w.emit({ type: "notice", team: -1, text: "SHIELD CRACKED!" });
@@ -186,7 +253,7 @@ export class Arena {
         if (used.some((u) => Math.hypot(u.x - p.x, u.z - p.z) < cfg.radius * 1.4)) continue;
         used.push(p);
         const at = w.time + cfg.warnSeconds + i * cfg.spacing;
-        const shot = { x: p.x, z: p.z, y: w.groundY(p.x, p.z), at, warnAt: w.time, radius: cfg.radius };
+        const shot = { x: p.x, z: p.z, y: w.groundY(p.x, p.z), at, warnAt: w.time, radius: cfg.radius, team: -1 };
         this.shots.push(shot);
         w.emit({ type: "cannonWarn", x: shot.x, y: shot.y, z: shot.z, radius: shot.radius, seconds: at - w.time });
       }
@@ -198,7 +265,7 @@ export class Arena {
       this.shots.splice(i, 1);
       w.emit({ type: "cannonHit", x: s.x, y: s.y, z: s.z, radius: s.radius });
       for (const o of w.entities.slice()) {
-        if (!o.alive) continue;
+        if (!o.alive || o.team === s.team) continue;
         const d = Math.hypot(o.transform.pos.x - s.x, o.transform.pos.z - s.z) - o.radius;
         if (d > s.radius) continue;
         const k = 1 - Math.max(0, d) / s.radius * 0.5;
@@ -241,6 +308,140 @@ export class Arena {
     this.ogreId = e.id;
     w.emit({ type: "spawn", id: e.id });
     w.emit({ type: "notice", team: -1, text: "THE OGRE WAKES!" });
+  }
+
+  inShop(e: Entity): boolean {
+    const core = this.w.core(e.team);
+    return !!core && this.w.dist(e, core) <= core.radius + this.w.data.match.arena.shop.radius;
+  }
+
+  buy(hero: Entity, item: ShopItem, aimAt?: Vec2): boolean {
+    const w = this.w;
+    const team = hero.team;
+    const ts = w.teams[team];
+    const sh = w.data.match.arena.shop;
+    const h = hero.hero!;
+    if (!this.inShop(hero)) {
+      w.emit({ type: "notice", team, text: "SHOP IS AT YOUR KEEP" });
+      return false;
+    }
+    const pay = (cost: number) => {
+      const c = Math.round(cost * w.costMul());
+      if (ts.resource < c) {
+        w.emit({ type: "notice", team, text: `NEED ${c}` });
+        return false;
+      }
+      ts.resource -= c;
+      return true;
+    };
+    if (item === "bomb") {
+      if (h.bomb) {
+        w.emit({ type: "notice", team, text: "ALREADY CARRYING A BOMB" });
+        return false;
+      }
+      if (!pay(sh.bomb.cost)) return false;
+      h.bomb = true;
+      w.emit({ type: "notice", team, text: "BOMB! TOUCH AN ENEMY TOWER" });
+      return true;
+    }
+    if (item === "ward") {
+      const core = w.core(team)!;
+      const st = core.structure!;
+      if (w.isSudden()) {
+        w.emit({ type: "notice", team, text: "NO SHIELDS IN SUDDEN DEATH" });
+        return false;
+      }
+      if (w.time < ts.wardReadyAt) {
+        w.emit({ type: "notice", team, text: `SHIELD READY IN ${Math.ceil(ts.wardReadyAt - w.time)}` });
+        return false;
+      }
+      if ((st.ward ?? 0) >= w.data.structures.core.ward) {
+        w.emit({ type: "notice", team, text: "SHIELD IS FULL" });
+        return false;
+      }
+      if (!pay(sh.ward.cost)) return false;
+      st.ward = w.data.structures.core.ward;
+      st.shielded = true;
+      ts.wardReadyAt = w.time + sh.ward.cooldown;
+      w.emit({ type: "pulse", x: core.transform.pos.x, y: core.transform.y, z: core.transform.pos.z, radius: 4, team });
+      w.emit({ type: "notice", team, text: "SHIELD RESTORED" });
+      return true;
+    }
+    const cost = Math.round(sh.cannon.cost * w.costMul());
+    if (ts.resource < cost) {
+      w.emit({ type: "notice", team, text: `NEED ${cost}` });
+      return false;
+    }
+    if (aimAt) return this.fireStrike(hero, aimAt.x, aimAt.z);
+    const f = hero.transform.facing;
+    h.aim = { x: hero.transform.pos.x + Math.sin(f) * 8, z: hero.transform.pos.z + Math.cos(f) * 8, until: w.time + sh.cannon.aimSeconds };
+    return true;
+  }
+
+  fireStrike(hero: Entity, x: number, z: number): boolean {
+    const w = this.w;
+    const sh = w.data.match.arena.shop.cannon;
+    const ts = w.teams[hero.team];
+    const cost = Math.round(sh.cost * w.costMul());
+    if (ts.resource < cost) {
+      w.emit({ type: "notice", team: hero.team, text: `NEED ${cost}` });
+      return false;
+    }
+    ts.resource -= cost;
+    const warn = w.data.match.arena.cannon.warnSeconds;
+    for (let i = 0; i < sh.shots; i++) {
+      const a = (i / sh.shots) * Math.PI * 2 + w.rng();
+      const r = i === 0 ? 0 : sh.spread * (0.5 + w.rng() * 0.5);
+      const p = this.snap(Math.max(1, Math.min(w.terrain.width - 1, x + Math.cos(a) * r)), Math.max(1, Math.min(w.terrain.depth - 1, z + Math.sin(a) * r)));
+      const at = w.time + warn + i * 0.3;
+      const shot = { x: p.x, z: p.z, y: w.groundY(p.x, p.z), at, warnAt: w.time, radius: sh.radius, team: hero.team };
+      this.shots.push(shot);
+      w.emit({ type: "cannonWarn", x: shot.x, y: shot.y, z: shot.z, radius: shot.radius, seconds: at - w.time });
+    }
+    w.emit({ type: "notice", team: -1, text: `P${hero.hero!.player + 1} CALLS CANNON FIRE!` });
+    return true;
+  }
+
+  private updateBombs(): void {
+    const w = this.w;
+    const sh = w.data.match.arena.shop.bomb;
+    for (const p of w.players) {
+      const e = w.get(p.heroId);
+      if (!e?.hero?.bomb || !e.alive) continue;
+      for (const o of w.entities) {
+        if (!o.alive || !o.structure || o.team === e.team || o.neutral || o.structure.siege) continue;
+        if (w.dist(e, o) - o.radius - e.radius > sh.plantReach) continue;
+        const dx = e.transform.pos.x - o.transform.pos.x;
+        const dz = e.transform.pos.z - o.transform.pos.z;
+        const dl = Math.hypot(dx, dz) || 1;
+        const bx = o.transform.pos.x + (dx / dl) * (o.radius + 0.2);
+        const bz = o.transform.pos.z + (dz / dl) * (o.radius + 0.2);
+        this.bombs.push({ x: bx, z: bz, y: w.groundY(bx, bz), targetId: o.id, ownerId: e.id, team: e.team, at: w.time + sh.fuse });
+        e.hero.bomb = false;
+        w.emit({ type: "bomb", state: "planted", x: bx, y: w.groundY(bx, bz), z: bz, team: e.team, fuse: sh.fuse });
+        w.emit({ type: "notice", team: 1 - e.team, text: "BOMB ON YOUR TOWER!" });
+        break;
+      }
+    }
+    for (let i = this.bombs.length - 1; i >= 0; i--) {
+      const b = this.bombs[i];
+      if (w.time < b.at) continue;
+      this.bombs.splice(i, 1);
+      const owner = w.get(b.ownerId) ?? null;
+      w.emit({ type: "bomb", state: "boom", x: b.x, y: b.y, z: b.z, team: b.team, fuse: 0 });
+      w.emit({ type: "cannonHit", x: b.x, y: b.y, z: b.z, radius: 3.4 });
+      const t = w.get(b.targetId);
+      if (t?.alive && t.structure) {
+        if (t.structure.type === "core") w.damage(owner, t, sh.coreDamage, { big: true, structureDamage: sh.coreDamage });
+        else w.damage(owner, t, t.hp + t.maxHp, { big: true, structureDamage: t.hp + t.maxHp });
+      }
+      for (const o of w.entities.slice()) {
+        if (!o.alive || o.structure || o.team === b.team) continue;
+        const d = Math.hypot(o.transform.pos.x - b.x, o.transform.pos.z - b.z) - o.radius;
+        if (d > 3) continue;
+        w.damage(owner, o, 60, { knockback: 9, fromX: b.x, fromZ: b.z, big: true, stun: 0.3 });
+      }
+    }
   }
 
   callSquad(hero: Entity, type: UnitType): boolean {

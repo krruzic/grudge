@@ -66,7 +66,8 @@
       "returnSeconds": 14,
       "respawnSeconds": 20,
       "dropLockSeconds": 1.0,
-      "firstSeconds": 15
+      "firstSeconds": 45,
+      "channelSeconds": 2.5
     },
     "cannon": {
       "firstSeconds": 50,
@@ -93,6 +94,27 @@
       "knockback": 11,
       "bounty": 80,
       "leash": 16
+    },
+    "shop": {
+      "radius": 5,
+      "bomb": {
+        "cost": 180,
+        "fuse": 3,
+        "coreDamage": 350,
+        "plantReach": 1.4
+      },
+      "ward": {
+        "cost": 150,
+        "cooldown": 45
+      },
+      "cannon": {
+        "cost": 260,
+        "shots": 4,
+        "radius": 3.0,
+        "aimSpeed": 16,
+        "aimSeconds": 8,
+        "spread": 2.6
+      }
     }
   }
 }

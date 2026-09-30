@@ -14,7 +14,6 @@ const PLAN: PlanItem[] = [
   { zone: "home", type: "foundry" },
   { zone: "forward", type: "damage" },
   { zone: "neutral", type: "control" },
-  { zone: "neutral", type: "support" },
 ];
 
 export class Bot {
@@ -37,6 +36,8 @@ export class Bot {
   private wantDodge = false;
   private wantBlock = false;
   private callAt = 0;
+  private wantBuy: { item: "bomb" | "ward" | "cannon"; at?: Vec2 } | null = null;
+  private tend: Pad | null = null;
   private callIndex = 0;
 
   constructor(readonly player: number, private skill = 0.8, seed = 7) {
@@ -105,8 +106,14 @@ export class Bot {
     }
     if (this.buildPad && this.buildType && Math.hypot(this.buildPad.x - me.transform.pos.x, this.buildPad.z - me.transform.pos.z) < 2.2) {
       cmd.build = this.buildType;
+      this.tend = this.buildPad;
       this.buildPad = null;
       this.buildType = null;
+    }
+    if (this.wantBuy) {
+      cmd.buy = this.wantBuy.item;
+      cmd.aimAt = this.wantBuy.at;
+      this.wantBuy = null;
     }
     cmd.attack = this.wantAttack;
     cmd.secondary = this.wantB;
@@ -136,6 +143,8 @@ export class Bot {
     const dHero = ehAlive ? w.dist(me, enemyHero!) : Infinity;
     const lowHp = me.hp < me.maxHp * 0.3;
 
+    const shopDone = this.shop(w, me, !!ehAlive && dHero < 8);
+    if (shopDone) return;
     const relic = w.arena.relic;
     if (w.arena.carrying(me)) {
       const core = w.core(1 - me.team);
@@ -170,7 +179,7 @@ export class Bot {
       else if (this.rand() < 0.5) this.wantBlock = true;
     }
 
-    const nearby = w.enemiesNear(me, 7, (o) => o.kind !== "structure" || !(o.structure?.type === "core" && o.structure.shielded));
+    const nearby = w.enemiesNear(me, 7);
     const def = w.heroDef(h.type);
     const ab = def.abilities;
     const prefer = def.botRange ?? 1.8;
@@ -240,6 +249,14 @@ export class Bot {
     }
     this.fightId = 0;
 
+    if (this.tend) {
+      const st = this.tend.structureId ? w.get(this.tend.structureId) : undefined;
+      if (!st || st.team !== me.team || (st.structure!.ready && !st.structure!.upgrading) || (ehAlive && dHero < 7)) this.tend = null;
+      else {
+        this.goal = { x: this.tend.x + (me.team ? 1.4 : -1.4), z: this.tend.z };
+        return;
+      }
+    }
     if (!this.buildPad) this.pickBuild(w, me);
     if (this.buildPad) {
       const pad = this.buildPad;
@@ -288,13 +305,54 @@ export class Bot {
     return { x: best.transform.pos.x, z: best.transform.pos.z };
   }
 
+  private shop(w: World, me: Entity, threatened: boolean): boolean {
+    const sh = w.data.match.arena.shop;
+    const ts = w.teams[me.team];
+    const gold = ts.resource;
+    const h = me.hero!;
+    if (h.bomb && !threatened) {
+      let best: Entity | undefined;
+      let bd = Infinity;
+      for (const o of w.entities) {
+        if (!o.alive || !o.structure || o.team === me.team || o.neutral || o.structure.type === "core" || o.structure.siege) continue;
+        const d = w.dist(me, o);
+        if (d < bd) { bd = d; best = o; }
+      }
+      const target = best ?? w.core(1 - me.team);
+      if (target) {
+        this.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
+        return true;
+      }
+    }
+    const core = w.core(me.team)!;
+    const ward = (core.structure!.ward ?? 0) / w.data.structures.core.ward;
+    const wardOk = w.time >= ts.wardReadyAt && !w.isSudden();
+    const wantWard = wardOk && ward < 0.4 && gold >= sh.ward.cost;
+    const wantBomb = !h.bomb && gold >= sh.bomb.cost + 120 && w.entities.some((o) => o.alive && o.structure && o.team !== me.team && !o.neutral && o.structure.type !== "core");
+    const enemy = w.heroOf(1 - me.team);
+    const wantCannon = gold >= sh.cannon.cost + 150 && !!enemy?.alive;
+    if (!(wantWard || wantBomb || wantCannon)) return false;
+    if (w.arena.inShop(me)) {
+      if (wantWard) this.wantBuy = { item: "ward" };
+      else if (wantBomb) this.wantBuy = { item: "bomb" };
+      else if (enemy) this.wantBuy = { item: "cannon", at: { x: enemy.transform.pos.x, z: enemy.transform.pos.z } };
+      return false;
+    }
+    if (threatened) return false;
+    this.goal = { x: core.transform.pos.x + (me.team ? -2.5 : 2.5), z: core.transform.pos.z };
+    return true;
+  }
+
   private pickBuild(w: World, me: Entity): void {
     const res = w.teams[me.team].resource;
     const myCore = w.core(me.team)!;
+    const towers = w.entities.filter((o) => o.alive && o.team === me.team && o.structure && o.structure.type !== "core" && w.data.structures.types[o.structure.type].class === "tower").length;
+    const towerRoom = towers < w.data.structures.towerLimit;
     const pads = w.pads
-      .filter((p) => canBuildOn(p, me.team))
+      .filter((p) => canBuildOn(p, me.team) && w.time >= p.rubbleUntil)
       .sort((a, b) => Math.hypot(a.x - myCore.transform.pos.x, a.z - myCore.transform.pos.z) - Math.hypot(b.x - myCore.transform.pos.x, b.z - myCore.transform.pos.z));
     for (const item of PLAN) {
+      if (!towerRoom && w.data.structures.types[item.type].class === "tower") continue;
       const pad = pads.find((p) => p.zone === item.zone && !p.structureId);
       if (!pad) continue;
       if (res >= buildCost(w, item.type, false, me.team)) {
@@ -306,7 +364,7 @@ export class Bot {
     if (res >= 180) {
       for (const pad of pads) {
         const st = pad.structureId ? w.get(pad.structureId) : undefined;
-        if (st && st.team === me.team && st.structure!.level < 2 && st.structure!.ready) {
+        if (st && st.team === me.team && st.structure!.level < 2 && st.structure!.ready && !st.structure!.upgrading) {
           this.buildPad = pad;
           this.buildType = st.structure!.type as StructureType;
           return;

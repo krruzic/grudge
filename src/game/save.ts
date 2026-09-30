@@ -16,6 +16,7 @@ export interface Options {
   sound: number;
   shake: number;
   hints: number;
+  split: number;
 }
 
 export interface Record3 {
@@ -59,7 +60,7 @@ const onOff = (v: number) => (v ? "ON" : "OFF");
 export const RULE_ROWS: Row<Rules>[] = [
   { key: "minutes", label: "MATCH LENGTH", values: [3, 4, 6, 8, 10, 15], fmt: (v) => `${v} MIN`, blurb: "TIME BEFORE THE BELL TOLLS." },
   { key: "sudden", label: "SUDDEN DEATH", values: [0, 30, 60, 120], fmt: (v) => (v ? `${v} SEC` : "NONE"), blurb: "EXTRA TIME WHERE ALL IS CHEAPER AND DEADLIER." },
-  { key: "popCap", label: "SOLDIER CAP", values: [4, 6, 8, 10, 12], fmt: String, blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD." },
+  { key: "popCap", label: "SOLDIER CAP", values: [8, 12, 16, 20, 24], fmt: String, blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD." },
   { key: "startGold", label: "STARTING GOLD", values: [0, 100, 200, 400, 800], fmt: String, blurb: "GOLD IN THE COFFERS AT THE FIRST HORN." },
   { key: "goldRate", label: "GOLD RATE", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST THE COFFERS FILL." },
   { key: "respawn", label: "HERO RETURNS", values: [3, 6, 10, 15], fmt: (v) => `${v} SEC`, blurb: "HOW LONG A FALLEN CHAMPION STAYS DOWN." },
@@ -71,11 +72,12 @@ export const OPTION_ROWS: Row<Options>[] = [
   { key: "music", label: "MUSIC", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF THE MINSTRELS." },
   { key: "sound", label: "SOUND", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF STEEL AND SPELLS." },
   { key: "shake", label: "SCREEN SHAKE", values: [1, 0], fmt: onOff, blurb: "THE GROUND TREMBLES WHEN BLOWS LAND." },
+  { key: "split", label: "SPLIT SCREEN", values: [1, 0], fmt: onOff, blurb: "EACH PLAYER GETS THEIR OWN VIEW OF THE FIELD." },
   { key: "hints", label: "BUTTON HINTS", values: [1, 0], fmt: onOff, blurb: "SHOW BUILD HINTS ABOVE PADS." },
 ];
 
-export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 8, startGold: 200, goldRate: 1, respawn: 6, mercy: 1, partners: 1 };
-export const DEFAULT_OPTIONS: Options = { music: 7, sound: 8, shake: 1, hints: 1 };
+export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 16, startGold: 200, goldRate: 1, respawn: 6, mercy: 1, partners: 1 };
+export const DEFAULT_OPTIONS: Options = { music: 7, sound: 8, shake: 1, hints: 1, split: 1 };
 
 const KEY = "grudge.save.v1";
 const MAX_LOG = 30;

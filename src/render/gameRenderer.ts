@@ -18,6 +18,8 @@ export interface RenderConfig {
   pitchDeg: number;
   fovDeg: number;
   minViewWidth: number;
+  splitViewWidth: number;
+  splitNear: number;
   viewMargin: number;
   skyZenith: string;
   skyHorizon: string;
@@ -313,10 +315,17 @@ export class GameRenderer {
   }
 
   private updateCamera(points: THREE.Vector3[], dt: number): void {
+    const st = { focus: this.camFocus, width: this.camWidth, init: this.camInit };
+    this.aimCamera(this.camera, st, points, dt, this.cfg.minViewWidth);
+    this.camWidth = st.width;
+    this.camInit = st.init;
+  }
+
+  private aimCamera(cam: THREE.PerspectiveCamera, st: { focus: THREE.Vector3; width: number; init: boolean }, points: THREE.Vector3[], dt: number, minWidth: number): void {
     const cfg = this.cfg;
     const t = this.world.terrain;
     const pitch = THREE.MathUtils.degToRad(cfg.pitchDeg);
-    const aspect = this.camera.aspect;
+    const aspect = cam.aspect;
     const vHalf = THREE.MathUtils.degToRad(cfg.fovDeg) / 2;
     const hHalf = Math.atan(Math.tan(vHalf) * aspect);
 
@@ -329,7 +338,7 @@ export class GameRenderer {
     const depthToWidth = (aspect / Math.sin(pitch)) * 1.25;
     const need = Math.max(max.x - min.x, (max.z - min.z) * depthToWidth) + cfg.viewMargin;
     const fullMap = Math.max(t.width, t.depth * depthToWidth) + 4;
-    const width = THREE.MathUtils.clamp(need, cfg.minViewWidth, fullMap);
+    const width = THREE.MathUtils.clamp(need, minWidth, Math.max(minWidth, fullMap));
 
     if (width < t.width) focus.x = THREE.MathUtils.clamp(focus.x, width / 2, t.width - width / 2);
     else focus.x = t.width / 2;
@@ -337,21 +346,72 @@ export class GameRenderer {
     if (viewDepth < t.depth) focus.z = THREE.MathUtils.clamp(focus.z, viewDepth / 2, t.depth - viewDepth / 2);
     else focus.z = t.depth / 2;
 
-    const k = this.camInit ? 1 - Math.exp(-dt * 4) : 1;
-    this.camInit = true;
-    this.camFocus.lerp(focus, k);
-    this.camWidth += (width - this.camWidth) * k;
+    const k = st.init ? 1 - Math.exp(-dt * 4) : 1;
+    st.init = true;
+    st.focus.lerp(focus, k);
+    st.width += (width - st.width) * k;
 
-    const dist = this.camWidth / (2 * Math.tan(hHalf));
-    const lift = this.camWidth * 0.06;
-    const look = new THREE.Vector3(this.camFocus.x, this.camFocus.y, this.camFocus.z - lift);
-    this.camera.position.set(look.x, look.y + Math.sin(pitch) * dist, look.z + Math.cos(pitch) * dist);
-    this.camera.lookAt(look);
-    this.sky.position.copy(this.camera.position);
+    const dist = st.width / (2 * Math.tan(hHalf));
+    const lift = st.width * 0.06;
+    const look = new THREE.Vector3(st.focus.x, st.focus.y, st.focus.z - lift);
+    cam.position.set(look.x, look.y + Math.sin(pitch) * dist, look.z + Math.cos(pitch) * dist);
+    cam.lookAt(look);
+    cam.userData.fogNear = dist * cfg.fogNearFactor;
+    cam.userData.fogFar = dist * cfg.fogFarFactor;
+  }
 
+  splitOn = true;
+  private merged = false;
+  private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroId: number }[] = [];
+
+  get splitCount(): number {
+    return this.splitViews.length;
+  }
+
+  private syncSplit(): void {
+    const humans = this.splitOn ? this.world.players.filter((p) => this.humanList[p.player]) : [];
+    humans.sort((a, b) => (humans.length === 2 ? a.team - b.team : 0) || a.player - b.player);
+    const ids = humans.map((p) => p.heroId);
+    const pts = ids.map((id) => this.entityViews.heroPoint(id));
+    let spread = 0;
+    for (const a of pts) for (const b of pts) if (a && b) spread = Math.max(spread, a.distanceTo(b));
+    if (spread > this.cfg.splitNear + 2) this.merged = false;
+    else if (spread < this.cfg.splitNear - 3 && pts.every(Boolean)) this.merged = true;
+    const want = ids.length >= 2 && !this.merged ? ids : [];
+    if (want.length === this.splitViews.length && want.every((id, i) => this.splitViews[i].heroId === id)) return;
+    this.splitViews = want.map((heroId) => ({
+      cam: new THREE.PerspectiveCamera(this.cfg.fovDeg, 1, this.camera.near, this.camera.far),
+      st: { focus: new THREE.Vector3(), width: this.cfg.splitViewWidth, init: false },
+      heroId,
+    }));
+  }
+
+  private splitRects(w: number, h: number): [number, number, number, number][] {
+    const n = this.splitViews.length;
+    const hw = Math.floor(w / 2);
+    const hh = Math.floor(h / 2);
+    if (n === 2) return [[0, 0, hw, h], [hw, 0, w - hw, h]];
+    return [[0, hh, hw, h - hh], [hw, h - hh, w - hw, hh], [0, 0, hw, hh], [hw, 0, w - hw, hh]];
+  }
+
+  private drawScene(cam: THREE.PerspectiveCamera): void {
     const fog = this.scene.fog as THREE.Fog;
-    fog.near = dist * cfg.fogNearFactor;
-    fog.far = dist * cfg.fogFarFactor;
+    fog.near = cam.userData.fogNear ?? fog.near;
+    fog.far = cam.userData.fogFar ?? fog.far;
+    this.sky.position.copy(cam.position);
+    this.renderer.render(this.scene, cam);
+    const auto = this.renderer.autoClear;
+    this.renderer.autoClear = false;
+    const bg = this.scene.background;
+    for (let team = 0; team < this.silMats.length; team++) {
+      cam.layers.set(1 + team);
+      this.scene.overrideMaterial = this.silMats[team];
+      this.renderer.render(this.scene, cam);
+    }
+    this.scene.overrideMaterial = null;
+    this.scene.background = bg;
+    cam.layers.set(0);
+    this.renderer.autoClear = auto;
   }
 
   render(alpha: number, dt: number): void {
@@ -373,29 +433,60 @@ export class GameRenderer {
     this.combatFx.syncBanners(this.world, performance.now() / 1000);
     this.combatFx.update(dt);
     this.hazards.sync(this.time, dt);
-    this.updateCamera(this.entityViews.heroPoints(), dt);
-    if (this.combatFx.shake > 0) {
-      const s = this.combatFx.shake * 0.5 * this.shakeMul;
-      this.camera.position.x += (Math.random() - 0.5) * s;
-      this.camera.position.y += (Math.random() - 0.5) * s;
-    }
+    this.syncSplit();
+    const shake = (cam: THREE.PerspectiveCamera) => {
+      if (this.combatFx.shake <= 0) return;
+      const k = this.combatFx.shake * 0.5 * this.shakeMul;
+      cam.position.x += (Math.random() - 0.5) * k;
+      cam.position.y += (Math.random() - 0.5) * k;
+    };
     this.map.update(this.time);
     this.effects.update(this.time, dt);
-
     this.renderer.setRenderTarget(this.target);
-    this.renderer.render(this.scene, this.camera);
-    const auto = this.renderer.autoClear;
-    this.renderer.autoClear = false;
-    const bg = this.scene.background;
-    for (let team = 0; team < this.silMats.length; team++) {
-      this.camera.layers.set(1 + team);
-      this.scene.overrideMaterial = this.silMats[team];
-      this.renderer.render(this.scene, this.camera);
+    if (!this.splitViews.length) {
+      const asp = this.target.width / this.target.height;
+      if (Math.abs(this.camera.aspect - asp) > 1e-3) {
+        this.camera.aspect = asp;
+        this.camera.updateProjectionMatrix();
+      }
+      this.updateCamera(this.entityViews.heroPoints(), dt);
+      shake(this.camera);
+      this.drawScene(this.camera);
+    } else {
+      const tw = this.target.width;
+      const th = this.target.height;
+      const rects = this.splitRects(tw, th);
+      const all = this.entityViews.heroPoints();
+      this.renderer.setScissor(0, 0, tw, th);
+      this.renderer.setScissorTest(true);
+      this.renderer.clear();
+      rects.forEach(([x, y, w, h], i) => {
+        const sv = this.splitViews[i];
+        let cam: THREE.PerspectiveCamera;
+        if (sv) {
+          cam = sv.cam;
+          cam.aspect = w / h;
+          cam.updateProjectionMatrix();
+          const me = this.entityViews.heroPoint(sv.heroId);
+          const hero = this.world.getAny(sv.heroId);
+          const home = hero ? this.world.spawnPoint(hero.team) : { x: 0, z: 0 };
+          const pts = me ? [me, ...all.filter((p) => p.distanceTo(me) < this.cfg.splitNear)] : [new THREE.Vector3(home.x, 0, home.z)];
+          this.aimCamera(cam, sv.st, pts, dt, this.cfg.splitViewWidth);
+        } else {
+          cam = this.camera;
+          cam.aspect = w / h;
+          cam.updateProjectionMatrix();
+          this.updateCamera(all, dt);
+        }
+        shake(cam);
+        this.renderer.setViewport(x, y, w, h);
+        this.renderer.setScissor(x, y, w, h);
+        this.drawScene(cam);
+      });
+      this.renderer.setScissorTest(false);
+      this.renderer.setViewport(0, 0, tw, th);
+      this.renderer.setScissor(0, 0, tw, th);
     }
-    this.scene.overrideMaterial = null;
-    this.scene.background = bg;
-    this.camera.layers.set(0);
-    this.renderer.autoClear = auto;
     this.renderer.setRenderTarget(this.lowTarget);
     this.renderer.render(this.postScene, this.postCam);
     this.renderer.setRenderTarget(null);

@@ -1,15 +1,16 @@
 import type { PadState } from "./gamepads";
-import type { Command, Directive, StructureType, UnitType } from "../sim/types";
+import type { Command, Directive, ShopItem, StructureType, UnitType } from "../sim/types";
 
 type Flick = "up" | "down" | "left" | "right";
 
 const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "hold", left: "follow", right: "nearest" };
-const TOWER_BY_FLICK: Partial<Record<Flick, StructureType>> = { up: "damage", left: "control", right: "support" };
+const TOWER_BY_FLICK: Partial<Record<Flick, StructureType>> = { up: "damage", left: "control" };
 const PROD_BY_FLICK: Partial<Record<Flick, StructureType>> = { left: "barracks", up: "range", right: "foundry" };
+const SHOP_BY_FLICK: Partial<Record<Flick, ShopItem>> = { up: "bomb", left: "ward", right: "cannon" };
 const CALL_BY_FLICK: Partial<Record<Flick, UnitType>> = { left: "grunt", up: "ranged", right: "heavy" };
 
 export interface MapperUi {
-  buildMenu: "closed" | "prod" | "tower" | "call";
+  buildMenu: "closed" | "prod" | "tower" | "call" | "shop";
   typeSelect: UnitType | null;
   commander: boolean;
   group: UnitType | "all";
@@ -54,7 +55,7 @@ export class CommandMapper {
     return p.cY > 0 ? "down" : "up";
   }
 
-  update(p: PadState, now: number, atPad = false): void {
+  update(p: PadState, now: number, atPad = false, atHome = false): void {
     const c = this.pending;
     c.moveX = p.stickX;
     c.moveZ = p.stickY;
@@ -92,10 +93,10 @@ export class CommandMapper {
       this.tDown = false;
       this.ui.buildMenu = atPad ? "prod" : "call";
     }
-    if (atPad && !this.xDown && (p.pressed.y || mrPressed)) {
+    if ((atPad || atHome) && !this.xDown && (p.pressed.y || mrPressed)) {
       this.tDown = true;
       this.tUsed = false;
-      this.ui.buildMenu = "tower";
+      this.ui.buildMenu = atPad ? "tower" : "shop";
     }
     const holdL = !!p.held.block;
     if (holdL && !this.yDown) {
@@ -113,6 +114,10 @@ export class CommandMapper {
       } else if (this.xDown) {
         if (f !== "down") c.build = PROD_BY_FLICK[f];
         this.xUsed = true;
+        this.ui.buildMenu = "closed";
+      } else if (this.tDown && this.ui.buildMenu === "shop") {
+        if (f !== "down") c.buy = SHOP_BY_FLICK[f];
+        this.tUsed = true;
         this.ui.buildMenu = "closed";
       } else if (this.tDown) {
         if (f !== "down") c.build = TOWER_BY_FLICK[f];
@@ -139,7 +144,7 @@ export class CommandMapper {
     if (this.tDown && !p.held.y && !mr) {
       if (!this.tUsed && atPad) c.build = "upgrade";
       this.tDown = false;
-      if (this.ui.buildMenu === "tower") this.ui.buildMenu = "closed";
+      if (this.ui.buildMenu === "tower" || this.ui.buildMenu === "shop") this.ui.buildMenu = "closed";
     }
     if (this.yDown && !holdL) {
       this.yDown = false;

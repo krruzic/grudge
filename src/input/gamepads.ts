@@ -218,7 +218,7 @@ export class Gamepads {
       const idx = this.slots[s];
       if (idx !== null && idx <= GC_BASE && !this.gc.ports[GC_BASE - idx]?.connected) this.slots[s] = null;
     }
-    const nativeGc = pads.some((pad) => !!pad?.connected && /gamecube (adapter port|controller)/i.test(pad.id));
+    const nativeGc = pads.some((pad) => !!pad?.connected && /gamecube (adapter port|controller)|wup-028/i.test(pad.id));
     this.gc.ports.forEach((gp, p) => {
       if (nativeGc || !gp.connected || this.slots.includes(GC_BASE - p)) return;
       if (!(gp.a || gp.b || gp.x || gp.y || gp.z || gp.start)) return;

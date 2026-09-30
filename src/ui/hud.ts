@@ -37,7 +37,7 @@ export class UiCanvas {
   begin(): CanvasRenderingContext2D {
     const h = 240;
     const w = Math.round((h * window.innerWidth) / window.innerHeight);
-    const scale = 1;
+    const scale = 2;
     const pw = Math.round(w * scale);
     const ph = Math.round(h * scale);
     if (w !== this.w || this.canvas.width !== pw || this.canvas.height !== ph) {
@@ -289,6 +289,16 @@ export class Hud {
   }
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
+    if (this.split >= 2) {
+      const t = 3;
+      ctx.fillStyle = INK;
+      ctx.fillRect(Math.round(W / 2 - t / 2) - 1, 0, t + 2, H);
+      texturedRect(ctx, "stone", Math.round(W / 2 - t / 2), 0, t, H, "#8a8070", 0, 0.5);
+      if (this.split >= 3) {
+        ctx.fillRect(0, Math.round(H / 2 - t / 2) - 1, W, t + 2);
+        texturedRect(ctx, "stone", 0, Math.round(H / 2 - t / 2), W, t, "#8a8070", 0, 0.5);
+      }
+    }
     if (this.banner && now < this.bannerUntil) this.drawBanner(ctx, W, now);
     if (!this.visible) return;
     this.drawClock(ctx, W, w, now);
@@ -308,6 +318,7 @@ export class Hud {
     ctx.restore();
   }
 
+  split = 0;
   locate: ((x: number, y: number, z: number) => { x: number; y: number }) | null = null;
 
   private drawRelic(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number): void {
@@ -323,7 +334,7 @@ export class Hud {
     else if (r.state === "carried") {
       const c = w.getAny(r.carrier);
       col = c ? this.teamColors[c.team] : col;
-      text = `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE`;
+      text = r.channel > 0 ? `CRACKING THE KEEP · ${Math.ceil(cfg.channelSeconds - r.channel)}` : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE`;
     } else {
       const left = Math.max(0, Math.ceil(cfg.returnSeconds - (w.time - r.since)));
       text = `GRUDGE LOOSE · ${left}`;
@@ -395,7 +406,9 @@ export class Hud {
 
     coreIcon(ctx, ax(5), y + 3.5, 4.2, col, shield);
     meter(ctx, ax(14, blockW - 14), y + 1, blockW - 14, 5, core ? core.hp / core.maxHp : 0, col);
-    y += 12;
+    const ward = core?.structure?.ward ?? 0;
+    if (ward > 0 && !w.isSudden()) meter(ctx, ax(14, blockW - 14), y + 8, blockW - 14, 2, ward / w.data.structures.core.ward, "#9fe0ff");
+    y += ward > 0 && !w.isSudden() ? 15 : 12;
 
     const hero = w.heroOf(t);
     const frac = hero?.hero ? hero.hero.meter / w.data.heroes.baseline.superMax : 0;
@@ -471,6 +484,15 @@ export class Hud {
     const menuHero = opener?.heroId;
     const crossY = H - 58;
     const crossX = right ? W - MARGIN_X - 62 : MARGIN_X + 62;
+    const aimer = w.players.map((p) => w.getAny(p.heroId)).find((e) => e?.team === t && e.hero?.aim);
+    if (aimer?.hero?.aim) {
+      const left = Math.max(0, Math.ceil(aimer.hero.aim.until - w.time));
+      const l1 = `AIM THE CANNON · ${left}`;
+      const l2 = "A FIRE · B CANCEL";
+      drawText(ctx, l1, Math.round(crossX - textWidth(l1, 0.85) / 2), crossY - 8, Math.floor(now * 4) % 2 ? "#ffd870" : "#ffffff", 0.85);
+      drawText(ctx, l2, Math.round(crossX - textWidth(l2, 0.72) / 2), crossY + 6, "#e8e0d0", 0.72);
+      return;
+    }
     if (menuUi && menuHero !== undefined) {
       const c = this.buildCross(w, t, menuHero, menuUi);
       if (c) this.drawCross(ctx, crossX, crossY, c, right, 1);
@@ -531,6 +553,13 @@ export class Hud {
   private buildCross(w: World, team: number, heroId: number, mui: MapperUi): Cross | null {
     const hero = w.getAny(heroId);
     if (!hero?.alive) return null;
+    if (mui.buildMenu === "shop") {
+      const sh = w.data.match.arena.shop;
+      const ts = w.teams[team];
+      const k = (n: number) => String(Math.round(n * w.costMul()));
+      const wardWait = Math.ceil(ts.wardReadyAt - w.time);
+      return { title: "KEEP SHOP", items: [["BOMB", k(sh.bomb.cost)], ["SHIELD", wardWait > 0 ? `${wardWait}S` : k(sh.ward.cost)], ["CANNON", k(sh.cannon.cost)], ["CANCEL", ""]], lit: -1, until: 0 };
+    }
     if (mui.buildMenu === "call") {
       const ts = w.teams[team];
       const sq = w.data.units.squads;
@@ -548,7 +577,7 @@ export class Hud {
       return { title: st.structure.level < 2 ? "UPGRADE" : "MAX LEVEL", items: [[up ? "UPGRADE" : "", up], ["", ""], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 };
     }
     return mui.buildMenu === "tower"
-      ? { title: "TOWERS", items: [["DAMAGE", c("damage")], ["CONTROL", c("control")], ["SUPPORT", c("support")], ["CANCEL", ""]], lit: -1, until: 0 }
+      ? { title: "TOWERS", items: [["DAMAGE", c("damage")], ["CONTROL", c("control")], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 }
       : { title: "OUTPOSTS", items: [["RANGE", c("range")], ["BARRACKS", c("barracks")], ["FOUNDRY", c("foundry")], ["CANCEL", ""]], lit: -1, until: 0 };
   }
 

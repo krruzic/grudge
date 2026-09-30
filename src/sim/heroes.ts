@@ -17,7 +17,6 @@ export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Ent
   let bestScore = Infinity;
   for (const o of w.entities) {
     if (!o.alive || o.team === e.team) continue;
-    if (o.structure?.type === "core" && o.structure.shielded && !w.isSudden()) continue;
     const d = w.dist(e, o) - o.radius;
     if (d > reach) continue;
     const dx = o.transform.pos.x - t.pos.x;
@@ -132,6 +131,22 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     return;
   }
 
+  if (h.aim) {
+    const sp = w.data.match.arena.shop.cannon;
+    h.vel.x = h.vel.z = 0;
+    h.blocking = false;
+    h.aim.x = Math.max(1, Math.min(w.terrain.width - 1, h.aim.x + cmd.moveX * sp.aimSpeed * dt));
+    h.aim.z = Math.max(1, Math.min(w.terrain.depth - 1, h.aim.z + cmd.moveZ * sp.aimSpeed * dt));
+    if (cmd.attack) {
+      const a = h.aim;
+      h.aim = null;
+      w.arena.fireStrike(e, a.x, a.z);
+    } else if (cmd.secondary || cmd.dodge || w.time > h.aim.until) {
+      h.aim = null;
+      w.emit({ type: "notice", team: e.team, text: "CANNON CANCELLED" });
+    }
+    return;
+  }
   if (w.arena.carrying(e)) cmd = { ...cmd, attack: false, secondary: false, special: false, super: false, dodge: false, build: undefined };
   const act = h.action;
   const canChainCombo = act?.name === "a" && act.kind === "combo" && act.fired && w.time < h.comboUntil;
@@ -685,6 +700,31 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         const j = w.nav.nearestOpen(o.transform.pos.x, o.transform.pos.z, 4);
         if (j >= 0) w.teleport(o, (j % w.nav.w) + 0.5, Math.floor(j / w.nav.w) + 0.5);
       }
+      return;
+    }
+    case "reach": {
+      const reach = def.range ?? 8;
+      const width = def.width ?? 1;
+      let best: Entity | null = null;
+      let bestD = reach;
+      for (const o of w.entities) {
+        if (!o.alive || o.team === e.team || o.structure) continue;
+        const dx = o.transform.pos.x - t.pos.x;
+        const dz = o.transform.pos.z - t.pos.z;
+        const along = dx * a.dirX + dz * a.dirZ;
+        if (along < 0 || along - o.radius > reach) continue;
+        const side = Math.abs(dx * a.dirZ - dz * a.dirX);
+        if (side > width + o.radius || Math.abs(o.transform.y - t.y) > 3) continue;
+        if (along < bestD) { bestD = along; best = o; }
+      }
+      let len = reach;
+      for (let s = 0.5; s <= reach; s += 0.5) {
+        if (w.losHeight(t.pos.x + a.dirX * s, t.pos.z + a.dirZ * s) > t.y + 2.2) { len = s; break; }
+      }
+      if (best && bestD > len) best = null;
+      if (best) len = Math.max(0.8, bestD);
+      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx: t.pos.x + a.dirX * len, tz: t.pos.z + a.dirZ * len, team: e.team, hit: !!best });
+      if (best) w.damage(e, best, (def.damage ?? 70) * mul, { knockback: def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, big: true });
       return;
     }
     case "trap": {

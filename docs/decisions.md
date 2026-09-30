@@ -369,3 +369,22 @@
 ## Arena events
 - Cannon fire every 38s from 0:50: up to 5 shots aimed near soldiers and heroes. Each gets a red target ring for 2.6s that pulses faster and fills as impact nears, and a whistle. An iron ball arcs in trailing smoke with a growing shadow, then hits for 110 (60 to towers) with knockback, a fireball, smoke, dirt, sparks and a scorch mark that fades over 9s.
 - A wild ogre wakes at 1:50 beside the centre and returns 100s after it dies. It attacks whoever is nearest (heroes, soldiers of either side), leashes to its lair and heals there, and pays 80 gold. It's its own low-poly model (mossy hide, bone necklace, spiked tree-trunk club) so it never reads as a brute.
+
+## GameCube adapter: one pad per port in Chromium
+- Chromium groups Linux gamepads by the sysfs path above their input node. `hid-gamecube-adapter` registered every port as a parentless virtual input device, so all ports shared `/sys/devices/virtual/` and Chromium exposed only one pad. `tools/gc-adapter/per-port-parent.patch` gives each port its own child device (`gcport1`–`gcport4`) under the adapter, a unique phys/uniq, and cancels pending connect work on removal. `tools/gc-adapter/install.sh` installs it through DKMS as a separate version.
+- With the patch Chromium names the pads "Nintendo WUP-028", which now maps to `gc_adapter_uinput`. Measured layout: A0 B3 X1 Y2 L4 R5 Z6 Start7, D-pad 8–11, sticks on axes 0/1 and 3/4, L analog on axis 2. Chromium reports an untouched analog axis as 0 (half-pressed), so block uses the L digital click or more than 60% travel.
+
+## Playtest fixes
+- `npm run release` builds into `release/` and serves it on port 5200 without hot reload, so a stable build can be tested while the dev server changes.
+- The 3D renders at 720 lines and the UI art canvas at 480 physical lines (same 240-line layout).
+- Automatic waves are back: every 16s each keep sends 2 grunts and an archer, and every outpost sends its troop (two at level 2), capped at 16 soldiers and growing 6% stronger per minute. Called squads (X) stay as an extra.
+- Damage towers were too strong to break: damage 55 to 34, 620 HP, 0.8x against heroes. The support tower is gone from the menu.
+- Building and upgrading now take work: a structure only rises while a friendly hero (1x) or soldiers (0.4x each, 2x total) stand within 3.6m. 10s to build, 12s to upgrade with one hero; the gold bar above it flashes dark when nobody is working. A destroyed pad is rubble for 20s. Bots stay to finish what they start.
+- The keep shield is no longer tied to home towers. Each keep starts with a 1500 HP shield that soaks damage first; the relic breaks it; it's gone in sudden death. The keep has 4000 HP.
+- Keep shop (Y at your keep): BOMB (180) is carried over your head and plants itself on the first enemy tower you touch; after 3s it destroys the tower outright (350 to a keep). SHIELD (150, 45s cooldown) refills the keep shield. CANNON (260) opens an aiming reticle (stick moves it, A fires, B cancels, 8s) and calls four shots that only hurt the enemy.
+- The relic now wakes at 0:45 and must be held at the enemy keep for 2.5s to crack it or deal damage; the HUD counts it down.
+- The Warden's trap is replaced by a long-arm slap: a bark arm stretches up to 8.5m, stops at walls, and slaps the first foe with heavy knockback.
+- Attacks are more distinct: Warlord two slow heavy swings (and down to mid health, weaker slam), Raider four quick jabs, Duelist long narrow thrusts, Warden wide sweeping hits, Engineer two wrench blows.
+
+## Split screen
+- With two or more human players each gets a view that follows their hero at a fixed close zoom (side by side for two, quadrants for three or four; the fourth quadrant of three shows the whole fight). When all human heroes are within about 9m of each other the views merge into one shared camera, and split again past 14m. Option SPLIT SCREEN turns it off.

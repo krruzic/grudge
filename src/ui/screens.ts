@@ -10,7 +10,7 @@ import { chipColor, type MenuCursors } from "./cursor";
 const KIND_LABEL: Record<string, string> = {
   combo: "3-HIT COMBO", slam: "GROUND SLAM", quake: "EARTHQUAKE", warcry: "WAR CRY", shoot: "MAGIC BOLT",
   hex: "HEX BLAST", leap: "CLIFF LEAP", dash: "PIERCING DASH", stealth: "SMOKE AMBUSH", summon: "SUMMON TROOPS",
-  repair: "REPAIR PULSE", turret: "DROP TURRET", ramp: "BUILD RAMP", wall: "STONE WALL", trap: "THROW TRAP",
+  repair: "REPAIR PULSE", turret: "DROP TURRET", ramp: "BUILD RAMP", wall: "STONE WALL", trap: "THROW TRAP", reach: "LONG ARM SLAP",
   zone: "BRAMBLE FIELD", flurry: "BLADE FLURRY", parry: "PARRY", none: "-",
 };
 
@@ -204,7 +204,7 @@ export class Screens {
       const rows: [string, string][] = [
         ["STICK", "MOVE"], ["A", "ATTACK"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
         ["L", "BLOCK · L + A: SHOVE · L + X / L + SMASH: DODGE"], ["C", "WHOLE ARMY: UP PUSH · DOWN HOLD · LEFT FOLLOW · RIGHT HUNT"],
-        ["X", "HOLD + C: CALL 3 TROOPS · AT PAD: OUTPOSTS / UPGRADE"], ["Y", "AT PAD: TOWERS (3 AT MOST)"], ["L + C", "HOLD L: FLICK TROOPS, THEN FLICK ORDERS"], ["D-PAD", "COMMANDER GROUPS"],
+        ["X", "HOLD + C: CALL 3 TROOPS · AT PAD: OUTPOSTS / UPGRADE"], ["Y", "AT PAD: TOWERS · AT YOUR KEEP: SHOP (BOMB, SHIELD, CANNON)"], ["L + C", "HOLD L: FLICK TROOPS, THEN FLICK ORDERS"], ["D-PAD", "COMMANDER GROUPS"],
       ];
       const bw = 300;
       const bx = Math.round((W - bw) / 2);

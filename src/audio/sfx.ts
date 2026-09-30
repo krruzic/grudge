@@ -200,6 +200,17 @@ export class Audio {
           this.hiss(900, 0.4, 1.1, 0.7, pan, "lowpass", 0, 90);
           this.hiss(3000, 0.8, 0.25, 0.25, pan, "bandpass", 0.02, 600);
           break;
+        case "bomb":
+          if (ev.state === "planted") {
+            this.tone("square", 900, 900, 0.05, 0.08, pan);
+            this.hiss(5000, 1.5, ev.fuse, 0.08, pan, "highpass");
+            for (let i = 1; i < ev.fuse * 2; i++) this.tone("square", 1200 + i * 60, 1200 + i * 60, 0.04, 0.06, pan, i * 0.5 * (1 - i / (ev.fuse * 6)));
+          }
+          break;
+        case "reach":
+          this.hiss(900, 1, 0.18, 0.2, pan, "bandpass", 0, 300);
+          if (ev.hit) this.tone("sine", 220, 80, 0.18, 0.4, pan, 0.1);
+          break;
         case "shove":
           this.hiss(700, 0.8, 0.14, ev.team >= 0 ? 0.35 : 0.15, pan, "lowpass", 0, 200);
           if (ev.team >= 0) this.tone("sine", 160, 60, 0.15, 0.3, pan);

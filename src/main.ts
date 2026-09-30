@@ -134,6 +134,7 @@ async function start(): Promise<void> {
     const o = save.data.options;
     audio.setLevels(o.music / 10, o.sound / 10);
     view.shakeMul = o.shake;
+    view.splitOn = o.split === 1;
     view.setHints(!!o.hints);
   };
   applyOptions();
@@ -396,7 +397,7 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV) (window as unknown as { grudge: unknown }).grudge = { pads, slots, cursors, menus, save, get state() { return state; }, get world() { return world; } };
+  if (import.meta.env.DEV) (window as unknown as { grudge: unknown }).grudge = { pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; } };
 
   let last = performance.now();
   let acc = 0;
@@ -552,7 +553,7 @@ async function start(): Promise<void> {
         const m = mappers[i];
         if (!m) return;
         const h = world.heroForPlayer(i);
-        m.update(p, now, !!h && h.alive && !!padNear(world, h));
+        m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h));
       });
       view.setMenus(mappers.map((m) => !!m && m.ui.buildMenu !== "closed"));
     } else if (state === "paused") {
@@ -603,7 +604,8 @@ async function start(): Promise<void> {
     if (state !== "select" && state !== "map" && !(state === "menu" && menus.page !== "main")) view.render(state === "paused" ? 0 : acc / world.dt, state === "paused" ? 0 : dt);
     const ctx = pixel.begin();
     const uiList = mappers.map((m) => m?.ui ?? null);
-    hud.locate = (x, y, z) => view.worldToScreen(x, y, z);
+    hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);
+    hud.split = view.splitCount;
     hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
     screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : mapIndex);
     if (state === "select") screens.portraits?.renderStages();

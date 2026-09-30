@@ -37,7 +37,7 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
       w.emit({ type: "notice", team, text: "ENEMY PAD" });
       return false;
     }
-    if (st.level >= 2 || !st.ready || st.type === "core") {
+    if (st.level >= 2 || !st.ready || st.upgrading || st.type === "core") {
       w.emit({ type: "notice", team, text: st.level >= 2 ? "MAX LEVEL" : "BUILDING..." });
       return false;
     }
@@ -47,11 +47,16 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
       return false;
     }
     ts.resource -= cost;
-    upgrade(w, existing);
+    st.upgrading = true;
+    st.progress = 0;
     w.emit({ type: "build", id: existing.id, padIndex: pad.index, team, upgrade: true });
     return true;
   }
   if (kind === "upgrade") return false;
+  if (w.time < pad.rubbleUntil) {
+    w.emit({ type: "notice", team, text: `RUBBLE · ${Math.ceil(pad.rubbleUntil - w.time)}` });
+    return false;
+  }
   if (!canBuildOn(pad, team)) {
     w.emit({ type: "notice", team, text: "ENEMY PAD" });
     return false;
@@ -84,7 +89,7 @@ export function createStructure(w: World, team: number, pad: Pad, type: Structur
   const core = w.core(1 - team);
   if (core) e.transform.facing = e.transform.prevFacing = Math.atan2(core.transform.pos.x - pad.x, core.transform.pos.z - pad.z);
   e.structure = {
-    type, padIndex: pad.index, level: 1, builtAt: w.time, ready: false, nextAction: w.time + sd.buildSeconds,
+    type, padIndex: pad.index, level: 1, builtAt: w.time, ready: false, nextAction: w.time + sd.buildSeconds, progress: 0,
     range: (sd.zoneRange[pad.zone] ?? 10) * (def.rangeMul ?? 1), damage: def.damage ?? 0, lastFireAt: -99, shielded: false,
   };
   if (type === "control") e.structure.range *= 1 + ((w.teamHooks(team).controlTowerMul ?? 1) - 1) * 0.5;
@@ -95,6 +100,18 @@ export function createStructure(w: World, team: number, pad: Pad, type: Structur
   }
   w.teams[team].structuresBuilt++;
   return e;
+}
+
+export function builderRate(w: World, e: Entity): number {
+  const sd = w.data.structures;
+  const r = sd.builderRates;
+  let rate = 0;
+  for (const o of w.entities) {
+    if (!o.alive || o.team !== e.team || o.structure) continue;
+    if (w.dist(o, e) - o.radius - e.radius > sd.builderRadius) continue;
+    rate += o.hero ? r.hero : r.unit;
+  }
+  return Math.min(r.max, rate);
 }
 
 function upgrade(w: World, e: Entity): void {
@@ -149,13 +166,24 @@ export function updateStructure(w: World, e: Entity): void {
   const sd = w.data.structures;
   const def = sd.types[st.type];
   const dt = w.dt;
-  if (!st.ready) {
-    e.hp = Math.min(e.maxHp, e.hp + ((e.maxHp * (1 - sd.buildStartHpFrac)) / sd.buildSeconds) * dt);
-    if (w.time >= st.builtAt + sd.buildSeconds) {
-      st.ready = true;
-      st.nextAction = w.time;
+  if (!st.ready || st.upgrading) {
+    const rate = builderRate(w, e);
+    const secs = st.ready ? sd.upgradeSeconds : sd.buildSeconds;
+    const step = (rate * dt) / secs;
+    st.progress = Math.min(1, (st.progress ?? 0) + step);
+    if (!st.ready) {
+      e.hp = Math.min(e.maxHp, e.hp + e.maxHp * (1 - sd.buildStartHpFrac) * step);
+      if (st.progress >= 1) {
+        st.ready = true;
+        st.nextAction = w.time;
+      }
+      return;
     }
-    return;
+    if (st.progress >= 1) {
+      st.upgrading = false;
+      upgrade(w, e);
+      w.emit({ type: "build", id: e.id, padIndex: st.padIndex, team: e.team, upgrade: true });
+    }
   }
   if (w.time < st.nextAction) return;
   const ts = w.teams[e.team];
@@ -172,7 +200,6 @@ export function updateStructure(w: World, e: Entity): void {
     for (const o of w.entities) {
       if (!o.alive || o.team === e.team || o.status.hidden) continue;
       if (o.structure && !siege && !o.structure.siege) continue;
-      if (o.structure?.type === "core" && o.structure.shielded && !w.isSudden()) continue;
       const d = w.dist(e, o) - o.radius;
       if (d > st.range * w.rangeMul(e, o)) continue;
       const score = d - (o.hero ? 100 : 0) - (o.structure?.siege ? 60 : 0) - (siege && o.structure ? 40 : 0);

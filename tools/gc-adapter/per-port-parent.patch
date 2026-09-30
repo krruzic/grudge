@@ -1,0 +1,103 @@
+--- a/hid-gamecube-adapter.c	2026-09-29 15:21:29.000000000 -0600
++++ b/hid-gamecube-adapter.c	2026-09-29 23:09:29.456739445 -0600
+@@ -54,6 +54,9 @@
+ 
+ struct gamecube_ctrl {
+ 	struct input_dev __rcu *input;
++	struct device port;
++	bool port_added;
++	char phys[64];
+ 	struct gamecube_adpt *adpt;
+ 	enum gamecube_ctrl_flags flags;
+ 	u8 axis_min[6];
+@@ -193,6 +196,12 @@
+ 	input->id.product = hdev->product;
+ 	input->id.version = hdev->version;
+ 	input->name = name;
++	if (ctrl->port_added)
++		input->dev.parent = &ctrl->port;
++	snprintf(ctrl->phys, sizeof(ctrl->phys), "%s/port%u", hdev->phys,
++		 (unsigned int)(ctrl - ctrl->adpt->ctrls + 1U));
++	input->phys = ctrl->phys;
++	input->uniq = ctrl->phys;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(gamecube_buttons); i++)
+ 		input_set_capability(input, EV_KEY, gamecube_buttons[i]);
+@@ -339,6 +348,43 @@
+ 	return 0;
+ }
+ 
++static void gamecube_port_release(struct device *dev)
++{
++}
++
++static void gamecube_ports_add(struct gamecube_adpt *adpt)
++{
++	unsigned int i;
++
++	for (i = 0; i < 4; i++) {
++		struct gamecube_ctrl *ctrl = adpt->ctrls + i;
++
++		device_initialize(&ctrl->port);
++		ctrl->port.parent = &adpt->hdev->dev;
++		ctrl->port.release = gamecube_port_release;
++		if (dev_set_name(&ctrl->port, "gcport%u", i + 1) ||
++		    device_add(&ctrl->port)) {
++			put_device(&ctrl->port);
++			hid_warn(adpt->hdev, "port %u: no sysfs node, browsers may merge pads\n", i + 1);
++			continue;
++		}
++		ctrl->port_added = true;
++	}
++}
++
++static void gamecube_ports_del(struct gamecube_adpt *adpt)
++{
++	unsigned int i;
++
++	for (i = 0; i < 4; i++) {
++		if (!adpt->ctrls[i].port_added)
++			continue;
++		device_del(&adpt->ctrls[i].port);
++		put_device(&adpt->ctrls[i].port);
++		adpt->ctrls[i].port_added = false;
++	}
++}
++
+ static struct gamecube_adpt *gamecube_adpt_create(struct hid_device *hdev)
+ {
+ 	struct gamecube_adpt *adpt;
+@@ -371,12 +417,15 @@
+ {
+ 	unsigned int i;
+ 
+-	for (i = 0; i < 4; i++)
++	hid_hw_close(adpt->hdev);
++	for (i = 0; i < 4; i++) {
++		cancel_work_sync(&adpt->ctrls[i].work_connect);
+ 		gamecube_ctrl_destroy(adpt->ctrls + i);
++	}
++	gamecube_ports_del(adpt);
+ #ifdef CONFIG_HID_GAMECUBE_ADAPTER_FF
+ 	cancel_work_sync(&adpt->work_rumble);
+ #endif
+-	hid_hw_close(adpt->hdev);
+ 	hid_hw_stop(adpt->hdev);
+ 	kfree(adpt);
+ }
+@@ -421,6 +470,7 @@
+ 		hid_err(hdev, "HW start failed\n");
+ 		goto err;
+ 	}
++	gamecube_ports_add(adpt);
+ 
+ 	ret = hid_hw_open(hdev);
+ 	if (ret) {
+@@ -446,6 +496,7 @@
+ err_close:
+ 	hid_hw_close(hdev);
+ err_stop:
++	gamecube_ports_del(adpt);
+ 	hid_hw_stop(hdev);
+ err:
+ 	kfree(adpt);

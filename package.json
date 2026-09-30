@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "bake-map": "node --experimental-transform-types --no-warnings tools/bake-map.ts",
-    "sim": "node --experimental-transform-types --no-warnings tools/sim.ts"
+    "sim": "node --experimental-transform-types --no-warnings tools/sim.ts",
+    "release": "tsc --noEmit && vite build --outDir release --emptyOutDir && vite preview --outDir release --port 5200 --strictPort --host"
   },
   "dependencies": {
     "three": "^0.186.1"

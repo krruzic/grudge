@@ -10,7 +10,6 @@ function slotOffset(slot: number, base: number): Vec2 {
 
 function attackable(w: World, o: Entity): boolean {
   if (!o.alive) return false;
-  if (o.structure?.type === "core" && o.structure.shielded && !w.isSudden()) return false;
   return true;
 }
 

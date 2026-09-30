@@ -4,6 +4,11 @@ import type { SimEvent } from "../sim/types";
 import { drawNum, fontReady, textWidth } from "../ui/font";
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
+import barkUrl from "../../assets/textures/moss_bark.png?url";
+
+const barkTex = new THREE.TextureLoader().load(barkUrl);
+barkTex.colorSpace = THREE.SRGBColorSpace;
+barkTex.wrapS = barkTex.wrapT = THREE.RepeatWrapping;
 
 const ironTex = new THREE.TextureLoader().load(ironUrl);
 ironTex.colorSpace = THREE.SRGBColorSpace;
@@ -20,7 +25,7 @@ function canvasTex(size: number, draw: (ctx: CanvasRenderingContext2D, s: number
   return t;
 }
 
-const starTex = canvasTex(32, (ctx, s) => {
+export const starTex = canvasTex(32, (ctx, s) => {
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
   g.addColorStop(0, "rgba(255,255,255,1)");
   g.addColorStop(0.25, "rgba(255,240,160,0.9)");
@@ -99,7 +104,7 @@ const streakTex = canvasTex(32, (ctx, s) => {
   ctx.fillRect(0, s / 2 - 2, s, 4);
 });
 
-const targetTex = canvasTex(64, (ctx, s) => {
+export const targetTex = canvasTex(64, (ctx, s) => {
   const c = s / 2;
   ctx.imageSmoothingEnabled = false;
   ctx.lineWidth = 5;
@@ -612,6 +617,9 @@ export class CombatFx {
       case "cannonHit":
         this.cannonHit(ev.x, ev.y, ev.z, ev.radius);
         break;
+      case "reach":
+        this.reach(ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.hit);
+        break;
       case "shove":
         this.burst(ev.x, ev.y + 0.9, ev.z, puffTex, 0xd8ccb0, 6, 0.9, 0.35, 2.2, false, 0.3);
         if (ev.team >= 0) {
@@ -721,6 +729,66 @@ export class CombatFx {
     });
   }
 
+  private reach(x: number, y: number, z: number, tx: number, tz: number, hit: boolean): void {
+    const dx = tx - x;
+    const dz = tz - z;
+    const len = Math.max(0.5, Math.hypot(dx, dz));
+    const ux = dx / len;
+    const uz = dz / len;
+    const sy = y + 1.7;
+    const ty = (this.world?.groundY(tx, tz) ?? y) + 1.1;
+    const tex = barkTex.clone();
+    tex.repeat.set(1, len / 1.2);
+    tex.needsUpdate = true;
+    const mat = new THREE.MeshLambertMaterial({ map: tex, color: 0xc8b89a, flatShading: true });
+    const arm = new THREE.Group();
+    const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 1, 6, 1), mat);
+    limb.position.y = 0.5;
+    arm.add(limb);
+    const hand = new THREE.Group();
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.28, 0.8), mat);
+    hand.add(palm);
+    for (let i = 0; i < 4; i++) {
+      const f = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.5, 5), mat);
+      f.rotation.x = Math.PI / 2;
+      f.position.set(-0.27 + i * 0.18, 0, 0.55);
+      hand.add(f);
+    }
+    const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.4, 5), mat);
+    thumb.rotation.set(Math.PI / 2, 0, 0.9);
+    thumb.position.set(0.42, 0, 0.2);
+    hand.add(thumb);
+    this.root.add(arm, hand);
+    const dir = new THREE.Vector3(ux * len, ty - sy, uz * len);
+    const full = dir.length();
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+    arm.position.set(x, sy, z);
+    arm.quaternion.copy(q);
+    const yaw = Math.atan2(ux, uz);
+    let impact = false;
+    this.items.push({
+      obj: arm, t: 0, dur: 0.46,
+      tick: (k) => {
+        const s = k * 0.46;
+        const f = s < 0.1 ? s / 0.1 : s < 0.22 ? 1 : Math.max(0.02, 1 - (s - 0.22) / 0.24);
+        arm.scale.set(1, full * f, 1);
+        hand.position.set(x + dir.x * f, sy + dir.y * f, z + dir.z * f);
+        hand.rotation.set(-0.3, yaw, s < 0.1 ? -1.2 * (1 - f) : 0);
+        hand.visible = true;
+        if (!impact && f >= 1) {
+          impact = true;
+          if (hit) {
+            this.flash(tx, ty, tz, starTex, 0xfff0c0, 1.7, 0.16);
+            this.burst(tx, ty, tz, puffTex, 0xd8ccb0, 6, 0.8, 0.4, 2.5, false, 0.4);
+            this.shake = Math.max(this.shake, 0.3);
+          } else this.burst(tx, ty, tz, puffTex, 0xb09878, 3, 0.6, 0.3, 1.2, false, 0.2);
+        }
+      },
+    });
+    this.items.push({ obj: hand, t: 0, dur: 0.46, tick: () => {} });
+    this.after(0.6, () => tex.dispose());
+  }
+
   private after(seconds: number, run: () => void): void {
     this.pending.push({ at: this.clock + Math.max(0, seconds), run });
   }
@@ -775,9 +843,11 @@ export class CombatFx {
       f.tick(k, dt);
       if (k >= 1) {
         this.root.remove(f.obj);
-        const m = (f.obj as THREE.Mesh).material as THREE.Material | undefined;
-        if (m !== ballMat) m?.dispose();
-        if (f.obj instanceof THREE.Mesh && f.obj.geometry !== chunkGeo && f.obj.geometry !== ballGeo) f.obj.geometry.dispose();
+        f.obj.traverse((o) => {
+          const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+          if (m && m !== ballMat) m.dispose();
+          if (o instanceof THREE.Mesh && o.geometry !== chunkGeo && o.geometry !== ballGeo) o.geometry.dispose();
+        });
         this.items.splice(i, 1);
       }
     }

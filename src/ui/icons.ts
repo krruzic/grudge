@@ -88,6 +88,12 @@ const STROKES: Record<string, Draw> = {
     c.moveTo(-0.85, 0.1); c.lineTo(-0.55, -0.25); c.lineTo(-0.3, 0.1); c.lineTo(0, -0.25); c.lineTo(0.3, 0.1); c.lineTo(0.55, -0.25); c.lineTo(0.85, 0.1);
     c.moveTo(-0.85, 0.7); c.lineTo(0.85, 0.7);
   },
+  reach: (c) => {
+    c.moveTo(-0.9, 0.55); c.lineTo(0.15, -0.05);
+    c.moveTo(0.15, -0.05); c.lineTo(0.35, -0.55); c.moveTo(0.15, -0.05); c.lineTo(0.55, -0.4);
+    c.moveTo(0.15, -0.05); c.lineTo(0.65, -0.1); c.moveTo(0.15, -0.05); c.lineTo(0.55, 0.25);
+    c.moveTo(0.7, -0.75); c.lineTo(0.85, -0.9); c.moveTo(0.85, -0.45); c.lineTo(0.98, -0.5);
+  },
   zone: (c) => {
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;

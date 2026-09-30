@@ -142,6 +142,7 @@ export interface VeterancyDef {
 
 export interface UnitData {
   popCap: number;
+  waves: { firstSeconds: number; everySeconds: number; core: UnitType[]; growPerMinute: number };
   squads: { size: number; cost: Record<UnitType, number>; cooldown: number; forwardStatMul: number };
   separationPush: number;
   repathSeconds: number;
@@ -179,8 +180,12 @@ export interface StructureData {
   buildStartHpFrac: number;
   structureRadius: number;
   zoneRange: Record<string, number>;
-  core: { hp: number; radius: number };
+  core: { hp: number; radius: number; ward: number };
   towerLimit: number;
+  upgradeSeconds: number;
+  rubbleSeconds: number;
+  builderRadius: number;
+  builderRates: { hero: number; unit: number; max: number };
   types: Record<StructureType, StructureDef>;
 }
 
@@ -203,8 +208,14 @@ export interface MatchData {
   };
   positional: { backstabMul: number; ambushMul: number; fallMin: number; fallDamageFrac: number; fallStun: number; knockDropMin: number };
   arena: {
-    relic: { pickupRadius: number; deliverReach: number; coreDamageFrac: number; carrySpeedMul: number; returnSeconds: number; respawnSeconds: number; dropLockSeconds: number; firstSeconds: number };
+    relic: { pickupRadius: number; deliverReach: number; coreDamageFrac: number; carrySpeedMul: number; returnSeconds: number; respawnSeconds: number; dropLockSeconds: number; firstSeconds: number; channelSeconds: number };
     cannon: { firstSeconds: number; everySeconds: number; volleys: number; spacing: number; warnSeconds: number; radius: number; damage: number; structureDamage: number; knockback: number; spread: number };
+    shop: {
+      radius: number;
+      bomb: { cost: number; fuse: number; coreDamage: number; plantReach: number };
+      ward: { cost: number; cooldown: number };
+      cannon: { cost: number; shots: number; radius: number; aimSpeed: number; aimSeconds: number; spread: number };
+    };
     ogre: { firstSeconds: number; respawnSeconds: number; hp: number; damage: number; speed: number; radius: number; aggro: number; range: number; cooldown: number; knockback: number; bounty: number; leash: number };
   };
   pacing: {

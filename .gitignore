@@ -4,3 +4,4 @@ dist
 .venv-tripo
 assets/generated/*_ai/
 __pycache__/
+release

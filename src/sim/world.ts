@@ -84,7 +84,7 @@ export class World {
     this.terrain.pads.forEach((p, i) => {
       const zone = (p.zone ?? "home") as PadZone;
       const side = zone === "neutral" ? -1 : p.side ?? (p.x < this.terrain.width / 2 ? 0 : 1);
-      this.pads.push({ index: i, x: p.x, z: p.z, zone, side, structureId: 0 });
+      this.pads.push({ index: i, x: p.x, z: p.z, zone, side, structureId: 0, rubbleUntil: 0 });
     });
     for (let team = 0; team < 2; team++) {
       const hold = this.defaultHold(team);
@@ -97,7 +97,7 @@ export class World {
           holdPoint: { grunt: { ...hold }, ranged: { ...hold }, heavy: { ...hold } },
           focus: { grunt: 0, ranged: 0, heavy: 0 },
         },
-        coreDamageDealt: 0, kills: 0, structuresBuilt: 0, structuresLost: 0, heroKills: 0, catchUp: 0, unitCount: 0, commanderOrderAt: -99, banner: null, callReadyAt: 0,
+        coreDamageDealt: 0, kills: 0, structuresBuilt: 0, structuresLost: 0, heroKills: 0, catchUp: 0, unitCount: 0, commanderOrderAt: -99, banner: null, callReadyAt: 0, wardReadyAt: 0,
       });
     }
     for (const c of this.terrain.cores) {
@@ -105,7 +105,7 @@ export class World {
       const e = this.addEntity(team, "structure", data.structures.core.radius, c.x, c.z, data.structures.core.hp);
       e.structure = {
         type: "core", padIndex: -1, level: 1, builtAt: 0, ready: true, nextAction: 0, range: 0, damage: 0,
-        lastFireAt: -99, shielded: true,
+        lastFireAt: -99, shielded: true, ward: data.structures.core.ward,
       };
       this.teams[team].coreId = e.id;
       this.nav.setBlocked(c.x, c.z, data.structures.core.radius + 0.4, true);
@@ -190,7 +190,7 @@ export class World {
       speed: tiers.speed[def.speed] * (def.hooks.speedMul ?? 1),
       damageMul: tiers.damage[def.damage],
       vel: { x: 0, z: 0 },
-      action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99,
+      action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99, bomb: false, aim: null,
       dead: false, respawnAt: 0, lastTargetId: 0, lastTargetAt: -99, anim: "idle", animStart: 0,
       stepHeight: def.hooks.stepHeight ?? b.stepHeight,
       maxSlope: def.hooks.maxSlope ?? b.maxSlope,
@@ -318,6 +318,7 @@ export class World {
       const cmd = commands[slot.player] ?? { moveX: 0, moveZ: 0 };
       if (e.alive && cmd.build) tryBuild(this, e, cmd.build);
       if (e.alive && cmd.call) this.arena.callSquad(e, cmd.call);
+      if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
       if (cmd.directive) {
         const ts = this.teams[slot.team];
         if (slot.commander) {
@@ -354,7 +355,6 @@ export class World {
       let best = Infinity;
       for (const o of this.entities) {
         if (!o.alive || o.team === team || !o.structure) continue;
-        if (o.structure.type === "core" && o.structure.shielded && !this.isSudden()) continue;
         const dd = this.dist(hero, o);
         if (dd < best) { best = dd; focusId = o.id; }
       }
@@ -393,8 +393,7 @@ export class World {
     for (let team = 0; team < 2; team++) {
       const core = this.core(team);
       if (!core?.structure) continue;
-      const hasHome = this.pads.some((p) => p.zone === "home" && p.side === team && p.structureId && this.get(p.structureId));
-      core.structure.shielded = !this.teams[team].homeLost && hasHome;
+      core.structure.shielded = (core.structure.ward ?? 0) > 0;
     }
   }
 
@@ -558,10 +557,6 @@ export class World {
       }
     }
     if (target.structure) {
-      if (target.structure.type === "core" && target.structure.shielded && !this.isSudden()) {
-        this.emit({ type: "hit", ...ev, team: target.team, big: false, blocked: true });
-        return false;
-      }
       if (opts.structureDamage !== undefined) amount = opts.structureDamage;
     }
     if (src && src.kind !== "structure") {
@@ -608,6 +603,20 @@ export class World {
       }
     }
     amount = Math.max(1, Math.round(amount));
+    const ts = target.structure;
+    if (ts?.type === "core" && (ts.ward ?? 0) > 0 && !this.isSudden()) {
+      const soak = Math.min(ts.ward!, amount);
+      ts.ward! -= soak;
+      amount -= soak;
+      if (ts.ward! <= 0) {
+        ts.ward = 0;
+        this.emit({ type: "notice", team: target.team, text: "CORE SHIELD DOWN" });
+      }
+      if (amount <= 0) {
+        this.emit({ type: "hit", ...ev, team: target.team, big: false, blocked: true, id: target.id, amount: soak, src: src?.id });
+        return true;
+      }
+    }
     target.hp -= amount;
     const b = this.data.heroes.baseline;
     if (src?.hero) src.hero.meter = Math.min(b.superMax, src.hero.meter + amount * b.superPerDamageDealt);
@@ -681,6 +690,8 @@ export class World {
       target.alive = false;
       target.hero.dead = true;
       target.hero.action = null;
+      target.hero.bomb = false;
+      target.hero.aim = null;
       target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds;
       killer.resource += bounty.hero;
       killer.heroKills++;
@@ -714,10 +725,7 @@ export class World {
     this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius, false);
     killer.resource += bounty.structure;
     this.teams[target.team].structuresLost++;
-    if (pad.zone === "home" && pad.side === target.team) {
-      if (!this.teams[target.team].homeLost) this.emit({ type: "notice", team: target.team, text: "CORE SHIELD DOWN" });
-      this.teams[target.team].homeLost = true;
-    }
+    pad.rubbleUntil = this.time + this.data.structures.rubbleSeconds;
   }
 
   nextSlot(team: number): number {

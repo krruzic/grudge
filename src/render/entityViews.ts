@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { builderRate, padNear } from "../sim/structures";
 import type { World } from "../sim/world";
 import type { Entity } from "../sim/types";
 import type { HeroModels } from "./heroModels";
@@ -35,6 +36,7 @@ interface View {
   bar: Bar;
   ring?: THREE.Mesh;
   shield?: THREE.Mesh;
+  work?: Bar;
   blockFx?: THREE.Mesh;
   lastAction?: object | null;
   seen: boolean;
@@ -65,7 +67,7 @@ const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "s
 
 const KIND_ANIM: Record<string, string> = {
   slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", hex: "cast", repair: "cast",
-  turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", shoot: "shoot",
+  turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
   banner: "cast", rally: "cast", works: "cast", ballista: "cast",
   shove: "attack_a", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
 };
@@ -100,8 +102,9 @@ function hintTex(rows: [string, string, string][]): THREE.CanvasTexture {
   return t;
 }
 const HINTS = {
-  build: new THREE.SpriteMaterial({ map: hintTex([["X", "#5a5a66", "PRODUCE"], ["Y", "#5a5a66", "TOWER"]]), depthTest: false, transparent: true }),
+  build: new THREE.SpriteMaterial({ map: hintTex([["X", "#5a5a66", "OUTPOST"], ["Y", "#5a5a66", "TOWER"]]), depthTest: false, transparent: true }),
   upgrade: new THREE.SpriteMaterial({ map: hintTex([["X", "#5a5a66", "UPGRADE"]]), depthTest: false, transparent: true }),
+  shop: new THREE.SpriteMaterial({ map: hintTex([["Y", "#5a5a66", "SHOP"]]), depthTest: false, transparent: true }),
 };
 
 function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
@@ -240,6 +243,7 @@ export class EntityViews {
   private rings = new Map<number, THREE.Mesh>();
   private padMarkers: THREE.Mesh[] = [];
   private padHints: THREE.Sprite[] = [];
+  private shopHints: THREE.Sprite[] = [];
   humans: boolean[] = [];
   hints = true;
   menus: boolean[] = [];
@@ -271,6 +275,18 @@ export class EntityViews {
       this.root.add(hint);
       this.padHints.push(hint);
     }
+    for (let team = 0; team < 2; team++) {
+      const hint = new THREE.Sprite(HINTS.shop);
+      hint.renderOrder = 33;
+      hint.visible = false;
+      this.root.add(hint);
+      this.shopHints.push(hint);
+    }
+  }
+
+  heroPoint(id: number): THREE.Vector3 | null {
+    const v = this.views.get(id);
+    return v && v.framed !== false && v.seen ? v.root.position.clone() : null;
   }
 
   heroPoints(): THREE.Vector3[] {
@@ -337,6 +353,8 @@ export class EntityViews {
         view.shield = sh;
         view.spin = body.getObjectByName("crystal") ?? undefined;
         bar = makeBar(3, team, 5.2);
+        view.work = makeBar(3, new THREE.Color(0x9fe0ff), 5.5);
+        root.add(view.work.group);
       } else {
         body = st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
         body.traverse((o) => {
@@ -345,6 +363,10 @@ export class EntityViews {
         });
         body.rotation.y = e.transform.facing;
         bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(2.2, team, 5.0);
+        if (!st.siege) {
+          view.work = makeBar(2.2, new THREE.Color(0xffd040), 5.3);
+          root.add(view.work.group);
+        }
         this.fx.buildFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
       }
       root.add(body);
@@ -363,7 +385,7 @@ export class EntityViews {
     });
     const v: View = {
       kind: e.kind, root, body, mixer, actions, bar, seen: true,
-      weapon: view.weapon, spin: view.spin, level2: view.level2, shield: view.shield, blockFx: view.blockFx,
+      weapon: view.weapon, spin: view.spin, level2: view.level2, shield: view.shield, blockFx: view.blockFx, work: view.work,
       mats, flash: 0, joltX: 0, joltZ: 0, freeze: 0, stepDist: 0,
     };
     if (e.unit) this.fx.spawnFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
@@ -724,17 +746,30 @@ export class EntityViews {
         v.spin.rotation.y = time * 0.8 + e.team;
       }
       v.bar.group.visible = true;
+      if (v.work) {
+        const ward = (st.ward ?? 0) / w.data.structures.core.ward;
+        v.work.group.visible = ward > 0 && !w.isSudden();
+        setBar(v.work, ward, 1 / 60, time);
+      }
       return;
     }
     v.bar.group.visible = e.hp < e.maxHp || !st.ready;
+    if (v.work) {
+      const building = !st.ready || !!st.upgrading;
+      v.work.group.visible = building;
+      if (building) {
+        setBar(v.work, st.progress ?? 0, 1 / 60, time);
+        const idle = builderRate(w, e) <= 0;
+        v.work.fg.material.color.set(idle && Math.floor(time * 3) % 2 === 0 ? 0x806020 : 0xffd040);
+      }
+    }
     if (st.siege) {
       const age = w.time - st.builtAt;
       v.body.scale.set(1, Math.min(1, 0.2 + age * 2), 1);
       syncBallista(v.body, e.transform.facing, w.time - st.lastFireAt, time, 1 / 60);
       return;
     }
-    const sd = w.data.structures;
-    const k = st.ready ? 1 : Math.min(1, (w.time - st.builtAt) / sd.buildSeconds);
+    const k = st.ready ? 1 : Math.min(1, st.progress ?? 0);
     v.body.scale.set(1, 0.25 + 0.75 * k, 1);
     if (v.level2) v.level2.visible = st.level > 1;
     const fired = w.time - st.lastFireAt;
@@ -801,6 +836,15 @@ export class EntityViews {
         const s = 1 + Math.sin(time * 3) * 0.03;
         hint.scale.set(4 * s, (up ? 4 * 48 / 256 : 4 * 88 / 256) * s, 1);
       }
+    });
+    this.shopHints.forEach((hint, team) => {
+      const core = w.core(team);
+      const shopper = heroes.find((h) => h.team === team && this.humans[h.hero!.player] && !this.menus[h.hero!.player] && w.arena.inShop(h) && !padNear(w, h));
+      hint.visible = this.hints && !!core && !!shopper;
+      if (!hint.visible || !core) return;
+      const s = 1 + Math.sin(time * 3) * 0.03;
+      hint.position.set(core.transform.pos.x, core.transform.y + 6.4, core.transform.pos.z);
+      hint.scale.set(4 * s, 4 * 48 / 256 * s, 1);
     });
   }
 }

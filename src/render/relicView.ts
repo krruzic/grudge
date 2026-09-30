@@ -2,6 +2,30 @@ import * as THREE from "three";
 import type { World } from "../sim/world";
 import type { StructureModels } from "./structureModels";
 import goldUrl from "../../assets/textures/gold.png?url";
+import ironUrl from "../../assets/textures/iron.png?url";
+import { starTex, targetTex } from "./combatFx";
+
+const ironTex = new THREE.TextureLoader().load(ironUrl);
+ironTex.colorSpace = THREE.SRGBColorSpace;
+const bombMat = new THREE.MeshLambertMaterial({ map: ironTex, color: 0x4a4a52, flatShading: true });
+const fuseMat = new THREE.MeshLambertMaterial({ color: 0xc8b080 });
+
+function bombMesh(): THREE.Group {
+  const g = new THREE.Group();
+  const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), bombMat);
+  ball.position.y = 0.42;
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.14, 6), bombMat);
+  cap.position.y = 0.86;
+  const fuse = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.28, 4), fuseMat);
+  fuse.position.set(0.05, 1.02, 0);
+  fuse.rotation.z = -0.35;
+  const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, color: 0xffc040, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  spark.position.set(0.1, 1.18, 0);
+  spark.scale.setScalar(0.45);
+  spark.name = "spark";
+  g.add(ball, cap, fuse, spark);
+  return g;
+}
 
 const goldTex = new THREE.TextureLoader().load(goldUrl);
 goldTex.colorSpace = THREE.SRGBColorSpace;
@@ -23,6 +47,9 @@ export class RelicView {
   private shadow = blob(0.5, 0.45);
   private ring: THREE.Mesh;
   private t = 0;
+  private carried = new Map<number, THREE.Group>();
+  private planted: THREE.Group[] = [];
+  private reticles = new Map<number, THREE.Mesh>();
 
   constructor(private world: World, models: StructureModels, private teamColors: THREE.Color[], private heroScale: number) {
     const src = models.create("grudge", new THREE.Color(1, 1, 1));
@@ -61,8 +88,72 @@ export class RelicView {
     this.root.add(this.relic, this.arrow, this.shadow, this.ring);
   }
 
+  private syncExtras(alpha: number): void {
+    const w = this.world;
+    const seen = new Set<number>();
+    const seenAim = new Set<number>();
+    for (const p of w.players) {
+      const e = w.getAny(p.heroId);
+      if (!e?.hero || !e.alive) continue;
+      const t = e.transform;
+      const x = t.prevPos.x + (t.pos.x - t.prevPos.x) * alpha;
+      const z = t.prevPos.z + (t.pos.z - t.prevPos.z) * alpha;
+      const y = t.prevY + (t.y - t.prevY) * alpha;
+      if (e.hero.bomb) {
+        seen.add(e.id);
+        let b = this.carried.get(e.id);
+        if (!b) {
+          b = bombMesh();
+          b.scale.setScalar(0.8);
+          this.carried.set(e.id, b);
+          this.root.add(b);
+        }
+        b.position.set(x, y + 2.25 * this.heroScale + Math.sin(this.t * 6) * 0.06, z);
+        b.rotation.y = this.t * 2;
+        const sp = b.getObjectByName("spark") as THREE.Sprite;
+        sp.scale.setScalar(0.35 + Math.random() * 0.2);
+      }
+      if (e.hero.aim) {
+        seenAim.add(e.id);
+        let r = this.reticles.get(e.id);
+        if (!r) {
+          r = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: targetTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+          r.rotation.x = -Math.PI / 2;
+          this.reticles.set(e.id, r);
+          this.root.add(r);
+        }
+        const a = e.hero.aim;
+        r.position.set(a.x, w.groundY(a.x, a.z) + 0.15, a.z);
+        r.scale.setScalar(w.data.match.arena.shop.cannon.radius + w.data.match.arena.shop.cannon.spread * 0.6 + Math.sin(this.t * 8) * 0.15);
+        r.rotation.z = this.t * 1.5;
+      }
+    }
+    for (const [id, b] of this.carried) if (!seen.has(id)) { this.root.remove(b); this.carried.delete(id); }
+    for (const [id, r] of this.reticles) if (!seenAim.has(id)) { this.root.remove(r); r.geometry.dispose(); (r.material as THREE.Material).dispose(); this.reticles.delete(id); }
+    const bombs = w.arena.bombs;
+    while (this.planted.length < bombs.length) {
+      const g = bombMesh();
+      this.planted.push(g);
+      this.root.add(g);
+    }
+    this.planted.forEach((g, i) => {
+      const b = bombs[i];
+      g.visible = !!b;
+      if (!b) return;
+      const left = b.at - w.time;
+      const beat = left < 1 ? 14 : left < 2 ? 8 : 4;
+      const on = Math.sin(this.t * beat * Math.PI) > 0;
+      g.position.set(b.x, b.y, b.z);
+      g.scale.setScalar(1 + (on ? 0.12 : 0) + Math.max(0, 1 - left) * 0.25);
+      const sp = g.getObjectByName("spark") as THREE.Sprite;
+      sp.scale.setScalar(on ? 0.7 : 0.4);
+      (sp.material as THREE.SpriteMaterial).color.set(on ? 0xff5020 : 0xffc040);
+    });
+  }
+
   sync(alpha: number, dt: number): void {
     this.t += dt;
+    this.syncExtras(alpha);
     const w = this.world;
     const r = w.arena.relic;
     const home = w.arena.home;
