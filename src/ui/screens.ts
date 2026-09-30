@@ -7,6 +7,31 @@ import { abilityIcon } from "./icons";
 import { artTitle, band, drawLogo, banner, beam, goldArrow, nameImage, paintedText, parchment, pennant, pin, ribbon, rolledBanner, scroll, shadowText, shield, table, texturedRect, wall, waxSeal, woodFloor } from "./n64ui";
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
+import { talentIcon } from "./hud";
+import talentData from "../../data/talents.json";
+
+type TNode = { id: string; next?: TNode[] };
+const TREES = (talentData as unknown as { heroes: Record<string, { a: TNode[]; b: TNode[] }> }).heroes;
+
+function drawTree(ctx: CanvasRenderingContext2D, hero: string, x: number, y: number, w: number): number {
+  const tree = TREES[hero];
+  if (!tree) return 0;
+  const gap = 2;
+  const big = Math.floor((w - 12 - gap * 5) / 4.4);
+  const small = Math.floor(big * 0.6);
+  let yy = y;
+  for (const slot of ["a", "b"] as const) {
+    drawText(ctx, slot.toUpperCase(), x, yy + big / 2 - 3, "#f8e8c0", 0.6, true);
+    let xx = x + 7;
+    tree[slot].forEach((t1) => {
+      talentIcon(ctx, t1.id, xx, yy, big);
+      (t1.next ?? []).forEach((t2, k) => talentIcon(ctx, t2.id, xx + big + gap, yy + k * (small + 1), small));
+      xx += big + gap + small + gap * 2;
+    });
+    yy += big + 3;
+  }
+  return yy - y;
+}
 
 const KIND_LABEL: Record<string, string> = {
   combo: "3-HIT COMBO", slam: "GROUND SLAM", quake: "EARTHQUAKE", warcry: "WAR CRY", shoot: "MAGIC BOLT",
@@ -428,7 +453,8 @@ export class Screens {
 
     const def = this.heroes[s.hero];
     const hy = y + 26;
-    const hh = h - notch - 50;
+    const treeH = commander || !TREES[s.hero] ? 0 : Math.floor((w - 12 - 10) / 4.4) * 2 + 8;
+    const hh = h - notch - 50 - treeH;
     if (showHero && this.portraits) {
       const cv = this.portraits.stage(i, s.hero, team, s.ready);
       const k = Math.min((w + 30) / cv.width, (hh + 14) / cv.height);
@@ -440,6 +466,7 @@ export class Screens {
       paintedText(ctx, "?", x + w / 2, hy + hh / 2 - 18, "#6a4a28", 3.4);
     }
     this.kindPlaque(ctx, i, x + w / 2, y + 18, s);
+    if (treeH) drawTree(ctx, s.hero, x + 5, hy + hh + 6, w - 8);
     const name = (showHero ? def?.name ?? s.hero : "RANDOM").toUpperCase();
     const ry = y + h - notch - 22;
     ribbon(ctx, x + w / 2, ry, w + 6, 11, name, Math.min(0.8, (w + 2) / Math.max(1, textWidth(name, 1, true))), undefined, showHero ? nameImage(s.hero) : null);

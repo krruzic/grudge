@@ -3,6 +3,7 @@ import { setTextLayer } from "./font";
 import { UNIT_TYPES, type Directive, type UnitType } from "../sim/types";
 import type { Portraits } from "./portraits";
 import { parchment, texturedRect } from "./n64ui";
+import { onHiLayer } from "./font";
 import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
 import { buildCost, padNear } from "../sim/structures";
@@ -336,9 +337,14 @@ export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number,
   ctx.fillRect(x - 1, y - 1, size + 2, size + 2);
   texturedRect(ctx, "stone", x, y, size, size, dim ? "#5a5048" : "#b8a888", 0, 0.5);
   if (im?.complete && im.naturalWidth) {
-    ctx.globalAlpha = dim ? 0.35 : 1;
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(im, x, y, size, size);
+    const a = dim ? 0.35 : 1;
+    onHiLayer(ctx, (c) => {
+      c.save();
+      c.globalAlpha *= a;
+      c.imageSmoothingEnabled = false;
+      c.drawImage(im, x, y, size, size);
+      c.restore();
+    });
   } else {
     ctx.fillStyle = dim ? "#6a6058" : "#ffe890";
     ctx.beginPath();
@@ -758,21 +764,18 @@ export class Hud {
     const hero = w.getAny(heroId);
     const opt = hero ? options(w, hero) : null;
     if (!opt) return;
-    const cw = 104;
+    const cw = 84;
     const x0 = right ? Math.max(4, cx - 64 - cw * 2 - 6) : Math.min(W - cw * 2 - 10, cx + 64);
-    const isz = 40;
-    const cards = opt.list.map((o) => ({ o, lines: hudWrap(o.desc, cw - 10, 0.62).slice(0, 5) }));
-    const h = isz + 22 + Math.max(...cards.map((c) => c.lines.length)) * 8;
-    const y = Math.max(40, Math.min(cy - h / 2, 236 - h));
-    cards.forEach(({ o, lines }, k) => {
+    const isz = 48;
+    const h = isz + 24;
+    const y = Math.max(40, Math.min(cy - h / 2, 232 - h));
+    opt.list.forEach((o, k) => {
       const x = x0 + k * (cw + 6);
       parchment(ctx, x, y, cw, h);
       talentIcon(ctx, o.id, x + (cw - isz) / 2, y + 5, isz);
-      const tag = k === 0 ? "◀ LEFT" : "RIGHT ▶";
-      drawText(ctx, k === 0 ? "LEFT" : "RIGHT", k === 0 ? x + 4 : x + cw - 4 - textWidth("RIGHT", 0.55), y + 4, "#8a1810", 0.55);
-      void tag;
-      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, 0.72) / 2, y + isz + 8, "#3a2410", 0.72);
-      lines.forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, 0.62) / 2, y + isz + 18 + j * 8, "#4a3018", 0.62));
+      drawText(ctx, k === 0 ? "LEFT" : "RIGHT", k === 0 ? x + 4 : x + cw - 4 - textWidth("RIGHT", 0.6), y + 4, "#8a1810", 0.6);
+      const s = Math.min(0.85, (cw - 6) / Math.max(1, textWidth(o.name, 1)));
+      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, s) / 2, y + isz + 10, "#3a2410", s);
     });
   }
 
