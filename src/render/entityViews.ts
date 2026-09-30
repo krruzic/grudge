@@ -311,7 +311,15 @@ export class EntityViews {
       body = inst.body;
       mixer = inst.mixer;
       actions = inst.actions;
-      bar = makeBar(1.3, team, 2.2 * this.heroScale + 0.2);
+      bar = makeBar(1.3, team, 0.1);
+      bar.group.position.z = 0.95 * this.heroScale;
+      const tag = inst.root.children.find((o) => o instanceof THREE.Sprite);
+      if (tag) {
+        inst.root.remove(tag);
+        tag.position.set(0, 0.1, 1.33 * this.heroScale);
+        tag.scale.multiplyScalar(this.heroScale * 0.85);
+        root.add(tag);
+      }
       markSilhouette(body, e.team);
       const bf = new THREE.Mesh(
         new THREE.RingGeometry(0.35, 0.75, 6),

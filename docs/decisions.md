@@ -399,3 +399,5 @@
 ## Camera modes
 - A ribbon on champion select (and CAMERA in Options) picks SPLIT · AUTO ZOOM (default), SPLIT · D-PAD ZOOM or SHARED VIEW. In both split modes every human gets a view that follows their own hero, including a single player against CPUs; two or more players split the screen and merge into one view when close together.
 - Auto zoom frames your hero plus anything relevant: enemies within 9m pull the camera in to about 18m wide, towers and keeps within 13m widen it to include them (up to 34m), otherwise it rests at 21m. D-pad zoom lets each player step through five fixed widths with D-pad left (out) and right (in).
+- Commanders always get a fixed wide view (58m across, closer than the old full-map zoom) framing their whole army, since they run the battlefield rather than one fight.
+- Hero health bars and P-tags moved from above the head to just below the foot ring, so the relic and bomb carried overhead are never hidden.

@@ -20,6 +20,7 @@ export interface RenderConfig {
   minViewWidth: number;
   splitViewWidth: number;
   splitNear: number;
+  commanderViewWidth: number;
   viewMargin: number;
   skyZenith: string;
   skyHorizon: string;
@@ -339,7 +340,8 @@ export class GameRenderer {
     const depthToWidth = (aspect / Math.sin(pitch)) * 1.25;
     const need = Math.max(max.x - min.x, (max.z - min.z) * depthToWidth) + margin;
     const fullMap = Math.max(t.width, t.depth * depthToWidth) + 4;
-    const width = THREE.MathUtils.clamp(need, minWidth, Math.max(minWidth, Math.min(maxWidth, fullMap)));
+    const lo = Math.min(minWidth, fullMap);
+    const width = THREE.MathUtils.clamp(need, lo, Math.max(lo, Math.min(maxWidth, fullMap)));
 
     if (width < t.width) focus.x = THREE.MathUtils.clamp(focus.x, width / 2, t.width - width / 2);
     else focus.x = t.width / 2;
@@ -411,6 +413,15 @@ export class GameRenderer {
     if (!pts.length) {
       const sp = w.spawnPoint(heroes[0]?.team ?? 0);
       return { pts: [new THREE.Vector3(sp.x, 0, sp.z)], min: this.cfg.splitViewWidth, max: this.cfg.splitViewWidth, margin: 0 };
+    }
+    const slot = w.players.find((p) => p.player === sv.player);
+    if (slot?.commander && sv.heroIds.length === 1) {
+      for (const o of w.entities) {
+        if (!o.alive || o.team !== slot.team || (!o.unit && !o.hero)) continue;
+        pts.push(new THREE.Vector3(o.transform.pos.x, o.transform.y, o.transform.pos.z));
+      }
+      const cw = this.cfg.commanderViewWidth;
+      return { pts, min: cw, max: cw, margin: 0 };
     }
     if (this.camMode === 2) {
       const z = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2];

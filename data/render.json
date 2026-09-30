@@ -34,5 +34,6 @@
   "shadows": false,
   "outlines": false,
   "splitViewWidth": 22,
-  "splitNear": 12
+  "splitNear": 12,
+  "commanderViewWidth": 58
 }
