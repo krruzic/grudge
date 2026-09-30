@@ -2,13 +2,14 @@ import { FLAG_GRASS, Kind, Terrain, type MapData } from "./terrain.ts";
 import { NavGrid } from "./nav.ts";
 import type { GameData, HeroDef } from "./config.ts";
 import type {
-  Boomerang, Command, Delayed, Directive, Entity, MatchState, Pad, PadZone, Projectile, SimEvent, Status, TargetClass, TeamState, TerrainMod, Trap, UnitType, Vec2, Zone,
+  Boomerang, Command, Delayed, Missile, Directive, Entity, MatchState, Pad, PadZone, Projectile, SimEvent, Status, TargetClass, TeamState, TerrainMod, Trap, UnitType, Vec2, Zone,
 } from "./types.ts";
 import { UNIT_TYPES } from "./types.ts";
 import { updateBoomerangs, updateHero } from "./heroes.ts";
 import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
+import { abilities, addShield, afterShot, allFx, gainXp, learn, onKill, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
 
 export type { Vec2, Entity, Command } from "./types.ts";
 
@@ -51,6 +52,8 @@ function newStatus(): Status {
   return {
     slowUntil: 0, slowMul: 1, stunUntil: 0, kvx: 0, kvz: 0, buffUntil: 0, buffDamageMul: 1, buffSpeedMul: 1,
     invulnUntil: 0, lastAttackAt: -99, hidden: false, supportDamageMul: 1, auraDamageMul: 1, stealthUntil: 0, ambushMul: 1, guardUntil: 0, guardMul: 1, cowedUntil: 0, hexUntil: 0, hexOwner: 0,
+    bleedStacks: 0, bleedDps: 0, bleedUntil: 0, bleedOwner: 0, shield: 0, shieldUntil: 0, shieldBurst: 0, armorMul: 1, armorUntil: 0, ccImmuneUntil: 0,
+    markUntil: 0, markTeam: -1, markOwner: 0, markMul: 1, markAll: false, markWeaken: 1,
   };
 }
 
@@ -60,6 +63,21 @@ export class World {
   readonly entities: Entity[] = [];
   readonly projectiles: Projectile[] = [];
   readonly boomerangs: Boomerang[] = [];
+  readonly missiles: Missile[] = [];
+  private timers: { at: number; seq: number; fn: () => void }[] = [];
+  private timerSeq = 0;
+
+  later(seconds: number, fn: () => void): void {
+    this.timers.push({ at: this.time + seconds, seq: this.timerSeq++, fn });
+  }
+
+  private runTimers(): void {
+    if (!this.timers.length) return;
+    const due = this.timers.filter((t) => t.at <= this.time).sort((a, b) => a.at - b.at || a.seq - b.seq);
+    if (!due.length) return;
+    this.timers = this.timers.filter((t) => t.at > this.time);
+    for (const t of due) t.fn();
+  }
   readonly pads: Pad[] = [];
   readonly teams: TeamState[] = [];
   readonly players: PlayerSlot[] = [];
@@ -192,6 +210,7 @@ export class World {
       damageMul: tiers.damage[def.damage],
       vel: { x: 0, z: 0 },
       action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99, bomb: false, stuckFor: 0, aim: null,
+      xp: 0, level: 1, picks: [], path: { a: [], b: [] }, ab: null, frenzy: 0, frenzyUntil: 0, recastUntil: 0, empowerMul: 1, empowerUntil: 0,
       dead: false, respawnAt: 0, lastTargetId: 0, lastTargetAt: -99, anim: "idle", animStart: 0,
       stepHeight: def.hooks.stepHeight ?? b.stepHeight,
       maxSlope: def.hooks.maxSlope ?? b.maxSlope,
@@ -320,6 +339,8 @@ export class World {
       if (e.alive && cmd.build) tryBuild(this, e, cmd.build);
       if (e.alive && cmd.call) this.arena.callSquad(e, cmd.call);
       if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
+      if (cmd.learn !== undefined && e.hero?.picks.length) learn(this, e, cmd.learn);
+      if (e.alive) gainXp(this, e, this.data.talents?.xp.passive * dt);
       if (cmd.directive) {
         const ts = this.teams[slot.team];
         if (slot.commander) {
@@ -340,6 +361,9 @@ export class World {
     }
     this.updateProjectiles(dt);
     updateBoomerangs(this);
+    updateMissiles(this);
+    tickStatus(this);
+    this.runTimers();
     this.updateHazards();
     this.applyKnockback(dt);
     this.separate();
@@ -541,11 +565,14 @@ export class World {
     }
     if (target.hero?.action?.kind === "parry" && target.hero.action.t <= (this.heroDef(target.hero.type).abilities.r.window ?? 0.5)) {
       const r = this.heroDef(target.hero.type).abilities.r;
+      const pfx = allFx(this, target);
       this.emit({ type: "parry", ...ev, team: target.team });
       target.hero.action.t = target.hero.action.dur;
       if (src && src.kind !== "structure" && this.dist(src, target) < 5) {
-        this.damage(target, src, (r.counter ?? 80) * this.damageMulOf(target), { stun: r.stunSeconds, knockback: 4, big: true });
+        const pc = pfx.parryCounter;
+        this.damage(target, src, (r.counter ?? 80) * (pc?.mul ?? 1) * this.damageMulOf(target), { stun: (r.stunSeconds ?? 0) + (pc?.stun ?? 0), knockback: 4, big: true });
       }
+      if (pfx.parryShield) addShield(target, pfx.parryShield, pfx.parryShield, 5, this.time);
       if (r.openingSeconds) {
         target.hero.cooldowns.b = this.time;
         target.hero.openingUntil = this.time + r.openingSeconds;
@@ -596,6 +623,18 @@ export class World {
         src.status.stealthUntil = 0;
       }
     }
+    const st = target.status;
+    if (src && this.time < st.markUntil && (st.markAll ? src.team === st.markTeam : src.id === st.markOwner || src.owner === st.markOwner)) amount *= st.markMul;
+    if (src && this.time < src.status.markUntil && src.status.markWeaken < 1) amount *= src.status.markWeaken;
+    if (this.time < st.armorUntil) amount *= st.armorMul;
+    if (target.hero && st.shield > 0) {
+      const aws = abilities(this, target).a.fx?.armorWhileShield;
+      if (aws) amount *= aws;
+    }
+    const ccImmune = this.time < st.ccImmuneUntil;
+    if (ccImmune) {
+      opts = { ...opts, stun: undefined, knockback: 0 };
+    }
     let blocked = false;
     const fx = opts.fromX ?? src?.transform.pos.x;
     const fz = opts.fromZ ?? src?.transform.pos.z;
@@ -623,7 +662,31 @@ export class World {
         return true;
       }
     }
+    if (st.shield > 0 && this.time < st.shieldUntil) {
+      const soak = Math.min(st.shield, amount);
+      st.shield -= soak;
+      amount -= soak;
+      if (st.shield <= 0) {
+        st.shield = 0;
+        const burst = target.hero ? abilities(this, target).a.fx?.shieldBurst : undefined;
+        this.emit({ type: "shieldBreak", x: tp.pos.x, y: tp.y, z: tp.pos.z, team: target.team, burst: !!burst });
+        if (burst) {
+          this.later(0, () => {
+            for (const o of this.entities.slice()) {
+              if (!o.alive || o.team === target.team || o.structure) continue;
+              if (this.dist(o, target) - o.radius > 3) continue;
+              this.damage(target, o, burst * this.damageMulOf(target), { fromX: tp.pos.x, fromZ: tp.pos.z, knockback: 6, big: true });
+            }
+          });
+        }
+      }
+      if (amount <= 0) {
+        this.emit({ type: "hit", ...ev, team: target.team, big: false, blocked: true, id: target.id, amount: soak, src: src?.id });
+        return true;
+      }
+    }
     target.hp -= amount;
+    xpForDamage(this, src, target, amount);
     const b = this.data.heroes.baseline;
     if (src?.hero) src.hero.meter = Math.min(b.superMax, src.hero.meter + amount * b.superPerDamageDealt);
     if (target.hero) target.hero.meter = Math.min(b.superMax, target.hero.meter + amount * b.superPerDamageTaken);
@@ -681,6 +744,7 @@ export class World {
   kill(target: Entity, src: Entity | null): void {
     const tp = target.transform;
     this.onKillSynergy(target, src);
+    onKill(this, src, target);
     const bounty = this.data.match.economy.bounty;
     const kt = src ? src.team : 1 - target.team;
     const killerTeam = kt === 0 || kt === 1 ? kt : -1;
@@ -1044,7 +1108,8 @@ export class World {
         this.projectiles.splice(i, 1);
         const src = this.getAny(p.sourceId) ?? null;
         const who = src && src.alive ? src : null;
-        if (target) this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss });
+        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss }) : false;
+        if (landed && who && target && p.talent) afterShot(this, who, target, p.damage, p.talent === "orb");
         if (p.splash) {
           const sp = p.splash;
           this.emit({ type: "telegraph", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: sp.radius, team: p.team, seconds: 0.05 });

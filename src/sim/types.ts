@@ -1,3 +1,4 @@
+import type { AbilityDef } from "./config.ts";
 export interface Vec2 {
   x: number;
   z: number;
@@ -41,6 +42,22 @@ export interface Status {
   cowedUntil: number;
   hexUntil: number;
   hexOwner: number;
+  bleedStacks: number;
+  bleedDps: number;
+  bleedUntil: number;
+  bleedOwner: number;
+  shield: number;
+  shieldUntil: number;
+  shieldBurst: number;
+  armorMul: number;
+  armorUntil: number;
+  ccImmuneUntil: number;
+  markUntil: number;
+  markTeam: number;
+  markOwner: number;
+  markMul: number;
+  markAll: boolean;
+  markWeaken: number;
 }
 
 export interface HeroAction {
@@ -59,6 +76,8 @@ export interface HeroAction {
   toZ?: number;
   hitIds?: number[];
   jab?: boolean;
+  fromX2?: number;
+  fromZ2?: number;
   pinned?: Record<number, [number, number]>;
 }
 
@@ -87,6 +106,16 @@ export interface HeroState {
   actionEndAt: number;
   bomb: boolean;
   stuckFor: number;
+  xp: number;
+  level: number;
+  picks: ("a" | "b")[];
+  path: { a: number[]; b: number[] };
+  ab: Record<"a" | "b" | "r" | "z", AbilityDef> | null;
+  frenzy: number;
+  frenzyUntil: number;
+  recastUntil: number;
+  empowerMul: number;
+  empowerUntil: number;
   onWorks?: boolean;
   aim: { x: number; z: number; until: number } | null;
 }
@@ -126,6 +155,8 @@ export interface StructureState {
   ward?: number;
   progress?: number;
   upgrading?: boolean;
+  hasteUntil?: number;
+  hasteMul?: number;
   siege?: { cooldown: number; vs: Partial<Record<string, number>>; modId: number };
 }
 
@@ -171,6 +202,7 @@ export interface Zone {
   until: number;
   dps: number;
   slowMul: number;
+  style?: string;
 }
 
 export interface Delayed {
@@ -201,6 +233,32 @@ export interface TerrainMod {
   prevStyle?: string[];
   deck: number[];
   until: number;
+}
+
+export interface Missile {
+  id: number;
+  ownerId: number;
+  team: number;
+  x: number;
+  z: number;
+  y: number;
+  dirX: number;
+  dirZ: number;
+  speed: number;
+  range: number;
+  dist: number;
+  width: number;
+  damage: number;
+  pierce: boolean;
+  hit: number[];
+  style: string;
+  stun?: number;
+  slowMul?: number;
+  slowSeconds?: number;
+  splash?: number;
+  splashDamage?: number;
+  chain?: number;
+  endBurst?: { radius: number; damage: number };
 }
 
 export interface Boomerang {
@@ -234,6 +292,7 @@ export interface Projectile {
   prevT: number;
   canMiss: boolean;
   splash?: { radius: number; damage: number; slowMul: number; slowSeconds: number };
+  talent?: "bolt" | "orb";
 }
 
 export interface Pad {
@@ -285,6 +344,7 @@ export interface Command {
   super?: boolean;
   build?: StructureType | "default" | "upgrade";
   call?: UnitType;
+  learn?: number;
   buy?: ShopItem;
   aimAt?: Vec2;
   directive?: { type: UnitType | "all"; dir: Directive };
@@ -314,10 +374,16 @@ export type SimEvent =
   | { type: "cannonWarn"; x: number; y: number; z: number; radius: number; seconds: number }
   | { type: "cannonHit"; x: number; y: number; z: number; radius: number }
   | { type: "relic"; state: "taken" | "dropped" | "shrined" | "stolen" | "home"; team: number; player: number; x: number; y: number; z: number }
-  | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean }
+  | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean; style?: string }
   | { type: "bomb"; state: "planted" | "boom"; x: number; y: number; z: number; team: number; fuse: number }
   | { type: "callout"; x: number; y: number; z: number; team: number; text: string; owner: number }
   | { type: "repair"; x: number; y: number; z: number; team: number; radius: number; fixed: { x: number; y: number; z: number; amount: number; h: number }[] }
+  | { type: "levelup"; id: number; level: number; x: number; y: number; z: number; team: number }
+  | { type: "learned"; id: number; name: string; x: number; y: number; z: number; team: number }
+  | { type: "chain"; pts: number[]; team: number }
+  | { type: "pull"; x: number; y: number; z: number; radius: number; team: number }
+  | { type: "shieldBreak"; x: number; y: number; z: number; team: number; burst: boolean }
+  | { type: "charge"; x: number; y: number; z: number; team: number }
   | { type: "shove"; x: number; y: number; z: number; team: number }
   | { type: "fall"; x: number; y: number; z: number }
   | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };

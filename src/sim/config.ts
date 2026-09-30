@@ -10,8 +10,70 @@ export interface HitDef {
   knockback: number;
 }
 
+export interface TalentFx {
+  wave?: { damage: number; length: number; width: number; stun?: number; style: string };
+  waveEnd?: { radius: number; damage: number };
+  bolt?: { damage: number; range: number; count: number; spread: number; style: string; splash?: number; splashDamage?: number; slowMul?: number; slowSeconds?: number; chain?: number };
+  lifesteal?: number;
+  lifestealVsBleed?: number;
+  frenzy?: { max: number; speed: number; seconds: number; damage?: number; atMaxArc?: number; atMaxDamage?: number };
+  resetOnKill?: "a" | "b" | "r";
+  takedownShield?: number;
+  stealthOnKill?: number;
+  pull?: boolean;
+  zoneAfter?: { seconds: number; dps: number; slowMul: number; style: string; radius?: number };
+  echo?: { count: number; delay: number; scale: number; step?: number };
+  charge?: { range: number; damage: number; knockback?: number; stun?: number };
+  armorOnUse?: { mul: number; seconds: number; cc?: boolean };
+  cdrOnHit?: { slot: "a" | "b" | "r"; seconds: number };
+  healAllies?: number;
+  chainAtMax?: { count: number; damage: number };
+  structShield?: { amount: number; seconds: number };
+  allyShield?: number;
+  towerHaste?: { mul: number; seconds: number };
+  bleed?: { dps: number; seconds: number; max: number };
+  consumeBleed?: number;
+  mark?: { seconds: number; mul: number; all?: boolean; burst?: number; weaken?: number };
+  recast?: number;
+  landShield?: number;
+  summonOnKill?: { type: UnitType; seconds: number };
+  shieldOnHit?: { amount: number; max: number; seconds: number };
+  chain?: { count: number; mul: number };
+  orbChain?: number;
+  hexOnHit?: number;
+  summon?: { type: UnitType; count: number; seconds: number };
+  parryShield?: number;
+  parryCounter?: { mul: number; stun: number };
+  finisherBonus?: { damage?: number; lunge?: number; extra?: number; knock?: number };
+  afterimage?: number;
+  empowerNextA?: number;
+  armorWhileShield?: number;
+  shieldBurst?: number;
+  finisherStun?: number;
+  finisherZone?: { radius: number; seconds: number; dps: number; slowMul: number; style: string };
+  pierce?: boolean;
+  splinter?: { radius: number; damage: number };
+}
+
+export interface TalentDef {
+  id: string;
+  name: string;
+  desc: string;
+  set?: Record<string, number>;
+  add?: Record<string, number>;
+  mul?: Record<string, number>;
+  fx?: TalentFx;
+  next?: TalentDef[];
+}
+
+export interface TalentData {
+  xp: { levels: number[]; passive: number; vsHero: number; vsUnit: number; vsStructure: number; heroKill: number; unitKill: number; structureKill: number; perLevelHp: number; perLevelDamage: number };
+  heroes: Record<string, { a: TalentDef[]; b: TalentDef[] }>;
+}
+
 export interface AbilityDef {
   kind: string;
+  fx?: TalentFx;
   anim: string;
   hits?: HitDef[];
   comboWindow?: number;
@@ -235,6 +297,7 @@ export interface MatchData {
 }
 
 export interface GameData {
+  talents: TalentData;
   heroes: HeroData;
   units: UnitData;
   structures: StructureData;

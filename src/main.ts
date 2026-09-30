@@ -1,4 +1,5 @@
 import heroData from "../data/heroes.json";
+import talentData from "../data/talents.json";
 import unitData from "../data/units.json";
 import structureData from "../data/structures.json";
 import matchData from "../data/match.json";
@@ -38,7 +39,7 @@ import { drawText, textWidth } from "./ui/font";
 import type { LobbySlot } from "./ui/screens";
 
 const MAX_PLAYERS = 4;
-const data = { heroes: heroData, units: unitData, structures: structureData, match: matchData } as unknown as GameData;
+const data = { talents: talentData, heroes: heroData, units: unitData, structures: structureData, match: matchData } as unknown as GameData;
 const heroUrls = import.meta.glob("../assets/heroes/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
 const unitUrls = import.meta.glob("../assets/units/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
 const structureUrls = import.meta.glob("../assets/structures/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
@@ -816,7 +817,7 @@ async function start(): Promise<void> {
         const m = i >= 0 ? mappers[i] : null;
         if (!m) return;
         const h = world.heroForPlayer(i);
-        m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h));
+        m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h), !!h?.hero?.picks.length);
         if (view.camMode !== 0 && !commanderSlot(i)) {
           if (p.pressed.down) view.zoomStep(i, 1);
           if (p.pressed.up) view.zoomStep(i, -1);

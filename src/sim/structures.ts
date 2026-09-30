@@ -194,6 +194,7 @@ export function updateStructure(w: World, e: Entity): void {
   }
 
   const boost = w.arena.towerBoost(e);
+  const haste = st.hasteUntil && w.time < st.hasteUntil ? st.hasteMul ?? 1 : 1;
   if (st.type === "damage") {
     let best: Entity | null = null;
     let bestScore = Infinity;
@@ -218,7 +219,7 @@ export function updateStructure(w: World, e: Entity): void {
     const vs = (siege ? siege.vs[cls] : def.vs?.[cls]) ?? 1;
     w.fireProjectile(e, best, st.damage * boost.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2);
     st.lastFireAt = w.time;
-    st.nextAction = w.time + (siege ? siege.cooldown : def.cooldown ?? 1);
+    st.nextAction = w.time + (siege ? siege.cooldown : def.cooldown ?? 1) / haste;
     return;
   }
 
@@ -236,7 +237,7 @@ export function updateStructure(w: World, e: Entity): void {
       w.damage(e, o, st.damage * boost.damage * vs * cm, { knockback: (def.knockback ?? 3) * Math.min(1, vs), slowMul: slow, slowSeconds: def.slowSeconds });
     }
     st.lastFireAt = w.time;
-    st.nextAction = w.time + (def.cooldown ?? 2);
+    st.nextAction = w.time + (def.cooldown ?? 2) / haste;
     return;
   }
 

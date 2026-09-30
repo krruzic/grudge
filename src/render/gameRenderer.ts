@@ -503,6 +503,7 @@ export class GameRenderer {
     this.entityViews.sync(alpha, dt, this.time);
     this.relicView?.sync(alpha, dt);
     this.combatFx.syncProjectiles(this.world, alpha);
+    this.combatFx.syncMissiles(this.world);
     this.combatFx.syncBanners(this.world, performance.now() / 1000);
     this.combatFx.update(dt);
     this.hazards.sync(this.time, dt);

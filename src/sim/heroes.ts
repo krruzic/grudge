@@ -3,6 +3,7 @@ import type { AbilityDef } from "./config.ts";
 import type { Command, Entity, HeroAction, TerrainMod, UnitType } from "./types.ts";
 import { Kind } from "./terrain.ts";
 import { spawnUnit } from "./structures.ts";
+import { abilities, addShield, afterMelee, bCooldown, fireMissile, frenzySpeed, markTargets, meleeMods, onBUse, pullTo, zoneAt } from "./talents.ts";
 
 type Slot = "a" | "b" | "r" | "z";
 
@@ -46,7 +47,7 @@ function aim(w: World, e: Entity, cmd: Command, reach: number): [number, number]
 
 function chaining(w: World, e: Entity): boolean {
   const h = e.hero!;
-  const hits = w.heroDef(h.type).abilities.a.hits;
+  const hits = abilities(w, e).a.hits;
   return !!hits && w.time < h.comboUntil && h.comboIndex % hits.length !== 0;
 }
 
@@ -64,9 +65,18 @@ function reachOf(def: AbilityDef): number {
 
 function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   const h = e.hero!;
-  const def = w.heroDef(h.type).abilities[slot];
-  const [dx, dz] = aim(w, e, cmd, reachOf(def) + 1);
+  const def = abilities(w, e)[slot];
+  const [dx, dz] = aim(w, e, cmd, reachOf(def) + (def.fx?.charge?.range ?? 0) + 1);
+  if (slot === "b" && def.fx?.charge) {
+    const c = begin(e, slot, "charge", 0.62, 0.42, dx, dz);
+    c.hitIds = [];
+    w.emit({ type: "charge", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team });
+    if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
+    return;
+  }
   const a = begin(e, slot, def.kind, def.dur ?? 0.5, def.hitAt ?? 0.25, dx, dz);
+  a.fromX2 = e.transform.pos.x;
+  a.fromZ2 = e.transform.pos.z;
   if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
   if (def.kind === "leap") {
     const p = e.transform.pos;
@@ -106,7 +116,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   const dt = w.dt;
   const b = w.data.heroes.baseline;
   const def = w.heroDef(h.type);
-  const ab = def.abilities;
+  const ab = abilities(w, e);
   const t = e.transform;
 
   if (h.dead) {
@@ -178,7 +188,8 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       h.cooldowns.r = w.time + (ab.r.cooldown ?? 10);
     } else if (cmd.secondary && ready(e, "b", w.time) && !act) {
       startAbility(w, e, "b", cmd);
-      h.cooldowns.b = w.time + (ab.b.cooldown ?? 4);
+      onBUse(w, e);
+      h.cooldowns.b = bCooldown(w, e);
     } else if (cmd.attack && !act && def.hooks.wrenchDamage && onWorks(w, e) && ready(e, "wrench", w.time)) {
       const [dx, dz] = aim(w, e, cmd, def.hooks.wrenchRange ?? 10);
       begin(e, "a", "wrench", 0.4, 0.16, dx, dz);
@@ -200,9 +211,10 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
         const idx = chaining(w, e) ? h.comboIndex % hits.length : 0;
         const hit = hits[idx];
         const [dx, dz] = aim(w, e, cmd, hit.range + 1.5);
-        begin(e, "a", "combo", hit.dur, hit.hitAt, dx, dz, idx);
+        const spd = frenzySpeed(w, e);
+        begin(e, "a", "combo", hit.dur / spd, hit.hitAt / spd, dx, dz, idx);
         h.comboIndex = idx + 1;
-        h.comboUntil = w.time + hit.dur + (ab.a.comboWindow ?? 0.35);
+        h.comboUntil = w.time + hit.dur / spd + (ab.a.comboWindow ?? 0.35);
         const cd = b.comboCooldown ?? 0;
         h.cooldowns.a = h.comboUntil + (idx === hits.length - 1 ? cd : cd * 0.5);
       } else if (ab.a.shots) {
@@ -231,7 +243,18 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
     } else if (a.kind === "combo" && a.t < a.hitAt) {
       const hit = ab.a.hits![a.combo];
-      w.moveBy(e, a.dirX * hit.lunge * dt, a.dirZ * hit.lunge * dt);
+      const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? ab.a.fx?.finisherBonus?.lunge ?? 1 : 1;
+      w.moveBy(e, a.dirX * hit.lunge * fin * dt, a.dirZ * hit.lunge * fin * dt);
+    } else if (a.kind === "charge" && a.t < a.hitAt) {
+      const ch = ab.b.fx!.charge!;
+      w.moveBy(e, a.dirX * (ch.range / a.hitAt) * dt, a.dirZ * (ch.range / a.hitAt) * dt);
+      const ids = a.hitIds ?? (a.hitIds = []);
+      for (const o of w.entities.slice()) {
+        if (!o.alive || o.team === e.team || o.structure || ids.includes(o.id)) continue;
+        if (w.dist(e, o) - o.radius > 1.3) continue;
+        ids.push(o.id);
+        w.damage(e, o, ch.damage * w.damageMulOf(e), { knockback: ch.knockback ?? 5, stun: ch.stun, big: true });
+      }
     } else if (a.kind === "quake" && a.t < a.hitAt) {
       w.moveBy(e, a.dirX * 5 * dt, a.dirZ * 5 * dt);
     } else if (a.kind === "leap" && a.toX !== undefined) {
@@ -257,6 +280,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     }
     if (a.t >= a.dur) {
       if (a.kind !== "dodge" && a.name !== "hit") h.actionEndAt = w.time;
+      if (a.name === "b" && a.kind === "dash") endDash(w, e, a);
       h.action = null;
     }
     h.blocking = false;
@@ -412,7 +436,8 @@ function unstick(w: World, e: Entity, ux: number, uz: number): void {
   t.y = w.groundY(t.pos.x, t.pos.z);
 }
 
-function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, arcDeg: number, damage: number, knockback: number, big: boolean, vsStunnedMul?: number): void {
+function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, arcDeg: number, damage: number, knockback: number, big: boolean, vsStunnedMul?: number): Entity[] {
+  const out: Entity[] = [];
   const t = e.transform;
   const cosArc = Math.cos(((arcDeg / 2) * Math.PI) / 180);
   for (const o of w.entities.slice()) {
@@ -423,8 +448,9 @@ function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, 
     if (d - o.radius > range) continue;
     if (d > 0.3 && (dx * dirX + dz * dirZ) / d < cosArc) continue;
     if (Math.abs(o.transform.y - t.y) > 2.5) continue;
-    w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul });
+    if (w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul })) out.push(o);
   }
+  return out;
 }
 
 function shoveHit(w: World, e: Entity, a: HeroAction): void {
@@ -454,14 +480,35 @@ function dashHits(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
     if (!o.alive || o.team === e.team || ids.includes(o.id)) continue;
     if (w.dist(e, o) - o.radius > (def.width ?? 1.2)) continue;
     ids.push(o.id);
-    w.damage(e, o, (def.damage ?? 60) * w.damageMulOf(e), {
+    const hit = w.damage(e, o, (def.damage ?? 60) * w.damageMulOf(e), {
       knockback: def.knockback ?? 3, structureDamage: def.structureDamage !== undefined ? def.structureDamage * w.damageMulOf(e) : undefined, big: true,
       executeBelow: def.executeBelow, executeMul: def.executeMul,
     });
+    if (hit && a.name === "b") markTargets(w, e, [o]);
   }
 }
 
-function aoe(w: World, e: Entity, cx: number, cz: number, radius: number, def: AbilityDef, mul: number): void {
+function slamAt(w: World, e: Entity, cx: number, cz: number, radius: number, def: AbilityDef, mul: number, dirX: number, dirZ: number): void {
+  const fx = def.fx;
+  const once = (x: number, z: number, scale: number) => {
+    if (fx?.pull) pullTo(w, e, x, z, radius + 1.5);
+    w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius, team: e.team });
+    aoe(w, e, x, z, radius, def, mul * scale);
+  };
+  once(cx, cz, 1);
+  if (fx?.zoneAfter) zoneAt(w, e, cx, cz, radius, fx.zoneAfter);
+  const ec = fx?.echo;
+  if (ec) {
+    for (let k = 1; k <= ec.count; k++) {
+      const x = cx + dirX * (ec.step ?? 0) * k;
+      const z = cz + dirZ * (ec.step ?? 0) * k;
+      w.later(ec.delay * k, () => { if (e.alive) once(x, z, ec.scale); });
+    }
+  }
+}
+
+function aoe(w: World, e: Entity, cx: number, cz: number, radius: number, def: AbilityDef, mul: number): Entity[] {
+  const out: Entity[] = [];
   for (const o of w.entities.slice()) {
     if (!o.alive || o.team === e.team) continue;
     const d = Math.hypot(o.transform.pos.x - cx, o.transform.pos.z - cz);
@@ -474,17 +521,98 @@ function aoe(w: World, e: Entity, cx: number, cz: number, radius: number, def: A
       vsSlowedMul: def.vsSlowedMul,
     });
     if (hit && def.cowSeconds && o.kind !== "structure") o.status.cowedUntil = w.time + def.cowSeconds;
+    if (hit) out.push(o);
+  }
+  return out;
+}
+
+function hexLand(w: World, e: Entity, x: number, z: number, def: AbilityDef, mul: number): void {
+  const fx = def.fx;
+  const r = def.radius ?? 2.5;
+  if (fx?.pull) pullTo(w, e, x, z, r + 2);
+  w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius: r, team: e.team });
+  for (const o of w.entities.slice()) {
+    if (!o.alive || o.team === e.team) continue;
+    if (Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) - o.radius > r) continue;
+    if (def.hexSeconds && o.kind !== "structure") {
+      o.status.hexUntil = w.time + def.hexSeconds;
+      o.status.hexOwner = e.id;
+    }
+    w.damage(e, o, (def.damage ?? 80) * mul, { fromX: x, fromZ: z, slowMul: def.slowMul, slowSeconds: def.slowSeconds, stun: def.stunSeconds, knockback: fx?.pull ? 0 : 2, big: true });
+  }
+  if (fx?.zoneAfter) zoneAt(w, e, x, z, r, fx.zoneAfter);
+  if (fx?.summon) {
+    for (let k = 0; k < fx.summon.count; k++) {
+      const u = spawnUnit(w, e.team, fx.summon.type, x + (k - 0.5) * 0.8, z, 1);
+      if (u) {
+        u.expiresAt = w.time + fx.summon.seconds;
+        u.owner = e.id;
+        u.unit!.raised = true;
+      }
+    }
+  }
+}
+
+function dashLine(w: World, e: Entity, fx0: number, fz0: number, fx1: number, fz1: number, def: AbilityDef, mul: number): void {
+  const dx = fx1 - fx0;
+  const dz = fz1 - fz0;
+  const len = Math.hypot(dx, dz) || 1;
+  const hit: Entity[] = [];
+  for (const o of w.entities.slice()) {
+    if (!o.alive || o.team === e.team) continue;
+    const ox = o.transform.pos.x - fx0;
+    const oz = o.transform.pos.z - fz0;
+    const along = Math.max(0, Math.min(len, (ox * dx + oz * dz) / len));
+    const px = fx0 + (dx / len) * along;
+    const pz = fz0 + (dz / len) * along;
+    if (Math.hypot(o.transform.pos.x - px, o.transform.pos.z - pz) - o.radius > (def.width ?? 1.2)) continue;
+    if (w.damage(e, o, (def.damage ?? 60) * mul, { knockback: def.knockback ?? 3, big: true, executeBelow: def.executeBelow, executeMul: def.executeMul, fromX: px - dx / len, fromZ: pz - dz / len })) hit.push(o);
+  }
+  markTargets(w, e, hit);
+}
+
+function endDash(w: World, e: Entity, a: HeroAction): void {
+  const def = abilities(w, e).b;
+  const fx = def.fx;
+  const h = e.hero!;
+  if (fx?.empowerNextA) {
+    h.empowerMul = fx.empowerNextA;
+    h.empowerUntil = w.time + 3;
+    w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: "EMPOWERED", owner: e.id });
+  }
+  if (fx?.afterimage && a.fromX2 !== undefined) {
+    const x0 = a.fromX2;
+    const z0 = a.fromZ2!;
+    const x1 = e.transform.pos.x;
+    const z1 = e.transform.pos.z;
+    const mul = w.damageMulOf(e);
+    w.later(fx.afterimage, () => {
+      if (!e.alive) return;
+      w.emit({ type: "reach", x: x0, y: w.groundY(x0, z0), z: z0, tx: x1, tz: z1, team: e.team, hit: false, style: "afterimage" });
+      dashLine(w, e, x0, z0, x1, z1, def, mul);
+    });
   }
 }
 
 function fire(w: World, e: Entity, a: HeroAction): void {
-  const ab = w.heroDef(e.hero!.type).abilities;
+  const ab = abilities(w, e);
   const t = e.transform;
   const mul = w.damageMulOf(e);
   if (a.kind === "combo") {
     const hit = ab.a.hits![a.combo];
-    if (a.jab) arcHit(w, e, a.dirX, a.dirZ, hit.range, hit.arcDeg, hit.damage * mul * 0.55, hit.knockback * 0.5, false);
-    else arcHit(w, e, a.dirX, a.dirZ, hit.range, hit.arcDeg, hit.damage * mul, hit.knockback, a.combo === (ab.a.hits!.length - 1));
+    const fin = !a.jab && a.combo === ab.a.hits!.length - 1;
+    const m = meleeMods(w, e, fin, !!a.jab);
+    const arc = m.arc ?? hit.arcDeg;
+    const dmg = (a.jab ? hit.damage * 0.55 : hit.damage) * mul * m.dmgMul + m.extra;
+    const targets = arcHit(w, e, a.dirX, a.dirZ, hit.range, arc, dmg, hit.knockback * (a.jab ? 0.5 : 1) * m.knockMul, fin || m.extra > 0);
+    afterMelee(w, e, targets, dmg * targets.length, fin, a.dirX, a.dirZ, hit.range, !!a.jab);
+    return;
+  }
+  if (a.kind === "charge") {
+    const def = ab.b;
+    const cx = t.pos.x + a.dirX * 0.8;
+    const cz = t.pos.z + a.dirZ * 0.8;
+    slamAt(w, e, cx, cz, def.radius ?? 3, def, mul, a.dirX, a.dirZ);
     return;
   }
   if (a.name === "shove") {
@@ -521,12 +649,22 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     case "slam": {
       const cx = t.pos.x + a.dirX * (def.offset ?? 1);
       const cz = t.pos.z + a.dirZ * (def.offset ?? 1);
-      w.emit({ type: "slam", x: cx, y: w.groundY(cx, cz), z: cz, radius: def.radius ?? 3, team: e.team });
-      aoe(w, e, cx, cz, def.radius ?? 3, def, mul);
+      slamAt(w, e, cx, cz, def.radius ?? 3, def, mul, a.dirX, a.dirZ);
       return;
     }
-    case "quake":
     case "leap": {
+      const r = def.radius ?? 5;
+      if (def.fx?.pull) pullTo(w, e, t.pos.x, t.pos.z, r + 1.5);
+      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: r, team: e.team });
+      const hit = aoe(w, e, t.pos.x, t.pos.z, r, def, mul);
+      if (a.name === "b") {
+        markTargets(w, e, hit);
+        if (def.fx?.zoneAfter) zoneAt(w, e, t.pos.x, t.pos.z, r, def.fx.zoneAfter);
+        if (def.fx?.landShield) addShield(e, def.fx.landShield, def.fx.landShield, 5, w.time);
+      }
+      return;
+    }
+    case "quake": {
       w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 5, team: e.team });
       aoe(w, e, t.pos.x, t.pos.z, def.radius ?? 5, def, mul);
       return;
@@ -588,7 +726,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const splash = sh?.splash ? { radius: sh.splash, damage: (sh.splashDamage ?? 30) * mul, slowMul: sh.slowMul ?? 1, slowSeconds: sh.slowSeconds ?? 0 } : undefined;
       const style = splash ? "orb" : "magic";
       const speed = (def.speed ?? 15) * (splash ? 0.8 : 1);
-      if (target) w.fireProjectile(e, target, dmg, speed, false, style, 1.6, true, splash);
+      if (target) {
+        w.fireProjectile(e, target, dmg, speed, false, style, 1.6, true, splash);
+        if (sh) w.projectiles[w.projectiles.length - 1].talent = splash ? "orb" : "bolt";
+      }
       else w.fireAtPoint(e, t.pos.x + a.dirX * (def.range ?? 8), t.pos.z + a.dirZ * (def.range ?? 8), speed, style, 1.6, splash);
       return;
     }
@@ -598,11 +739,16 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const x = target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.7;
       const z = target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.7;
       const delay = def.delay ?? 0.8;
-      w.delayed.push({
-        id: w.newId(), team: e.team, ownerId: e.id, at: w.time + delay, x, z, radius: def.radius ?? 2.5,
-        damage: (def.damage ?? 80) * mul, slowMul: def.slowMul, slowSeconds: def.slowSeconds, hexSeconds: def.hexSeconds,
-      });
-      w.emit({ type: "telegraph", x, y: w.groundY(x, z), z, radius: def.radius ?? 2.5, team: e.team, seconds: delay });
+      const ec = def.fx?.echo;
+      const n = 1 + (ec?.count ?? 0);
+      for (let k = 0; k < n; k++) {
+        const hx = x + a.dirX * (ec?.step ?? 0) * k;
+        const hz = z + a.dirZ * (ec?.step ?? 0) * k;
+        const at = delay + (ec?.delay ?? 0) * k;
+        const scale = k === 0 ? 1 : ec?.scale ?? 1;
+        w.emit({ type: "telegraph", x: hx, y: w.groundY(hx, hz), z: hz, radius: def.radius ?? 2.5, team: e.team, seconds: at });
+        w.later(at, () => { if (e.alive) hexLand(w, e, hx, hz, def, mul * scale); });
+      }
       return;
     }
     case "summon": {
@@ -641,16 +787,27 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     }
     case "repair": {
       const fixed: { x: number; y: number; z: number; amount: number; h: number }[] = [];
+      const fx = def.fx;
+      const r = def.radius ?? 6;
+      if (fx?.pull) pullTo(w, e, t.pos.x, t.pos.z, r + 1);
       for (const o of w.entities.slice()) {
-        if (!o.alive || w.dist(e, o) - o.radius > (def.radius ?? 6)) continue;
+        if (!o.alive || w.dist(e, o) - o.radius > r) continue;
         if (o.team === e.team && o.structure) {
           const before = o.hp;
           w.heal(o, def.heal ?? 200);
           fixed.push({ x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, amount: Math.round(o.hp - before), h: o.structure.type === "core" ? 4.5 : 3.6 });
+          if (fx?.structShield) addShield(o, fx.structShield.amount, fx.structShield.amount, fx.structShield.seconds, w.time);
+          if (fx?.towerHaste && o.structure.type !== "core") {
+            o.structure.hasteMul = fx.towerHaste.mul;
+            o.structure.hasteUntil = w.time + fx.towerHaste.seconds;
+          }
+        } else if (o.team === e.team && fx?.allyShield) {
+          addShield(o, fx.allyShield, fx.allyShield, 6, w.time);
         } else if (o.team !== e.team && o.kind !== "structure") {
-          w.damage(e, o, (def.damage ?? 30) * mul, { knockback: 3 });
+          w.damage(e, o, (def.damage ?? 30) * mul, { knockback: fx?.pull ? 0.5 : 3, stun: def.stunSeconds, big: !!def.stunSeconds });
         }
       }
+      if (fx?.zoneAfter) zoneAt(w, e, t.pos.x, t.pos.z, r, fx.zoneAfter);
       w.emit({ type: "repair", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, radius: def.radius ?? 6, fixed });
       if (!fixed.length) w.emit({ type: "notice", team: e.team, text: "NOTHING TO REPAIR IN REACH" });
       return;
@@ -909,9 +1066,46 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         if (w.losHeight(t.pos.x + a.dirX * s, t.pos.z + a.dirZ * s) > t.y + 2.2) { len = s; break; }
       }
       if (best && bestD > len) best = null;
-      if (best) len = Math.max(0.8, bestD);
-      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx: t.pos.x + a.dirX * len, tz: t.pos.z + a.dirZ * len, team: e.team, hit: !!best });
-      if (best) w.damage(e, best, (def.damage ?? 70) * mul, { knockback: def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, big: true });
+      const fx = def.fx;
+      const victims: Entity[] = [];
+      if (fx?.pierce) {
+        for (const o of w.entities) {
+          if (!o.alive || o.team === e.team || o.structure) continue;
+          const dx = o.transform.pos.x - t.pos.x;
+          const dz = o.transform.pos.z - t.pos.z;
+          const along = dx * a.dirX + dz * a.dirZ;
+          if (along < 0 || along - o.radius > len) continue;
+          if (Math.abs(dx * a.dirZ - dz * a.dirX) > width + o.radius || Math.abs(o.transform.y - t.y) > 3) continue;
+          victims.push(o);
+        }
+      } else if (best) {
+        len = Math.max(0.8, bestD);
+        victims.push(best);
+      }
+      const tx = t.pos.x + a.dirX * len;
+      const tz = t.pos.z + a.dirZ * len;
+      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx, tz, team: e.team, hit: victims.length > 0, style: fx?.pull ? "vine" : undefined });
+      for (const o of victims) {
+        const hit = w.damage(e, o, (def.damage ?? 70) * mul, {
+          knockback: fx?.pull ? 0 : def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, slowMul: def.slowMul, slowSeconds: def.slowSeconds, big: true,
+        });
+        if (hit && fx?.pull && o.alive && w.time >= o.status.ccImmuneUntil) {
+          const dx = t.pos.x - o.transform.pos.x;
+          const dz = t.pos.z - o.transform.pos.z;
+          const d = Math.hypot(dx, dz) || 1;
+          const k = Math.min(18, Math.max(0, d - 1.4) * 3.6);
+          o.status.kvx += (dx / d) * k;
+          o.status.kvz += (dz / d) * k;
+        }
+      }
+      if (fx?.splinter) {
+        w.emit({ type: "slam", x: tx, y: w.groundY(tx, tz), z: tz, radius: fx.splinter.radius, team: e.team });
+        for (const o of w.entities.slice()) {
+          if (!o.alive || o.team === e.team || o.structure) continue;
+          if (Math.hypot(o.transform.pos.x - tx, o.transform.pos.z - tz) - o.radius > fx.splinter.radius) continue;
+          w.damage(e, o, fx.splinter.damage * mul, { fromX: tx, fromZ: tz, knockback: 4 });
+        }
+      }
       return;
     }
     case "trap": {

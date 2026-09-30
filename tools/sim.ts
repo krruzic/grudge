@@ -18,6 +18,7 @@ const twoVtwo = opt("mode", "1v1") === "2v2";
 
 const json = (p: string) => JSON.parse(readFileSync(p, "utf8"));
 const data: GameData = {
+  talents: json("data/talents.json"),
   heroes: json("data/heroes.json"),
   units: json("data/units.json"),
   structures: json("data/structures.json"),
@@ -42,6 +43,10 @@ function run(seed: number): Result {
   w.spawnHero(swap ? heroB : heroA, 0, 0);
   w.spawnHero(swap ? heroA : heroB, 1, 1);
   const bots = [new Bot(0, 0.8, seed), new Bot(1, 0.8, seed + 1000)];
+  const pa = opt("pickA", "");
+  const pb = opt("pickB", "");
+  if (pa) bots[0 + (seed % 2 === 1 ? 1 : 0)].picks = pa.split("").map(Number);
+  if (pb) bots[1 - (seed % 2 === 1 ? 1 : 0)].picks = pb.split("").map(Number);
   if (twoVtwo) {
     const heroes2 = opt("partners", "commanders") === "heroes";
     w.spawnHero(heroes2 ? (swap ? heroB : heroA) : "herald", 2, 0);

@@ -1,0 +1,876 @@
+{
+  "notes": "Level 2 learns A tier 1, level 3 B tier 1, level 4 A tier 2, level 5 B tier 2. Each tier-1 pick has its own two tier-2 follow-ups. Mods: set/add/mul change the ability's numbers, fx turns on mechanics (see src/sim/talents.ts).",
+  "xp": {
+    "levels": [
+      0,
+      150,
+      400,
+      750,
+      1200
+    ],
+    "passive": 1.5,
+    "vsHero": 0.3,
+    "vsUnit": 0.05,
+    "vsStructure": 0.04,
+    "heroKill": 120,
+    "unitKill": 4,
+    "structureKill": 40,
+    "perLevelHp": 0.06,
+    "perLevelDamage": 0.06
+  },
+  "heroes": {
+    "warlord": {
+      "a": [
+        {
+          "id": "earthsplitter",
+          "name": "EARTHSPLITTER",
+          "desc": "YOUR FINISHER SENDS A ROCK WAVE 6M AHEAD FOR 50.",
+          "fx": {
+            "wave": {
+              "damage": 40,
+              "length": 6,
+              "width": 1.3,
+              "style": "rock"
+            }
+          },
+          "next": [
+            {
+              "id": "faultline",
+              "name": "FAULT LINE",
+              "desc": "THE ROCK WAVE RUNS 9M AND STUNS FOR 0.7S.",
+              "fx": {
+                "wave": {
+                  "damage": 45,
+                  "length": 9,
+                  "width": 1.4,
+                  "stun": 0.5,
+                  "style": "rock"
+                }
+              }
+            },
+            {
+              "id": "aftershock",
+              "name": "AFTERSHOCK",
+              "desc": "THE ROCK WAVE ERUPTS AT ITS END FOR 70 AROUND.",
+              "fx": {
+                "waveEnd": {
+                  "radius": 2.6,
+                  "damage": 70
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "bloodlust",
+          "name": "BLOODLUST",
+          "desc": "SWINGS HEAL 20% OF THEIR DAMAGE AND STACK +12% ATTACK SPEED (3).",
+          "fx": {
+            "lifesteal": 0.12,
+            "frenzy": {
+              "max": 3,
+              "speed": 0.12,
+              "seconds": 4
+            }
+          },
+          "next": [
+            {
+              "id": "frenzy",
+              "name": "FRENZY",
+              "desc": "AT 3 STACKS YOUR SWINGS CLEAVE ALL AROUND FOR +30%.",
+              "fx": {
+                "frenzy": {
+                  "atMaxArc": 330,
+                  "atMaxDamage": 1.12
+                }
+              }
+            },
+            {
+              "id": "wartrophy",
+              "name": "WAR TROPHY",
+              "desc": "HERO TAKEDOWNS RESET B AND GRANT A 150 SHIELD.",
+              "fx": {
+                "resetOnKill": "b",
+                "takedownShield": 150
+              }
+            }
+          ]
+        }
+      ],
+      "b": [
+        {
+          "id": "magnitude",
+          "name": "MAGNITUDE",
+          "desc": "THE SLAM DRAGS FOES INTO ITS CENTER. RADIUS +25%.",
+          "mul": {
+            "radius": 1.25
+          },
+          "fx": {
+            "pull": true
+          },
+          "next": [
+            {
+              "id": "sinkhole",
+              "name": "SINKHOLE",
+              "desc": "LEAVES A SINKHOLE FOR 3.5S: SLOW 50%, 25 PER SECOND.",
+              "fx": {
+                "zoneAfter": {
+                  "seconds": 3.5,
+                  "dps": 25,
+                  "slowMul": 0.5,
+                  "style": "sinkhole"
+                }
+              }
+            },
+            {
+              "id": "tremor",
+              "name": "TREMOR",
+              "desc": "THE SLAM ECHOES TWICE MORE AT 60% POWER.",
+              "fx": {
+                "echo": {
+                  "count": 2,
+                  "delay": 0.45,
+                  "scale": 0.6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "shouldercharge",
+          "name": "SHOULDER CHARGE",
+          "desc": "CHARGE 5M, BOWLING FOES OVER FOR 40, THEN SLAM.",
+          "fx": {
+            "charge": {
+              "range": 5,
+              "damage": 40,
+              "knockback": 5
+            }
+          },
+          "next": [
+            {
+              "id": "unstoppable",
+              "name": "UNSTOPPABLE",
+              "desc": "CHARGING GIVES 35% ARMOR AND CAN'T BE STUNNED FOR 2.5S.",
+              "fx": {
+                "armorOnUse": {
+                  "mul": 0.65,
+                  "seconds": 2.5,
+                  "cc": true
+                }
+              }
+            },
+            {
+              "id": "bulldoze",
+              "name": "BULLDOZE",
+              "desc": "THE CHARGE HITS FOR 70 AND STUNS FOR 1S.",
+              "fx": {
+                "charge": {
+                  "damage": 55,
+                  "stun": 0.7
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "engineer": {
+      "a": [
+        {
+          "id": "riveter",
+          "name": "RIVETER",
+          "desc": "YOUR FINISHER FIRES A RIVET 10M FOR 45.",
+          "fx": {
+            "bolt": {
+              "damage": 60,
+              "range": 10,
+              "count": 1,
+              "spread": 0,
+              "style": "rivet"
+            }
+          },
+          "next": [
+            {
+              "id": "scattershot",
+              "name": "SCATTERSHOT",
+              "desc": "FIRES THREE RIVETS IN A FAN.",
+              "fx": {
+                "bolt": {
+                  "count": 3,
+                  "spread": 16
+                }
+              }
+            },
+            {
+              "id": "shrapnel",
+              "name": "SHRAPNEL",
+              "desc": "RIVETS BURST FOR 40 AROUND WHATEVER THEY HIT.",
+              "fx": {
+                "bolt": {
+                  "splash": 2.2,
+                  "splashDamage": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "overclock",
+          "name": "OVERCLOCK",
+          "desc": "HITS CUT B COOLDOWN BY 0.6S AND STACK +10% ATTACK SPEED (4).",
+          "fx": {
+            "cdrOnHit": {
+              "slot": "b",
+              "seconds": 0.6
+            },
+            "frenzy": {
+              "max": 4,
+              "speed": 0.14,
+              "seconds": 3
+            }
+          },
+          "next": [
+            {
+              "id": "tuneup",
+              "name": "TUNE-UP",
+              "desc": "HITS REPAIR BUILDINGS AND HEAL TROOPS NEAR YOU FOR 20.",
+              "fx": {
+                "healAllies": 20
+              }
+            },
+            {
+              "id": "sparkgap",
+              "name": "SPARK GAP",
+              "desc": "AT 4 STACKS HITS ARC LIGHTNING TO 2 MORE FOES FOR 35.",
+              "fx": {
+                "chainAtMax": {
+                  "count": 2,
+                  "damage": 35
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "b": [
+        {
+          "id": "fortify",
+          "name": "FORTIFY",
+          "desc": "REPAIRED BUILDINGS GET A 250 SHIELD FOR 8S. REACH +30%.",
+          "mul": {
+            "radius": 1.3
+          },
+          "fx": {
+            "structShield": {
+              "amount": 250,
+              "seconds": 8
+            }
+          },
+          "next": [
+            {
+              "id": "bulwark",
+              "name": "BULWARK",
+              "desc": "ALSO SHIELDS YOU AND NEARBY TROOPS FOR 90.",
+              "fx": {
+                "allyShield": 90
+              }
+            },
+            {
+              "id": "overdrive",
+              "name": "OVERDRIVE",
+              "desc": "REPAIRED TOWERS FIRE TWICE AS FAST FOR 6S.",
+              "fx": {
+                "towerHaste": {
+                  "mul": 2,
+                  "seconds": 6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "shockwrench",
+          "name": "SHOCK WRENCH",
+          "desc": "THE PULSE HITS FOES FOR 90 AND STUNS 0.5S. REACH +20%.",
+          "set": {
+            "damage": 90,
+            "stunSeconds": 0.5
+          },
+          "mul": {
+            "radius": 1.2
+          },
+          "next": [
+            {
+              "id": "teslacoil",
+              "name": "TESLA COIL",
+              "desc": "PLANTS A COIL THAT ZAPS FOES 30 PER SECOND FOR 4S.",
+              "fx": {
+                "zoneAfter": {
+                  "seconds": 4,
+                  "dps": 30,
+                  "slowMul": 0.7,
+                  "style": "tesla",
+                  "radius": 3.2
+                }
+              }
+            },
+            {
+              "id": "magnet",
+              "name": "MAGNET",
+              "desc": "DRAGS FOES IN BEFORE THE SHOCK.",
+              "fx": {
+                "pull": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "raider": {
+      "a": [
+        {
+          "id": "serrated",
+          "name": "SERRATED",
+          "desc": "HITS MAKE FOES BLEED 10 PER SECOND FOR 3S, STACKING 3 TIMES.",
+          "fx": {
+            "bleed": {
+              "dps": 10,
+              "seconds": 3,
+              "max": 3
+            }
+          },
+          "next": [
+            {
+              "id": "hemorrhage",
+              "name": "HEMORRHAGE",
+              "desc": "YOUR FINISHER ON A 3-STACK BLEED BURSTS IT FOR 100.",
+              "fx": {
+                "consumeBleed": 100
+              }
+            },
+            {
+              "id": "bloodscent",
+              "name": "BLOOD SCENT",
+              "desc": "HEAL 35% OF THE DAMAGE YOU DEAL TO BLEEDING FOES.",
+              "fx": {
+                "lifestealVsBleed": 0.35
+              }
+            }
+          ]
+        },
+        {
+          "id": "twinfangs",
+          "name": "TWIN FANGS",
+          "desc": "YOUR FINISHER THROWS TWO DAGGERS 8M FOR 30 EACH.",
+          "fx": {
+            "bolt": {
+              "damage": 30,
+              "range": 8,
+              "count": 2,
+              "spread": 10,
+              "style": "dagger"
+            }
+          },
+          "next": [
+            {
+              "id": "poisontips",
+              "name": "POISON TIPS",
+              "desc": "DAGGERS SLOW FOES 40% FOR 1.5S.",
+              "fx": {
+                "bolt": {
+                  "slowMul": 0.6,
+                  "slowSeconds": 1.5
+                }
+              }
+            },
+            {
+              "id": "ricochet",
+              "name": "RICOCHET",
+              "desc": "DAGGERS BOUNCE TO ONE MORE FOE.",
+              "fx": {
+                "bolt": {
+                  "chain": 1
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "b": [
+        {
+          "id": "pounce",
+          "name": "POUNCE",
+          "desc": "LANDING MARKS FOES FOR 4S: THEY TAKE 30% MORE FROM YOU.",
+          "fx": {
+            "mark": {
+              "seconds": 4,
+              "mul": 1.3
+            }
+          },
+          "next": [
+            {
+              "id": "predator",
+              "name": "PREDATOR",
+              "desc": "KILLING A HERO RESETS LEAP AND HIDES YOU FOR 2S.",
+              "fx": {
+                "resetOnKill": "b",
+                "stealthOnKill": 2
+              }
+            },
+            {
+              "id": "rip",
+              "name": "RIP",
+              "desc": "MARKS BURST 2S LATER FOR 70.",
+              "fx": {
+                "mark": {
+                  "burst": 70
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "doublejump",
+          "name": "DOUBLE JUMP",
+          "desc": "LEAP AGAIN WITHIN 3S.",
+          "fx": {
+            "recast": 3
+          },
+          "next": [
+            {
+              "id": "featherfall",
+              "name": "FEATHERFALL",
+              "desc": "LANDING GIVES A 90 SHIELD. LEAP RANGE +40%.",
+              "mul": {
+                "range": 1.4
+              },
+              "fx": {
+                "landShield": 90
+              }
+            },
+            {
+              "id": "crater",
+              "name": "CRATER",
+              "desc": "LANDINGS LEAVE A CRATER THAT SLOWS 45% FOR 2.5S.",
+              "fx": {
+                "zoneAfter": {
+                  "seconds": 2.5,
+                  "dps": 12,
+                  "slowMul": 0.55,
+                  "style": "crater",
+                  "radius": 2.6
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "summoner": {
+      "a": [
+        {
+          "id": "soulsiphon",
+          "name": "SOUL SIPHON",
+          "desc": "YOUR BOLTS HEAL YOU FOR 20% OF THEIR DAMAGE.",
+          "fx": {
+            "lifesteal": 0.3
+          },
+          "next": [
+            {
+              "id": "soulharvest",
+              "name": "SOUL HARVEST",
+              "desc": "FOES YOUR BOLTS KILL RISE AS YOUR GRUNTS FOR 18S.",
+              "fx": {
+                "summonOnKill": {
+                  "type": "grunt",
+                  "seconds": 18
+                }
+              }
+            },
+            {
+              "id": "darkpact",
+              "name": "DARK PACT",
+              "desc": "HITS ALSO GROW A SHIELD, +20 EACH UP TO 120.",
+              "fx": {
+                "shieldOnHit": {
+                  "amount": 25,
+                  "max": 160,
+                  "seconds": 6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "arcbolts",
+          "name": "ARC BOLTS",
+          "desc": "BOLTS LEAP TO ONE MORE FOE FOR 60%.",
+          "fx": {
+            "chain": {
+              "count": 1,
+              "mul": 0.8
+            }
+          },
+          "next": [
+            {
+              "id": "stormorb",
+              "name": "STORM ORB",
+              "desc": "THE ORB ARCS TO THREE MORE FOES.",
+              "fx": {
+                "orbChain": 3
+              }
+            },
+            {
+              "id": "hexfire",
+              "name": "HEXFIRE",
+              "desc": "BOLTS HEX FOES: IF THEY DIE SOON THEY RISE FOR YOU.",
+              "fx": {
+                "hexOnHit": 4
+              }
+            }
+          ]
+        }
+      ],
+      "b": [
+        {
+          "id": "gravepull",
+          "name": "GRAVE PULL",
+          "desc": "THE HEX DRAGS FOES INTO ITS CENTER.",
+          "fx": {
+            "pull": true
+          },
+          "next": [
+            {
+              "id": "ossuary",
+              "name": "OSSUARY",
+              "desc": "LEAVES BONE SPIKES FOR 3S: SLOW 40%, 25 PER SECOND.",
+              "fx": {
+                "zoneAfter": {
+                  "seconds": 3,
+                  "dps": 25,
+                  "slowMul": 0.6,
+                  "style": "bones"
+                }
+              }
+            },
+            {
+              "id": "boneprison",
+              "name": "BONE PRISON",
+              "desc": "HEXED FOES ARE STUNNED FOR 1S.",
+              "set": {
+                "stunSeconds": 1.0
+              }
+            }
+          ]
+        },
+        {
+          "id": "twinhex",
+          "name": "TWIN HEX",
+          "desc": "A SECOND HEX FALLS 3M FURTHER AHEAD.",
+          "fx": {
+            "echo": {
+              "count": 1,
+              "delay": 0.4,
+              "scale": 1,
+              "step": 3
+            }
+          },
+          "next": [
+            {
+              "id": "cascade",
+              "name": "CASCADE",
+              "desc": "THREE HEXES MARCH FORWARD.",
+              "fx": {
+                "echo": {
+                  "count": 2
+                }
+              }
+            },
+            {
+              "id": "hungrydead",
+              "name": "HUNGRY DEAD",
+              "desc": "EVERY HEX RAISES A GRUNT FOR 12S.",
+              "fx": {
+                "summon": {
+                  "type": "grunt",
+                  "count": 1,
+                  "seconds": 12
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "duelist": {
+      "a": [
+        {
+          "id": "engarde",
+          "name": "EN GARDE",
+          "desc": "HITS CUT YOUR PARRY COOLDOWN BY 0.8S.",
+          "fx": {
+            "cdrOnHit": {
+              "slot": "r",
+              "seconds": 0.8
+            }
+          },
+          "next": [
+            {
+              "id": "riposte",
+              "name": "RIPOSTE",
+              "desc": "A SUCCESSFUL PARRY GRANTS A 150 SHIELD.",
+              "fx": {
+                "parryShield": 150
+              }
+            },
+            {
+              "id": "counterstrike",
+              "name": "COUNTERSTRIKE",
+              "desc": "PARRY COUNTERS HIT TWICE AS HARD AND STUN 0.6S LONGER.",
+              "fx": {
+                "parryCounter": {
+                  "mul": 2,
+                  "stun": 0.6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "fleche",
+          "name": "FLECHE",
+          "desc": "YOUR FINISHER LUNGES FARTHER AND HITS 40% HARDER.",
+          "fx": {
+            "finisherBonus": {
+              "damage": 1.4,
+              "lunge": 1.8
+            }
+          },
+          "next": [
+            {
+              "id": "windslash",
+              "name": "WIND SLASH",
+              "desc": "YOUR FINISHER SENDS A SLASH 7M THROUGH FOES FOR 45.",
+              "fx": {
+                "wave": {
+                  "damage": 45,
+                  "length": 7,
+                  "width": 1.1,
+                  "style": "slash"
+                }
+              }
+            },
+            {
+              "id": "momentum",
+              "name": "MOMENTUM",
+              "desc": "HITS STACK +8% DAMAGE AND ATTACK SPEED, UP TO 5.",
+              "fx": {
+                "frenzy": {
+                  "max": 5,
+                  "speed": 0.08,
+                  "damage": 0.08,
+                  "seconds": 3
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "b": [
+        {
+          "id": "blinkstep",
+          "name": "BLINK STEP",
+          "desc": "DASH AGAIN WITHIN 2.5S.",
+          "fx": {
+            "recast": 2.5
+          },
+          "next": [
+            {
+              "id": "afterimage",
+              "name": "AFTERIMAGE",
+              "desc": "A PHANTOM REPEATS EACH DASH HALF A SECOND LATER.",
+              "fx": {
+                "afterimage": 0.5
+              }
+            },
+            {
+              "id": "feint",
+              "name": "FEINT",
+              "desc": "AFTER A DASH YOUR NEXT A HITS 70% HARDER.",
+              "fx": {
+                "empowerNextA": 1.7
+              }
+            }
+          ]
+        },
+        {
+          "id": "marked",
+          "name": "MARKED",
+          "desc": "DASH MARKS FOES FOR 4S: +25% DAMAGE FROM YOUR WHOLE TEAM.",
+          "fx": {
+            "mark": {
+              "seconds": 4,
+              "mul": 1.25,
+              "all": true
+            }
+          },
+          "next": [
+            {
+              "id": "execute",
+              "name": "EXECUTE",
+              "desc": "DASH DEALS DOUBLE TO FOES BELOW 40% HEALTH.",
+              "set": {
+                "executeBelow": 0.4,
+                "executeMul": 2
+              }
+            },
+            {
+              "id": "duel",
+              "name": "DUEL",
+              "desc": "MARKED FOES DEAL 25% LESS DAMAGE.",
+              "fx": {
+                "mark": {
+                  "weaken": 0.75
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "warden": {
+      "a": [
+        {
+          "id": "thornguard",
+          "name": "THORNGUARD",
+          "desc": "HITS GROW A BARK SHIELD, +25 EACH UP TO 150.",
+          "fx": {
+            "shieldOnHit": {
+              "amount": 25,
+              "max": 150,
+              "seconds": 6
+            }
+          },
+          "next": [
+            {
+              "id": "barkskin",
+              "name": "BARKSKIN",
+              "desc": "WHILE SHIELDED YOU TAKE 25% LESS DAMAGE.",
+              "fx": {
+                "armorWhileShield": 0.75
+              }
+            },
+            {
+              "id": "thornburst",
+              "name": "THORN BURST",
+              "desc": "WHEN YOUR SHIELD BREAKS IT BURSTS FOR 90 AROUND YOU.",
+              "fx": {
+                "shieldBurst": 90
+              }
+            }
+          ]
+        },
+        {
+          "id": "rootsnare",
+          "name": "ROOTSNARE",
+          "desc": "YOUR FINISHER ROOTS FOES FOR 0.6S.",
+          "fx": {
+            "finisherStun": 0.6
+          },
+          "next": [
+            {
+              "id": "overgrowth",
+              "name": "OVERGROWTH",
+              "desc": "YOUR FINISHER LEAVES BRAMBLES FOR 3S.",
+              "fx": {
+                "finisherZone": {
+                  "radius": 2.6,
+                  "seconds": 3,
+                  "dps": 20,
+                  "slowMul": 0.6,
+                  "style": "bramble"
+                }
+              }
+            },
+            {
+              "id": "uproot",
+              "name": "UPROOT",
+              "desc": "YOUR FINISHER HURLS FOES AWAY AND DEALS +45.",
+              "fx": {
+                "finisherBonus": {
+                  "extra": 45,
+                  "knock": 2
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "b": [
+        {
+          "id": "graspingvine",
+          "name": "GRASPING VINE",
+          "desc": "THE SLAP YANKS ITS TARGET TO YOU.",
+          "fx": {
+            "pull": true
+          },
+          "next": [
+            {
+              "id": "choke",
+              "name": "CHOKE",
+              "desc": "YANKED FOES ARE STUNNED FOR 0.8S.",
+              "set": {
+                "stunSeconds": 0.8
+              }
+            },
+            {
+              "id": "tether",
+              "name": "TETHER",
+              "desc": "YANKED FOES TAKE +40 AND ARE SLOWED 50% FOR 2.5S.",
+              "add": {
+                "damage": 40
+              },
+              "set": {
+                "slowMul": 0.5,
+                "slowSeconds": 2.5
+              }
+            }
+          ]
+        },
+        {
+          "id": "whiplash",
+          "name": "WHIPLASH",
+          "desc": "THE SLAP HITS EVERYONE IN LINE. RANGE +3M.",
+          "add": {
+            "range": 3
+          },
+          "fx": {
+            "pierce": true
+          },
+          "next": [
+            {
+              "id": "flail",
+              "name": "FLAIL",
+              "desc": "SLAP AGAIN WITHIN 2S.",
+              "fx": {
+                "recast": 2
+              }
+            },
+            {
+              "id": "splinter",
+              "name": "SPLINTER",
+              "desc": "THE ARM BURSTS AT ITS END FOR 55 AROUND.",
+              "fx": {
+                "splinter": {
+                  "radius": 2.6,
+                  "damage": 55
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

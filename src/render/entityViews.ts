@@ -24,6 +24,9 @@ interface Bar {
 }
 
 interface View {
+  dome?: THREE.Mesh;
+  gear?: THREE.Sprite;
+  auraT?: number;
   kind: Entity["kind"];
   root: THREE.Group;
   body: THREE.Object3D;
@@ -118,7 +121,75 @@ function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTextu
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
+const hexShieldTex = (() => {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 128;
+  const c = cv.getContext("2d")!;
+  c.strokeStyle = "rgba(255,255,255,0.95)";
+  c.lineWidth = 3;
+  const r = 12;
+  for (let row = -1; row < 7; row++) {
+    for (let col = -1; col < 7; col++) {
+      const cx = col * r * 1.75 + (row % 2 ? r * 0.87 : 0);
+      const cy = row * r * 1.5;
+      c.beginPath();
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2 + Math.PI / 6;
+        c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      }
+      c.closePath();
+      c.stroke();
+    }
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 2);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+const domeGeo = new THREE.IcosahedronGeometry(1, 1);
+const gearMat = new THREE.SpriteMaterial({ depthTest: false, map: (() => {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 32;
+  const c = cv.getContext("2d")!;
+  c.beginPath();
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2;
+    const r = k % 2 ? 11 : 15;
+    c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r);
+  }
+  c.closePath();
+  c.fillStyle = "#e8b840"; c.fill();
+  c.strokeStyle = "#3a2408"; c.lineWidth = 2; c.stroke();
+  c.beginPath(); c.arc(16, 16, 5, 0, Math.PI * 2); c.fillStyle = "#3a2408"; c.fill();
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})() });
+
 const MARKS: Record<string, THREE.SpriteMaterial> = {
+  bleed: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.moveTo(16, 3); c.quadraticCurveTo(27, 18, 16, 28); c.quadraticCurveTo(5, 18, 16, 3);
+    c.fillStyle = "#c01818"; c.fill();
+    c.strokeStyle = "#2a0404"; c.lineWidth = 2.5; c.stroke();
+    c.fillStyle = "#ff8080"; c.fillRect(12, 16, 3, 5);
+  }) }),
+  mark: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.arc(16, 16, 11, 0, Math.PI * 2);
+    c.strokeStyle = "#1a0404"; c.lineWidth = 5; c.stroke();
+    c.strokeStyle = "#ff3a2a"; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.moveTo(16, 1); c.lineTo(16, 9); c.moveTo(16, 23); c.lineTo(16, 31); c.moveTo(1, 16); c.lineTo(9, 16); c.moveTo(23, 16); c.lineTo(31, 16);
+    c.strokeStyle = "#1a0404"; c.lineWidth = 4; c.stroke();
+    c.strokeStyle = "#ffd0c0"; c.lineWidth = 2; c.stroke();
+    c.beginPath(); c.arc(16, 16, 3, 0, Math.PI * 2); c.fillStyle = "#ff3a2a"; c.fill();
+  }) }),
+  armor: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+    c.beginPath(); c.moveTo(16, 3); c.lineTo(28, 8); c.lineTo(26, 20); c.lineTo(16, 29); c.lineTo(6, 20); c.lineTo(4, 8); c.closePath();
+    c.fillStyle = "#8a8478"; c.fill();
+    c.strokeStyle = "#1a1408"; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.moveTo(10, 11); c.lineTo(15, 17); c.lineTo(12, 22); c.moveTo(19, 9); c.lineTo(21, 15);
+    c.strokeStyle = "#3a3428"; c.lineWidth = 1.5; c.stroke();
+  }) }),
   stun: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
     for (const [x, y, r] of [[8, 14, 6], [24, 12, 6], [16, 24, 5]]) {
       c.beginPath();
@@ -611,6 +682,7 @@ export class EntityViews {
       else this.syncStructure(e, v, time);
       if (e.kind !== "structure" && e.alive) this.footsteps(e, v);
       if (e.kind !== "structure") this.syncMark(e, v, time);
+      this.syncTalentFx(e, v, time, dt);
       this.applyImpact(v, dt, frozen);
     }
     const nowS = performance.now() / 1000;
@@ -642,11 +714,58 @@ export class EntityViews {
     this.syncPads(time);
   }
 
+  private syncTalentFx(e: Entity, v: View, time: number, dt: number): void {
+    const w = this.world;
+    const s = e.status;
+    const shielded = e.alive && s.shield > 0 && w.time < s.shieldUntil;
+    if (shielded && !v.dome) {
+      const col = this.teamColors[e.team] ?? new THREE.Color(1, 1, 1);
+      v.dome = new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({
+        map: hexShieldTex, color: col.clone().lerp(new THREE.Color(1, 0.95, 0.7), 0.55), transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending,
+      }));
+      v.dome.userData.noSil = true;
+      v.root.add(v.dome);
+    }
+    if (v.dome) {
+      v.dome.visible = shielded;
+      if (shielded) {
+        const r = e.structure ? e.radius * 1.9 : e.hero ? 1.25 * this.heroScale : e.radius * 2.2;
+        v.dome.scale.setScalar(r * (1 + Math.sin(time * 5) * 0.03));
+        v.dome.position.y = e.structure ? r * 0.9 : r * 0.75;
+        v.dome.rotation.y = time * 0.6;
+        (v.dome.material as THREE.MeshBasicMaterial).opacity = 0.25 + Math.min(0.35, s.shield / 400);
+      }
+    }
+    const st = e.structure;
+    const haste = !!st && !!st.hasteUntil && w.time < st.hasteUntil;
+    if (haste && !v.gear) {
+      v.gear = new THREE.Sprite(gearMat);
+      v.gear.renderOrder = 32;
+      v.gear.scale.setScalar(1.2);
+      v.root.add(v.gear);
+    }
+    if (v.gear) {
+      v.gear.visible = haste;
+      v.gear.position.y = 6.2;
+      v.gear.material.rotation = time * 4;
+    }
+    if (!e.alive) return;
+    v.auraT = (v.auraT ?? 0) - dt;
+    if (v.auraT > 0) return;
+    v.auraT = 0.12;
+    const p = v.root.position;
+    const h = e.hero;
+    if (h && h.frenzy > 0 && w.time < h.frenzyUntil) for (let k = 0; k < h.frenzy; k++) this.fx.aura("flame", p.x, p.y, p.z);
+    if (h && w.time < h.empowerUntil) this.fx.aura("spark", p.x, p.y, p.z);
+    if (w.time < s.bleedUntil && s.bleedStacks > 0 && Math.random() < 0.3 * s.bleedStacks) this.fx.aura("drip", p.x, p.y, p.z);
+    if (haste) this.fx.aura("steam", p.x + (Math.random() - 0.5), p.y + 4.5, p.z + (Math.random() - 0.5));
+  }
+
   private syncMark(e: Entity, v: View, time: number): void {
     const t = this.world.time;
     const s = e.status;
-    const kind = !e.alive ? "" : t < s.stunUntil ? "stun" : e.hero && t < e.hero.openingUntil ? "opening" : t < s.hexUntil ? "hex"
-      : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : t < s.buffUntil && s.buffDamageMul > 1 ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
+    const kind = !e.alive ? "" : t < s.stunUntil ? "stun" : t < s.markUntil ? "mark" : e.hero && t < e.hero.openingUntil ? "opening" : t < s.hexUntil ? "hex"
+      : t < s.bleedUntil && s.bleedStacks > 0 ? "bleed" : t < s.armorUntil && s.armorMul < 1 ? "armor" : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : t < s.buffUntil && s.buffDamageMul > 1 ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
     if (kind !== v.markKind) {
       v.markKind = kind;
       if (v.mark) { v.root.remove(v.mark); v.mark = undefined; }
@@ -712,7 +831,7 @@ export class EntityViews {
       this.play(v, anim, scale, true);
     }
     v.lastAction = a;
-    if (a && (a.name === "dodge" || a.kind === "dash" || a.kind === "leap" || a.kind === "flurry" || a.kind === "blink")) {
+    if (a && (a.name === "dodge" || a.kind === "dash" || a.kind === "leap" || a.kind === "flurry" || a.kind === "blink" || a.kind === "charge")) {
       v.trailT = (v.trailT ?? 0) - dt;
       if (v.trailT <= 0) {
         v.trailT = 0.035;

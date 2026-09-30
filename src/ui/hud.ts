@@ -2,7 +2,8 @@ import type { World } from "../sim/world";
 import { setTextLayer } from "./font";
 import { UNIT_TYPES, type Directive, type UnitType } from "../sim/types";
 import type { Portraits } from "./portraits";
-import { texturedRect } from "./n64ui";
+import { parchment, texturedRect } from "./n64ui";
+import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
 import { buildCost, padNear } from "../sim/structures";
 import { drawNum, drawText, textWidth } from "./font";
@@ -320,6 +321,20 @@ interface Cross {
   until: number;
 }
 
+function hudWrap(s: string, width: number, scale: number): string[] {
+  const out: string[] = [];
+  let line = "";
+  for (const word of s.split(" ")) {
+    const next = line ? `${line} ${word}` : word;
+    if (textWidth(next, scale) > width && line) {
+      out.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
 export class Hud {
   private visible = false;
   private banner = "";
@@ -561,6 +576,42 @@ export class Hud {
       bxc += bw + 6;
     }
     y += 18;
+    const cfgXp = w.data.talents?.xp;
+    for (const p of w.players) {
+      const e = w.getAny(p.heroId);
+      if (!e?.hero || e.team !== t || p.commander || !cfgXp) continue;
+      const h = e.hero;
+      const lv = `LV ${h.level}`;
+      const lw = textWidth(lv, 0.7, true);
+      const lx = right ? ax(0, lw) : ax(0);
+      drawNum(ctx, lv, lx, y, "#ffe890", 0.7);
+      const next = cfgXp.levels[h.level];
+      const prev = cfgXp.levels[h.level - 1] ?? 0;
+      const frac = next === undefined ? 1 : (h.xp - prev) / (next - prev);
+      const bw = 34;
+      meter(ctx, right ? ax(lw + 4, bw) : ax(lw + 4), y + 2, bw, 2, frac, next === undefined ? "#ffd040" : "#8ad8ff");
+      let px = lw + 4 + bw + 5;
+      for (const slot of ["a", "b"] as const) {
+        const got = learned(w, e, slot).length;
+        const key = slot.toUpperCase();
+        const kx = right ? ax(px, 5) : ax(px);
+        drawText(ctx, key, kx, y, "#d8d0c0", 0.6, true);
+        for (let k = 0; k < 2; k++) {
+          ctx.fillStyle = INK;
+          const cx = (right ? ax(px + 7 + k * 5, 3) : ax(px + 7 + k * 5)) + 1.5;
+          ctx.fillRect(cx - 2, y + 1, 4, 4);
+          ctx.fillStyle = k < got ? "#ffd040" : "#3a3440";
+          ctx.fillRect(cx - 1.5, y + 1.5, 3, 3);
+        }
+        px += 20;
+      }
+      y += 8;
+      if (h.picks.length && Math.floor(now * 3) % 3 !== 0) {
+        const msg = `LEVEL UP! HOLD Y · FLICK C`;
+        drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.62)) : ax(0), y, "#ffe060", 0.62);
+      }
+      y += h.picks.length ? 8 : 0;
+    }
 
 
     const slot = w.players.find((p) => p.team === t && !p.commander);
@@ -601,6 +652,7 @@ export class Hud {
     if (menuUi && menuHero !== undefined) {
       const c = this.buildCross(w, t, menuHero, menuUi);
       if (c) this.drawCross(ctx, crossX, crossY, c, right, 1);
+      if (menuUi.buildMenu === "learn") this.drawLearnCards(ctx, W, crossX, crossY, w, menuHero, right);
       return;
     }
     const o = this.orders[t];
@@ -670,9 +722,34 @@ export class Hud {
     });
   }
 
+  private drawLearnCards(ctx: CanvasRenderingContext2D, W: number, cx: number, cy: number, w: World, heroId: number, right: boolean): void {
+    const hero = w.getAny(heroId);
+    const opt = hero ? options(w, hero) : null;
+    if (!opt) return;
+    const cw = 96;
+    const x0 = right ? Math.max(4, cx - 64 - cw * 2 - 6) : Math.min(W - cw * 2 - 10, cx + 64);
+    opt.list.forEach((o, k) => {
+      const x = x0 + k * (cw + 6);
+      const lines = hudWrap(o.desc, cw - 10, 0.55).slice(0, 4);
+      const h = 18 + lines.length * 7;
+      const y = cy - h / 2 - 6;
+      parchment(ctx, x, y, cw, h);
+      const tag = k === 0 ? "LEFT" : "RIGHT";
+      drawText(ctx, tag, x + 5, y + 4, "#8a1810", 0.5);
+      drawText(ctx, o.name, x + 5 + textWidth(tag, 0.5) + 4, y + 4, "#3a2410", 0.6);
+      lines.forEach((l, j) => drawText(ctx, l, x + 5, y + 13 + j * 7, "#4a3018", 0.55));
+    });
+  }
+
   private buildCross(w: World, team: number, heroId: number, mui: MapperUi): Cross | null {
     const hero = w.getAny(heroId);
     if (!hero?.alive) return null;
+    if (mui.buildMenu === "learn") {
+      const opt = options(w, hero);
+      if (!opt) return { title: "NOTHING TO LEARN", items: [["", ""], ["", ""], ["", ""], ["LATER", ""]], lit: -1, until: 0 };
+      const tier = hero.hero!.path[opt.slot].length + 1;
+      return { title: `LEARN · ${opt.slot === "a" ? "ATTACK (A)" : "SKILL (B)"} ${tier === 1 ? "I" : "II"}`, items: [["", ""], [opt.list[0]?.name ?? "", ""], [opt.list[1]?.name ?? "", ""], ["LATER", ""]], lit: -1, until: 0 };
+    }
     if (mui.buildMenu === "shop") {
       const sh = w.data.match.arena.shop;
       const ts = w.teams[team];

@@ -23,8 +23,16 @@ function hammerMesh(): THREE.Group {
   g.add(handle, head);
   return g;
 }
-const SHARED_GEO = new Set<THREE.BufferGeometry>([plankGeo, handleGeo, headGeo]);
-const SHARED_MAT = new Set<THREE.Material>([woodMat, hammerHeadMat]);
+const ironMat = new THREE.MeshLambertMaterial({ color: 0x8a8a96, flatShading: true });
+const bladeMat = new THREE.MeshLambertMaterial({ color: 0xd8dce8, flatShading: true, emissive: 0x202630 });
+const rivetGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.55, 6);
+const rivetHeadGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.1, 6);
+const bladeGeo = new THREE.ConeGeometry(0.12, 0.7, 4);
+const rockGeo = new THREE.ConeGeometry(0.45, 1.3, 5);
+const rockMat = new THREE.MeshLambertMaterial({ color: 0x8a7a66, flatShading: true });
+const shardGeo = new THREE.TetrahedronGeometry(0.22);
+const SHARED_GEO = new Set<THREE.BufferGeometry>([plankGeo, handleGeo, headGeo, rivetGeo, rivetHeadGeo, bladeGeo, rockGeo, shardGeo]);
+const SHARED_MAT = new Set<THREE.Material>([woodMat, hammerHeadMat, ironMat, bladeMat, rockMat]);
 
 const barkTex = new THREE.TextureLoader().load(barkUrl);
 barkTex.colorSpace = THREE.SRGBColorSpace;
@@ -32,6 +40,7 @@ barkTex.wrapS = barkTex.wrapT = THREE.RepeatWrapping;
 
 const ironTex = new THREE.TextureLoader().load(ironUrl);
 ironTex.colorSpace = THREE.SRGBColorSpace;
+ironMat.map = ironTex;
 const ballGeo = new THREE.IcosahedronGeometry(0.5, 1);
 const ballMat = new THREE.MeshLambertMaterial({ map: ironTex, color: 0x6a6660, flatShading: true });
 
@@ -348,6 +357,53 @@ const emblemTex = canvasTex(128, (ctx, s) => {
   ctx.fillStyle = "#40c040";
   ctx.fillRect(c - 4, c - 16, 8, 30);
   ctx.fillRect(c - 15, c - 5, 30, 8);
+});
+
+const swirlTex = canvasTex(128, (ctx, s) => {
+  const c = s / 2;
+  ctx.lineCap = "round";
+  for (let arm = 0; arm < 4; arm++) {
+    ctx.beginPath();
+    for (let k = 0; k <= 40; k++) {
+      const f = k / 40;
+      const a = arm * (Math.PI / 2) + f * Math.PI * 2.2;
+      const r = (1 - f) * (c - 6) + 4;
+      const x = c + Math.cos(a) * r;
+      const y = c + Math.sin(a) * r;
+      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "rgba(30,20,12,0.75)";
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(220,200,160,0.85)";
+    ctx.stroke();
+  }
+});
+
+const pillarTex = canvasTex(64, (ctx, s) => {
+  const g = ctx.createLinearGradient(0, 0, 0, s);
+  g.addColorStop(0, "rgba(255,240,160,0)");
+  g.addColorStop(0.5, "rgba(255,220,110,0.55)");
+  g.addColorStop(1, "rgba(255,250,210,0.95)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, s, s);
+  for (let k = 0; k < 10; k++) {
+    ctx.fillStyle = "rgba(255,255,230,0.8)";
+    ctx.fillRect(Math.random() * s, Math.random() * s, 2, 6);
+  }
+});
+
+const slashTex = canvasTex(64, (ctx, s) => {
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(s / 2, s * 0.95, s * 0.7, Math.PI * 1.2, Math.PI * 1.8);
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = "rgba(160,200,255,0.6)";
+  ctx.stroke();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.stroke();
 });
 
 const missTex = textTex("MISS", "#e0e0e0");
@@ -833,7 +889,60 @@ export class CombatFx {
         break;
       }
       case "reach":
-        this.reach(ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.hit);
+        if (ev.style === "afterimage") this.afterimage(ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.team);
+        else this.reach(ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.hit, ev.style === "vine");
+        break;
+      case "levelup": {
+        const col = ev.level >= 5 ? "#ffd040" : "#fff0b0";
+        this.pillar(ev.x, ev.y, ev.z);
+        this.burst(ev.x, ev.y + 1.5, ev.z, starTex, 0xffe080, 16, 0.7, 1, 2.4, true, 4);
+        const { tex, aspect } = calloutTex(`LEVEL ${ev.level}!`, col);
+        this.floatSprite(tex, aspect, ev.x, ev.y + 5, ev.z, 0.8, 1.6);
+        break;
+      }
+      case "learned": {
+        const { tex, aspect } = calloutTex(`★ ${ev.name}`, "#ffe890");
+        this.floatSprite(tex, aspect, ev.x, ev.y + 4.4, ev.z, 0.65, 2.2);
+        this.burst(ev.x, ev.y + 2.5, ev.z, starTex, 0xffd060, 10, 0.5, 0.8, 1.2, true, 1.5);
+        break;
+      }
+      case "chain":
+        this.lightning(ev.pts);
+        break;
+      case "pull":
+        this.decal(swirlTex, ev.x, ev.y, ev.z, ev.radius, 0.55, 0, -7);
+        for (let k = 0; k < 10; k++) {
+          const a = (k / 10) * Math.PI * 2;
+          this.sparks(ev.x + Math.cos(a) * ev.radius, ev.y + 0.3, ev.z + Math.sin(a) * ev.radius, -Math.cos(a), -Math.sin(a), 0xd8c8a0, 1, ev.radius * 2.2);
+        }
+        break;
+      case "shieldBreak": {
+        for (let k = 0; k < 12; k++) {
+          const m = new THREE.Mesh(shardGeo, new THREE.MeshLambertMaterial({ color: ev.burst ? 0x7a5a30 : 0xbfe0ff, emissive: ev.burst ? 0x201008 : 0x203850, transparent: true, flatShading: true }));
+          const a = Math.random() * Math.PI * 2;
+          const sp = 4 + Math.random() * 4;
+          let vy = 3 + Math.random() * 3;
+          m.position.set(ev.x, ev.y + 1.2, ev.z);
+          this.root.add(m);
+          this.items.push({
+            obj: m, t: 0, dur: 0.8,
+            tick: (q, dt) => {
+              vy -= 14 * dt;
+              m.position.x += Math.cos(a) * sp * dt;
+              m.position.z += Math.sin(a) * sp * dt;
+              m.position.y += vy * dt;
+              m.rotation.x += dt * 9;
+              (m.material as THREE.MeshLambertMaterial).opacity = 1 - q;
+            },
+          });
+        }
+        if (ev.burst) this.slamFx(ev.x, ev.y, ev.z, 3);
+        this.flash(ev.x, ev.y + 1.2, ev.z, glowTex, ev.burst ? 0xc8a060 : 0xbfe8ff, 3, 0.25);
+        break;
+      }
+      case "charge":
+        this.burst(ev.x, ev.y + 0.3, ev.z, puffTex, 0xb09878, 10, 1.2, 0.7, 2, false, 0.4);
+        this.shake = Math.max(this.shake, 0.2);
         break;
       case "shove":
         this.burst(ev.x, ev.y + 0.9, ev.z, puffTex, 0xd8ccb0, 6, 0.9, 0.35, 2.2, false, 0.3);
@@ -950,7 +1059,7 @@ export class CombatFx {
     });
   }
 
-  private reach(x: number, y: number, z: number, tx: number, tz: number, hit: boolean): void {
+  private reach(x: number, y: number, z: number, tx: number, tz: number, hit: boolean, vine = false): void {
     const dx = tx - x;
     const dz = tz - z;
     const len = Math.max(0.5, Math.hypot(dx, dz));
@@ -961,7 +1070,7 @@ export class CombatFx {
     const tex = barkTex.clone();
     tex.repeat.set(1, len / 1.2);
     tex.needsUpdate = true;
-    const mat = new THREE.MeshLambertMaterial({ map: tex, color: 0xc8b89a, flatShading: true });
+    const mat = new THREE.MeshLambertMaterial({ map: tex, color: vine ? 0x88c060 : 0xc8b89a, flatShading: true });
     const arm = new THREE.Group();
     const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 1, 6, 1), mat);
     limb.position.y = 0.5;
@@ -1139,6 +1248,153 @@ export class CombatFx {
     });
   }
 
+  private floatSprite(tex: THREE.Texture, aspect: number, x: number, y: number, z: number, h: number, dur: number): void {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    s.renderOrder = 32;
+    s.scale.set(h * aspect, h, 1);
+    s.position.set(x, y, z);
+    this.root.add(s);
+    this.items.push({
+      obj: s, t: 0, dur,
+      tick: (k, dt) => {
+        const pop = k < 0.1 ? 1 + (1 - k / 0.1) * 0.5 : 1;
+        s.scale.set(h * aspect * pop, h * pop, 1);
+        s.position.y += dt * 0.6;
+        s.material.opacity = k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
+      },
+    });
+  }
+
+  private pillar(x: number, y: number, z: number): void {
+    const m = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 1.3, 7, 10, 1, true),
+      new THREE.MeshBasicMaterial({ map: pillarTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+    );
+    m.position.set(x, y + 3.5, z);
+    this.root.add(m);
+    this.items.push({
+      obj: m, t: 0, dur: 1.1,
+      tick: (k) => {
+        m.scale.set(1 - k * 0.6, 0.3 + Math.min(1, k * 4) * 0.7, 1 - k * 0.6);
+        m.rotation.y = k * 4;
+        (m.material as THREE.MeshBasicMaterial).opacity = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
+      },
+    });
+  }
+
+  private lightning(pts: number[]): void {
+    for (let seg = 0; seg + 5 < pts.length; seg += 3) {
+      const a = new THREE.Vector3(pts[seg], pts[seg + 1], pts[seg + 2]);
+      const b = new THREE.Vector3(pts[seg + 3], pts[seg + 4], pts[seg + 5]);
+      const path: THREE.Vector3[] = [a];
+      const n = 6;
+      for (let k = 1; k < n; k++) {
+        const p = a.clone().lerp(b, k / n);
+        p.x += (Math.random() - 0.5) * 0.9;
+        p.y += (Math.random() - 0.5) * 0.9;
+        p.z += (Math.random() - 0.5) * 0.9;
+        path.push(p);
+      }
+      path.push(b);
+      const curve = new THREE.CatmullRomCurve3(path, false, "catmullrom", 0);
+      for (const [r, col] of [[0.12, 0x6ab0ff], [0.05, 0xffffff]] as const) {
+        const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 18, r, 4, false), new THREE.MeshBasicMaterial({ color: col, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+        this.root.add(m);
+        this.items.push({ obj: m, t: 0, dur: 0.3, tick: (k) => { (m.material as THREE.MeshBasicMaterial).opacity = (1 - k) * (Math.random() < 0.3 ? 0.4 : 1); } });
+      }
+      this.flash(b.x, b.y, b.z, starTex, 0xbfe0ff, 1.6, 0.2);
+    }
+  }
+
+  private afterimage(x: number, y: number, z: number, tx: number, tz: number, team: number): void {
+    const c = (this.teamColors[team] ?? new THREE.Color(1, 1, 1)).clone().lerp(new THREE.Color(0.8, 0.9, 1), 0.6);
+    const n = 8;
+    for (let k = 0; k <= n; k++) {
+      const f = k / n;
+      this.after(f * 0.18, () => {
+        const px = x + (tx - x) * f;
+        const pz = z + (tz - z) * f;
+        const s = this.sprite(streakTex, c, true, 0.9);
+        s.position.set(px, y + 1.2, pz);
+        s.material.rotation = Math.atan2(-(tz - z), tx - x);
+        this.items.push({ obj: s, t: 0, dur: 0.4, tick: (q) => { s.scale.set(2.2, 0.5, 1); s.material.opacity = 0.9 * (1 - q); } });
+        this.flash(px, y + 1.2, pz, glowTex, c, 1.2, 0.25);
+      });
+    }
+  }
+
+  private missileViews = new Map<number, { obj: THREE.Object3D; lastSpike: number }>();
+
+  syncMissiles(world: World): void {
+    const seen = new Set<number>();
+    for (const m of world.missiles) {
+      seen.add(m.id);
+      let v = this.missileViews.get(m.id);
+      if (!v) {
+        let obj: THREE.Object3D;
+        if (m.style === "rivet") {
+          const g = new THREE.Group();
+          const body = new THREE.Mesh(rivetGeo, ironMat);
+          body.rotation.x = Math.PI / 2;
+          const head = new THREE.Mesh(rivetHeadGeo, ironMat);
+          head.rotation.x = Math.PI / 2;
+          head.position.z = -0.28;
+          g.add(body, head);
+          obj = g;
+        } else if (m.style === "dagger") {
+          const g = new THREE.Group();
+          const blade = new THREE.Mesh(bladeGeo, bladeMat);
+          blade.rotation.x = Math.PI / 2;
+          const hilt = new THREE.Mesh(rivetHeadGeo, woodMat);
+          hilt.rotation.x = Math.PI / 2;
+          hilt.position.z = -0.4;
+          g.add(blade, hilt);
+          obj = g;
+        } else if (m.style === "slash") {
+          const sp = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.2), new THREE.MeshBasicMaterial({ map: slashTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+          obj = sp;
+        } else obj = new THREE.Group();
+        this.root.add(obj);
+        v = { obj, lastSpike: -1 };
+        this.missileViews.set(m.id, v);
+      }
+      const yaw = Math.atan2(m.dirX, m.dirZ);
+      v.obj.position.set(m.x, m.y, m.z);
+      if (m.style === "dagger") v.obj.rotation.set(0, yaw, 0), v.obj.rotateX(performance.now() / 40);
+      else if (m.style === "slash") v.obj.rotation.set(-Math.PI / 2, 0, -yaw + Math.PI);
+      else v.obj.rotation.set(0, yaw, 0);
+      if (m.style === "rock" && m.dist - v.lastSpike > 0.55) {
+        v.lastSpike = m.dist;
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        const gx = m.x + (Math.random() - 0.5) * 0.6;
+        const gz = m.z + (Math.random() - 0.5) * 0.6;
+        const gy = world.groundY(gx, gz);
+        rock.rotation.set((Math.random() - 0.5) * 0.6, Math.random() * 3, (Math.random() - 0.5) * 0.6);
+        this.root.add(rock);
+        this.items.push({
+          obj: rock, t: 0, dur: 0.9,
+          tick: (k) => {
+            const up = k < 0.15 ? k / 0.15 : k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1;
+            rock.position.set(gx, gy - 0.65 + up * 0.95, gz);
+          },
+        });
+        this.burst(gx, gy + 0.2, gz, puffTex, 0xa89478, 2, 0.8, 0.5, 0.8, false, 0.3);
+      }
+    }
+    for (const [id, v] of this.missileViews) {
+      if (seen.has(id)) continue;
+      this.burst(v.obj.position.x, v.obj.position.y, v.obj.position.z, puffTex, 0xc8b898, 4, 0.7, 0.35, 1, false, 0.4);
+      this.root.remove(v.obj);
+      v.obj.traverse((o) => {
+        if (!(o instanceof THREE.Mesh)) return;
+        if (!SHARED_GEO.has(o.geometry)) o.geometry.dispose();
+        const mat = o.material as THREE.Material;
+        if (!SHARED_MAT.has(mat)) mat.dispose();
+      });
+      this.missileViews.delete(id);
+    }
+  }
+
   private after(seconds: number, run: () => void): void {
     this.pending.push({ at: this.clock + Math.max(0, seconds), run });
   }
@@ -1166,6 +1422,21 @@ export class CombatFx {
     this.root.add(scorch);
     this.items.push({ obj: scorch, t: 0, dur: 9, tick: (k) => { (scorch.material as THREE.MeshBasicMaterial).opacity = 0.9 * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3); } });
     this.shake = Math.max(this.shake, 0.7);
+  }
+
+  aura(kind: "flame" | "spark" | "drip" | "steam", x: number, y: number, z: number): void {
+    if (kind === "flame") this.burst(x + (Math.random() - 0.5) * 0.8, y + 0.4 + Math.random() * 1.2, z + (Math.random() - 0.5) * 0.8, starTex, 0xff7a20, 1, 0.45, 0.45, 0.2, true, 1.6);
+    else if (kind === "spark") this.burst(x + (Math.random() - 0.5) * 0.9, y + 1 + Math.random() * 1.2, z + (Math.random() - 0.5) * 0.9, starTex, 0xfff0a0, 1, 0.35, 0.35, 0.3, true, 0.6);
+    else if (kind === "steam") this.burst(x, y, z, puffTex, 0xe8e8f0, 1, 0.8, 0.8, 0.3, false, 1.2);
+    else {
+      const s = this.sprite(glowTex, 0xa01010, false, 1);
+      const sx = x + (Math.random() - 0.5) * 0.6;
+      const sz = z + (Math.random() - 0.5) * 0.6;
+      let vy = 0;
+      s.position.set(sx, y + 1.2 + Math.random() * 0.6, sz);
+      s.scale.setScalar(0.22);
+      this.items.push({ obj: s, t: 0, dur: 0.5, tick: (k, dt) => { vy -= 12 * dt; s.position.y += vy * dt; s.material.opacity = 1 - k * 0.6; } });
+    }
   }
 
   smoke(x: number, y: number, z: number, heat: number): void {

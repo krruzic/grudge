@@ -57,7 +57,7 @@
       "defaultBuild": "barracks",
       "hooks": {
         "auraRadius": 7,
-        "auraDamageMul": 1.1,
+        "auraDamageMul": 1.05,
         "heavyStatMul": 1.25
       },
       "abilities": {
@@ -65,7 +65,7 @@
           "kind": "combo",
           "hits": [
             {
-              "damage": 56,
+              "damage": 52,
               "range": 2.6,
               "arcDeg": 140,
               "dur": 0.62,
@@ -74,7 +74,7 @@
               "knockback": 4.0
             },
             {
-              "damage": 88,
+              "damage": 81,
               "range": 2.8,
               "arcDeg": 170,
               "dur": 0.82,
@@ -89,7 +89,7 @@
         },
         "b": {
           "kind": "slam",
-          "damage": 70,
+          "damage": 60,
           "radius": 3.2,
           "offset": 1.4,
           "dur": 0.7,
@@ -107,7 +107,7 @@
         "r": {
           "kind": "warcry",
           "radius": 10,
-          "damageMul": 1.35,
+          "damageMul": 1.25,
           "speedMul": 1.25,
           "seconds": 6,
           "cooldown": 16,
@@ -141,7 +141,7 @@
       "blurb": "Cheaper structures and upgrades. Repairs. Raises siege works and a ballista to perch on them.",
       "health": "mid",
       "speed": "mid",
-      "damage": "low",
+      "damage": "mid",
       "defaultBuild": "damage",
       "botRange": 1.8,
       "hooks": {
@@ -156,7 +156,7 @@
           "kind": "combo",
           "hits": [
             {
-              "damage": 40,
+              "damage": 46,
               "range": 2.2,
               "arcDeg": 120,
               "dur": 0.36,
@@ -165,7 +165,7 @@
               "knockback": 1.2
             },
             {
-              "damage": 62,
+              "damage": 71,
               "range": 2.4,
               "arcDeg": 150,
               "dur": 0.5,
@@ -183,7 +183,7 @@
           "anim": "attack_a",
           "radius": 6,
           "heal": 350,
-          "damage": 40,
+          "damage": 60,
           "dur": 0.6,
           "hitAt": 0.3,
           "cooldown": 8,
@@ -339,7 +339,7 @@
     "summoner": {
       "name": "Summoner",
       "blurb": "Necromancer. Hex marks foes: minions hit them harder and the hexed dead rise to serve.",
-      "health": "low",
+      "health": "mid",
       "speed": "mid",
       "damage": "low",
       "defaultBuild": "range",
@@ -364,13 +364,13 @@
           "botRange": 11,
           "shots": [
             {
-              "damage": 42
+              "damage": 53
             },
             {
-              "damage": 42
+              "damage": 53
             },
             {
-              "damage": 80,
+              "damage": 99,
               "splash": 2.4,
               "splashDamage": 45,
               "slowMul": 0.6,
@@ -393,7 +393,7 @@
           "slowSeconds": 1.5,
           "dur": 0.5,
           "hitAt": 0.3,
-          "cooldown": 7,
+          "cooldown": 5,
           "bot": "fight",
           "botRange": 8,
           "hexSeconds": 6,

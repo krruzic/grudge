@@ -504,7 +504,7 @@ export class Menus {
     const pad: [string, string][] = [
       ["STICK", "MOVE"], ["A", "ATTACK · HOLDING A BOMB: THROW"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
       ["L", "BLOCK · L+A SHOVE · L+X DODGE"], ["C", "ORDERS: UP ATTACK · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD"],
-      ["X", "CALL 3 TROOPS · AT PAD: OUTPOSTS"], ["Y", "AT PAD: TOWERS · AT KEEP: SHOP"], ["D-PAD", "LEFT/RIGHT: WHO OBEYS (ALL, GRUNTS, ARCHERS, BRUTES) · UP/DOWN: ZOOM"], ["START", "PAUSE"],
+      ["X", "CALL 3 TROOPS · AT PAD: OUTPOSTS"], ["Y", "AT PAD: TOWERS · AT KEEP: SHOP · LEVEL UP: LEARN"], ["D-PAD", "LEFT/RIGHT: WHO OBEYS (ALL, GRUNTS, ARCHERS, BRUTES) · UP/DOWN: ZOOM"], ["START", "PAUSE"],
     ];
     const keys: [string, string][] = [
       ["WASD", "MOVE"], ["E", "ATTACK"], ["Q", "SECONDARY"], ["X", "SPECIAL"], ["C", "SUPER"], ["Z", "BLOCK · Z + E: SHOVE"], ["SPACE", "DODGE"],

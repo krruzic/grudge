@@ -36,6 +36,7 @@ export class Bot {
   private wantDodge = false;
   private wantBlock = false;
   private callAt = 0;
+  picks: number[] | null = null;
   private wantBuy: { item: "bomb" | "ward" | "cannon"; at?: Vec2 } | null = null;
   private tend: Pad | null = null;
   private callIndex = 0;
@@ -52,6 +53,10 @@ export class Bot {
   command(w: World): Command {
     const me = w.heroForPlayer(this.player);
     const cmd: Command = { moveX: 0, moveZ: 0 };
+    if (me?.hero?.picks.length) {
+      const k = me.hero.path.a.length + me.hero.path.b.length;
+      cmd.learn = this.picks ? this.picks[k % this.picks.length] : this.rand() < 0.5 ? 0 : 1;
+    }
     if (!me || !me.alive) return cmd;
     if (w.time >= this.thinkAt) {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;

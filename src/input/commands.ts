@@ -10,7 +10,7 @@ const SHOP_BY_FLICK: Partial<Record<Flick, ShopItem>> = { up: "bomb", left: "war
 const CALL_BY_FLICK: Partial<Record<Flick, UnitType>> = { left: "grunt", up: "ranged", right: "heavy" };
 
 export interface MapperUi {
-  buildMenu: "closed" | "prod" | "tower" | "call" | "shop";
+  buildMenu: "closed" | "prod" | "tower" | "call" | "shop" | "learn";
   commander: boolean;
   group: UnitType | "all";
   groupAt: number;
@@ -49,7 +49,7 @@ export class CommandMapper {
     return p.cY > 0 ? "down" : "up";
   }
 
-  update(p: PadState, now: number, atPad = false, atHome = false): void {
+  update(p: PadState, now: number, atPad = false, atHome = false, canLearn = false): void {
     const c = this.pending;
     c.moveX = p.stickX;
     c.moveZ = p.stickY;
@@ -88,10 +88,10 @@ export class CommandMapper {
       this.tDown = false;
       this.ui.buildMenu = atPad ? "prod" : "call";
     }
-    if ((atPad || atHome) && !this.xDown && (p.pressed.y || mrPressed)) {
+    if ((atPad || atHome || canLearn) && !this.xDown && (p.pressed.y || mrPressed)) {
       this.tDown = true;
       this.tUsed = false;
-      this.ui.buildMenu = atPad ? "tower" : "shop";
+      this.ui.buildMenu = atPad ? "tower" : canLearn ? "learn" : "shop";
     }
     const f = this.flick(p);
     if (f) {
@@ -102,6 +102,10 @@ export class CommandMapper {
       } else if (this.xDown) {
         if (f !== "down") c.build = PROD_BY_FLICK[f];
         this.xUsed = true;
+        this.ui.buildMenu = "closed";
+      } else if (this.tDown && this.ui.buildMenu === "learn") {
+        if (f === "left" || f === "right") c.learn = f === "left" ? 0 : 1;
+        this.tUsed = true;
         this.ui.buildMenu = "closed";
       } else if (this.tDown && this.ui.buildMenu === "shop") {
         if (f !== "down") c.buy = SHOP_BY_FLICK[f];
@@ -126,7 +130,7 @@ export class CommandMapper {
     if (this.tDown && !p.held.y && !mr) {
       if (!this.tUsed && atPad) c.build = "upgrade";
       this.tDown = false;
-      if (this.ui.buildMenu === "tower" || this.ui.buildMenu === "shop") this.ui.buildMenu = "closed";
+      if (this.ui.buildMenu === "tower" || this.ui.buildMenu === "shop" || this.ui.buildMenu === "learn") this.ui.buildMenu = "closed";
     }
   }
 

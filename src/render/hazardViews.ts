@@ -29,6 +29,87 @@ function worldBox(w: number, h: number, d: number): THREE.BoxGeometry {
   return g;
 }
 const THORN = new THREE.MeshLambertMaterial({ color: 0x3f5a2a, flatShading: true });
+const BONE = new THREE.MeshLambertMaterial({ color: 0xe8dcc0, flatShading: true });
+const ROCK = new THREE.MeshLambertMaterial({ color: 0x6a5c4a, flatShading: true });
+const IRON = new THREE.MeshLambertMaterial({ color: 0x5a5a64, flatShading: true });
+const COPPER = new THREE.MeshLambertMaterial({ color: 0xd07a3a, flatShading: true, emissive: 0x301000 });
+
+function groundTex(draw: (c: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 128;
+  const c = cv.getContext("2d")!;
+  draw(c, 128);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const blot = (c: CanvasRenderingContext2D, s: number, colors: string[], n: number) => {
+  for (let k = 0; k < n; k++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.pow(Math.random(), 0.7) * (s / 2 - 6);
+    const z = 3 + Math.random() * 9 * (1 - r / (s / 2));
+    c.fillStyle = colors[k % colors.length];
+    c.fillRect(Math.round(s / 2 + Math.cos(a) * r - z / 2), Math.round(s / 2 + Math.sin(a) * r - z / 2), Math.round(z), Math.round(z));
+  }
+};
+const ZONE_TEX: Record<string, THREE.CanvasTexture> = {
+  bramble: groundTex((c, s) => blot(c, s, ["rgba(40,28,14,0.8)", "rgba(58,40,20,0.7)", "rgba(50,70,28,0.75)"], 160)),
+  sinkhole: groundTex((c, s) => {
+    const g = c.createRadialGradient(s / 2, s / 2, 4, s / 2, s / 2, s / 2 - 4);
+    g.addColorStop(0, "rgba(8,5,3,1)");
+    g.addColorStop(0.55, "rgba(46,32,20,0.9)");
+    g.addColorStop(1, "rgba(80,60,40,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, s, s);
+    c.lineWidth = 3;
+    for (let arm = 0; arm < 5; arm++) {
+      c.beginPath();
+      for (let k = 0; k <= 30; k++) {
+        const f = k / 30;
+        const a = arm * (Math.PI * 2 / 5) + f * 4;
+        const r = (1 - f) * (s / 2 - 8) + 6;
+        c.lineTo(s / 2 + Math.cos(a) * r, s / 2 + Math.sin(a) * r);
+      }
+      c.strokeStyle = "rgba(20,12,6,0.9)";
+      c.stroke();
+    }
+  }),
+  crater: groundTex((c, s) => {
+    const g = c.createRadialGradient(s / 2, s / 2, 6, s / 2, s / 2, s / 2 - 4);
+    g.addColorStop(0, "rgba(30,22,16,0.95)");
+    g.addColorStop(0.7, "rgba(70,54,38,0.8)");
+    g.addColorStop(1, "rgba(90,70,50,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, s, s);
+    blot(c, s, ["rgba(20,14,10,0.6)", "rgba(110,90,66,0.6)"], 60);
+  }),
+  tesla: groundTex((c, s) => {
+    blot(c, s, ["rgba(24,22,26,0.75)", "rgba(40,38,44,0.6)"], 120);
+    c.strokeStyle = "rgba(210,130,60,0.9)";
+    c.lineWidth = 2;
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      c.beginPath();
+      c.moveTo(s / 2, s / 2);
+      let x = s / 2;
+      let y = s / 2;
+      for (let j = 0; j < 5; j++) {
+        x += Math.cos(a + (Math.random() - 0.5)) * 11;
+        y += Math.sin(a + (Math.random() - 0.5)) * 11;
+        c.lineTo(x, y);
+      }
+      c.stroke();
+    }
+  }),
+  bones: groundTex((c, s) => {
+    blot(c, s, ["rgba(60,50,56,0.7)", "rgba(90,80,84,0.6)", "rgba(40,20,50,0.7)"], 140);
+    c.strokeStyle = "rgba(200,120,255,0.8)";
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.arc(s / 2, s / 2, s / 2 - 10, 0, Math.PI * 2);
+    c.stroke();
+  }),
+};
 
 export class HazardViews {
   readonly root = new THREE.Group();
@@ -54,27 +135,80 @@ export class HazardViews {
     return g;
   }
 
-  private zoneMesh(team: number, r: number): THREE.Object3D {
+  private zoneMesh(team: number, r: number, style = "bramble"): THREE.Object3D {
     const g = new THREE.Group();
-    const disc = new THREE.Mesh(
-      new THREE.CircleGeometry(r, 32),
-      new THREE.MeshBasicMaterial({ color: this.teamColors[team].clone().lerp(new THREE.Color(0.2, 0.5, 0.1), 0.6), transparent: true, opacity: 0.3, depthWrite: false }),
+    const decal = new THREE.Mesh(
+      new THREE.PlaneGeometry(r * 2.1, r * 2.1),
+      new THREE.MeshBasicMaterial({ map: ZONE_TEX[style] ?? ZONE_TEX.bramble, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
     );
-    disc.rotation.x = -Math.PI / 2;
-    disc.position.y = 0.25;
-    g.add(disc);
-    const n = Math.round(r * 5);
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = Math.sqrt(Math.random()) * r * 0.95;
-      const x = Math.cos(a) * d;
-      const z = Math.sin(a) * d;
-      const thorn = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6 + Math.random() * 0.5, 4), THORN);
-      thorn.position.set(x, this.world.groundY(this.cx + x, this.cz + z) - this.cy + 0.25, z);
-      thorn.rotation.set((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8);
-      g.add(thorn);
+    decal.rotation.x = -Math.PI / 2;
+    decal.position.y = 0.12;
+    g.add(decal);
+    const gy = (x: number, z: number) => this.world.groundY(this.cx + x, this.cz + z) - this.cy;
+    const scatter = (n: number, make: () => THREE.Mesh, lift = 0) => {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.sqrt(Math.random()) * r * 0.9;
+        const x = Math.cos(a) * d;
+        const z = Math.sin(a) * d;
+        const m = make();
+        m.position.set(x, gy(x, z) + lift, z);
+        g.add(m);
+      }
+    };
+    if (style === "bramble") {
+      scatter(Math.round(r * 5), () => {
+        const th = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6 + Math.random() * 0.5, 4), THORN);
+        th.rotation.set((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8);
+        return th;
+      }, 0.25);
+    } else if (style === "bones") {
+      scatter(Math.round(r * 4), () => {
+        const b = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.8 + Math.random() * 0.6, 5), BONE);
+        b.rotation.set((Math.random() - 0.5) * 0.9, 0, (Math.random() - 0.5) * 0.9);
+        return b;
+      }, 0.3);
+      const skull = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), BONE);
+      skull.position.set(0, gy(0, 0) + 0.3, 0);
+      skull.scale.set(1, 0.85, 1.1);
+      g.add(skull);
+    } else if (style === "sinkhole" || style === "crater") {
+      const n = style === "sinkhole" ? Math.round(r * 2.5) : Math.round(r * 2);
+      const rocks = new THREE.Group();
+      rocks.name = "spin";
+      g.add(rocks);
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const d = r * (0.45 + Math.random() * 0.45);
+        const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + Math.random() * 0.25, 0), ROCK);
+        m.position.set(Math.cos(a) * d, gy(Math.cos(a) * d, Math.sin(a) * d) + 0.1, Math.sin(a) * d);
+        rocks.add(m);
+      }
+    } else if (style === "tesla") {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 0.35, 8), IRON);
+      base.position.y = gy(0, 0) + 0.18;
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 2.2, 6), IRON);
+      post.position.y = gy(0, 0) + 1.4;
+      g.add(base, post);
+      for (let k = 0; k < 4; k++) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3 - k * 0.04, 0.07, 4, 10), COPPER);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = gy(0, 0) + 0.8 + k * 0.4;
+        g.add(ring);
+      }
+      const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 0), COPPER);
+      ball.position.y = gy(0, 0) + 2.65;
+      g.add(ball);
+      const arc = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x9ad0ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+      arc.name = "arc";
+      arc.userData.top = gy(0, 0) + 2.65;
+      g.add(arc);
     }
     return g;
+  }
+
+  private cyOf(o: THREE.Object3D): number {
+    return o.position.y;
   }
 
   private cx = 0;
@@ -169,7 +303,7 @@ export class HazardViews {
         this.cx = z.x;
         this.cz = z.z;
         this.cy = w.groundY(z.x, z.z);
-        o = this.zoneMesh(z.team, z.radius);
+        o = this.zoneMesh(z.team, z.radius, z.style);
         o.position.set(z.x, this.cy, z.z);
         o.scale.setScalar(0.1);
         this.zones.set(z.id, o);
@@ -178,6 +312,23 @@ export class HazardViews {
       const left = z.until - w.time;
       const s = Math.min(1, o.scale.x + dt * 5) * (left < 0.4 ? left / 0.4 : 1);
       o.scale.setScalar(Math.max(0.01, s));
+      const spin = o.getObjectByName("spin");
+      if (spin) {
+        spin.rotation.y += dt * (z.style === "sinkhole" ? 1.6 : 0.2);
+        spin.scale.setScalar(z.style === "sinkhole" ? 0.6 + 0.4 * (left % 1) : 1);
+      }
+      const arc = o.getObjectByName("arc") as THREE.Mesh | undefined;
+      if (arc && Math.random() < 0.35) {
+        const top = new THREE.Vector3(0, arc.userData.top as number, 0);
+        const a = Math.random() * Math.PI * 2;
+        const d = z.radius * (0.4 + Math.random() * 0.6);
+        const end = new THREE.Vector3(Math.cos(a) * d, w.groundY(z.x + Math.cos(a) * d, z.z + Math.sin(a) * d) - this.cyOf(o) + 0.2, Math.sin(a) * d);
+        const pts = [top];
+        for (let k = 1; k < 5; k++) pts.push(top.clone().lerp(end, k / 5).add(new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5)));
+        pts.push(end);
+        arc.geometry.dispose();
+        arc.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0), 10, 0.05, 3, false);
+      }
     }
     for (const [id, o] of this.zones) if (!seenZ.has(id)) { this.root.remove(o); this.zones.delete(id); }
     for (const o of this.mods.values()) o.scale.y = Math.min(1, o.scale.y + dt * 6);
