@@ -15,6 +15,7 @@ export interface MapperUi {
   group: UnitType | "all";
   groupAt: number;
   lastOrderAt: number;
+  learnReady: boolean;
 }
 
 const GROUPS: (UnitType | "all")[] = ["all", "grunt", "ranged", "heavy"];
@@ -34,7 +35,7 @@ export class CommandMapper {
   smash = { from: 0.3, to: 0.85, within: 0.12 };
 
   constructor(private flickThreshold: number, commander = false) {
-    this.ui = { buildMenu: "closed", commander, group: "all", groupAt: -99, lastOrderAt: -99 };
+    this.ui = { buildMenu: "closed", commander, group: "all", groupAt: -99, lastOrderAt: -99, learnReady: false };
   }
 
   private flick(p: PadState): Flick | null {
@@ -88,10 +89,11 @@ export class CommandMapper {
       this.tDown = false;
       this.ui.buildMenu = atPad ? "prod" : "call";
     }
-    if ((atPad || atHome || canLearn) && !this.xDown && (p.pressed.y || mrPressed)) {
+    this.ui.learnReady = canLearn;
+    if ((atPad || atHome) && !this.xDown && (p.pressed.y || mrPressed)) {
       this.tDown = true;
       this.tUsed = false;
-      this.ui.buildMenu = atPad ? "tower" : canLearn ? "learn" : "shop";
+      this.ui.buildMenu = atPad ? "tower" : "shop";
     }
     const f = this.flick(p);
     if (f) {
@@ -115,6 +117,8 @@ export class CommandMapper {
         if (f !== "down") c.build = TOWER_BY_FLICK[f];
         this.tUsed = true;
         this.ui.buildMenu = "closed";
+      } else if (canLearn && (f === "left" || f === "right")) {
+        c.learn = f === "left" ? 0 : 1;
       } else {
         c.directive = { type: this.ui.group, dir: DIRECTIVE_BY_FLICK[f] };
         this.ui.lastOrderAt = now;

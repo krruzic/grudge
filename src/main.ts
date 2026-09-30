@@ -492,7 +492,11 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, bots: () => bots, pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot, frames: netFrames.length, remotes: [...remotes.values()].map((r) => r.slot) }; } };
+  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, bots: () => bots, humanize: (i: number) => {
+    mappers[i] = new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i));
+    bots[i] = null;
+    view.setHumans(mappers.map((m) => !!m));
+  }, pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot, frames: netFrames.length, remotes: [...remotes.values()].map((r) => r.slot) }; } };
 
   let last = performance.now();
   let acc = 0;

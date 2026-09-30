@@ -342,7 +342,8 @@ export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number,
     draw((c) => {
       c.save();
       c.globalAlpha *= a;
-      c.imageSmoothingEnabled = false;
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
       c.drawImage(im, x, y, size, size);
       c.restore();
     });
@@ -646,7 +647,7 @@ export class Hud {
       }
       y += isz + 3;
       if (h.picks.length && Math.floor(now * 3) % 3 !== 0) {
-        const msg = `LEVEL UP! HOLD Y · FLICK C`;
+        const msg = `LEVEL UP! FLICK C LEFT / RIGHT`;
         drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.62)) : ax(0), y, "#ffe060", 0.62);
       }
       y += h.picks.length ? 8 : 0;
@@ -676,7 +677,15 @@ export class Hud {
         const bx = Math.round(crossX - (tw + cw) / 2 + jolt);
         coinIcon(ctx, bx + 3.5, crossY - 43.5, 3.5);
         drawText(ctx, nt.text, bx + cw, crossY - 48, "#ff7060", s);
-      } else drawText(ctx, nt.text, Math.round(crossX - tw / 2 + jolt), crossY - 48, "#ffd0a0", s);
+      } else {
+        const maxW = Math.min(150, W / 2 - 12);
+        const lines = hudWrap(nt.text, maxW, s);
+        lines.forEach((ln, k) => {
+          const lw = textWidth(ln, s);
+          const lx = Math.max(right ? W / 2 + 4 : 4, Math.min((right ? W : W / 2) - 4 - lw, crossX - lw / 2 + jolt));
+          drawText(ctx, ln, Math.round(lx), crossY - 48 - (lines.length - 1 - k) * 9, "#ffd0a0", s);
+        });
+      }
       ctx.restore();
     }
     const aimer = w.players.map((p) => w.getAny(p.heroId)).find((e) => e?.team === t && e.hero?.aim);
@@ -688,10 +697,12 @@ export class Hud {
       drawText(ctx, l2, Math.round(crossX - textWidth(l2, 0.72) / 2), crossY + 6, "#e8e0d0", 0.72);
       return;
     }
+    const learner = w.players.find((p) => p.team === t && ui[p.player]?.learnReady);
+    if (learner && !menuUi) this.drawLearnCards(ctx, W, crossX, crossY, w, learner.heroId, right, now);
     if (menuUi && menuHero !== undefined) {
       const c = this.buildCross(w, t, menuHero, menuUi);
       if (c) this.drawCross(ctx, crossX, crossY, c, right, 1);
-      if (menuUi.buildMenu === "learn") this.drawLearnCards(ctx, W, crossX, crossY, w, menuHero, right);
+
       return;
     }
     const o = this.orders[t];
@@ -761,22 +772,27 @@ export class Hud {
     });
   }
 
-  private drawLearnCards(ctx: CanvasRenderingContext2D, W: number, cx: number, cy: number, w: World, heroId: number, right: boolean): void {
+  private drawLearnCards(ctx: CanvasRenderingContext2D, W: number, cx: number, cy: number, w: World, heroId: number, right: boolean, now: number): void {
     const hero = w.getAny(heroId);
-    const opt = hero ? options(w, hero) : null;
+    const opt = hero?.alive ? options(w, hero) : null;
     if (!opt) return;
-    const cw = 84;
-    const x0 = right ? Math.max(4, cx - 64 - cw * 2 - 6) : Math.min(W - cw * 2 - 10, cx + 64);
-    const isz = 48;
-    const h = isz + 24;
-    const y = Math.max(40, Math.min(cy - h / 2, 232 - h));
+    const cw = 50;
+    const gap = 4;
+    const x0 = right ? Math.max(4, cx - 60 - cw * 2 - gap) : Math.min(W - cw * 2 - gap - 4, cx + 60);
+    const isz = 30;
+    const h = isz + 17;
+    const y = Math.round(cy - h / 2 + 4);
+    const title = `LEARN ${opt.slot === "a" ? "A" : "B"} ${hero!.hero!.path[opt.slot].length ? "II" : "I"}`;
+    const pulse = Math.floor(now * 3) % 3 !== 0;
+    drawText(ctx, title, x0 + cw + gap / 2 - textWidth(title, 0.6) / 2, y - 9, pulse ? "#ffe060" : "#fff4c8", 0.6);
     opt.list.forEach((o, k) => {
-      const x = x0 + k * (cw + 6);
+      const x = x0 + k * (cw + gap);
       parchment(ctx, x, y, cw, h);
-      talentIcon(ctx, o.id, x + (cw - isz) / 2, y + 5, isz);
-      drawText(ctx, k === 0 ? "LEFT" : "RIGHT", k === 0 ? x + 4 : x + cw - 4 - textWidth("RIGHT", 0.6), y + 4, "#8a1810", 0.6);
-      const s = Math.min(0.85, (cw - 6) / Math.max(1, textWidth(o.name, 1)));
-      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, s) / 2, y + isz + 10, "#3a2410", s);
+      talentIcon(ctx, o.id, x + (cw - isz) / 2, y + 3, isz);
+      const tag = k === 0 ? "<C" : "C>";
+      drawText(ctx, tag, k === 0 ? x + 2 : x + cw - 2 - textWidth(tag, 0.5), y + 2, "#8a1810", 0.5);
+      const s = Math.min(0.62, (cw - 4) / Math.max(1, textWidth(o.name, 1)));
+      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, s) / 2, y + isz + 6, "#3a2410", s);
     });
   }
 

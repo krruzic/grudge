@@ -18,7 +18,7 @@ for p in sorted(glob.glob("assets/generated/talents/*_raw.png")):
     rgb = a.copy()
     rgb[~m] = [30, 20, 14]
     img = Image.fromarray(np.dstack([rgb, alpha * 255]).astype(np.uint8), "RGBA")
-    img = img.crop((cx - side // 2, cy - side // 2, cx - side // 2 + side, cy - side // 2 + side)).resize((48, 48), Image.LANCZOS)
+    img = img.crop((cx - side // 2, cy - side // 2, cx - side // 2 + side, cy - side // 2 + side)).resize((96, 96), Image.LANCZOS)
     arr = np.asarray(img).astype(np.int32)
     q = (arr[..., :3] >> 3) << 3
     al = np.where(arr[..., 3] > 110, 255, 0)
