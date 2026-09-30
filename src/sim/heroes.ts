@@ -67,6 +67,7 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   const def = w.heroDef(h.type).abilities[slot];
   const [dx, dz] = aim(w, e, cmd, reachOf(def) + 1);
   const a = begin(e, slot, def.kind, def.dur ?? 0.5, def.hitAt ?? 0.25, dx, dz);
+  if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
   if (def.kind === "leap") {
     const p = e.transform.pos;
     const target = aimTarget(w, e, cmd, (def.range ?? 7) + 1);
@@ -148,6 +149,11 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     return;
   }
   if (w.arena.carrying(e)) cmd = { ...cmd, attack: false, secondary: false, special: false, super: false, dodge: false, build: undefined };
+  if (def.hooks.wrenchDamage) {
+    const on = onWorks(w, e);
+    if (on && !h.onWorks) w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: "ON THE RAMP · A THROWS WRENCH", owner: e.id });
+    h.onWorks = on;
+  }
   const act = h.action;
   const canChainCombo = act?.name === "a" && act.kind === "combo" && act.fired && w.time < h.comboUntil;
   if (!act || canChainCombo) {
@@ -173,6 +179,10 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     } else if (cmd.secondary && ready(e, "b", w.time) && !act) {
       startAbility(w, e, "b", cmd);
       h.cooldowns.b = w.time + (ab.b.cooldown ?? 4);
+    } else if (cmd.attack && !act && def.hooks.wrenchDamage && onWorks(w, e) && ready(e, "wrench", w.time)) {
+      const [dx, dz] = aim(w, e, cmd, def.hooks.wrenchRange ?? 10);
+      begin(e, "a", "wrench", 0.4, 0.16, dx, dz);
+      h.cooldowns.wrench = w.time + (def.hooks.wrenchCooldown ?? 1.1);
     } else if (cmd.attack && h.bomb && !act) {
       const sh = w.data.match.arena.shop.bomb;
       const [dx, dz] = aim(w, e, cmd, sh.throwRange);
@@ -266,7 +276,105 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (h.vel.x !== 0 || h.vel.z !== 0) {
     w.moveBy(e, h.vel.x * dt, h.vel.z * dt);
   }
+  const mag = Math.hypot(cmd.moveX, cmd.moveZ);
+  const moved = mag > 0 ? ((t.pos.x - t.prevPos.x) * cmd.moveX + (t.pos.z - t.prevPos.z) * cmd.moveZ) / mag : 0;
+  if (mag > 0.5 && moved < h.speed * mul * dt * 0.3) h.stuckFor += dt;
+  else h.stuckFor = 0;
+  if (h.stuckFor > 0.35) unstick(w, e, cmd.moveX / mag, cmd.moveZ / mag);
   if (!h.blocking && Math.hypot(cmd.moveX, cmd.moveZ) > 0.01) w.faceToward(e, cmd.moveX, cmd.moveZ, b.turnRate);
+}
+
+export function onWorks(w: World, e: Entity): boolean {
+  const i = w.terrain.index(Math.floor(e.transform.pos.x), Math.floor(e.transform.pos.z));
+  return w.mods.some((m) => m.kind === "works" && m.team === e.team && m.cells.includes(i));
+}
+
+export function updateBoomerangs(w: World): void {
+  const dt = w.dt;
+  for (let i = w.boomerangs.length - 1; i >= 0; i--) {
+    const b = w.boomerangs[i];
+    const owner = w.get(b.ownerId);
+    if (!owner || !owner.alive) {
+      w.boomerangs.splice(i, 1);
+      continue;
+    }
+    if (!b.back) {
+      const step = 17 * dt;
+      const nx = b.x + b.dirX * step;
+      const nz = b.z + b.dirZ * step;
+      b.dist += step;
+      if (b.dist >= b.range || w.losHeight(nx, nz) > b.y + 0.4) {
+        b.back = true;
+        b.hit = [];
+      } else {
+        b.x = nx;
+        b.z = nz;
+      }
+    } else {
+      const tx = owner.transform.pos.x;
+      const tz = owner.transform.pos.z;
+      const dx = tx - b.x;
+      const dz = tz - b.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 0.9) {
+        w.boomerangs.splice(i, 1);
+        continue;
+      }
+      const step = Math.min(d, 20 * dt);
+      b.x += (dx / d) * step;
+      b.z += (dz / d) * step;
+      b.y += (owner.transform.y + 1.6 - b.y) * Math.min(1, dt * 6);
+    }
+    for (const o of w.entities.slice()) {
+      if (!o.alive || o.team === b.team || b.hit.includes(o.id)) continue;
+      if (Math.hypot(o.transform.pos.x - b.x, o.transform.pos.z - b.z) - o.radius > 1.0) continue;
+      b.hit.push(o.id);
+      const dmg = o.structure ? b.damage * 0.6 : b.damage;
+      w.damage(owner, o, dmg, { knockback: 3, fromX: b.x - b.dirX, fromZ: b.z - b.dirZ, big: true, structureDamage: o.structure ? dmg : undefined });
+    }
+  }
+}
+
+function unstick(w: World, e: Entity, ux: number, uz: number): void {
+  const t = e.transform;
+  const nav = w.nav;
+  const cx = Math.floor(t.pos.x);
+  const cz = Math.floor(t.pos.z);
+  let best = -1;
+  let bestScore = Infinity;
+  const maxSlope = e.hero!.maxSlope;
+  for (let dz = -3; dz <= 3; dz++) {
+    for (let dx = -3; dx <= 3; dx++) {
+      if (!dx && !dz) continue;
+      const i = nav.index(cx + dx, cz + dz);
+      if (i < 0) continue;
+      if (!nav.open(i) && !(w.terrain.slopeAt(cx + dx + 0.5, cz + dz + 0.5) <= maxSlope)) continue;
+      const d = Math.hypot(dx, dz);
+      const along = (dx * ux + dz * uz) / d;
+      if (along < 0.2) continue;
+      let clear = true;
+      for (let k = 1; k <= 4 && clear; k++) {
+        const f = k / 4;
+        if (!Number.isFinite(w.terrain.heightAt(t.pos.x + (cx + dx + 0.5 - t.pos.x) * f, t.pos.z + (cz + dz + 0.5 - t.pos.z) * f))) clear = false;
+      }
+      if (!clear) continue;
+      const mx = cx + dx + 0.5;
+      const mz = cz + dz + 0.5;
+      if (w.entities.some((o) => o.alive && o.structure && Math.hypot(o.transform.pos.x - mx, o.transform.pos.z - mz) < o.radius + 1 || (o.alive && o.structure && Math.hypot(o.transform.pos.x - (t.pos.x + mx) / 2, o.transform.pos.z - (t.pos.z + mz) / 2) < o.radius + 0.5))) continue;
+      const score = d - along * 1.5;
+      if (score < bestScore) { bestScore = score; best = i; }
+    }
+  }
+  if (best < 0) return;
+  const tx = (best % nav.w) + 0.5;
+  const tz = Math.floor(best / nav.w) + 0.5;
+  const dx = tx - t.pos.x;
+  const dz = tz - t.pos.z;
+  const d = Math.hypot(dx, dz) || 1;
+  const step = Math.min(d, e.hero!.speed * 0.8 * w.dt);
+  t.pos.x += (dx / d) * step;
+  t.pos.z += (dz / d) * step;
+  t.y = w.groundY(t.pos.x, t.pos.z);
 }
 
 function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, arcDeg: number, damage: number, knockback: number, big: boolean, vsStunnedMul?: number): void {
@@ -346,6 +454,15 @@ function fire(w: World, e: Entity, a: HeroAction): void {
   }
   if (a.name === "shove") {
     shoveHit(w, e, a);
+    return;
+  }
+  if (a.kind === "wrench") {
+    const hk = w.heroDef(e.hero!.type).hooks;
+    w.boomerangs.push({
+      id: w.newId(), ownerId: e.id, team: e.team, x: t.pos.x + a.dirX * 0.8, z: t.pos.z + a.dirZ * 0.8, y: t.y + 1.6, dirX: a.dirX, dirZ: a.dirZ,
+      dist: 0, back: false, hit: [], damage: (hk.wrenchDamage ?? 95) * w.damageMulOf(e), range: hk.wrenchRange ?? 10,
+    });
+    w.emit({ type: "shot", style: "wrench", x: t.pos.x, y: t.y + 1.6, z: t.pos.z });
     return;
   }
   if (a.kind === "throw") {

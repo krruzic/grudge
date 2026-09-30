@@ -817,7 +817,7 @@ async function start(): Promise<void> {
         if (!m) return;
         const h = world.heroForPlayer(i);
         m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h));
-        if (view.camMode === 2 && !commanderSlot(i)) {
+        if (view.camMode !== 0 && !commanderSlot(i)) {
           if (p.pressed.down) view.zoomStep(i, 1);
           if (p.pressed.up) view.zoomStep(i, -1);
         }

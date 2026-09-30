@@ -42,6 +42,7 @@ interface View {
   seen: boolean;
   wasDead?: boolean;
   stealthed?: boolean;
+  baseVisible?: boolean;
   mark?: THREE.Sprite;
   markKind?: string;
   lastAttack?: number;
@@ -69,7 +70,7 @@ const KIND_ANIM: Record<string, string> = {
   slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", hex: "cast", repair: "cast",
   turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
   banner: "cast", rally: "cast", works: "cast", ballista: "cast",
-  shove: "attack_a", throw: "attack_b", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
+  shove: "attack_a", throw: "attack_b", wrench: "attack_b", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
 };
 
 const white = new THREE.Color(1, 1, 1);
@@ -281,6 +282,14 @@ export class EntityViews {
       hint.visible = false;
       this.root.add(hint);
       this.shopHints.push(hint);
+    }
+  }
+
+  setViewer(team: number | null): void {
+    for (const [id, v] of this.views) {
+      if (v.kind !== "hero" || v.baseVisible === undefined) continue;
+      const e = this.world.getAny(id);
+      v.root.visible = v.baseVisible && (!v.stealthed || team === null || e?.team === team);
     }
   }
 
@@ -558,7 +567,10 @@ export class EntityViews {
       const frozen = v.freeze > 0;
       const adt = frozen ? 0 : dt;
       v.freeze = Math.max(0, v.freeze - dt);
-      if (e.hero) this.syncHero(e, v, facing, adt, time);
+      if (e.hero) {
+        this.syncHero(e, v, facing, adt, time);
+        v.baseVisible = v.root.visible;
+      }
       else if (e.unit) this.syncUnit(e, v, facing, time, adt);
       else this.syncStructure(e, v, time);
       if (e.kind !== "structure" && e.alive) this.footsteps(e, v);

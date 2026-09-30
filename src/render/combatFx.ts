@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { World } from "../sim/world";
 import type { SimEvent } from "../sim/types";
-import { drawNum, fontReady, textWidth } from "../ui/font";
+import { drawNum, drawText, fontReady, textWidth } from "../ui/font";
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
@@ -161,6 +161,32 @@ const scorchTex = canvasTex(64, (ctx, s) => {
     ctx.fillRect(Math.round(c + Math.cos(a) * r - sz / 2), Math.round(c + Math.sin(a) * r - sz / 2), Math.round(sz), Math.round(sz));
   }
 });
+
+const calloutCache = new Map<string, { tex: THREE.CanvasTexture; aspect: number }>();
+function calloutTex(text: string, color: string): { tex: THREE.CanvasTexture; aspect: number } {
+  const key = `${text}|${color}`;
+  const hit = calloutCache.get(key);
+  if (hit) return hit;
+  const s = 1.6;
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(textWidth(text, s) + 12);
+  c.height = 30;
+  const ctx = c.getContext("2d")!;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const draw = () => {
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.fillStyle = "rgba(14,10,8,0.72)";
+    ctx.fillRect(0, 4, c.width, 22);
+    drawText(ctx, text, 6, 6, color, s);
+    t.needsUpdate = true;
+  };
+  draw();
+  fontReady.then(draw);
+  const out = { tex: t, aspect: c.width / c.height };
+  calloutCache.set(key, out);
+  return out;
+}
 
 const missTex = textTex("MISS", "#e0e0e0");
 const koTex = textTex("K.O.!", "#ff5a3a");
@@ -617,6 +643,25 @@ export class CombatFx {
       case "cannonHit":
         this.cannonHit(ev.x, ev.y, ev.z, ev.radius);
         break;
+      case "callout": {
+        const col = ev.team === 0 ? "#b8ccff" : ev.team === 1 ? "#ffc0b8" : "#fff0c0";
+        const { tex, aspect } = calloutTex(ev.text, col);
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+        s.renderOrder = 31;
+        const h = 0.62;
+        s.scale.set(h * aspect, h, 1);
+        s.position.set(ev.x, ev.y + 4.3, ev.z);
+        s.userData.owner = ev.owner;
+        this.root.add(s);
+        this.items.push({
+          obj: s, t: 0, dur: 1.8,
+          tick: (k, dt) => {
+            s.position.y += dt * 0.5;
+            s.material.opacity = k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
+          },
+        });
+        break;
+      }
       case "reach":
         this.reach(ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.hit);
         break;

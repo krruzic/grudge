@@ -27,6 +27,7 @@ export interface AbilityDef {
   slowSeconds?: number;
   damageMul?: number;
   speedMul?: number;
+  callout?: string;
   seconds?: number;
   stunSeconds?: number;
   bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "never";

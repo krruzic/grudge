@@ -2,10 +2,10 @@ import { FLAG_GRASS, Kind, Terrain, type MapData } from "./terrain.ts";
 import { NavGrid } from "./nav.ts";
 import type { GameData, HeroDef } from "./config.ts";
 import type {
-  Command, Delayed, Directive, Entity, MatchState, Pad, PadZone, Projectile, SimEvent, Status, TargetClass, TeamState, TerrainMod, Trap, UnitType, Vec2, Zone,
+  Boomerang, Command, Delayed, Directive, Entity, MatchState, Pad, PadZone, Projectile, SimEvent, Status, TargetClass, TeamState, TerrainMod, Trap, UnitType, Vec2, Zone,
 } from "./types.ts";
 import { UNIT_TYPES } from "./types.ts";
-import { updateHero } from "./heroes.ts";
+import { updateBoomerangs, updateHero } from "./heroes.ts";
 import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
@@ -59,6 +59,7 @@ export class World {
   readonly nav: NavGrid;
   readonly entities: Entity[] = [];
   readonly projectiles: Projectile[] = [];
+  readonly boomerangs: Boomerang[] = [];
   readonly pads: Pad[] = [];
   readonly teams: TeamState[] = [];
   readonly players: PlayerSlot[] = [];
@@ -190,7 +191,7 @@ export class World {
       speed: tiers.speed[def.speed] * (def.hooks.speedMul ?? 1),
       damageMul: tiers.damage[def.damage],
       vel: { x: 0, z: 0 },
-      action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99, bomb: false, aim: null,
+      action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99, bomb: false, stuckFor: 0, aim: null,
       dead: false, respawnAt: 0, lastTargetId: 0, lastTargetAt: -99, anim: "idle", animStart: 0,
       stepHeight: def.hooks.stepHeight ?? b.stepHeight,
       maxSlope: def.hooks.maxSlope ?? b.maxSlope,
@@ -338,6 +339,7 @@ export class World {
       else if (e.structure) updateStructure(this, e);
     }
     this.updateProjectiles(dt);
+    updateBoomerangs(this);
     this.updateHazards();
     this.applyKnockback(dt);
     this.separate();
@@ -809,7 +811,7 @@ export class World {
     if (!Number.isFinite(hc)) return false;
     const falling = this.knocked && hc < e.transform.y - step;
     if (!falling && Math.abs(hc - e.transform.y) > step) return false;
-    if (!falling && this.terrain.slopeAt(x, z) > maxSlope && !(this.knocked && hc < e.transform.y)) return false;
+    if (!falling && this.terrain.slopeAt(x, z) > maxSlope && !(hc < e.transform.y - 0.01)) return false;
     return !this.hitsStructure(e, x, z);
   }
 

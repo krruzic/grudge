@@ -55,6 +55,7 @@ export class RelicView {
   private planted: THREE.Group[] = [];
   private reticles = new Map<number, THREE.Mesh>();
   private flying: THREE.Group[] = [];
+  private wrenches: THREE.Group[] = [];
   private smokeT = 0;
   fx: CombatFx | null = null;
 
@@ -143,6 +144,28 @@ export class RelicView {
       this.planted.push(g);
       this.root.add(g);
     }
+    const bs = w.boomerangs;
+    while (this.wrenches.length < bs.length) {
+      const g = new THREE.Group();
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.14, 0.2), bombMat);
+      const jaw = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.08, 4, 8, Math.PI * 1.4), bombMat);
+      jaw.position.x = 0.62;
+      jaw.rotation.set(Math.PI / 2, 0, Math.PI * 0.8);
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.22), fuseMat);
+      grip.position.x = -0.42;
+      g.add(bar, jaw, grip);
+      g.scale.setScalar(1.3);
+      this.wrenches.push(g);
+      this.root.add(g);
+    }
+    this.wrenches.forEach((g, i) => {
+      const b = bs[i];
+      g.visible = !!b;
+      if (!b) return;
+      g.position.set(b.x, b.y, b.z);
+      g.rotation.set(0, this.t * 22, 0);
+      if (this.fx && Math.random() < 0.5) this.fx.dust(b.x, b.y - 0.3, b.z, 0.4, 1, 0.2, 0xd8d0c0);
+    });
     const thrown = w.arena.thrown;
     while (this.flying.length < thrown.length) {
       const g = bombMesh();

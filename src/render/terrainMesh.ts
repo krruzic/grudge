@@ -207,7 +207,7 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         };
         slope = Math.max(g(x, z), g(x - 0.35, z - 0.35), g(x + 0.35, z - 0.35), g(x - 0.35, z + 0.35), g(x + 0.35, z + 0.35));
       }
-      const rock = THREE.MathUtils.smoothstep(slope, WALK_SLOPE - 0.1, WALK_SLOPE + 0.05);
+      const rock = THREE.MathUtils.smoothstep(slope, WALK_SLOPE - 0.35, WALK_SLOPE - 0.08);
       let grass = Math.max(0, 1 - dirt - paving);
       const sum0 = grass + dirt + paving;
       grass /= sum0;

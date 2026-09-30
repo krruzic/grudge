@@ -21,8 +21,8 @@
     "height": 1.6,
     "turnRate": 14,
     "accel": 40,
-    "stepHeight": 0.6,
-    "maxSlope": 1.05,
+    "stepHeight": 0.75,
+    "maxSlope": 1.6,
     "respawnSeconds": 6,
     "blockMoveMul": 0.4,
     "blockFrontalMul": 0.25,
@@ -101,7 +101,8 @@
           "anim": "attack_a",
           "bot": "fight",
           "botRange": 3.2,
-          "cowSeconds": 1.5
+          "cowSeconds": 1.5,
+          "callout": "GROUND SLAM \u00b7 SLOWS"
         },
         "r": {
           "kind": "warcry",
@@ -113,7 +114,8 @@
           "dur": 0.5,
           "anim": "idle",
           "bot": "allies",
-          "resetB": true
+          "resetB": true,
+          "callout": "WAR CRY \u00b7 ALLIES HIT HARDER"
         },
         "z": {
           "kind": "quake",
@@ -128,7 +130,8 @@
           "bot": "fight",
           "botRange": 4,
           "vsSlowedMul": 1.5,
-          "stunBonus": 0.6
+          "stunBonus": 0.6,
+          "callout": "EARTHQUAKE \u00b7 STUNS"
         }
       },
       "botRange": 1.8
@@ -143,7 +146,10 @@
       "botRange": 1.8,
       "hooks": {
         "costMul": 0.8,
-        "upgradeCostMul": 0.6
+        "upgradeCostMul": 0.6,
+        "wrenchDamage": 95,
+        "wrenchRange": 10,
+        "wrenchCooldown": 1.1
       },
       "abilities": {
         "a": {
@@ -181,7 +187,8 @@
           "dur": 0.6,
           "hitAt": 0.3,
           "cooldown": 8,
-          "bot": "repair"
+          "bot": "repair",
+          "callout": "REPAIR \u00b7 FIXES BUILDINGS"
         },
         "r": {
           "kind": "works",
@@ -196,7 +203,8 @@
           "hitAt": 0.45,
           "cooldown": 20,
           "bot": "works",
-          "botRange": 12
+          "botRange": 12,
+          "callout": "SIEGE RAMP"
         },
         "z": {
           "kind": "ballista",
@@ -217,7 +225,8 @@
           "dur": 0.8,
           "hitAt": 0.5,
           "bot": "fight",
-          "botRange": 8
+          "botRange": 8,
+          "callout": "BALLISTA"
         }
       }
     },
@@ -234,7 +243,7 @@
         "awayProductionMul": 0.85,
         "awayRadius": 28,
         "stepHeight": 1.4,
-        "maxSlope": 2.2,
+        "maxSlope": 3.5,
         "killResetsB": 1
       },
       "abilities": {
@@ -293,7 +302,8 @@
           "cooldown": 5,
           "knockback": 4,
           "bot": "fight",
-          "botRange": 7
+          "botRange": 7,
+          "callout": "LEAP"
         },
         "r": {
           "kind": "stealth",
@@ -305,7 +315,8 @@
           "hitAt": 0.1,
           "cooldown": 14,
           "bot": "approach",
-          "botRange": 12
+          "botRange": 12,
+          "callout": "SMOKE \u00b7 UNSEEN"
         },
         "z": {
           "kind": "dash",
@@ -320,7 +331,8 @@
           "structureDamage": 120,
           "knockback": 6,
           "executeBelow": 0.4,
-          "executeMul": 1.4
+          "executeMul": 1.4,
+          "callout": "EXECUTE DASH"
         }
       }
     },
@@ -365,7 +377,8 @@
           "cooldown": 7,
           "bot": "fight",
           "botRange": 8,
-          "hexSeconds": 6
+          "hexSeconds": 6,
+          "callout": "HEX \u00b7 SLAIN FOES RISE FOR YOU"
         },
         "r": {
           "kind": "summon",
@@ -378,7 +391,8 @@
           "hitAt": 0.4,
           "cooldown": 24,
           "bot": "fight",
-          "botRange": 10
+          "botRange": 10,
+          "callout": "SUMMON GRUNTS"
         },
         "z": {
           "kind": "summon",
@@ -393,7 +407,8 @@
           "hitAt": 0.6,
           "bot": "fight",
           "botRange": 10,
-          "hexRadius": 7
+          "hexRadius": 7,
+          "callout": "RAISE AN ARMY"
         }
       }
     },
@@ -455,7 +470,8 @@
           "cooldown": 5,
           "knockback": 3,
           "bot": "fight",
-          "botRange": 5.5
+          "botRange": 5.5,
+          "callout": "LUNGE"
         },
         "r": {
           "kind": "parry",
@@ -468,7 +484,8 @@
           "cooldown": 7,
           "bot": "defend",
           "openingSeconds": 2.5,
-          "openingMul": 1.5
+          "openingMul": 1.5,
+          "callout": "PARRY \u00b7 COUNTER THE NEXT HIT"
         },
         "z": {
           "kind": "flurry",
@@ -483,7 +500,8 @@
           "lunge": 1.5,
           "bot": "fight",
           "botRange": 2.8,
-          "vsStunnedMul": 1.4
+          "vsStunnedMul": 1.4,
+          "callout": "BLADE FLURRY"
         }
       }
     },
@@ -538,7 +556,8 @@
           "hitAt": 0.3,
           "cooldown": 4.5,
           "bot": "fight",
-          "botRange": 8
+          "botRange": 8,
+          "callout": "LONG ARM SLAP"
         },
         "r": {
           "kind": "wall",
@@ -550,7 +569,8 @@
           "hitAt": 0.3,
           "cooldown": 15,
           "bot": "defend",
-          "endTraps": true
+          "endTraps": true,
+          "callout": "STONE WALL"
         },
         "z": {
           "kind": "zone",
@@ -563,7 +583,8 @@
           "hitAt": 0.4,
           "bot": "fight",
           "botRange": 5,
-          "rearmSeconds": 2
+          "rearmSeconds": 2,
+          "callout": "BRAMBLES \u00b7 SLOW AND HURT"
         }
       }
     },
@@ -601,7 +622,8 @@
           "dur": 0.45,
           "hitAt": 0.25,
           "cooldown": 6,
-          "bot": "banner"
+          "bot": "banner",
+          "callout": "WAR BANNER \u00b7 TROOPS GATHER"
         },
         "r": {
           "kind": "warcry",
@@ -613,7 +635,8 @@
           "dur": 0.5,
           "hitAt": 0.2,
           "cooldown": 14,
-          "bot": "allies"
+          "bot": "allies",
+          "callout": "WAR HORN \u00b7 TROOPS FASTER"
         },
         "z": {
           "kind": "rally",
@@ -624,7 +647,8 @@
           "seconds": 4,
           "dur": 0.6,
           "hitAt": 0.3,
-          "bot": "allies"
+          "bot": "allies",
+          "callout": "RALLY \u00b7 HEAL AND GUARD"
         }
       }
     }

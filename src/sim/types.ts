@@ -85,6 +85,8 @@ export interface HeroState {
   combatAt: number;
   actionEndAt: number;
   bomb: boolean;
+  stuckFor: number;
+  onWorks?: boolean;
   aim: { x: number; z: number; until: number } | null;
 }
 
@@ -200,6 +202,22 @@ export interface TerrainMod {
   until: number;
 }
 
+export interface Boomerang {
+  id: number;
+  ownerId: number;
+  team: number;
+  x: number;
+  z: number;
+  y: number;
+  dirX: number;
+  dirZ: number;
+  dist: number;
+  back: boolean;
+  hit: number[];
+  damage: number;
+  range: number;
+}
+
 export interface Projectile {
   id: number;
   team: number;
@@ -296,6 +314,7 @@ export type SimEvent =
   | { type: "relic"; state: "taken" | "dropped" | "shrined" | "stolen" | "home"; team: number; player: number; x: number; y: number; z: number }
   | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean }
   | { type: "bomb"; state: "planted" | "boom"; x: number; y: number; z: number; team: number; fuse: number }
+  | { type: "callout"; x: number; y: number; z: number; team: number; text: string; owner: number }
   | { type: "shove"; x: number; y: number; z: number; team: number }
   | { type: "fall"; x: number; y: number; z: number }
   | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };

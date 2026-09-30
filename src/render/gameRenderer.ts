@@ -387,6 +387,9 @@ export class GameRenderer {
     for (const a of pts) for (const b of pts) if (a && b) spread = Math.max(spread, a.distanceTo(b));
     if (spread > this.cfg.splitNear + 2) this.merged = false;
     else if (spread < this.cfg.splitNear - 3 && pts.every(Boolean)) this.merged = true;
+    const w = this.world;
+    const teamsInView = new Set(humans.map((p) => p.team));
+    if (teamsInView.size > 1 && w.players.some((p) => { const e = w.getAny(p.heroId); return !!e && w.time < e.status.stealthUntil; })) this.merged = false;
     const groups: { ids: number[]; player: number }[] = !ids.length ? [] : ids.length === 1 || this.merged ? [{ ids, player: humans[0].player }] : humans.map((p) => ({ ids: [p.heroId], player: p.player }));
     const same = groups.length === this.splitViews.length && groups.every((g, i) => g.ids.join() === this.splitViews[i].heroIds.join());
     if (same) return;
@@ -444,8 +447,9 @@ export class GameRenderer {
         pts.push(new THREE.Vector3(o.transform.pos.x, o.transform.y, o.transform.pos.z));
       }
     }
-    const min = fight ? 18 : towers ? 24 : 21;
-    return { pts, min, max: 34, margin: fight ? 6 : 8 };
+    const zf = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2] / this.zoomSteps[2];
+    const min = (fight ? 18 : towers ? 24 : 21) * zf;
+    return { pts, min, max: Math.max(min, 34 * zf), margin: (fight ? 6 : 8) * zf };
   }
 
   private splitRects(w: number, h: number): [number, number, number, number][] {
@@ -457,7 +461,13 @@ export class GameRenderer {
     return [[0, hh, hw, h - hh], [hw, h - hh, w - hw, hh], [0, 0, hw, hh], [hw, 0, w - hw, hh]];
   }
 
-  private drawScene(cam: THREE.PerspectiveCamera): void {
+  private sharedViewer(): number | null {
+    const teams = new Set(this.world.players.filter((p) => this.humanList[p.player]).map((p) => p.team));
+    return teams.size === 1 ? [...teams][0] : null;
+  }
+
+  private drawScene(cam: THREE.PerspectiveCamera, viewer: number | null = this.sharedViewer()): void {
+    this.entityViews.setViewer(viewer);
     const fog = this.scene.fog as THREE.Fog;
     fog.near = cam.userData.fogNear ?? fog.near;
     fog.far = cam.userData.fogFar ?? fog.far;
@@ -541,7 +551,9 @@ export class GameRenderer {
         shake(cam);
         this.renderer.setViewport(x, y, w, h);
         this.renderer.setScissor(x, y, w, h);
-        this.drawScene(cam);
+        const vp = sv ? this.world.players.find((p) => p.player === sv.player) : undefined;
+        const viewer = sv && sv.heroIds.length === 1 && vp ? vp.team : this.sharedViewer();
+        this.drawScene(cam, viewer);
       });
       this.renderer.setScissorTest(false);
       this.renderer.setViewport(0, 0, tw, th);

@@ -6,6 +6,7 @@ export interface Rules {
   popCap: number;
   startGold: number;
   goldRate: number;
+  troops: number;
   respawn: number;
   mercy: number;
   partners: number;
@@ -65,6 +66,7 @@ export const RULE_ROWS: Row<Rules>[] = [
   { key: "popCap", label: "SOLDIER CAP", values: [8, 12, 16, 20, 24], fmt: String, blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD." },
   { key: "startGold", label: "STARTING GOLD", values: [0, 100, 200, 400, 800], fmt: String, blurb: "GOLD IN THE COFFERS AT THE FIRST HORN." },
   { key: "goldRate", label: "GOLD RATE", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST THE COFFERS FILL." },
+  { key: "troops", label: "TROOP OUTPUT", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST KEEPS AND OUTPOSTS SEND SOLDIERS, AND HOW SOON YOU CAN CALL MORE." },
   { key: "respawn", label: "HERO RETURNS", values: [3, 6, 10, 15], fmt: (v) => `${v} SEC`, blurb: "HOW LONG A FALLEN CHAMPION STAYS DOWN." },
   { key: "partners", label: "2 VS 2 ALLIES", values: [1, 0], fmt: (v) => (v ? "CHAMPIONS" : "COMMANDERS"), blurb: "IN 2 VS 2, PLAYERS 3 AND 4 FIGHT AS CHAMPIONS OR LEAD AS COMMANDERS." },
   { key: "mercy", label: "MERCY", values: [1, 0], fmt: onOff, blurb: "THE LOSING HOUSE EARNS AND BUILDS FASTER." },
@@ -74,11 +76,11 @@ export const OPTION_ROWS: Row<Options>[] = [
   { key: "music", label: "MUSIC", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF THE MINSTRELS." },
   { key: "sound", label: "SOUND", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF STEEL AND SPELLS." },
   { key: "shake", label: "SCREEN SHAKE", values: [1, 0], fmt: onOff, blurb: "THE GROUND TREMBLES WHEN BLOWS LAND." },
-  { key: "split", label: "CAMERA", values: [1, 2, 0], fmt: (v) => CAMERA_NAMES[v], blurb: "SPLIT: EACH PLAYER GETS A VIEW. AUTO ZOOM FOLLOWS THE FIGHT; D-PAD ZOOM USES UP/DOWN." },
+  { key: "split", label: "CAMERA", values: [1, 2, 0], fmt: (v) => CAMERA_NAMES[v], blurb: "SPLIT: EACH PLAYER GETS A VIEW. AUTO ZOOM FOLLOWS THE FIGHT, D-PAD ZOOM IS FIXED. D-PAD UP/DOWN ZOOMS IN BOTH." },
   { key: "hints", label: "BUTTON HINTS", values: [1, 0], fmt: onOff, blurb: "SHOW BUILD HINTS ABOVE PADS." },
 ];
 
-export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 16, startGold: 200, goldRate: 1, respawn: 6, mercy: 1, partners: 1 };
+export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 16, startGold: 200, goldRate: 1, troops: 1, respawn: 6, mercy: 1, partners: 1 };
 export const DEFAULT_OPTIONS: Options = { music: 7, sound: 8, shake: 1, hints: 1, split: 1 };
 
 const KEY = "grudge.save.v1";
@@ -176,6 +178,10 @@ export function applyRules(base: GameData, r: Rules): GameData {
   d.match.economy.start = r.startGold;
   d.match.economy.income = base.match.economy.income * r.goldRate;
   d.heroes.baseline.respawnSeconds = r.respawn;
+  const troops = r.troops || 1;
+  d.units.waves.everySeconds = base.units.waves.everySeconds / troops;
+  d.units.waves.firstSeconds = base.units.waves.firstSeconds / Math.min(troops, 2);
+  d.units.squads.cooldown = base.units.squads.cooldown / troops;
   if (!r.mercy) {
     d.match.catchUp.incomeBoost = 0;
     d.match.catchUp.productionBoost = 0;
