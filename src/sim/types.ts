@@ -348,6 +348,7 @@ export interface Command {
   buy?: ShopItem;
   aimAt?: Vec2;
   directive?: { type: UnitType | "all"; dir: Directive };
+  say?: string;
 }
 
 export type SimEvent =

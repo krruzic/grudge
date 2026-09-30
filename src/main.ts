@@ -269,6 +269,14 @@ async function start(): Promise<void> {
   const randomHero = () => roster[Math.floor(Math.random() * roster.length)];
   let overAt = -1;
 
+  let people: boolean[] = [];
+  const linkMates = () => {
+    bots.forEach((b, i) => {
+      if (!b) return;
+      const m = people.findIndex((h, j) => h && j !== i && j % 2 === i % 2);
+      b.mate = m < 0 ? null : m;
+    });
+  };
   const setupControl = (humans: boolean[], levels: number[] = [], remote: boolean[] = [], botsToo = true) => {
     mappers = humans.map((h, i) => {
       if (!h) return null;
@@ -277,6 +285,8 @@ async function start(): Promise<void> {
       return m;
     });
     bots = humans.map((h, i) => (h || remote[i] || !botsToo ? null : new Bot(i, [0.5, 0.75, 0.95][(levels[i] ?? 2) - 1] ?? 0.75, seed + i)));
+    people = humans.map((h, i) => h || !!remote[i]);
+    linkMates();
     view.setHumans(humans);
   };
   const buildWorld = (spec: MatchSpec): World => {
@@ -580,7 +590,11 @@ async function start(): Promise<void> {
             const i = r.slot;
             slots[i].tag = undefined;
             if (state === "select" || state === "map") { makeCpu(i); slots[i].autoCpu = true; }
-            else if (i < players) bots[i] = new Bot(i, 0.75, seed + i);
+            else if (i < players) {
+              bots[i] = new Bot(i, 0.75, seed + i);
+              people[i] = false;
+              linkMates();
+            }
             hud.banner_(`${r.name} LEFT · A CPU TAKES OVER`, now, 2.5);
           }
         } else if (m.t === "from") netFromPeer(Number(m.id), m.msg as NetMsg);

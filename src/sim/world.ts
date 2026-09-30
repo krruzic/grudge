@@ -340,6 +340,7 @@ export class World {
       if (e.alive && cmd.call) this.arena.callSquad(e, cmd.call);
       if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
       if (cmd.learn !== undefined && e.hero?.picks.length) learn(this, e, cmd.learn);
+      if (cmd.say) this.emit({ type: "notice", team: slot.team, text: cmd.say.slice(0, 48) });
       if (e.alive) gainXp(this, e, this.data.talents?.xp.passive * dt);
       if (cmd.directive) {
         const ts = this.teams[slot.team];

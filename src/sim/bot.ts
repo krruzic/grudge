@@ -40,6 +40,14 @@ export class Bot {
   private wantBuy: { item: "bomb" | "ward" | "cannon"; at?: Vec2 } | null = null;
   private tend: Pad | null = null;
   private callIndex = 0;
+  mate: number | null = null;
+  role: "solo" | "attack" | "support" = "solo";
+  private homeScore = 0.3;
+  private roleAt = -99;
+  private roleCheckAt = 0;
+  private humanOrderAt = -99;
+  private sayText: string | null = null;
+  private helpSaidAt = -99;
 
   constructor(readonly player: number, private skill = 0.8, seed = 7) {
     this.seed = seed * 9973 + player * 131;
@@ -62,9 +70,16 @@ export class Bot {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;
       this.think(w, me);
     }
+    if (w.time >= this.roleCheckAt) {
+      this.roleCheckAt = w.time + 1;
+      this.updateRole(w, me);
+    }
     if (w.time >= this.directiveAt) {
       this.directiveAt = w.time + 2;
-      const d = this.pickDirective(w, me);
+      const cur = w.teams[me.team].directives.grunt;
+      if (this.lastDirective && cur !== this.lastDirective) this.humanOrderAt = w.time;
+      this.lastDirective = cur;
+      const d = this.role === "solo" ? this.pickDirective(w, me) : this.role === "support" && w.time - this.humanOrderAt > 25 ? this.supportDirective(w, me) : cur;
       if (d !== this.lastDirective) {
         cmd.directive = { type: "all", dir: d };
         this.lastDirective = d;
@@ -104,7 +119,8 @@ export class Bot {
       const type = order[this.callIndex % order.length];
       const ts = w.teams[me.team];
       const cost = w.data.units.squads.cost[type];
-      if (ts.resource >= cost + (this.buildType ? 60 : 0) && ts.unitCount < w.data.units.popCap) {
+      const spare = (this.buildType ? 60 : 0) + (this.role === "attack" ? 160 : 0);
+      if (ts.resource >= cost + spare && ts.unitCount < w.data.units.popCap) {
         cmd.call = type;
         this.callIndex++;
       }
@@ -119,6 +135,10 @@ export class Bot {
       cmd.buy = this.wantBuy.item;
       cmd.aimAt = this.wantBuy.at;
       this.wantBuy = null;
+    }
+    if (this.sayText) {
+      cmd.say = this.sayText;
+      this.sayText = null;
     }
     cmd.attack = this.wantAttack;
     cmd.secondary = this.wantB;
@@ -140,10 +160,106 @@ export class Bot {
     return "follow";
   }
 
+  private mateHero(w: World): Entity | undefined {
+    if (this.mate === null) return undefined;
+    const m = w.heroForPlayer(this.mate);
+    return m && m.alive ? m : undefined;
+  }
+
+  private enemyHeroes(w: World, me: Entity): Entity[] {
+    return w.players.filter((k) => k.team !== me.team).map((k) => w.get(k.heroId)).filter((e): e is Entity => !!e && e.alive);
+  }
+
+  private say(w: World, me: Entity, text: string): void {
+    this.sayText = `${w.heroDef(me.hero!.type).name.toUpperCase()}: ${text}`;
+  }
+
+  private updateRole(w: World, me: Entity): void {
+    if (this.mate === null) {
+      this.role = "solo";
+      return;
+    }
+    const slot = w.players.find((k) => k.player === this.mate);
+    const mate = this.mateHero(w);
+    let want = this.role === "solo" ? "support" : this.role;
+    if (slot?.commander) want = "attack";
+    else if (mate) {
+      const own = w.core(me.team)!;
+      const foe = w.core(1 - me.team)!;
+      const dOwn = w.dist(mate, own);
+      const dFoe = w.dist(mate, foe);
+      const frac = dOwn / (dOwn + dFoe || 1);
+      const fighting = this.enemyHeroes(w, me).some((e) => w.dist(mate, e) < 9);
+      const tending = w.arena.inShop(mate) || w.pads.some((pd) => pd.side === me.team && Math.hypot(pd.x - mate.transform.pos.x, pd.z - mate.transform.pos.z) < 3);
+      const home = fighting ? 0 : frac < 0.36 || tending ? 1 : frac > 0.5 ? 0 : 0.5;
+      this.homeScore += (home - this.homeScore) * 0.05;
+      if (this.homeScore > 0.68) want = "attack";
+      else if (this.homeScore < 0.32) want = "support";
+    }
+    if (want !== this.role && (this.role === "solo" || w.time - this.roleAt > 12)) {
+      if (this.role !== "solo") this.say(w, me, want === "attack" ? "I'LL TAKE THE FIGHT TO THEM" : "I'LL COVER YOU");
+      this.role = want as "attack" | "support";
+      this.roleAt = w.time;
+    }
+  }
+
+  private supportDirective(w: World, me: Entity): Directive {
+    const t = w.teams[me.team];
+    if (this.baseThreat(w, me)) return "defend";
+    if (w.isSudden() || t.unitCount >= 9) return "push";
+    const lead = w.heroOf(me.team);
+    if (lead && lead.alive && lead.id !== me.id) return "follow";
+    return t.unitCount >= 6 ? "push" : "follow";
+  }
+
+  private baseThreat(w: World, me: Entity): Entity | undefined {
+    let worst: Entity | undefined;
+    let most = 0;
+    for (const o of w.entities) {
+      if (!o.alive || o.team !== me.team || !o.structure || o.structure.siege) continue;
+      if (o.structure.type !== "core" && !w.arena.isTowerOrKeep(o)) continue;
+      const foes = w.enemiesNear(o, 13, (e) => e.kind === "unit" || e.kind === "hero");
+      const score = foes.reduce((n, e) => n + (e.hero ? 3 : 1), 0) + (o.structure.type === "core" ? 1 : 0);
+      if (score >= 3 && score > most) {
+        most = score;
+        worst = foes.sort((a, b) => w.dist(a, o) - w.dist(b, o))[0];
+      }
+    }
+    return worst;
+  }
+
+  private assistTarget(w: World, me: Entity): Entity | undefined {
+    const mate = this.mateHero(w);
+    if (!mate || this.role === "solo") return undefined;
+    const reach = this.role === "support" ? 45 : 22;
+    if (w.dist(me, mate) > reach) return undefined;
+    const foes = this.enemyHeroes(w, me).filter((e) => w.dist(mate, e) < 9 && !(e.status.hidden && w.dist(me, e) > 2.5));
+    if (!foes.length) return undefined;
+    const friends = w.players.filter((k) => k.team === me.team && k.player !== this.player).map((k) => w.get(k.heroId)).filter((e) => e && e.alive && w.dist(mate, e) < 9).length;
+    const weak = foes.find((e) => e.hp < e.maxHp * 0.4);
+    const outnumbered = foes.length > friends;
+    const hurting = mate.hp < mate.maxHp * 0.55;
+    if (!(outnumbered || hurting || weak || this.role === "support")) return undefined;
+    const t = weak ?? foes.sort((a, b) => w.dist(a, mate) - w.dist(b, mate))[0];
+    if (w.time - this.helpSaidAt > 15 && w.dist(me, t) > 12 && (outnumbered || hurting)) {
+      this.helpSaidAt = w.time;
+      this.say(w, me, weak ? "MOVING IN TO FINISH THEM" : "HOLD ON, I'M COMING");
+    }
+    return t;
+  }
+
   private think(w: World, me: Entity): void {
     const p = me.transform.pos;
     const h = me.hero!;
-    const enemyHero = w.heroOf(1 - me.team);
+    const assist = this.assistTarget(w, me);
+    let enemyHero = assist;
+    if (!enemyHero) {
+      let bd = Infinity;
+      for (const e of this.enemyHeroes(w, me)) {
+        const d = w.dist(me, e);
+        if (d < bd) { bd = d; enemyHero = e; }
+      }
+    }
     const ehAlive = enemyHero && enemyHero.alive;
     const dHero = ehAlive ? w.dist(me, enemyHero!) : Infinity;
     const lowHp = me.hp < me.maxHp * 0.3;
@@ -181,6 +297,12 @@ export class Bot {
         this.wantBlock = this.rand() < 0.5;
       }
       if (dHero > 2.5) return;
+    }
+    if (assist && !lowHp && dHero > 9 + (w.heroDef(h.type).botRange ?? 1.8)) {
+      this.goal = { x: assist.transform.pos.x, z: assist.transform.pos.z };
+      const ab0 = w.heroDef(h.type).abilities;
+      if (ab0.r.bot === "approach" && (h.cooldowns.r ?? 0) <= w.time && dHero < (ab0.r.botRange ?? 10)) this.wantR = true;
+      return;
     }
     if (lowHp && dHero < 10) {
       const sp = w.spawnPoint(me.team);
@@ -265,6 +387,17 @@ export class Bot {
     }
     this.fightId = 0;
 
+    const mate = this.mateHero(w);
+    if (this.role === "support") {
+      const threat = this.baseThreat(w, me);
+      if (threat && !(mate && w.dist(mate, threat) < w.dist(me, threat))) {
+        this.goal = { x: threat.transform.pos.x, z: threat.transform.pos.z };
+        return;
+      }
+    }
+    const maintain = this.role !== "attack" || w.teams[me.team].resource > 450;
+    if (!maintain) this.tend = this.buildPad = null;
+
     if (this.tend) {
       const st = this.tend.structureId ? w.get(this.tend.structureId) : undefined;
       if (!st || st.team !== me.team || (st.structure!.ready && !st.structure!.upgrading) || (ehAlive && dHero < 7)) this.tend = null;
@@ -273,7 +406,7 @@ export class Bot {
         return;
       }
     }
-    if (!this.buildPad) this.pickBuild(w, me);
+    if (!this.buildPad && maintain) this.pickBuild(w, me);
     if (this.buildPad) {
       const pad = this.buildPad;
       const st = pad.structureId ? w.get(pad.structureId) : undefined;
@@ -286,6 +419,20 @@ export class Bot {
       }
     }
 
+    if (this.role === "attack") {
+      const prey = this.enemyHeroes(w, me).find((e) => !e.status.hidden && w.dist(me, e) < 20 && e.hp < me.hp * 1.2);
+      this.goal = prey ? { x: prey.transform.pos.x, z: prey.transform.pos.z } : this.frontTarget(w, me);
+      return;
+    }
+    if (this.role === "support" && mate) {
+      const own = w.core(me.team)!.transform.pos;
+      const mp = mate.transform.pos;
+      const back = Math.hypot(own.x - mp.x, own.z - mp.z) || 1;
+      if (Math.hypot(mp.x - own.x, mp.z - own.z) > 22) {
+        this.goal = { x: mp.x + ((own.x - mp.x) / back) * 3, z: mp.z + ((own.z - mp.z) / back) * 3 + (this.player % 2 ? 1.5 : -1.5) };
+        return;
+      }
+    }
     const army = w.entities.filter((o) => o.alive && o.unit && o.team === me.team);
     const d = w.teams[me.team].directives.grunt;
     if (d === "push" && army.length) {
@@ -349,10 +496,13 @@ export class Bot {
     const core = w.core(me.team)!;
     const ward = (core.structure!.ward ?? 0) / w.data.structures.core.ward;
     const wardOk = w.time >= ts.wardReadyAt && !w.isSudden();
-    const wantWard = wardOk && ward < 0.4 && gold >= sh.ward.cost;
+    const wantWard = wardOk && ward < (this.role === "attack" ? 0.15 : this.role === "support" ? 0.55 : 0.4) && gold >= sh.ward.cost;
     const wantBomb = !h.bomb && gold >= sh.bomb.cost + 120 && w.entities.some((o) => o.alive && o.structure && o.team !== me.team && !o.neutral && o.structure.type !== "core");
-    const enemy = w.heroOf(1 - me.team);
-    const wantCannon = gold >= sh.cannon.cost + 150 && !!enemy?.alive;
+    const mate = this.mateHero(w);
+    const foes = this.enemyHeroes(w, me);
+    const brawl = mate && this.role === "support" ? foes.find((e) => w.dist(mate, e) < 8) : undefined;
+    const enemy = brawl ?? foes[0];
+    const wantCannon = !!enemy && gold >= sh.cannon.cost + (brawl ? 40 : this.role === "attack" ? 300 : 150);
     if (!(wantWard || wantBomb || wantCannon)) return false;
     if (w.arena.inShop(me)) {
       if (wantWard) this.wantBuy = { item: "ward" };
