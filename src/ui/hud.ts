@@ -341,6 +341,72 @@ function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.restore();
 }
 
+const ORDER_COL: Record<Directive, string> = { push: "#d83a28", follow: "#3a78e0", defend: "#3aa04a", hold: "#d8a020", nearest: "#e07020", focus: "#8a4ad0" };
+
+function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Directive, flip: boolean): void {
+  const r = 4.4;
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x, y, r + 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = ORDER_COL[d] ?? "#888";
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(x - r * 0.15, y - r * 0.45, r * 0.6, r * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fff8e8";
+  ctx.strokeStyle = "#fff8e8";
+  ctx.lineWidth = 0.9;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  const f = flip ? -1 : 1;
+  ctx.beginPath();
+  if (d === "push") {
+    for (const o of [-1.3, 0.6]) {
+      ctx.moveTo(x + (o - 0.9) * f, y - 1.9);
+      ctx.lineTo(x + (o + 0.9) * f, y);
+      ctx.lineTo(x + (o - 0.9) * f, y + 1.9);
+    }
+    ctx.stroke();
+  } else if (d === "follow") {
+    ctx.arc(x - 0.6 * f, y + 0.6, 1.9, Math.PI * 0.9, Math.PI * 1.9);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 1.9 * f, y - 1.2);
+    ctx.lineTo(x + 0.6 * f, y - 2.2);
+    ctx.lineTo(x + 2.2 * f, y + 0.6);
+    ctx.closePath();
+    ctx.fill();
+  } else if (d === "defend") {
+    ctx.moveTo(x - 2, y - 2.1);
+    ctx.lineTo(x + 2, y - 2.1);
+    ctx.lineTo(x + 2, y + 0.2);
+    ctx.quadraticCurveTo(x + 1.6, y + 1.8, x, y + 2.5);
+    ctx.quadraticCurveTo(x - 1.6, y + 1.8, x - 2, y + 0.2);
+    ctx.closePath();
+    ctx.fill();
+  } else if (d === "hold") {
+    ctx.fillRect(x - 2.2, y - 0.8, 4.4, 1.6);
+  } else if (d === "nearest") {
+    ctx.arc(x, y, 1.9, 0, Math.PI * 2);
+    ctx.moveTo(x - 3, y);
+    ctx.lineTo(x + 3, y);
+    ctx.moveTo(x, y - 3);
+    ctx.lineTo(x, y + 3);
+    ctx.stroke();
+  } else {
+    ctx.fillRect(x - 1.6, y - 1, 3.2, 3.2);
+    ctx.fillRect(x - 2.1, y - 2.2, 1.1, 1.4);
+    ctx.fillRect(x - 0.55, y - 2.2, 1.1, 1.4);
+    ctx.fillRect(x + 1, y - 2.2, 1.1, 1.4);
+  }
+  ctx.restore();
+}
+
 function ringMeter(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, frac: number, color: string): void {
   ctx.save();
   ctx.lineWidth = 2.4;
@@ -1433,40 +1499,62 @@ export class Hud {
     const o = this.orders[t];
     const counts: Record<UnitType, number> = { grunt: 0, ranged: 0, heavy: 0 };
     for (const e of w.entities) if (e.alive && e.unit && e.team === t) counts[e.unit.type]++;
-    const cw = 40;
-    const pw = cw * 3 + 4;
-    const ph = 17;
+    const cw = 25;
+    const pw = cw * 3;
+    const ph = 26;
     const x0 = F ? (right ? F.x + F.w - MARGIN_X - pw : F.x + MARGIN_X) : right ? W - MARGIN_X - pw : MARGIN_X;
     const y0 = (F ? F.y + F.h : H) - ph - 6;
     const flash = now < o.until - 1.2;
-    const key = [x0, y0, selected, flash, o.type, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
+    const key = [x0, y0, right, selected, flash, o.type, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
     this.memo(ctx, `orders${t}`, key, x0 - 6, y0 - 6, pw + 12, ph + 12, (c) => {
-      this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash);
+      this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash, right);
       return 0;
     });
   }
 
-  private drawOrdersBody(ctx: CanvasRenderingContext2D, x0: number, y0: number, pw: number, ph: number, cw: number, t: number, ts: World["teams"][number], o: { type: UnitType | "all"; until: number }, counts: Record<UnitType, number>, selected: UnitType | "all" | null, flash: boolean): void {
-    ctx.fillStyle = INK;
-    ctx.fillRect(x0 - 1, y0 - 1, pw + 2, ph + 2);
-    texturedRect(ctx, "wood", x0, y0, pw, ph, "#6a4a30", 0, 0.6);
-    UNIT_TYPES.forEach((k, i) => {
-      const cx = x0 + 2 + i * cw;
-      if (selected && (selected === "all" || selected === k)) {
-        ctx.fillStyle = "rgba(255,200,90,0.22)";
-        ctx.fillRect(cx, y0 + 1, cw, ph - 2);
-      }
+  private drawOrdersBody(ctx: CanvasRenderingContext2D, x0: number, y0: number, pw: number, ph: number, cw: number, t: number, ts: World["teams"][number], o: { type: UnitType | "all"; until: number }, counts: Record<UnitType, number>, selected: UnitType | "all" | null, flash: boolean, right = false): void {
+    void pw;
+    void ph;
+    const r = 9.5;
+    const order = right ? [...UNIT_TYPES].reverse() : UNIT_TYPES;
+    order.forEach((k, i) => {
+      const x = x0 + cw / 2 + i * cw;
+      const y = y0 + r + 1;
+      const sel = !!selected && (selected === "all" || selected === k);
       const hit = flash && (o.type === "all" || o.type === k);
-      if (hit) {
-        ctx.fillStyle = "rgba(255,220,120,0.35)";
-        ctx.fillRect(cx, y0 + 1, cw, ph - 2);
-      }
+      ctx.save();
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(x, y, r + 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2a1c12";
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
       const icon = this.portraits?.unitIcon(k, t);
-      if (icon) ctx.drawImage(icon, cx - 1, y0 - 1, 17, 17);
-      const word = DIR_NAME[ts.directives[k]];
-      drawText(ctx, word, cx + 16, y0 + 2, hit ? "#ffe070" : "#f0e4c8", 0.62, true);
+      if (icon) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r - 1.2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(icon, x - r - 1, y - r - 2, r * 2 + 2, r * 2 + 2);
+        ctx.restore();
+      }
+      ctx.lineWidth = sel || hit ? 1.8 : 1.1;
+      ctx.strokeStyle = hit ? "#fff4c0" : sel ? "#ffd040" : "#a07a34";
+      ctx.beginPath();
+      ctx.arc(x, y, r - 0.6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      orderBadge(ctx, x + r * 0.74, y - r * 0.74, ts.directives[k], t === 1 || right);
       const n = String(counts[k]);
-      drawText(ctx, n, cx + 16, y0 + 9, "#c8b890", 0.55, true);
+      const nw = textWidth(n, 0.6, true);
+      const pw2 = Math.max(7, nw + 4);
+      ctx.fillStyle = INK;
+      ctx.fillRect(Math.round(x - pw2 / 2 - 1), Math.round(y + r - 3), Math.round(pw2 + 2), 9);
+      ctx.fillStyle = "#3a2a1a";
+      ctx.fillRect(Math.round(x - pw2 / 2), Math.round(y + r - 2), Math.round(pw2), 7);
+      drawNum(ctx, n, Math.round(x - nw / 2), Math.round(y + r - 2), counts[k] ? "#fff4d8" : "#9a8a70", 0.6);
     });
   }
 
