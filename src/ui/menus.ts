@@ -533,6 +533,8 @@ export class Menus {
     }
     const p: [string, string][] = [["A", "SELECT"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
+    const ver = `BUILD ${__BUILD__}`;
+    shadowText(ctx, ver, W - 6 - textWidth(ver, 0.5), H - 11, "#d8c8a8", 0.5);
   }
 
   devices: () => (string | null)[] = () => [];
