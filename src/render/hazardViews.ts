@@ -394,7 +394,7 @@ export class HazardViews {
         o.scale.setScalar(0.001);
         g.add(o);
       };
-      const arches = Math.round(r * 3.2);
+      const arches = Math.round(r * 6);
       for (let i = 0; i < arches; i++) {
         const a = Math.random() * Math.PI * 2;
         const d = Math.sqrt(Math.random()) * r * 0.85;
@@ -429,7 +429,7 @@ export class HazardViews {
         arch.position.set(x, 0, z);
         grow(arch, x, z);
       }
-      for (let i = 0; i < Math.round(r * 1.2); i++) {
+      for (let i = 0; i < Math.round(r * 2.4); i++) {
         const a = Math.random() * Math.PI * 2;
         const d = Math.sqrt(Math.random()) * r * 0.8;
         const x = Math.cos(a) * d;

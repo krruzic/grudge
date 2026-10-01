@@ -90,7 +90,6 @@ export function warlordHit(h: FxHost, x: number, y: number, z: number, dx: numbe
   emit(h, { tex: WARLORD.pebbles, n: big ? 3 : 1, x, y: gy + 0.4, z, size: [0.5, 0.8], life: [0.4, 0.6], speed: [2, 4], up: [2, 4], dir: { x: n.x, y: 0.3, z: n.z }, cone: 1.2, gravity: 16, spin: 6, floor: gy + 0.1 });
   emit(h, { tex: WARLORD.dust, n: big ? 5 : 2, x, y: gy + 0.4, z, size: [0.8, 1.2], grow: 1.9, life: [0.45, 0.8], speed: [1.2, 2.8], flatSpread: true, drag: 3, opacity: 0.85, jitter: 0.5 });
   if (big) {
-    shockwave(h, WARLORD.ring, x, gy + 0.15, z, UP, 0.4, 2.6, 0.35, 0xffd0a0, 0.8);
     decal(h, WARLORD.crackRing, x, gy, z, 1.4, 1.6, { grow: 0.06 });
     chunks(h, 4, x, gy + 0.3, z, { size: [0.14, 0.26], speed: [2, 4], up: [4, 7] });
   }
@@ -102,8 +101,10 @@ function slamFx(h: FxHost, x: number, z: number, r: number, heavy: boolean): voi
   decal(h, WARLORD.crackRing, x, gy, z, r * 0.9, 1.8, { grow: 0.08 });
   decal(h, WARLORD.lavaCrack, x, gy + 0.01, z, r * (heavy ? 1.1 : 0.7), heavy ? 2.4 : 1.6, { grow: 0.12, opacity: 0.95 });
   emit(h, { tex: FX.burst, n: 1, x, y: gy + 0.4, z, size: [r * 0.9, r * 0.9], grow: 1.4, life: [0.12, 0.12], speed: [0, 0], additive: true });
-  shockwave(h, WARLORD.ring, x, gy + 0.2, z, UP, 0.5, r * 1.15, 0.4, 0xffe0c0);
-  h.after(0.08, () => shockwave(h, FX.shock, x, gy + 0.25, z, UP, 0.5, r * 0.9, 0.35, 0xffffff, 0.8));
+  if (!heavy) {
+    shockwave(h, WARLORD.ring, x, gy + 0.2, z, UP, 0.5, r * 1.15, 0.4, 0xffe0c0);
+    h.after(0.08, () => shockwave(h, FX.shock, x, gy + 0.25, z, UP, 0.5, r * 0.9, 0.35, 0xffffff, 0.8));
+  }
   const ring = heavy ? 20 : 12;
   for (let i = 0; i < ring; i++) {
     const a = (i / ring) * Math.PI * 2;

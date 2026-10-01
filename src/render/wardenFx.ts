@@ -212,12 +212,8 @@ export function wardenSprout(h: FxHost, x: number, y: number, z: number): void {
 
 export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r: number): void {
   const gy = ground(h, x, z, y);
-  decal(h, WARDEN.rune, x, gy + 0.05, z, r * 1.05, 0.9, { grow: 0.2, spin: 1.2, additive: true, color: 0x90ff60 });
-  decal(h, WARDEN.rune, x, gy + 0.06, z, r * 0.55, 0.7, { grow: 0.12, spin: -2, additive: true, color: 0xe0ffb0 });
   emit(h, { tex: WARDEN.wisp, n: 1, x, y: gy + 1.4, z, size: [3, 3], grow: 2.2, life: [0.4, 0.4], speed: [0, 0], additive: true });
   emit(h, { tex: WARDEN.natureBurst, n: 1, x, y: gy + 1.2, z, size: [3.2, 3.2], grow: 1.5, life: [0.3, 0.3], speed: [0, 0] });
-  shockwave(h, FX.shock, x, gy + 0.25, z, new THREE.Vector3(0, 1, 0), 0.5, r, 0.45, 0xa0ff70);
-  h.after(0.12, () => shockwave(h, FX.shock, x, gy + 0.25, z, new THREE.Vector3(0, 1, 0), 0.5, r * 0.8, 0.4, 0xe8ffc0, 0.7));
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * Math.PI * 2;
     emit(h, { tex: FX.dust, n: 1, x: x + Math.cos(a) * r * 0.95, y: gy + 0.4, z: z + Math.sin(a) * r * 0.95, size: [0.8, 1.1], grow: 1.8, life: [0.7, 1], speed: [0.8, 1.6], dir: { x: Math.cos(a), y: 0.2, z: Math.sin(a) }, cone: 0.3, drag: 2, opacity: 0.85 });

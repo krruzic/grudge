@@ -596,3 +596,7 @@
   - Repair also gets a damaged allied tower next to the hero.
   - Stig's Siege Ramp demo walks him up the ramp after he raises it (longer loop, grunts placed past the platform).
 - SIT HERE sits back at the bottom of the CPU's portrait frame, drawn on the high-res layer so it renders over the 3D portrait.
+- Effect tweaks after review:
+  - Remnil's hex and summon circles are back to the original painted circles (they read better than the 3D sigil).
+  - Thorn's Brambles cast lost its rune sigils and flat rings; instead the zone grows roughly twice as many 3D bramble arches and thorn clumps.
+  - Earthquake no longer spawns flat ground rings: no slam rings when the slam is a quake, and no ground ring on big Warlord hits. The upright per-hit impact ring stays.

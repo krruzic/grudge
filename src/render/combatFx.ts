@@ -18,7 +18,7 @@ FISSURE_TEX.set(WARLORD.crackRing, "crack");
 FISSURE_TEX.set(WARLORD.lavaCrack, "lava");
 FISSURE_TEX.set(WARDEN.mossCrack, "moss");
 FISSURE_TEX.set(WARDEN.roots, "moss");
-for (const t of [WARLORD.rune, WARDEN.rune, HERALD.halo, HERALD.laurel, SUMMONER.circle, SUMMONER.hex]) DECAL_3D.set(t, "sigil");
+for (const t of [WARLORD.rune, HERALD.halo, HERALD.laurel]) DECAL_3D.set(t, "sigil");
 DECAL_3D.set(WARLORD.ring, "ring");
 DECAL_3D.set(ENGINEER.gear, "gear");
 DECAL_3D.set(RAIDER.smokeRing, "smoke");
