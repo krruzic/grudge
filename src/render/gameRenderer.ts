@@ -429,6 +429,16 @@ export class GameRenderer {
   private zoomIndex = new Map<number, number>();
   private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroIds: number[]; player: number }[] = [];
 
+  viewRectOf(player: number): { x: number; y: number; w: number; h: number } | null {
+    if (this.splitViews.length < 2) return null;
+    const k = this.splitViews.findIndex((v) => v.player === player);
+    if (k < 0) return null;
+    const tw = this.target.width;
+    const th = this.target.height;
+    const [x, y, w, h] = this.splitRects(tw, th)[k];
+    return { x: x / tw, y: 1 - (y + h) / th, w: w / tw, h: h / th };
+  }
+
   get splitCount(): number {
     return this.splitViews.length > 1 ? this.splitViews.length : 0;
   }

@@ -1,6 +1,6 @@
 import type { World } from "../sim/world";
 import { setTextLayer } from "./font";
-import { UNIT_TYPES, type Directive, type UnitType } from "../sim/types";
+import { UNIT_TYPES, type Directive, type Entity, type UnitType } from "../sim/types";
 import type { Portraits } from "./portraits";
 import { parchment, texturedRect } from "./n64ui";
 import { onHiLayer } from "./font";
@@ -14,6 +14,7 @@ export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828",
 
 const DIR_NAME: Record<Directive, string> = { push: "ATTACK", hold: "HOLD", follow: "FOLLOW", nearest: "HUNT", focus: "SIEGE", defend: "DEFEND" };
 const TYPE_NAME: Record<UnitType | "all", string> = { grunt: "GRUNTS", ranged: "ARCHERS", heavy: "BRUTES", all: "ARMY" };
+const PLAYER_TAG = ["#8ab0ff", "#ff9a8a", "#70e0d0", "#ffd060"];
 const MARGIN_X = 14;
 const MARGIN_Y = 10;
 
@@ -438,6 +439,74 @@ export class Hud {
   }
 
   private dense = false;
+  rectOf: ((player: number) => { x: number; y: number; w: number; h: number } | null) | null = null;
+
+  private drawPlayerPanel(ctx: CanvasRenderingContext2D, w: World, e: Entity, x0: number, y0: number, blockW: number, right: boolean, now: number, local: boolean, tag: string): number {
+    const h = e.hero!;
+    const ax = (dx: number, width = 0) => (right ? x0 + blockW - dx - width : x0 + dx);
+    let y = y0;
+    let px = 0;
+    if (tag) {
+      const tw = textWidth(tag, 0.62, true);
+      drawText(ctx, tag, right ? ax(0, tw) : ax(0), y + 2, PLAYER_TAG[e.hero!.player] ?? "#d8d0c0", 0.62, true);
+      px = tw + 4;
+    }
+    if (h.dead) {
+      const n = Math.max(0, Math.ceil(h.respawnAt - w.time));
+      const lab = `RESPAWN ${n}`;
+      drawText(ctx, lab, right ? ax(px, textWidth(lab, 0.75)) : ax(px), y + 1, "#ffb8a0", 0.75);
+    } else {
+      const keys: ["b" | "r", string][] = [["b", PAD.b], ["r", PAD.r]];
+      keys.forEach(([k, c], i) => {
+        const left = (h.cooldowns[k] ?? 0) - w.time;
+        const bxx = ax(px + 5 + i * 13);
+        const ready = left <= 0;
+        padButton(ctx, bxx, y + 5, 5, c, ready ? k.toUpperCase() : "", !ready);
+        if (!ready) {
+          const n = String(Math.ceil(left));
+          drawNum(ctx, n, bxx - textWidth(n, 0.75, true) / 2 - 0.5, y + 1, "#ffffff", 0.75);
+        }
+      });
+      px += 27;
+      const frac = h.meter / w.data.heroes.baseline.superMax;
+      const full = frac >= 1;
+      padButton(ctx, ax(px + 4), y + 5, 4.5, full ? "#e8c030" : PAD.z, "Z");
+      const mw = blockW - px - 12;
+      meter(ctx, ax(px + 11, mw), y + 3, mw, 4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
+    }
+    y += 12;
+    const cfgXp = w.data.talents?.xp;
+    if (!cfgXp || w.players.find((p) => p.heroId === e.id)?.commander) return y - y0;
+    const lv = `LV ${h.level}`;
+    const lw = textWidth(lv, 0.62, true);
+    drawNum(ctx, lv, right ? ax(0, lw) : ax(0), y, "#ffe890", 0.62);
+    const next = cfgXp.levels[h.level];
+    const prev = cfgXp.levels[h.level - 1] ?? 0;
+    const frac = next === undefined ? 1 : (h.xp - prev) / (next - prev);
+    const isz = 9;
+    let tx = lw + 4;
+    for (const slot of ["r", "b", "a", "z"] as const) {
+      const got = learned(w, e, slot);
+      const ix = right ? ax(tx, isz) : ax(tx);
+      if (got[0]) talentIcon(ctx, got[0].id, ix, y - 1, isz);
+      else {
+        ctx.fillStyle = INK;
+        ctx.fillRect(ix - 1, y - 2, isz + 2, isz + 2);
+        ctx.fillStyle = "#2a2430";
+        ctx.fillRect(ix, y - 1, isz, isz);
+      }
+      tx += isz + 2;
+    }
+    const xw = Math.max(10, blockW - tx - 2);
+    meter(ctx, right ? ax(tx + 1, xw) : ax(tx + 1), y + 3, xw, 2, frac, next === undefined ? "#ffd040" : "#8ad8ff");
+    y += isz + 2;
+    if (local && h.picks.length && Math.floor(now * 3) % 3 !== 0) {
+      const msg = "LEVEL UP! FLICK C LEFT / RIGHT";
+      drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.55)) : ax(0), y, "#ffe060", 0.55);
+      y += 7;
+    }
+    return y - y0;
+  }
 
   private drawBanner(ctx: CanvasRenderingContext2D, W: number, now: number): void {
     const age = now - this.bannerAt;
@@ -551,23 +620,6 @@ export class Hud {
     if (ward > 0 && !w.isSudden()) meter(ctx, ax(14, blockW - 14), y + 8, blockW - 14, 2, ward / w.data.structures.core.ward, "#9fe0ff");
     y += ward > 0 && !w.isSudden() ? 15 : 12;
 
-    const hero = w.heroOf(t);
-    const frac = hero?.hero ? hero.hero.meter / w.data.heroes.baseline.superMax : 0;
-    const full = frac >= 1;
-    padButton(ctx, ax(5), y + 3, 5, full ? "#e8c030" : PAD.z, "Z");
-    const flash = full && Math.floor(now * 5) % 2 === 0;
-    meter(ctx, ax(14, 64), y + 1, 64, 4, frac, flash ? "#fff4a0" : "#f0b020");
-    y += 12;
-    const mate = w.players.filter((p) => p.team === t && !p.commander)[1];
-    const mh = mate ? w.getAny(mate.heroId) : undefined;
-    if (mh?.hero) {
-      const f2 = mh.hero.meter / w.data.heroes.baseline.superMax;
-      const lab = `P${mate!.player + 1}`;
-      drawText(ctx, lab, right ? ax(0, textWidth(lab, 0.7)) : ax(0), y - 1, f2 >= 1 ? "#fff4a0" : "#d8d0c0", 0.7, true);
-      meter(ctx, ax(14, 64), y + 1, 64, 3, f2, f2 >= 1 && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
-      y += 9;
-    }
-
     this.shownCoin[t] += (ts.resource - this.shownCoin[t]) * Math.min(1, 0.25);
     const coin = String(Math.round(this.shownCoin[t]));
     const army = `${ts.unitCount}/${w.data.units.popCap}`;
@@ -586,26 +638,7 @@ export class Hud {
     drawNum(ctx, army, bx, y, capped ? "#ff8a6a" : "#ffffff", 1.15);
     y += 16;
 
-    if (hero?.hero?.dead) {
-      const n = Math.max(0, Math.ceil(hero.hero.respawnAt - w.time));
-      const lab = "RESPAWN";
-      const lw = textWidth(lab, 0.85);
-      drawText(ctx, lab, ax(0, lw + 16), y + 2, "#ffb8a0", 0.85);
-      drawNum(ctx, String(n), ax(lw + 4, 12), y - 1, "#ffffff", 1.3);
-    } else if (hero?.hero) {
-      const keys: ["b" | "r", string][] = [["b", PAD.b], ["r", PAD.r]];
-      keys.forEach(([k, c], i) => {
-        const left = (hero.hero!.cooldowns[k] ?? 0) - w.time;
-        const bxx = ax(6 + i * 18);
-        const ready = left <= 0;
-        padButton(ctx, bxx, y + 6, 6.5, c, ready ? k.toUpperCase() : "", !ready);
-        if (!ready) {
-          const n = String(Math.ceil(left));
-          drawNum(ctx, n, bxx - textWidth(n, 0.95, true) / 2 - 0.5, y + 1, "#ffffff", 0.95);
-        }
-      });
-    }
-    let bxc = 44;
+    let bxc = 0;
     for (const p of w.players) {
       const e = w.getAny(p.heroId);
       if (!e?.hero || e.team !== t || !e.alive) continue;
@@ -623,49 +656,28 @@ export class Hud {
       drawText(ctx, lab, x + 12 + tw, y + 3, relic ? (Math.floor(now * 3) % 2 ? "#ffe890" : "#ffffff") : "#ffc0a0", 0.7);
       bxc += bw + 6;
     }
-    y += 18;
-    const cfgXp = w.data.talents?.xp;
-    for (const p of w.players) {
+    if (bxc > 0) y += 14;
+    const anyLocal = ui.some(Boolean);
+    const teamHeroes = w.players.filter((p) => p.team === t && !p.commander);
+    const shown = teamHeroes.filter((p, k) => !!ui[p.player] || (!anyLocal && k === 0));
+    const rectPx = (pl: number) => {
+      const r = this.rectOf?.(pl);
+      return r ? { x: r.x * W, y: r.y * H, w: r.w * W, h: r.h * H } : null;
+    };
+    for (const p of shown) {
       const e = w.getAny(p.heroId);
-      if (!e?.hero || e.team !== t || p.commander || !cfgXp) continue;
-      const h = e.hero;
-      const lv = `LV ${h.level}`;
-      const lw = textWidth(lv, 0.7, true);
-      const lx = right ? ax(0, lw) : ax(0);
-      drawNum(ctx, lv, lx, y, "#ffe890", 0.7);
-      const next = cfgXp.levels[h.level];
-      const prev = cfgXp.levels[h.level - 1] ?? 0;
-      const frac = next === undefined ? 1 : (h.xp - prev) / (next - prev);
-      const bw = 34;
-      meter(ctx, right ? ax(lw + 4, bw) : ax(lw + 4), y + 2, bw, 2, frac, next === undefined ? "#ffd040" : "#8ad8ff");
-      let px = lw + 4 + bw + 5;
-      y += 7;
-      px = 0;
-      const isz = 11;
-      for (const slot of ["r", "b", "a", "z"] as const) {
-        const got = learned(w, e, slot);
-        const key = slot === "z" ? "Z+" : slot.toUpperCase();
-        const kw = textWidth(key, 0.55, true);
-        drawText(ctx, key, right ? ax(px, kw) : ax(px), y + 2, "#d8d0c0", 0.55, true);
-        const ix = right ? ax(px + kw + 2, isz) : ax(px + kw + 2);
-        if (got[0]) talentIcon(ctx, got[0].id, ix, y, isz);
-        else {
-          ctx.fillStyle = INK;
-          ctx.fillRect(ix - 1, y - 1, isz + 2, isz + 2);
-          ctx.fillStyle = "#2a2430";
-          ctx.fillRect(ix, y, isz, isz);
-        }
-        px += kw + 2 + isz + 5;
-      }
-      y += isz + 3;
-      if (h.picks.length && Math.floor(now * 3) % 3 !== 0) {
-        const msg = `LEVEL UP! FLICK C LEFT / RIGHT`;
-        drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.62)) : ax(0), y, "#ffe060", 0.62);
-      }
-      y += h.picks.length ? 8 : 0;
+      if (!e?.hero) continue;
+      const r = rectPx(p.player);
+      const px0 = r ? (right ? r.x + r.w - MARGIN_X - blockW : r.x + MARGIN_X) : x0;
+      const py0 = r ? (r.y < 2 ? y + 2 : r.y + MARGIN_Y + 2) : y + 2;
+      const h = this.drawPlayerPanel(ctx, w, e, px0, py0, blockW, right, now, !!ui[p.player], shown.length > 1 || teamHeroes.length > 1 ? `P${p.player + 1}` : "");
+      if (!r) y = py0 + h;
     }
-
-
+    const crossOf = (pl: number | undefined): [number, number] => {
+      const r = pl === undefined ? null : rectPx(pl);
+      if (!r) return [right ? W - MARGIN_X - 62 : MARGIN_X + 62, H - 58];
+      return [right ? r.x + r.w - MARGIN_X - 62 : r.x + MARGIN_X + 62, r.y + r.h - 58];
+    };
     const slot = w.players.find((p) => p.team === t && !p.commander);
     const cmd = w.players.find((p) => p.team === t && p.commander);
     const mui = slot ? ui[slot.player] : null;
@@ -673,8 +685,8 @@ export class Hud {
     const opener = w.players.find((p) => p.team === t && ui[p.player] && ui[p.player]!.buildMenu !== "closed");
     const menuUi = opener ? ui[opener.player] : null;
     const menuHero = opener?.heroId;
-    const crossY = H - 58;
-    const crossX = right ? W - MARGIN_X - 62 : MARGIN_X + 62;
+    const firstLocal = w.players.find((p) => p.team === t && ui[p.player]);
+    let [crossX, crossY] = crossOf(opener?.player ?? firstLocal?.player);
     const nt = this.notices[t];
     if (now < nt.until) {
       const age = 2 - (nt.until - now);
@@ -709,8 +721,10 @@ export class Hud {
       drawText(ctx, l2, Math.round(crossX - textWidth(l2, 0.72) / 2), crossY + 6, "#e8e0d0", 0.72);
       return;
     }
-    const learner = w.players.find((p) => p.team === t && ui[p.player]?.learnReady);
-    if (learner && !menuUi) this.drawLearnCards(ctx, W, crossX, crossY, w, learner.heroId, right, now);
+    for (const learner of w.players.filter((p) => p.team === t && ui[p.player]?.learnReady && ui[p.player]!.buildMenu === "closed")) {
+      const [lx, ly] = crossOf(learner.player);
+      this.drawLearnCards(ctx, W, lx, ly, w, learner.heroId, right, now);
+    }
     if (menuUi && menuHero !== undefined) {
       const c = this.buildCross(w, t, menuHero, menuUi);
       if (c) this.drawCross(ctx, crossX, crossY, c, right, 1);
@@ -719,7 +733,9 @@ export class Hud {
     }
     const o = this.orders[t];
     const team = w.players.filter((p) => p.team === t).sort((a, b) => Number(b.commander) - Number(a.commander));
-    const picker = team.map((p) => ui[p.player]).find((u) => !!u) ?? null;
+    const pickerP = team.find((p) => !!ui[p.player]);
+    const picker = pickerP ? ui[pickerP.player] : null;
+    if (pickerP) [crossX, crossY] = crossOf(pickerP.player);
     const group = picker?.group ?? "all";
     this.drawOrders(ctx, W, H, w, t, right, now, picker ? group : null);
     if (!picker) {

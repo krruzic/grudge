@@ -1165,6 +1165,7 @@ async function start(): Promise<void> {
     const uiList = mappers.map((m) => m?.ui ?? null);
     hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);
     hud.split = view.splitCount;
+    hud.rectOf = (pl) => view.viewRectOf(pl);
     hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
     screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : mapIndex);
     if (state === "select" || state === "lobby") screens.portraits?.renderStages();
