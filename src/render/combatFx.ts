@@ -5,11 +5,12 @@ import { drawNum, drawText, fontReady, onTextLost, textWidth } from "../ui/font"
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
-import { FX } from "./fxKit";
+import { DUELIST, ENGINEER, FX, HERALD, RAIDER, WARLORD } from "./fxKit";
+import { spikeGeo, spikeMat } from "./warlordFx";
 import { wardenSlap } from "./wardenFx";
 import { KITS, type HeroKit } from "./kits";
 import "./heroFx";
-import { emit, Ribbon, shockwave, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
+import { chunks, decal, emit, Ribbon, shockwave, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
 
 const woodTex = new THREE.TextureLoader().load(woodUrl);
 woodTex.colorSpace = THREE.SRGBColorSpace;
@@ -884,7 +885,7 @@ export class CombatFx implements FxHost {
         this.burst(ev.x, ev.y + 0.4, ev.z, starTex, 0xbfe8ff, 8, 0.4, 0.5, ev.radius * 0.8, true, 0.6);
         break;
       case "heal":
-        this.burst(ev.x, ev.y + 1.5, ev.z, plusTex, 0xffffff, 2, 0.5, 0.9, 1.2, false, 1.2);
+        emit(this, { tex: HERALD.heal, n: 2, x: ev.x, y: ev.y + 1.4, z: ev.z, size: [0.4, 0.55], life: [0.8, 1.1], speed: [0.2, 0.6], up: [1, 1.6], jitter: 0.8 });
         break;
       case "build":
         break;
@@ -1332,65 +1333,72 @@ export class CombatFx implements FxHost {
       seen.add(m.id);
       let v = this.missileViews.get(m.id);
       if (!v) {
-        let obj: THREE.Object3D;
+        const obj = new THREE.Group();
+        const spr = (tex: THREE.Texture, size: number, additive = false, color: THREE.ColorRepresentation = 0xffffff) => {
+          const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+          sp.scale.setScalar(size);
+          obj.add(sp);
+          return sp;
+        };
         if (m.style === "rivet") {
-          const g = new THREE.Group();
-          const body = new THREE.Mesh(rivetGeo, ironMat);
-          body.rotation.x = Math.PI / 2;
-          const head = new THREE.Mesh(rivetHeadGeo, ironMat);
-          head.rotation.x = Math.PI / 2;
-          head.position.z = -0.28;
-          g.add(body, head);
-          obj = g;
+          spr(ENGINEER.weld, 1.1, true, 0xffb060);
+          spr(ENGINEER.rivet, 0.55);
         } else if (m.style === "dagger") {
-          const g = new THREE.Group();
-          const blade = new THREE.Mesh(bladeGeo, bladeMat);
-          blade.rotation.x = Math.PI / 2;
-          const hilt = new THREE.Mesh(rivetHeadGeo, woodMat);
-          hilt.rotation.x = Math.PI / 2;
-          hilt.position.z = -0.4;
-          g.add(blade, hilt);
-          obj = g;
+          spr(RAIDER.knife, 0.9).name = "spin";
+          spr(RAIDER.poison, 0.6, false).material.opacity = 0.6;
         } else if (m.style === "slash") {
-          const sp = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.2), new THREE.MeshBasicMaterial({ map: slashTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-          obj = sp;
-        } else obj = new THREE.Group();
+          const sp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.3), new THREE.MeshBasicMaterial({ map: DUELIST.crescent, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+          sp.name = "flat";
+          obj.add(sp);
+        } else if (m.style === "rock") {
+          spr(WARLORD.dust, 1.4).material.opacity = 0.8;
+        }
         this.root.add(obj);
         v = { obj, lastSpike: -1 };
         this.missileViews.set(m.id, v);
       }
       const yaw = Math.atan2(m.dirX, m.dirZ);
       v.obj.position.set(m.x, m.y, m.z);
-      if (m.style === "dagger") v.obj.rotation.set(0, yaw, 0), v.obj.rotateX(performance.now() / 40);
-      else if (m.style === "slash") v.obj.rotation.set(-Math.PI / 2, 0, -yaw + Math.PI);
-      else v.obj.rotation.set(0, yaw, 0);
-      if (m.style === "rock" && m.dist - v.lastSpike > 0.55) {
+      const flat = v.obj.getObjectByName("flat");
+      if (flat) flat.rotation.set(-Math.PI / 2, 0, -yaw + Math.PI);
+      const spin = v.obj.getObjectByName("spin") as THREE.Sprite | undefined;
+      if (spin) spin.material.rotation = performance.now() / 60;
+      if (Math.random() < 0.6) {
+        if (m.style === "rivet") emit(this, { tex: FX.twinkle, n: 1, x: m.x, y: m.y, z: m.z, color: 0xffa040, size: [0.25, 0.4], life: [0.2, 0.3], speed: [0.3, 1], gravity: 6, additive: true });
+        else if (m.style === "dagger") emit(this, { tex: RAIDER.drop, n: 1, x: m.x, y: m.y, z: m.z, color: 0x80ff60, size: [0.18, 0.26], life: [0.3, 0.5], speed: [0, 0.5], gravity: 10 });
+        else if (m.style === "slash") emit(this, { tex: DUELIST.sparkle, n: 1, x: m.x, y: m.y, z: m.z, size: [0.3, 0.45], life: [0.25, 0.4], speed: [0.3, 1], additive: true, jitter: 0.8 });
+      }
+      if (m.style === "rock" && m.dist - v.lastSpike > 0.6) {
         v.lastSpike = m.dist;
-        const rock = new THREE.Mesh(rockGeo, rockMat);
         const gx = m.x + (Math.random() - 0.5) * 0.6;
         const gz = m.z + (Math.random() - 0.5) * 0.6;
         const gy = world.groundY(gx, gz);
-        rock.rotation.set((Math.random() - 0.5) * 0.6, Math.random() * 3, (Math.random() - 0.5) * 0.6);
+        const rock = new THREE.Mesh(spikeGeo, spikeMat);
+        const sc = 0.55 + Math.random() * 0.35;
+        rock.scale.set(sc, sc * (0.9 + Math.random() * 0.5), sc);
+        rock.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * 3, (Math.random() - 0.5) * 0.5);
+        const hgt = 1.6 * rock.scale.y;
         this.root.add(rock);
         this.items.push({
-          obj: rock, t: 0, dur: 0.9,
+          obj: rock, t: 0, dur: 1,
           tick: (k) => {
-            const up = k < 0.15 ? k / 0.15 : k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1;
-            rock.position.set(gx, gy - 0.65 + up * 0.95, gz);
+            const up = k < 0.12 ? k / 0.12 : k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1;
+            rock.position.set(gx, gy - hgt / 2 + hgt * 0.75 * up, gz);
           },
         });
-        this.burst(gx, gy + 0.2, gz, puffTex, 0xa89478, 2, 0.8, 0.5, 0.8, false, 0.3);
+        decal(this, WARLORD.crackRing, gx, gy, gz, 0.9, 1.2, { grow: 0.05 });
+        emit(this, { tex: WARLORD.dust, n: 2, x: gx, y: gy + 0.4, z: gz, size: [0.8, 1.1], grow: 1.7, life: [0.4, 0.6], speed: [0.8, 1.6], flatSpread: true, drag: 3, opacity: 0.85 });
+        chunks(this, 1, gx, gy + 0.4, gz, { size: [0.1, 0.18], speed: [1, 2.5], up: [3, 5] });
       }
     }
     for (const [id, v] of this.missileViews) {
       if (seen.has(id)) continue;
-      this.burst(v.obj.position.x, v.obj.position.y, v.obj.position.z, puffTex, 0xc8b898, 4, 0.7, 0.35, 1, false, 0.4);
+      emit(this, { tex: FX.dust, n: 3, x: v.obj.position.x, y: v.obj.position.y, z: v.obj.position.z, size: [0.6, 0.9], grow: 1.6, life: [0.3, 0.5], speed: [0.8, 1.6], opacity: 0.8 });
       this.root.remove(v.obj);
       v.obj.traverse((o) => {
-        if (!(o instanceof THREE.Mesh)) return;
-        if (!SHARED_GEO.has(o.geometry)) o.geometry.dispose();
-        const mat = o.material as THREE.Material;
-        if (!SHARED_MAT.has(mat)) mat.dispose();
+        const mat = (o as THREE.Mesh).material as THREE.Material | undefined;
+        if (mat && !SHARED_MAT.has(mat) && !mat.userData.keep) mat.dispose();
+        if (o instanceof THREE.Mesh && !SHARED_GEO.has(o.geometry) && !o.geometry.userData.model) o.geometry.dispose();
       });
       this.missileViews.delete(id);
     }
@@ -1486,6 +1494,10 @@ export class CombatFx implements FxHost {
     shockwave(this, FX.shock, x, y + 0.15, z, new THREE.Vector3(0, 1, 0), 0.4, 1.8 + k * 1.8, 0.35, 0xfff0c0, 0.8);
     emit(this, { tex: FX.dust, n: 4 + Math.round(k * 4), x, y: y + 0.3, z, size: [0.9, 1.3], grow: 1.8, life: [0.4, 0.7], speed: [2, 4], flatSpread: true, drag: 3, opacity: 0.85 });
     this.shake = Math.max(this.shake, 0.2 + k * 0.3);
+  }
+
+  bloodMote(x: number, y: number, z: number): void {
+    emit(this, { tex: RAIDER.drop, n: 1, x: x + (Math.random() - 0.5) * 1.2, y: y + 0.6 + Math.random() * 1.4, z: z + (Math.random() - 0.5) * 1.2, color: 0xff4040, size: [0.22, 0.32], life: [0.5, 0.8], speed: [0, 0.2], up: [0.6, 1.2], opacity: 0.9 });
   }
 
   regen(x: number, y: number, z: number): void {

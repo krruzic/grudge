@@ -14,6 +14,7 @@ import waterTex from "../assets/textures/water.png?url";
 import { World } from "./sim/world";
 import { Bot } from "./sim/bot";
 import { placeRanges } from "./sim/heroes";
+import { allLearned, gainXp, learn } from "./sim/talents";
 import { forceAbility } from "./sim/heroes";
 import { padNear } from "./sim/structures";
 import type { GameData } from "./sim/config";
@@ -493,7 +494,14 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, screens, pause: () => setPaused(true), endMatch: (winner = 0) => {
+  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, screens, levelUp: (player: number, picks: number[]) => {
+    const e = world.heroForPlayer(player);
+    if (!e?.hero) return [];
+    gainXp(world, e, 99999);
+    for (const k of picks) learn(world, e, k);
+    while (e.hero.picks.length) learn(world, e, 0);
+    return allLearned(world, e).map((t) => t.id);
+  }, pause: () => setPaused(true), endMatch: (winner = 0) => {
     world.match.phase = "over";
     world.match.winner = winner;
     world.match.reason = "core destroyed";

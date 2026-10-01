@@ -1,3 +1,4 @@
+import { teslaCoil } from "./hazardViews";
 import { FX } from "./fxKit";
 import { KITS } from "./kits";
 import * as THREE from "three";
@@ -514,7 +515,7 @@ export class EntityViews {
         view.work = makeBar(3, new THREE.Color(0x9fe0ff), 5.5);
         root.add(view.work.group);
       } else {
-        body = st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
+        body = st.tesla ? teslaCoil(1.1) : st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
         body.traverse((o) => {
           if (!view.spin && o.name.startsWith("spin")) view.spin = o;
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
@@ -931,6 +932,7 @@ export class EntityViews {
         v.body.position.y -= 0.12 * k;
       }
     }
+    if (e.status.stealUntil && w.time < e.status.stealUntil && !v.stealthed && Math.random() < dt * 8) this.fx.bloodMote(v.root.position.x, v.root.position.y, v.root.position.z);
     if (e.hp < e.maxHp && !v.stealthed && w.calm(e) && Math.random() < dt * 5) {
       const turf = w.turf(e);
       if (turf === "home" || turf === "tower") this.fx.regen(v.root.position.x, v.root.position.y, v.root.position.z);

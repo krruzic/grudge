@@ -220,7 +220,7 @@ export class Menus {
         ctx.fillStyle = e.alive ? (fr > 0.35 ? "#58c040" : "#e04030") : "#5a5048";
         ctx.fillRect(x + 34, yy + 11, Math.round(bwid * fr), 3);
         drawText(ctx, e.alive ? `${Math.ceil(e.hp)} / ${Math.round(e.maxHp)}` : "FALLEN", x + 33, yy + 16, "#d8c8a8", 0.45);
-        const got = [...learned(w, e, "a"), ...learned(w, e, "b")];
+        const got = (["r", "b", "a", "z"] as const).flatMap((sl) => learned(w, e, sl));
         got.forEach((tl, k) => talentIcon(ctx, tl.id, x + colW - 5 - (got.length - k) * 11, yy + 15, 10));
         yy += 31;
       }

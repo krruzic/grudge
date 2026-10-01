@@ -54,6 +54,12 @@ KITS.raider = {
     return true;
   },
   event(h, ev) {
+    if (ev.type === "reach" && ev.style === "afterimage") {
+      const gy = ground(h, ev.x, ev.z, ev.y);
+      streakLine(h, RAIDER.dashStreak, ev.x, gy + 1.2, ev.z, ev.tx, ev.tz, 6, 0xffffff, 2, false);
+      streakLine(h, RAIDER.shadow, ev.x, gy + 1, ev.z, ev.tx, ev.tz, 4, 0xffffff, 1.4, false);
+      return true;
+    }
     if (ev.type === "blink") {
       const gy = ground(h, ev.x, ev.z, ev.y);
       emit(h, { tex: RAIDER.smoke, n: 14, x: ev.x, y: gy + 0.8, z: ev.z, size: [1.6, 2.4], grow: 1.8, life: [1.2, 1.8], speed: [0.8, 2.4], flatSpread: true, up: [0.2, 0.8], drag: 1.5, opacity: 0.95, jitter: 1 });
@@ -108,6 +114,14 @@ KITS.duelist = {
     return true;
   },
   event(h, ev) {
+    if (ev.type === "blink") {
+      const gy = ground(h, ev.x, ev.z, ev.y);
+      emit(h, { tex: DUELIST.gust, n: 3, x: ev.x, y: gy + 0.9, z: ev.z, size: [1.2, 1.6], grow: 1.6, life: [0.35, 0.5], speed: [0.5, 1.5], flatSpread: true, opacity: 0.85, jitter: 0.6 });
+      emit(h, { tex: DUELIST.glint, n: 1, x: ev.x, y: gy + 1.6, z: ev.z, size: [1.4, 1.4], grow: 1.3, life: [0.2, 0.2], speed: [0, 0], additive: true });
+      emit(h, { tex: DUELIST.sparkle, n: 6, x: ev.x, y: gy + 1.2, z: ev.z, size: [0.3, 0.45], life: [0.3, 0.5], speed: [1, 3], up: [0.5, 1.5], additive: true, jitter: 0.6 });
+      tumblers(h, [DUELIST.feather, DUELIST.petal], 2, ev.x, gy + 2, ev.z, { speed: [0.3, 1], up: [0.5, 1.5], size: [0.35, 0.45], life: [1.2, 1.6] });
+      return true;
+    }
     if (ev.type === "parry") {
       emit(h, { tex: DUELIST.clash, n: 1, x: ev.x, y: ev.y + 0.4, z: ev.z, size: [2.6, 2.6], grow: 1.3, life: [0.22, 0.22], speed: [0, 0], additive: true, order: 7 });
       shockwave(h, DUELIST.parryRing, ev.x, ev.y + 0.4, ev.z, UP, 0.5, 2.4, 0.35, 0xffffff);

@@ -62,7 +62,7 @@ export class Bot {
     const me = w.heroForPlayer(this.player);
     const cmd: Command = { moveX: 0, moveZ: 0 };
     if (me?.hero?.picks.length) {
-      const k = me.hero.path.a.length + me.hero.path.b.length;
+      const k = me.hero.path.a.length + me.hero.path.b.length + me.hero.path.r.length;
       cmd.learn = this.picks ? this.picks[k % this.picks.length] : this.rand() < 0.5 ? 0 : 1;
     }
     if (!me || !me.alive) return cmd;

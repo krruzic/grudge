@@ -53,13 +53,31 @@ export interface TalentFx {
   finisherZone?: { radius: number; seconds: number; dps: number; slowMul: number; style: string };
   pierce?: boolean;
   splinter?: { radius: number; damage: number };
+  lifestealAura?: number;
+  challenge?: { radius: number; weaken: number; armor: number; seconds: number };
+  extendWalls?: number;
+  grove?: { heal: number; radius?: number };
+  meterOnKill?: number;
+  parryMark?: boolean;
+  tesla?: boolean;
+}
+
+export interface TalentWith {
+  id: string;
+  slot?: "a" | "b" | "r" | "z";
+  set?: Record<string, unknown>;
+  add?: Record<string, number>;
+  mul?: Record<string, number>;
+  fx?: TalentFx;
 }
 
 export interface TalentDef {
   id: string;
   name: string;
   desc: string;
-  set?: Record<string, number>;
+  combo?: string;
+  with?: TalentWith[];
+  set?: Record<string, unknown>;
   add?: Record<string, number>;
   mul?: Record<string, number>;
   fx?: TalentFx;
@@ -68,7 +86,8 @@ export interface TalentDef {
 
 export interface TalentData {
   xp: { levels: number[]; passive: number; vsHero: number; vsUnit: number; vsStructure: number; heroKill: number; unitKill: number; structureKill: number; perLevelHp: number; perLevelDamage: number };
-  heroes: Record<string, { a: TalentDef[]; b: TalentDef[] }>;
+  order: ("a" | "b" | "r" | "z")[];
+  heroes: Record<string, Partial<Record<"a" | "b" | "r" | "z", TalentDef[]>>>;
 }
 
 export interface AbilityDef {

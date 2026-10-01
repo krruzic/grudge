@@ -7,7 +7,7 @@ import { onHiLayer } from "./font";
 import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
 import { buildCost, padNear } from "../sim/structures";
-import { drawNum, drawText, textWidth } from "./font";
+import { drawNum, drawPlain, drawText, textWidth } from "./font";
 
 export const INK = "#0b0806";
 export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828", z: "#8a8a94", r: "#8a8a94" };
@@ -629,21 +629,20 @@ export class Hud {
       y += 7;
       px = 0;
       const isz = 11;
-      for (const slot of ["a", "b"] as const) {
+      for (const slot of ["r", "b", "a", "z"] as const) {
         const got = learned(w, e, slot);
-        const key = slot.toUpperCase();
-        drawText(ctx, key, right ? ax(px, 5) : ax(px), y + 2, "#d8d0c0", 0.6, true);
-        for (let k = 0; k < 2; k++) {
-          const ix = right ? ax(px + 7 + k * (isz + 2), isz) : ax(px + 7 + k * (isz + 2));
-          if (got[k]) talentIcon(ctx, got[k].id, ix, y, isz);
-          else {
-            ctx.fillStyle = INK;
-            ctx.fillRect(ix - 1, y - 1, isz + 2, isz + 2);
-            ctx.fillStyle = "#2a2430";
-            ctx.fillRect(ix, y, isz, isz);
-          }
+        const key = slot === "z" ? "Z+" : slot.toUpperCase();
+        const kw = textWidth(key, 0.55, true);
+        drawText(ctx, key, right ? ax(px, kw) : ax(px), y + 2, "#d8d0c0", 0.55, true);
+        const ix = right ? ax(px + kw + 2, isz) : ax(px + kw + 2);
+        if (got[0]) talentIcon(ctx, got[0].id, ix, y, isz);
+        else {
+          ctx.fillStyle = INK;
+          ctx.fillRect(ix - 1, y - 1, isz + 2, isz + 2);
+          ctx.fillStyle = "#2a2430";
+          ctx.fillRect(ix, y, isz, isz);
         }
-        px += 7 + 2 * (isz + 2) + 5;
+        px += kw + 2 + isz + 5;
       }
       y += isz + 3;
       if (h.picks.length && Math.floor(now * 3) % 3 !== 0) {
@@ -776,13 +775,16 @@ export class Hud {
     const hero = w.getAny(heroId);
     const opt = hero?.alive ? options(w, hero) : null;
     if (!opt) return;
-    const cw = 50;
+    const cw = 76;
     const gap = 4;
     const x0 = right ? Math.max(4, cx - 60 - cw * 2 - gap) : Math.min(W - cw * 2 - gap - 4, cx + 60);
-    const isz = 30;
-    const h = isz + 17;
-    const y = Math.round(cy - h / 2 + 4);
-    const title = `LEARN ${opt.slot === "a" ? "A" : "B"} ${hero!.hero!.path[opt.slot].length ? "II" : "I"}`;
+    const isz = 26;
+    const ds = 0.4;
+    const lines = opt.list.map((o) => [...hudWrap(o.desc, cw - 6, ds).map((l) => [l, "#4a3018"]), ...(o.combo ? hudWrap(o.combo, cw - 6, ds).map((l) => [l, "#8a1810"]) : [])]);
+    const nl = Math.max(...lines.map((l) => l.length));
+    const h = isz + 14 + nl * 5.5 + 3;
+    const y = Math.round(Math.min(cy - h / 2 + 4, 236 - h));
+    const title = opt.slot === "a" ? "CHOOSE YOUR A STYLE" : opt.slot === "z" ? "SUPER UPGRADE" : `EVOLVE ${opt.slot.toUpperCase()}`;
     const pulse = Math.floor(now * 3) % 3 !== 0;
     drawText(ctx, title, x0 + cw + gap / 2 - textWidth(title, 0.6) / 2, y - 9, pulse ? "#ffe060" : "#fff4c8", 0.6);
     opt.list.forEach((o, k) => {
@@ -791,8 +793,9 @@ export class Hud {
       talentIcon(ctx, o.id, x + (cw - isz) / 2, y + 3, isz);
       const tag = k === 0 ? "<C" : "C>";
       drawText(ctx, tag, k === 0 ? x + 2 : x + cw - 2 - textWidth(tag, 0.5), y + 2, "#8a1810", 0.5);
-      const s = Math.min(0.62, (cw - 4) / Math.max(1, textWidth(o.name, 1)));
-      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, s) / 2, y + isz + 6, "#3a2410", s);
+      const s = Math.min(0.6, (cw - 4) / Math.max(1, textWidth(o.name, 1)));
+      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, s) / 2, y + isz + 5, "#3a2410", s);
+      lines[k].forEach(([l, c], j) => drawPlain(ctx, l, x + 3, y + isz + 13 + j * 5.5, c, ds));
     });
   }
 
@@ -802,8 +805,7 @@ export class Hud {
     if (mui.buildMenu === "learn") {
       const opt = options(w, hero);
       if (!opt) return { title: "NOTHING TO LEARN", items: [["", ""], ["", ""], ["", ""], ["LATER", ""]], lit: -1, until: 0 };
-      const tier = hero.hero!.path[opt.slot].length + 1;
-      return { title: `LEARN · ${opt.slot === "a" ? "ATTACK (A)" : "SKILL (B)"} ${tier === 1 ? "I" : "II"}`, items: [["", ""], [opt.list[0]?.name ?? "", ""], [opt.list[1]?.name ?? "", ""], ["LATER", ""]], lit: -1, until: 0 };
+      return { title: `EVOLVE ${opt.slot.toUpperCase()}`, items: [["", ""], [opt.list[0]?.name ?? "", ""], [opt.list[1]?.name ?? "", ""], ["LATER", ""]], lit: -1, until: 0 };
     }
     if (mui.buildMenu === "shop") {
       const sh = w.data.match.arena.shop;

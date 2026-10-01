@@ -9,7 +9,7 @@ import { updateBoomerangs, updateHero } from "./heroes.ts";
 import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
-import { abilities, addShield, afterShot, allFx, gainXp, learn, onKill, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
+import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, onKill, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
 
 export type { Vec2, Entity, Command } from "./types.ts";
 
@@ -211,7 +211,7 @@ export class World {
       damageMul: tiers.damage[def.damage],
       vel: { x: 0, z: 0 },
       action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99, bomb: false, stuckFor: 0, aim: null,
-      xp: 0, level: 1, picks: [], path: { a: [], b: [] }, ab: null, frenzy: 0, frenzyUntil: 0, recastUntil: 0, empowerMul: 1, empowerUntil: 0,
+      xp: 0, level: 1, picks: [], path: { a: [], b: [], r: [], z: [] }, ab: null, frenzy: 0, frenzyUntil: 0, recastUntil: 0, empowerMul: 1, empowerUntil: 0,
       dead: false, respawnAt: 0, lastTargetId: 0, lastTargetAt: -99, anim: "idle", animStart: 0,
       stepHeight: def.hooks.stepHeight ?? b.stepHeight,
       maxSlope: def.hooks.maxSlope ?? b.maxSlope,
@@ -575,6 +575,8 @@ export class World {
         this.damage(target, src, (r.counter ?? 80) * (pc?.mul ?? 1) * this.damageMulOf(target), { stun: (r.stunSeconds ?? 0) + (pc?.stun ?? 0), knockback: 4, big: true });
       }
       if (pfx.parryShield) addShield(target, pfx.parryShield, pfx.parryShield, 5, this.time);
+      const pm = abilities(this, target).b.fx?.mark;
+      if (pfx.parryMark && pm && src && !src.structure) markOne(this, target, src, pm);
       if (r.openingSeconds) {
         target.hero.cooldowns.b = this.time;
         target.hero.openingUntil = this.time + r.openingSeconds;
@@ -703,6 +705,7 @@ export class World {
     }
     target.hp -= amount;
     xpForDamage(this, src, target, amount);
+    if (src && src.alive && src.status.stealUntil && this.time < src.status.stealUntil) this.heal(src, amount * (src.status.stealMul ?? 0));
     const b = this.data.heroes.baseline;
     if (src?.hero) src.hero.meter = Math.min(b.superMax, src.hero.meter + amount * b.superPerDamageDealt);
     if (target.hero) target.hero.meter = Math.min(b.superMax, target.hero.meter + amount * b.superPerDamageTaken);
@@ -1216,12 +1219,20 @@ export class World {
       if (t >= z.until) { this.zones.splice(i, 1); continue; }
       const owner = this.get(z.ownerId) ?? null;
       const tickDmg = this.tick % 15 === 0;
+      if (z.heal && tickDmg) {
+        for (const o of this.entities) {
+          if (!o.alive || o.team !== z.team || o.kind === "structure" || o.hp >= o.maxHp) continue;
+          if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
+          this.heal(o, z.heal * 0.5);
+          if (this.tick % 30 === 0) this.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: z.team });
+        }
+      }
       for (const o of this.entities) {
         if (!o.alive || o.team === z.team || o.kind === "structure") continue;
         if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
         o.status.slowMul = Math.min(o.status.slowUntil > t ? o.status.slowMul : 1, z.slowMul);
         o.status.slowUntil = t + 0.3;
-        if (tickDmg) this.damage(owner, o, z.dps * 0.5, { fromX: z.x, fromZ: z.z, tick: true });
+        if (tickDmg && z.dps > 0) this.damage(owner, o, z.dps * 0.5, { fromX: z.x, fromZ: z.z, tick: true });
       }
     }
     for (let i = this.delayed.length - 1; i >= 0; i--) {

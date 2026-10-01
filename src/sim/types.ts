@@ -37,6 +37,8 @@ export interface Status {
   auraDamageMul: number;
   stealthUntil: number;
   ambushMul: number;
+  stealUntil?: number;
+  stealMul?: number;
   guardUntil: number;
   guardMul: number;
   cowedUntil: number;
@@ -112,8 +114,8 @@ export interface HeroState {
   stuckFor: number;
   xp: number;
   level: number;
-  picks: ("a" | "b")[];
-  path: { a: number[]; b: number[] };
+  picks: ("a" | "b" | "r" | "z")[];
+  path: { a: number[]; b: number[]; r: number[]; z: number[] };
   ab: Record<"a" | "b" | "r" | "z", AbilityDef> | null;
   frenzy: number;
   frenzyUntil: number;
@@ -162,6 +164,7 @@ export interface StructureState {
   hasteUntil?: number;
   hasteMul?: number;
   siege?: { cooldown: number; vs: Partial<Record<string, number>>; modId: number };
+  tesla?: boolean;
 }
 
 export interface Entity {
@@ -207,6 +210,7 @@ export interface Zone {
   dps: number;
   slowMul: number;
   style?: string;
+  heal?: number;
 }
 
 export interface Delayed {
@@ -227,6 +231,7 @@ export interface TerrainMod {
   id: number;
   kind: "ramp" | "wall" | "works";
   owner?: number;
+  style?: string;
   cx?: number;
   cz?: number;
   top?: number;
@@ -366,14 +371,14 @@ export type SimEvent =
   | { type: "rankUp"; id: number; rank: number; x: number; y: number; z: number; team: number }
   | { type: "build"; id: number; padIndex: number; team: number; upgrade: boolean }
   | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean; trap?: boolean; src?: number }
-  | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number; src?: number }
+  | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number; src?: number; style?: string }
   | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number }
   | { type: "heal"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "banner"; team: number; x: number; y: number; z: number; until: number; src?: number }
   | { type: "rally"; x: number; y: number; z: number; radius: number; team: number; src?: number }
   | { type: "directive"; team: number; unitType: UnitType | "all"; dir: Directive }
   | { type: "notice"; team: number; text: string }
-  | { type: "telegraph"; x: number; y: number; z: number; radius: number; team: number; seconds: number; src?: number }
+  | { type: "telegraph"; x: number; y: number; z: number; radius: number; team: number; seconds: number; src?: number; style?: string }
   | { type: "blink"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "act"; src: number; slot: string; kind: string; phase: "start" | "fire"; x: number; y: number; z: number; dirX: number; dirZ: number; combo: number; toX?: number; toZ?: number }
   | { type: "parry"; x: number; y: number; z: number; team: number; src?: number }

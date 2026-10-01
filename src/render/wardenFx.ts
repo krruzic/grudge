@@ -181,7 +181,16 @@ export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: numbe
   h.after(dur + 0.1, () => tex.dispose());
 }
 
-export function wardenWallBlock(h: FxHost, x: number, y: number, z: number, delay: number, dirX: number, dirZ: number): void {
+export function wardenWallBlock(h: FxHost, x: number, y: number, z: number, delay: number, dirX: number, dirZ: number, wood = false): void {
+  if (wood) {
+    h.after(delay, () => {
+      emit(h, { tex: FX.dust, n: 3, x, y: y + 0.35, z, size: [0.9, 1.3], grow: 1.8, life: [0.5, 0.8], speed: [1.5, 3], flatSpread: true, drag: 3, opacity: 0.9, jitter: 0.6 });
+      emit(h, { tex: WARDEN.splinters, n: 1, x, y: y + 1.2, z, size: [1.4, 1.4], grow: 1.4, life: [0.25, 0.25], speed: [0, 0] });
+      emit(h, { tex: WARDEN.bark, n: 3, x, y: y + 1, z, size: [0.3, 0.45], life: [0.5, 0.8], speed: [2, 4], up: [3, 5], gravity: 16, spin: 10, floor: y + 0.1 });
+      h.shake = Math.max(h.shake, 0.15);
+    });
+    return;
+  }
   h.after(delay, () => {
     emit(h, { tex: FX.dust, n: 3, x, y: y + 0.35, z, size: [0.9, 1.4], grow: 1.8, life: [0.55, 0.9], speed: [1.5, 3], flatSpread: true, drag: 3, opacity: 0.9, jitter: 0.6 });
     emit(h, { tex: WARDEN.pebbleDust, n: 1, x, y: y + 0.6, z, size: [1.2, 1.5], grow: 1.5, life: [0.5, 0.6], speed: [0.2, 0.6], up: [0.6, 1] });
@@ -297,6 +306,14 @@ KITS.warden = {
     return true;
   },
   event(h, ev) {
+    if (ev.type === "telegraph" && ev.style === "roots") {
+      const gy = ground(h, ev.x, ev.z, ev.y);
+      decal(h, WARDEN.roots, ev.x, gy + 0.02, ev.z, ev.radius * 1.1, ev.seconds + 0.6, { grow: ev.seconds, opacity: 0.95 });
+      decal(h, WARDEN.rune, ev.x, gy + 0.04, ev.z, ev.radius * 1.15, ev.seconds + 0.2, { grow: 0.15, spin: 2, additive: true, color: 0x90ff60 });
+      emit(h, { tex: FX.dust, n: 6, x: ev.x, y: gy + 0.3, z: ev.z, size: [0.8, 1.1], grow: 1.6, life: [0.4, 0.6], speed: [0.5, 1.5], flatSpread: true, drag: 2, opacity: 0.7, jitter: ev.radius });
+      emit(h, { tex: WARDEN.pebbleDust, n: 3, x: ev.x, y: gy + 0.3, z: ev.z, size: [0.7, 1], life: [0.3, 0.5], speed: [0.2, 0.6], up: [1, 2], jitter: ev.radius, opacity: 0.8 });
+      return true;
+    }
     if (ev.type === "slam" && ev.trap) {
       wardenSnap(h, ev.x, ev.y, ev.z, ev.radius / 1.5);
       return true;

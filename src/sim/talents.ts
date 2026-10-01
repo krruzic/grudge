@@ -5,7 +5,10 @@ import { spawnUnit } from "./structures.ts";
 
 type Slot = "a" | "b" | "r" | "z";
 
-export function treeOf(w: World, type: string): { a: TalentDef[]; b: TalentDef[] } | undefined {
+export type TSlot = "a" | "b" | "r" | "z";
+export const TSLOTS: TSlot[] = ["r", "b", "a", "z"];
+
+export function treeOf(w: World, type: string): Partial<Record<TSlot, TalentDef[]>> | undefined {
   return w.data.talents?.heroes[type];
 }
 
@@ -13,29 +16,22 @@ export function abilities(w: World, e: Entity): Record<Slot, AbilityDef> {
   return e.hero!.ab ?? w.heroDef(e.hero!.type).abilities;
 }
 
-export function learned(w: World, e: Entity, slot: "a" | "b"): TalentDef[] {
-  const tree = treeOf(w, e.hero!.type);
-  if (!tree) return [];
-  const out: TalentDef[] = [];
-  let list: TalentDef[] | undefined = tree[slot];
-  for (const k of e.hero!.path[slot]) {
-    const t: TalentDef | undefined = list?.[k];
-    if (!t) break;
-    out.push(t);
-    list = t.next;
-  }
-  return out;
+export function learned(w: World, e: Entity, slot: TSlot): TalentDef[] {
+  const list = treeOf(w, e.hero!.type)?.[slot];
+  const k = e.hero!.path[slot]?.[0];
+  return list && k !== undefined && list[k] ? [list[k]] : [];
 }
 
-export function options(w: World, e: Entity): { slot: "a" | "b"; list: TalentDef[] } | null {
+export function allLearned(w: World, e: Entity): TalentDef[] {
+  return TSLOTS.flatMap((s) => learned(w, e, s));
+}
+
+export function options(w: World, e: Entity): { slot: TSlot; list: TalentDef[] } | null {
   const h = e.hero!;
   const slot = h.picks[0];
   if (!slot) return null;
-  const tree = treeOf(w, h.type);
-  if (!tree) return null;
-  let list: TalentDef[] | undefined = tree[slot];
-  for (const k of h.path[slot]) list = list?.[k]?.next;
-  return list && list.length ? { slot, list } : null;
+  const list = treeOf(w, h.type)?.[slot];
+  return list && list.length && !h.path[slot].length ? { slot, list } : null;
 }
 
 function mergeFx(a: TalentFx | undefined, b: TalentFx | undefined): TalentFx | undefined {
@@ -48,9 +44,9 @@ function mergeFx(a: TalentFx | undefined, b: TalentFx | undefined): TalentFx | u
   return out as TalentFx;
 }
 
-function apply(def: AbilityDef, t: TalentDef): AbilityDef {
+function apply(def: AbilityDef, t: { set?: Record<string, unknown>; add?: Record<string, number>; mul?: Record<string, number>; fx?: TalentFx }): AbilityDef {
   const d = structuredClone(def) as AbilityDef & Record<string, unknown>;
-  for (const [k, v] of Object.entries(t.set ?? {})) d[k] = v;
+  for (const [k, v] of Object.entries(t.set ?? {})) d[k] = structuredClone(v);
   for (const [k, v] of Object.entries(t.add ?? {})) d[k] = ((d[k] as number | undefined) ?? 0) + v;
   for (const [k, v] of Object.entries(t.mul ?? {})) if (typeof d[k] === "number") d[k] = (d[k] as number) * v;
   d.fx = mergeFx(d.fx, t.fx);
@@ -60,28 +56,37 @@ function apply(def: AbilityDef, t: TalentDef): AbilityDef {
 export function recompute(w: World, e: Entity): void {
   const h = e.hero!;
   const base = w.heroDef(h.type).abilities;
-  let a = base.a;
-  let b = base.b;
-  for (const t of learned(w, e, "a")) a = apply(a, t);
-  for (const t of learned(w, e, "b")) b = apply(b, t);
-  h.ab = { ...base, a, b };
+  const out = { ...base } as Record<Slot, AbilityDef>;
+  const got = new Set(allLearned(w, e).map((t) => t.id));
+  for (const s of TSLOTS) for (const t of learned(w, e, s)) out[s] = apply(out[s], t);
+  for (const s of TSLOTS) {
+    for (const t of learned(w, e, s)) {
+      for (const c of t.with ?? []) if (got.has(c.id)) out[c.slot ?? s] = apply(out[c.slot ?? s], c);
+    }
+  }
+  h.ab = out;
 }
 
 export function allFx(w: World, e: Entity): TalentFx {
   const ab = abilities(w, e);
-  return mergeFx(ab.a.fx, ab.b.fx) ?? {};
+  return mergeFx(mergeFx(mergeFx(ab.a.fx, ab.b.fx), ab.r.fx), ab.z.fx) ?? {};
 }
 
 export function learn(w: World, e: Entity, choice: number): void {
   const h = e.hero!;
   const opt = options(w, e);
-  if (!opt) return;
+  if (!opt) {
+    if (h.picks.length) h.picks.shift();
+    return;
+  }
   const t = opt.list[Math.max(0, Math.min(opt.list.length - 1, choice))];
   h.path[opt.slot].push(opt.list.indexOf(t));
   h.picks.shift();
   recompute(w, e);
   const p = e.transform;
   w.emit({ type: "learned", id: e.id, name: t.name, icon: t.id, x: p.pos.x, y: p.y, z: p.pos.z, team: e.team });
+  const next = options(w, e);
+  if (next && next.list.length === 1) learn(w, e, 0);
 }
 
 export function gainXp(w: World, e: Entity | null | undefined, amount: number): void {
@@ -97,7 +102,12 @@ export function gainXp(w: World, e: Entity | null | undefined, amount: number): 
     hero.maxHp *= hpK;
     hero.hp = Math.min(hero.maxHp, hero.hp * hpK + hero.maxHp * 0.15);
     h.damageMul *= 1 + cfg.perLevelDamage;
-    if (treeOf(w, h.type)) h.picks.push(h.level % 2 === 0 ? "a" : "b");
+    const tree = treeOf(w, h.type);
+    const slot = w.data.talents!.order?.[h.level - 2];
+    if (tree && slot && tree[slot]?.length) {
+      h.picks.push(slot);
+      if (h.picks.length === 1 && tree[slot]!.length === 1) learn(w, hero, 0);
+    }
     const p = hero.transform;
     w.emit({ type: "levelup", id: hero.id, level: h.level, x: p.pos.x, y: p.y, z: p.pos.z, team: hero.team });
   }
@@ -423,6 +433,7 @@ export function onKill(w: World, src: Entity | null, target: Entity): void {
       w.emit({ type: "callout", x: hero.transform.pos.x, y: hero.transform.y, z: hero.transform.pos.z, team: hero.team, text: "RESET!", owner: hero.id });
     }
     if (fx.takedownShield) addShield(hero, fx.takedownShield, fx.takedownShield, 6, w.time);
+    if (fx.meterOnKill) h.meter = Math.max(h.meter, w.data.heroes.baseline.superMax * fx.meterOnKill);
     if (fx.stealthOnKill) {
       hero.status.stealthUntil = w.time + fx.stealthOnKill;
       w.emit({ type: "blink", x: hero.transform.pos.x, y: hero.transform.y, z: hero.transform.pos.z, team: hero.team });

@@ -11,19 +11,17 @@ import { talentIcon } from "./hud";
 import talentData from "../../data/talents.json";
 
 type TNode = { id: string; next?: TNode[] };
-const TREES = (talentData as unknown as { heroes: Record<string, { a: TNode[]; b: TNode[] }> }).heroes;
+const TREES = (talentData as unknown as { heroes: Record<string, Partial<Record<"a" | "b" | "r" | "z", TNode[]>>> }).heroes;
 
-function drawTree(ctx: CanvasRenderingContext2D, hero: string, slot: "a" | "b", x: number, y: number, right: boolean, k = 1): void {
+function drawTree(ctx: CanvasRenderingContext2D, hero: string, side: "a" | "b", x: number, y: number, right: boolean, k = 1): void {
   const tree = TREES[hero];
   if (!tree) return;
-  const big = Math.round(13 * k);
-  const small = Math.round(8 * k);
-  tree[slot].forEach((t1, r) => {
-    const yy = y + r * (big + 3);
-    const bx = right ? x + small + 1 : x;
-    const sx = right ? x : x + big + 1;
-    talentIcon(ctx, t1.id, bx, yy, big, false, true);
-    (t1.next ?? []).forEach((t2, k) => talentIcon(ctx, t2.id, sx, yy + k * (small - 1), small - 1, false, true));
+  const big = Math.round(11 * k);
+  const slots: ("a" | "b" | "r" | "z")[] = side === "a" ? ["r", "b"] : ["a", "z"];
+  slots.forEach((slot, row) => {
+    const list = tree[slot] ?? [];
+    const yy = y + row * (big + 4);
+    list.forEach((t, j) => talentIcon(ctx, t.id, right ? x + (1 - j) * (big + 1) : x + j * (big + 1), yy, big, false, true));
   });
 }
 
@@ -461,7 +459,7 @@ export class Screens {
       const tw = w >= 100 ? 1 : 0.7;
       ctx.save();
       drawTree(ctx, s.hero, "a", x + 4, hy + 8, false, tw);
-      drawTree(ctx, s.hero, "b", x + w - 4 - Math.round((13 + 8) * tw), hy + 8, true, tw);
+      drawTree(ctx, s.hero, "b", x + w - 4 - Math.round(23 * tw), hy + 8, true, tw);
       ctx.restore();
     }
     const name = (showHero ? def?.name ?? s.hero : "RANDOM").toUpperCase();

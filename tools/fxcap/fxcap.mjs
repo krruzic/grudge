@@ -16,6 +16,8 @@ const p = await b.newPage({ viewport: { width: 960, height: 540 } });
 p.on("pageerror", (e) => console.log("PAGEERR", e.message));
 await p.goto(`http://localhost:5199/?bots=1&heroes=${hero},${foeHero}&map=crossing&seed=3&zoom=13`, { waitUntil: "commit" });
 await p.waitForFunction(() => window.grudge && !document.getElementById("boot") && grudge.state === "match", null, { timeout: 90000 });
+const PICKS = (process.env.FX_PICKS ?? "").split("").map(Number);
+if (PICKS.length) console.log("learned", await p.evaluate((pk) => grudge.levelUp(0, pk), PICKS));
 const kit = await p.evaluate(() => {
   const g = grudge;
   g.dbg.freeze = true;
@@ -26,7 +28,9 @@ const kit = await p.evaluate(() => {
   g.view.setHumans([false, false]);
   const w = g.world;
   const ab = w.heroDef(w.heroForPlayer(0).hero.type).abilities;
-  return Object.fromEntries(Object.entries(ab).map(([k, a]) => [k, { kind: a.kind, hits: a.hits?.length ?? 0, range: a.range ?? 0 }]));
+  const h0 = w.heroForPlayer(0).hero;
+  const abx = h0.ab ?? ab;
+  return Object.fromEntries(Object.entries(abx).map(([k, a]) => [k, { kind: a.kind, hits: a.hits?.length ?? 0, range: a.range ?? 0 }]));
 });
 
 const setup = (gap) => p.evaluate(([X, Z, gap]) => {
@@ -42,7 +46,7 @@ const setup = (gap) => p.evaluate(([X, Z, gap]) => {
 const step = async (n) => { for (let i = 0; i < n; i++) { await p.evaluate(() => { grudge.dbg.adv = 1 / 30; }); await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); } };
 const press = (c) => p.evaluate((c) => { grudge.dbg.puppet[0] = { moveX: 0, moveZ: 0, ...c }; }, c);
 
-const far = (k) => ["leap", "dash", "hex", "reach", "shoot", "ballista"].includes(k.kind);
+const far = (k) => ["leap", "dash", "hex", "reach", "shoot", "ballista", "rootcage", "turret"].includes(k.kind);
 const moves = [];
 if (kit.a.kind === "combo") {
   moves.push({ name: "A1 HIT", presses: [[0, { attack: true }]], frames: 16, every: 2, gap: 3.2, zoom: 13 });
@@ -53,14 +57,14 @@ if (kit.a.kind === "combo") {
 }
 for (const [k, btn] of [["b", "secondary"], ["r", "special"], ["z", "super"]]) {
   const a = kit[k];
-  const big = ["quake", "zone", "summon", "rally", "warcry", "works", "ballista"].includes(a.kind);
+  const big = ["quake", "zone", "summon", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth"].includes(a.kind);
   moves.push({ name: `${k.toUpperCase()} ${a.kind.toUpperCase()}`, presses: [[0, { [btn]: true, moveX: 1, moveZ: 0 }]], frames: big ? 48 : 24, every: big ? 6 : 3, gap: far(a) ? Math.min(7, Math.max(4, (a.range || 6) * 0.75)) : 3.2, zoom: big ? 20 : far(a) ? 16 : 14 });
 }
 if (hero === "warden") moves.push({ name: "R2 WALL CRUMBLES", crumble: true, presses: [], frames: 18, every: 3, gap: 5.5, zoom: 15 });
 
 const rows = [];
 for (const mv of moves) {
-  if (only && !mv.name.startsWith(only)) continue;
+  if (only && !only.split(",").some((o) => mv.name.startsWith(o))) continue;
   await p.evaluate((z) => { grudge.view.cfg.minViewWidth = z; }, mv.zoom);
   if (mv.crumble) await p.evaluate(() => { for (const m of grudge.world.mods) m.until = grudge.world.time + 0.1; });
   else {

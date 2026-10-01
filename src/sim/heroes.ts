@@ -59,7 +59,7 @@ function begin(e: Entity, name: HeroAction["name"], kind: string, dur: number, h
   return a;
 }
 
-export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7, leap: 0, hex: 0, banner: 0 };
+export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7, leap: 0, hex: 0, banner: 0, blink: 0, rootcage: 0, turret: 7 };
 
 function placeRange(def: AbilityDef): number | undefined {
   const r = PLACEABLE[def.kind];
@@ -226,6 +226,10 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     } else if (cmd.special && ready(e, "r", w.time) && !act) {
       startAbility(w, e, "r", cmd);
       h.cooldowns.r = w.time + (ab.r.cooldown ?? 10);
+      if (ab.r.resetB && ab.r.kind !== "warcry") {
+        h.cooldowns.b = w.time;
+        h.recastUntil = 0;
+      }
     } else if (cmd.secondary && ready(e, "b", w.time) && !act) {
       startAbility(w, e, "b", cmd);
       onBUse(w, e);
@@ -713,6 +717,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     case "quake": {
       w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 5, team: e.team, src: e.id });
       aoe(w, e, t.pos.x, t.pos.z, def.radius ?? 5, def, mul);
+      if (def.fx?.zoneAfter) zoneAt(w, e, t.pos.x, t.pos.z, def.radius ?? 5, def.fx.zoneAfter);
       return;
     }
     case "banner": {
@@ -754,7 +759,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       return;
     }
     case "warcry": {
-      w.emit({ type: "warcry", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 8, team: e.team, src: e.id });
+      w.emit({ type: "warcry", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 8, team: e.team, src: e.id, style: def.fx?.challenge ? "challenge" : def.fx?.lifestealAura ? "blood" : undefined });
       if (def.resetB) e.hero!.cooldowns.b = w.time;
       for (const o of w.entities) {
         if (!o.alive || o.team !== e.team || o.kind === "structure") continue;
@@ -762,6 +767,26 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         o.status.buffUntil = w.time + (def.seconds ?? 5);
         o.status.buffDamageMul = def.damageMul ?? 1.3;
         o.status.buffSpeedMul = def.speedMul ?? 1.2;
+        if (def.fx?.lifestealAura) {
+          o.status.stealUntil = w.time + (def.seconds ?? 5);
+          o.status.stealMul = def.fx.lifestealAura;
+        }
+      }
+      const ch = def.fx?.challenge;
+      if (ch) {
+        pullTo(w, e, t.pos.x, t.pos.z, ch.radius, 1.4);
+        e.status.armorMul = ch.armor;
+        e.status.armorUntil = w.time + ch.seconds;
+        for (const o of w.entities) {
+          if (!o.alive || o.team === e.team || o.structure || w.dist(e, o) > ch.radius + o.radius) continue;
+          o.status.markUntil = w.time + ch.seconds;
+          o.status.markTeam = e.team;
+          o.status.markOwner = e.id;
+          o.status.markMul = 1;
+          o.status.markAll = false;
+          o.status.markWeaken = ch.weaken;
+          o.status.cowedUntil = w.time + ch.seconds;
+        }
       }
       return;
     }
@@ -831,6 +856,56 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       e.status.buffSpeedMul = def.speedMul ?? 1.3;
       e.status.buffDamageMul = 1;
       w.emit({ type: "blink", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, src: e.id });
+      if (def.fx?.zoneAfter) zoneAt(w, e, t.pos.x, t.pos.z, def.fx.zoneAfter.radius ?? 3, def.fx.zoneAfter);
+      return;
+    }
+    case "blink": {
+      const range = def.range ?? 6;
+      const pl = a.placed ? Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z) : range;
+      const d = Math.min(range, pl);
+      w.emit({ type: "blink", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, src: e.id });
+      let bx = t.pos.x;
+      let bz = t.pos.z;
+      for (let k = 0; k <= 12; k++) {
+        const f = 1 - k / 12;
+        const x = t.pos.x + a.dirX * d * f;
+        const z = t.pos.z + a.dirZ * d * f;
+        if (Number.isFinite(w.terrain.heightAt(x, z)) && w.nav.open(w.nav.index(Math.floor(x), Math.floor(z)))) {
+          bx = x;
+          bz = z;
+          break;
+        }
+      }
+      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx: bx, tz: bz, team: e.team, hit: false, style: "afterimage", src: e.id });
+      w.teleport(e, bx, bz);
+      e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.35);
+      if (def.seconds) {
+        e.status.stealthUntil = w.time + def.seconds;
+        e.status.ambushMul = def.ambushMul ?? 1.5;
+      }
+      if (def.fx?.empowerNextA) {
+        e.hero!.empowerMul = def.fx.empowerNextA;
+        e.hero!.empowerUntil = w.time + 3;
+      }
+      w.emit({ type: "blink", x: bx, y: w.groundY(bx, bz), z: bz, team: e.team, src: e.id });
+      return;
+    }
+    case "rootcage": {
+      const range = def.range ?? 9;
+      const target = a.placed ? null : aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range);
+      const x = a.placed ? a.toX! : target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.6;
+      const z = a.placed ? a.toZ! : target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.6;
+      const r = def.radius ?? 2.4;
+      w.emit({ type: "telegraph", x, y: w.groundY(x, z), z, radius: r, team: e.team, seconds: def.delay ?? 0.5, src: e.id, style: "roots" });
+      w.later(def.delay ?? 0.5, () => {
+        if (!e.alive) return;
+        w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius: r * 1.5, team: e.team, src: e.id, trap: true });
+        for (const o of w.entities.slice()) {
+          if (!o.alive || o.team === e.team || o.structure) continue;
+          if (Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) - o.radius > r) continue;
+          w.damage(e, o, (def.damage ?? 60) * mul, { stun: def.stunSeconds ?? 1.4, fromX: x, fromZ: z, knockback: 0, big: true });
+        }
+      });
       return;
     }
     case "repair": {
@@ -856,13 +931,20 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
       }
       if (fx?.zoneAfter) zoneAt(w, e, t.pos.x, t.pos.z, r, fx.zoneAfter);
+      if (fx?.extendWalls) {
+        for (const m of w.mods) {
+          if (m.kind !== "wall" || m.owner !== e.id) continue;
+          m.until += fx.extendWalls;
+          fixed.push({ x: (m.cells[0] % w.terrain.width) + 0.5, y: t.y, z: Math.floor(m.cells[0] / w.terrain.width) + 0.5, amount: 0, h: 2.4 });
+        }
+      }
       w.emit({ type: "repair", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, radius: def.radius ?? 6, fixed, src: e.id });
       if (!fixed.length) w.emit({ type: "notice", team: e.team, text: "NOTHING TO REPAIR IN REACH" });
       return;
     }
     case "turret": {
-      const x = t.pos.x + a.dirX * 1.6;
-      const z = t.pos.z + a.dirZ * 1.6;
+      const x = a.placed ? a.toX! : t.pos.x + a.dirX * 1.6;
+      const z = a.placed ? a.toZ! : t.pos.z + a.dirZ * 1.6;
       const i = w.nav.nearestOpen(x, z, 3);
       if (i < 0) return;
       const sx = (i % w.nav.w) + 0.5;
@@ -874,6 +956,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       };
       s.expiresAt = w.time + (def.seconds ?? 20);
       s.owner = e.id;
+      if (def.fx?.tesla) s.structure.tesla = true;
       w.nav.setBlocked(sx, sz, 0.8, true);
       w.emit({ type: "build", id: s.id, padIndex: -1, team: e.team, upgrade: false });
       return;
@@ -1071,7 +1154,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         cells.push(i);
       }
       if (!cells.length) return;
-      const m: TerrainMod = { id: w.newId(), kind: "wall", team: e.team, cells, prevKind: [], prevDeck: [], deck: [], until: w.time + (def.seconds ?? 8) };
+      const m: TerrainMod = { id: w.newId(), kind: "wall", team: e.team, owner: e.id, style: (def as { style?: string }).style, cells, prevKind: [], prevDeck: [], deck: [], until: w.time + (def.seconds ?? 8) };
+      if (def.fx?.grove) {
+        w.zones.push({ id: w.newId(), team: e.team, ownerId: e.id, x: cx, z: cz, radius: len / 2 + 1.5, until: m.until, dps: 0, slowMul: 1, style: "grove", heal: def.fx.grove.heal });
+      }
       w.applyMod(m);
       if (def.endTraps) {
         const tdef = w.heroDef(e.hero!.type).abilities.b;
@@ -1149,7 +1235,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx, tz, team: e.team, hit: victims.length > 0, style: fx?.pull ? "vine" : undefined, src: e.id });
       for (const o of victims) {
         const hit = w.damage(e, o, (def.damage ?? 70) * mul, {
-          knockback: fx?.pull ? 0 : def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, slowMul: def.slowMul, slowSeconds: def.slowSeconds, big: true,
+          knockback: fx?.pull ? 0 : def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, slowMul: def.slowMul, slowSeconds: def.slowSeconds, big: true, vsStunnedMul: def.vsStunnedMul,
         });
         if (hit && fx?.pull && o.alive && w.time >= o.status.ccImmuneUntil) {
           const dx = t.pos.x - o.transform.pos.x;
@@ -1184,7 +1270,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     case "zone": {
       w.zones.push({
         id: w.newId(), team: e.team, ownerId: e.id, x: a.placed ? a.toX! : t.pos.x, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6,
-        until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4,
+        until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4, heal: def.fx?.grove?.heal,
       });
       w.emit({ type: "slam", x: a.placed ? a.toX! : t.pos.x, y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true, src: e.id });
       return;

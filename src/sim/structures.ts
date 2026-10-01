@@ -1,3 +1,4 @@
+import { chainLightning } from "./talents.ts";
 import type { World } from "./world.ts";
 import type { Entity, Pad, StructureType, UnitType } from "./types.ts";
 
@@ -217,6 +218,16 @@ export function updateStructure(w: World, e: Entity): void {
     if (siege) e.transform.facing = e.transform.prevFacing = Math.atan2(best.transform.pos.x - e.transform.pos.x, best.transform.pos.z - e.transform.pos.z);
     const cls = best.structure?.siege ? "heavy" : w.classOf(best);
     const vs = (siege ? siege.vs[cls] : def.vs?.[cls]) ?? 1;
+    if (st.tesla) {
+      const pts = [e.transform.pos.x, e.transform.y + 2.6, e.transform.pos.z, best.transform.pos.x, best.transform.y + 1.2, best.transform.pos.z];
+      w.emit({ type: "chain", pts, team: e.team });
+      const owner = e.owner ? w.get(e.owner) ?? e : e;
+      w.damage(owner, best, st.damage * boost.damage, { fromX: e.transform.pos.x, fromZ: e.transform.pos.z, knockback: 1, slowMul: 0.7, slowSeconds: 0.6 });
+      if (best.alive) chainLightning(w, owner, best, 2, st.damage * 0.6 * boost.damage);
+      st.lastFireAt = w.time;
+      st.nextAction = w.time + 1 / haste;
+      return;
+    }
     w.fireProjectile(e, best, st.damage * boost.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2);
     st.lastFireAt = w.time;
     st.nextAction = w.time + (siege ? siege.cooldown : def.cooldown ?? 1) / haste;

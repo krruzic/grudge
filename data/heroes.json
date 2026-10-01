@@ -372,13 +372,13 @@
           "botRange": 11,
           "shots": [
             {
-              "damage": 53
+              "damage": 58
             },
             {
-              "damage": 53
+              "damage": 58
             },
             {
-              "damage": 99,
+              "damage": 108,
               "splash": 2.4,
               "splashDamage": 45,
               "slowMul": 0.6,
@@ -394,7 +394,7 @@
         "b": {
           "kind": "hex",
           "anim": "attack_a",
-          "damage": 70,
+          "damage": 80,
           "radius": 2.6,
           "range": 8,
           "delay": 0.9,
