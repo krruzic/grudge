@@ -656,6 +656,6 @@
 ## HUD cleanup
 - Event card titles have no drop shadow.
 - Build, upgrade and shop prompts are painted icons with the button badge in the corner, no words (`tools/gen-prompt-icons.mjs`, one fal sheet: hut = outpost, watchtower = tower, hammer and anvil = upgrade, coin purse = shop). They sit on the empty pad, over the building being upgraded, or on the keep.
-- Building health, build/upgrade progress and the keep shield bars sit under the building instead of floating above it: anchored at the base centre and pushed straight down in view space, so they stay under the building from any camera angle.
+- Building health, build/upgrade progress and the keep shield bars sit snug under the building instead of floating above it: anchored at the base centre and pushed a short way straight down in view space, so they stay under the building from any camera angle. Prompt icons sit on a dark gold-rimmed disc so they read against the ground.
 - Team header: the keep diamond is bigger and is the keep's health (filled from the bottom in the house colour, flashing when low). The shield is a light-blue border around it that loses length as the shield takes damage. Gold and troop count sit stacked beside it, replacing the two bars.
 - Player panel is one row: B and R with cooldown numbers, Z with its gauge as a ring around the button, then the level number with an XP ring, then the talent icons. Replaces the long Z and XP bars.

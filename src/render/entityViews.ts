@@ -211,12 +211,25 @@ function hintTex(cells: [string, string][]): THREE.CanvasTexture {
       const im = imgs[k];
       c.save();
       c.translate(k * 128, 0);
+      c.fillStyle = "#0b0806";
+      c.beginPath();
+      c.arc(60, 60, 54, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#2a1c12";
+      c.beginPath();
+      c.arc(60, 60, 50, 0, Math.PI * 2);
+      c.fill();
+      c.lineWidth = 4;
+      c.strokeStyle = "#c89a40";
+      c.beginPath();
+      c.arc(60, 60, 47, 0, Math.PI * 2);
+      c.stroke();
       if (im.complete && im.naturalWidth) {
         c.imageSmoothingEnabled = true;
-        c.drawImage(im, 8, 4, 108, 108);
+        c.drawImage(im, 24, 22, 72, 72);
       }
       c.scale(4, 4);
-      padButton(c, 25, 25, 5.2, "#5a5a66", btn);
+      padButton(c, 25.5, 25.5, 5.4, "#5a5a66", btn);
       c.restore();
     });
     t.needsUpdate = true;
@@ -819,8 +832,8 @@ export class EntityViews {
         root.add(sh);
         view.shield = sh;
         view.spin = body.getObjectByName("crystal") ?? undefined;
-        bar = makeBar(3, team, 0, 1.9);
-        view.work = makeBar(3, new THREE.Color(0x9fe0ff), 0, 2.3);
+        bar = makeBar(2.6, team, 0, 0.75);
+        view.work = makeBar(2.6, new THREE.Color(0x9fe0ff), 0, 1.05);
         root.add(view.work.group);
       } else {
         body = st.tesla ? teslaCoil(1.1) : st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
@@ -829,9 +842,9 @@ export class EntityViews {
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
         });
         body.rotation.y = e.transform.facing;
-        bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(2.2, team, 0, 1.3);
+        bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(1.9, team, 0, 0.5);
         if (!st.siege) {
-          view.work = makeBar(2.2, new THREE.Color(0xffd040), 0, 1.7);
+          view.work = makeBar(1.9, new THREE.Color(0xffd040), 0, 0.8);
           root.add(view.work.group);
         }
         this.fx.buildFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
@@ -1490,7 +1503,7 @@ export class EntityViews {
         const up = !!st;
         hint.material = up ? HINTS.upgrade : HINTS.build;
         const s = 1 + Math.sin(time * 3) * 0.04;
-        const k = 2.9 * s;
+        const k = 1.9 * s;
         hint.scale.set(up ? k : k * 2, k, 1);
         hint.position.set(p.x, w.groundY(p.x, p.z) + (up ? 1.7 : 1.0), p.z);
       }
@@ -1502,7 +1515,7 @@ export class EntityViews {
       if (!hint.visible || !core) return;
       const s = 1 + Math.sin(time * 3) * 0.03;
       hint.position.set(core.transform.pos.x, core.transform.y + 2.4, core.transform.pos.z);
-      hint.scale.set(3.2 * s, 3.2 * s, 1);
+      hint.scale.set(2.1 * s, 2.1 * s, 1);
     });
   }
 }
