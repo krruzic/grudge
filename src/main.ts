@@ -238,7 +238,7 @@ async function start(): Promise<void> {
     const sl = slots[i];
     if (commanderSlot(i)) { sl.hero = commanderType; sl.ready = true; cursors.placeChip(i, null); return; }
     if (heldBy(i) >= 0) return;
-    if (!sl.ready) sl.hero = randomHero();
+    if (!sl.ready || sl.open || !roster.includes(sl.hero)) sl.hero = randomHero();
     sl.ready = true;
     cursors.placeChip(i, sl.hero);
   };
@@ -257,6 +257,7 @@ async function start(): Promise<void> {
   };
   const makeOpen = (i: number) => {
     const sl = slots[i];
+    if (!commanderSlot(i) && !roster.includes(sl.hero)) sl.hero = randomHero();
     sl.cpu = false;
     sl.joined = false;
     sl.open = true;
@@ -269,8 +270,10 @@ async function start(): Promise<void> {
   const vacant = (i: number) => (netMode === "host" ? makeOpen(i) : (makeCpu(i), (slots[i].autoCpu = true)));
   const makeCpu = (i: number) => {
     const sl = slots[i];
+    const wasOpen = !!sl.open;
     sl.open = false;
     sl.cpu = true;
+    if (wasOpen) sl.ready = false;
     sl.joined = false;
     if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
     settleCpu(i);
