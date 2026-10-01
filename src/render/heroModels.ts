@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { mergedMaterial, mergeParts } from "./mergedModel";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { blobShadow, footRing, markModel, playerTag, warlordPlaceholder } from "./placeholders";
@@ -77,6 +78,32 @@ function withOutlineNormals(geo: THREE.BufferGeometry): THREE.BufferGeometry {
   return g;
 }
 
+export const FRAME = { id: 0 };
+const skUpdate = THREE.Skeleton.prototype.update;
+THREE.Skeleton.prototype.update = function (this: THREE.Skeleton & { appFrame?: number }) {
+  if (this.appFrame === FRAME.id) return;
+  this.appFrame = FRAME.id;
+  skUpdate.call(this);
+};
+
+export function shareSkeletons(root: THREE.Object3D): void {
+  const byBones = new Map<string, THREE.Skeleton>();
+  const ids = new WeakMap<THREE.Object3D, number>();
+  let n = 0;
+  const idOf = (o: THREE.Object3D) => {
+    let v = ids.get(o);
+    if (v === undefined) ids.set(o, (v = n++));
+    return v;
+  };
+  root.traverse((o) => {
+    if (!(o instanceof THREE.SkinnedMesh)) return;
+    const key = o.skeleton.bones.map(idOf).join(",") + "|" + o.skeleton.boneInverses.map((m) => m.elements.map((v) => v.toFixed(4)).join(":")).join(",");
+    const prev = byBones.get(key);
+    if (prev) o.skeleton = prev;
+    else byBones.set(key, o.skeleton);
+  });
+}
+
 export function addOutline(root: THREE.Object3D): void {
   if (!outlineConfig.enabled) return;
   const meshes: THREE.Mesh[] = [];
@@ -111,6 +138,7 @@ export class HeroModels {
       Object.entries(urls).map(async ([type, url]) => {
         try {
           const g = await loader.loadAsync(url);
+          mergeParts(g.scene);
           markModel(g.scene);
           this.gltfs.set(type, g);
         } catch (err) {
@@ -128,11 +156,17 @@ export class HeroModels {
     const actions = new Map<string, THREE.AnimationAction>();
     if (gltf) {
       body = skeletonClone(gltf.scene);
+      shareSkeletons(body);
       const teamMat = new Map<THREE.Material, THREE.Material>();
       body.traverse((o) => {
         if (!(o instanceof THREE.Mesh)) return;
         o.castShadow = true;
         o.receiveShadow = true;
+        const mm = mergedMaterial(o.geometry, (n) => (n.startsWith("team") ? dyeColor(dye) : null));
+        if (mm) {
+          o.material = mm;
+          return;
+        }
         const conv = (m: THREE.Material) => {
           let c = teamMat.get(m);
           if (!c) {

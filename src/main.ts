@@ -848,6 +848,9 @@ async function start(): Promise<void> {
     }
   };
 
+  let fpsFrames = 0;
+  let fpsAt = 0;
+  let fpsShown = 0;
   const frame = (nowMs: number): void => {
     let now = nowMs / 1000;
     let dt = Math.max(0, Math.min(0.25, (nowMs - last) / 1000));
@@ -1298,6 +1301,17 @@ async function start(): Promise<void> {
     if (state === "select") {
       menus.drawTag(ctx, pixel.w, pixel.h, cursors, now);
       if (menus.tagSlot >= 0) cursors.drawCursors(ctx, now);
+    }
+    fpsFrames++;
+    if (nowMs - fpsAt >= 500) {
+      fpsShown = Math.round((fpsFrames * 1000) / (nowMs - fpsAt));
+      fpsAt = nowMs;
+      fpsFrames = 0;
+    }
+    if (save.data.options.fps) {
+      const t = `${fpsShown} FPS`;
+      const col = fpsShown >= 55 ? "#a0ff80" : fpsShown >= 30 ? "#ffe060" : "#ff6050";
+      drawText(ctx, t, pixel.w - 4 - textWidth(t, 0.7), pixel.h - 10, col, 0.7);
     }
     padsEl.textContent = showPads ? pads.debugText() : "";
     requestAnimationFrame(frame);

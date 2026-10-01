@@ -318,21 +318,24 @@ export class Terrain {
     if (!Number.isFinite(c)) return Number.POSITIVE_INFINITY;
     const ci = this.index(Math.floor(x), Math.floor(z));
     const cWorks = this.styles[ci] === "works";
-    const edge = (sx: number, sz: number, h: number) => {
-      if (!Number.isFinite(h) || Math.abs(h - c) <= 0.6) return false;
-      const si = this.index(Math.floor(sx), Math.floor(sz));
-      return si !== ci && (cWorks || this.styles[si] === "works");
-    };
-    const d = (ax: number, az: number) => {
-      const a = this.heightAt(x + ax, z + az);
-      const b = this.heightAt(x - ax, z - az);
-      const fa = Number.isFinite(a) && !edge(x + ax, z + az, a);
-      const fb = Number.isFinite(b) && !edge(x - ax, z - az, b);
-      if (fa && fb) return (a - b) / (2 * r);
-      if (fa) return (a - c) / r;
-      if (fb) return (c - b) / r;
-      return 0;
-    };
-    return Math.hypot(d(r, 0), d(0, r));
+    return Math.hypot(this.slopeAxis(x, z, r, 0, c, ci, cWorks), this.slopeAxis(x, z, 0, r, c, ci, cWorks));
+  }
+
+  private slopeEdge(sx: number, sz: number, h: number, c: number, ci: number, cWorks: boolean): boolean {
+    if (!Number.isFinite(h) || Math.abs(h - c) <= 0.6) return false;
+    const si = this.index(Math.floor(sx), Math.floor(sz));
+    return si !== ci && (cWorks || this.styles[si] === "works");
+  }
+
+  private slopeAxis(x: number, z: number, ax: number, az: number, c: number, ci: number, cWorks: boolean): number {
+    const r = ax || az;
+    const a = this.heightAt(x + ax, z + az);
+    const b = this.heightAt(x - ax, z - az);
+    const fa = Number.isFinite(a) && !this.slopeEdge(x + ax, z + az, a, c, ci, cWorks);
+    const fb = Number.isFinite(b) && !this.slopeEdge(x - ax, z - az, b, c, ci, cWorks);
+    if (fa && fb) return (a - b) / (2 * r);
+    if (fa) return (a - c) / r;
+    if (fb) return (c - b) / r;
+    return 0;
   }
 }

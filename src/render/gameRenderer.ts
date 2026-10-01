@@ -4,13 +4,19 @@ import type { World } from "../sim/world";
 import type { Terrain } from "../sim/terrain";
 import type { MapView } from "./mapView";
 import { Effects, makeSky } from "./fx";
-import { outlineConfig, type HeroModels } from "./heroModels";
+import { FRAME, outlineConfig, type HeroModels } from "./heroModels";
 import { EntityViews } from "./entityViews";
 import { CombatFx } from "./combatFx";
 import { HazardViews } from "./hazardViews";
 import { Reticles, type ReticleReq } from "./reticle";
 import type { UnitModels } from "./unitModels";
 import type { StructureModels } from "./structureModels";
+
+Object.defineProperty(THREE.Material.prototype, "forceSinglePass", {
+  get: () => true,
+  set: () => {},
+  configurable: true,
+});
 
 export interface RenderConfig {
   lowResHeight: number;
@@ -128,7 +134,6 @@ export class GameRenderer {
   private hazards!: HazardViews;
   private heroModels: HeroModels;
   private structureModels: StructureModels;
-  private silMats: THREE.MeshBasicMaterial[];
   private camFocus = new THREE.Vector3();
   private camWidth: number;
   private camInit = false;
@@ -149,7 +154,7 @@ export class GameRenderer {
   ) {
     outlineConfig.enabled = cfg.outlines;
     THREE.Material.prototype.dispose = function () {};
-    this.renderer = new THREE.WebGLRenderer({ antialias: false });
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", stencil: true, depth: true });
     this.renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
     this.renderer.setPixelRatio(1);
     this.renderer.shadowMap.enabled = cfg.shadows;
@@ -210,7 +215,10 @@ export class GameRenderer {
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.03;
     this.scene.add(this.sun, this.sun.target);
-    this.scene.add(new THREE.HemisphereLight(cfg.ambientSky, cfg.ambientGround, cfg.ambientIntensity));
+    const hemi = new THREE.HemisphereLight(cfg.ambientSky, cfg.ambientGround, cfg.ambientIntensity);
+    hemi.layers.enableAll();
+    this.sun.layers.enableAll();
+    this.scene.add(hemi);
     this.effects = new Effects(new THREE.Box3());
     this.setMap(map, world.terrain);
 
@@ -220,20 +228,7 @@ export class GameRenderer {
     this.combatFx.world = world;
     this.entityViews = new EntityViews(world, this.teamColors, heroes, structures, cfg.heroScale, this.combatFx, unitModels, cfg.playerColors.map((c) => new THREE.Color(c)));
     this.setWorld(world);
-    this.silMats = this.teamColors.map((c) => new THREE.MeshBasicMaterial({
-      color: c.clone().multiplyScalar(0.8),
-      transparent: true,
-      opacity: 0.5,
-      depthWrite: false,
-      depthFunc: THREE.GreaterDepth,
-      stencilWrite: true,
-      stencilRef: 1,
-      stencilFunc: THREE.NotEqualStencilFunc,
-      stencilFail: THREE.KeepStencilOp,
-      stencilZFail: THREE.KeepStencilOp,
-      stencilZPass: THREE.ReplaceStencilOp,
-      fog: false,
-    }));
+
 
     window.addEventListener("resize", () => this.resize());
     this.resize();
@@ -247,6 +242,11 @@ export class GameRenderer {
     this.mapReady = true;
     this.map = map;
     this.scene.add(map.root);
+    map.root.updateMatrixWorld(true);
+    map.root.traverse((o) => {
+      o.matrixAutoUpdate = false;
+      o.updateMatrixWorld = () => {};
+    });
     const center = new THREE.Vector3(t.width / 2, 0, t.depth / 2);
     const dir = new THREE.Vector3(...this.cfg.sunDir).normalize();
     this.sun.position.copy(center).addScaledVector(dir, 80);
@@ -550,26 +550,32 @@ export class GameRenderer {
     this.cullMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.cullMat);
     this.entityViews.cullTo(this.frustum);
+    if (this.matrixFrame !== FRAME.id) {
+      this.matrixFrame = FRAME.id;
+      this.scene.updateMatrixWorld();
+    }
+    this.sky.updateMatrixWorld(true);
     this.renderer.render(this.scene, cam);
     const auto = this.renderer.autoClear;
     this.renderer.autoClear = false;
     const bg = this.scene.background;
-    for (let team = 0; team < this.silMats.length; team++) {
-      cam.layers.set(1 + team);
-      this.scene.overrideMaterial = this.silMats[team];
-      this.renderer.render(this.scene, cam);
-    }
-    this.scene.overrideMaterial = null;
+    this.scene.background = null;
+    cam.layers.disableAll();
+    for (let team = 0; team < this.teamColors.length; team++) cam.layers.enable(1 + team);
+    this.renderer.render(this.scene, cam);
     this.scene.background = bg;
     cam.layers.set(0);
     this.renderer.autoClear = auto;
     this.entityViews.uncull();
   }
 
+  private matrixFrame = -1;
   private frustum = new THREE.Frustum();
   private cullMat = new THREE.Matrix4();
 
   render(alpha: number, dt: number): void {
+    FRAME.id++;
+    this.scene.matrixWorldAutoUpdate = false;
     this.time += dt;
     for (const ev of this.world.events) {
       if (ev.type === "mod" || ev.type === "modEnd") this.hazards.handle(ev);

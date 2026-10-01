@@ -343,7 +343,24 @@ export function shieldPath(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.closePath();
 }
 
-export function shield(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, field: string, inner: (() => void) | null, rim: string): void {
+const imgIds = new WeakMap<object, number>();
+let imgSeq = 0;
+const imgId = (o: object | null) => {
+  if (!o) return 0;
+  let v = imgIds.get(o);
+  if (v === undefined) imgIds.set(o, (v = ++imgSeq));
+  return v;
+};
+
+export function shield(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, field: string, icon: HTMLCanvasElement | HTMLImageElement | null, rim: string): void {
+  bakedPlate(ctx, `shield|${field}|${rim}|${imgId(icon)}`, x - 3, y - 3, w + 6, h + 6, (g) =>
+    shieldPlate(g, 3, 3, w, h, field, icon ? () => {
+      const s2 = w + 10;
+      g.drawImage(icon, 3 + (w - s2) / 2, 2, s2, s2);
+    } : null, rim));
+}
+
+function shieldPlate(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, field: string, inner: (() => void) | null, rim: string): void {
   withClip(ctx, () => shieldPath(ctx, x, y, w, h), () => {
     ctx.fillStyle = pattern(ctx, "leather", 1, x, y);
     ctx.fillRect(x, y, w, h);
@@ -372,9 +389,49 @@ export function shield(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   }
 }
 
+const plates = new Map<string, HTMLCanvasElement>();
+function bakedPlate(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): void {
+  const m = ctx.getTransform();
+  const k = Math.max(1, Math.hypot(m.a, m.b));
+  const key = `${id}|${w.toFixed(2)}|${h.toFixed(2)}|${k.toFixed(2)}`;
+  let c = plates.get(key);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = Math.max(1, Math.ceil(w * k));
+    c.height = Math.max(1, Math.ceil(h * k));
+    const g = c.getContext("2d")!;
+    g.imageSmoothingEnabled = false;
+    g.scale(c.width / w, c.height / h);
+    draw(g);
+    plates.set(key, c);
+    if (plates.size > 300) {
+      const old = plates.keys().next().value!;
+      plates.get(old)!.width = 0;
+      plates.delete(old);
+    }
+  }
+  ctx.drawImage(c, x, y, w, h);
+}
+
 export function ribbon(ctx: CanvasRenderingContext2D, cx: number, y: number, w: number, h: number, text: string, scale: number, color = "#3a2410", art: HTMLCanvasElement | null = null): void {
-  const stain = art ? "rgba(60,30,12,0.78)" : "rgba(90,50,20,0.45)";
   const x = cx - w / 2;
+  bakedPlate(ctx, `ribbon|${art ? 1 : 0}`, x - 8, y - 2, w + 16, h + 8, (g) => ribbonPlate(g, 8, 2, w, h, !!art));
+  if (art) {
+    const ah = h + 3;
+    const aw = Math.min(w - 2, (art.width / art.height) * ah);
+    const dh = aw * (art.height / art.width);
+    onHiLayer(ctx, (t) => {
+      t.imageSmoothingEnabled = true;
+      t.drawImage(art, cx - aw / 2, y + (h - dh) / 2, aw, dh);
+    });
+    return;
+  }
+  const tw = textWidth(text, scale, true);
+  drawPlain(ctx, text, cx - tw / 2, y + (h - 10 * scale) / 2 + 0.3, color, scale, true);
+}
+
+function ribbonPlate(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, dark: boolean): void {
+  const stain = dark ? "rgba(60,30,12,0.78)" : "rgba(90,50,20,0.45)";
   for (const side of [-1, 1]) {
     const ex = side < 0 ? x - 5 : x + w + 5;
     const ix = side < 0 ? x + 3 : x + w - 3;
@@ -404,20 +461,10 @@ export function ribbon(ctx: CanvasRenderingContext2D, cx: number, y: number, w: 
   ctx.fillStyle = INK;
   ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
   texturedRect(ctx, "parch", x, y, w, h, null, 0, 1);
-  if (art) {
+  if (dark) {
     ctx.fillStyle = "rgba(60,30,12,0.7)";
     ctx.fillRect(x, y, w, h);
-    const ah = h + 3;
-    const aw = Math.min(w - 2, (art.width / art.height) * ah);
-    const dh = aw * (art.height / art.width);
-    onHiLayer(ctx, (t) => {
-      t.imageSmoothingEnabled = true;
-      t.drawImage(art, cx - aw / 2, y + (h - dh) / 2, aw, dh);
-    });
-    return;
   }
-  const tw = textWidth(text, scale, true);
-  drawPlain(ctx, text, cx - tw / 2, y + (h - 10 * scale) / 2 + 0.3, color, scale, true);
 }
 
 function notchPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, notch: number): void {
@@ -454,6 +501,10 @@ function pole(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): v
 
 export function banner(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string, notch = 10): void {
   pole(ctx, x, y, w);
+  bakedPlate(ctx, `banner|${tint}|${notch}`, x - 2, y, w + 4, h + 2, (g) => bannerCloth(g, 2, 0, w, h, tint, notch));
+}
+
+function bannerCloth(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string, notch: number): void {
   ctx.fillStyle = INK;
   ctx.beginPath();
   notchPath(ctx, x - 1.5, y, w + 3, h + 1.5, notch);

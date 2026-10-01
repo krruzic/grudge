@@ -74,6 +74,7 @@ export class Effects {
     if (withLight) {
       light = new THREE.PointLight(0xffa040, 6, 7, 1.5);
       light.position.copy(p).add(new THREE.Vector3(0, 0.3, 0));
+      light.layers.enableAll();
       this.root.add(light);
     }
     this.flickers.push({ sprite, light, base: 0.9, seed: Math.random() * 100 });

@@ -355,10 +355,45 @@ function setBar(bar: Bar, frac: number, dt = 0, time = 0, pulse = false): void {
   else m.color.copy(bar.color);
 }
 
+const silMats = new Map<string, THREE.MeshBasicMaterial>();
+let silColors: THREE.Color[] = [];
+function silMat(team: number, skinned: boolean): THREE.MeshBasicMaterial {
+  const key = `${team}|${skinned}`;
+  let m = silMats.get(key);
+  if (!m) {
+    m = new THREE.MeshBasicMaterial({
+      color: (silColors[team] ?? new THREE.Color(1, 1, 1)).clone().multiplyScalar(0.8),
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      depthFunc: THREE.GreaterDepth,
+      stencilWrite: true,
+      stencilRef: 1,
+      stencilFunc: THREE.NotEqualStencilFunc,
+      stencilFail: THREE.KeepStencilOp,
+      stencilZFail: THREE.KeepStencilOp,
+      stencilZPass: THREE.ReplaceStencilOp,
+      fog: false,
+    });
+    silMats.set(key, m);
+    SHARED_VIEW_MATS.add(m);
+  }
+  return m;
+}
+
 export function markSilhouette(obj: THREE.Object3D, team: number): void {
+  const meshes: THREE.Mesh[] = [];
   obj.traverse((o) => {
-    if (!(o instanceof THREE.Mesh) || o.userData.noSil) return;
-    o.layers.enable(1 + team);
+    if (o instanceof THREE.Mesh && !o.userData.noSil && !o.userData.silProxy) meshes.push(o);
+  });
+  for (const o of meshes) {
+    const skinned = o instanceof THREE.SkinnedMesh;
+    const proxy = skinned ? new THREE.SkinnedMesh(o.geometry, silMat(team, true)) : new THREE.Mesh(o.geometry, silMat(team, false));
+    if (proxy instanceof THREE.SkinnedMesh && o instanceof THREE.SkinnedMesh) proxy.bind(o.skeleton, o.bindMatrix);
+    proxy.userData.silProxy = true;
+    proxy.frustumCulled = o.frustumCulled;
+    proxy.layers.set(1 + team);
+    o.add(proxy);
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of mats) {
       m.stencilWrite = true;
@@ -366,7 +401,7 @@ export function markSilhouette(obj: THREE.Object3D, team: number): void {
       m.stencilFunc = THREE.AlwaysStencilFunc;
       m.stencilZPass = THREE.ReplaceStencilOp;
     }
-  });
+  }
 }
 
 export class EntityViews {
@@ -391,6 +426,10 @@ export class EntityViews {
     private units: UnitModels,
     private playerColors: THREE.Color[] = [],
   ) {
+    if (silColors !== teamColors) {
+      silColors = teamColors;
+      silMats.clear();
+    }
     for (const p of world.pads) {
       const m = new THREE.Mesh(
         new THREE.RingGeometry(1.7, 2.0, 24),
@@ -913,7 +952,7 @@ export class EntityViews {
     if (stealth !== v.stealthed) {
       v.stealthed = stealth;
       v.body.traverse((o) => {
-        if (!(o instanceof THREE.Mesh)) return;
+        if (!(o instanceof THREE.Mesh) || o.userData.silProxy) return;
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         for (const m of mats) {
           m.transparent = stealth;

@@ -2,7 +2,8 @@ import { markModel } from "./placeholders";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { dyeColor, toLambert } from "./heroModels";
+import { dyeColor, shareSkeletons, toLambert } from "./heroModels";
+import { mergedMaterial, mergeParts } from "./mergedModel";
 
 export interface UnitInstance {
   body: THREE.Object3D;
@@ -20,6 +21,7 @@ export class UnitModels {
       Object.entries(urls).map(async ([k, url]) => {
         try {
           const g = await loader.loadAsync(url);
+          mergeParts(g.scene);
           markModel(g.scene);
           this.gltfs.set(k, g);
         } catch (err) {
@@ -37,8 +39,15 @@ export class UnitModels {
     const gltf = this.gltfs.get(type);
     if (!gltf) return null;
     const body = skeletonClone(gltf.scene);
+    shareSkeletons(body);
     body.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
+      o.frustumCulled = false;
+      const mm = mergedMaterial(o.geometry, (n) => (n.startsWith("team") ? dyeColor(team) : null));
+      if (mm) {
+        o.material = mm;
+        return;
+      }
       const conv = (m: THREE.Material) => {
         const key = `${type}:${m.name}:${m.name.startsWith("team") ? teamIndex : "x"}`;
         let c = this.mats.get(key);

@@ -277,10 +277,7 @@ export class Screens {
       this.hit(`hero:${type}`, x - 2, gy - 2, sw + 4, sh + 8);
       this.shieldAt.set(type, { x: x + sw / 2, y: gy + sh - 14 });
       const icon = this.portraits?.icon(type);
-      shield(ctx, x, gy, sw, sh, on.length ? TEAM_FIELD[on[0]] : "#b04a2a", icon ? () => {
-        const s2 = sw + 10;
-        ctx.drawImage(icon, x + (sw - s2) / 2, gy - 1, s2, s2);
-      } : null, on.length === 1 ? TEAM_BRIGHT[on[0]] : on.length === 2 ? "#f0c030" : "#8a8a94");
+      shield(ctx, x, gy, sw, sh, on.length ? TEAM_FIELD[on[0]] : "#b04a2a", icon ?? null, on.length === 1 ? TEAM_BRIGHT[on[0]] : on.length === 2 ? "#f0c030" : "#8a8a94");
       const name = (this.heroes[type]?.name ?? type).toUpperCase();
       ribbon(ctx, x + sw / 2, gy + sh - 3, sw + 4, 9, name, Math.min(0.5, (sw + 2) / Math.max(1, textWidth(name, 1, true))), undefined, nameImage(type));
     });

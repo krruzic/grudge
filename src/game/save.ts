@@ -19,6 +19,7 @@ export interface Options {
   hints: number;
   split: number;
   kbm: number;
+  fps: number;
 }
 
 export interface Record3 {
@@ -79,11 +80,12 @@ export const OPTION_ROWS: Row<Options>[] = [
   { key: "shake", label: "SCREEN SHAKE", values: [1, 0], fmt: onOff, blurb: "THE GROUND TREMBLES WHEN BLOWS LAND." },
   { key: "split", label: "CAMERA", values: [1, 2, 0], fmt: (v) => CAMERA_NAMES[v], blurb: "SPLIT: EACH PLAYER GETS A VIEW. AUTO ZOOM FOLLOWS THE FIGHT, D-PAD ZOOM IS FIXED. D-PAD UP/DOWN ZOOMS IN BOTH." },
   { key: "kbm", label: "KEYBOARD + MOUSE", values: [1, 0], fmt: onOff, blurb: "OFF: KEYS AND MOUSE NEVER TAKE A SEAT. CLICK HERE TO TURN BACK ON." },
+  { key: "fps", label: "FPS COUNTER", values: [1, 0], fmt: onOff, blurb: "FRAMES PER SECOND IN THE BOTTOM-RIGHT CORNER." },
   { key: "hints", label: "BUTTON HINTS", values: [1, 0], fmt: onOff, blurb: "SHOW BUILD HINTS ABOVE PADS." },
 ];
 
 export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 16, startGold: 200, goldRate: 1, troops: 1, respawn: 6, mercy: 1, partners: 1 };
-export const DEFAULT_OPTIONS: Options = { music: 7, sound: 8, shake: 1, hints: 1, split: 1, kbm: 1 };
+export const DEFAULT_OPTIONS: Options = { music: 7, sound: 8, shake: 1, hints: 1, split: 1, kbm: 1, fps: 1 };
 
 const KEY = "grudge.save.v1";
 const MAX_LOG = 30;

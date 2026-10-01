@@ -6,6 +6,9 @@ const DIRS: [number, number, number][] = [
   [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
 ];
 
+const DX = DIRS.map((d) => d[0]);
+const DZ = DIRS.map((d) => d[1]);
+const DC = DIRS.map((d) => d[2]);
 const SLOPE_SAMPLES: [number, number][] = [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35], [0.42, 0.42], [-0.42, 0.42], [0.42, -0.42], [-0.42, -0.42]];
 const PLAN_SLOPE = 0.9;
 const LINE_SLOPE = 0.95;
@@ -24,6 +27,11 @@ export class NavGrid {
   private stamp: Uint32Array;
   private closed: Uint32Array;
   private gen = 1;
+  private heapI = new Int32Array(1024);
+  private heapF = new Float64Array(1024);
+  private heapN = 0;
+  private cache = new Map<number, { found: boolean; cells: Int32Array } | null>();
+  private clearMemo = new Map<number, boolean>();
 
   constructor(private t: Terrain, maxStep: number, private maxSlope: number) {
     this.w = t.width;
@@ -62,6 +70,8 @@ export class NavGrid {
   }
 
   recompute(cells: number[]): void {
+    this.cache.clear();
+    this.clearMemo.clear();
     const done = new Set<number>();
     for (const c of cells) {
       const cx = c % this.w;
@@ -96,6 +106,8 @@ export class NavGrid {
         if (i < 0) continue;
         if (Math.hypot(cx + 0.5 - x, cz + 0.5 - z) > r) continue;
         this.blocked[i] = on ? Math.min(255, this.blocked[i] + 1) : Math.max(0, this.blocked[i] - 1);
+        this.cache.clear();
+        this.clearMemo.clear();
       }
     }
   }
@@ -122,6 +134,24 @@ export class NavGrid {
   }
 
   lineClear(a: Vec2, b: Vec2): boolean {
+    if (a.x - Math.floor(a.x) === 0.5 && a.z - Math.floor(a.z) === 0.5 && b.x - Math.floor(b.x) === 0.5 && b.z - Math.floor(b.z) === 0.5) {
+      const ia = this.index(Math.floor(a.x), Math.floor(a.z));
+      const ib = this.index(Math.floor(b.x), Math.floor(b.z));
+      if (ia >= 0 && ib >= 0) {
+        const key = ia * this.w * this.d + ib;
+        let v = this.clearMemo.get(key);
+        if (v === undefined) {
+          v = this.lineClearRaw(a, b);
+          if (this.clearMemo.size > 50000) this.clearMemo.clear();
+          this.clearMemo.set(key, v);
+        }
+        return v;
+      }
+    }
+    return this.lineClearRaw(a, b);
+  }
+
+  private lineClearRaw(a: Vec2, b: Vec2): boolean {
     const dx = b.x - a.x;
     const dz = b.z - a.z;
     const len = Math.hypot(dx, dz);
@@ -146,6 +176,56 @@ export class NavGrid {
     return true;
   }
 
+  private push(i: number, fv: number): void {
+    if (this.heapN === this.heapI.length) {
+      const ni = new Int32Array(this.heapN * 2);
+      ni.set(this.heapI);
+      const nf = new Float64Array(this.heapN * 2);
+      nf.set(this.heapF);
+      this.heapI = ni;
+      this.heapF = nf;
+    }
+    const H = this.heapI;
+    const F = this.heapF;
+    let k = this.heapN++;
+    while (k > 0) {
+      const p = (k - 1) >> 1;
+      if (F[p] <= fv) break;
+      H[k] = H[p];
+      F[k] = F[p];
+      k = p;
+    }
+    H[k] = i;
+    F[k] = fv;
+  }
+
+  private pop(): number {
+    const H = this.heapI;
+    const F = this.heapF;
+    const top = H[0];
+    const n = --this.heapN;
+    if (n > 0) {
+      const li = H[n];
+      const lf = F[n];
+      let k = 0;
+      for (;;) {
+        const l = k * 2 + 1;
+        const r = l + 1;
+        let m = -1;
+        let mf = lf;
+        if (l < n && F[l] < mf) { m = l; mf = F[l]; }
+        if (r < n && F[r] < mf) { m = r; mf = F[r]; }
+        if (m < 0) break;
+        H[k] = H[m];
+        F[k] = F[m];
+        k = m;
+      }
+      H[k] = li;
+      F[k] = lf;
+    }
+    return top;
+  }
+
   findPath(from: Vec2, to: Vec2, fromY?: number): Vec2[] | null {
     let start = this.index(Math.floor(from.x), Math.floor(from.z));
     if (!this.open(start) || (fromY !== undefined && Math.abs(this.h[start] - fromY) > this.maxStep * 1.2)) {
@@ -156,90 +236,17 @@ export class NavGrid {
     if (!this.open(goal)) goal = this.nearestOpen(to.x, to.z, 6);
     if (start < 0 || goal < 0) return null;
     if (start === goal) return [{ x: to.x, z: to.z }];
-
-    const gen = ++this.gen;
-    const W = this.w;
-    const gx = goal % W;
-    const gz = (goal / W) | 0;
-    const heur = (i: number) => {
-      const dx = Math.abs((i % W) - gx);
-      const dz = Math.abs(((i / W) | 0) - gz);
-      return Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz);
-    };
-    const heap: number[] = [];
-    const f: number[] = [];
-    const push = (i: number, fv: number) => {
-      heap.push(i);
-      f.push(fv);
-      let k = heap.length - 1;
-      while (k > 0) {
-        const p = (k - 1) >> 1;
-        if (f[p] <= f[k]) break;
-        [heap[p], heap[k]] = [heap[k], heap[p]];
-        [f[p], f[k]] = [f[k], f[p]];
-        k = p;
-      }
-    };
-    const pop = (): number => {
-      const top = heap[0];
-      const li = heap.pop()!;
-      const lf = f.pop()!;
-      if (heap.length) {
-        heap[0] = li;
-        f[0] = lf;
-        let k = 0;
-        for (;;) {
-          const l = k * 2 + 1;
-          const r = l + 1;
-          let m = k;
-          if (l < heap.length && f[l] < f[m]) m = l;
-          if (r < heap.length && f[r] < f[m]) m = r;
-          if (m === k) break;
-          [heap[m], heap[k]] = [heap[k], heap[m]];
-          [f[m], f[k]] = [f[k], f[m]];
-          k = m;
-        }
-      }
-      return top;
-    };
-    this.stamp[start] = gen;
-    this.g[start] = 0;
-    this.came[start] = -1;
-    push(start, heur(start));
-    let found = false;
-    let iter = 0;
-    let best = start;
-    let bestH = heur(start);
-    while (heap.length && iter++ < 20000) {
-      const cur = pop();
-      if (this.closed[cur] === gen) continue;
-      this.closed[cur] = gen;
-      if (cur === goal) { found = true; break; }
-      const hc = heur(cur);
-      if (hc < bestH) { bestH = hc; best = cur; }
-      const cx = cur % W;
-      const cz = (cur / W) | 0;
-      for (const [dx, dz, dc] of DIRS) {
-        const n = this.index(cx + dx, cz + dz);
-        if (n < 0 || this.closed[n] === gen || !this.passable(cur, n)) continue;
-        if (dx !== 0 && dz !== 0) {
-          if (!this.passable(cur, this.index(cx + dx, cz)) || !this.passable(cur, this.index(cx, cz + dz))) continue;
-        }
-        const ng = this.g[cur] + dc * (this.cost[cur] + this.cost[n]) * 0.5 + Math.max(0, this.h[n] - this.h[cur]) * 0.3;
-        if (this.stamp[n] !== gen || ng < this.g[n]) {
-          this.stamp[n] = gen;
-          this.g[n] = ng;
-          this.came[n] = cur;
-          push(n, ng + heur(n));
-        }
-      }
+    const key = start * this.w * this.d + goal;
+    let hit = this.cache.get(key);
+    if (hit === undefined) {
+      hit = this.search(start, goal);
+      if (this.cache.size > 4000) this.cache.clear();
+      this.cache.set(key, hit);
     }
-    if (!found && best === start) return null;
-    const end = found ? goal : best;
-    const cells: number[] = [];
-    for (let c = end; c >= 0; c = this.came[c]) cells.push(c);
-    cells.reverse();
-    const pts = cells.map((c) => ({ x: (c % W) + 0.5, z: ((c / W) | 0) + 0.5 }));
+    if (!hit) return null;
+    const { found, cells } = hit;
+    const W = this.w;
+    const pts: Vec2[] = Array.from(cells, (c) => ({ x: (c % W) + 0.5, z: ((c / W) | 0) + 0.5 }));
     if (found) pts[pts.length - 1] = this.open(this.index(Math.floor(to.x), Math.floor(to.z))) ? { x: to.x, z: to.z } : pts[pts.length - 1];
     const out: Vec2[] = [];
     let anchor: Vec2 = from;
@@ -252,5 +259,60 @@ export class NavGrid {
       k = j + 1;
     }
     return out;
+  }
+
+  private search(start: number, goal: number): { found: boolean; cells: Int32Array } | null {
+
+    const gen = ++this.gen;
+    const W = this.w;
+    const gx = goal % W;
+    const gz = (goal / W) | 0;
+    const heur = (i: number) => {
+      const dx = Math.abs((i % W) - gx);
+      const dz = Math.abs(((i / W) | 0) - gz);
+      return Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz);
+    };
+    this.heapN = 0;
+    this.stamp[start] = gen;
+    this.g[start] = 0;
+    this.came[start] = -1;
+    this.push(start, heur(start));
+    let found = false;
+    let iter = 0;
+    let best = start;
+    let bestH = heur(start);
+    while (this.heapN && iter++ < 20000) {
+      const cur = this.pop();
+      if (this.closed[cur] === gen) continue;
+      this.closed[cur] = gen;
+      if (cur === goal) { found = true; break; }
+      const hc = heur(cur);
+      if (hc < bestH) { bestH = hc; best = cur; }
+      const cx = cur % W;
+      const cz = (cur / W) | 0;
+      for (let di = 0; di < 8; di++) {
+        const dx = DX[di];
+        const dz = DZ[di];
+        const dc = DC[di];
+        const n = this.index(cx + dx, cz + dz);
+        if (n < 0 || this.closed[n] === gen || !this.passable(cur, n)) continue;
+        if (dx !== 0 && dz !== 0) {
+          if (!this.passable(cur, this.index(cx + dx, cz)) || !this.passable(cur, this.index(cx, cz + dz))) continue;
+        }
+        const ng = this.g[cur] + dc * (this.cost[cur] + this.cost[n]) * 0.5 + Math.max(0, this.h[n] - this.h[cur]) * 0.3;
+        if (this.stamp[n] !== gen || ng < this.g[n]) {
+          this.stamp[n] = gen;
+          this.g[n] = ng;
+          this.came[n] = cur;
+          this.push(n, ng + heur(n));
+        }
+      }
+    }
+    if (!found && best === start) return null;
+    const end = found ? goal : best;
+    const cells: number[] = [];
+    for (let c = end; c >= 0; c = this.came[c]) cells.push(c);
+    cells.reverse();
+    return { found, cells: Int32Array.from(cells) };
   }
 }
