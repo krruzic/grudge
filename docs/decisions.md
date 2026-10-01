@@ -540,3 +540,9 @@
   - `tools/rps.ts` compares troops at equal spawn cost.
 - Tower limit removed (supersedes "3 towers per hero"); pads and gold are the only limits.
 - Economy snapshot (18 bot matches across all maps, per team per minute): passive income +266, bounties +231, troop spawns −201, building/upgrades/shop −230, losses −51. About 18 troops spawn per team per minute, but only 4–8 are alive at once; banked gold sits around 150–200 and climbs to ~330 late.
+- Anti-snowball pass. Measured with mirror bot matches (same hero both sides, 8 per hero per map): the side ahead at 90 s won 74%. Gold-only catch-up barely moved it (75%), because the snowball comes from losing buildings and piling up keep damage. Changes, all scaled by the existing deficit score (`catchUp`, 0–1):
+  - The team behind gets cheaper troop spawns (up to −40%, `productionBoost`, previously unused), smaller gold losses on hero death or tower loss (up to −100%), more passive income (`incomeBoost` 0.35→0.6), faster hero respawns (up to −40%, `respawnCut`), and buildings that take less damage (up to −30%, `fortify`).
+  - The team ahead earns smaller bounties for killing the team behind (up to −50%, `bountyCut`).
+  - Troop bounties down: grunt 5→3, archer 6→4, brute 12→7.
+  - Result: the early leader now wins 63%; games average 413 s (was 390) and fewer end with the keep destroyed (26 vs 59 of 144).
+- Brute spawn cost 25→32 (archer 16, grunt 12). At equal gold against a mixed army, an all-brute army now does worst of the three mono armies. Economy per team per minute: income +280, bounties +182, troops −186, building −227, losses −34.

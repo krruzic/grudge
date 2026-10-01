@@ -30,8 +30,11 @@
   "catchUp": {
     "resourceScale": 250,
     "structureWeight": 0.35,
-    "incomeBoost": 0.35,
-    "productionBoost": 0.25
+    "incomeBoost": 0.6,
+    "productionBoost": 0.4,
+    "bountyCut": 0.5,
+    "respawnCut": 0.4,
+    "fortify": 0.3
   },
   "terrain": {
     "highGroundDelta": 1.0,

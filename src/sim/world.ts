@@ -763,6 +763,8 @@ export class World {
     }
     if (target.structure) {
       if (opts.structureDamage !== undefined) amount = opts.structureDamage;
+      const tt = this.teams[target.team];
+      if (tt) amount *= 1 - tt.catchUp * this.data.match.catchUp.fortify;
     }
     if (src && src.kind !== "structure") {
       const hk = this.hooks(src);
@@ -931,7 +933,7 @@ export class World {
 
   loseGold(team: number, amount: number, why: string): void {
     const ts = this.teams[team];
-    const lost = Math.min(ts.resource, Math.round(amount));
+    const lost = Math.min(ts.resource, Math.round(amount * (1 - ts.catchUp)));
     if (lost <= 0) return;
     ts.resource -= lost;
     this.emit({ type: "notice", team, text: `${why} · -${lost} GOLD` });
@@ -956,6 +958,8 @@ export class World {
     const killerTeam = kt === 0 || kt === 1 ? kt : -1;
     const nobody = { resource: 0, heroKills: 0, kills: 0 };
     const killer = killerTeam >= 0 ? this.teams[killerTeam] : nobody;
+    const victim = this.teams[target.team];
+    const cut = victim ? 1 - victim.catchUp * this.data.match.catchUp.bountyCut : 1;
     target.hp = 0;
     this.emit({
       type: "death", id: target.id, kind: target.kind, x: tp.pos.x, y: tp.y, z: tp.pos.z, team: target.team,
@@ -968,8 +972,8 @@ export class World {
       target.hero.action = null;
       target.hero.bomb = false;
       target.hero.aim = null;
-      target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds;
-      killer.resource += bounty.hero;
+      target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds * (1 - (victim?.catchUp ?? 0) * this.data.match.catchUp.respawnCut);
+      killer.resource += bounty.hero * cut;
       killer.heroKills++;
       this.loseGold(target.team, this.data.match.economy.loss.heroDeath, "HERO DOWN");
       return;
@@ -996,7 +1000,7 @@ export class World {
         }
         return;
       }
-      killer.resource += this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank;
+      killer.resource += (this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank) * cut;
       killer.kills++;
       return;
     }
@@ -1013,7 +1017,7 @@ export class World {
     const pad = this.pads[st.padIndex];
     pad.structureId = 0;
     this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius, false);
-    killer.resource += bounty.structure;
+    killer.resource += bounty.structure * cut;
     this.teams[target.team].structuresLost++;
     if (this.data.structures.types[st.type as "damage"]?.class === "tower") {
       this.loseGold(target.team, this.data.match.economy.loss.tower, "TOWER LOST");

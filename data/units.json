@@ -44,7 +44,7 @@
         "hero": 0.7,
         "structure": 0.9
       },
-      "bounty": 5
+      "bounty": 3
     },
     "ranged": {
       "hp": 120,
@@ -69,7 +69,7 @@
         "hero": 0.8,
         "structure": 0.7
       },
-      "bounty": 6
+      "bounty": 4
     },
     "heavy": {
       "hp": 380,
@@ -91,7 +91,7 @@
         "structure": 1.8
       },
       "knockbackResist": 0.15,
-      "bounty": 12
+      "bounty": 7
     }
   },
   "squads": {
@@ -103,7 +103,7 @@
     "spawnCost": {
       "grunt": 12,
       "ranged": 16,
-      "heavy": 25
+      "heavy": 32
     },
     "growPerMinute": 0.06
   }

@@ -283,7 +283,7 @@ export interface MatchData {
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
   economy: { start: number; income: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
-  catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number };
+  catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number; bountyCut: number; respawnCut: number; fortify: number };
   terrain: {
     highGroundDelta: number;
     highGroundRangeMul: number;

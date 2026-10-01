@@ -121,7 +121,7 @@ export class Arena {
       let broke = false;
       for (const item of list) {
         if (ts.unitCount >= w.data.units.popCap) break;
-        const cost = Math.round((wv.spawnCost[item.type] ?? 0) * w.costMul());
+        const cost = Math.round((wv.spawnCost[item.type] ?? 0) * w.costMul() * (1 - ts.catchUp * w.data.match.catchUp.productionBoost));
         if (ts.resource < cost) {
           broke = true;
           continue;
