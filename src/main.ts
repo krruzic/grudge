@@ -290,14 +290,19 @@ async function start(): Promise<void> {
   };
   const enterSelect = () => {
     const here = [0, 1, 2, 3].filter(present).length;
+    const keptCpu = (i: number) => netMode === "host" && slots[i].cpu && !slots[i].autoCpu && !slots[i].open;
     if (here >= 3) twoVtwo = true;
-    else if (netMode === "host") twoVtwo = false;
+    else if (netMode === "host" && !(twoVtwo && [2, 3].some(keptCpu))) twoVtwo = false;
     cursors.setScale(pixel.w, pixel.h);
     cursors.reset(twoVtwo ? [0, 2, 1, 3] : [0, 1]);
     slots.forEach((sl, i) => {
+      const keep = keptCpu(i);
       sl.ready = false;
       if (present(i)) { sl.autoCpu = false; makeHuman(i); }
-      else vacant(i);
+      else if (keep) {
+        makeCpu(i);
+        sl.autoCpu = false;
+      } else vacant(i);
     });
     readySince = -1;
   };
