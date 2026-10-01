@@ -711,7 +711,7 @@ export class EntityViews {
     for (const hint of [...this.padHints, ...this.shopHints]) {
       const base = hint.userData.base as [number, number] | undefined;
       if (!hint.visible || !base) continue;
-      const f = Math.min(3, Math.max(1, camera.position.distanceTo(hint.position) / 75));
+      const f = Math.min(6.5, Math.max(1, camera.position.distanceTo(hint.position) / 17));
       hint.scale.set(base[0] * f, base[1] * f, 1);
       hint.updateMatrixWorld();
     }

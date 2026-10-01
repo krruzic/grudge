@@ -661,7 +661,7 @@
 - Player panel is one row: B and R with cooldown numbers, Z with its gauge as a ring around the button, then the level number with an XP ring, then the talent icons. Replaces the long Z and XP bars.
 - One status line under the clock: the Grudge status and the small notice banner share it. A new notice replaces the line for its 2 s, then it shows the current Grudge state again, so the two never stack. Big banners (VICTORY, countdowns) are unchanged.
 - Level-up picker is just the two talent icons on dark discs with a small C-left / C-right badge; no title, names or descriptions (the codex has those). A choice that combos with a talent you already own (its `with` list) gets a flashing red rim instead of gold. It sits right under that player's own panel in their HUD corner, badges drawn on top of the icons. The "LEVEL UP!" line in the player panel is gone.
-- Pad, upgrade and shop prompt icons keep their approved size at the default camera distance (~75 m) and grow with distance when zoomed further out (up to 3×), per split view.
+- Pad, upgrade and shop prompt icons keep their approved size at the default play camera distance (~16 m from the hero) and grow with distance when zoomed out so they stay the same size on screen (up to 6.5×), per split view.
 - Army roster (bottom corners) restyled to match: one dark gold-rimmed disc per troop type with its portrait, the count in a small pill under it, and the current order as a coloured badge with a glyph instead of a word (attack red double chevron pointing at the enemy, follow blue arrow, defend green shield, hold gold bar, hunt orange crosshair, siege purple tower). The selected group gets a bright rim and freshly ordered troops flash white.
 
 ## Herald
