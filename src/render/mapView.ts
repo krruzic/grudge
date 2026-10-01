@@ -6,7 +6,7 @@ import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextur
 export interface MapView {
   root: THREE.Group;
   fx: { name: string; position: THREE.Vector3 }[];
-  update(time: number): void;
+  update(time: number, tide?: number): void;
 }
 
 const swayUniforms = { uTime: { value: 0 } };
@@ -84,7 +84,8 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   const root = new THREE.Group();
   root.add(gltf.scene);
   root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water }, light));
-  root.add(buildWaterMesh(terrain, waterMaterial(water)));
+  const waterMesh = buildWaterMesh(terrain, waterMaterial(water));
+  root.add(waterMesh);
   const fx: MapView["fx"] = [];
   const cache = new Map<THREE.Material, THREE.Material>();
 
@@ -112,8 +113,14 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   return {
     root,
     fx,
-    update(time: number) {
+    update(time: number, tide = 0) {
       swayUniforms.uTime.value = time;
+      const y = tide * 0.42 + Math.sin(time * 0.8) * 0.02 * tide;
+      if (Math.abs(waterMesh.position.y - y) > 1e-4) {
+        waterMesh.position.y = y;
+        waterMesh.updateMatrix();
+        waterMesh.matrixWorld.copy(waterMesh.matrix);
+      }
     },
   };
 }

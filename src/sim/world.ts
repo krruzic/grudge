@@ -534,6 +534,7 @@ export class World {
     tickStatus(this);
     this.runTimers();
     this.updateHazards();
+    this.updateTide();
     this.applyKnockback(dt);
     this.separate();
     this.cleanup();
@@ -934,6 +935,33 @@ export class World {
     e.hp = Math.min(e.maxHp, e.hp * hpK + e.maxHp * vet.healOnRank);
     const p = e.transform;
     this.emit({ type: "rankUp", id: e.id, rank: next, x: p.pos.x, y: p.y, z: p.pos.z, team: e.team });
+  }
+
+  tideHigh = false;
+
+  tideLevel(time = this.time): number {
+    const td = this.terrain.tide;
+    if (!td) return 0;
+    const cycle = td.lowSeconds + td.highSeconds;
+    const t = time - td.firstSeconds;
+    if (t < 0) return 0;
+    const p = t % cycle;
+    const ramp = 3;
+    if (p < td.lowSeconds) return Math.max(0, 1 - p / ramp) * (t >= cycle ? 1 : 0);
+    return Math.min(1, (p - td.lowSeconds) / ramp);
+  }
+
+  private updateTide(): void {
+    const td = this.terrain.tide;
+    if (!td || !this.terrain.tideCells.length) return;
+    const t = this.time - td.firstSeconds;
+    const high = t >= 0 && t % (td.lowSeconds + td.highSeconds) >= td.lowSeconds;
+    if (high === this.tideHigh) return;
+    this.tideHigh = high;
+    for (const i of this.terrain.tideCells) this.terrain.kinds[i] = high ? Kind.Ford : Kind.Ground;
+    this.nav.recompute(this.terrain.tideCells);
+    for (const e of this.entities) if (e.unit) e.unit.repathAt = 0;
+    this.emit({ type: "notice", team: -1, text: high ? "HIGH TIDE · THE FLATS FLOOD" : "LOW TIDE · THE FLATS DRAIN" });
   }
 
   loseGold(team: number, amount: number, why: string): void {

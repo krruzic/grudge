@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import heroesData from "../../data/heroes.json";
-import { FLAG_DIRT, FLAG_PAVING, Kind, type Terrain } from "../sim/terrain";
+import { FLAG_DIRT, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../sim/terrain";
 
 export interface TerrainTextures {
   grass: THREE.Texture;
@@ -186,13 +186,17 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
 
       let dirt = 0;
       let paving = 0;
+      let wet = 0;
       if (inside(x, z)) {
         const cells = [[x - 1, z - 1], [x, z - 1], [x - 1, z], [x, z]];
         for (const [cx, cz] of cells) {
           dirt += cellFlag(cx, cz, FLAG_DIRT) / 4;
           paving += cellFlag(cx, cz, FLAG_PAVING) / 4;
+          const ci = cx >= 0 && cz >= 0 && cx < t.width && cz < t.depth ? cz * t.width + cx : -1;
+          if (ci >= 0 && t.tideCells.length && (t.flags[ci] & FLAG_TIDE) && h < t.waterLevel + 0.7) wet += 0.25;
         }
       }
+      if (wet > 0) dirt = Math.max(dirt, wet);
       const wob = (vnoise(x * 0.45, z * 0.45) - 0.5) * 0.7;
       dirt = THREE.MathUtils.smoothstep(dirt + wob, 0.2, 0.75);
       paving = THREE.MathUtils.smoothstep(paving + wob * 0.3, 0.3, 0.7);
@@ -255,6 +259,11 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         r *= ao;
         g *= ao;
         b *= ao;
+      }
+      if (wet > 0) {
+        r *= 1 - wet * 0.22;
+        g *= 1 - wet * 0.16;
+        b *= 1 - wet * 0.04;
       }
       if (h < t.waterLevel) {
         const deep = Math.min(1, (t.waterLevel - h) / 1.2);

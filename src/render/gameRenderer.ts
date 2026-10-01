@@ -604,7 +604,7 @@ export class GameRenderer {
       cam.position.x += (Math.random() - 0.5) * k;
       cam.position.y += (Math.random() - 0.5) * k;
     };
-    this.map.update(this.time);
+    this.map.update(this.time, this.world.tideLevel());
     this.effects.update(this.time, dt);
     this.renderer.setRenderTarget(this.target);
     if (!this.splitViews.length) {

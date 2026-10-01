@@ -132,6 +132,13 @@ const STROKES: Record<string, Draw> = {
     c.moveTo(-0.55, -0.55); c.lineTo(-0.55, -0.25);
     c.moveTo(0.55, -0.55); c.lineTo(0.55, -0.25);
   },
+  tide: (c) => {
+    for (const oy of [0.25, 0.65]) {
+      c.moveTo(-0.9, oy); c.quadraticCurveTo(-0.6, oy - 0.25, -0.3, oy); c.quadraticCurveTo(0, oy + 0.25, 0.3, oy); c.quadraticCurveTo(0.6, oy - 0.25, 0.9, oy);
+    }
+    c.moveTo(0.15, -0.95); c.arc(-0.1, -0.45, 0.5, -1.05, 1.05, true);
+    c.moveTo(0.15, -0.95); c.quadraticCurveTo(-0.35, -0.45, 0.15, 0.05);
+  },
 };
 
 const FILLS: Record<string, Draw> = {

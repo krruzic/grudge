@@ -30,7 +30,7 @@ export interface NoiseOp {
 }
 
 export interface CellOp extends Rect {
-  op: "wall" | "water" | "ford" | "bridge" | "dirt" | "paving" | "grass" | "pit";
+  op: "wall" | "water" | "ford" | "bridge" | "dirt" | "paving" | "grass" | "pit" | "tide";
   style?: string;
   y?: number;
   deep?: boolean;
@@ -63,7 +63,8 @@ export interface MapData {
   emblem?: string;
   width: number;
   depth: number;
-  mirror: "x" | "diag" | "none";
+  mirror: "x" | "diag" | "rot" | "none";
+  tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
   rimHeight: number;
   waterLevel: number;
   ops: MapOp[];
@@ -86,6 +87,7 @@ export const FLAG_DIRT = 1;
 export const FLAG_PAVING = 2;
 export const FLAG_GRASS = 4;
 export const FLAG_DEEP = 8;
+export const FLAG_TIDE = 16;
 
 function smooth(t: number): number {
   t = Math.min(1, Math.max(0, t));
@@ -123,11 +125,18 @@ export class Terrain {
   readonly cores: MapPoint[] = [];
   readonly pads: MapPoint[] = [];
   readonly spawns: MapPoint[] = [];
-  private mirror: "x" | "diag" | "none" = "none";
+  private mirror: "x" | "diag" | "rot" | "none" = "none";
+  readonly tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
+  readonly tideCells: number[] = [];
 
   private canon(vx: number, vz: number): [number, number] {
     if (this.mirror === "x") return [Math.min(vx, this.width - vx), vz];
     if (this.mirror === "diag") return [Math.min(vx, vz), Math.max(vx, vz)];
+    if (this.mirror === "rot") {
+      const rx = this.width - vx;
+      const rz = this.depth - vz;
+      return vx < rx || (vx === rx && vz <= rz) ? [vx, vz] : [rx, rz];
+    }
     return [vx, vz];
   }
 
@@ -144,7 +153,8 @@ export class Terrain {
     this.flags = new Uint8Array(n);
     this.deck = new Float32Array(n);
     this.styles = new Array<string>(n).fill("");
-    this.mirror = data.mirror === "x" || data.mirror === "diag" ? data.mirror : "none";
+    this.mirror = data.mirror === "x" || data.mirror === "diag" || data.mirror === "rot" ? data.mirror : "none";
+    this.tide = data.tide;
     const mode = this.mirror;
     const mirror = mode !== "none";
 
@@ -153,6 +163,11 @@ export class Terrain {
         const mx = r.w !== undefined ? W - r.x - r.w : W - r.x;
         if (Math.abs(mx - r.x) < 1e-6) return [r];
         return [r, { ...r, x: mx }];
+      }
+      if (mode === "rot" && r.z !== undefined) {
+        const m = r.w !== undefined ? { ...r, x: W - r.x - r.w, z: D - r.z - (r.h ?? 0) } : { ...r, x: W - r.x, z: D - r.z };
+        if (Math.abs(m.x - r.x) < 1e-6 && Math.abs(m.z - r.z) < 1e-6) return [r];
+        return [r, m];
       }
       if (mode === "diag" && r.z !== undefined) {
         const m = { ...r, x: r.z, z: r.x, w: r.h, h: r.w };
@@ -188,6 +203,7 @@ export class Terrain {
             case "dirt": this.flags[i] |= FLAG_DIRT; break;
             case "paving": this.flags[i] |= FLAG_PAVING; break;
             case "grass": this.flags[i] |= FLAG_GRASS; break;
+            case "tide": this.flags[i] |= FLAG_TIDE; break;
           }
         });
       }
@@ -203,6 +219,11 @@ export class Terrain {
       }
     }
 
+    for (let i = 0; i < n; i++) {
+      if (!(this.flags[i] & FLAG_TIDE) || this.kinds[i] !== Kind.Ground) continue;
+      if (this.groundHeight((i % W) + 0.5, Math.floor(i / W) + 0.5) < this.waterLevel + 0.7) this.tideCells.push(i);
+    }
+
     const both = <T extends { x: number; z: number; rot?: number; team?: number; side?: number }>(
       list: T[], out: T[], flipTeam: boolean,
     ) => {
@@ -211,8 +232,9 @@ export class Terrain {
         if (!mirror) continue;
         if (mode === "x" && Math.abs(p.x - W / 2) < 0.01) continue;
         if (mode === "diag" && Math.abs(p.x - p.z) < 0.01) continue;
-        const m: T = mode === "x" ? { ...p, x: W - p.x, side: 1 } : { ...p, x: p.z, z: p.x, side: 1 };
-        if (p.rot !== undefined) m.rot = mode === "x" ? -p.rot : 90 - p.rot;
+        if (mode === "rot" && Math.abs(p.x - W / 2) < 0.01 && Math.abs(p.z - D / 2) < 0.01) continue;
+        const m: T = mode === "x" ? { ...p, x: W - p.x, side: 1 } : mode === "rot" ? { ...p, x: W - p.x, z: D - p.z, side: 1 } : { ...p, x: p.z, z: p.x, side: 1 };
+        if (p.rot !== undefined) m.rot = mode === "x" ? -p.rot : mode === "rot" ? p.rot + 180 : 90 - p.rot;
         if (flipTeam && p.team !== undefined) m.team = 1 - p.team;
         out.push(m);
       }

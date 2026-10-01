@@ -49,7 +49,7 @@ const structureUrls = import.meta.glob("../assets/structures/*.glb", { query: "?
 
 const mapJsons = import.meta.glob("../data/maps/*.json", { import: "default", eager: true }) as Record<string, MapData>;
 const mapGlbs = import.meta.glob("../assets/maps/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
-const MAP_ORDER = ["crossing", "ruins"];
+const MAP_ORDER = ["crossing", "ruins", "shoals"];
 const maps = Object.entries(mapJsons)
   .map(([path, d]) => {
     const id = path.split("/").pop()!.replace(".json", "");
