@@ -107,6 +107,7 @@ export interface HeroState {
   dead: boolean;
   respawnAt: number;
   morphAt?: number;
+  frozenCd?: Record<string, number>;
   morphBack?: boolean;
   morphed?: { type: string; level: number; xp: number; maxHp: number; damageMul: number; speed: number; path: Record<string, number[]>; picks: string[]; stepHeight: number; maxSlope: number };
   recallUsed?: boolean;

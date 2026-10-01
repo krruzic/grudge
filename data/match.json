@@ -10,7 +10,13 @@
   },
   "economy": {
     "start": 200,
-    "income": 3.5,
+    "income": 2.0,
+    "respawnCooldownPenalty": 2,
+    "padIncome": {
+      "home": 0.35,
+      "forward": 0.45,
+      "neutral": 0.45
+    },
     "loss": {
       "heroDeath": 50,
       "tower": 75
@@ -30,11 +36,11 @@
   "catchUp": {
     "resourceScale": 250,
     "structureWeight": 0.35,
-    "incomeBoost": 0.6,
-    "productionBoost": 0.4,
+    "incomeBoost": 1.2,
+    "productionBoost": 0.8,
     "bountyCut": 0.5,
     "respawnCut": 0.4,
-    "fortify": 0.3
+    "fortify": 0.45
   },
   "terrain": {
     "highGroundDelta": 1.0,
@@ -120,7 +126,12 @@
       "blessSpeed": 1.1,
       "blessXp": 250
     },
-    "morph": { "type": "herald", "holdSeconds": 0.6, "channelSeconds": 0.9, "revertCost": 50 },
+    "morph": {
+      "type": "herald",
+      "holdSeconds": 0.6,
+      "channelSeconds": 0.9,
+      "revertCost": 50
+    },
     "shop": {
       "radius": 5,
       "bomb": {

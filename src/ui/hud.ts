@@ -1362,7 +1362,8 @@ export class Hud {
     const hpFrac = core && !out ? core.hp / core.maxHp : 0;
     const wardFrac = ward > 0 && !sudden ? ward / w.data.structures.core.ward : 0;
     const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
-    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, army, capped, out].join("|");
+    const rate = `+${w.incomeOf(t).toFixed(1)}/S`;
+    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, army, capped, out, rate].join("|");
     let y = this.memo(ctx, `head${t}`, headKey, x0 - 8, y00 - 6, blockW + 16, 40, (c) => {
       const y = y00;
       const gx = ax(8);
@@ -1380,6 +1381,8 @@ export class Hud {
       cx += 8;
       cx += times(c, cx, y + 1);
       drawNum(c, coin, cx, y, "#ffd848", 1.15);
+      const rx = right ? cx - textWidth(coin, 1.15, true) - 8 - textWidth("×", 0.9) - 4 - textWidth(rate, 0.6) : cx + textWidth(coin, 1.15, true) + 4;
+      drawText(c, rate, Math.round(rx), y + 3, "#c8b070", 0.6);
       let bx = right ? ax(20, aw) : ax(20);
       armyIcon(c, bx + 3.5, y + 15, 3.6, col);
       bx += 9;

@@ -174,6 +174,10 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       e.status.stunUntil = 0;
       h.recallUsed = false;
       h.recallAt = undefined;
+      const pen = w.data.match.economy.respawnCooldownPenalty ?? 0;
+      const frozen = h.frozenCd ?? {};
+      for (const k of new Set([...Object.keys(frozen), "b", "r"])) h.cooldowns[k as keyof typeof h.cooldowns] = w.time + (frozen[k] ?? 0) + pen;
+      h.frozenCd = undefined;
       w.emit({ type: "spawn", id: e.id });
     }
     return;

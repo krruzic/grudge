@@ -43,7 +43,7 @@ const TALENTS = (talentJson as unknown as { heroes: Record<string, Record<"r" | 
 const U = unitJson as unknown as { waves: { everySeconds: number; spawnCost: Record<string, number> }; types: Record<string, { hp: number; bounty: number }>; popCap: number };
 const S = structJson as unknown as { types: Record<string, { name: string; cost: number; upgradeCost: number; mix?: Record<string, number> }>; buildSeconds: number; rubbleSeconds: number };
 const M = matchJson as unknown as {
-  economy: { start: number; income: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
+  economy: { start: number; income: number; padIncome?: Record<string, number>; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   arena: {
     shop: { bomb: { cost: number; coreDamage: number }; ward: { cost: number; cooldown: number }; cannon: { cost: number; shots: number } };
     relic: { firstSeconds: number; enshrineSeconds: number; stealSeconds: number; incomeMul: number };
@@ -280,7 +280,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       pages: [
         { title: "HITTING THINGS", text: "PRESS A TO SWING. KEEP PRESSING TO CHAIN A COMBO, THE LAST HIT IS ALWAYS THE BIG ONE. HOLD A TO CHARGE A HEAVY HIT. B, R AND Z ARE YOUR ABILITIES. Z ONLY WORKS WHEN THE METER IS FULL, AND IT FILLS AS YOU DEAL AND TAKE DAMAGE.", tip: "HITTING SOMEONE FROM BEHIND DEALS EXTRA DAMAGE. SO DOES HITTING THEM WHILE THEY'RE STUNNED.", art: { kind: "seal", glyph: "combo" } },
         { title: "NOT GETTING HIT", text: "HOLD L TO BLOCK: HITS FROM THE FRONT BARELY HURT, BUT YOU MOVE SLOWLY. L + X DODGES, A QUICK ROLL WHERE NOTHING CAN TOUCH YOU. IT HAS A SHORT COOLDOWN, SO DON'T SPAM IT. L + A SHOVES PEOPLE AWAY AND STUNS THEM FOR A MOMENT.", tip: "A BLOCKER IS VERY ANNOYING. SHOVE THEM, OR WALK AROUND AND HIT THEIR BACK.", art: { kind: "seal", glyph: "parry" } },
-        { title: "DYING", text: `YOU COME BACK AT YOUR KEEP AFTER A FEW SECONDS. EVERY DEATH COSTS YOUR TEAM ${e.loss.heroDeath} GOLD AND GIVES THE ENEMY A ${e.bounty.hero} GOLD BOUNTY, SO TRY NOT TO DO IT.`, tip: "IF YOU'RE BEHIND, YOU RESPAWN FASTER AND LOSE LESS GOLD. COMEBACKS ARE REAL.", art: { kind: "seal", glyph: "none", color: "#4a3a2a" } },
+        { title: "DYING", text: `YOU COME BACK AT YOUR KEEP AFTER A FEW SECONDS. EVERY DEATH COSTS YOUR TEAM ${e.loss.heroDeath} GOLD AND GIVES THE ENEMY A ${e.bounty.hero} GOLD BOUNTY, SO TRY NOT TO DO IT. YOUR MOVES COME BACK ON THE SAME COOLDOWNS YOU DIED WITH, PLUS ${(e as { respawnCooldownPenalty?: number }).respawnCooldownPenalty ?? 2} SECONDS, AND A HALF-CHARGED SUPER IS LOST. A FULL ONE YOU KEEP.`, tip: "IF YOU'RE BEHIND, YOU RESPAWN FASTER AND LOSE LESS GOLD. COMEBACKS ARE REAL.", art: { kind: "seal", glyph: "none", color: "#4a3a2a" } },
         { title: "CLIFFS AND HIGH GROUND", text: "YOU CAN DROP OFF A CLIFF, BUT YOU CAN'T CLIMB ONE. FIND THE RAMP. TROOPS SHOOTING UPHILL MISS MORE OFTEN, SO HIGH GROUND IS WORTH HOLDING.", tip: "GRIM IGNORES MOST OF THIS. HE CLIMBS LIKE A GOAT.", art: { kind: "seal", glyph: "peak" } },
       ],
     },
@@ -327,7 +327,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       title: "GOLD",
       glyph: "repair",
       pages: [
-        { title: "MAKING IT", text: `YOU EARN ${e.income} GOLD A SECOND JUST FOR EXISTING. KILLS PAY BOUNTIES: ${e.bounty.hero} FOR A HERO, ${e.bounty.structure} FOR A BUILDING, A FEW COINS PER SOLDIER.`, tip: "IF YOU'RE BEHIND, YOU EARN MORE AND THEY EARN LESS FROM KILLING YOU.", art: { kind: "seal", glyph: "repair" } },
+        { title: "MAKING IT", text: `YOUR KEEP EARNS ${e.income} GOLD A SECOND. EVERY FINISHED BUILDING ON A PAD ADDS MORE: ${e.padIncome?.home ?? 0} FOR A HOME PAD, ${e.padIncome?.forward ?? 0} FOR A FORWARD OR NEUTRAL ONE. YOUR RATE IS NEXT TO YOUR GOLD. KILLS PAY BOUNTIES: ${e.bounty.hero} FOR A HERO, ${e.bounty.structure} FOR A BUILDING, A FEW COINS PER SOLDIER.`, tip: "LOSE A FORWARD TOWER AND YOU LOSE ITS GOLD. LET THEM BUILD ON IT AND THEY GET IT. HOLD YOUR PADS.", art: { kind: "seal", glyph: "repair" } },
         { title: "LOSING IT", text: `EVERY TIME YOUR HERO DIES YOUR TEAM LOSES ${e.loss.heroDeath} GOLD. EVERY TOWER YOU LOSE COSTS ${e.loss.tower}. AND WHEN THE ENEMY FELLS ONE OF YOUR TOWERS, THEIR WHOLE ARMY RALLIES: +${pct(e.rally.damageMul)} DAMAGE AND +${pct(e.rally.speedMul)} SPEED FOR ${e.rally.seconds} SECONDS.`, tip: "THE SAME GOES FOR YOU. KNOCK A TOWER DOWN AND CHARGE WHILE THE RALLY LASTS.", art: { kind: "seal", glyph: "quake" } },
       ],
     },

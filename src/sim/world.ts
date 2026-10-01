@@ -901,8 +901,22 @@ export class World {
     this.teams.forEach((t, team) => {
       if (t.out) return;
       const tithe = this.arena.heldBy(team) ? this.data.match.arena.relic.incomeMul : 1;
-      t.resource += eco.income * (1 + t.catchUp * cu.incomeBoost) * tithe * dt;
+      t.resource += this.incomeOf(team) * (1 + t.catchUp * cu.incomeBoost) * tithe * dt;
     });
+  }
+
+  incomeOf(team: number): number {
+    const eco = this.data.match.economy;
+    let inc = eco.income;
+    const per = eco.padIncome;
+    if (!per) return inc;
+    for (const p of this.pads) {
+      if (!p.structureId) continue;
+      const s = this.get(p.structureId);
+      if (!s?.alive || s.team !== team || !s.structure?.ready) continue;
+      inc += per[p.zone] ?? 0;
+    }
+    return inc;
   }
 
   private updateStatusMods(): void {
@@ -1162,7 +1176,7 @@ export class World {
     if (src && src.alive && src.status.stealUntil && this.time < src.status.stealUntil) this.heal(src, amount * (src.status.stealMul ?? 0));
     const b = this.data.heroes.baseline;
     if (src?.hero) src.hero.meter = Math.min(b.superMax, src.hero.meter + amount * b.superPerDamageDealt);
-    if (target.hero) target.hero.meter = Math.min(b.superMax, target.hero.meter + amount * b.superPerDamageTaken);
+    if (target.hero && target.hp > 0) target.hero.meter = Math.min(b.superMax, target.hero.meter + amount * b.superPerDamageTaken);
     if (src?.hero) {
       src.hero.lastTargetId = target.id;
       src.hero.lastTargetAt = this.time;
@@ -1283,6 +1297,9 @@ export class World {
       target.hero.bomb = false;
       target.hero.aim = null;
       target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds * (1 - (victim?.catchUp ?? 0) * this.data.match.catchUp.respawnCut);
+      const hh = target.hero;
+      hh.frozenCd = Object.fromEntries(Object.entries(hh.cooldowns).map(([k, v]) => [k, Math.max(0, (v ?? 0) - this.time)]));
+      if (hh.meter < this.data.heroes.baseline.superMax) hh.meter = 0;
       killer.resource += bounty.hero * cut;
       killer.heroKills++;
       this.loseGold(target.team, this.data.match.economy.loss.heroDeath, "HERO DOWN");
