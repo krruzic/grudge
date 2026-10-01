@@ -586,6 +586,7 @@ export class Hud {
     this.drawClock(ctx, W, w, now);
     this.drawRelic(ctx, W, H, w, now, bannerOn && !this.bannerBig);
     if (bannerOn && !this.bannerBig) this.drawBanner(ctx, W, now);
+    this.mini = null;
     if (this.minimap) this.drawMinimap(ctx, W, H, w, now);
     if (this.card && now < this.card.until) this.drawCard(ctx, W, w, now);
     if (w.ffa) {
@@ -814,13 +815,8 @@ export class Hud {
       }
       px += isz + 2;
     }
-    let hgt = 13;
-    if (local && h.picks.length && Math.floor(now * 3) % 3 !== 0) {
-      const msg = "LEVEL UP! FLICK C LEFT / RIGHT";
-      drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.55)) : ax(0), y + 13, "#ffe060", 0.55);
-      hgt += 7;
-    }
-    return hgt;
+    void local;
+    return 13;
   }
 
   private drawBanner(ctx: CanvasRenderingContext2D, W: number, now: number): void {
@@ -896,6 +892,7 @@ export class Hud {
     const mh = t.depth * s;
     const x0 = Math.round(W / 2 - mw / 2);
     const y0 = Math.round(this.split >= 2 ? H / 2 - mh / 2 : H - mh - 12);
+    this.mini = { x: x0 - 4, y: y0 - 4, w: mw + 8, h: mh + 8 };
     const img = idx >= 0 ? this.portraits?.mapTop(idx, Math.round(t.width * 6), Math.round(t.depth * 6)) : null;
     const tc = (team: number) => this.teamColors[team] ?? this.teamColors[4] ?? "#9a9068";
     const P = (x: number, z: number): [number, number] => [x0 + x * s, y0 + z * s];
@@ -1472,31 +1469,64 @@ export class Hud {
     });
   }
 
+  private mini: { x: number; y: number; w: number; h: number } | null = null;
+
   private drawLearnCards(ctx: CanvasRenderingContext2D, W: number, cx: number, cy: number, w: World, heroId: number, right: boolean, now: number): void {
     const hero = w.getAny(heroId);
     const opt = hero?.alive ? options(w, hero) : null;
-    if (!opt) return;
-    const cw = 76;
-    const gap = 4;
-    const x0 = right ? Math.max(4, cx - 60 - cw * 2 - gap) : Math.min(W - cw * 2 - gap - 4, cx + 60);
-    const isz = 26;
-    const ds = 0.4;
-    const lines = opt.list.map((o) => [...hudWrap(o.desc, cw - 6, ds).map((l) => [l, "#4a3018"]), ...(o.combo ? hudWrap(o.combo, cw - 6, ds).map((l) => [l, "#8a1810"]) : [])]);
-    const nl = Math.max(...lines.map((l) => l.length));
-    const h = isz + 14 + nl * 5.5 + 3;
-    const y = Math.round(Math.min(cy - h / 2 + 4, 236 - h));
-    const title = opt.slot === "a" ? "CHOOSE YOUR A STYLE" : opt.slot === "z" ? "SUPER UPGRADE" : `EVOLVE ${opt.slot.toUpperCase()}`;
-    const pulse = Math.floor(now * 3) % 3 !== 0;
-    drawText(ctx, title, x0 + cw + gap / 2 - textWidth(title, 0.6) / 2, y - 9, pulse ? "#ffe060" : "#fff4c8", 0.6);
+    if (!opt || !hero?.hero) return;
+    const owned = new Set((["r", "b", "a", "z"] as const).flatMap((sl) => learned(w, hero, sl).map((t) => t.id)));
+    const r = 12;
+    const gap = 8;
+    const tw = r * 4 + gap;
+    let x0 = right ? Math.max(4, cx - 58 - tw) : Math.min(W - tw - 4, cx + 58);
+    let yc = Math.round(Math.min(cy, 240 - r - 8));
+    const m = this.mini;
+    if (m && x0 < m.x + m.w + 3 && x0 + tw > m.x - 3 && yc + r + 4 > m.y) yc = Math.round(m.y - r - 6);
+    const bob = Math.sin(now * 4) * 0.8;
     opt.list.forEach((o, k) => {
-      const x = x0 + k * (cw + gap);
-      parchment(ctx, x, y, cw, h);
-      talentIcon(ctx, o.id, x + (cw - isz) / 2, y + 3, isz);
-      const tag = k === 0 ? "<C" : "C>";
-      drawText(ctx, tag, k === 0 ? x + 2 : x + cw - 2 - textWidth(tag, 0.5), y + 2, "#8a1810", 0.5);
-      const s = Math.min(0.6, (cw - 4) / Math.max(1, textWidth(o.name, 1)));
-      drawText(ctx, o.name, x + cw / 2 - textWidth(o.name, s) / 2, y + isz + 5, "#3a2410", s);
-      lines[k].forEach(([l, c], j) => drawPlain(ctx, l, x + 3, y + isz + 13 + j * 5.5, c, ds));
+      const x = x0 + r + k * (r * 2 + gap);
+      const y = yc + (k ? -bob : bob);
+      const syn = (o.with ?? []).some((q) => owned.has(q.id));
+      ctx.save();
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(x, y, r + 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2a1c12";
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = syn ? 2 : 1.1;
+      ctx.strokeStyle = syn ? (Math.floor(now * 4) % 2 ? "#ff3a2a" : "#c81810") : "#c89a40";
+      ctx.beginPath();
+      ctx.arc(x, y, r - (syn ? 0.6 : 0.9), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      const im = talentImgs.get(o.id);
+      if (im?.complete && im.naturalWidth) {
+        const sz = r * 1.45;
+        onHiLayer(ctx, (c) => {
+          c.save();
+          c.beginPath();
+          c.arc(x, y, r - 1.6, 0, Math.PI * 2);
+          c.clip();
+          c.imageSmoothingEnabled = true;
+          c.drawImage(im, x - sz / 2, y - sz / 2, sz, sz);
+          c.restore();
+        });
+      }
+      const bx = x + (k ? r * 0.72 : -r * 0.72);
+      const by = y + r * 0.72;
+      padButton(ctx, bx, by, 3.6, "#e8c030", "");
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      const d = k ? 1 : -1;
+      ctx.moveTo(bx + d * 1.9, by);
+      ctx.lineTo(bx - d * 1.2, by - 1.7);
+      ctx.lineTo(bx - d * 1.2, by + 1.7);
+      ctx.closePath();
+      ctx.fill();
     });
   }
 
