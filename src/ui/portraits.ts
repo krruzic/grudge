@@ -41,7 +41,7 @@ export class Portraits {
     this.scene.add(sun, new THREE.HemisphereLight("#b8d4ff", "#6a5a3a", 1.6));
   }
 
-  private pose(type: string, team: THREE.Color): { root: THREE.Group; body: THREE.Object3D; mixer?: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; height: number; center: THREE.Vector3 } {
+  private pose(type: string, team: THREE.Color): { root: THREE.Group; body: THREE.Object3D; mixer?: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; height: number; center: THREE.Vector3; top: number } {
     const inst = this.heroes.create(type, team, "");
     const root = new THREE.Group();
     root.add(inst.body);
@@ -51,7 +51,18 @@ export class Portraits {
     const box = new THREE.Box3().setFromObject(inst.body);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    return { root, body: inst.body, mixer: inst.mixer, actions: inst.actions, height: Math.max(0.5, size.y), center };
+    let top = box.max.y;
+    const head = inst.body.getObjectByName("head");
+    if (head) {
+      const hp = head.getWorldPosition(new THREE.Vector3());
+      const toHead = hp.y - box.min.y;
+      const crown = hp.y + toHead * 0.22;
+      if (box.max.y > crown + toHead * 0.5) {
+        top = crown;
+        center.set(hp.x, (box.min.y + crown) / 2, hp.z);
+      }
+    }
+    return { root, body: inst.body, mixer: inst.mixer, actions: inst.actions, height: Math.max(0.5, top - box.min.y), center, top };
   }
 
   private shoot(root: THREE.Object3D, w: number, h: number, out: HTMLCanvasElement): void {
@@ -134,8 +145,7 @@ export class Portraits {
     const p = this.pose(type, NEUTRAL);
     p.root.rotation.y = 0.35;
     p.root.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(p.body);
-    const top = box.max.y;
+    const top = p.top;
     const headY = top - p.height * 0.2;
     const dist = p.height * 1.25;
     this.camera.position.set(p.center.x + dist * 0.12, headY + p.height * 0.02, p.center.z + dist);
