@@ -125,7 +125,6 @@
       }
     }
   },
-  "towerLimit": 3,
   "upgradeSeconds": 10,
   "rubbleSeconds": 20,
   "builderRadius": 3.6,

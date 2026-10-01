@@ -269,7 +269,6 @@ export interface StructureData {
   structureRadius: number;
   zoneRange: Record<string, number>;
   core: { hp: number; radius: number; ward: number };
-  towerLimit: number;
   upgradeSeconds: number;
   rubbleSeconds: number;
   builderRadius: number;

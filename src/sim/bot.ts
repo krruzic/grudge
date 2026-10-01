@@ -527,13 +527,10 @@ export class Bot {
   private pickBuild(w: World, me: Entity): void {
     const res = w.teams[me.team].resource;
     const myCore = w.core(me.team)!;
-    const towers = w.entities.filter((o) => o.alive && o.team === me.team && o.structure && o.structure.type !== "core" && w.data.structures.types[o.structure.type].class === "tower").length;
-    const towerRoom = towers < w.data.structures.towerLimit;
     const pads = w.pads
       .filter((p) => canBuildOn(p, me.team) && (w.time >= p.rubbleUntil || p.rubbleTeam !== me.team))
       .sort((a, b) => Math.hypot(a.x - myCore.transform.pos.x, a.z - myCore.transform.pos.z) - Math.hypot(b.x - myCore.transform.pos.x, b.z - myCore.transform.pos.z));
     for (const item of PLAN) {
-      if (!towerRoom && w.data.structures.types[item.type].class === "tower") continue;
       const pad = pads.find((p) => p.zone === item.zone && !p.structureId);
       if (!pad) continue;
       if (res >= buildCost(w, item.type, false, me.team)) {

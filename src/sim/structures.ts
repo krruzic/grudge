@@ -63,14 +63,6 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
     return false;
   }
   const type = kind === "default" ? w.heroDef(hero.hero!.type).defaultBuild : kind;
-  if (w.data.structures.types[type].class === "tower") {
-    const limit = w.data.structures.towerLimit * Math.max(1, w.players.filter((p) => p.team === team).length);
-    const alive = w.entities.filter((o) => o.alive && o.team === team && o.structure && o.structure.type !== "core" && w.data.structures.types[o.structure.type].class === "tower").length;
-    if (alive >= limit) {
-      w.emit({ type: "notice", team, text: `TOWER LIMIT ${limit}` });
-      return false;
-    }
-  }
   const cost = buildCost(w, type, false, team);
   if (ts.resource < cost) {
     w.emit({ type: "notice", team, text: `NEED ${cost}` });

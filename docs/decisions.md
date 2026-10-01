@@ -538,3 +538,5 @@
   - Felling an enemy tower rallies the whole army, heroes included: +20% damage and +15% speed for 10 s (`economy.rally`). It has its own timer (`status.rallyUntil`) so it can't be overwritten by War Cry, the Ogre blessing or the Herald's aura, and it shows with the existing buff marker.
   - Bots build more outposts (a longer build plan with forward and neutral barracks, a second range and a forward foundry) so they keep turning gold into troops.
   - `tools/rps.ts` compares troops at equal spawn cost.
+- Tower limit removed (supersedes "3 towers per hero"); pads and gold are the only limits.
+- Economy snapshot (18 bot matches across all maps, per team per minute): passive income +266, bounties +231, troop spawns −201, building/upgrades/shop −230, losses −51. About 18 troops spawn per team per minute, but only 4–8 are alive at once; banked gold sits around 150–200 and climbs to ~330 late.
