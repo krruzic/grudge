@@ -539,10 +539,10 @@ export class Hud {
     else if (r.state === "carried") {
       const c = w.getAny(r.carrier);
       col = c ? this.teamColors[c.team] : col;
-      text = r.channel > 0 ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}` : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE · TAKE IT HOME`;
+      text = r.channel > 0 ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}` : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
     } else if (r.state === "shrined") {
       const s = w.get(r.shrineId);
-      const where = s?.structure?.type === "core" ? "KEEP" : "TOWER";
+      const where = s?.structure?.type === "core" ? "KEEP" : s?.structure && w.data.structures.types[s.structure.type as "barracks"]?.class === "production" ? "OUTPOST" : "TOWER";
       col = this.teamColors[r.team] ?? col;
       text = r.channel > 0 ? `STEALING THE GRUDGE · ${Math.ceil(cfg.stealSeconds - r.channel)}` : `${r.team === 0 ? "BLUE" : "RED"} HOLDS THE GRUDGE · ${where}`;
     } else {

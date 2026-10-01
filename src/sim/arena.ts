@@ -113,7 +113,9 @@ export class Arena {
         const def = w.data.structures.types[o.structure.type];
         if (def.class !== "production" || !def.unit) continue;
         const up = o.structure.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
-        for (let k = 0; k < o.structure.level; k++) list.push({ type: def.unit, from: o, stat: grow * up });
+        const blessed = this.relic.state === "shrined" && this.relic.shrineId === o.id;
+        const rc = w.data.match.arena.relic;
+        for (let k = 0; k < o.structure.level + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
       }
       let n = 0;
       for (const item of list) {
@@ -225,7 +227,9 @@ export class Arena {
   isTowerOrKeep(o: Entity): boolean {
     const st = o.structure;
     if (!st || st.siege || !st.ready) return false;
-    return st.type === "core" || this.w.data.structures.types[st.type].class === "tower";
+    if (st.type === "core") return true;
+    const cls = this.w.data.structures.types[st.type]?.class;
+    return cls === "tower" || (cls === "production" && st.padIndex >= 0);
   }
 
   private shrineNear(c: Entity): Entity | null {
@@ -632,7 +636,8 @@ export class Arena {
     const fst = from?.structure;
     const upStat = fst && fst.type !== "core" && fst.level > 1 ? w.data.structures.types[fst.type].upgrade.unitStat ?? 1 : 1;
     const zone = fst && fst.padIndex >= 0 ? w.pads[fst.padIndex]?.zone : undefined;
-    const stat = from ? upStat * (zone && zone !== "home" ? sq.forwardStatMul : 1) : 1;
+    const blessed = !!from && this.relic.state === "shrined" && this.relic.shrineId === from.id;
+    const stat = from ? upStat * (zone && zone !== "home" ? sq.forwardStatMul : 1) * (blessed ? w.data.match.arena.relic.outpostStatMul : 1) : 1;
     const n = Math.min(sq.size, room);
     for (let i = 0; i < n; i++) {
       const a = ((i - (n - 1) / 2) * 0.9);
