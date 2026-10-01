@@ -967,42 +967,131 @@ def build_warden(images):
 def build_herald(images):
     B = rig(hip=0.86, chest=1.24, neck=1.44, head_top=1.84, sh_x=0.33, hand_z=0.78, leg_x=0.15)
     c = charkit.Char("herald", images)
-    PL = (1.35, 1.35, 1.45)
-    c.lathe([(0.0, 1.38), (0.2, 1.4), (0.25, 1.52), (0.26, 1.66), (0.23, 1.8), (0.12, 1.88), (0.0, 1.9)], (0, -0.02, 0), "steel", "head", segs=8, sy=1.08)
-    c.box((0.34, 0.04, 0.05), (0, -0.29, 1.64), "plain", "head", shade=(0.05, 0.05, 0.08))
-    c.box((0.04, 0.04, 0.2), (0, -0.29, 1.56), "plain", "head", shade=(0.05, 0.05, 0.08))
-    c.tbox((0.06, 0.3), (0.04, 0.34), 0.08, (0, -0.02, 1.86), "gold", "head")
-    for k in range(4):
-        c.limb((0, 0.0 + k * 0.02, 1.9), (0.0, 0.2 + k * 0.1, 2.14 - k * 0.12), 0.08 - k * 0.012, 0.02, "feather", "head", segs=4, shade=(1.0, 0.85, 0.3))
-    c.lathe([(0.2, 0.96), (0.26, 1.08), (0.3, 1.26), (0.29, 1.38), (0.2, 1.48)], (0, 0, 0), "steel", "chest", segs=8, sy=0.8)
+    ST = (1.0, 1.0, 1.05)
+    ST_D = (0.72, 0.72, 0.78)
+    VOID = (0.04, 0.04, 0.06)
+    LTH = (0.5, 0.35, 0.25)
+    PLUME = (1.15, 0.95, 0.35)
+
+    c.lathe([(0.0, 1.38), (0.16, 1.385), (0.225, 1.42), (0.25, 1.52), (0.26, 1.64), (0.25, 1.74), (0.22, 1.82), (0.14, 1.88), (0.0, 1.9)], (0, -0.02, 0), "steel", "head", segs=18, sy=1.08, shade=ST)
+    c.lathe([(0.258, 1.6), (0.268, 1.62), (0.268, 1.68), (0.258, 1.7)], (0, -0.02, 0), "gold", "head", segs=18, sy=1.08, caps=False)
+    c.tbox((0.32, 0.05), (0.32, 0.05), 0.035, (0, -0.29, 1.63), "plain", "head", shade=VOID)
+    c.tbox((0.035, 0.05), (0.035, 0.05), 0.16, (0, -0.29, 1.47), "plain", "head", shade=VOID)
     for sx in (-1, 1):
-        c.lathe([(0.0, -0.1), (0.14, -0.06), (0.17, 0.04), (0.12, 0.12), (0.0, 0.14)], (0.36 * sx, 0.0, 1.4), "steel", "chest", segs=7, sx=1.1, rot=(0, 0.3 * sx, 0))
-        c.lathe([(0.175, 0.0), (0.18, 0.04)], (0.36 * sx, 0.0, 1.4), "gold", "chest", segs=7, sx=1.1, caps=False, rot=(0, 0.3 * sx, 0))
-    c.tbox((0.36, 0.05), (0.3, 0.05), 1.02, (0, -0.27, 0.36), TEAM, "chest", rot=(0.06, 0, 0))
-    c.tbox((0.76, 0.08), (0.48, 0.1), 1.1, (0, 0.26, 0.28), TEAM, "chest", rot=(-0.14, 0, 0), shade=(0.8, 0.8, 0.8))
-    c.lathe([(0.24, 0.9), (0.26, 0.94), (0.26, 1.0), (0.24, 1.02)], (0, 0, 0), "leather", "hips", segs=8, sy=0.85, shade=(0.5, 0.35, 0.25))
+        for k in range(3):
+            for r in range(2):
+                c.ico(0.008, (0.07 * sx + 0.03 * k * sx, -0.285 + 0.01 * k, 1.5 - r * 0.035), "plain", "head", sub=1, shade=VOID)
+    c.lathe_ab([(0.02, 0.0), (0.025, 0.5), (0.02, 1.0)], (0, -0.285, 1.42), (0, -0.2, 1.9), "gold", "head", segs=6) if False else None
+    crest = [(0, -0.27, 1.72), (0, -0.2, 1.86), (0, -0.05, 1.93), (0, 0.12, 1.9), (0, 0.24, 1.78)]
+    tube(c, crest, [0.022, 0.026, 0.026, 0.024, 0.018], "gold", "head", segs=6)
+    for k in range(5):
+        base = Vector((0.0, -0.02 + k * 0.025, 1.92))
+        side = (k - 2) * 0.05
+        pts = [tuple(base + Vector((side * u, 0.32 * u, 0.22 * math.sin(u * 2.4) - 0.1 * u * u))) for u in [t / 6 for t in range(7)]]
+        blade(c, pts, [0.015, 0.04, 0.055, 0.055, 0.045, 0.028, 0.004], "feather", "head", thick=0.006, side=(1, 0, 0.2), shade=PLUME if k % 2 == 0 else (1.2, 1.2, 1.15))
+    ring(c, 0.2, 0.03, (0, -0.01, 1.42), "steel", "chest", segs=16, tsegs=5, shade=ST_D)
+    ring(c, 0.18, 0.025, (0, -0.01, 1.46), "steel", "chest", segs=16, tsegs=5, shade=ST)
+
+    folded(c, [(0.2, 0.96), (0.26, 1.06), (0.3, 1.22), (0.3, 1.34), (0.26, 1.42), (0.18, 1.48)], (0, 0, 0), "steel", "chest", segs=18, folds=1, amp=0.04, phase=-math.pi, sy=0.8, shade=ST)
+    c.limb((0, -0.255, 0.98), (0, -0.25, 1.38), 0.015, 0.015, "steel", "chest", segs=5, shade=(1.2, 1.2, 1.25))
+    for k in range(6):
+        a = math.radians(-90 + (k - 2.5) * 22)
+        c.ico(0.012, (math.cos(a) * 0.3, math.sin(a) * 0.24, 1.36), "gold", "chest", sub=1)
+    front = [[(x, -0.265 - 0.02 * (1 - z), z) for x in (-0.17, -0.06, 0.06, 0.17)] for z in (1.36, 1.0, 0.7, 0.42)]
+    front[-1] = [(x, y, z - (0.06 if k in (1, 2) else 0.0)) for k, (x, y, z) in enumerate(front[-1])]
+    sheet(c, front, TEAM, "chest", thick=0.015)
+    for col in (0, -1):
+        tube(c, [r[col] for r in front], [0.012] * len(front), "gold", "chest", segs=5)
+    tube(c, front[-1], [0.012] * 4, "gold", "chest", segs=5)
+    crest_pts = [(0, -0.3, 1.18), (0.07, -0.3, 1.16), (0.07, -0.3, 1.02), (0, -0.3, 0.94), (-0.07, -0.3, 1.02), (-0.07, -0.3, 1.16)]
+    tube(c, crest_pts + [crest_pts[0]], [0.012] * 7, "gold", "chest", segs=5, cap=False)
+    c.ico(0.035, (0, -0.305, 1.07), "gold", "chest", sub=2, scale=(1.0, 0.5, 1.2))
+    back = [[(x, 0.25 + 0.02 * (1 - z), z) for x in (-0.24, -0.08, 0.08, 0.24)] for z in (1.36, 1.0, 0.6, 0.3)]
+    back[-1] = [(x, y, z - (0.08 if k in (1, 2) else 0.0)) for k, (x, y, z) in enumerate(back[-1])]
+    sheet(c, back, TEAM, "chest", thick=0.015, shade=(0.8, 0.8, 0.8))
+    for sx in (-1, 1):
+        for k, (r, z) in enumerate(((0.18, 1.44), (0.165, 1.37), (0.15, 1.3))):
+            c.lathe([(0.0, 0.06), (r * 0.6, 0.05), (r, 0.0), (r * 0.95, -0.03), (r * 0.6, -0.02)], (0.37 * sx, 0.0, z), "steel", "chest", segs=12, sx=1.1, rot=(0, 0.35 * sx, 0), shade=ST if k == 0 else ST_D)
+            c.lathe([(r * 1.0, -0.005), (r * 1.03, -0.02), (r * 0.98, -0.035)], (0.37 * sx, 0.0, z), "gold", "chest", segs=12, sx=1.1, caps=False, rot=(0, 0.35 * sx, 0))
+
+    c.lathe([(0.24, 0.9), (0.265, 0.94), (0.265, 1.0), (0.24, 1.02)], (0, 0, 0), "leather", "hips", segs=16, sy=0.85, shade=LTH)
     c.box((0.12, 0.05, 0.1), (0, -0.25, 0.95), "gold", "hips")
-    c.lathe([(0.24, 0.92), (0.28, 0.76), (0.29, 0.68)], (0, 0, 0), "steel", "hips", segs=8, sy=0.85)
+    c.tbox((0.1, 0.06), (0.09, 0.05), 0.11, (0.2, -0.17, 0.85), "leather", "hips", rot=(0, 0, 0.3), shade=LTH)
+    for k in range(3):
+        z = 0.88 - k * 0.07
+        c.lathe([(0.25 + k * 0.012, 0.0), (0.27 + k * 0.012, -0.07)], (0, 0, z), "steel", "hips", segs=16, sy=0.85, caps=False, shade=ST if k % 2 == 0 else ST_D)
+
     for side, sx in (("R", -1), ("L", 1)):
         a0, a1, _ = B[f"arm_{side}"]
         f0, f1, _ = B[f"forearm_{side}"]
         t0, t1, _ = B[f"thigh_{side}"]
         s0, s1, _ = B[f"shin_{side}"]
-        c.limb(a0, a1, 0.08, 0.075, "steel", f"arm_{side}", segs=6)
-        c.ico(0.08, a1, "steel", f"forearm_{side}")
-        c.lathe_ab([(0.07, 0.0), (0.08, 0.6), (0.1, 0.9), (0.1, 1.0)], f0, f1, "steel", f"forearm_{side}", segs=6)
-        c.ico(0.085, hand_pos(B, side), "steel", f"hand_{side}")
-        c.limb(t0, t1, 0.1, 0.09, "steel", f"thigh_{side}", segs=6)
-        c.ico(0.09, t1, "steel", f"shin_{side}")
-        c.lathe([(0.09, 0.0), (0.1, 0.3), (0.09, 0.44)], (s1[0], -0.01, 0.04), "steel", f"shin_{side}", segs=7)
-        c.tbox((0.16, 0.32), (0.12, 0.16), 0.1, (s1[0], -0.1, 0.0), "steel", f"shin_{side}", shift=(0, 0.06))
-    c.limb((0.3, 0.3, 0.3), (0.3, 0.3, 3.0), 0.035, 0.035, "wood", "chest", segs=5)
-    c.cone(0.07, 0.0, 0.2, (0.3, 0.3, 3.08), "gold", "chest", segs=4)
-    c.box((0.7, 0.04, 0.05), (0.3, 0.3, 2.9), "gold", "chest")
-    c.box((0.64, 0.03, 0.78), (0.3, 0.3, 2.5), TEAM, "chest")
+        c.lathe_ab([(0.08, 0.0), (0.085, 0.5), (0.078, 1.0)], a0, a1, "steel", f"arm_{side}", segs=10, shade=ST)
+        c.ico(0.075, a1, "steel", f"forearm_{side}", sub=2, shade=ST_D)
+        c.cone(0.07, 0.0, 0.08, (a1[0], a1[1] + 0.06, a1[2]), "steel", f"forearm_{side}", segs=8, rot=(-1.57, 0, 0), shade=ST)
+        c.lathe_ab([(0.072, 0.0), (0.078, 0.55), (0.1, 0.85), (0.105, 1.0)], f0, f1, "steel", f"forearm_{side}", segs=10, shade=ST)
+        c.lathe_ab([(0.105, 0.95), (0.11, 1.0)], f0, f1, "gold", f"forearm_{side}", segs=10, caps=False)
+        hx, hy, hz = hand_pos(B, side)
+        c.ico(0.075, (hx, hy, hz + 0.02), "steel", f"hand_{side}", sub=2, scale=(0.95, 1.0, 1.1), shade=ST_D)
+        for k in range(4):
+            fx = hx + (k - 1.5) * 0.026
+            tube(c, [(fx, hy - 0.04, hz + 0.01), (fx, hy - 0.08, hz - 0.03), (fx + (k - 1.5) * 0.005, hy - 0.07, hz - 0.09)], [0.016, 0.014, 0.01], "steel", f"hand_{side}", segs=5, shade=ST)
+        tube(c, [(hx - 0.05 * sx, hy - 0.02, hz + 0.04), (hx - 0.06 * sx, hy - 0.07, hz), (hx - 0.04 * sx, hy - 0.08, hz - 0.03)], [0.017, 0.014, 0.01], "steel", f"hand_{side}", segs=5, shade=ST)
+        c.lathe_ab([(0.1, 0.0), (0.105, 0.5), (0.092, 1.0)], t0, t1, "steel", f"thigh_{side}", segs=10, shade=ST)
+        c.ico(0.085, t1, "steel", f"shin_{side}", sub=2, shade=ST)
+        c.lathe([(0.0, 0.0), (0.07, 0.0), (0.06, 0.06), (0.0, 0.07)], (t1[0], t1[1] - 0.06, t1[2]), "steel", f"shin_{side}", segs=10, rot=(1.57, 0, 0), shade=ST_D)
+        c.lathe([(0.088, 0.0), (0.098, 0.12), (0.104, 0.3), (0.095, 0.44), (0.09, 0.5)], (s1[0], -0.01, 0.04), "steel", f"shin_{side}", segs=12, shade=ST)
+        c.limb((s1[0], -0.11, 0.1), (s1[0], -0.1, 0.48), 0.012, 0.012, "steel", f"shin_{side}", segs=5, shade=(1.2, 1.2, 1.25))
+        for k in range(4):
+            c.tbox((0.15 - k * 0.006, 0.1), (0.14 - k * 0.006, 0.09), 0.06, (s1[0], -0.04 - k * 0.07, 0.0 + k * 0.004), "steel", f"shin_{side}", rot=(0.15, 0, 0), shade=ST if k % 2 == 0 else ST_D)
+        c.cone(0.06, 0.0, 0.1, (s1[0], -0.3, 0.035), "steel", f"shin_{side}", segs=8, rot=(1.57, 0, 0), shade=ST)
+
+    px, py = 0.3, 0.3
+    c.lathe_ab([(0.035, 0.0), (0.035, 1.0)], (px, py, 0.3), (px, py, 3.0), "wood", "chest", segs=8)
+    for z in (1.0, 1.3):
+        ring(c, 0.045, 0.012, (px, py, z), "leather", "chest", segs=10, shade=LTH)
+    tube(c, [(px, py - 0.05, 1.3), (0.1, 0.22, 1.42), (-0.2, -0.1, 1.42), (-0.25, -0.24, 1.2)], [0.02] * 4, "leather", "chest", segs=5, shade=LTH)
+    c.lathe([(0.0, 0.0), (0.05, 0.02), (0.06, 0.06), (0.03, 0.18), (0.0, 0.28)], (px, py, 3.0), "gold", "chest", segs=8)
+    c.lathe_ab([(0.02, 0.0), (0.02, 1.0)], (px - 0.36, py, 2.9), (px + 0.36, py, 2.9), "gold", "chest", segs=8)
+    for sx in (-1, 1):
+        c.ico(0.035, (px + 0.37 * sx, py, 2.9), "gold", "chest", sub=1)
+    rows = []
+    for zi in range(7):
+        t = zi / 6
+        z = 2.88 - t * 0.85
+        row = []
+        for xi in range(5):
+            u = xi / 4
+            x = px - 0.32 + u * 0.64
+            y = py + 0.015 * math.sin(u * math.pi * 2 + t * 3)
+            if zi == 6:
+                z2 = z + (0.22 if xi == 2 else 0.11 if xi in (1, 3) else 0.0)
+            else:
+                z2 = z
+            row.append((x, y, z2))
+        rows.append(row)
+    sheet(c, rows, TEAM, "chest", thick=0.012)
+    for k in range(9):
+        x = px - 0.32 + k * 0.08
+        c.limb((x, py - 0.012, 2.06 + (0.22 - abs(k - 4) * 0.055 if 2 <= k <= 6 else 0.0) - 0.01), (x, py - 0.012, 2.0 + (0.22 - abs(k - 4) * 0.055 if 2 <= k <= 6 else 0.0) - 0.01), 0.008, 0.004, "gold", "chest", segs=4) if False else None
+    tube(c, rows[-1], [0.012] * 5, "gold", "chest", segs=5)
+    tube(c, [r[0] for r in rows], [0.012] * 7, "gold", "chest", segs=5)
+    tube(c, [r[-1] for r in rows], [0.012] * 7, "gold", "chest", segs=5)
+    crest_b = [(px, py - 0.02, 2.66), (px + 0.1, py - 0.02, 2.62), (px + 0.1, py - 0.02, 2.44), (px, py - 0.02, 2.36), (px - 0.1, py - 0.02, 2.44), (px - 0.1, py - 0.02, 2.62)]
+    tube(c, crest_b + [crest_b[0]], [0.014] * 7, "gold", "chest", segs=5, cap=False)
+    c.ico(0.05, (px, py - 0.025, 2.52), "gold", "chest", sub=2, scale=(1.0, 0.4, 1.2))
+
     hx, hy, hz = hand_pos(B)
-    c.box((0.2, 0.05, 0.05), (hx, hy - 0.02, hz - 0.06), "gold", "hand_R")
-    c.lathe_ab([(0.035, 0.0), (0.03, 0.85), (0.0, 1.0)], (hx, hy - 0.02, hz - 0.08), (hx, hy - 0.35, hz - 0.72), "steel", "hand_R", segs=4, sy=0.4)
+    gy = hy - 0.02
+    c.lathe_ab([(0.02, 0.0), (0.024, 0.5), (0.02, 1.0)], (hx - 0.12, gy, hz - 0.075), (hx + 0.12, gy, hz - 0.075), "gold", "hand_R", segs=8)
+    for sx in (-1, 1):
+        c.ico(0.025, (hx + 0.125 * sx, gy, hz - 0.075), "gold", "hand_R", sub=1)
+    c.lathe_ab([(0.024, 0.0), (0.026, 0.5), (0.024, 1.0)], (hx, gy + 0.01, hz - 0.06), (hx, gy + 0.03, hz + 0.1), "leather", "hand_R", segs=8, shade=LTH)
+    c.ico(0.035, (hx, gy + 0.035, hz + 0.13), "gold", "hand_R", sub=2)
+    tip = Vector((hx, hy - 0.35, hz - 0.72))
+    base = Vector((hx, gy, hz - 0.09))
+    pts = [tuple(base + (tip - base) * (k / 6)) for k in range(7)]
+    blade(c, pts, [0.038, 0.037, 0.036, 0.034, 0.03, 0.02, 0.003], "steel", "hand_R", thick=0.01, side=(1, 0, 0), shade=(1.4, 1.4, 1.5))
     return c, B
 
 
