@@ -150,9 +150,9 @@ def build_engineer(images):
     c.limb((0.15, -0.42, 0.86), (0.15, -0.43, 0.98), 0.012, 0.012, "wood", "spine", segs=4)
     c.box((0.06, 0.03, 0.03), (0.15, -0.43, 0.99), "iron", "spine")
     for sx in (-1, 1):
-        c.box((0.05, 0.03, 0.42), (0.17 * sx, -0.4, 0.98), "leather", "chest", rot=(0, 0.2 * sx, 0), shade=(0.6, 0.5, 0.4))
-        c.ico(0.025, (0.17 * sx, -0.425, 0.82), "gold", "chest", sub=1)
-        c.ico(0.025, (0.2 * sx, -0.4, 1.15), "gold", "chest", sub=1)
+        strap = [(0.16 * sx, -0.395, 1.0), (0.2 * sx, -0.36, 1.1), (0.24 * sx, -0.25, 1.18), (0.25 * sx, 0.0, 1.22), (0.22 * sx, 0.25, 1.12)]
+        tube(c, strap, [0.026] * 5, "cloth", "chest", segs=6, shade=YEL_D)
+        c.ico(0.028, (0.16 * sx, -0.405, 0.99), "gold", "chest", sub=1)
     c.lathe([(0.43, 0.64), (0.455, 0.67), (0.455, 0.77), (0.43, 0.8)], (0, 0.01, 0), "leather", "hips", segs=18, sy=0.88, shade=(0.6, 0.45, 0.35))
     c.box((0.15, 0.06, 0.13), (0, -0.42, 0.72), "gold", "hips")
     c.box((0.08, 0.065, 0.07), (0, -0.425, 0.72), "leather", "hips", shade=LTH_D)
@@ -682,36 +682,37 @@ def build_duelist(images):
 
     SKIN_D = (0.82, 0.68, 0.62)
     LIP = (0.78, 0.46, 0.4)
-    c.limb(tuple(surf(-0.55, 0.27, 0.0)), tuple(surf(0.55, 0.27, 0.0)), 0.015, 0.015, "flesh", "head", segs=6)
     for sx in (-1, 1):
         e = surf(0.36 * sx, 0.13, 0.0)
-        c.ico(1.0, tuple(e), "plain", "head", sub=2, scale=(0.027, 0.009, 0.012), shade=(1.2, 1.17, 1.1))
-        c.ico(1.0, tuple(e + Vector((0.003 * -sx, -0.0075, 0.0))), "plain", "head", sub=1, scale=(0.0095, 0.004, 0.011), shade=(0.32, 0.2, 0.1))
-        c.ico(1.0, tuple(e + Vector((0.003 * -sx, -0.011, 0.0))), "plain", "head", sub=1, scale=(0.0048, 0.002, 0.0055), shade=(0.02, 0.02, 0.02))
-        c.ico(0.0022, tuple(e + Vector((0.0015 * -sx, -0.0125, 0.005))), "plain", "head", sub=1, shade=(1.6, 1.6, 1.6))
-        lid = [e + Vector((-0.029 * sx * k, -0.004 - 0.004 * (1 - abs(k)), 0.009 + 0.005 * (1 - abs(k)))) for k in (-1, -0.5, 0, 0.5, 1)]
+        c.ico(1.0, tuple(e), "plain", "head", sub=2, scale=(0.031, 0.01, 0.0145), shade=(1.2, 1.17, 1.1))
+        c.ico(1.0, tuple(e + Vector((0.003 * -sx, -0.0085, 0.0))), "plain", "head", sub=1, scale=(0.011, 0.0045, 0.0128), shade=(0.32, 0.2, 0.1))
+        c.ico(1.0, tuple(e + Vector((0.003 * -sx, -0.0125, 0.0))), "plain", "head", sub=1, scale=(0.0055, 0.0022, 0.0064), shade=(0.02, 0.02, 0.02))
+        c.ico(0.0026, tuple(e + Vector((0.0015 * -sx, -0.014, 0.006))), "plain", "head", sub=1, shade=(1.6, 1.6, 1.6))
+        lid = [e + Vector((-0.033 * sx * k, -0.004 - 0.004 * (1 - abs(k)), 0.011 + 0.005 * (1 - abs(k)))) for k in (-1, -0.5, 0, 0.5, 1)]
         tube(c, lid, [0.004, 0.006, 0.007, 0.006, 0.004], "flesh", "head", segs=5, shade=SKIN_D, cap=False)
         brow = [surf(0.17 * sx, 0.32, 0.02), surf(0.34 * sx, 0.37, 0.022), surf(0.52 * sx, 0.33, 0.016)]
         tube(c, brow, [0.009, 0.011, 0.006], "hair", "head", segs=5, shade=HAIR)
-    bridge = surf(0.0, 0.18, 0.0)
-    tip = surf(0.0, -0.22, 0.036)
-    c.lathe_ab([(0.013, 0.0), (0.015, 0.4), (0.019, 0.75), (0.023, 0.88), (0.0, 1.0)], tuple(bridge), tuple(tip), "flesh", "head", segs=8, sx=0.85)
+    bridge = surf(0.0, 0.16, 0.002)
+    tip = surf(0.0, -0.2, 0.032)
+    c.lathe_ab([(0.011, 0.0), (0.012, 0.35), (0.015, 0.7), (0.0, 1.0)], tuple(bridge), tuple(tip), "flesh", "head", segs=8, sx=0.8)
+    c.ico(1.0, tuple(tip), "flesh", "head", sub=2, scale=(0.017, 0.016, 0.015))
     for sx in (-1, 1):
-        c.ico(1.0, tuple(tip + Vector((0.018 * sx, 0.016, 0.006))), "flesh", "head", sub=1, scale=(0.014, 0.01, 0.01), shade=SKIN_D)
+        c.ico(1.0, tuple(tip + Vector((0.016 * sx, 0.012, -0.007))), "flesh", "head", sub=2, scale=(0.012, 0.012, 0.01), shade=(0.94, 0.82, 0.76))
+        c.ico(1.0, tuple(tip + Vector((0.008 * sx, 0.004, -0.015))), "plain", "head", sub=1, scale=(0.0055, 0.006, 0.0025), shade=(0.12, 0.06, 0.05))
     mz = -0.5
-    up = [surf(-0.2, mz + 0.02, 0.008), surf(-0.08, mz + 0.04, 0.012), surf(0.0, mz + 0.035, 0.013), surf(0.08, mz + 0.04, 0.012), surf(0.2, mz + 0.02, 0.008)]
-    tube(c, up, [0.003, 0.005, 0.005, 0.005, 0.003], "flesh", "head", segs=6, shade=(0.72, 0.48, 0.44))
-    lo = [surf(-0.15, mz - 0.03, 0.008), surf(0.0, mz - 0.05, 0.014), surf(0.15, mz - 0.03, 0.008)]
-    tube(c, lo, [0.004, 0.007, 0.004], "flesh", "head", segs=6, shade=(0.86, 0.62, 0.56))
+    up = [surf(-0.27, mz + 0.0, 0.006), surf(-0.12, mz + 0.03, 0.012), surf(0.0, mz + 0.025, 0.014), surf(0.12, mz + 0.03, 0.012), surf(0.27, mz + 0.0, 0.006)]
+    tube(c, up, [0.004, 0.007, 0.007, 0.007, 0.004], "flesh", "head", segs=6, shade=(0.72, 0.46, 0.42))
+    lo = [surf(-0.22, mz - 0.005, 0.006), surf(-0.1, mz - 0.03, 0.012), surf(0.0, mz - 0.035, 0.014), surf(0.1, mz - 0.03, 0.012), surf(0.22, mz - 0.005, 0.006)]
+    tube(c, lo, [0.004, 0.008, 0.009, 0.008, 0.004], "flesh", "head", segs=6, shade=(0.84, 0.58, 0.52))
     c.ico(1.0, tuple(surf(0.0, -0.84, 0.004)), "flesh", "head", sub=2, scale=(0.045, 0.02, 0.03))
     for sx in (-1, 1):
-        must = [surf(0.02 * sx, mz + 0.11, 0.018), surf(0.14 * sx, mz + 0.09, 0.016), surf(0.25 * sx, mz + 0.06, 0.012), surf(0.32 * sx, mz + 0.12, 0.008)]
-        tube(c, must, [0.008, 0.009, 0.006, 0.003], "hair", "head", segs=5, shade=HAIR)
+        must = [surf(0.02 * sx, mz + 0.12, 0.02), surf(0.16 * sx, mz + 0.1, 0.019), surf(0.3 * sx, mz + 0.06, 0.014), surf(0.4 * sx, mz + 0.14, 0.008), surf(0.38 * sx, mz + 0.22, 0.006)]
+        tube(c, must, [0.012, 0.014, 0.01, 0.006, 0.002], "hair", "head", segs=6, shade=HAIR)
         c.ico(0.06, (0.19 * sx, -0.01, 1.6), "flesh", "head", scale=(0.32, 0.6, 0.95), sub=2)
     c.lathe([(0.19, 1.735), (0.2, 1.77), (0.17, 1.82), (0.1, 1.855), (0.0, 1.865)], (0, 0.02, 0), "hair", "head", segs=16, sy=1.12, shade=HAIR)
     back = cloak_rows(1.78, 1.4, 0.2, 0.235, math.radians(5), math.radians(175), 12, 3, cy=0.02)
     sheet(c, back, "hair", "head", thick=0.04, shade=HAIR)
-    for row, (rad, z0, ln, cnt, a0, a1) in enumerate(((0.215, 1.66, 0.42, 12, -42, 222), (0.24, 1.58, 0.34, 9, -25, 205))):
+    for row, (rad, z0, ln, cnt, a0, a1) in enumerate(((0.215, 1.66, 0.42, 11, -42, 222), (0.24, 1.58, 0.34, 8, -25, 205))):
         for k in range(cnt):
             a = math.radians(a0 + (a1 - a0) * k / (cnt - 1))
             dx, dy = math.cos(a), math.sin(a)
@@ -719,17 +720,18 @@ def build_duelist(images):
             l = ln * (0.85 + 0.15 * math.sin(k * 2.1 + row))
             bot = Vector((dx * (rad + 0.06), 0.03 + dy * (rad + 0.06), z0 - l))
             ph = k * 1.7 + row
-            turns = 3.2
-            n = 26
+            turns = 5.5
+            n = 34
             pts = []
             rad_t = []
             for i in range(n + 1):
                 t = i / n
-                hr = 0.022 * (0.4 + 0.6 * min(1.0, t * 4))
+                hr = 0.017 * (0.4 + 0.6 * min(1.0, t * 4))
                 ang = ph + t * turns * math.tau
                 pts.append(top + (bot - top) * t + Vector((math.cos(ang) * hr, math.sin(ang) * hr, 0)))
                 rad_t.append((0.027 - row * 0.003) * (1 - 0.35 * t))
-            tube(c, pts, rad_t, "hair", "head", segs=6, shade=HAIR)
+            tube(c, pts, rad_t, "hair", "head", segs=5, shade=HAIR)
+            tube(c, [top, (top + bot) / 2, bot], [(0.024 - row * 0.003), (0.02 - row * 0.002), 0.012], "hair", "head", segs=6, shade=(HAIR[0] * 0.8, HAIR[1] * 0.8, HAIR[2] * 0.8))
     tilt = (-0.12, 0.0, -0.1)
     c.lathe([(0.0, 0.0), (0.27, 0.0), (0.45, 0.01), (0.48, 0.04), (0.44, 0.05), (0.27, 0.06), (0.26, 0.14), (0.25, 0.22), (0.2, 0.28), (0.1, 0.3), (0.0, 0.3)],
             (0, 0.04, 1.75), "cloth", "head", segs=20, sy=0.9, shade=HAT, rot=tilt)
