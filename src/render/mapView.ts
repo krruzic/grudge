@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { layerTexture } from "./mergedModel";
 import type { Terrain } from "../sim/terrain";
+import { surroundFor } from "../sim/surround";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./terrainMesh";
 
 export interface MapView {
@@ -140,13 +141,14 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   const texLoader = new THREE.TextureLoader();
   const [gltf, ...texs] = await Promise.all([
     new GLTFLoader().loadAsync(url),
-    ...(["grass", "dirt", "rock", "cobble", "water"] as const).map((k) => texLoader.loadAsync(textureUrls[k])),
+    ...(["grass", "dirt", "rock", "cobble", "water", "sand"] as const).map((k) => texLoader.loadAsync(textureUrls[k] as string)),
   ]);
-  const [grass, dirt, rock, cobble, water] = texs;
+  const [grass, dirt, rock, cobble, water, sand] = texs;
   const root = new THREE.Group();
   root.add(gltf.scene);
-  root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water }, light));
-  const waterMesh = buildWaterMesh(terrain, waterMaterial(water));
+  const sur = surroundFor(terrain);
+  root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water, sand }, light, sur));
+  const waterMesh = buildWaterMesh(terrain, waterMaterial(water), sur);
   root.add(waterMesh);
   const fx: MapView["fx"] = [];
   const cache = new Map<THREE.Material, THREE.Material>();

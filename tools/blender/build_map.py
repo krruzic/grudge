@@ -39,10 +39,10 @@ FLAG_DIRT, FLAG_PAVING, FLAG_GRASS = 1, 2, 4
 TEAM = [texgen.hexc("#3a6cff"), texgen.hexc("#ff3a2a")]
 
 MATS = ["grass", "dirt", "cobble", "cliff", "brick", "wood", "leaves", "pine",
-        "bark", "tallgrass", "cloth", "gold", "iron", "roof"]
+        "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch"]
 TEX_METERS = {"grass": 7, "dirt": 6, "cobble": 4, "cliff": 5, "brick": 3.5, "wood": 2.5,
               "leaves": 3, "pine": 3, "bark": 2, "tallgrass": 1, "cloth": 1.5, "gold": 2, "iron": 1.5,
-              "roof": 2.5}
+              "roof": 2.5, "thatch": 2.0}
 
 
 def G(x, y, z):
@@ -152,7 +152,7 @@ def make_materials(images):
         out = nt.nodes.new("ShaderNodeOutputMaterial")
         bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
         tex = nt.nodes.new("ShaderNodeTexImage")
-        tex.image = images[name]
+        tex.image = images.get(name) or texgen.load_photo(name, os.path.join(ROOT, "assets", "textures"))
         nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
         if name == "tallgrass":
             nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
@@ -179,6 +179,7 @@ class MapBuilder:
         self.grass = Builder("TallGrass")
         self.tufts = Builder("Tufts")
         self.fx = []
+        self.sur = g.get("surround")
 
     def idx(self, x, z):
         return z * self.W + x if 0 <= x < self.W and 0 <= z < self.D else -1
@@ -203,9 +204,23 @@ class MapBuilder:
     def corners(self, x, z):
         return [self.vh(x, z), self.vh(x + 1, z), self.vh(x + 1, z + 1), self.vh(x, z + 1)]
 
+    def outer_h(self, x, z):
+        s = self.sur
+        if not s:
+            return self.rim
+        fx = min(s["nx"] - 1e-3, max(0.0, (x - s["x0"]) / s["step"]))
+        fz = min(s["nz"] - 1e-3, max(0.0, (z - s["z0"]) / s["step"]))
+        i, j = int(fx), int(fz)
+        u, v = fx - i, fz - j
+        H = s["heights"]
+        w = s["nx"] + 1
+        a, b = H[j * w + i], H[j * w + i + 1]
+        c, d = H[(j + 1) * w + i], H[(j + 1) * w + i + 1]
+        return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v
+
     def ground_h(self, x, z):
         if x < 0 or z < 0 or x > self.W or z > self.D:
-            return self.rim
+            return self.outer_h(x, z)
         cx = min(self.W - 1, max(0, int(math.floor(x))))
         cz = min(self.D - 1, max(0, int(math.floor(z))))
         fx, fz = x - cx, z - cz
@@ -568,14 +583,15 @@ class MapBuilder:
             self.fx.append(("core_%d" % c.get("team", 0), (c["x"], self.ground_h(c["x"], c["z"]), c["z"])))
 
     def ao_ground(self, coll):
-        m = 20
+        m = 88 if self.sur else 20
+        st = 1
         verts, faces = [], []
-        xs = list(range(-m, self.W + m + 1))
-        zs = list(range(-m, self.D + m + 1))
+        xs = list(range(-m, self.W + m + 1, st))
+        zs = list(range(-m, self.D + m + 1, st))
         for z in zs:
             for x in xs:
                 inside = 0 <= x <= self.W and 0 <= z <= self.D
-                verts.append(tuple(G(x, self.vh(x, z) if inside else self.rim, z)))
+                verts.append(tuple(G(x, self.vh(x, z) if inside else self.outer_h(x, z), z)))
         n = len(xs)
         for j in range(len(zs) - 1):
             for i in range(n - 1):
@@ -654,7 +670,14 @@ def main():
     mb.bridges()
     mb.place_props()
     mb.cliff_rubble()
-    mb.rim_forest()
+    if mb.sur:
+        import surround_kit
+        importlib.reload(surround_kit)
+        missing = surround_kit.build(mb, mb.sur["features"])
+        if missing:
+            print("surround: no builder for", missing)
+    else:
+        mb.rim_forest()
     mb.vegetation()
 
     objs = {b.name: b.build(coll) for b in (mb.props, mb.grass, mb.tufts) if b.faces}

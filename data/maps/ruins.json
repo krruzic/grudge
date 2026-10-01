@@ -5,7 +5,8 @@
  "width": 48,
  "depth": 48,
  "mirror": "diag",
- "rimHeight": 4.5,
+ "surround": "crag",
+  "rimHeight": 4.5,
  "waterLevel": -6,
  "notes": "Square, mirrored across the diagonal x = z. Author the half where x < z (team 0 keeps the bottom-left corner). Rects mirror by swapping x/z and w/h; points swap x/z; prop rot becomes 90 - rot. Pits are impassable holes. Each base has two gates: the corner toward the centre and a back gate in the side wall onto the outer lane.",
  "cores": [

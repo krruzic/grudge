@@ -65,6 +65,7 @@ export interface MapData {
   depth: number;
   mirror: "x" | "diag" | "rot" | "none";
   tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
+  surround?: "valley" | "crag" | "sea";
   rimHeight: number;
   waterLevel: number;
   ops: MapOp[];
@@ -128,6 +129,11 @@ export class Terrain {
   private mirror: "x" | "diag" | "rot" | "none" = "none";
   readonly tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
   readonly tideCells: number[] = [];
+  readonly surround?: "valley" | "crag" | "sea";
+
+  get symmetry(): "x" | "diag" | "rot" | "none" {
+    return this.mirror;
+  }
 
   private canon(vx: number, vz: number): [number, number] {
     if (this.mirror === "x") return [Math.min(vx, this.width - vx), vz];
@@ -155,6 +161,7 @@ export class Terrain {
     this.styles = new Array<string>(n).fill("");
     this.mirror = data.mirror === "x" || data.mirror === "diag" || data.mirror === "rot" ? data.mirror : "none";
     this.tide = data.tide;
+    this.surround = data.surround;
     const mode = this.mirror;
     const mirror = mode !== "none";
 

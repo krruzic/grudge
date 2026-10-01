@@ -8,6 +8,7 @@ import inputData from "../data/input.json";
 import coreUrl from "../assets/structures/core.glb?url";
 import grassTex from "../assets/textures/grass.png?url";
 import dirtTex from "../assets/textures/dirt.png?url";
+import sandTex from "../assets/textures/sand.png?url";
 import cliffTex from "../assets/textures/cliff.png?url";
 import cobbleTex from "../assets/textures/cobble.png?url";
 import waterTex from "../assets/textures/water.png?url";
@@ -96,7 +97,7 @@ async function start(): Promise<void> {
     sUrls[name] = url;
   }
   const [mapViews, heroes] = await Promise.all([
-    Promise.all(maps.map((m) => loadMap(m.url, new Terrain(m.data), { grass: grassTex, dirt: dirtTex, rock: cliffTex, cobble: cobbleTex, water: waterTex }, renderData as RenderConfig))),
+    Promise.all(maps.map((m) => loadMap(m.url, new Terrain(m.data), { grass: grassTex, dirt: dirtTex, rock: cliffTex, cobble: cobbleTex, water: waterTex, sand: sandTex }, renderData as RenderConfig))),
     (async () => {
       const h = new HeroModels();
       const urls: Record<string, string> = {};

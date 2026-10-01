@@ -1,12 +1,27 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Terrain, type MapData } from "../src/sim/terrain.ts";
+import { surroundFor } from "../src/sim/surround.ts";
 
 const name = process.argv[2] ?? "crossing";
 const data = JSON.parse(readFileSync(`data/maps/${name}.json`, "utf8")) as MapData;
 const t = new Terrain(data);
 
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
+const sur = surroundFor(t);
+let surround: unknown = null;
+if (sur) {
+  const pad = 90;
+  const step = 2;
+  const x0 = -pad;
+  const z0 = -pad;
+  const nx = Math.ceil((t.width + pad * 2) / step);
+  const nz = Math.ceil((t.depth + pad * 2) / step);
+  const heights: number[] = [];
+  for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) heights.push(r3(sur.ground(x0 + i * step, z0 + j * step)));
+  const features = sur.buildFeatures().map((f) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === "number" ? r3(v) : v])));
+  surround = { style: sur.style, x0, z0, step, nx, nz, heights, features };
+}
 const out = {
   name: data.name,
   width: t.width,
@@ -21,6 +36,7 @@ const out = {
   props: t.props,
   cores: t.cores,
   pads: t.pads,
+  surround,
 };
 
 const path = `assets/maps/${name}.grid.json`;

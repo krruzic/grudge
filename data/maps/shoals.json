@@ -5,7 +5,8 @@
  "width": 68,
  "depth": 52,
  "mirror": "rot",
- "rimHeight": 4.5,
+ "surround": "sea",
+  "rimHeight": 4.5,
  "waterLevel": -0.5,
  "tide": {
   "lowSeconds": 40,

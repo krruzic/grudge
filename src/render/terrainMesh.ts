@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import heroesData from "../../data/heroes.json";
 import { FLAG_DIRT, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../sim/terrain";
+import type { Surround } from "../sim/surround";
 
 export interface TerrainTextures {
   grass: THREE.Texture;
@@ -8,6 +9,7 @@ export interface TerrainTextures {
   rock: THREE.Texture;
   cobble: THREE.Texture;
   water: THREE.Texture;
+  sand?: THREE.Texture;
 }
 
 const MARGIN = 48;
@@ -64,24 +66,55 @@ const PROP_SHADOW: Record<string, [number, number]> = {
 };
 
 const WALK_SLOPE = heroesData.baseline.maxSlope;
+const AO_NEAR = [1, 2, 3, 5, 8];
+const AO_FAR = [1, 3, 8];
 
-export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: TerrainLight): THREE.Mesh {
-  const x0 = -MARGIN;
-  const z0 = -MARGIN;
-  const nx = t.width + MARGIN * 2;
-  const nz = t.depth + MARGIN * 2;
+function axis(n: number, sur: Surround | null): number[] {
+  if (!sur) {
+    const out: number[] = [];
+    for (let v = -MARGIN; v <= n + MARGIN; v++) out.push(v);
+    return out;
+  }
+  const steps: [number, number][] = [[24, 1], [64, 2], [160, 4], [sur.far, 8]];
+  const lo: number[] = [];
+  let v = 0;
+  for (const [until, st] of steps) while (v < until) lo.push(-(v += st));
+  const mid: number[] = [];
+  for (let i = 0; i <= n; i++) mid.push(i);
+  const hi = lo.map((d) => n - d);
+  return [...lo.reverse(), ...mid, ...hi];
+}
+
+function locate(arr: number[], v: number): number {
+  let a = 0;
+  let b = arr.length - 1;
+  if (v <= arr[0]) return 0;
+  if (v >= arr[b]) return b;
+  while (b - a > 1) {
+    const m = (a + b) >> 1;
+    if (arr[m] <= v) a = m;
+    else b = m;
+  }
+  return v - arr[a] < arr[b] - v ? a : b;
+}
+
+export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: TerrainLight, sur: Surround | null = null): THREE.Mesh {
+  const xs = axis(t.width, sur);
+  const zs = axis(t.depth, sur);
+  const nx = xs.length - 1;
+  const nz = zs.length - 1;
   const vw = nx + 1;
   const count = vw * (nz + 1);
   const pos = new Float32Array(count * 3);
   const heights = new Float32Array(count);
 
   const inside = (x: number, z: number) => x >= 0 && z >= 0 && x <= t.width && z <= t.depth;
-  const hAt = (x: number, z: number) => (inside(x, z) ? t.vertexHeight(x, z) : outerHeight(t, x, z));
+  const hAt = (x: number, z: number) => (inside(x, z) ? t.vertexHeight(x, z) : sur ? sur.ground(x, z) : outerHeight(t, x, z));
 
   for (let j = 0; j <= nz; j++) {
     for (let i = 0; i <= nx; i++) {
-      const x = x0 + i;
-      const z = z0 + j;
+      const x = xs[i];
+      const z = zs[j];
       const k = j * vw + i;
       const h = hAt(x, z);
       heights[k] = h;
@@ -94,8 +127,8 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   const idx: number[] = [];
   for (let j = 0; j < nz; j++) {
     for (let i = 0; i < nx; i++) {
-      const pi = t.index(x0 + i, z0 + j);
-      if (pi >= 0 && x0 + i < t.width && z0 + j < t.depth && t.kinds[pi] === Kind.Wall && t.styles[pi] === "pit") continue;
+      const pi = t.index(xs[i], zs[j]);
+      if (pi >= 0 && xs[i] >= 0 && zs[j] >= 0 && xs[i] < t.width && zs[j] < t.depth && t.kinds[pi] === Kind.Wall && t.styles[pi] === "pit") continue;
       const a = j * vw + i;
       const b = a + 1;
       const c = a + vw;
@@ -111,6 +144,8 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   const nrm = geo.getAttribute("normal") as THREE.BufferAttribute;
 
   const splat = new Float32Array(count * 4);
+  const sandW = new Float32Array(count);
+  const sandField = sur?.style === "sea";
   const col = new Float32Array(count * 3);
   const cellFlag = (cx: number, cz: number, f: number) => (t.hasFlag(cx, cz, f) ? 1 : 0);
   const nearWall = (x: number, z: number) => {
@@ -132,20 +167,31 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   const dirs: [number, number][] = [];
   for (let a = 0; a < 8; a++) dirs.push([Math.cos((a / 8) * Math.PI * 2), Math.sin((a / 8) * Math.PI * 2)]);
   const hSample = (x: number, z: number) => {
-    const i = Math.round(x) - x0;
-    const j = Math.round(z) - z0;
-    if (i < 0 || j < 0 || i > nx || j > nz) return -Infinity;
-    return heights[j * vw + i];
+    if (!sur && (x < xs[0] || z < zs[0] || x > xs[nx] || z > zs[nz])) return -Infinity;
+    return heights[locate(zs, z) * vw + locate(xs, x)];
   };
 
   const L = new THREE.Vector3(...(light?.sunDir ?? [0, 1, 0])).normalize();
   const sunC = new THREE.Color(light?.sunColor ?? "#ffffff").convertSRGBToLinear();
   const amb0 = new THREE.Color(light?.ambientGround ?? "#444444").convertSRGBToLinear();
   const amb1 = new THREE.Color(light?.ambientSky ?? "#aaaaaa").convertSRGBToLinear();
+  const CELL = 4;
+  const buckets = new Map<number, { x: number; z: number; r: number; r0: number; base: number; top: number }[]>();
+  let maxR = 0;
+  for (const p of t.props) {
+    const ps = PROP_SHADOW[p.type];
+    if (!ps) continue;
+    const sc = p.scale ?? 1;
+    const c = { x: p.x, z: p.z, r: ps[0] * sc, r0: ps[0], base: t.groundHeight(p.x, p.z), top: ps[1] * sc };
+    maxR = Math.max(maxR, c.r);
+    const key = Math.floor(p.x / CELL) * 4096 + Math.floor(p.z / CELL);
+    const list = buckets.get(key) ?? [];
+    list.push(c);
+    buckets.set(key, list);
+  }
+  const reach = Math.ceil(maxR / CELL);
   const occ = (x: number, z: number): number => {
-    const i = Math.round(x) - x0;
-    const j = Math.round(z) - z0;
-    let hh = i < 0 || j < 0 || i > nx || j > nz ? -Infinity : heights[j * vw + i];
+    let hh = hSample(x, z);
     if (inside(x, z)) {
       const kind = t.kindAt(Math.floor(x), Math.floor(z));
       if (kind === Kind.Wall) {
@@ -153,17 +199,24 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         hh = st === "pit" ? -Infinity : t.groundHeight(x, z) + (st === "rim" ? 1.5 : 3.2);
       }
     }
-    for (const p of t.props) {
-      const ps = PROP_SHADOW[p.type];
-      if (!ps) continue;
-      const d = Math.hypot(p.x - x, p.z - z);
-      if (d < ps[0] * (p.scale ?? 1)) hh = Math.max(hh, t.groundHeight(p.x, p.z) + ps[1] * (p.scale ?? 1) * (1 - (d / ps[0]) * 0.3));
+    if (x < -6 || z < -6 || x > t.width + 6 || z > t.depth + 6) return hh;
+    const cx = Math.floor(x / CELL);
+    const cz = Math.floor(z / CELL);
+    for (let j = cz - reach; j <= cz + reach; j++) {
+      for (let i = cx - reach; i <= cx + reach; i++) {
+        const list = buckets.get(i * 4096 + j);
+        if (!list) continue;
+        for (const c of list) {
+          const d = Math.hypot(c.x - x, c.z - z);
+          if (d < c.r) hh = Math.max(hh, c.base + c.top * (1 - (d / c.r0) * 0.3));
+        }
+      }
     }
     return hh;
   };
-  const sunShadow = (x: number, h: number, z: number): number => {
+  const sunShadow = (x: number, h: number, z: number, far = false): number => {
     let lit = 1;
-    for (let d = 0.6; d < 22; d += 0.6) {
+    for (let d = far ? 2 : 0.6; d < (far ? 120 : 22); d += far ? Math.max(2, d * 0.3) : 0.6) {
       const px = x + L.x * d;
       const pz = z + L.z * d;
       const py = h + L.y * d + 0.15;
@@ -179,10 +232,12 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   for (let j = 0; j <= nz; j++) {
     for (let i = 0; i <= nx; i++) {
       const k = j * vw + i;
-      const x = x0 + i;
-      const z = z0 + j;
+      const x = xs[i];
+      const z = zs[j];
       const h = heights[k];
       const ny = nrm.getY(k);
+      const outside = !!sur && !inside(x, z);
+      const spacing = Math.max(xs[Math.min(nx, i + 1)] - xs[Math.max(0, i - 1)], zs[Math.min(nz, j + 1)] - zs[Math.max(0, j - 1)]) / 2;
 
       let dirt = 0;
       let paving = 0;
@@ -211,28 +266,50 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         };
         slope = Math.max(g(x, z), g(x - 0.35, z - 0.35), g(x + 0.35, z - 0.35), g(x - 0.35, z + 0.35), g(x + 0.35, z + 0.35));
       }
-      const rock = THREE.MathUtils.smoothstep(slope, WALK_SLOPE - 0.35, WALK_SLOPE - 0.08);
-      let grass = Math.max(0, 1 - dirt - paving);
-      const sum0 = grass + dirt + paving;
-      grass /= sum0;
-      const d0 = dirt / sum0;
-      const p0 = paving / sum0;
-      splat[k * 4] = grass * (1 - rock);
-      splat[k * 4 + 1] = d0 * (1 - rock);
-      splat[k * 4 + 2] = rock;
-      splat[k * 4 + 3] = p0 * (1 - rock);
+      let tint: [number, number, number] = [1, 1, 1];
+      if (outside) {
+        const pt = sur!.paint(x, z, h, slope);
+        const edge = THREE.MathUtils.smoothstep(sur!.boxDist(x, z), 0, 3);
+        const rk = Math.max(pt.rock, THREE.MathUtils.smoothstep(slope, WALK_SLOPE - 0.35, WALK_SLOPE - 0.08) * (1 - edge));
+        const tot = Math.max(1e-4, pt.grass + pt.dirt + pt.cobble);
+        splat[k * 4] = (pt.grass / tot) * (1 - rk);
+        splat[k * 4 + 1] = (pt.dirt / tot) * (1 - rk);
+        splat[k * 4 + 2] = rk;
+        splat[k * 4 + 3] = (pt.cobble / tot) * (1 - rk);
+        tint = pt.tint;
+        sandW[k] = pt.sand ?? 0;
+      } else {
+        const rock = THREE.MathUtils.smoothstep(slope, WALK_SLOPE - 0.35, WALK_SLOPE - 0.08);
+        let grass = Math.max(0, 1 - dirt - paving);
+        const sum0 = grass + dirt + paving;
+        grass /= sum0;
+        const d0 = dirt / sum0;
+        const p0 = paving / sum0;
+        splat[k * 4] = grass * (1 - rock);
+        splat[k * 4 + 1] = d0 * (1 - rock);
+        splat[k * 4 + 2] = rock;
+        splat[k * 4 + 3] = p0 * (1 - rock);
+        if (sandField) {
+          const gs = splat[k * 4];
+          const ds = splat[k * 4 + 1];
+          splat[k * 4] = 0;
+          splat[k * 4 + 1] = gs + ds;
+          sandW[k] = gs + ds > 0 ? gs / (gs + ds) : 0;
+        }
+      }
 
       let occ = 0;
       for (const [dx, dz] of dirs) {
         let maxTan = 0;
-        for (const dist of [1, 2, 3, 5, 8]) {
+        for (const d1 of spacing > 1.5 ? AO_FAR : AO_NEAR) {
+          const dist = d1 * Math.max(1, spacing);
           const hs = hSample(x + dx * dist, z + dz * dist);
           maxTan = Math.max(maxTan, (hs - h) / dist);
         }
         occ += Math.atan(maxTan) / (Math.PI / 2);
       }
       occ /= dirs.length;
-      let ao = THREE.MathUtils.clamp(1 - occ * 1.6, 0.35, 1);
+      let ao = outside && spacing > 1.5 ? THREE.MathUtils.clamp(1 - occ * 0.8, 0.62, 1) : THREE.MathUtils.clamp(1 - occ * 1.6, 0.35, 1);
       if (inside(x, z) && nearWall(x, z)) ao *= 0.7;
       if (inside(x, z) && nearPit(x, z)) ao *= 0.45;
       const n = vnoise(x * 0.09 + 50, z * 0.09);
@@ -245,7 +322,7 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         const nx = nrm.getX(k);
         const nz = nrm.getZ(k);
         const ndl = Math.max(0, nx * L.x + ny * L.y + nz * L.z);
-        const sh = ndl > 0 ? sunShadow(x, h, z) : 0;
+        const sh = ndl > 0 ? sunShadow(x, h, z, outside && sur!.boxDist(x, z) > 6) : 0;
         const hemi = ny * 0.5 + 0.5;
         const sunK = ndl * sh * light.sunIntensity / Math.PI;
         const lr = amb0.r * (1 - hemi) + amb1.r * hemi;
@@ -260,12 +337,15 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         g *= ao;
         b *= ao;
       }
+      r *= tint[0];
+      g *= tint[1];
+      b *= tint[2];
       if (wet > 0) {
         r *= 1 - wet * 0.22;
         g *= 1 - wet * 0.16;
         b *= 1 - wet * 0.04;
       }
-      if (h < t.waterLevel) {
+      if (h < t.waterLevel && (!sur || sur.water)) {
         const deep = Math.min(1, (t.waterLevel - h) / 1.2);
         r *= 1 - deep * 0.55;
         g *= 1 - deep * 0.4;
@@ -277,6 +357,8 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
     }
   }
   geo.setAttribute("splat", new THREE.BufferAttribute(splat, 4));
+  const hasSand = !!tex.sand && sandW.some((v) => v > 0);
+  if (hasSand) geo.setAttribute("aSand", new THREE.BufferAttribute(sandW, 1));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
   const mat = light ? new THREE.MeshBasicMaterial({ vertexColors: true }) : new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -285,24 +367,25 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
     tDirt: { value: prepare(tex.dirt) },
     tRock: { value: prepare(tex.rock) },
     tCobble: { value: prepare(tex.cobble) },
+    tSand: { value: hasSand ? prepare(tex.sand!) : null },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
-        "#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;",
+        `#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;${hasSand ? "\nattribute float aSand;\nvarying float vSand;" : ""}`,
       )
       .replace(
         "#include <worldpos_vertex>",
-        "#include <worldpos_vertex>\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);",
+        `#include <worldpos_vertex>${hasSand ? "\nvSand = aSand;" : ""}\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
 uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tRock; uniform sampler2D tCobble;
-varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;`,
+varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}`,
       )
       .replace(
         "#include <map_fragment>",
@@ -314,7 +397,10 @@ an = pow(an, vec3(4.0)); an /= (an.x + an.y + an.z);
 vec4 sw = vSplat / max(0.001, vSplat.x + vSplat.y + vSplat.z + vSplat.w);
 vec3 tsum = vec3(0.0);
 if (sw.x > 0.0) tsum += textureGrad(tGrass, wuv / 7.0, dpx.xz / 7.0, dpy.xz / 7.0).rgb * sw.x;
-if (sw.y > 0.0) tsum += textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb * sw.y;
+if (sw.y > 0.0) {
+  vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}
+  tsum += cd * sw.y;
+}
 if (sw.z > 0.0) {
   vec3 cr = vec3(0.0);
   if (an.x > 0.0) cr += textureGrad(tRock, vWPos.zy / 5.0, dpx.zy / 5.0, dpy.zy / 5.0).rgb * an.x;
@@ -327,6 +413,7 @@ diffuseColor.rgb *= tsum;`,
       );
   };
 
+  mat.customProgramCacheKey = () => (hasSand ? "terrain-sand" : "terrain");
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = "Terrain";
   mesh.receiveShadow = true;
@@ -334,12 +421,15 @@ diffuseColor.rgb *= tsum;`,
   return mesh;
 }
 
-export function buildWaterMesh(t: Terrain, material: THREE.Material): THREE.Mesh {
-  const geo = new THREE.PlaneGeometry(t.width, t.depth, 1, 1);
+export function buildWaterMesh(t: Terrain, material: THREE.Material, sur: Surround | null = null): THREE.Mesh {
+  const pad = sur?.water ? 1400 : 0;
+  const w = t.width + pad * 2;
+  const d = t.depth + pad * 2;
+  const geo = new THREE.PlaneGeometry(w, d, 1, 1);
   geo.rotateX(-Math.PI / 2);
   geo.translate(t.width / 2, t.waterLevel, t.depth / 2);
   const uv = geo.getAttribute("uv") as THREE.BufferAttribute;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * t.width) / 10, (uv.getY(i) * t.depth) / 10);
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * w - pad) / 10, (uv.getY(i) * d - pad) / 10);
   const mesh = new THREE.Mesh(geo, material);
   mesh.name = "Water";
   mesh.renderOrder = 2;

@@ -36,6 +36,8 @@ SPECS = {
     "ui_ridge": {"src": "metal_plate_02", "size": 64, "sat": 0.0, "contrast": 0.8, "mean": (0.62, 0.62, 0.62), "blur": 0.4, "crop": 0.5, "ridges": 8},
     "banner": {"src": "quatrefoil_jacquard_fabric", "size": 64, "sat": 0.0, "contrast": 0.75, "mean": (0.8, 0.8, 0.8), "blur": 0.3, "crop": 0.25, "map": "Displacement", "tint": True},
     "wallblock": {"src": "medieval_blocks_03", "size": 64, "sat": 0.6, "contrast": 1.1, "mean": (0.6, 0.57, 0.52), "blur": 0.5, "crop": 0.5},
+    "sand": {"src": "coast_sand_01", "size": 64, "sat": 0.9, "contrast": 0.8, "mean": (0.78, 0.7, 0.52), "blur": 0.8},
+    "thatch": {"src": "thatch_roof_angled", "size": 64, "sat": 0.9, "contrast": 1.1, "mean": (0.62, 0.52, 0.32), "blur": 0.5, "crop": 0.5},
     "bone": {"src": "white_rough_plaster", "size": 64, "sat": 0.4, "contrast": 0.35, "mean": (0.86, 0.8, 0.66), "blur": 0.6, "crop": 0.5},
 }
 
