@@ -4,6 +4,7 @@
  "emblem": "river",
  "width": 104,
  "depth": 48,
+ "patrols": [{"a": {"x": 52, "z": 5}, "b": {"x": 52, "z": 43}}],
  "mirror": "x",
  "surround": "valley",
  "mist": {"firstSeconds": 60, "everySeconds": 75, "warnSeconds": 5, "rollSeconds": 6, "holdSeconds": 16, "pad": 2, "x0": 30, "x1": 74},

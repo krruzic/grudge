@@ -4,6 +4,7 @@
  "emblem": "tide",
  "width": 68,
  "depth": 52,
+ "patrols": [{"a": {"x": 31, "z": 13}, "b": {"x": 37, "z": 39}}],
  "mirror": "rot",
  "surround": "sea",
   "rimHeight": 4.5,

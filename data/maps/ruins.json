@@ -4,6 +4,7 @@
  "emblem": "castle",
  "width": 48,
  "depth": 48,
+ "patrols": [{"a": {"x": 6.5, "z": 6.5}, "b": {"x": 41.5, "z": 41.5}}],
  "mirror": "diag",
  "surround": "crag",
  "outposts": true,

@@ -672,3 +672,8 @@
   - Rally (Z) also cuts the partner's remaining B and R cooldowns by half, anywhere on the map.
   - Inside his active war banner (6 m), his house can open the shop and build/upgrade on any pad within the banner's reach.
 - Portrait framing ignores props that stick far above the head (the Herald's banner pole): when the model's top is more than half a head-height above the head bone's crown, icons and select-screen stages frame from the feet to the crown at the head instead of the bounding box. Other heroes are unaffected.
+
+## Ogre patrol
+- The Ogre walks a beat instead of standing at his spawn: each map defines `patrols` (endpoint pairs, mirrored like everything else). He spawns at a random end of a random route, walks it at 60% speed, pauses 2 s at each end to look around, and turns back.
+- Routes: Crossing north-south down the middle of the island; Ruins corner to corner between the two empty graveyards; Shoals across the flats past the centre isle; Frostcross along each corner causeway; Bellwick through each quadrant's middle corridor between the outer and mid corridors.
+- He sees 9 m in a forward cone but only ~3.8 m behind and to the sides, so heroes can slip past his back. When he spots someone he shouts and charges at full speed; he gives up once they're more than 16 m from his route and walks back to it.

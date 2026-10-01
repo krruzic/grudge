@@ -113,6 +113,8 @@
       "knockback": 11,
       "bounty": 200,
       "leash": 16,
+      "patrolSpeedMul": 0.6,
+      "patrolPause": 2,
       "blessSeconds": 45,
       "blessDamage": 1.25,
       "blessSpeed": 1.1,

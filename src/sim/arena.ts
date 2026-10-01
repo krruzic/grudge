@@ -63,6 +63,7 @@ export class Arena {
   private nextOgre: number;
   private nextWave: number;
   ogreId = 0;
+  ogreRoute: { a: Vec2; b: Vec2; leg: number; waitUntil: number } | null = null;
   private crackNoticeAt = -99;
 
   constructor(private w: World) {
@@ -423,8 +424,22 @@ export class Arena {
     const al = Math.hypot(ax, az) || 1;
     const side = w.rng() < 0.5 ? 1 : -1;
     const off = Math.min(w.terrain.width, w.terrain.depth) * 0.3;
-    const den = dens.length ? dens[Math.floor(w.rng() * dens.length) % dens.length] : null;
-    const p = den ? this.snap(den.x, den.z) : this.snap(this.home.x - (az / al) * off * side, this.home.z + (ax / al) * off * side);
+    const routes = w.terrain.patrols;
+    let p: Vec2;
+    if (routes.length) {
+      const r = routes[Math.floor(w.rng() * routes.length) % routes.length];
+      const a = this.snap(r.a.x, r.a.z);
+      const b = this.snap(r.b.x, r.b.z);
+      const start = w.rng() < 0.5;
+      p = start ? a : b;
+      this.ogreRoute = { a, b, leg: start ? 1 : 0, waitUntil: 0 };
+    } else {
+      const den = dens.length ? dens[Math.floor(w.rng() * dens.length) % dens.length] : null;
+      p = den ? this.snap(den.x, den.z) : this.snap(this.home.x - (az / al) * off * side, this.home.z + (ax / al) * off * side);
+      const px = -(az / al) * 10;
+      const pz = (ax / al) * 10;
+      this.ogreRoute = { a: this.snap(p.x - px, p.z - pz), b: this.snap(p.x + px, p.z + pz), leg: 1, waitUntil: 0 };
+    }
     const e = w.addEntity(NEUTRAL, "unit", cfg.radius, p.x, p.z, cfg.hp);
     e.neutral = true;
     e.unit = {
@@ -628,29 +643,63 @@ export function updateOgre(w: World, e: Entity): void {
   const u = e.unit!;
   const cfg = w.data.match.arena.ogre;
   if (w.time < e.status.stunUntil) return;
+  const route = w.arena.ogreRoute;
+  const p0 = e.transform.pos;
+  const offRoute = (x: number, z: number): number => {
+    if (!route) return Math.hypot(x - (u.pathGoal?.x ?? p0.x), z - (u.pathGoal?.z ?? p0.z));
+    const vx = route.b.x - route.a.x;
+    const vz = route.b.z - route.a.z;
+    const l2 = vx * vx + vz * vz || 1;
+    const t = Math.max(0, Math.min(1, ((x - route.a.x) * vx + (z - route.a.z) * vz) / l2));
+    return Math.hypot(x - (route.a.x + vx * t), z - (route.a.z + vz * t));
+  };
   let target = u.targetId ? w.get(u.targetId) : undefined;
   if (target && (!target.alive || target.structure)) target = undefined;
-  const lair = u.pathGoal ?? { x: e.transform.pos.x, z: e.transform.pos.z };
-  if (target && Math.hypot(target.transform.pos.x - lair.x, target.transform.pos.z - lair.z) > cfg.leash) target = undefined;
+  if (target && offRoute(target.transform.pos.x, target.transform.pos.z) > cfg.leash) target = undefined;
   if (!target || w.time >= u.retargetAt) {
-    u.retargetAt = w.time + 0.5;
+    u.retargetAt = w.time + 0.4;
     let best: Entity | undefined;
-    let bestD = cfg.aggro;
+    let bestD = Infinity;
+    const fx = Math.sin(e.transform.facing);
+    const fz = Math.cos(e.transform.facing);
     for (const o of w.entities) {
       if (!o.alive || o.neutral || o.structure || !w.canSee(e, o)) continue;
-      const d = w.dist(e, o);
+      const dx = o.transform.pos.x - p0.x;
+      const dz = o.transform.pos.z - p0.z;
+      const d = Math.hypot(dx, dz);
+      const ahead = d > 0.01 ? (dx * fx + dz * fz) / d : 1;
+      const sight = target ? cfg.aggro * 1.5 : ahead > 0.35 ? cfg.aggro : cfg.aggro * 0.42;
+      if (d > sight || offRoute(o.transform.pos.x, o.transform.pos.z) > cfg.leash) continue;
       if (d < bestD) { bestD = d; best = o; }
     }
-    if (best) target = best;
-    else if (target && w.dist(e, target) > cfg.aggro * 1.5) target = undefined;
+    if (best) {
+      if (!target) w.emit({ type: "callout", x: p0.x, y: e.transform.y + 3, z: p0.z, team: NEUTRAL, text: "!", owner: e.id });
+      target = best;
+    } else if (target && w.dist(e, target) > cfg.aggro * 1.5) target = undefined;
     u.targetId = target?.id ?? 0;
   }
   if (!target) {
     u.targetId = 0;
-    moveToward(w, e, lair, 1);
+    u.speed = cfg.speed * (cfg.patrolSpeedMul ?? 0.6);
     if (e.hp < e.maxHp) w.heal(e, e.maxHp * 0.02 * w.dt);
+    if (!route) {
+      moveToward(w, e, u.pathGoal ?? { x: p0.x, z: p0.z }, 1);
+      return;
+    }
+    if (w.time < route.waitUntil) {
+      if (Math.floor(route.waitUntil - w.time) !== Math.floor(route.waitUntil - w.time + w.dt)) w.faceToward(e, Math.sin(e.transform.facing + 1.6), Math.cos(e.transform.facing + 1.6), 4);
+      return;
+    }
+    const goal = route.leg ? route.b : route.a;
+    if (Math.hypot(goal.x - p0.x, goal.z - p0.z) < 1.4) {
+      route.leg = 1 - route.leg;
+      route.waitUntil = w.time + (cfg.patrolPause ?? 2);
+      return;
+    }
+    moveToward(w, e, goal, 1);
     return;
   }
+  u.speed = cfg.speed;
   const d = w.dist(e, target) - target.radius - e.radius;
   if (d <= u.range) {
     w.faceToward(e, target.transform.pos.x - e.transform.pos.x, target.transform.pos.z - e.transform.pos.z, 8);
