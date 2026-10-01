@@ -1,5 +1,5 @@
 import { drawPlain, drawText, occlude, onHiLayer, textWidth } from "./font";
-import { artTitle, band, banner, beam, drawLogo, fieldShade, goldArrow, nameImage, paintedText, parchment, plank, ribbon, scroll, shadowText, texturedRect, waxSeal, woodFloor } from "./n64ui";
+import { artTitle, band, banner, beam, boardTitle, card, drawLogo, fieldShade, goldArrow, inset, nameImage, paintedText, parchment, pin, plank, ribbon, scroll, shadowText, tag, texturedRect, waxSeal, windowCut, woodDisc, woodFloor } from "./n64ui";
 import { padButton, PAD, talentIcon } from "./hud";
 import { learned } from "../sim/talents";
 import { prompt, promptWidth, wrap } from "./screens";
@@ -48,6 +48,16 @@ const ITEMS = [
   { art: "m_options", label: "OPTIONS", blurb: "MUSIC, SOUND, SCREEN SHAKE AND BUTTON HINTS." },
   { art: "m_controls", label: "CONTROLS", blurb: "HOW TO FIGHT, BUILD AND COMMAND YOUR ARMY." },
 ];
+function upArrow(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-Math.PI / 2);
+  goldArrow(ctx, 0, 0, 1, 5);
+  ctx.restore();
+}
+
+const ROMAN_N = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+const MAIN_GLYPHS = ["combo", "rally", "banner", "works", "castle", "repair", "pad"];
 const PAGES: Page[] = ["main", "players", "network", "rules", "records", "options", "controls"];
 const TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".split("");
@@ -158,97 +168,87 @@ export class Menus {
 
   drawPause(ctx: CanvasRenderingContext2D, W: number, H: number, now: number, w: World): void {
     this.hits = [];
-    band(ctx, 0, 0, W, H, "#0a0602", 0.35);
-    beam(ctx, 4, 2, W - 8, 17);
-    artTitle(ctx, "!PAUSED", "PAUSED", W / 2, 3, 14);
+    fieldShade(ctx, W, H, 0.45);
+    boardTitle(ctx, W, "!PAUSED", "PAUSED");
     woodFloor(ctx, H - 20, W, H);
     if (this.pauseView === "controls") {
-      drawControlSheet(ctx, 12, 24, W - 24, H - 48);
+      drawControlSheet(ctx, 12, 26, W - 24, H - 52);
       const p: [string, string][] = [["B", "BACK"]];
       prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
       return;
     }
-    const bw = 116;
-    const bx = 20;
-    const by = 24;
-    const bh = 132;
-    banner(ctx, bx, by, bw, bh, "#9a2a1c", 12);
-    const step = (bh - 30) / PAUSE_ITEMS.length;
-    PAUSE_ITEMS.forEach((label, k) => {
-      const sel = k === this.pauseFocus;
-      const h = sel ? 19 : 15;
-      const y = by + 12 + k * step + (step - h) / 2;
-      const cx = bx + bw / 2;
-      const text = k === 2 && sel && this.pauseConfirm ? "ARE YOU SURE?" : label;
-      const tw = artWord(ctx, `!${text}`, text, cx + (sel ? 3 : 0), y, h, sel ? 1 : 0.6);
-      if (sel) goldArrow(ctx, cx + 3 - tw / 2 - 8, y + h / 2, 1, 5);
-      this.hit(`prow:${k}`, bx, y - 3, bw, h + 6);
-    });
-    const blurb = this.pauseFocus === 0 ? "BACK TO THE FIGHT." : this.pauseFocus === 1 ? "EVERY BUTTON, FOR PADS AND FOR KEYBOARDS." : this.pauseConfirm ? "PRESS A AGAIN TO ABANDON THE MATCH." : "LEAVE THE MATCH AND RETURN TO THE MENU.";
-    wrap(blurb, bw - 10, 0.55).forEach((l, j) => shadowText(ctx, l, bx + bw / 2 - textWidth(l, 0.55) / 2, by + bh + 14 + j * 8, this.pauseConfirm && this.pauseFocus === 2 ? "#ffb090" : "#f0e4c8", 0.55));
-
-    const rx = bx + bw + 18;
-    const rw = W - rx - 18;
-    const ry = 26;
-    const rh = H - 56;
-    plank(ctx, rx, ry, rw, rh, "#6a4a30");
+    const pw = Math.min(270, Math.round(W * 0.64));
+    const ph = H - 52;
+    const px = 14;
+    const py = 26;
     const m = w.data.match;
     const left = Math.max(0, m.matchSeconds - w.time);
     const sudden = w.match.phase === "sudden";
-    const clock = sudden ? "SUDDEN DEATH" : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")} LEFT`;
-    const mapName = this.currentMap.toUpperCase();
-    paintedText(ctx, clock, rx + rw / 2, ry + 6, sudden ? "#ff7050" : "#f0c030", 0.95);
-    if (mapName) drawText(ctx, mapName, rx + rw / 2 - textWidth(mapName, 0.5) / 2, ry + 19, "#d8c8a8", 0.5);
-    const colW = (rw - 18) / 2;
-    [0, 1].forEach((team) => {
-      const x = rx + 6 + team * (colW + 6);
-      const y = ry + 30;
-      const h = rh - 36;
-      ctx.fillStyle = "#0b0806";
-      ctx.fillRect(x - 1, y - 1, colW + 2, h + 2);
-      texturedRect(ctx, "cloth", x, y, colW, h, TEAM_CLOTH[team], 0, 0.8);
-      band(ctx, x, y, colW, h, "#000000", 0.25);
-      const name = team === 0 ? "BLUE HOUSE" : "RED HOUSE";
-      drawText(ctx, name, x + colW / 2 - textWidth(name, 0.68) / 2, y + 3, "#fff0c8", 0.68);
-      const ts = w.teams[team];
-      let yy = y + 15;
-      for (const p of w.players.filter((q) => q.team === team)) {
-        const e = w.getAny(p.heroId);
-        if (!e?.hero) continue;
-        const icon = this.portraits?.icon(p.heroType);
-        ctx.fillStyle = "#0b0806";
-        ctx.fillRect(x + 3, yy - 2, 26, 26);
-        texturedRect(ctx, "stone", x + 4, yy - 1, 24, 24, "#b8a888", 0, 0.5);
-        if (icon) ctx.drawImage(icon, x + 2, yy - 3, 28, 28);
-        const nm = `P${p.player + 1} ${(this.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
-        drawText(ctx, nm, x + 33, yy, "#f8e8c0", 0.6);
-        const lv = `LV ${e.hero.level ?? 1}`;
-        drawText(ctx, lv, x + colW - 4 - textWidth(lv, 0.5), yy, "#ffe070", 0.5);
-        const fr = e.alive ? Math.max(0, e.hp / e.maxHp) : 0;
-        const bwid = colW - 38;
-        ctx.fillStyle = "#0b0806";
-        ctx.fillRect(x + 33, yy + 10, bwid + 2, 5);
-        ctx.fillStyle = e.alive ? (fr > 0.35 ? "#58c040" : "#e04030") : "#5a5048";
-        ctx.fillRect(x + 34, yy + 11, Math.round(bwid * fr), 3);
-        drawText(ctx, e.alive ? `${Math.ceil(e.hp)} / ${Math.round(e.maxHp)}` : "FALLEN", x + 33, yy + 16, "#d8c8a8", 0.45);
-        const got = (["r", "b", "a", "z"] as const).flatMap((sl) => learned(w, e, sl));
-        got.forEach((tl, k) => talentIcon(ctx, tl.id, x + colW - 5 - (got.length - k) * 11, yy + 15, 10));
-        yy += 31;
-      }
-      const core = w.core(team);
-      const stats: [string, string][] = [
-        ["KEEP", core ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-"],
-        ["GOLD", String(Math.floor(ts.resource))],
-        ["SOLDIERS", String(ts.unitCount)],
-        ["HERO KILLS", String(ts.heroKills)],
-      ];
-      const sy = y + h - 8 - stats.length * 9;
-      band(ctx, x + 4, sy - 3, colW - 8, 1, "#000000", 0.4);
-      stats.forEach(([k, v], i) => {
-        drawText(ctx, k, x + 5, sy + i * 9, "#e8d8b8", 0.5);
-        drawText(ctx, v, x + colW - 5 - textWidth(v, 0.55), sy + i * 9, "#fff4c8", 0.55);
+    const clock = sudden ? "SUDDEN DEATH" : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")}`;
+    card(ctx, px, py, pw, ph, -0.012, null, () => {
+      const iw = pw - 20;
+      const ih = 46;
+      windowCut(ctx, 10, 10, iw, ih);
+      paintedText(ctx, clock, 10 + iw / 2, 10 + ih / 2 - 10, sudden ? "#ff7050" : "#f0c030", 1.5);
+      const mapName = this.currentMap.toUpperCase();
+      if (mapName) shadowText(ctx, mapName, 10 + iw / 2 - textWidth(mapName, 0.5) / 2, 10 + ih - 10, "#f0e4c8", 0.5);
+      const colW = (pw - 26) / 2;
+      [0, 1].forEach((team) => {
+        const x = 10 + team * (colW + 6);
+        let y = ih + 20;
+        const name = team === 0 ? "BLUE HOUSE" : "RED HOUSE";
+        drawPlain(ctx, name, x, y, TEAM_TEXT[team], 0.68, true);
+        waxSeal(ctx, x + colW - 7, y + 3, 6, TEAM_CLOTH[team], "castle");
+        y += 12;
+        for (const p of w.players.filter((q) => q.team === team)) {
+          const e = w.getAny(p.heroId);
+          if (!e?.hero) continue;
+          inset(ctx, x + 1, y, 20, 20, "#3a2a1c");
+          const icon = this.portraits?.icon(p.heroType);
+          if (icon) ctx.drawImage(icon, x, y - 1, 22, 22);
+          const nm = `P${p.player + 1} ${(this.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
+          drawPlain(ctx, nm, x + 25, y, BROWN, 0.55, true);
+          const lv = `LV ${e.hero.level ?? 1}`;
+          drawPlain(ctx, lv, x + colW - textWidth(lv, 0.5, true), y, "#8a1810", 0.5, true);
+          const fr = e.alive ? Math.max(0, e.hp / e.maxHp) : 0;
+          const bw = colW - 27;
+          ctx.fillStyle = "#3a2410";
+          ctx.fillRect(x + 25, y + 9, bw + 2, 5);
+          ctx.fillStyle = e.alive ? (fr > 0.35 ? "#4a9a30" : "#c83020") : "#8a7a60";
+          ctx.fillRect(x + 26, y + 10, Math.round(bw * fr), 3);
+          const got = (["r", "b", "a", "z"] as const).flatMap((sl) => learned(w, e, sl));
+          got.slice(0, 7).forEach((tl, k) => talentIcon(ctx, tl.id, x + 25 + k * 9, y + 15, 8));
+          y += 27;
+        }
+        const ts = w.teams[team];
+        const core = w.core(team);
+        const stats: [string, string][] = [["KEEP", core ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-"], ["GOLD", String(Math.floor(ts.resource))], ["SOLDIERS", String(ts.unitCount)], ["HERO KILLS", String(ts.heroKills)]];
+        const sy = ph - 10 - stats.length * 8;
+        band(ctx, x, sy - 3, colW, 1, "#6a4424", 0.5);
+        stats.forEach(([k, v], q) => {
+          drawPlain(ctx, k, x, sy + q * 8, "#6a4424", 0.5, true);
+          drawPlain(ctx, v, x + colW - textWidth(v, 0.55, true), sy + q * 8, BROWN, 0.55, true);
+        });
       });
     });
+    const cx0 = px + pw + 18;
+    const cw = W - cx0 - 14;
+    const n = PAUSE_ITEMS.length;
+    const chh = 34;
+    const gap = 10;
+    const glyphs = ["dash", "pad", "quake"];
+    PAUSE_ITEMS.forEach((label, k) => {
+      const sel = k === this.pauseFocus;
+      const cy = 30 + k * (chh + gap);
+      this.hit(`prow:${k}`, cx0 - 8, cy - 2, cw + 8, chh + 4);
+      const text = k === 2 && sel && this.pauseConfirm ? "SURE?" : label;
+      tag(ctx, cx0, cy, cw, chh, sel, k, () => {
+        waxSeal(ctx, 13, chh / 2 + 1, 9, sel ? "#a8141a" : "#6a3a2a", glyphs[k]);
+        drawPlain(ctx, text, 27, chh / 2 - 3, sel ? "#8a1810" : BROWN, 0.72, true);
+      });
+    });
+    const blurb = this.pauseFocus === 0 ? "BACK TO THE FIGHT." : this.pauseFocus === 1 ? "EVERY BUTTON, FOR PADS AND FOR KEYBOARDS." : this.pauseConfirm ? "PRESS A AGAIN TO ABANDON THE MATCH." : "LEAVE THE MATCH AND RETURN TO THE MENU.";
+    wrap(blurb, cw, 0.55).forEach((l, j) => shadowText(ctx, l, cx0 + cw / 2 - textWidth(l, 0.55) / 2, 30 + n * (chh + gap) + 4 + j * 8, this.pauseConfirm && this.pauseFocus === 2 ? "#ffb090" : "#f0e4c8", 0.55));
     void now;
     const p: [string, string][] = [["A", "CHOOSE"], ["B", "RESUME"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
@@ -499,42 +499,51 @@ export class Menus {
   }
 
   private drawMain(ctx: CanvasRenderingContext2D, W: number, H: number, _now: number): void {
-    fieldShade(ctx, W, H, 0.12);
+    fieldShade(ctx, W, H, 0.3);
     woodFloor(ctx, H - 20, W, H);
-    const bw = 128;
-    const bx = 26;
-    const by = 12;
-    const bh = H - 38;
-    banner(ctx, bx, by, bw, bh, "#9a2a1c", 12);
-    const step = (bh - 34) / ITEMS.length;
-    ITEMS.forEach((it, k) => {
-      const sel = k === this.focus;
-      const h = sel ? 21 : 17;
-      const y = by + 14 + k * step + (step - h) / 2;
-      const cx = bx + bw / 2;
-      const w = artWord(ctx, it.art, it.label, cx + (sel ? 4 : 0), y, h, sel ? 1 : 0.62);
-      if (sel) goldArrow(ctx, cx + 4 - w / 2 - 9, y + h / 2, 1, 5);
-      this.hit(`row:${k}`, bx, y - 3, bw, h + 6);
-    });
-    const rx = bx + bw + 16;
-    const rw = W - rx - 16;
-    const rcx = rx + rw / 2;
-    drawLogo(ctx, rcx, 16, Math.min(78, rw * 0.36));
-    const sw = rw - 16;
-    const sy = H - 92;
-    scroll(ctx, rcx, sy, sw, 58);
     const it = ITEMS[this.focus];
-    artWord(ctx, it.art, it.label, rcx, sy + 4, 13);
-    wrap(it.blurb, sw - 16, 0.58).slice(0, 3).forEach((l, j) => drawPlain(ctx, l, rcx - sw / 2 + 8, sy + 21 + j * 8, "#4a3018", 0.58));
-    if (this.focus === 0) {
-      const r = this.save.data.rules;
-      const t = `${r.minutes} MIN  ·  ${r.popCap} SOLDIERS  ·  GOLD X ${r.goldRate}${r.mercy ? "" : "  ·  NO MERCY"}`;
-      drawPlain(ctx, t, rcx - textWidth(t, 0.52) / 2, sy + 47, "#8a1810", 0.52);
-    }
+    const pw = Math.min(250, Math.round(W * 0.6));
+    const ph = H - 34;
+    const px = 16;
+    const py = 8;
+    card(ctx, px, py, pw, ph, -0.02, null, () => {
+      const iw = pw - 24;
+      const ih = Math.round(iw * 0.5);
+      windowCut(ctx, 12, 12, iw, ih);
+      drawLogo(ctx, 12 + 56, 12 + ih - 40, 46);
+      const nm = nameImage(it.art);
+      if (nm) {
+        const h = 16;
+        const w = (nm.width / nm.height) * h;
+        onHiLayer(ctx, (t) => {
+          t.imageSmoothingEnabled = true;
+          t.drawImage(nm, 14, ih + 20, w, h);
+        });
+      } else drawPlain(ctx, it.label, 14, ih + 20, BROWN, 1.3, true);
+      wrap(it.blurb, pw - 70, 0.6).slice(0, 3).forEach((l, j) => drawPlain(ctx, l, 14, ih + 42 + j * 8, "#4a3018", 0.6));
+      if (this.focus === 0) {
+        const r = this.save.data.rules;
+        const t = `${r.minutes} MIN  ·  ${r.popCap} SOLDIERS  ·  GOLD X ${r.goldRate}${r.mercy ? "" : "  ·  NO MERCY"}`;
+        drawPlain(ctx, t, 14, ph - 12, "#8a1810", 0.55);
+      } else drawPlain(ctx, `BUILD ${__BUILD__}`, 14, ph - 12, "#8a6a44", 0.5);
+      waxSeal(ctx, pw - 22, ih + 40, 15, "#a8141a", MAIN_GLYPHS[this.focus]);
+    });
+    const cx0 = px + pw + 18;
+    const cw = W - cx0 - 14;
+    const n = ITEMS.length;
+    const gap = 5;
+    const chh = Math.floor((H - 30 - (n - 1) * gap) / n);
+    ITEMS.forEach((item, k) => {
+      const sel = k === this.focus;
+      const cy = 6 + k * (chh + gap);
+      this.hit(`row:${k}`, cx0 - 8, cy - 2, cw + 8, chh + 4);
+      tag(ctx, cx0, cy, cw, chh, sel, k, () => {
+        waxSeal(ctx, 11, chh / 2 + 1, Math.min(8, chh / 2 - 2), sel ? "#a8141a" : "#6a3a2a", MAIN_GLYPHS[k]);
+        drawPlain(ctx, item.label, 24, chh / 2 - 3, sel ? "#8a1810" : BROWN, 0.72, true);
+      });
+    });
     const p: [string, string][] = [["A", "SELECT"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
-    const ver = `BUILD ${__BUILD__}`;
-    shadowText(ctx, ver, W - 6 - textWidth(ver, 0.5), H - 11, "#d8c8a8", 0.5);
   }
 
   devices: () => (string | null)[] = () => [];
@@ -549,204 +558,298 @@ export class Menus {
   netAddrs: string[] = [];
 
   private drawNetwork(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
-    artTitle(ctx, "m_network", "VERSUS ONLINE", W / 2, 3, 14);
-    const opts: [string, string, string, string][] = [
-      ["t_host", "HOST A BATTLE", "castle", "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS."],
-      ["t_join", "JOIN A BATTLE", "banner", "SEE EVERY BATTLE ON THIS SERVER AND TAKE A SEAT. YOU SEE THE HOST'S RULES BEFORE THE FIGHT."],
+    boardTitle(ctx, W, "m_network", "VERSUS ONLINE");
+    const opts: [string, string, string, string, string][] = [
+      ["t_host", "HOST A BATTLE", "castle", "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS.", "#a8141a"],
+      ["t_join", "JOIN A BATTLE", "banner", "SEE EVERY BATTLE ON THIS SERVER AND TAKE A SEAT. YOU SEE THE HOST'S RULES BEFORE THE FIGHT.", "#1a3aa8"],
     ];
-    const cw = Math.min(170, Math.floor((W - 50) / 2));
-    const ch = 112;
-    const gap = 18;
-    const x0 = Math.round((W - cw * 2 - gap) / 2);
-    const cy = 34;
-    opts.forEach(([art, label, glyph, blurb], k) => {
-      const x = x0 + k * (cw + gap);
-      const hot = k === this.focus;
-      const y = cy - (hot ? 3 : 0);
-      plank(ctx, x, y, cw, ch, hot ? "#a07448" : "#6a4a30");
-      if (hot) {
-        ctx.strokeStyle = "#f0c030";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x - 2.5, y - 2.5, cw + 5, ch + 5);
-      }
-      waxSeal(ctx, x + cw / 2, y + 30, 18, hot ? "#b81a1a" : "#7a1a14", glyph);
-      artWord(ctx, art, label, x + cw / 2, y + 54, hot ? 16 : 14, hot ? 1 : 0.75);
-      wrap(blurb, cw - 18, 0.52).slice(0, 3).forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, 0.52) / 2, y + 76 + j * 8, hot ? "#fff0c8" : "#d8ccb0", 0.52));
-      if (hot) {
-        goldArrow(ctx, x + cw / 2 - 30, y + ch + 8, 1, 5);
-        goldArrow(ctx, x + cw / 2 + 30, y + ch + 8, -1, 5);
-      }
-      this.hit(`row:${k}`, x, y, cw, ch);
-    });
     const lines = [this.netStatus, ...this.netAddrs.map((a) => `FRIENDS OPEN  http://${a}`)].filter(Boolean);
+    const cw = 118;
+    const ch = lines.length ? 136 : 160;
+    const gap = 34;
+    const x0 = Math.round((W - cw * 2 - gap) / 2);
+    const cy = 28;
+    opts.forEach(([art, label, glyph, blurb, suit], k) => {
+      const hot = k === this.focus;
+      const x = x0 + k * (cw + gap) + (hot ? (k ? -4 : 4) : 0);
+      const y = cy - (hot ? 4 : 0);
+      this.hit(`row:${k}`, x, y, cw, ch);
+      card(ctx, x, y, cw, ch, hot ? 0 : k ? 0.06 : -0.06, hot ? "#c81818" : "#8a8a90", () => {
+        for (const [ox, oy, flip] of [[9, 10, false], [cw - 9, ch - 10, true]] as const) {
+          ctx.save();
+          ctx.translate(ox, oy);
+          if (flip) ctx.rotate(Math.PI);
+          drawPlain(ctx, "A", -textWidth("A", 1.1, true) / 2, -6, suit, 1.1, true);
+          waxSeal(ctx, 0, 14, 5, suit, glyph);
+          ctx.restore();
+        }
+        inset(ctx, 18, 22, cw - 36, 52, "#3a2a1c");
+        texturedRect(ctx, "cloth", 18, 22, cw - 36, 52, suit, 0, 0.7);
+        band(ctx, 18, 22, cw - 36, 52, "#000000", hot ? 0.1 : 0.35);
+        waxSeal(ctx, cw / 2, 48, 19, hot ? "#c8a020" : "#8a7a40", glyph);
+        const nm = nameImage(art);
+        if (nm) {
+          const h = hot ? 13 : 11;
+          const w = Math.min(cw - 16, (nm.width / nm.height) * h);
+          const hh = (w / nm.width) * nm.height;
+          onHiLayer(ctx, (t) => {
+            t.imageSmoothingEnabled = true;
+            t.globalAlpha = hot ? 1 : 0.75;
+            t.drawImage(nm, cw / 2 - w / 2, 84, w, hh);
+          });
+        } else drawPlain(ctx, label, cw / 2 - textWidth(label, 0.8, true) / 2, 84, BROWN, 0.8, true);
+        wrap(blurb, cw - 20, 0.5).slice(0, 4).forEach((l, j) => drawPlain(ctx, l, cw / 2 - textWidth(l, 0.5) / 2, 102 + j * 8, hot ? "#4a3018" : "#7a5a38", 0.5));
+      });
+    });
     if (lines.length) {
       const pw = cw * 2 + gap;
-      const sy = cy + ch + 16;
-      const sh = 10 + lines.length * 9;
-      parchment(ctx, x0, sy, pw, sh);
-      lines.forEach((l, j) => drawPlain(ctx, l, W / 2 - textWidth(l, 0.58) / 2, sy + 5 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
+      const sy = cy + ch + 8;
+      const sh = 8 + lines.length * 9;
+      card(ctx, x0, sy, pw, sh, 0.008, "#8a8a90", () => {
+        lines.forEach((l, j) => drawPlain(ctx, l, pw / 2 - textWidth(l, 0.58) / 2, 5 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
+      });
     }
     const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "SELECT"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
   private drawPlayers(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
-    artTitle(ctx, "!PLAYERS", "PLAYERS", W / 2, 3, 14);
+    boardTitle(ctx, W, "!PLAYERS", "PLAYERS");
     const devs = this.devices();
-    const cw = Math.min(86, Math.floor((W - 40) / 4) - 6);
-    const gap = 6;
+    const gap = 10;
+    const cw = Math.min(90, Math.floor((W - 30 - gap * 3) / 4));
     const x0 = Math.round((W - (cw * 4 + gap * 3)) / 2);
-    const y0 = 26;
-    const ch = 96;
+    const y0 = 28;
+    const ch = 118;
     const SEAT = ["#2a4ab8", "#b02a1c", "#2a7ab8", "#c86a1c"];
+    const ROMAN = ["I", "II", "III", "IV"];
     for (let i = 0; i < 4; i++) {
-      const x = x0 + i * (cw + gap);
       const sel = this.focus === i;
       const d = devs[i];
-      const y = y0 - (sel ? 2 : 0);
-      plank(ctx, x, y, cw, ch, d ? "#8a6040" : "#5a4430");
-      if (sel) {
-        ctx.strokeStyle = "#f0c030";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x - 2.5, y - 2.5, cw + 5, ch + 5);
-      }
-      waxSeal(ctx, x + cw / 2, y + 18, 11, d ? SEAT[i] : "#4a4038", "combo");
-      paintedText(ctx, `P${i + 1}`, x + cw / 2, y + 13, "#fff4c8", 0.75);
-      if (d) {
-        const lines = wrap(d, cw - 10, 0.52).slice(0, 3);
-        lines.forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, 0.52) / 2, y + 36 + j * 8, "#fff0c8", 0.52));
-        const t = "A: FREE SEAT";
-        drawText(ctx, t, x + cw / 2 - textWidth(t, 0.45) / 2, y + ch - 13, sel ? "#ffe070" : "#c8b898", 0.45);
-      } else {
-        const lines = ["EMPTY", "PRESS ANY", "BUTTON TO JOIN"];
-        lines.forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, j ? 0.48 : 0.62) / 2, y + 36 + j * 9, j ? "#b8a888" : "#d8c8a8", j ? 0.48 : 0.62));
-      }
+      const x = x0 + i * (cw + gap);
+      const y = y0 - (sel ? 4 : 0);
       this.hit(`row:${i}`, x, y, cw, ch);
+      card(ctx, x, y, cw, ch, sel ? 0 : (i % 2 ? 0.03 : -0.03), sel ? "#c81818" : d ? SEAT[i] : "#8a8a90", () => {
+        const t = `SEAT ${ROMAN[i]}`;
+        drawPlain(ctx, t, cw / 2 - textWidth(t, 0.62, true) / 2, 9, "#8a5a2a", 0.62, true);
+        const iw = cw - 14;
+        const ih = 52;
+        inset(ctx, 7, 20, iw, ih, d ? SEAT[i] : "#3a2a1c");
+        texturedRect(ctx, "cloth", 7, 20, iw, ih, d ? SEAT[i] : "#4a3a2c", 0, 0.7);
+        band(ctx, 7, 20, iw, ih, "#000000", d ? 0.15 : 0.45);
+        waxSeal(ctx, cw / 2, 20 + ih / 2, 16, d ? "#c8a020" : "#5a4a3a", d ? (d.includes("KEYBOARD") ? "pad" : "combo") : "none");
+        paintedText(ctx, `P${i + 1}`, cw / 2, 20 + ih / 2 - 7, d ? "#fff4c8" : "#a89878", 1.0);
+        const lines = d ? wrap(d, cw - 12, 0.5).slice(0, 3) : ["EMPTY SEAT", "PRESS ANY BUTTON", "TO JOIN"];
+        lines.forEach((l, j) => drawPlain(ctx, l, cw / 2 - textWidth(l, 0.5) / 2, 80 + j * 8, d ? BROWN : "#8a6a44", 0.5));
+        if (d) {
+          const f = "A: FREE SEAT";
+          drawPlain(ctx, f, cw / 2 - textWidth(f, 0.48) / 2, ch - 11, sel ? "#8a1810" : "#8a6a44", 0.48);
+        }
+      });
+      if (sel) upArrow(ctx, x + cw / 2, y + ch + 8);
     }
-    const ry = y0 + ch + 10;
-    const rw = cw * 4 + gap * 3;
-    const rowsY = [ry, ry + 18];
     const kbmOn = !!this.save.data.options.kbm;
-    const labels: [string, string][] = [["KEYBOARD + MOUSE PLAYERS", kbmOn ? "ON" : "OFF"], ["FIND A GAMECUBE ADAPTER OR PRO CONTROLLER", "SEARCH"]];
-    labels.forEach(([l, v], k) => {
-      const y = rowsY[k];
+    const rows: [string, string, string][] = [["KEYBOARD + MOUSE", kbmOn ? "ON" : "OFF", "pad"], ["FIND GAMECUBE / PRO PAD", "SEARCH", "rally"]];
+    const tw = Math.floor((cw * 4 + gap * 3 - gap) / 2);
+    rows.forEach(([l, v, g], k) => {
       const sel = this.focus === 4 + k;
-      plank(ctx, x0, y, rw, 14, sel ? "#a07448" : "#6a4a30");
-      drawText(ctx, l, x0 + 8, y + 3, sel ? "#ffe890" : "#f0e4c8", 0.62);
-      drawText(ctx, v, x0 + rw - 8 - textWidth(v, 0.68), y + 3, v === "OFF" ? "#ff9070" : "#c8ffa0", 0.68);
-      this.hit(`row:${4 + k}`, x0, y, rw, 14);
+      const x = x0 + k * (tw + gap);
+      const y = y0 + ch + 14 - (sel ? 2 : 0);
+      this.hit(`row:${4 + k}`, x, y, tw, 24);
+      card(ctx, x, y, tw, 24, sel ? 0 : (k ? 0.015 : -0.015), sel ? "#c81818" : "#8a8a90", () => {
+        waxSeal(ctx, 12, 13, 7, sel ? "#a8141a" : "#6a3a2a", g);
+        drawPlain(ctx, l, 24, 9, sel ? "#8a1810" : BROWN, 0.6, true);
+        drawPlain(ctx, v, tw - 8 - textWidth(v, 0.66, true), 9, v === "OFF" ? "#a01810" : "#2a6a18", 0.66, true);
+      });
     });
     const hint = "PLAYERS HERE PLAY FROM THIS MACHINE · ONLINE, EVERY ONE OF THEM TAKES A SEAT";
-    shadowText(ctx, hint, W / 2 - textWidth(hint, 0.5) / 2, rowsY[1] + 20, "#f0e4c8", 0.5);
+    shadowText(ctx, hint, W / 2 - textWidth(hint, 0.5) / 2, H - 31, "#f0e4c8", 0.5);
     void now;
     const p: [string, string][] = [["A", this.focus < 4 ? "FREE SEAT" : "CHANGE"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
   private drawBrowse(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
-    artTitle(ctx, "!BATTLES ON THIS SERVER", "BATTLES ON THIS SERVER", W / 2, 3, 14);
-    const px = 14;
-    const py = 26;
-    const pw = W - 28;
-    const ph = H - 52;
-    parchment(ctx, px, py, pw, ph);
-    const rh = 22;
-    const head = (t: string, x: number, right = false) => drawPlain(ctx, t, right ? x - textWidth(t, 0.55, true) : x, py + 6, "#8a5a2a", 0.55, true);
-    const c = { name: px + 34, mode: px + pw * 0.52, map: px + pw * 0.64, seats: px + pw - 64, state: px + pw - 10 };
-    head("BATTLE", c.name);
-    head("MODE", c.mode);
-    head("FIELD", c.map);
-    head("SEATS", c.seats, true);
-    head("STATE", c.state, true);
-    band(ctx, px + 6, py + 15, pw - 12, 1, "#6a4424", 0.5);
-    const vis = Math.floor((ph - 30) / rh);
-    const n = this.rooms.length + 1;
-    if (this.focus < this.scrollTop) this.scrollTop = this.focus;
-    if (this.focus >= this.scrollTop + vis) this.scrollTop = this.focus - vis + 1;
+    boardTitle(ctx, W, "!BATTLES ON THIS SERVER", "BATTLES ON THIS SERVER");
+    const qw = 104;
+    const qh = H - 58;
+    const qx = 14;
+    const qy = 28;
+    const qsel = this.focus === 0;
+    this.hit("row:0", qx, qy, qw, qh);
+    card(ctx, qx + (qsel ? 3 : 0), qy - (qsel ? 2 : 0), qw, qh, qsel ? 0 : -0.025, qsel ? "#c81818" : "#8a8a90", () => {
+      inset(ctx, 8, 16, qw - 16, 66, "#3a2a1c");
+      texturedRect(ctx, "cloth", 8, 16, qw - 16, 66, "#a8141a", 0, 0.7);
+      band(ctx, 8, 16, qw - 16, 66, "#000000", qsel ? 0.1 : 0.35);
+      waxSeal(ctx, qw / 2, 49, 20, qsel ? "#c8a020" : "#8a7a40", "dash");
+      const t = "QUICK JOIN";
+      drawPlain(ctx, t, qw / 2 - textWidth(t, 0.95, true) / 2, 92, qsel ? "#8a1810" : BROWN, 0.95, true);
+      wrap("TAKE THE FIRST OPEN SEAT ON THE SERVER.", qw - 16, 0.52).forEach((l, j) => drawPlain(ctx, l, qw / 2 - textWidth(l, 0.52) / 2, 108 + j * 8, "#4a3018", 0.52));
+      const st = this.netBusy ? this.netStatus : `${this.rooms.length} BATTLE${this.rooms.length === 1 ? "" : "S"} POSTED`;
+      wrap(st, qw - 14, 0.48).slice(0, 2).forEach((l, j) => drawPlain(ctx, l, qw / 2 - textWidth(l, 0.48) / 2, qh - 22 + j * 8, this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : "#8a5a2a", 0.48));
+    });
+    const gx = qx + qw + 16;
+    const gw = W - gx - 12;
+    const cols = 2;
+    const nw = Math.floor((gw - 10) / cols);
+    const nh = 42;
+    const rowsVis = Math.floor((H - 58) / (nh + 8));
+    const vis = rowsVis * cols;
+    const n = this.rooms.length;
+    const fr = this.focus - 1;
+    if (fr >= 0) {
+      if (fr < this.scrollTop) this.scrollTop = fr - (fr % cols);
+      if (fr >= this.scrollTop + vis) this.scrollTop = fr - (fr % cols) - (rowsVis - 1) * cols;
+    }
+    if (!n) {
+      card(ctx, gx + gw / 2 - 90, 70, 180, 50, 0.02, "#8a8a90", () => {
+        const a = this.roomsError || "NO BATTLES POSTED YET";
+        drawPlain(ctx, a, 90 - textWidth(a, 0.75, true) / 2, 14, "#6a4424", 0.75, true);
+        const b = "GO BACK AND HOST ONE";
+        drawPlain(ctx, b, 90 - textWidth(b, 0.55) / 2, 30, "#8a5a2a", 0.55);
+      });
+    }
     for (let k = this.scrollTop; k < Math.min(n, this.scrollTop + vis); k++) {
-      const y = py + 20 + (k - this.scrollTop) * rh;
-      const sel = k === this.focus;
-      this.hit(`row:${k}`, px + 4, y, pw - 8, rh - 2);
-      if (sel) {
-        ctx.fillStyle = INK;
-        ctx.fillRect(px + 5, y - 1, pw - 10, rh);
-        texturedRect(ctx, "banner", px + 6, y, pw - 12, rh - 2, "#a8301c", 0, 0.5);
-      }
-      const ink = (col: string) => (sel ? LIGHT : col);
-      if (k === 0) {
-        waxSeal(ctx, px + 19, y + 10, 7, "#a8141a", "dash");
-        drawPlain(ctx, "QUICK JOIN", c.name, y + 3, ink(BROWN), 0.85, true);
-        drawPlain(ctx, "TAKE THE FIRST OPEN SEAT ON THE SERVER", c.name, y + 13, ink("#6a4424"), 0.5, true);
-        continue;
-      }
-      const r = this.rooms[k - 1];
+      const r = this.rooms[k];
+      const slot = k - this.scrollTop;
+      const sel = this.focus === k + 1;
+      const x = gx + (slot % cols) * (nw + 10);
+      const y = 28 + Math.floor(slot / cols) * (nh + 8);
+      const drift = Math.sin(now * 0.8 + k * 1.7) * 0.012;
+      this.hit(`row:${k + 1}`, x, y, nw, nh);
       const open = r.phase === "lobby" && r.humans < r.seats;
-      waxSeal(ctx, px + 19, y + 10, 7, open ? "#2a7a20" : "#6a6058", open ? "banner" : "castle");
-      const nm = r.name.length > 20 ? r.name.slice(0, 20) : r.name;
-      drawPlain(ctx, nm, c.name, y + 3, ink(BROWN), 0.8, true);
-      const age = r.age < 60 ? `OPENED ${r.age}S AGO` : `OPENED ${Math.floor(r.age / 60)} MIN AGO`;
-      drawPlain(ctx, age, c.name, y + 13, ink("#8a5a2a"), 0.45, true);
-      drawPlain(ctx, r.mode, c.mode, y + 6, ink(BROWN), 0.6, true);
-      const map = (r.map || "-").replace(/^GRUDGE\w*\s*/, "");
-      drawPlain(ctx, map.slice(0, 14), c.map, y + 6, ink(BROWN), 0.6, true);
-      num(ctx, `${r.humans} / ${r.seats}`, c.seats, y + 5, ink(open ? "#2a6a18" : "#8a1810"), 0.75);
-      const st = r.phase === "match" ? "FIGHTING" : r.humans >= r.seats ? "FULL" : "OPEN";
-      num(ctx, st, c.state, y + 5, ink(st === "OPEN" ? "#2a6a18" : "#8a1810"), 0.65);
+      card(ctx, x, y - (sel ? 2 : 0), nw, nh, sel ? 0 : (k % 2 ? 0.02 : -0.02) + drift, sel ? "#c81818" : open ? "#3a9a30" : "#8a8a90", () => {
+        waxSeal(ctx, 12, 16, 8, open ? "#2a7a20" : "#6a6058", open ? "banner" : "castle");
+        const nm = r.name.length > 16 ? r.name.slice(0, 16) : r.name;
+        drawPlain(ctx, nm, 25, 8, sel ? "#8a1810" : BROWN, 0.72, true);
+        const map = (r.map || "-").replace(/^GRUDGE\w*\s*/, "");
+        drawPlain(ctx, `${r.mode}  ·  ${map.slice(0, 12)}`, 25, 19, "#6a4424", 0.5);
+        const age = r.age < 60 ? `${r.age}S AGO` : `${Math.floor(r.age / 60)} MIN AGO`;
+        drawPlain(ctx, age, 25, 29, "#8a5a2a", 0.45);
+        const st = r.phase === "match" ? "FIGHTING" : r.humans >= r.seats ? "FULL" : "OPEN";
+        const seats = `${r.humans}/${r.seats}`;
+        drawPlain(ctx, seats, nw - 8 - textWidth(seats, 0.8, true), 9, open ? "#2a6a18" : "#8a1810", 0.8, true);
+        drawPlain(ctx, st, nw - 8 - textWidth(st, 0.5, true), 27, open ? "#2a6a18" : "#8a1810", 0.5, true);
+      });
     }
-    if (!this.rooms.length) {
-      const t = this.roomsError || "NO BATTLES YET · GO BACK AND HOST ONE";
-      drawPlain(ctx, t, W / 2 - textWidth(t, 0.7, true) / 2, py + ph / 2, "#6a4424", 0.7, true);
+    if (n > vis) {
+      const t = `${this.scrollTop + 1}-${Math.min(n, this.scrollTop + vis)} OF ${n}`;
+      shadowText(ctx, t, W - 14 - textWidth(t, 0.5), H - 31, "#f0e4c8", 0.5);
     }
-    const t = this.netBusy ? this.netStatus : `REFRESHES BY ITSELF · ${this.rooms.length} BATTLE${this.rooms.length === 1 ? "" : "S"}`;
-    drawPlain(ctx, t, px + pw - 8 - textWidth(t, 0.48, true), py + ph - 10, this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : "#8a5a2a", 0.48, true);
     const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "JOIN"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
   private drawRows(ctx: CanvasRenderingContext2D, W: number, H: number, art: string, fallback: string, rows: Row<object>[], obj: object, extra: string[]): void {
-    artTitle(ctx, art, fallback, W / 2, 3, 14);
-    const pw = Math.min(300, W - 40);
-    const px = Math.round((W - pw) / 2);
-    const py = 28;
+    boardTitle(ctx, W, art, fallback);
+    const decree = this.page === "rules";
     const total = rows.length + extra.length;
-    const rh = Math.min(20, Math.floor((H - 24 - py - 40) / total));
-    const ph = total * rh + 40;
-    parchment(ctx, px, py, pw, ph);
-    const vx = px + pw - 58;
-    for (let k = 0; k < total; k++) {
-      const y = py + 8 + k * rh + (k >= rows.length ? 4 : 0);
-      const sel = k === this.focus;
-      if (sel) {
-        ctx.fillStyle = INK;
-        ctx.fillRect(px + 5, y - 1, pw - 10, rh - 1);
-        texturedRect(ctx, "cloth", px + 6, y, pw - 12, rh - 3, "#a8301c", 0, 0.6);
-      }
-      this.hit(`row:${k}`, px + 4, y - 1, pw - 8, rh);
-      if (k < rows.length) {
-        const r = rows[k];
-        const ty = y + (rh - 3) / 2 - 4.5;
-        drawPlain(ctx, r.label, px + 14, ty, sel ? LIGHT : BROWN, 0.9, true);
-        const v = r.fmt((obj as Record<string, number>)[r.key as string]);
-        drawPlain(ctx, v, vx - textWidth(v, 0.9, true) / 2, ty, sel ? "#ffe890" : "#6a1c10", 0.9, true);
-        if (sel) {
-          goldArrow(ctx, vx - 36, y + (rh - 3) / 2, -1, 4.5);
-          goldArrow(ctx, vx + 36, y + (rh - 3) / 2, 1, 4.5);
-        }
-        this.hit(`dec:${k}`, vx - 42, y - 1, 18, rh);
-        this.hit(`inc:${k}`, vx + 24, y - 1, 18, rh);
-      } else {
-        const t = extra[k - rows.length];
-        drawPlain(ctx, t, px + pw / 2 - textWidth(t, 0.8, true) / 2, y + (rh - 3) / 2 - 4, sel ? LIGHT : "#6a4424", 0.8, true);
-      }
-    }
+    const pw = Math.min(232, Math.round(W * 0.55));
+    const px = 16;
+    const py = 26;
+    const ph = H - 52;
+    const top = decree ? 24 : 12;
+    const rh = Math.min(17, Math.floor((ph - top - 10) / total));
     const f = this.focus;
+    const val = (k: number) => rows[k].fmt((obj as Record<string, number>)[rows[k].key as string]);
+    card(ctx, px, py, pw, ph, -0.015, null, () => {
+      if (decree) {
+        const t = "BY ORDER OF BOTH HOUSES";
+        drawPlain(ctx, t, pw / 2 - textWidth(t, 0.6, true) / 2, 8, "#8a1810", 0.6, true);
+        band(ctx, 14, 18, pw - 28, 1, "#6a4424", 0.5);
+      }
+      for (let k = 0; k < total; k++) {
+        const y = top + k * rh + (k >= rows.length ? 4 : 0);
+        const sel = k === f;
+        this.hit(`row:${k}`, px + 4, py + y - 2, pw - 8, rh);
+        if (sel) {
+          ctx.fillStyle = "rgba(168,48,28,0.16)";
+          ctx.fillRect(6, y - 2, pw - 12, rh - 1);
+          goldArrow(ctx, 9, y + rh / 2 - 2, 1, 4);
+        }
+        const ty = y + rh / 2 - 6;
+        if (k < rows.length) {
+          const lead = decree ? `${ROMAN_N[k]}.  ` : "";
+          const label = lead + rows[k].label;
+          drawPlain(ctx, label, 18, ty, sel ? "#8a1810" : BROWN, 0.72, true);
+          const v = val(k);
+          const vx = pw - 12 - textWidth(v, 0.72, true);
+          const lw = textWidth(label, 0.72, true) + 22;
+          for (let dx = lw; dx < vx - 6; dx += 5) {
+            ctx.fillStyle = "rgba(106,68,36,0.45)";
+            ctx.fillRect(dx, ty + 6, 1.5, 1.5);
+          }
+          drawPlain(ctx, v, vx, ty, sel ? "#8a1810" : "#6a1c10", 0.72, true);
+        } else {
+          const t = extra[k - rows.length];
+          drawPlain(ctx, t, pw / 2 - textWidth(t, 0.7, true) / 2, ty, sel ? "#8a1810" : "#6a4424", 0.7, true);
+        }
+      }
+    });
+    const dx0 = px + pw + 16;
+    const dw = W - dx0 - 14;
+    const dh = ph - 8;
+    const dy0 = py + 2;
     const blurb =
       f < rows.length ? rows[f].blurb
       : f === rows.length ? "PUT EVERYTHING BACK AS IT WAS."
       : this.confirm === "erase" ? "PRESS A AGAIN TO BURN EVERY RECORD. NAMES ARE KEPT."
       : this.confirm === "erased" ? "THE RECORDS ARE ASHES."
       : "FORGET EVERY WIN, LOSS AND MATCH.";
-    drawPlain(ctx, blurb, px + pw / 2 - textWidth(blurb, 0.7) / 2, py + ph - 15, this.confirm === "erase" ? "#a01810" : "#5a3a1c", 0.7);
+    card(ctx, dx0, dy0, dw, dh, 0.02, "#c81818", () => {
+      const head = f < rows.length ? (decree ? `ARTICLE ${ROMAN_N[f]}` : "SETTING") : "THE LEDGER";
+      drawPlain(ctx, head, dw / 2 - textWidth(head, 0.55, true) / 2, 10, "#8a5a2a", 0.55, true);
+      const title = f < rows.length ? rows[f].label : extra[f - rows.length];
+      const ts = Math.min(1, (dw - 16) / Math.max(1, textWidth(title, 1, true)));
+      drawPlain(ctx, title, dw / 2 - textWidth(title, ts, true) / 2, 22, BROWN, ts, true);
+      const cy = 82;
+      if (f < rows.length) {
+        const r = rows[f];
+        const cur = (obj as Record<string, number>)[r.key as string];
+        if (decree) {
+          inset(ctx, 12, 44, dw - 24, 48, "#3a2a1c");
+          texturedRect(ctx, "cloth", 12, 44, dw - 24, 48, "#7a1a14", 0, 0.7);
+          const v = val(f);
+          const vs = Math.min(1.5, (dw - 60) / Math.max(1, textWidth(v, 1, true)));
+          paintedText(ctx, v, dw / 2, 68 - 6 * vs - 2, "#f0c030", vs);
+        } else {
+          const r0 = Math.min(34, dw / 2 - 18);
+          woodDisc(ctx, dw / 2, cy - 12, r0);
+          const nv = r.values.length;
+          const idx = Math.max(0, r.values.indexOf(cur));
+          for (let q = 0; q < nv; q++) {
+            const a = -Math.PI * 0.8 + (Math.PI * 1.6 * q) / Math.max(1, nv - 1);
+            ctx.fillStyle = q === idx ? "#f0c030" : "#2a1a0a";
+            ctx.beginPath();
+            ctx.arc(dw / 2 + Math.sin(a) * (r0 - 5), cy - 12 - Math.cos(a) * (r0 - 5), q === idx ? 2.4 : 1.4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          const a = -Math.PI * 0.8 + (Math.PI * 1.6 * idx) / Math.max(1, nv - 1);
+          ctx.strokeStyle = "#0b0806";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(dw / 2, cy - 12);
+          ctx.lineTo(dw / 2 + Math.sin(a) * (r0 - 10), cy - 12 - Math.cos(a) * (r0 - 10));
+          ctx.stroke();
+          ctx.strokeStyle = "#c8a020";
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+          waxSeal(ctx, dw / 2, cy - 12, 6, "#a8141a", "none");
+          const v = val(f);
+          drawPlain(ctx, v, dw / 2 - textWidth(v, 0.9, true) / 2, cy + 28, "#8a1810", 0.9, true);
+        }
+        const ay = decree ? 68 : cy + 32;
+        goldArrow(ctx, 20, ay, -1, 6);
+        goldArrow(ctx, dw - 20, ay, 1, 6);
+      } else waxSeal(ctx, dw / 2, cy - 12, 22, f === rows.length ? "#6a3a2a" : "#a8141a", f === rows.length ? "repair" : "quake");
+      wrap(blurb, dw - 20, 0.55).slice(0, 4).forEach((l, j) => drawPlain(ctx, l, dw / 2 - textWidth(l, 0.55) / 2, dh - 46 + j * 8, this.confirm === "erase" && f > rows.length ? "#a01810" : "#4a3018", 0.55));
+      if (decree) waxSeal(ctx, dw - 16, dh - 14, 9, "#a8141a", "works");
+    });
+    if (f < rows.length) {
+      const ay = dy0 + (decree ? 68 : 114);
+      this.hit(`dec:${f}`, dx0 + 8, ay - 10, 24, 20);
+      this.hit(`inc:${f}`, dx0 + dw - 32, ay - 10, 24, 20);
+    }
     const p: [string, string][] = [["A", "CHANGE"], ["B", "DONE"]];
     const hint = "STICK LEFT / RIGHT: CHANGE";
     const pwid = promptWidth(p, 0.7) + 14 + textWidth(hint, 0.6);
@@ -756,108 +859,184 @@ export class Menus {
   }
 
   private drawRecords(ctx: CanvasRenderingContext2D, W: number, H: number): void {
-    artTitle(ctx, "t_records", "HALL OF GRUDGES", W / 2, 3, 14);
-    const tw = 78;
+    boardTitle(ctx, W, "t_records", "HALL OF GRUDGES");
+    const bx = 12;
+    const by = 30;
+    const bw = W - 24;
+    const bh = H - 56;
+    band(ctx, bx + 4, by + 5, bw, bh, INK, 0.45);
+    ctx.fillStyle = INK;
+    ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+    texturedRect(ctx, "leather", bx, by, bw, bh, "#5a2a18", 0, 0.8);
+    const pgw = Math.floor((bw - 16) / 2);
+    const lx = bx + 6;
+    const rx = bx + bw - 6 - pgw;
+    const pgy = by + 5;
+    const pgh = bh - 10;
+    for (const x of [lx, rx]) texturedRect(ctx, "parch", x, pgy, pgw, pgh, null, 0, 1.3);
+    const sx = bx + bw / 2;
+    const g = ctx.createLinearGradient(sx - 14, 0, sx + 14, 0);
+    g.addColorStop(0, "rgba(60,30,10,0)");
+    g.addColorStop(0.45, "rgba(60,30,10,0.45)");
+    g.addColorStop(0.55, "rgba(60,30,10,0.45)");
+    g.addColorStop(1, "rgba(60,30,10,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(sx - 14, pgy, 28, pgh);
     TABS.forEach((t, k) => {
-      const cx = W / 2 + (k - 1) * (tw + 18);
       const sel = k === this.tab;
-      ribbon(ctx, cx, sel ? 23 : 21, tw, 10, t, 0.55, sel ? "#a01810" : "#6a4a2a");
-      this.hit(`tab:${k}`, cx - tw / 2 - 4, 20, tw + 8, 14);
+      const rw = 62;
+      const cx = lx + 40 + k * (rw + 8);
+      const len = sel ? 14 : 10;
+      ctx.fillStyle = INK;
+      ctx.fillRect(cx - rw / 2 - 1, by - 8, rw + 2, len + 1);
+      texturedRect(ctx, "cloth", cx - rw / 2, by - 7, rw, len, sel ? "#b01818" : "#6a4a2a", 0, 0.6);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.moveTo(cx - rw / 2, by - 7 + len);
+      ctx.lineTo(cx, by - 7 + len - 4);
+      ctx.lineTo(cx + rw / 2, by - 7 + len);
+      ctx.fill();
+      drawPlain(ctx, t, cx - textWidth(t, 0.5, true) / 2, by - 6 + (sel ? 3 : 0), sel ? "#fff4c8" : "#d8c8a8", 0.5, true);
+      this.hit(`tab:${k}`, cx - rw / 2, by - 9, rw, len + 3);
     });
-    const px = 14;
-    const py = 38;
-    const pw = W - 28;
-    const ph = H - 64;
-    parchment(ctx, px, py, pw, ph);
-    const rh = 17;
-    const vis = Math.floor((ph - 24) / rh);
+    const rh = 15;
+    const listTop = pgy + 22;
+    const vis = Math.floor((pgh - 24) / rh);
     const n = this.rowCount();
     if (this.focus < this.scrollTop) this.scrollTop = this.focus;
     if (this.focus >= this.scrollTop + vis) this.scrollTop = this.focus - vis + 1;
-    const col = (f: number) => Math.round(px + pw * f);
-    const TS = 0.85;
-    const head = (cols: [string, number, boolean][]) => {
-      for (const [t, x, left] of cols) drawPlain(ctx, t, left ? x : x - textWidth(t, 0.6, true), py + 6, "#8a5a2a", 0.6, true);
-      band(ctx, px + 6, py + 16, pw - 12, 1, "#6a4424", 0.5);
-    };
-    const rowY = (k: number) => py + 24 + (k - this.scrollTop) * rh;
-    const rowBg = (k: number, y: number) => {
-      this.hit(`row:${k}`, px + 4, y - 3, pw - 8, rh);
-      if (k !== this.focus) return;
-      ctx.fillStyle = INK;
-      ctx.fillRect(px + 5, y - 4, pw - 10, rh);
-      texturedRect(ctx, "banner", px + 6, y - 3, pw - 12, rh - 2, "#a8301c", 0, 0.5);
-    };
-    const ink = (k: number, c = BROWN) => (k === this.focus ? LIGHT : c);
-    const icon = (type: string, x: number, y: number, s = 15) => {
+    const icon = (type: string, x: number, y: number, sz = 13) => {
       const im = this.portraits?.icon(type);
-      if (im) ctx.drawImage(im, x, y - 4, s, s);
+      if (im) ctx.drawImage(im, x, y, sz, sz);
+    };
+    const rowAt = (k: number, draw: (y: number, sel: boolean) => void) => {
+      if (k < this.scrollTop || k >= this.scrollTop + vis) return;
+      const y = listTop + (k - this.scrollTop) * rh;
+      const sel = k === this.focus;
+      this.hit(`row:${k}`, lx + 2, y - 2, pgw - 4, rh);
+      if (sel) {
+        ctx.fillStyle = "rgba(168,48,28,0.16)";
+        ctx.fillRect(lx + 4, y - 2, pgw - 8, rh - 1);
+        goldArrow(ctx, lx + 7, y + rh / 2 - 2, 1, 4);
+      }
+      draw(y, sel);
+    };
+    const pageHead = (x: number, t: string) => {
+      drawPlain(ctx, t, x + pgw / 2 - textWidth(t, 0.6, true) / 2, pgy + 9, "#8a5a2a", 0.6, true);
+      band(ctx, x + 10, pgy + 17, pgw - 20, 1, "#6a4424", 0.5);
+    };
+    const R = rx + 10;
+    const RW = pgw - 20;
+    const stat = (label: string, v: string, y: number, col = BROWN) => {
+      drawPlain(ctx, label, R, y, "#6a4424", 0.6, true);
+      drawPlain(ctx, v, R + RW - textWidth(v, 0.8, true), y - 1, col, 0.8, true);
     };
     if (this.tab === 0) {
-      const c = [col(0.5), col(0.6), col(0.7), col(0.8), col(0.94)];
-      head([["CHAMPION", px + 34, true], ["PICKS", c[0], false], ["WON", c[1], false], ["LOST", c[2], false], ["DRAWN", c[3], false], ["WIN RATE", c[4], false]]);
-      this.roster.forEach((type, k) => {
-        if (k < this.scrollTop || k >= this.scrollTop + vis) return;
-        const y = rowY(k);
-        rowBg(k, y);
-        const s = this.save.data.heroes[type] ?? { picks: 0, w: 0, l: 0, d: 0 };
-        icon(type, px + 12, y);
-        drawPlain(ctx, (this.heroNames[type] ?? type).toUpperCase(), px + 34, y, ink(k), TS, true);
-        [s.picks, s.w, s.l, s.d].forEach((v, j) => num(ctx, v, c[j], y, ink(k), TS));
-        num(ctx, winRate(s), c[4], y, ink(k, "#8a1810"), TS);
-      });
+      pageHead(lx, "CHAMPIONS");
+      this.roster.forEach((type, k) => rowAt(k, (y, sel) => {
+        icon(type, lx + 14, y - 3);
+        drawPlain(ctx, (this.heroNames[type] ?? type).toUpperCase(), lx + 30, y, sel ? "#8a1810" : BROWN, 0.72, true);
+        const s0 = this.save.data.heroes[type] ?? { picks: 0, w: 0, l: 0, d: 0 };
+        num(ctx, winRate(s0), lx + pgw - 10, y, "#8a1810", 0.7);
+      }));
+      const type = this.roster[this.focus];
+      if (type) {
+        const s0 = this.save.data.heroes[type] ?? { picks: 0, w: 0, l: 0, d: 0 };
+        pageHead(rx, (this.heroNames[type] ?? type).toUpperCase());
+        inset(ctx, R + RW / 2 - 28, pgy + 25, 56, 56, "#3a2a1c");
+        texturedRect(ctx, "cloth", R + RW / 2 - 28, pgy + 25, 56, 56, "#7a1a14", 0, 0.7);
+        icon(type, R + RW / 2 - 30, pgy + 23, 60);
+        let y = pgy + 90;
+        for (const [l, v] of [["PICKED", s0.picks], ["WON", s0.w], ["LOST", s0.l], ["DRAWN", s0.d]] as const) {
+          stat(l, String(v), y);
+          y += 12;
+        }
+        stat("WIN RATE", winRate(s0), y + 2, "#8a1810");
+      }
     } else if (this.tab === 1) {
       const names = this.save.tagNames();
-      const c = [col(0.42), col(0.52), col(0.62), col(0.75), col(0.8)];
-      head([["NAME", px + 34, true], ["WON", c[0], false], ["LOST", c[1], false], ["DRAWN", c[2], false], ["WIN RATE", c[3], false], ["FAVOURITE", c[4], true]]);
-      if (!names.length) this.empty(ctx, W, py + ph / 2 - 8, "NO NAMES SIGNED YET.", "CLICK YOUR P-NUMBER ON THE CHAMPION BANNER TO SIGN ONE.");
-      names.forEach((name, k) => {
-        if (k < this.scrollTop || k >= this.scrollTop + vis) return;
-        const y = rowY(k);
-        rowBg(k, y);
+      pageHead(lx, "SIGNED NAMES");
+      if (!names.length) {
+        const a = "NO NAMES SIGNED YET.";
+        drawPlain(ctx, a, lx + pgw / 2 - textWidth(a, 0.7, true) / 2, pgy + pgh / 2 - 8, "#6a4424", 0.7, true);
+        wrap("CLICK YOUR NAME PLATE ON THE CHAMPION BANNER TO SIGN ONE.", pgw - 24, 0.5).forEach((l, j) => drawPlain(ctx, l, lx + pgw / 2 - textWidth(l, 0.5) / 2, pgy + pgh / 2 + 6 + j * 8, "#8a5a2a", 0.5));
+      }
+      names.forEach((name, k) => rowAt(k, (y, sel) => {
+        waxSeal(ctx, lx + 20, y + 3.5, 5, "#a8141a", "combo");
+        drawPlain(ctx, name, lx + 30, y, sel ? "#8a1810" : BROWN, 0.72, true);
+        num(ctx, winRate(this.save.data.tags[name]), lx + pgw - 10, y, "#8a1810", 0.7);
+      }));
+      const name = names[this.focus];
+      if (name) {
         const t = this.save.data.tags[name];
-        waxSeal(ctx, px + 19, y + 3.5, 5.5, "#a8141a", "combo");
-        drawPlain(ctx, name, px + 34, y, ink(k), TS, true);
-        [t.w, t.l, t.d].forEach((v, j) => num(ctx, v, c[j], y, ink(k), TS));
-        num(ctx, winRate(t), c[3], y, ink(k, "#8a1810"), TS);
+        pageHead(rx, "THE SIGNATORY");
+        const ns = Math.min(1.6, RW / Math.max(1, textWidth(name, 1, true)));
+        drawPlain(ctx, name, R + RW / 2 - textWidth(name, ns, true) / 2, pgy + 22, "#3a2410", ns, true);
+        let y = pgy + 50;
+        for (const [l, v] of [["WON", t.w], ["LOST", t.l], ["DRAWN", t.d]] as const) {
+          stat(l, String(v), y);
+          y += 12;
+        }
+        stat("WIN RATE", winRate(t), y + 2, "#8a1810");
         const fav = Object.entries(t.heroes).sort((a, b) => b[1].w + b[1].l + b[1].d - (a[1].w + a[1].l + a[1].d))[0];
         if (fav) {
-          icon(fav[0], c[4], y);
-          drawPlain(ctx, (this.heroNames[fav[0]] ?? fav[0]).toUpperCase(), c[4] + 18, y + 1, ink(k, "#4a3018"), 0.7, true);
+          y += 18;
+          drawPlain(ctx, "FAVOURITE", R, y, "#6a4424", 0.6, true);
+          inset(ctx, R + RW - 26, y - 4, 24, 24, "#3a2a1c");
+          icon(fav[0], R + RW - 27, y - 5, 26);
+          drawPlain(ctx, (this.heroNames[fav[0]] ?? fav[0]).toUpperCase(), R, y + 10, BROWN, 0.72, true);
         }
-      });
+        if (this.confirm === `strike:${name}`) {
+          const c = "PRESS Y AGAIN TO STRIKE";
+          drawPlain(ctx, c, R + RW / 2 - textWidth(c, 0.55) / 2, pgy + pgh - 12, "#a01810", 0.55);
+        }
+      }
     } else {
       const log = this.save.data.log;
-      head([["DAY", px + 10, true], ["BLUE HOUSE", px + 50, true], ["RED HOUSE", col(0.42), true], ["FIELD", col(0.7), true], ["VICTOR", col(0.97), false]]);
-      if (!log.length) this.empty(ctx, W, py + ph / 2 - 8, "NO GRUDGES SETTLED YET.", "FINISH A MATCH TO WRITE THE FIRST PAGE.");
-      log.forEach((m, k) => {
-        if (k < this.scrollTop || k >= this.scrollTop + vis) return;
-        const y = rowY(k);
-        rowBg(k, y);
-        drawPlain(ctx, dateOf(m.at), px + 10, y + 1, ink(k, "#8a5a2a"), 0.7, true);
-        for (const team of [0, 1]) {
-          let x = team ? col(0.42) : px + 50;
-          for (const p of m.players.filter((q) => q.team === team)) {
-            icon(p.hero, x, y, 14);
-            x += 15;
-            const nm = p.cpu ? "CPU" : p.tag ?? "-";
-            drawPlain(ctx, nm, x, y + 1, k === this.focus ? LIGHT : TEAM_TEXT[team], 0.72, true);
-            x += textWidth(nm, 0.72, true) + 8;
-          }
-        }
-        const mm = `${Math.floor(m.secs / 60)}:${String(Math.floor(m.secs % 60)).padStart(2, "0")}`;
-        drawPlain(ctx, `${(this.mapNames[m.map] ?? m.map).toUpperCase().replace(/^GRUDGE\w*\s*/, "")}  ${mm}`, col(0.7), y + 1, ink(k, "#6a4424"), 0.68, true);
+      pageHead(lx, "THE CHRONICLE");
+      if (!log.length) {
+        const a = "NO GRUDGES SETTLED YET.";
+        drawPlain(ctx, a, lx + pgw / 2 - textWidth(a, 0.7, true) / 2, pgy + pgh / 2 - 8, "#6a4424", 0.7, true);
+        const b = "FINISH A MATCH TO WRITE THE FIRST PAGE.";
+        drawPlain(ctx, b, lx + pgw / 2 - textWidth(b, 0.5) / 2, pgy + pgh / 2 + 6, "#8a5a2a", 0.5);
+      }
+      log.forEach((m, k) => rowAt(k, (y, sel) => {
+        drawPlain(ctx, dateOf(m.at), lx + 14, y, "#8a5a2a", 0.62, true);
+        const map = (this.mapNames[m.map] ?? m.map).toUpperCase().replace(/^GRUDGE\w*\s*/, "");
+        drawPlain(ctx, map.slice(0, 12), lx + 44, y, sel ? "#8a1810" : BROWN, 0.65, true);
         const res = m.winner < 0 ? "DRAW" : m.winner === 0 ? "BLUE" : "RED";
-        num(ctx, res, col(0.97), y, k === this.focus ? LIGHT : m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], TS);
-      });
+        num(ctx, res, lx + pgw - 10, y, m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], 0.65);
+      }));
+      const m = log[this.focus];
+      if (m) {
+        const map = (this.mapNames[m.map] ?? m.map).toUpperCase();
+        pageHead(rx, `${dateOf(m.at)} · ${map}`);
+        const mm = `${Math.floor(m.secs / 60)}:${String(Math.floor(m.secs % 60)).padStart(2, "0")}`;
+        let y = pgy + 22;
+        for (const team of [0, 1]) {
+          drawPlain(ctx, team ? "RED HOUSE" : "BLUE HOUSE", R, y, TEAM_TEXT[team], 0.62, true);
+          y += 10;
+          for (const p of m.players.filter((q) => q.team === team)) {
+            icon(p.hero, R, y - 3, 14);
+            const nm = `${p.cpu ? "CPU" : p.tag ?? "-"} · ${(this.heroNames[p.hero] ?? p.hero).toUpperCase()}`;
+            drawPlain(ctx, nm, R + 17, y, BROWN, 0.6, true);
+            y += 13;
+          }
+          y += 4;
+        }
+        stat("LASTED", mm, y + 2);
+        const res = m.winner < 0 ? "DRAW" : m.winner === 0 ? "BLUE" : "RED";
+        waxSeal(ctx, R + RW - 14, pgy + pgh - 18, 12, m.winner < 0 ? "#8a7a60" : m.winner === 0 ? "#2a4ab8" : "#a8141a", "combo");
+        drawPlain(ctx, res === "DRAW" ? "A DRAW" : `${res} WON`, R, pgy + pgh - 22, m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], 0.85, true);
+      }
     }
     if (n > vis) {
       const t = `${this.scrollTop + 1}-${Math.min(n, this.scrollTop + vis)} OF ${n}`;
-      drawPlain(ctx, t, px + pw - 8 - textWidth(t, 0.5, true), py + ph - 10, "#8a5a2a", 0.5, true);
+      drawPlain(ctx, t, lx + pgw - 8 - textWidth(t, 0.48, true), pgy + pgh - 9, "#8a5a2a", 0.48, true);
     }
     const p: [string, string][] = [["B", "DONE"]];
     if (this.tab === 1 && this.save.tagNames().length) p.unshift(["Y", this.confirm.startsWith("strike:") ? "AGAIN TO STRIKE" : "STRIKE NAME"]);
-    const hint = "STICK LEFT / RIGHT: PAGE";
+    const hint = "STICK LEFT / RIGHT: BOOKMARK";
     const pwid = promptWidth(p, 0.7) + 14 + textWidth(hint, 0.6);
     const x0 = Math.round((W - pwid) / 2);
     shadowText(ctx, hint, x0, H - 12, "#f0e4c8", 0.6);
@@ -970,49 +1149,56 @@ export class Menus {
   }
 }
 
-const PAD_ROWS: [string, string][] = [
-  ["STICK", "MOVE"], ["A", "ATTACK · HOLD TO CHARGE A HEAVY HIT · WITH A BOMB: THROW"], ["B", "SECONDARY · HOLD TO CHARGE (LEAP, HEX, BANNER: HOLD TO AIM)"], ["R", "SPECIAL · HOLD TO AIM WHERE IT LANDS"], ["Z", "SUPER WHEN THE METER IS FULL · HOLD TO AIM"],
-  ["L", "BLOCK · L+A SHOVE · L+X DODGE"], ["C", "ORDERS: UP ATTACK · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD · LEVEL UP: LEFT / RIGHT LEARNS"],
-  ["X", "AT A PAD: OUTPOSTS · THEY SEND TROOPS FOR GOLD"], ["Y", "AT A PAD: TOWERS · AT THE KEEP: SHOP · ELSEWHERE: RECALL HOME (ONCE PER LIFE)"], ["D-PAD", "LEFT / RIGHT: WHO OBEYS · UP / DOWN: ZOOM"], ["START", "PAUSE"], ["ARMY", "GRUNTS BEAT BRUTES · ARCHERS BEAT GRUNTS · BRUTES BEAT ARCHERS"],
+const PAD_GROUPS: [string, [string, string][]][] = [
+  ["FIGHT", [["STICK", "MOVE"], ["A", "ATTACK · HOLD TO CHARGE · WITH A BOMB: THROW"], ["B", "SECONDARY · HOLD TO CHARGE OR AIM"], ["R", "SPECIAL · HOLD TO AIM WHERE IT LANDS"], ["Z", "SUPER WHEN THE METER IS FULL"], ["L", "BLOCK · L+A SHOVE · L+X DODGE"]]],
+  ["COMMAND", [["C", "ORDERS: UP ATTACK · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD · LEVEL UP: LEFT / RIGHT"], ["D-PAD", "LEFT / RIGHT: WHO OBEYS · UP / DOWN: ZOOM"]]],
+  ["BUILD", [["X", "AT A PAD: OUTPOSTS · THEY SEND TROOPS FOR GOLD"], ["Y", "AT A PAD: TOWERS · KEEP: SHOP · ELSEWHERE: RECALL (ONCE PER LIFE)"], ["START", "PAUSE"]]],
 ];
-const KEY_ROWS: [string, string][] = [
-  ["WASD", "MOVE"], ["E", "ATTACK · HOLD TO CHARGE"], ["Q", "SECONDARY · HOLD TO CHARGE"], ["X", "SPECIAL · HOLD + WASD TO AIM"], ["C", "SUPER · HOLD + WASD TO AIM"], ["Z", "BLOCK · Z + E: SHOVE"], ["SPACE", "DODGE"],
-  ["F / L-MOUSE", "OUTPOSTS AT A PAD"], ["R / R-MOUSE", "TOWERS AT A PAD · SHOP AT THE KEEP · ELSEWHERE: RECALL"], ["ARROWS", "ORDERS · LEFT / RIGHT LEARNS ON LEVEL UP"], ["3 / 4", "WHO OBEYS"], ["1 / 2", "ZOOM"], ["ENTER", "PAUSE"],
+const KEY_GROUPS: [string, [string, string][]][] = [
+  ["FIGHT", [["WASD", "MOVE"], ["E", "ATTACK · HOLD TO CHARGE"], ["Q", "SECONDARY · HOLD TO CHARGE"], ["X", "SPECIAL · HOLD + WASD TO AIM"], ["C", "SUPER · HOLD + WASD TO AIM"], ["Z", "BLOCK · Z + E: SHOVE"], ["SPACE", "DODGE"]]],
+  ["COMMAND", [["ARROWS", "ORDERS · LEFT / RIGHT LEARNS ON LEVEL UP"], ["3 / 4", "WHO OBEYS"], ["1 / 2", "ZOOM"]]],
+  ["BUILD", [["F / L-MOUSE", "OUTPOSTS AT A PAD"], ["R / R-MOUSE", "TOWERS · SHOP AT THE KEEP · ELSEWHERE: RECALL"], ["ENTER", "PAUSE"]]],
 ];
 
 export function drawControlSheet(ctx: CanvasRenderingContext2D, px: number, py: number, pw: number, ph: number): void {
-  parchment(ctx, px, py, pw, ph);
-  const colW = Math.floor(pw / 2);
-  const S = 0.55;
-  const LH = 7.5;
-  drawPlain(ctx, "CONTROLLER", px + 12, py + 7, "#8a1810", 0.7, true);
-  drawPlain(ctx, "KEYBOARD AND MOUSE", px + colW + 10, py + 7, "#8a1810", 0.7, true);
-  band(ctx, px + colW, py + 8, 1, ph - 16, "#6a4424", 0.4);
-  const fit = (rows: [string, string][], textX: number, maxW: number): { lines: string[]; h: number }[] => rows.map(([, v]) => {
-    const lines = wrap(v, maxW, S);
-    return { lines, h: Math.max(10, lines.length * LH + 3) };
-  });
-  const padText = px + 34;
-  const pl = fit(PAD_ROWS, padText, colW - 42);
-  const padTotal = pl.reduce((a, r) => a + r.h, 0);
-  let y = py + 19 + Math.max(0, (ph - 26 - padTotal) / (PAD_ROWS.length * 2));
-  const padGap = Math.max(0, (ph - 26 - padTotal) / PAD_ROWS.length);
-  PAD_ROWS.forEach(([k], i) => {
-    const col = k === "A" ? PAD.a : k === "B" ? PAD.b : k === "C" || k === "X" || k === "Y" ? PAD.c : k === "Z" || k === "R" || k === "L" ? PAD.z : k === "START" ? PAD.start : "";
-    if (col) padButton(ctx, px + 20, y + 3.5, 4.4, col, k === "START" ? "S" : k);
-    else drawPlain(ctx, k, px + 20 - textWidth(k, 0.48, true) / 2, y + 1, "#6a4424", 0.48, true);
-    pl[i].lines.forEach((l, j) => drawPlain(ctx, l, padText, y + j * LH, BROWN, S, true));
-    y += pl[i].h + padGap;
-  });
-  const keyX = px + colW + 10;
-  const keyW = 62;
-  const kl = fit(KEY_ROWS, keyX + keyW, colW - keyW - 18);
-  const keyTotal = kl.reduce((a, r) => a + r.h, 0);
-  const keyGap = Math.max(0, (ph - 26 - keyTotal) / KEY_ROWS.length);
-  y = py + 19 + keyGap / 2;
-  KEY_ROWS.forEach(([k], i) => {
-    drawPlain(ctx, k, keyX, y, "#6a1c10", 0.5, true);
-    kl[i].lines.forEach((l, j) => drawPlain(ctx, l, keyX + keyW, y + j * LH, BROWN, S, true));
-    y += kl[i].h + keyGap;
+  const gap = 12;
+  const cw = Math.floor((pw - gap) / 2);
+  ([[PAD_GROUPS, "CONTROLLER", "pad"], [KEY_GROUPS, "KEYBOARD AND MOUSE", "works"]] as const).forEach(([groups, title, glyph], c) => {
+    const x = px + c * (cw + gap);
+    card(ctx, x, py, cw, ph, c ? 0.012 : -0.012, "#8a8a90", () => {
+      waxSeal(ctx, 13, 12, 7, "#a8141a", glyph);
+      drawPlain(ctx, title, 25, 8, "#8a1810", 0.68, true);
+      band(ctx, 8, 21, cw - 16, 1, "#6a4424", 0.5);
+      const keyW = c ? 50 : 28;
+      const textW = cw - keyW - 18;
+      let S = 0.5;
+      let LH = 7;
+      const build = () => groups.map(([g, rows]) => ({ g, rows: rows.map(([k, v]) => ({ k, lines: wrap(v, textW, S) })) }));
+      const measure = (bl: ReturnType<typeof build>) => bl.reduce((a, b) => a + 10 + b.rows.reduce((q, r) => q + r.lines.length * LH + 2, 0), 0);
+      let blocks = build();
+      while (measure(blocks) > ph - 30 && S > 0.4) {
+        S -= 0.03;
+        LH = 14 * S;
+        blocks = build();
+      }
+      const used = measure(blocks);
+      const slack = Math.max(0, (ph - 30 - used) / Math.max(1, blocks.length));
+      let y = 26 + slack / 2;
+      for (const b of blocks) {
+        drawPlain(ctx, b.g, 8, y, "#a8141a", 0.5, true);
+        band(ctx, 10 + textWidth(b.g, 0.5, true), y + 3.5, cw - 22 - textWidth(b.g, 0.5, true), 1, "#a8141a", 0.25);
+        y += 10;
+        for (const r of b.rows) {
+          if (c === 0) {
+            const col = r.k === "A" ? PAD.a : r.k === "B" ? PAD.b : r.k === "C" || r.k === "X" || r.k === "Y" ? PAD.c : r.k === "Z" || r.k === "R" || r.k === "L" ? PAD.z : r.k === "START" ? PAD.start : "";
+            if (col) padButton(ctx, 16, y + 3, 4.2, col, r.k === "START" ? "S" : r.k);
+            else drawPlain(ctx, r.k, 16 - textWidth(r.k, 0.42, true) / 2, y + 0.5, "#6a4424", 0.42, true);
+          } else drawPlain(ctx, r.k, 8, y, "#6a1c10", 0.48, true);
+          r.lines.forEach((l, j) => drawPlain(ctx, l, 8 + keyW, y + j * LH, BROWN, S, true));
+          y += r.lines.length * LH + 2;
+        }
+        y += slack;
+      }
+    });
   });
 }

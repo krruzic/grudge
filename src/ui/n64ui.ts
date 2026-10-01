@@ -664,3 +664,46 @@ export function drawLogo(ctx: CanvasRenderingContext2D, cx: number, y: number, h
   ctx.drawImage(logo, cx - w / 2, y, w, h);
   ctx.imageSmoothingEnabled = smooth;
 }
+
+export function card(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tilt: number, pinColor: string | null, body: () => void): void {
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate(tilt);
+  ctx.translate(-w / 2, -h / 2);
+  parchment(ctx, 0, 0, w, h);
+  body();
+  if (pinColor) pin(ctx, w / 2, 3, pinColor);
+  ctx.restore();
+}
+
+export function inset(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fill: string | null = "#2a1a0a"): void {
+  ctx.fillStyle = "#2a1a0a";
+  ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, y, w, h);
+  }
+}
+
+export function windowCut(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  ctx.fillStyle = "#2a1a0a";
+  ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+  ctx.clearRect(x, y, w, h);
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, "rgba(0,0,0,0.25)");
+  g.addColorStop(0.2, "rgba(0,0,0,0)");
+  g.addColorStop(0.8, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.3)");
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+}
+
+export function boardTitle(ctx: CanvasRenderingContext2D, W: number, key: string, fallback: string): void {
+  beam(ctx, 4, 2, W - 8, 17);
+  artTitle(ctx, key, fallback, W / 2, 3, 14);
+}
+
+export function tag(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, sel: boolean, k: number, body: () => void): void {
+  card(ctx, x - (sel ? 8 : 0), y, w, h, sel ? 0 : k % 2 ? 0.025 : -0.025, sel ? "#c81818" : "#8a8a90", body);
+  if (sel) goldArrow(ctx, x - 14, y + h / 2, -1, 6);
+}
