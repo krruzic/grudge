@@ -47,7 +47,8 @@
     "calmSeconds": 2.5,
     "calmSpeedMul": 1.15,
     "commitSeconds": 0.35,
-    "commitMul": 0.6
+    "commitMul": 0.6,
+    "outpostReach": 8
   },
   "positional": {
     "backstabMul": 1.35,

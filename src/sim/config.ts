@@ -315,6 +315,7 @@ export interface MatchData {
     calmSpeedMul: number;
     commitSeconds: number;
     commitMul: number;
+    outpostReach: number;
   };
   directives: { holdLeash: number; followRadius: number; followLeash: number; followEngage: number };
 }

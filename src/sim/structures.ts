@@ -54,7 +54,7 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
     return true;
   }
   if (kind === "upgrade") return false;
-  if (w.time < pad.rubbleUntil) {
+  if (w.time < pad.rubbleUntil && pad.rubbleTeam === team) {
     w.emit({ type: "notice", team, text: `RUBBLE · ${Math.ceil(pad.rubbleUntil - w.time)}` });
     return false;
   }

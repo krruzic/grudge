@@ -102,7 +102,7 @@
       "heavy": 110
     },
     "cooldown": 3,
-    "forwardStatMul": 1.0
+    "forwardStatMul": 1.15
   },
   "waves": {
     "firstSeconds": 8,

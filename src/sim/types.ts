@@ -312,6 +312,7 @@ export interface Pad {
   side: number;
   structureId: number;
   rubbleUntil: number;
+  rubbleTeam?: number;
 }
 
 export interface TeamDirectives {

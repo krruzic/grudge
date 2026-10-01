@@ -613,12 +613,14 @@ export class Arena {
     }
     let from: Entity | undefined;
     let best = Infinity;
+    const core0 = w.core(team);
+    const coreD = core0 ? w.dist(hero, core0) : Infinity;
     for (const o of w.entities) {
-      if (!o.alive || o.team !== team || !o.structure?.ready) continue;
+      if (!o.alive || o.team !== team || !o.structure?.ready || o.structure.padIndex < 0) continue;
       const def = o.structure.type === "core" ? null : w.data.structures.types[o.structure.type];
-      if (def?.unit !== type) continue;
-      const d = w.dist(hero, o);
-      if (d < best) { best = d; from = o; }
+      if (def?.class !== "production") continue;
+      const d = w.dist(hero, o) - (def.unit === type ? 4 : 0);
+      if (d < best && d < coreD) { best = d; from = o; }
     }
     const base = from ?? w.core(team);
     if (!base) return false;
@@ -631,7 +633,8 @@ export class Arena {
     const cz = base.transform.pos.z + (dz / dl) * out;
     const fst = from?.structure;
     const upStat = fst && fst.type !== "core" && fst.level > 1 ? w.data.structures.types[fst.type].upgrade.unitStat ?? 1 : 1;
-    const stat = from ? upStat * sq.forwardStatMul : 1;
+    const zone = fst && fst.padIndex >= 0 ? w.pads[fst.padIndex]?.zone : undefined;
+    const stat = from ? upStat * (zone && zone !== "home" ? sq.forwardStatMul : 1) : 1;
     const n = Math.min(sq.size, room);
     for (let i = 0; i < n; i++) {
       const a = ((i - (n - 1) / 2) * 0.9);

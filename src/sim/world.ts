@@ -828,6 +828,7 @@ export class World {
     killer.resource += bounty.structure;
     this.teams[target.team].structuresLost++;
     pad.rubbleUntil = this.time + this.data.structures.rubbleSeconds;
+    pad.rubbleTeam = target.team;
   }
 
   nextSlot(team: number): number {
@@ -865,6 +866,13 @@ export class World {
       if (d > o.structure.range * pc.towerReach) continue;
       if (o.team !== e.team) return "enemyTower";
       own = true;
+    }
+    if (!own) {
+      for (const o of this.entities) {
+        if (!o.alive || o.team !== e.team || !o.structure?.ready || o.structure.padIndex < 0) continue;
+        if (this.data.structures.types[o.structure.type as keyof typeof this.data.structures.types]?.class !== "production") continue;
+        if (Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z) <= pc.outpostReach) { own = true; break; }
+      }
     }
     if (own) return "tower";
     const mine = this.get(this.teams[e.team]?.coreId ?? -1);
