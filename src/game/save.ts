@@ -138,10 +138,11 @@ export class Save {
   record(m: MatchLog, heroKills: number[]): void {
     const res = (team: number): keyof Record3 => (m.winner < 0 ? "d" : m.winner === team ? "w" : "l");
     for (const p of m.players) {
+      if (p.cpu) continue;
       const h = (this.data.heroes[p.hero] ??= { picks: 0, w: 0, l: 0, d: 0 });
       h.picks++;
       h[res(p.team)]++;
-      if (!p.tag || p.cpu) continue;
+      if (!p.tag) continue;
       const t = (this.data.tags[p.tag] ??= { w: 0, l: 0, d: 0, kills: 0, heroes: {}, last: 0 });
       t[res(p.team)]++;
       t.kills += heroKills[p.team] ?? 0;
