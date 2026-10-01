@@ -287,7 +287,9 @@ async function start(): Promise<void> {
     }
   };
   const enterSelect = () => {
-    if ([0, 1, 2, 3].filter(present).length >= 3) twoVtwo = true;
+    const here = [0, 1, 2, 3].filter(present).length;
+    if (here >= 3) twoVtwo = true;
+    else if (netMode === "host") twoVtwo = false;
     cursors.setScale(pixel.w, pixel.h);
     cursors.reset(twoVtwo ? [0, 2, 1, 3] : [0, 1]);
     slots.forEach((sl, i) => {
