@@ -282,6 +282,86 @@ function armyIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
   ctx.restore();
 }
 
+function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hp: number, ward: number, now: number): void {
+  const gem = (k: number) => {
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 1.25 - k);
+    ctx.lineTo(x + r * 0.8 + k, y);
+    ctx.lineTo(x, y + r * 1.25 + k);
+    ctx.lineTo(x - r * 0.8 - k, y);
+    ctx.closePath();
+  };
+  ctx.save();
+  if (ward > 0) {
+    const k = 2.6;
+    const pts: [number, number][] = [[x, y - r * 1.25 - k], [x + r * 0.8 + k, y], [x, y + r * 1.25 + k], [x - r * 0.8 - k, y], [x, y - r * 1.25 - k]];
+    const seg = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
+    const total = seg.reduce((a, b) => a + b, 0);
+    const trace = (frac: number) => {
+      let left = total * Math.min(1, frac);
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 0; i < 4 && left > 0; i++) {
+        const f = Math.min(1, left / seg[i]);
+        ctx.lineTo(pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f);
+        left -= seg[i];
+      }
+    };
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    trace(ward);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    trace(ward);
+    ctx.strokeStyle = "#aee8ff";
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
+  ctx.fillStyle = INK;
+  gem(1);
+  ctx.fill();
+  ctx.fillStyle = "#2a2226";
+  gem(0);
+  ctx.fill();
+  ctx.save();
+  gem(0);
+  ctx.clip();
+  const top = y + r * 1.25 - r * 2.5 * Math.max(0, Math.min(1, hp));
+  ctx.fillStyle = hp < 0.25 && Math.floor(now * 4) % 2 === 0 ? "#ff6a50" : team;
+  ctx.fillRect(x - r, top, r * 2, y + r * 1.3 - top);
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.beginPath();
+  ctx.moveTo(x, y - r * 1.25);
+  ctx.lineTo(x - r * 0.8, y);
+  ctx.lineTo(x - r * 0.25, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+}
+
+function ringMeter(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, frac: number, color: string): void {
+  ctx.save();
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 1.3;
+  ctx.strokeStyle = "#3a3038";
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  if (frac > 0) {
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, frac));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function coreIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, shield: boolean): void {
   ctx.save();
   const gem = (k: number) => {
@@ -673,7 +753,7 @@ export class Hud {
   private drawPlayerPanel(ctx: CanvasRenderingContext2D, w: World, e: Entity, x0: number, y0: number, blockW: number, right: boolean, now: number, local: boolean, tag: string): number {
     const h = e.hero!;
     const ax = (dx: number, width = 0) => (right ? x0 + blockW - dx - width : x0 + dx);
-    let y = y0;
+    const y = y0;
     let px = 0;
     if (tag) {
       const tw = textWidth(tag, 0.62, true);
@@ -683,58 +763,61 @@ export class Hud {
     if (h.dead) {
       const n = Math.max(0, Math.ceil(h.respawnAt - w.time));
       const lab = `RESPAWN ${n}`;
-      drawText(ctx, lab, right ? ax(px, textWidth(lab, 0.75)) : ax(px), y + 1, "#ffb8a0", 0.75);
+      drawText(ctx, lab, right ? ax(px, textWidth(lab, 0.7)) : ax(px), y + 1.5, "#ffb8a0", 0.7);
+      px += Math.max(40, textWidth(lab, 0.7) + 4);
     } else {
       const keys: ["b" | "r", string][] = [["b", PAD.b], ["r", PAD.r]];
       keys.forEach(([k, c], i) => {
         const left = (h.cooldowns[k] ?? 0) - w.time;
-        const bxx = ax(px + 5 + i * 13);
+        const bxx = ax(px + 5 + i * 12);
         const ready = left <= 0;
-        padButton(ctx, bxx, y + 5, 5, c, ready ? k.toUpperCase() : "", !ready);
+        padButton(ctx, bxx, y + 5, 4.8, c, ready ? k.toUpperCase() : "", !ready);
         if (!ready) {
           const n = String(Math.ceil(left));
-          drawNum(ctx, n, bxx - textWidth(n, 0.75, true) / 2 - 0.5, y + 1, "#ffffff", 0.75);
+          drawNum(ctx, n, bxx - textWidth(n, 0.72, true) / 2 - 0.5, y + 1.2, "#ffffff", 0.72);
         }
       });
-      px += 27;
       const frac = h.meter / w.data.heroes.baseline.superMax;
       const full = frac >= 1;
-      padButton(ctx, ax(px + 4), y + 5, 4.5, full ? "#e8c030" : PAD.z, "Z");
-      const mw = blockW - px - 12;
-      meter(ctx, ax(px + 11, mw), y + 3, mw, 4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
+      const zx = ax(px + 30);
+      ringMeter(ctx, zx, y + 5, 6.4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
+      padButton(ctx, zx, y + 5, 4.4, full ? "#e8c030" : PAD.z, "Z", !full);
+      px += 42;
     }
-    y += 12;
     const cfgXp = w.data.talents?.xp;
-    if (!cfgXp || w.players.find((p) => p.heroId === e.id)?.commander) return y - y0;
-    const lv = `LV ${h.level}`;
-    const lw = textWidth(lv, 0.62, true);
-    drawNum(ctx, lv, right ? ax(0, lw) : ax(0), y, "#ffe890", 0.62);
+    if (!cfgXp || w.players.find((p) => p.heroId === e.id)?.commander) return 12;
     const next = cfgXp.levels[h.level];
     const prev = cfgXp.levels[h.level - 1] ?? 0;
-    const frac = next === undefined ? 1 : (h.xp - prev) / (next - prev);
+    const xf = next === undefined ? 1 : (h.xp - prev) / (next - prev);
+    const lx = ax(px + 5);
+    ringMeter(ctx, lx, y + 5, 5.4, xf, next === undefined ? "#ffd040" : "#8ad8ff");
+    ctx.fillStyle = "#2a2226";
+    ctx.beginPath();
+    ctx.arc(lx, y + 5, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+    const lv = String(h.level);
+    drawNum(ctx, lv, lx - textWidth(lv, 0.72, true) / 2 - 0.3, y + 1.3, "#ffe890", 0.72);
+    px += 13;
     const isz = 9;
-    let tx = lw + 4;
     for (const slot of ["r", "b", "a", "z"] as const) {
       const got = learned(w, e, slot);
-      const ix = right ? ax(tx, isz) : ax(tx);
-      if (got[0]) talentIcon(ctx, got[0].id, ix, y - 1, isz);
+      const ix = right ? ax(px, isz) : ax(px);
+      if (got[0]) talentIcon(ctx, got[0].id, ix, y + 0.5, isz);
       else {
         ctx.fillStyle = INK;
-        ctx.fillRect(ix - 1, y - 2, isz + 2, isz + 2);
+        ctx.fillRect(ix - 1, y - 0.5, isz + 2, isz + 2);
         ctx.fillStyle = "#2a2430";
-        ctx.fillRect(ix, y - 1, isz, isz);
+        ctx.fillRect(ix, y + 0.5, isz, isz);
       }
-      tx += isz + 2;
+      px += isz + 2;
     }
-    const xw = Math.max(10, blockW - tx - 2);
-    meter(ctx, right ? ax(tx + 1, xw) : ax(tx + 1), y + 3, xw, 2, frac, next === undefined ? "#ffd040" : "#8ad8ff");
-    y += isz + 2;
+    let hgt = 13;
     if (local && h.picks.length && Math.floor(now * 3) % 3 !== 0) {
       const msg = "LEVEL UP! FLICK C LEFT / RIGHT";
-      drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.55)) : ax(0), y, "#ffe060", 0.55);
-      y += 7;
+      drawText(ctx, msg, right ? ax(0, textWidth(msg, 0.55)) : ax(0), y + 13, "#ffe060", 0.55);
+      hgt += 7;
     }
-    return y - y0;
+    return hgt;
   }
 
   private drawBanner(ctx: CanvasRenderingContext2D, W: number, now: number): void {
@@ -778,7 +861,7 @@ export class Hud {
     ctx.fillRect(x + bw - 3, y, 3, bh);
     waxSeal(ctx, x + 13, y + bh / 2, 7, c.color, c.glyph);
     const flash = left2 > 0 && Math.floor(now * 4) % 2 === 0;
-    drawText(ctx, title, x + 24, y + 3, flash ? "#d02010" : c.color, ts);
+    drawPlain(ctx, title, x + 24, y + 3, flash ? "#d02010" : c.color, ts, true);
     if (c.sub) drawPlain(ctx, c.sub, x + 24, y + 15, "#3a2410", ss);
     ctx.restore();
   }
@@ -1171,32 +1254,32 @@ export class Hud {
     const capped = ts.unitCount >= w.data.units.popCap;
     const out = !!ts.out;
     const hpFrac = core && !out ? core.hp / core.maxHp : 0;
-    const headKey = [x0, y00, right, col, shield, hpFrac, sudden, ward, coin, army, capped, out].join("|");
+    const wardFrac = ward > 0 && !sudden ? ward / w.data.structures.core.ward : 0;
+    const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
+    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, army, capped, out].join("|");
     let y = this.memo(ctx, `head${t}`, headKey, x0 - 8, y00 - 6, blockW + 16, 40, (c) => {
-      let y = y00;
-      coreIcon(c, ax(5), y + 3.5, 4.2, col, shield);
-      meter(c, ax(14, blockW - 14), y + 1, blockW - 14, 5, hpFrac, col);
+      const y = y00;
+      const gx = ax(8);
+      keepGem(c, gx, y + 10, 7.2, col, hpFrac, wardFrac, now);
       if (out) {
-        fallenMark(c, ax(5), y + 3.5, 5);
+        fallenMark(c, gx, y + 10, 7);
         const lab = `${TEAM_NAMES[t] ?? ""} HOUSE FELL`;
-        drawText(c, lab, right ? ax(14, textWidth(lab, 0.62)) : ax(14), y + 0.5, "#ffb8a0", 0.62);
-        return y + 12;
+        drawText(c, lab, right ? ax(20, textWidth(lab, 0.62)) : ax(20), y + 6, "#ffb8a0", 0.62);
+        return y + 24;
       }
-      if (ward > 0 && !sudden) meter(c, ax(14, blockW - 14), y + 8, blockW - 14, 2, ward / w.data.structures.core.ward, "#9fe0ff");
-      y += ward > 0 && !sudden ? 15 : 12;
       const cw = 8 + textWidth("×", 0.9) + 1.5 + textWidth(coin, 1.15, true);
       const aw = 9 + textWidth("×", 0.9) + 1.5 + textWidth(army, 1.15, true);
-      let cx = ax(0, cw);
+      let cx = right ? ax(20, cw) : ax(20);
       coinIcon(c, cx + 3, y + 5, 3.8);
       cx += 8;
       cx += times(c, cx, y + 1);
       drawNum(c, coin, cx, y, "#ffd848", 1.15);
-      let bx = right ? ax(cw + 10, aw) : ax(cw + 10);
-      armyIcon(c, bx + 3.5, y + 5, 3.6, col);
+      let bx = right ? ax(20, aw) : ax(20);
+      armyIcon(c, bx + 3.5, y + 15, 3.6, col);
       bx += 9;
-      bx += times(c, bx, y + 1);
-      drawNum(c, army, bx, y, capped ? "#ff8a6a" : "#ffffff", 1.15);
-      return y + 16;
+      bx += times(c, bx, y + 11);
+      drawNum(c, army, bx, y + 10, capped ? "#ff8a6a" : "#ffffff", 1.15);
+      return y + 24;
     });
 
     let bxc = 0;

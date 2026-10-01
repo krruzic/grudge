@@ -19,6 +19,10 @@ import { FxBatch, type FxInst } from "./fxInstances";
 import { ballistaMesh, syncBallista } from "./ballista";
 import { drawText, fontReady, textWidth } from "../ui/font";
 import { padButton } from "../ui/hud";
+import outpostIcon from "../../assets/ui/talents/p_outpost.png?url";
+import towerIcon from "../../assets/ui/talents/p_tower.png?url";
+import upgradeIcon from "../../assets/ui/talents/p_upgrade.png?url";
+import shopIcon from "../../assets/ui/talents/p_shop.png?url";
 
 interface Bar {
   group: THREE.Group;
@@ -28,6 +32,7 @@ interface Bar {
   frac: number;
   ghostFrac: number;
   holdUntil: number;
+  drop?: number;
 }
 
 const BAR_MAX = 1536;
@@ -46,7 +51,7 @@ class BarBatch {
     this.geo.index = base.index;
     this.geo.setAttribute("position", base.getAttribute("position"));
     this.center = new THREE.InstancedBufferAttribute(new Float32Array(BAR_MAX * 3), 3);
-    this.rect = new THREE.InstancedBufferAttribute(new Float32Array(BAR_MAX * 3), 3);
+    this.rect = new THREE.InstancedBufferAttribute(new Float32Array(BAR_MAX * 4), 4);
     this.col = new THREE.InstancedBufferAttribute(new Float32Array(BAR_MAX * 4), 4);
     for (const a of [this.center, this.rect, this.col]) a.setUsage(THREE.DynamicDrawUsage);
     this.geo.setAttribute("iCenter", this.center);
@@ -55,14 +60,14 @@ class BarBatch {
     this.geo.instanceCount = 0;
     const mat = new THREE.ShaderMaterial({
       vertexShader: `attribute vec3 iCenter;
-attribute vec3 iRect;
+attribute vec4 iRect;
 attribute vec4 iColor;
 varying vec4 vCol;
 void main() {
   vCol = iColor;
   vec4 mv = modelViewMatrix * vec4(iCenter, 1.0);
   mv.x += iRect.x + (position.x + 0.5) * iRect.y;
-  mv.y += position.y * iRect.z;
+  mv.y += position.y * iRect.z - iRect.w;
   gl_Position = projectionMatrix * mv;
 }`,
       fragmentShader: `varying vec4 vCol;
@@ -84,15 +89,16 @@ void main() {
     this.n = 0;
   }
 
-  private quad(x: number, y: number, z: number, x0: number, w: number, h: number, c: THREE.Color, a: number): void {
+  private quad(x: number, y: number, z: number, x0: number, w: number, h: number, c: THREE.Color, a: number, drop = 0): void {
     if (this.n >= BAR_MAX) return;
     const i = this.n++;
     this.center.array[i * 3] = x;
     this.center.array[i * 3 + 1] = y;
     this.center.array[i * 3 + 2] = z;
-    this.rect.array[i * 3] = x0;
-    this.rect.array[i * 3 + 1] = w;
-    this.rect.array[i * 3 + 2] = h;
+    this.rect.array[i * 4] = x0;
+    this.rect.array[i * 4 + 1] = w;
+    this.rect.array[i * 4 + 2] = h;
+    this.rect.array[i * 4 + 3] = drop;
     this.col.array[i * 4] = c.r;
     this.col.array[i * 4 + 1] = c.g;
     this.col.array[i * 4 + 2] = c.b;
@@ -106,9 +112,10 @@ void main() {
     const y = m[13];
     const z = m[14];
     const w = bar.width * k;
-    this.quad(x, y, z, -(w + 0.08 * k) / 2, w + 0.08 * k, 0.2 * k, BAR_BG, 0.85);
-    this.quad(x, y, z, -w / 2, Math.max(0.001, w * bar.ghostFrac), 0.13 * k, BAR_GHOST, 1);
-    this.quad(x, y, z, -w / 2, Math.max(0.001, w * bar.frac), 0.13 * k, bar.fgColor, 1);
+    const d = (bar.drop ?? 0) * k;
+    this.quad(x, y, z, -(w + 0.08 * k) / 2, w + 0.08 * k, 0.2 * k, BAR_BG, 0.85, d);
+    this.quad(x, y, z, -w / 2, Math.max(0.001, w * bar.ghostFrac), 0.13 * k, BAR_GHOST, 1, d);
+    this.quad(x, y, z, -w / 2, Math.max(0.001, w * bar.frac), 0.13 * k, bar.fgColor, 1, d);
   }
 
   end(): void {
@@ -186,37 +193,43 @@ const KIND_ANIM: Record<string, string> = {
 
 const white = new THREE.Color(1, 1, 1);
 
-function hintTex(rows: [string, string, string][]): THREE.CanvasTexture {
+function hintTex(cells: [string, string][]): THREE.CanvasTexture {
   const cv = document.createElement("canvas");
-  cv.width = 256;
-  cv.height = 40 * rows.length + 8;
+  cv.width = 128 * cells.length;
+  cv.height = 128;
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
+  const imgs = cells.map(([, url]) => {
+    const im = new Image();
+    im.src = url;
+    return im;
+  });
   const draw = () => {
     const c = cv.getContext("2d")!;
     c.clearRect(0, 0, cv.width, cv.height);
-    c.save();
-    c.scale(4, 4);
-    rows.forEach(([btn, color, label], k) => {
-      const y = 2 + k * 10;
-      const lw = textWidth(label, 0.8) + 18;
-      const x0 = (64 - lw) / 2;
-      c.fillStyle = "rgba(10,8,6,0.72)";
-      c.fillRect(x0 - 2, y, lw + 4, 9);
-      padButton(c, x0 + 5, y + 4.5, 3.8, color, btn);
-      drawText(c, label, x0 + 12, y + 1, "#ffffff", 0.8);
+    cells.forEach(([btn], k) => {
+      const im = imgs[k];
+      c.save();
+      c.translate(k * 128, 0);
+      if (im.complete && im.naturalWidth) {
+        c.imageSmoothingEnabled = true;
+        c.drawImage(im, 8, 4, 108, 108);
+      }
+      c.scale(4, 4);
+      padButton(c, 25, 25, 5.2, "#5a5a66", btn);
+      c.restore();
     });
-    c.restore();
     t.needsUpdate = true;
   };
   draw();
   fontReady.then(draw);
+  for (const im of imgs) im.onload = draw;
   return t;
 }
 const HINTS = {
-  build: new THREE.SpriteMaterial({ map: hintTex([["X", "#5a5a66", "OUTPOST"], ["Y", "#5a5a66", "TOWER"]]), depthTest: false, transparent: true }),
-  upgrade: new THREE.SpriteMaterial({ map: hintTex([["X", "#5a5a66", "UPGRADE"]]), depthTest: false, transparent: true }),
-  shop: new THREE.SpriteMaterial({ map: hintTex([["Y", "#5a5a66", "SHOP"]]), depthTest: false, transparent: true }),
+  build: new THREE.SpriteMaterial({ map: hintTex([["X", outpostIcon], ["Y", towerIcon]]), depthTest: false, transparent: true }),
+  upgrade: new THREE.SpriteMaterial({ map: hintTex([["X", upgradeIcon]]), depthTest: false, transparent: true }),
+  shop: new THREE.SpriteMaterial({ map: hintTex([["Y", shopIcon]]), depthTest: false, transparent: true }),
 };
 
 const SHARED_VIEW_MATS = new Set<THREE.Material>(Object.values(HINTS));
@@ -425,10 +438,10 @@ function rankTex(rank: number): THREE.CanvasTexture {
 }
 const rankTexes = [1, 2, 3].map(rankTex);
 
-function makeBar(width: number, color: THREE.Color, y: number): Bar {
+function makeBar(width: number, color: THREE.Color, y: number, drop = 0): Bar {
   const group = new THREE.Group();
   group.position.y = y;
-  return { group, width, color: color.clone(), fgColor: color.clone(), frac: 1, ghostFrac: 1, holdUntil: 0 };
+  return { group, width, color: color.clone(), fgColor: color.clone(), frac: 1, ghostFrac: 1, holdUntil: 0, drop };
 }
 
 function setBar(bar: Bar, frac: number, dt = 0, time = 0, pulse = false): void {
@@ -806,8 +819,8 @@ export class EntityViews {
         root.add(sh);
         view.shield = sh;
         view.spin = body.getObjectByName("crystal") ?? undefined;
-        bar = makeBar(3, team, 5.2);
-        view.work = makeBar(3, new THREE.Color(0x9fe0ff), 5.5);
+        bar = makeBar(3, team, 0, 1.9);
+        view.work = makeBar(3, new THREE.Color(0x9fe0ff), 0, 2.3);
         root.add(view.work.group);
       } else {
         body = st.tesla ? teslaCoil(1.1) : st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
@@ -816,9 +829,9 @@ export class EntityViews {
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
         });
         body.rotation.y = e.transform.facing;
-        bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(2.2, team, 5.0);
+        bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(2.2, team, 0, 1.3);
         if (!st.siege) {
-          view.work = makeBar(2.2, new THREE.Color(0xffd040), 5.3);
+          view.work = makeBar(2.2, new THREE.Color(0xffd040), 0, 1.7);
           root.add(view.work.group);
         }
         this.fx.buildFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
@@ -1476,8 +1489,10 @@ export class EntityViews {
       if (hint.visible) {
         const up = !!st;
         hint.material = up ? HINTS.upgrade : HINTS.build;
-        const s = 1 + Math.sin(time * 3) * 0.03;
-        hint.scale.set(4 * s, (up ? 4 * 48 / 256 : 4 * 88 / 256) * s, 1);
+        const s = 1 + Math.sin(time * 3) * 0.04;
+        const k = 2.9 * s;
+        hint.scale.set(up ? k : k * 2, k, 1);
+        hint.position.set(p.x, w.groundY(p.x, p.z) + (up ? 1.7 : 1.0), p.z);
       }
     });
     this.shopHints.forEach((hint, team) => {
@@ -1486,8 +1501,8 @@ export class EntityViews {
       hint.visible = this.hints && !!core && !!shopper;
       if (!hint.visible || !core) return;
       const s = 1 + Math.sin(time * 3) * 0.03;
-      hint.position.set(core.transform.pos.x, core.transform.y + 6.4, core.transform.pos.z);
-      hint.scale.set(4 * s, 4 * 48 / 256 * s, 1);
+      hint.position.set(core.transform.pos.x, core.transform.y + 2.4, core.transform.pos.z);
+      hint.scale.set(3.2 * s, 3.2 * s, 1);
     });
   }
 }
