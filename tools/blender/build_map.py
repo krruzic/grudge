@@ -36,7 +36,7 @@ if "--" in sys.argv:
 
 GROUND, WALL, WATER, FORD, BRIDGE, PROP = 0, 1, 2, 3, 4, 5
 FLAG_DIRT, FLAG_PAVING, FLAG_GRASS = 1, 2, 4
-TEAM = [texgen.hexc("#3a6cff"), texgen.hexc("#ff3a2a")]
+TEAM = [texgen.hexc("#3a6cff"), texgen.hexc("#ff3a2a"), texgen.hexc("#ffcf1a"), texgen.hexc("#2fc84a")]
 
 MATS = ["grass", "dirt", "cobble", "cliff", "brick", "wood", "leaves", "pine",
         "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch"]
@@ -254,6 +254,9 @@ class MapBuilder:
                     continue
                 c = self.corners(x, z)
                 base = min(c) - 0.4
+                if st == "hedge":
+                    self.hedge(x, z, c)
+                    continue
                 if st == "castle":
                     top = max(c) + 2.1
                     tops = [top] * 4
@@ -272,6 +275,26 @@ class MapBuilder:
                         self.box(P, x + 0.5, top, z + 0.5, 0.55, 0.5, 0.55, "brick")
                 elif hsh(x, z, 4) < 0.5:
                     self.rock(x + 0.5 + (hsh(x, z, 6) - 0.5), z + 1.3, 0.3, seed=x * 7 + z)
+
+    def is_hedge(self, x, z):
+        return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) == "hedge"
+
+    def hedge(self, x, z, c):
+        P = self.props
+        base = min(c) - 0.3
+        top = max(c) + 1.75
+        g = 0.9 + hsh(x, z, 3) * 0.15
+        tint = (0.62 * g, 0.92 * g, 0.55 * g)
+        inset = 0.12
+        x0 = x + (0 if self.is_hedge(x - 1, z) else inset)
+        x1 = x + 1 - (0 if self.is_hedge(x + 1, z) else inset)
+        z0 = z + (0 if self.is_hedge(x, z - 1) else inset)
+        z1 = z + 1 - (0 if self.is_hedge(x, z + 1) else inset)
+        tops = [top + (hsh(px, pz, 9) - 0.5) * 0.12 for (px, pz) in ((x0, z0), (x1, z0), (x1, z1), (x0, z1))]
+        pts = [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
+        v8 = [G(px, base, pz) for (px, pz) in pts] + [G(px, t, pz) for (px, pz), t in zip(pts, tops)]
+        solid(P, v8, "leaves", cols=lambda p, b=base, t=top: tuple(
+            k * (0.55 + 0.45 * min(1, max(0, (p.z - b) / max(0.1, t - b)))) for k in tint))
 
     def is_pit(self, x, z):
         return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) == "pit"
@@ -577,6 +600,13 @@ class MapBuilder:
                 self.crate(x, z)
             elif t == "statue":
                 self.statue(x, z)
+            else:
+                import surround_kit
+                fn = surround_kit.BUILDERS.get(t)
+                if fn:
+                    fn(self, {"x": x, "y": self.ground_h(x, z) - 0.05, "z": z, "rot": math.radians(p.get("rot", 0)), "s": p.get("scale", 1.0), "seed": seed, "side": side, **({"color": p["color"]} if "color" in p else {})})
+                else:
+                    print("prop: no builder for", t)
         for p in self.g["pads"]:
             self.pad(p["x"], p["z"], p.get("zone", "home"), p.get("side", 0))
         for c in self.g["cores"]:

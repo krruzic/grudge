@@ -38,7 +38,7 @@ export function updateUnit(w: World, e: Entity): void {
     goal = { x: focus.transform.pos.x, z: focus.transform.pos.z };
     if (!u.targetId || w.dist(e, focus) < u.aggro + 3) u.targetId = focus.id;
   } else if (directive === "push" || directive === "focus") {
-    const core = w.core(1 - e.team);
+    const core = w.foeCore(e.team, e.transform.pos.x, e.transform.pos.z);
     if (core) goal = { x: core.transform.pos.x, z: core.transform.pos.z };
   } else if (directive === "defend") {
     const { post, rank } = w.defendPost(e);

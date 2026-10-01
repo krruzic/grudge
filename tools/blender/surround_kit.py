@@ -82,7 +82,7 @@ def gable(B, M, cx, cy, cz, w, d, h, mat, col=(1, 1, 1)):
 
 
 PLASTER = (1.4, 1.26, 1.0)
-TEAM = [(0.35, 0.5, 1.0), (1.0, 0.42, 0.34)]
+TEAM = [(0.35, 0.5, 1.0), (1.0, 0.42, 0.34), (1.0, 0.86, 0.3), (0.38, 0.95, 0.42)]
 
 
 def house(mb, f):
@@ -513,13 +513,179 @@ def kelp(mb, f):
         mb.grass.face(pts, "tallgrass", uvs=[(0, 0), (1, 0), (1, 1), (0, 1)], cols=[(0.3, 0.4, 0.2), (0.3, 0.4, 0.2), (0.55, 0.7, 0.35), (0.55, 0.7, 0.35)])
 
 
+SNOW = (1.35, 1.4, 1.5)
+
+
+def cabin(mb, f):
+    P = mb.props
+    M = place(f)
+    r = random.Random(f["seed"])
+    w, d, h = 4.4, 3.4, 2.2
+    cube(P, M, 0, -0.5, 0, w + 0.3, 0.6, d + 0.3, "cliff", (0.85, 0.85, 0.88))
+    for i in range(6):
+        y = 0.05 + i * h / 6
+        cube(P, M, 0, y, -d / 2, w + 0.3, h / 6, 0.3, "bark", (0.85, 0.72, 0.62), lo=0.9)
+        cube(P, M, 0, y, d / 2, w + 0.3, h / 6, 0.3, "bark", (0.85, 0.72, 0.62), lo=0.9)
+        cube(P, M, -w / 2, y, 0, 0.3, h / 6, d + 0.3, "bark", (0.8, 0.68, 0.58), lo=0.9)
+        cube(P, M, w / 2, y, 0, 0.3, h / 6, d + 0.3, "bark", (0.8, 0.68, 0.58), lo=0.9)
+    cube(P, M, 0, 0, 0, w - 0.2, h, d - 0.2, "wood", (0.6, 0.5, 0.42))
+    cube(P, M, 0, 0, -d / 2 - 0.16, 0.9, 1.6, 0.1, "wood", (0.55, 0.45, 0.36))
+    cube(P, M, w * 0.25, h * 0.45, -d / 2 - 0.16, 0.6, 0.55, 0.08, "gold", (1.3, 1.0, 0.5))
+    gable(P, M, 0, h, 0, w, d, 1.6, "wood", (0.7, 0.58, 0.48))
+    prism_roof_x(P, M, 0, h, 0, w, d, 1.6, "wood", (0.55, 0.45, 0.38), over=0.45)
+    prism_roof_x(P, M, 0, h + 0.14, 0, w, d, 1.6, "cloth", SNOW, over=0.4)
+    cube(P, M, -w * 0.28, h + 0.5, d * 0.1, 0.55, 1.7, 0.55, "cliff", (0.8, 0.8, 0.82))
+    for i in range(r.randrange(1, 3)):
+        cube(P, M, w / 2 + 0.6, -0.1, -0.8 + i * 0.7, 0.6, 0.45 + i * 0.3, 0.5, "bark", (0.8, 0.7, 0.6), ry=0.2)
+
+
+def lantern(mb, f):
+    M = place(f)
+    cube(mb.props, M, 0, -0.2, 0, 0.16, 2.2, 0.16, "wood", (0.6, 0.5, 0.4))
+    cube(mb.props, M, 0, 1.9, -0.25, 0.1, 0.1, 0.6, "wood", (0.6, 0.5, 0.4))
+    cube(mb.props, M, 0, 1.45, -0.5, 0.32, 0.42, 0.32, "gold", (1.5, 1.2, 0.6))
+    p = pt(M, 0, 1.7, -0.5)
+    mb.fx.append(("fx_torch", (p.x, p.z, -p.y)))
+
+
+def cairn(mb, f):
+    M = place(f)
+    r = random.Random(f["seed"])
+    y = -0.1
+    for i in range(4):
+        rad = 0.55 - i * 0.1
+        blob(mb.props, M, r.uniform(-0.08, 0.08), y + rad * 0.55, r.uniform(-0.08, 0.08), rad, rad * 0.55, rad * 0.9, "cliff", (0.95, 0.95, 0.98), seed=f["seed"] + i, sub=1, jit=0.2)
+        y += rad * 1.0
+    blob(mb.props, M, 0, -0.05, 0, 0.9, 0.2, 0.9, "cloth", SNOW, seed=f["seed"], sub=1)
+
+
+def shrine(mb, f):
+    P = mb.props
+    M = place(f)
+    cube(P, M, 0, -0.6, 0, 6.0, 0.8, 5.0, "cliff", (0.9, 0.9, 0.92))
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            cyl(P, M, sx * 2.2, 0.2, sz * 1.7, 0.28, 0.26, 3.2, "brick", (0.95, 0.93, 0.9), seg=8)
+    cube(P, M, 0, 3.4, 0, 5.4, 0.35, 4.4, "brick", (0.95, 0.93, 0.9))
+    gable(P, M, 0, 3.75, 0, 5.4, 4.4, 1.4, "brick", (0.95, 0.93, 0.9))
+    prism_roof_x(P, M, 0, 3.75, 0, 5.4, 4.4, 1.4, "roof", (0.9, 0.85, 0.8), over=0.4)
+    prism_roof_x(P, M, 0, 3.9, 0, 5.4, 4.4, 1.4, "cloth", SNOW, over=0.35)
+    cube(P, M, 0, 0.2, 0, 1.2, 1.0, 0.8, "cliff", (1.0, 1.0, 1.0))
+    cube(P, M, 0, 1.2, 0, 0.5, 0.5, 0.5, "gold", (1.4, 1.2, 0.6))
+    mb.fx.append(("fx_glow", (f["x"], f["y"] + 1.6, f["z"])))
+
+
+LEAF = (0.62, 0.9, 0.55)
+STONE = (1.0, 0.97, 0.9)
+
+
+def hexcol(h, k=1.25):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) / 255 * k for i in (0, 2, 4))
+
+
+def topiary(mb, f):
+    M = place(f)
+    r = random.Random(f["seed"])
+    cube(mb.props, M, 0, -0.2, 0, 0.9, 0.7, 0.9, "brick", STONE)
+    cyl(mb.props, M, 0, 0.5, 0, 0.1, 0.1, 0.6, "bark", (0.8, 0.7, 0.6), seg=5)
+    if r.random() < 0.5:
+        blob(mb.props, M, 0, 1.6, 0, 0.75, 0.75, 0.75, "leaves", LEAF, seed=f["seed"], sub=1, jit=0.05)
+    else:
+        cyl(mb.props, M, 0, 0.9, 0, 0.75, 0.0, 2.2, "leaves", LEAF, seg=8)
+    blob(mb.props, M, 0, 0.55, 0, 0.42, 0.28, 0.42, "leaves", LEAF, seed=f["seed"] + 1, sub=1)
+
+
+def urn(mb, f):
+    M = place(f)
+    cube(mb.props, M, 0, -0.2, 0, 0.8, 0.7, 0.8, "brick", STONE)
+    cyl(mb.props, M, 0, 0.5, 0, 0.18, 0.42, 0.55, "brick", STONE, seg=8)
+    cyl(mb.props, M, 0, 1.05, 0, 0.42, 0.48, 0.15, "brick", STONE, seg=8)
+    blob(mb.props, M, 0, 1.25, 0, 0.42, 0.28, 0.42, "leaves", LEAF, seed=f["seed"], sub=1)
+    col = hexcol(["#d8384a", "#f2c84a", "#9a5ad8"][f["seed"] % 3])
+    for i in range(5):
+        a = i * 1.26
+        blob(mb.props, M, math.cos(a) * 0.25, 1.45, math.sin(a) * 0.25, 0.12, 0.1, 0.12, "cloth", col, seed=f["seed"] + i, sub=0)
+
+
+def flowers(mb, f):
+    M = place(f)
+    r = random.Random(f["seed"])
+    c = f.get("color")
+    col = hexcol(c if isinstance(c, str) else ["#d8384a", "#f2c84a", "#e8e0f0", "#9a5ad8", "#ff8a3a"][f["seed"] % 5])
+    blob(mb.props, M, 0, 0.12, 0, 0.6, 0.22, 0.6, "leaves", (0.5, 0.78, 0.45), seed=f["seed"], sub=0, jit=0.2)
+    for i in range(5):
+        x, z = r.uniform(-0.4, 0.4), r.uniform(-0.4, 0.4)
+        blob(mb.props, M, x, 0.32, z, 0.13, 0.09, 0.13, "cloth", col, seed=f["seed"] + i + 50, sub=0)
+
+
+def fountain(mb, f):
+    P = mb.props
+    M = place(f)
+    for i in range(20):
+        a0 = i * math.tau / 20
+        a1 = (i + 1) * math.tau / 20
+        am = (a0 + a1) / 2
+        rr = 4.75
+        cube(P, M, math.cos(am) * rr, -0.4, math.sin(am) * rr, 0.55, 0.85, rr * (a1 - a0) + 0.08, "brick", STONE, ry=-am)
+        cube(P, M, math.cos(am) * rr, 0.45, math.sin(am) * rr, 0.75, 0.14, rr * (a1 - a0) + 0.1, "cobble", (0.95, 0.93, 0.88), ry=-am)
+    for i in range(4):
+        a = math.pi / 4 + i * math.pi / 2
+        x, z = math.cos(a) * 4.75, math.sin(a) * 4.75
+        cube(P, M, x, -0.3, z, 0.9, 1.3, 0.9, "brick", STONE, ry=a)
+        cyl(P, M, x, 1.0, z, 0.3, 0.4, 0.5, "brick", STONE, seg=8)
+        blob(P, M, x, 1.65, z, 0.32, 0.26, 0.32, "gold", (1.2, 1.05, 0.7), seed=i, sub=1)
+        mb.fx.append(("fx_glow", (f["x"] + x, f["y"] + 1.8, f["z"] + z)))
+
+
+def gazebo(mb, f):
+    P = mb.props
+    M = place(f)
+    cyl(P, M, 0, -0.4, 0, 3.0, 3.0, 0.7, "cobble", STONE, seg=8)
+    for i in range(8):
+        a = i * math.pi / 4
+        cyl(P, M, math.cos(a) * 2.6, 0.3, math.sin(a) * 2.6, 0.14, 0.14, 2.6, "brick", STONE, seg=6)
+    cyl(P, M, 0, 2.9, 0, 3.2, 3.2, 0.3, "brick", STONE, seg=8)
+    cyl(P, M, 0, 3.2, 0, 3.3, 0.2, 1.8, "roof", (0.6, 0.8, 0.75), seg=8)
+    blob(P, M, 0, 5.1, 0, 0.25, 0.25, 0.25, "gold", (1.3, 1.1, 0.6), seed=1, sub=1)
+
+
+def manor(mb, f):
+    P = mb.props
+    M = place(f)
+    w, d, h = 16.0, 8.0, 6.0
+    cube(P, M, 0, -0.8, 0, w + 1, 1.2, d + 1, "cobble", STONE)
+    cube(P, M, 0, 0, 0, w, h, d, "brick", STONE)
+    for wx in (-1, 1):
+        cube(P, M, wx * (w / 2 + 2.5), 0, 1.5, 5, h + 1.5, d + 3, "brick", (0.98, 0.94, 0.88))
+        prism_roof_x(P, M, wx * (w / 2 + 2.5), h + 1.5, 1.5, 5, d + 3, 2.6, "roof", (0.55, 0.62, 0.75), over=0.3)
+    prism_roof_x(P, M, 0, h, 0, w, d, 3.2, "roof", (0.55, 0.62, 0.75), over=0.4)
+    for i in range(6):
+        x = -w / 2 + 1.6 + i * (w - 3.2) / 5
+        for y in (1.2, 3.8):
+            cube(P, M, x, y, -d / 2 - 0.05, 0.9, 1.4, 0.1, "gold", (1.25, 1.05, 0.6))
+    cube(P, M, 0, 0, -d / 2 - 0.08, 1.6, 2.6, 0.12, "wood", (0.6, 0.45, 0.35))
+    for sx in (-1, 1):
+        cube(P, M, sx * w * 0.3, h + 1.2, 0.5, 0.7, 2.6, 0.7, "brick", (0.9, 0.85, 0.8))
+    side = f.get("side", 0)
+    if side is not None and 0 <= side < len(TEAM):
+        cyl(P, M, 0, h + 3.2, 0, 0.06, 0.06, 3.0, "iron", (0.6, 0.6, 0.6), seg=4)
+        cube(P, M, 0.55, h + 5.4, 0, 1.0, 0.7, 0.05, "cloth", TEAM[side])
+
+
+def hedgerow(mb, f):
+    M = place(f)
+    ln = f.get("len", 6.0)
+    cube(mb.props, M, 0, -0.3, 0, ln, 1.9, 1.1, "leaves", LEAF, lo=0.6)
+
+
 BUILDERS = {
     "house": house, "barn": barn, "gatehouse": gatehouse, "bridge": bridge, "well": well, "windmill": windmill,
     "hedge": hedge, "fence": fence, "wheat": wheat, "haystack": haystack, "bush": bush, "pine": tree_like, "tree": tree_like,
     "rock": rock, "banner": banner, "rubble": rubble, "ruinwall": ruinwall, "ruintower": ruintower, "column": column,
     "grave": grave, "deadtree": deadtree, "ruinhouse": ruinhouse, "chapel": chapel,
     "quay": quay, "pier": pier, "boat": boat, "lighthouse": lighthouse, "wreck": wreck, "stilthut": stilthut,
-    "seastack": seastack, "buoy": buoy, "posts": posts, "kelp": kelp, "hut": hut, "shells": shells,
+    "seastack": seastack, "buoy": buoy, "posts": posts, "kelp": kelp, "hut": hut, "shells": shells, "cabin": cabin, "topiary": topiary, "urn": urn, "flowers": flowers, "fountain": fountain, "gazebo": gazebo, "manor": manor, "hedgerow": hedgerow, "lantern": lantern, "cairn": cairn, "shrine": shrine,
 }
 
 

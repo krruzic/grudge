@@ -1130,7 +1130,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         range: def.range ?? 11, damage: (def.damage ?? 80) * mul, lastFireAt: -99, shielded: false,
         siege: { cooldown: def.cooldown ?? 1.8, vs: def.vs ?? {}, modId: perch ? perch.id : 0 },
       };
-      const core = w.core(1 - e.team);
+      const core = w.foeCore(e.team, sx, sz);
       if (core) s.transform.facing = s.transform.prevFacing = Math.atan2(core.transform.pos.x - sx, core.transform.pos.z - sz);
       s.expiresAt = Math.min(perch ? perch.until : Infinity, w.time + (def.seconds ?? 20));
       s.owner = e.id;

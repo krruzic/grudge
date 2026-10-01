@@ -145,7 +145,8 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
 
   const splat = new Float32Array(count * 4);
   const sandW = new Float32Array(count);
-  const sandField = sur?.style === "sea";
+  const altFromGrass = sur?.style === "sea" || sur?.style === "alpine";
+  const altFromDirt = sur?.style === "garden";
   const col = new Float32Array(count * 3);
   const cellFlag = (cx: number, cz: number, f: number) => (t.hasFlag(cx, cz, f) ? 1 : 0);
   const nearWall = (x: number, z: number) => {
@@ -196,7 +197,7 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
       const kind = t.kindAt(Math.floor(x), Math.floor(z));
       if (kind === Kind.Wall) {
         const st = t.styles[t.index(Math.floor(x), Math.floor(z))];
-        hh = st === "pit" ? -Infinity : t.groundHeight(x, z) + (st === "rim" ? 1.5 : 3.2);
+        if (st !== "rim" || !sur) hh = st === "pit" ? -Infinity : t.groundHeight(x, z) + (st === "rim" ? 1.5 : 3.2);
       }
     }
     if (x < -6 || z < -6 || x > t.width + 6 || z > t.depth + 6) return hh;
@@ -289,13 +290,13 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         splat[k * 4 + 1] = d0 * (1 - rock);
         splat[k * 4 + 2] = rock;
         splat[k * 4 + 3] = p0 * (1 - rock);
-        if (sandField) {
+        if (altFromGrass) {
           const gs = splat[k * 4];
           const ds = splat[k * 4 + 1];
           splat[k * 4] = 0;
           splat[k * 4 + 1] = gs + ds;
           sandW[k] = gs + ds > 0 ? gs / (gs + ds) : 0;
-        }
+        } else if (altFromDirt) sandW[k] = 1;
       }
 
       let occ = 0;

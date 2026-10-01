@@ -15,7 +15,7 @@ import titleFontMeta from "../../assets/ui/titlefont.json";
 
 const KEY_TEXT: Record<string, string> = {
   t_champion: "CHOOSE YOUR CHAMPION", t_field: "CHOOSE THE FIELD", t_rules: "RULES OF COMBAT", t_records: "HALL OF GRUDGES",
-  t_tag: "SIGN YOUR NAME", t_1v1: "1 VS 1", t_2v2: "2 VS 2", t_host: "HOST A BATTLE", t_join: "JOIN A BATTLE",
+  t_tag: "SIGN YOUR NAME", t_1v1: "1 VS 1", t_2v2: "2 VS 2", t_ffa: "FREE FOR ALL", t_host: "HOST A BATTLE", t_join: "JOIN A BATTLE",
   m_fight: "FIGHT", m_network: "VERSUS ONLINE", m_rules: "RULES", m_records: "RECORDS", m_options: "OPTIONS", m_controls: "CONTROLS", m_loading: "NOW LOADING",
 };
 type TGlyph = { x: number; w: number; h: number; top: number };

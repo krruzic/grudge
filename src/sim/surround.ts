@@ -1,6 +1,6 @@
 import { Kind, type Terrain } from "./terrain.ts";
 
-export type SurroundStyle = "valley" | "crag" | "sea";
+export type SurroundStyle = "valley" | "crag" | "sea" | "alpine" | "garden";
 
 export interface SFeature {
   t: string;
@@ -247,15 +247,17 @@ export class Surround {
   private islands: Spot[] = [];
   private seed: number;
 
-  constructor(private t: Terrain, style: SurroundStyle, private mirror: "x" | "diag" | "rot" | "none") {
+  constructor(private t: Terrain, style: SurroundStyle, private mirror: "x" | "diag" | "rot" | "quad" | "none") {
     this.style = style;
     this.W = t.width;
     this.D = t.depth;
     this.seed = t.width * 7 + t.depth * 13;
     this.exits = exits(t);
-    this.water = style !== "crag";
+    this.water = style === "valley" || style === "sea" || style === "garden";
     if (style === "valley") this.designValley();
     else if (style === "crag") this.designCrag();
+    else if (style === "alpine") this.designAlpine();
+    else if (style === "garden") this.designGarden();
     else this.designSea();
   }
 
@@ -269,16 +271,13 @@ export class Surround {
     if (this.mirror === "x") return [[x, z], [W - x, z]];
     if (this.mirror === "diag") return [[x, z], [z, x]];
     if (this.mirror === "rot") return [[x, z], [W - x, D - z]];
+    if (this.mirror === "quad") return [[x, z], [D - z, x], [W - x, D - z], [z, W - x]];
     return [[x, z]];
   }
 
   private symLine(ctrl: [number, number][], w0: number, w1 = w0): Line[] {
-    const sets: [number, number][][] = [[], []];
-    for (const [x, z] of ctrl) {
-      const m = this.sym(x, z);
-      sets[0].push(m[0]);
-      if (m[1]) sets[1].push(m[1]);
-    }
+    const sets: [number, number][][] = [[], [], [], []];
+    for (const [x, z] of ctrl) this.sym(x, z).forEach((m, k) => sets[k].push(m));
     return sets.filter((s) => s.length).map((s) => line(s, w0, w1));
   }
 
@@ -377,6 +376,219 @@ export class Surround {
     this.clearings.push({ x: -26, z: D + 24, r: 10 }, { x: W + 24, z: -26, r: 10 });
   }
 
+  private valleyAxis: Line[] = [];
+
+  private designAlpine(): void {
+    const c = this.D / 2;
+    const road: [number, number][] = [[-1, c], [-10, c - 3], [-18, c + 5], [-27, c - 3], [-36, c + 5], [-47, c - 1], [-62, c + 3], [-82, c], [-110, c + 6], [-160, c - 4], [-240, c + 8], [-420, c]];
+    this.roads.push(...this.symLine(road, 1.4, 2.2));
+    this.valleyAxis.push(...this.symLine([[-1, c], [-40, c + 1], [-90, c + 3], [-170, c - 4], [-420, c + 2]], 1, 1));
+    for (const [x, z] of this.sym(-78, c + 1)) this.lakes.push({ x, z, rx: 15, rz: 15 });
+    this.cirques.push(...this.symLine([[20, 20], [6, 6], [-14, -10], [-40, -30], [-80, -56], [-150, -110], [-420, -300]], 1, 1));
+  }
+
+  private cirques: Line[] = [];
+
+  private cirqueDepth(x: number, z: number, d: number): number {
+    let v = 0;
+    for (const a of this.cirques) {
+      const n = near(a, x, z, 90);
+      if (n.d === Infinity) continue;
+      v = Math.max(v, Math.exp(-((n.d / (20 + d * 0.3)) ** 2)));
+    }
+    return v;
+  }
+
+  private alpineVale(x: number, z: number, d: number): number {
+    let v = 0;
+    for (const a of this.valleyAxis) {
+      const n = near(a, x, z, 120);
+      if (n.d === Infinity) continue;
+      const wdt = 16 + d * 0.28;
+      v = Math.max(v, Math.exp(-((n.d / wdt) ** 2)));
+    }
+    return v;
+  }
+
+  private alpineH(x: number, z: number, d: number): number {
+    const s = this.seed;
+    const rg = ridge(x * 0.011, z * 0.011, s + 5);
+    let peaks = 12 + smooth(0, 60, d) * (14 + rg * rg * 70) + smooth(60, 260, d) * (20 + rg * 60);
+    peaks += (fbm(x * 0.05, z * 0.05, 3, s) - 0.5) * 3;
+    const vale = this.alpineVale(x, z, d);
+    const floor = 3.6 - Math.min(40, d * 0.24) + (fbm(x * 0.03, z * 0.03, 3, s + 2) - 0.5) * 4;
+    let h = lerp(peaks, floor, vale);
+    const cq = this.cirqueDepth(x, z, d);
+    if (cq > 0) h = lerp(h, -7 - Math.min(38, d * 0.2) + (fbm(x * 0.04, z * 0.04, 3, s + 6) - 0.5) * 5, cq);
+    for (const l of this.lakes) {
+      const e = Math.hypot(x - l.x, z - l.z) / l.rx;
+      if (e < 1.5) h = lerp(Math.min(h, floor - 0.6), h, smooth(0.85, 1.3, e));
+    }
+    for (const r of this.roads) {
+      const n = near(r, x, z, 5);
+      if (n.d < 4) h = lerp(h, floor + (h - floor) * 0.15, smooth(4, n.w, n.d) * vale);
+    }
+    return h;
+  }
+
+  private alpinePaint(x: number, z: number, h: number, slope: number, d: number): Paint {
+    const s = this.seed;
+    const p: Paint = { grass: 0, dirt: 1, rock: 0, cobble: 0, sand: 1, tint: [1, 1, 1] };
+    const n = fbm(x * 0.06, z * 0.06, 3, s + 41);
+    p.tint = [0.96 + n * 0.08, 0.98 + n * 0.06, 1.04 + n * 0.04];
+    const vale = this.alpineVale(x, z, d);
+    const forest = smooth(0.35, 0.6, vale) * smooth(2, -30, h) * smooth(0.42, 0.56, fbm(x * 0.035, z * 0.035, 3, s + 42));
+    if (forest > 0) {
+      p.grass = forest * 0.8;
+      p.dirt = 1 - p.grass;
+      p.tint = [lerp(p.tint[0], 0.66, forest), lerp(p.tint[1], 0.82, forest), lerp(p.tint[2], 0.72, forest)];
+    }
+    p.rock = smooth(0.95, 1.4, slope + (n - 0.5) * 0.3);
+    if (p.rock > 0) {
+      const g = 0.85 + noise(x * 0.1, z * 0.1, s + 43) * 0.25;
+      p.tint = [lerp(p.tint[0], 0.78 * g, p.rock), lerp(p.tint[1], 0.84 * g, p.rock), lerp(p.tint[2], 1.0 * g, p.rock)];
+    }
+    const glacier = smooth(30, 45, h) * (1 - p.rock) * smooth(0.5, 0.7, fbm(x * 0.02, z * 0.02, 2, s + 44));
+    if (glacier > 0) p.tint = [lerp(p.tint[0], 0.82, glacier), lerp(p.tint[1], 0.95, glacier), lerp(p.tint[2], 1.25, glacier)];
+    for (const l of this.lakes) {
+      const e = Math.hypot(x - l.x, z - l.z) / l.rx;
+      if (e < 1.05) {
+        const k = smooth(1.05, 0.9, e);
+        p.rock = Math.min(p.rock, 1 - k);
+        p.tint = [lerp(p.tint[0], 0.7, k), lerp(p.tint[1], 0.88, k), lerp(p.tint[2], 1.2, k)];
+      }
+    }
+    for (const r of this.roads) {
+      const q = near(r, x, z, 4);
+      if (q.d < 3) {
+        const k = smooth(q.w + 0.6, q.w * 0.4, q.d);
+        p.sand = 1 - k * 0.85;
+        p.tint = [lerp(p.tint[0], 0.9, k), lerp(p.tint[1], 0.86, k), lerp(p.tint[2], 0.82, k)];
+      }
+    }
+    return p;
+  }
+
+  private alpineFeatures(): void {
+    const road = this.roads[0];
+    const total = road.len[road.len.length - 1];
+    for (let u = 6; u < 90; u += 7) {
+      const p = pointAt(road, u / total);
+      const sg = Math.floor(u / 7) % 2 ? 1 : -1;
+      const off = 2.4;
+      this.add({ t: u % 14 < 7 ? "lantern" : "fence", x: p.x + Math.cos(p.ang) * off * sg, z: p.z - Math.sin(p.ang) * off * sg, rot: p.ang, s: 1, seed: u }, false);
+    }
+    for (let i = 0; i < 6; i++) {
+      const p = pointAt(road, (30 + i * 9) / total);
+      const sg = i % 2 ? 1 : -1;
+      const off = 7 + hash(i, 4) * 3;
+      const x = p.x + Math.cos(p.ang) * off * sg;
+      const z = p.z - Math.sin(p.ang) * off * sg;
+      if (this.alpineVale(x, z, this.boxDist(x, z)) < 0.5) continue;
+      this.add({ t: "cabin", x, z, rot: p.ang + (sg > 0 ? Math.PI / 2 : -Math.PI / 2), s: 0.9 + hash(i, 5) * 0.3, seed: i, side: 0 });
+    }
+    const lake = this.lakes[0];
+    if (lake) this.add({ t: "shrine", x: lake.x + 2, z: lake.z - lake.rz - 5, rot: 0, s: 1, seed: 3 }, true);
+    this.add({ t: "cairn", x: -4, z: this.D / 2 - 7, rot: 0, s: 1, seed: 1 }, false);
+    this.add({ t: "cairn", x: -5, z: this.D / 2 + 8, rot: 1, s: 1.2, seed: 2 }, false);
+    const ok = (x: number, z: number) => this.canonical(x, z) && this.boxDist(x, z) > 3 && !this.blocked(x, z, 2) && !this.lakes.some((l) => Math.hypot(x - l.x, z - l.z) < l.rx + 2);
+    this.scatter(260, (r) => this.ring(r, 6, 110), (x, z) => {
+      if (!ok(x, z)) return false;
+      const d = this.boxDist(x, z);
+      const h = this.ground(x, z);
+      const v = this.alpineVale(x, z, d);
+      return v > 0.3 && h < 4 && fbm(x * 0.035, z * 0.035, 3, this.seed + 42) > 0.45;
+    }, (x, z, r) => this.add({ t: "pine", x, z, rot: r() * 6, s: 1.2 + r() * 1.0, seed: Math.floor(r() * 9999) }, false), 51);
+    this.scatter(60, (r) => this.ring(r, 2, 40), (x, z) => ok(x, z) && this.ground(x, z) < 18, (x, z, r) => this.add({ t: r() < 0.65 ? "rock" : "cairn", x, z, rot: r() * 6, s: 0.7 + r() * 0.9, seed: Math.floor(r() * 9999) }, false), 52);
+  }
+
+  private canal = 11;
+
+  private designGarden(): void {
+    this.roads.push(...this.symLine([[-15, -15], [-30, -30], [-50, -50]], 1.6, 1.6));
+    this.roads.push(...this.symLine([[30, -15], [30, -42], [24, -60]], 1.2, 1.2));
+    this.roads.push(...this.symLine([[-15, 30], [-42, 30], [-60, 24]], 1.2, 1.2));
+  }
+
+  private gardenH(x: number, z: number, d: number): number {
+    const s = this.seed;
+    let h = 1.0 + (fbm(x * 0.04, z * 0.04, 3, s) - 0.5) * 0.5;
+    const rg = ridge(x * 0.008, z * 0.008, s + 5);
+    h += smooth(70, 240, d) * (14 + rg * 34) + smooth(40, 90, d) * 3 * fbm(x * 0.02, z * 0.02, 2, s + 1);
+    const c = Math.abs(d - this.canal);
+    if (c < 4) h = lerp(-0.2, h, smooth(2.6, 3.4, c));
+    for (const r of this.roads) {
+      const n = near(r, x, z, 3);
+      if (n.d < 3) h = lerp(h, 1.05, smooth(3, n.w, n.d));
+    }
+    return h;
+  }
+
+  private gardenPaint(x: number, z: number, h: number, slope: number, d: number): Paint {
+    const s = this.seed;
+    const p: Paint = { grass: 1, dirt: 0, rock: 0, cobble: 0, sand: 0, tint: [1, 1, 1] };
+    const n = fbm(x * 0.05, z * 0.05, 3, s + 41);
+    const ax = Math.abs(x - this.W / 2) > Math.abs(z - this.D / 2) ? z : x;
+    const stripe = d > 15 && d < 60 ? (Math.floor(ax / 3.5) % 2 ? 1.05 : 0.93) : 1;
+    p.tint = [0.95 * stripe + n * 0.08, 1.02 * stripe + n * 0.06, 0.9 * stripe];
+    if (d < 5.5) {
+      const k = smooth(5.5, 4.5, d);
+      p.grass = 1 - k;
+      p.dirt = k;
+      p.sand = k;
+    }
+    const c = Math.abs(d - this.canal);
+    if (c < 4) {
+      const k = smooth(4, 3.2, c);
+      p.cobble = k;
+      p.grass *= 1 - k;
+      if (c < 2.8) {
+        p.cobble = 0;
+        p.dirt = 1;
+        p.sand = 0;
+        p.tint = [0.7, 0.72, 0.62];
+      }
+    }
+    for (const r of this.roads) {
+      const q = near(r, x, z, 3);
+      if (q.d < q.w + 0.6) {
+        const k = smooth(q.w + 0.6, q.w - 0.2, q.d);
+        p.grass *= 1 - k;
+        p.dirt = Math.max(p.dirt, k);
+        p.sand = Math.max(p.sand ?? 0, k);
+      }
+    }
+    const far = smooth(60, 120, d);
+    if (far > 0) p.tint = [lerp(p.tint[0], 0.78 + n * 0.1, far), lerp(p.tint[1], 0.92 + n * 0.08, far), lerp(p.tint[2], 0.7, far)];
+    p.rock = smooth(0.9, 1.3, slope + (n - 0.5) * 0.3);
+    return p;
+  }
+
+  private gardenFeatures(): void {
+    const ok = (x: number, z: number, pad = 1.5) => this.canonical(x, z) && this.boxDist(x, z) > 1.5 && !this.blocked(x, z, pad) && Math.abs(this.boxDist(x, z) - this.canal) > 4.5;
+    const both = (t: string, x: number, z: number, rot: number, sc: number, seed: number, extra: Record<string, number> = {}) => {
+      this.add({ t, x, z, rot, s: sc, seed, ...extra } as never, false);
+      if (Math.abs(x - z) > 0.5) this.add({ t, x: z, z: x, rot: -Math.PI / 2 - rot, s: sc, seed: seed + 1, ...extra } as never, false);
+    };
+    for (let x = 3; x < 50; x += 6.2) both("hedgerow", x + 3, -1.1, 0, 1, Math.floor(x), { len: 6 });
+    this.add({ t: "hedgerow", x: -1.1, z: -1.1, rot: Math.PI / 4, s: 1, seed: 7, len: 3 } as never, false);
+    const k = this.canal / Math.SQRT2;
+    this.add({ t: "bridge", x: -k, z: -k, rot: Math.PI / 4, s: 1, seed: 1, w: 10 } as never, false);
+    both("bridge", 30, -this.canal, 0, 1, 2, { w: 9 });
+    this.add({ t: "manor", x: -58, z: -58, rot: -Math.PI * 0.75, s: 1, seed: 3, side: 0 });
+    for (let u = 20; u < 70; u += 5.5) {
+      const a = u / Math.SQRT2;
+      for (const sg of [-1, 1]) this.add({ t: "tree", x: -a + sg * 3.1, z: -a - sg * 3.1, rot: u, s: 1.0 + hash(u, sg) * 0.25, seed: Math.floor(u * 7 + sg) } as never, false);
+    }
+    both("gazebo", 40, -26, 0, 1, 4);
+    both("fountain", 14, -34, 0, 0.6, 5);
+    for (const [x, z] of [[8, -20], [20, -20], [8, -46], [20, -46]] as const) both("topiary", x, z, 0, 1.3, x * 3 + z);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) both("flowers", 10 + i * 3, -30 - j * 3 - (i % 2) * 1.5, 0, 1.6, i * 7 + j);
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) both("tree", 36 + j * 5.5, -40 - i * 5, 0, 0.75, i * 11 + j);
+    this.scatter(70, (r) => this.ring(r, 60, 150), (x, z) => ok(x, z, 2) && fbm(x * 0.03, z * 0.03, 3, this.seed + 42) > 0.5, (x, z, r) => this.add({ t: r() < 0.5 ? "pine" : "tree", x, z, rot: r() * 6, s: 1.3 + r() * 0.9, seed: Math.floor(r() * 9999) } as never, false), 61);
+    this.scatter(24, (r) => this.ring(r, 20, 60), (x, z) => ok(x, z, 3), (x, z, r) => this.add({ t: r() < 0.5 ? "bush" : "tree", x, z, rot: r() * 6, s: 0.9 + r() * 0.5, seed: Math.floor(r() * 9999) } as never, false), 62);
+  }
+
   private designSea(): void {
     const { W, D } = this;
     const cx = W / 2;
@@ -420,6 +632,8 @@ export class Surround {
     let h: number;
     if (this.style === "valley") h = this.valleyH(x, z, d);
     else if (this.style === "crag") h = this.cragH(x, z, d);
+    else if (this.style === "alpine") h = this.alpineH(x, z, d);
+    else if (this.style === "garden") h = this.gardenH(x, z, d);
     else h = this.seaH(x, z, d);
     return h;
   }
@@ -530,6 +744,8 @@ export class Surround {
     const d = this.boxDist(x, z);
     if (this.style === "valley") return this.valleyPaint(x, z, h, slope, d);
     if (this.style === "crag") return this.cragPaint(x, z, h, slope, d);
+    if (this.style === "alpine") return this.alpinePaint(x, z, h, slope, d);
+    if (this.style === "garden") return this.gardenPaint(x, z, h, slope, d);
     return this.seaPaint(x, z, h, slope, d);
   }
 
@@ -669,12 +885,13 @@ export class Surround {
     const pts = single ? [[f.x, f.z] as [number, number]] : this.sym(f.x, f.z);
     pts.forEach(([x, z], i) => {
       let rot = f.rot;
-      if (i === 1) {
+      if (this.mirror === "quad") rot = rot - (i * Math.PI) / 2;
+      else if (i === 1) {
         if (this.mirror === "x") rot = -rot;
         else if (this.mirror === "diag") rot = Math.PI / 2 - rot;
         else if (this.mirror === "rot") rot = rot + Math.PI;
       }
-      const side = f.side === undefined ? 0 : mirrorSide && i === 1 ? 1 - f.side : f.side;
+      const side = f.side === undefined ? 0 : this.mirror === "quad" ? (mirrorSide ? (f.side + i) % 4 : f.side) : mirrorSide && i === 1 ? 1 - f.side : f.side;
       this.features.push({ ...f, x, z, rot, side, y: this.ground(x, z) });
     });
   }
@@ -700,12 +917,15 @@ export class Surround {
     if (this.mirror === "x") return x <= this.W / 2;
     if (this.mirror === "diag") return x <= z;
     if (this.mirror === "rot") return x < this.W / 2 || (x === this.W / 2 && z <= this.D / 2);
+    if (this.mirror === "quad") return x < this.W / 2 && z <= this.D / 2;
     return true;
   }
 
   private placeFeatures(): void {
     if (this.style === "valley") this.valleyFeatures();
     else if (this.style === "crag") this.cragFeatures();
+    else if (this.style === "alpine") this.alpineFeatures();
+    else if (this.style === "garden") this.gardenFeatures();
     else this.seaFeatures();
   }
 
@@ -941,5 +1161,5 @@ export class Surround {
 }
 
 export function surroundFor(t: Terrain): Surround | null {
-  return t.surround ? new Surround(t, t.surround, t.symmetry) : null;
+  return t.surround ? new Surround(t, t.surround as SurroundStyle, t.symmetry) : null;
 }

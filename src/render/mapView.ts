@@ -4,6 +4,9 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { layerTexture } from "./mergedModel";
 import type { Terrain } from "../sim/terrain";
 import { surroundFor } from "../sim/surround";
+import sandUrl from "../../assets/textures/sand.png?url";
+import snowUrl from "../../assets/textures/snow.png?url";
+import gravelUrl from "../../assets/textures/gravel.png?url";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./terrainMesh";
 
 export interface MapView {
@@ -141,9 +144,11 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   const texLoader = new THREE.TextureLoader();
   const [gltf, ...texs] = await Promise.all([
     new GLTFLoader().loadAsync(url),
-    ...(["grass", "dirt", "rock", "cobble", "water", "sand"] as const).map((k) => texLoader.loadAsync(textureUrls[k] as string)),
+    ...(["grass", "dirt", "rock", "cobble", "water"] as const).map((k) => texLoader.loadAsync(textureUrls[k] as string)),
   ]);
-  const [grass, dirt, rock, cobble, water, sand] = texs;
+  const [grass, dirt, rock, cobble, water] = texs;
+  const altUrl = terrain.surround === "alpine" ? snowUrl : terrain.surround === "garden" ? gravelUrl : sandUrl;
+  const sand = await texLoader.loadAsync(altUrl);
   const root = new THREE.Group();
   root.add(gltf.scene);
   const sur = surroundFor(terrain);

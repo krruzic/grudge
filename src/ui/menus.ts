@@ -39,9 +39,10 @@ export type MenuResult = "fight" | "title" | "options" | "host" | "join" | "brow
 const INK = "#0b0806";
 const BROWN = "#3a2410";
 const LIGHT = "#f8e8c0";
-const TEAM_TEXT = ["#1c3aa8", "#a81c1c"];
+const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#1a6a24", "#8a6000"];
+const HOUSE = ["BLUE", "RED", "YELLOW", "GREEN"];
 const ITEMS = [
-  { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, OR TWO AGAINST TWO WITH COMMANDERS." },
+  { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, TWO AGAINST TWO, OR FOUR HOUSES IN A FREE FOR ALL." },
   { art: "!PLAYERS", label: "PLAYERS", blurb: "WHO IS PLAYING ON THIS MACHINE: CONTROLLERS, KEYBOARD AND MOUSE. FREE A SEAT OR TURN THE KEYBOARD OFF." },
   { art: "m_network", label: "VERSUS ONLINE", blurb: "PLAY OVER THE HOUSE NETWORK. ONE MACHINE HOSTS, FRIENDS OPEN ITS PAGE AND JOIN." },
   { art: "!CODEX", label: "CODEX", blurb: "EVERY CHAMPION, EVERY EVOLUTION, EVERY TRICK FOR YOUR ARMY AND BASE. ALSO SOME LIES ABOUT A TREE." },
@@ -103,7 +104,7 @@ function dateOf(ms: number): string {
 }
 
 const PAUSE_ITEMS = ["RESUME", "CONTROLS", "QUIT MATCH"];
-const TEAM_CLOTH = ["#2a4ab8", "#b02a1c"];
+const TEAM_CLOTH = ["#2a4ab8", "#b02a1c", "#2a8a3a", "#c89a14"];
 
 export class Menus {
   pauseFocus = 0;
@@ -195,10 +196,14 @@ export class Menus {
       const mapName = this.currentMap.toUpperCase();
       if (mapName) shadowText(ctx, mapName, 10 + iw / 2 - textWidth(mapName, 0.5) / 2, 10 + ih - 10, "#f0e4c8", 0.5);
       const colW = (pw - 26) / 2;
+      if (w.ffa) {
+        this.drawPauseHouses(ctx, w, colW, ih, ph);
+        return;
+      }
       [0, 1].forEach((team) => {
         const x = 10 + team * (colW + 6);
         let y = ih + 20;
-        const name = team === 0 ? "BLUE HOUSE" : "RED HOUSE";
+        const name = `${HOUSE[team]} HOUSE`;
         drawPlain(ctx, name, x, y, TEAM_TEXT[team], 0.68, true);
         waxSeal(ctx, x + colW - 7, y + 3, 6, TEAM_CLOTH[team], "castle");
         y += 12;
@@ -255,6 +260,47 @@ export class Menus {
     const p: [string, string][] = [["A", "CHOOSE"], ["B", "RESUME"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
+  private drawPauseHouses(ctx: CanvasRenderingContext2D, w: World, colW: number, ih: number, ph: number): void {
+    const cellH = Math.floor((ph - ih - 20) / 2);
+    w.teams.forEach((ts, team) => {
+      const x = 10 + (team % 2) * (colW + 6);
+      let y = ih + 18 + Math.floor(team / 2) * cellH;
+      const out = !!ts.out;
+      drawPlain(ctx, `${HOUSE[team] ?? ""} HOUSE`, x, y, TEAM_TEXT[team], 0.62, true);
+      waxSeal(ctx, x + colW - 6, y + 3, 5, out ? "#6a6058" : TEAM_CLOTH[team], out ? "none" : "castle");
+      if (out) {
+        const f = "FALLEN";
+        drawPlain(ctx, f, x + colW - 14 - textWidth(f, 0.5, true), y + 1, "#8a1810", 0.5, true);
+      }
+      y += 10;
+      for (const p of w.players.filter((q) => q.team === team)) {
+        const e = w.getAny(p.heroId);
+        if (!e?.hero) continue;
+        inset(ctx, x + 1, y, 18, 18, "#3a2a1c");
+        const icon = this.portraits?.icon(p.heroType);
+        if (icon) hiImage(ctx, icon, x + 1, y, 18, 18);
+        const nm = `P${p.player + 1} ${(this.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
+        drawPlain(ctx, nm, x + 23, y, BROWN, 0.52, true);
+        const lv = `LV ${e.hero.level ?? 1}`;
+        drawPlain(ctx, lv, x + colW - textWidth(lv, 0.48, true), y, "#8a1810", 0.48, true);
+        const fr = e.alive ? Math.max(0, e.hp / e.maxHp) : 0;
+        const bw = colW - 25;
+        ctx.fillStyle = "#3a2410";
+        ctx.fillRect(x + 23, y + 8, bw + 2, 5);
+        ctx.fillStyle = e.alive ? (fr > 0.35 ? "#4a9a30" : "#c83020") : "#8a7a60";
+        ctx.fillRect(x + 24, y + 9, Math.round(bw * fr), 3);
+        const got = (["r", "b", "a", "z"] as const).flatMap((sl) => learned(w, e, sl));
+        got.slice(0, 7).forEach((tl, k) => talentIcon(ctx, tl.id, x + 23 + k * 8, y + 14, 7));
+        y += 23;
+      }
+      const core = w.core(team);
+      const keep = core?.alive && !out ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-";
+      const line = `KEEP ${keep} · GOLD ${Math.floor(ts.resource)} · ${ts.unitCount} MEN · ${ts.heroKills} KO`;
+      band(ctx, x, y - 1, colW, 1, "#6a4424", 0.5);
+      drawPlain(ctx, line, x, y + 2, "#6a4424", Math.min(0.48, colW / Math.max(1, textWidth(line, 1, true))), true);
+    });
+  }
+
   page: Page = "main";
   focus = 0;
   tab = 0;
@@ -1026,7 +1072,7 @@ export class Menus {
         drawPlain(ctx, dateOf(m.at), lx + 14, y, "#8a5a2a", 0.62, true);
         const map = (this.mapNames[m.map] ?? m.map).toUpperCase().replace(/^GRUDGE\w*\s*/, "");
         drawPlain(ctx, map.slice(0, 12), lx + 44, y, sel ? "#8a1810" : BROWN, 0.65, true);
-        const res = m.winner < 0 ? "DRAW" : m.winner === 0 ? "BLUE" : "RED";
+        const res = m.winner < 0 ? "DRAW" : HOUSE[m.winner] ?? "-";
         num(ctx, res, lx + pgw - 10, y, m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], 0.65);
       }));
       const m = log[this.focus];
@@ -1035,7 +1081,17 @@ export class Menus {
         pageHead(rx, `${dateOf(m.at)} · ${map}`);
         const mm = `${Math.floor(m.secs / 60)}:${String(Math.floor(m.secs % 60)).padStart(2, "0")}`;
         let y = pgy + 22;
-        for (const team of [0, 1]) {
+        if (m.mode === "ffa") {
+          for (const p of [...m.players].sort((a, b) => Number(b.team === m.winner) - Number(a.team === m.winner))) {
+            icon(p.hero, R, y - 3, 14);
+            drawPlain(ctx, HOUSE[p.team] ?? "", R + 17, y, TEAM_TEXT[p.team], 0.55, true);
+            const nm = `${p.cpu ? "CPU" : p.tag ?? "-"} · ${(this.heroNames[p.hero] ?? p.hero).toUpperCase()}`;
+            drawPlain(ctx, nm, R + 17, y + 7, BROWN, 0.55, true);
+            y += 17;
+          }
+          y += 2;
+        }
+        for (const team of m.mode === "ffa" ? [] : [0, 1]) {
           drawPlain(ctx, team ? "RED HOUSE" : "BLUE HOUSE", R, y, TEAM_TEXT[team], 0.62, true);
           y += 10;
           for (const p of m.players.filter((q) => q.team === team)) {
@@ -1047,8 +1103,8 @@ export class Menus {
           y += 4;
         }
         stat("LASTED", mm, y + 2);
-        const res = m.winner < 0 ? "DRAW" : m.winner === 0 ? "BLUE" : "RED";
-        waxSeal(ctx, R + RW - 14, pgy + pgh - 18, 12, m.winner < 0 ? "#8a7a60" : m.winner === 0 ? "#2a4ab8" : "#a8141a", "combo");
+        const res = m.winner < 0 ? "DRAW" : HOUSE[m.winner] ?? "-";
+        waxSeal(ctx, R + RW - 14, pgy + pgh - 18, 12, m.winner < 0 ? "#8a7a60" : m.winner === 0 ? "#2a4ab8" : m.winner === 1 ? "#a8141a" : TEAM_CLOTH[m.winner], "combo");
         drawPlain(ctx, res === "DRAW" ? "A DRAW" : `${res} WON`, R, pgy + pgh - 22, m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], 0.85, true);
       }
     }

@@ -63,9 +63,11 @@ export interface MapData {
   emblem?: string;
   width: number;
   depth: number;
-  mirror: "x" | "diag" | "rot" | "none";
+  mirror: "x" | "diag" | "rot" | "quad" | "none";
+  teams?: number;
+  mode?: "duel" | "ffa";
   tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
-  surround?: "valley" | "crag" | "sea";
+  surround?: string;
   rimHeight: number;
   waterLevel: number;
   ops: MapOp[];
@@ -73,6 +75,10 @@ export interface MapData {
   cores: MapPoint[];
   pads: MapPoint[];
   spawns: MapPoint[];
+  dens?: MapPoint[];
+  avalanche?: unknown;
+  gates?: unknown;
+  fountain?: unknown;
 }
 
 export enum Kind {
@@ -126,12 +132,17 @@ export class Terrain {
   readonly cores: MapPoint[] = [];
   readonly pads: MapPoint[] = [];
   readonly spawns: MapPoint[] = [];
-  private mirror: "x" | "diag" | "rot" | "none" = "none";
+  readonly dens: MapPoint[] = [];
+  private mirror: "x" | "diag" | "rot" | "quad" | "none" = "none";
+  readonly teams: number = 2;
   readonly tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
   readonly tideCells: number[] = [];
-  readonly surround?: "valley" | "crag" | "sea";
+  readonly surround?: string;
+  readonly avalanche?: unknown;
+  readonly gates?: unknown;
+  readonly fountain?: unknown;
 
-  get symmetry(): "x" | "diag" | "rot" | "none" {
+  get symmetry(): "x" | "diag" | "rot" | "quad" | "none" {
     return this.mirror;
   }
 
@@ -142,6 +153,15 @@ export class Terrain {
       const rx = this.width - vx;
       const rz = this.depth - vz;
       return vx < rx || (vx === rx && vz <= rz) ? [vx, vz] : [rx, rz];
+    }
+    if (this.mirror === "quad") {
+      let best: [number, number] = [vx, vz];
+      let p: [number, number] = [vx, vz];
+      for (let k = 0; k < 3; k++) {
+        p = [this.depth - p[1], p[0]];
+        if (p[0] < best[0] || (p[0] === best[0] && p[1] < best[1])) best = p;
+      }
+      return best;
     }
     return [vx, vz];
   }
@@ -159,9 +179,13 @@ export class Terrain {
     this.flags = new Uint8Array(n);
     this.deck = new Float32Array(n);
     this.styles = new Array<string>(n).fill("");
-    this.mirror = data.mirror === "x" || data.mirror === "diag" || data.mirror === "rot" ? data.mirror : "none";
+    this.mirror = data.mirror === "x" || data.mirror === "diag" || data.mirror === "rot" || data.mirror === "quad" ? data.mirror : "none";
+    this.teams = data.teams ?? 2;
     this.tide = data.tide;
     this.surround = data.surround;
+    this.avalanche = data.avalanche;
+    this.gates = data.gates;
+    this.fountain = data.fountain;
     const mode = this.mirror;
     const mirror = mode !== "none";
 
@@ -175,6 +199,15 @@ export class Terrain {
         const m = r.w !== undefined ? { ...r, x: W - r.x - r.w, z: D - r.z - (r.h ?? 0) } : { ...r, x: W - r.x, z: D - r.z };
         if (Math.abs(m.x - r.x) < 1e-6 && Math.abs(m.z - r.z) < 1e-6) return [r];
         return [r, m];
+      }
+      if (mode === "quad" && r.z !== undefined) {
+        const out: T[] = [r];
+        let c = r;
+        for (let k = 0; k < 3; k++) {
+          c = c.w !== undefined ? { ...c, x: D - c.z! - (c.h ?? 0), z: c.x, w: c.h, h: c.w } : { ...c, x: D - c.z!, z: c.x };
+          if (!out.some((o) => Math.abs(o.x - c.x) < 1e-6 && Math.abs((o.z ?? 0) - (c.z ?? 0)) < 1e-6 && o.w === c.w && o.h === c.h)) out.push(c);
+        }
+        return out;
       }
       if (mode === "diag" && r.z !== undefined) {
         const m = { ...r, x: r.z, z: r.x, w: r.h, h: r.w };
@@ -235,6 +268,18 @@ export class Terrain {
       list: T[], out: T[], flipTeam: boolean,
     ) => {
       for (const p of list) {
+        if (mode === "quad") {
+          let c: T = { ...p, side: 0 };
+          out.push(c);
+          if (Math.abs(p.x - W / 2) < 0.01 && Math.abs(p.z - D / 2) < 0.01) continue;
+          for (let k = 1; k < 4; k++) {
+            c = { ...c, x: D - c.z, z: c.x, side: k };
+            if (p.rot !== undefined) c.rot = (p.rot - 90 * k + 360) % 360;
+            if (flipTeam && p.team !== undefined) c.team = (p.team + k) % 4;
+            out.push(c);
+          }
+          continue;
+        }
         out.push({ ...p, side: 0 });
         if (!mirror) continue;
         if (mode === "x" && Math.abs(p.x - W / 2) < 0.01) continue;
@@ -250,6 +295,7 @@ export class Terrain {
     both(data.cores, this.cores, true);
     both(data.pads, this.pads, false);
     both(data.spawns, this.spawns, true);
+    both(data.dens ?? [], this.dens, false);
 
     for (const p of this.props) {
       if (!p.solid) continue;

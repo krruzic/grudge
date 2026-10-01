@@ -9,6 +9,7 @@ import type { FxHost } from "./fxParts";
 import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
 import { buildFissures } from "./fxParts";
 import { SpriteBatches } from "./spriteBatch";
+import { MapFx } from "./mapFx";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -429,6 +430,7 @@ export class HazardViews {
   private now = 0;
 
   dispose(): void {
+    this.mapFx.dispose();
     for (const o of [...this.traps.values(), ...this.zones.values(), ...this.mods.values(), ...this.dying.map((d) => d.obj)]) free(o);
     this.traps.clear();
     this.zones.clear();
@@ -437,8 +439,12 @@ export class HazardViews {
     this.sprites.dispose();
   }
 
+  private mapFx: MapFx;
+
   constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {
     this.root.add(this.sprites.root);
+    this.mapFx = new MapFx(world, fx);
+    this.root.add(this.mapFx.root);
   }
 
   fillView(camera: THREE.Camera): void {
@@ -796,6 +802,10 @@ export class HazardViews {
   }
 
   handle(ev: { type: string; id?: number }): void {
+    if (ev.type === "avalanche" || ev.type === "gates") {
+      this.mapFx.handle(ev);
+      return;
+    }
     if (ev.type === "mod" && ev.id !== undefined) {
       const obj = this.modMesh(ev.id);
       const m = this.world.mods.find((k) => k.id === ev.id);
@@ -833,6 +843,7 @@ export class HazardViews {
   private dying: { obj: THREE.Object3D; at: number }[] = [];
 
   sync(time: number, dt: number): void {
+    this.mapFx.sync(time, dt);
     this.now = time;
     const w = this.world;
     this.dying = this.dying.filter(({ obj, at }) => {

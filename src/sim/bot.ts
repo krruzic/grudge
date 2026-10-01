@@ -184,7 +184,7 @@ export class Bot {
     if (slot?.commander) want = "attack";
     else if (mate) {
       const own = w.core(me.team)!;
-      const foe = w.core(1 - me.team)!;
+      const foe = w.foeCore(me.team, own.transform.pos.x, own.transform.pos.z) ?? own;
       const dOwn = w.dist(mate, own);
       const dFoe = w.dist(mate, foe);
       const frac = dOwn / (dOwn + dFoe || 1);
@@ -277,7 +277,7 @@ export class Bot {
       if (best) this.goal = { x: best.transform.pos.x, z: best.transform.pos.z };
       return;
     }
-    const enemyShrine = w.arena.shrineOf(1 - me.team);
+    const enemyShrine = relic.state === "shrined" && relic.team >= 0 && relic.team !== me.team ? w.arena.shrineOf(relic.team) : null;
     if (enemyShrine && !lowHp && w.dist(me, enemyShrine) < 22 && !(ehAlive && dHero < 5)) {
       this.goal = { x: enemyShrine.transform.pos.x, z: enemyShrine.transform.pos.z };
       return;
@@ -465,7 +465,7 @@ export class Bot {
       for (const u of army) { cx += u.transform.pos.x; cz += u.transform.pos.z; }
       cx /= army.length;
       cz /= army.length;
-      const core = w.core(1 - me.team)!;
+      const core = w.foeCore(me.team, cx, cz) ?? w.core(me.team)!;
       const f = 0.15;
       this.goal = { x: cx + (core.transform.pos.x - cx) * f, z: cz + (core.transform.pos.z - cz) * f };
       return;
@@ -488,7 +488,7 @@ export class Bot {
       const d = w.dist(me, o);
       if (d < bestD) { bestD = d; best = o; }
     }
-    if (!best) return w.spawnPoint(1 - me.team);
+    if (!best) return w.spawnPoint(w.rival(me.team));
     return { x: best.transform.pos.x, z: best.transform.pos.z };
   }
 
@@ -505,7 +505,7 @@ export class Bot {
         const d = w.dist(me, o);
         if (d < bd) { bd = d; best = o; }
       }
-      const target = best ?? w.core(1 - me.team);
+      const target = best ?? w.foeCore(me.team, me.transform.pos.x, me.transform.pos.z);
       if (target) {
         this.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
         if (w.dist(me, target) < w.data.match.arena.shop.bomb.throwRange - 1 && this.rand() < 0.3) {

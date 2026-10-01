@@ -81,7 +81,7 @@ export function createStructure(w: World, team: number, pad: Pad, type: Structur
   const hp = def.hp * (lane?.hp ?? 1);
   const e = w.addEntity(team, "structure", sd.structureRadius, pad.x, pad.z, hp);
   e.hp = hp * sd.buildStartHpFrac;
-  const core = w.core(1 - team);
+  const core = w.foeCore(team, pad.x, pad.z);
   if (core) e.transform.facing = e.transform.prevFacing = Math.atan2(core.transform.pos.x - pad.x, core.transform.pos.z - pad.z);
   e.structure = {
     type, padIndex: pad.index, level: 1, builtAt: w.time, ready: false, nextAction: w.time + sd.buildSeconds, progress: 0,

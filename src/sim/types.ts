@@ -337,7 +337,10 @@ export interface TeamDirectives {
   focus: Record<UnitType, number>;
 }
 
+export const TEAM_NAMES = ["BLUE", "RED", "YELLOW", "GREEN"];
+
 export interface TeamState {
+  out?: boolean;
   resource: number;
   coreId: number;
   homeLost: boolean;
@@ -382,6 +385,9 @@ export type SimEvent =
   | { type: "hit"; x: number; y: number; z: number; team: number; big: boolean; blocked?: boolean; id?: number; amount?: number; src?: number; fx?: number; fz?: number; crit?: boolean }
   | { type: "miss"; x: number; y: number; z: number }
   | { type: "death"; id: number; kind: Entity["kind"]; x: number; y: number; z: number; team: number; big: boolean }
+  | { type: "eliminated"; team: number; by: number }
+  | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number }
+  | { type: "avalanche"; stage: "warn" | "slide" | "settle"; arm: number; rect: { x: number; z: number; w: number; h: number }; dx: number; dz: number; seconds: number }
   | { type: "spawn"; id: number }
   | { type: "rankUp"; id: number; rank: number; x: number; y: number; z: number; team: number }
   | { type: "build"; id: number; padIndex: number; team: number; upgrade: boolean }

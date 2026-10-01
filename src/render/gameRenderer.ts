@@ -480,6 +480,8 @@ export class GameRenderer {
     });
   }
 
+  private watching = new Map<number, number>();
+
   private frameView(sv: { heroIds: number[]; player: number }): { pts: THREE.Vector3[]; min: number; max: number; margin: number } {
     const w = this.world;
     const pts: THREE.Vector3[] = [];
@@ -487,6 +489,21 @@ export class GameRenderer {
     for (const id of sv.heroIds) {
       const p = this.entityViews.heroPoint(id);
       if (p) pts.push(p);
+    }
+    if (heroes.length && heroes.every((h) => w.teams[h.team]?.out)) {
+      let id = this.watching.get(sv.player) ?? 0;
+      const ok = (e: { alive: boolean; team: number } | undefined) => !!e?.alive && w.standing(e.team);
+      if (!ok(w.getAny(id))) {
+        const sp = w.spawnPoint(heroes[0].team);
+        const near = w.players.map((p) => w.getAny(p.heroId)).filter(ok).sort((a, b) => Math.hypot(a!.transform.pos.x - sp.x, a!.transform.pos.z - sp.z) - Math.hypot(b!.transform.pos.x - sp.x, b!.transform.pos.z - sp.z))[0];
+        id = near?.id ?? 0;
+        this.watching.set(sv.player, id);
+      }
+      const p = id ? this.entityViews.heroPoint(id) : null;
+      if (p) {
+        pts.length = 0;
+        pts.push(p);
+      }
     }
     if (!pts.length) {
       const sp = w.spawnPoint(heroes[0]?.team ?? 0);
@@ -579,7 +596,7 @@ export class GameRenderer {
     this.scene.matrixWorldAutoUpdate = false;
     this.time += dt;
     for (const ev of this.world.events) {
-      if (ev.type === "mod" || ev.type === "modEnd") this.hazards.handle(ev);
+      if (ev.type === "mod" || ev.type === "modEnd" || ev.type === "avalanche" || ev.type === "gates") this.hazards.handle(ev);
       if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {
         this.entityViews.onHit(ev.id);
         this.entityViews.onImpact(ev.id, ev.src, ev.fx, ev.fz, ev.big);

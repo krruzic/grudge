@@ -1,6 +1,6 @@
 import type { Command } from "../sim/types";
 import type { World } from "../sim/world";
-import type { Rules } from "../game/save";
+import type { MatchMode, Rules } from "../game/save";
 
 export interface MatchSpec {
   map: string;
@@ -11,6 +11,7 @@ export interface MatchSpec {
   levels: number[];
   humans: boolean[];
   names: (string | null)[];
+  mode?: MatchMode;
 }
 
 export interface Frame {

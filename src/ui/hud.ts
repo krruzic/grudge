@@ -1,6 +1,6 @@
 import type { World } from "../sim/world";
 import { fontLoaded, setTextLayer, textLayer } from "./font";
-import { UNIT_TYPES, type Directive, type Entity, type UnitType } from "../sim/types";
+import { TEAM_NAMES, UNIT_TYPES, type Directive, type Entity, type UnitType } from "../sim/types";
 import type { Portraits } from "./portraits";
 import { parchment, texturedRect, uiImagesReady } from "./n64ui";
 import { onHiLayer } from "./font";
@@ -17,6 +17,8 @@ const TYPE_NAME: Record<UnitType | "all", string> = { grunt: "GRUNTS", ranged: "
 const PLAYER_TAG = ["#8ab0ff", "#ff9a8a", "#70e0d0", "#ffd060"];
 const MARGIN_X = 14;
 const MARGIN_Y = 10;
+
+type Frame = { x: number; y: number; w: number; h: number; right: boolean };
 
 export class UiCanvas {
   readonly canvas: HTMLCanvasElement;
@@ -311,6 +313,22 @@ function coreIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
   ctx.restore();
 }
 
+function fallenMark(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.save();
+  ctx.lineCap = "round";
+  for (const [c, lw] of [[INK, 3], ["#d83020", 1.4]] as const) {
+    ctx.strokeStyle = c;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(x - r, y - r);
+    ctx.lineTo(x + r, y + r);
+    ctx.moveTo(x + r, y - r);
+    ctx.lineTo(x - r, y + r);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function times(ctx: CanvasRenderingContext2D, x: number, y: number): number {
   drawText(ctx, "×", x, y + 1, "#b8c4e8", 0.9);
   return textWidth("×", 0.9) + 1.5;
@@ -400,12 +418,10 @@ export class Hud {
   private banner = "";
   private bannerAt = 0;
   private bannerUntil = 0;
-  private notices: { text: string; until: number }[] = [{ text: "", until: 0 }, { text: "", until: 0 }];
-  private orders: { type: UnitType | "all"; dir: Directive; until: number }[] = [
-    { type: "all", dir: "follow", until: 0 },
-    { type: "all", dir: "follow", until: 0 },
-  ];
-  private shownCoin = [0, 0];
+  private notices: { text: string; until: number }[] = Array.from({ length: 4 }, () => ({ text: "", until: 0 }));
+  private orders: { type: UnitType | "all"; dir: Directive; until: number }[] = Array.from({ length: 4 }, () => ({ type: "all" as const, dir: "follow" as Directive, until: 0 }));
+  private shownCoin = [0, 0, 0, 0];
+  private fall: { team: number; at: number; until: number } | null = null;
 
   constructor(private teamColors: string[]) {}
 
@@ -426,9 +442,11 @@ export class Hud {
     for (const ev of w.events) {
       if (ev.type === "notice") {
         if (ev.team < 0) this.banner_(ev.text, now);
-        else this.notices[ev.team] = { text: ev.text, until: now + 2 };
-      } else if (ev.type === "directive" && ev.team >= 0 && ev.team < 2) {
+        else if (this.notices[ev.team]) this.notices[ev.team] = { text: ev.text, until: now + 2 };
+      } else if (ev.type === "directive" && ev.team >= 0 && ev.team < this.orders.length) {
         this.orders[ev.team] = { type: ev.unitType, dir: ev.dir, until: now + 2.2 };
+      } else if (ev.type === "eliminated") {
+        this.fall = { team: ev.team, at: now, until: now + 3.5 };
       }
     }
   }
@@ -449,6 +467,10 @@ export class Hud {
     if (!this.visible) return;
     this.drawClock(ctx, W, w, now);
     this.drawRelic(ctx, W, H, w, now);
+    if (w.ffa) {
+      this.drawFfa(ctx, W, H, w, ui, now);
+      return;
+    }
     const k = w.players.length >= 4 || this.split >= 3 ? 0.74 : w.players.length >= 3 ? 0.86 : 1;
     this.dense = k < 1;
     for (let t = 0; t < 2; t++) {
@@ -461,6 +483,77 @@ export class Hud {
       this.drawTeam(ctx, W / k, H / k, w, ui, t, now);
       ctx.restore();
     }
+  }
+
+  private drawFfa(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
+    const k = this.split >= 3 ? 0.74 : this.split === 2 ? 0.86 : 1;
+    this.dense = k < 1;
+    const Wk = W / k;
+    const Hk = H / k;
+    const locals = w.players.filter((p) => ui[p.player] && !p.commander);
+    const mine = [...new Set(locals.map((p) => p.team))];
+    const frames = new Map<number, Frame>();
+    const quad = (j: number, n: number): Frame => {
+      if (n <= 1) return { x: 0, y: 0, w: Wk, h: Hk, right: false };
+      if (n === 2) return { x: j ? Wk / 2 : 0, y: 0, w: Wk / 2, h: Hk, right: j === 1 };
+      return { x: j % 2 ? Wk / 2 : 0, y: j >= 2 ? Hk / 2 : 0, w: Wk / 2, h: Hk / 2, right: j % 2 === 1 };
+    };
+    if (!mine.length) frames.set(0, quad(0, 1));
+    mine.forEach((t, j) => {
+      const pl = locals.find((p) => p.team === t)!.player;
+      const r = this.split >= 2 ? this.rectOf?.(pl) : null;
+      frames.set(t, r ? { x: r.x * Wk, y: r.y * Hk, w: r.w * Wk, h: r.h * Hk, right: r.x + r.w / 2 > 0.5 } : quad(j, mine.length));
+    });
+    ctx.save();
+    if (k !== 1) ctx.scale(k, k);
+    for (const [t, F] of frames) this.drawTeam(ctx, Wk, Hk, w, ui, t, now, F);
+    const rest = w.teams.map((_, t) => t).filter((t) => !frames.has(t));
+    if (rest.length) {
+      const single = frames.size === 1 && this.split < 2;
+      this.drawStandings(ctx, single ? Wk - MARGIN_X - 74 : Wk / 2 - 37, single ? MARGIN_Y + 2 : MARGIN_Y + 40, w, rest, single);
+    }
+    for (const [t, F] of frames) {
+      if (!w.teams[t].out || !mine.includes(t)) continue;
+      const msg = "YOUR KEEP FELL · SPECTATING";
+      const s = 0.9;
+      drawText(ctx, msg, Math.round(F.x + F.w / 2 - textWidth(msg, s) / 2), Math.round(F.y + F.h * 0.8), Math.floor(now * 2) % 2 ? "#ffd0a0" : "#ffffff", s);
+    }
+    ctx.restore();
+    const f = this.fall;
+    if (f && now < f.until && w.match.phase !== "over") {
+      const name = `${TEAM_NAMES[f.team] ?? ""} HOUSE FALLS`;
+      const age = now - f.at;
+      const s = 2.4 * (age < 0.12 ? 1.3 - (age / 0.12) * 0.3 : 1);
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, (f.until - now) * 4);
+      drawNum(ctx, name, Math.round((W - textWidth(name, s, true)) / 2), Math.round(H * 0.3), this.teamColors[f.team] ?? "#ffffff", s);
+      ctx.restore();
+    }
+  }
+
+  private drawStandings(ctx: CanvasRenderingContext2D, x: number, y: number, w: World, teams: number[], right: boolean): void {
+    const rows = teams.map((t) => {
+      const core = w.core(t);
+      return { t, out: !!w.teams[t].out, hp: core?.alive ? core.hp / core.maxHp : 0, shield: !!core?.structure?.shielded && !w.isSudden() };
+    });
+    const bw = 74;
+    const rh = 10;
+    const key = [x, y, right, ...rows.map((r) => `${r.t}${r.out}${r.hp.toFixed(3)}${r.shield}`)].join("|");
+    this.memo(ctx, "standings", key, x - 8, y - 6, bw + 16, rows.length * rh + 10, (c) => {
+      rows.forEach((r, i) => {
+        const ry = y + i * rh;
+        const col = this.teamColors[r.t];
+        const gx = right ? x + bw - 4 : x + 4;
+        const mx = right ? x : x + 11;
+        coreIcon(c, gx, ry + 3, 3.2, r.out ? "#5a5048" : col, r.shield && !r.out);
+        if (r.out) {
+          fallenMark(c, gx, ry + 3, 4);
+          const lab = "FALLEN";
+          drawText(c, lab, right ? x + bw - 11 - textWidth(lab, 0.6) : mx, ry - 0.5, "#ffb8a0", 0.6);
+        } else meter(c, mx, ry + 1, bw - 11, 4, r.hp, col);
+      });
+      return 0;
+    });
   }
 
   private dense = false;
@@ -642,7 +735,7 @@ export class Hud {
       const s = w.get(r.shrineId);
       const where = s?.structure?.type === "core" ? "KEEP" : s?.structure && w.data.structures.types[s.structure.type as "barracks"]?.class === "production" ? "OUTPOST" : "TOWER";
       col = this.teamColors[r.team] ?? col;
-      text = r.channel > 0 ? `STEALING THE GRUDGE · ${Math.ceil(cfg.stealSeconds - r.channel)}` : `${r.team === 0 ? "BLUE" : "RED"} HOLDS THE GRUDGE · ${where}`;
+      text = r.channel > 0 ? `STEALING THE GRUDGE · ${Math.ceil(cfg.stealSeconds - r.channel)}` : `${w.teamName(r.team)} HOLDS THE GRUDGE · ${where}`;
     } else {
       const left = Math.max(0, Math.ceil(cfg.returnSeconds - (w.time - r.since)));
       text = `GRUDGE LOOSE · ${left}`;
@@ -701,28 +794,35 @@ export class Hud {
     }
   }
 
-  private drawTeam(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], t: number, now: number): void {
-    const right = t === 1;
+  private drawTeam(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], t: number, now: number, F: Frame | null = null): void {
+    const right = F ? F.right : t === 1;
     const col = this.teamColors[t];
     const blockW = 104;
-    const x0 = right ? W - MARGIN_X - blockW : MARGIN_X;
+    const x0 = F ? (right ? F.x + F.w - MARGIN_X - blockW : F.x + MARGIN_X) : right ? W - MARGIN_X - blockW : MARGIN_X;
     const ax = (dx: number, width = 0) => (right ? x0 + blockW - dx - width : x0 + dx);
     const ts = w.teams[t];
     const core = w.core(t);
     const shield = !!core?.structure?.shielded && !w.isSudden();
-    const y00 = MARGIN_Y + 2;
+    const y00 = (F ? F.y : 0) + MARGIN_Y + 2;
     const ward = core?.structure?.ward ?? 0;
     const sudden = w.isSudden();
     this.shownCoin[t] += (ts.resource - this.shownCoin[t]) * Math.min(1, 0.25);
     const coin = String(Math.round(this.shownCoin[t]));
     const army = `${ts.unitCount}/${w.data.units.popCap}`;
     const capped = ts.unitCount >= w.data.units.popCap;
-    const hpFrac = core ? core.hp / core.maxHp : 0;
-    const headKey = [x0, right, col, shield, hpFrac, sudden, ward, coin, army, capped].join("|");
+    const out = !!ts.out;
+    const hpFrac = core && !out ? core.hp / core.maxHp : 0;
+    const headKey = [x0, y00, right, col, shield, hpFrac, sudden, ward, coin, army, capped, out].join("|");
     let y = this.memo(ctx, `head${t}`, headKey, x0 - 8, y00 - 6, blockW + 16, 40, (c) => {
       let y = y00;
       coreIcon(c, ax(5), y + 3.5, 4.2, col, shield);
       meter(c, ax(14, blockW - 14), y + 1, blockW - 14, 5, hpFrac, col);
+      if (out) {
+        fallenMark(c, ax(5), y + 3.5, 5);
+        const lab = `${TEAM_NAMES[t] ?? ""} HOUSE FELL`;
+        drawText(c, lab, right ? ax(14, textWidth(lab, 0.62)) : ax(14), y + 0.5, "#ffb8a0", 0.62);
+        return y + 12;
+      }
       if (ward > 0 && !sudden) meter(c, ax(14, blockW - 14), y + 8, blockW - 14, 2, ward / w.data.structures.core.ward, "#9fe0ff");
       y += ward > 0 && !sudden ? 15 : 12;
       const cw = 8 + textWidth("×", 0.9) + 1.5 + textWidth(coin, 1.15, true);
@@ -759,11 +859,12 @@ export class Hud {
       bxc += bw + 6;
     }
     if (bxc > 0) y += 14;
+    if (out) return;
     const anyLocal = ui.some(Boolean);
     const teamHeroes = w.players.filter((p) => p.team === t && !p.commander);
     const shown = teamHeroes.filter((p, k) => !!ui[p.player] || (!anyLocal && k === 0));
     const rectPx = (pl: number) => {
-      const r = this.rectOf?.(pl);
+      const r = F ? null : this.rectOf?.(pl);
       return r ? { x: r.x * W, y: r.y * H, w: r.w * W, h: r.h * H } : null;
     };
     for (const p of shown) {
@@ -778,6 +879,7 @@ export class Hud {
       if (!r) y = py0 + h;
     }
     const crossOf = (pl: number | undefined): [number, number] => {
+      if (F) return [right ? F.x + F.w - MARGIN_X - 62 : F.x + MARGIN_X + 62, F.y + F.h - 58];
       const r = pl === undefined ? null : rectPx(pl);
       if (!r) return [right ? W - MARGIN_X - 62 : MARGIN_X + 62, H - 58];
       return [right ? r.x + r.w - MARGIN_X - 62 : r.x + MARGIN_X + 62, r.y + r.h - 58];
@@ -810,7 +912,9 @@ export class Hud {
         const lines = hudWrap(nt.text, maxW, s);
         lines.forEach((ln, k) => {
           const lw = textWidth(ln, s);
-          const lx = Math.max(right ? W / 2 + 4 : 4, Math.min((right ? W : W / 2) - 4 - lw, crossX - lw / 2 + jolt));
+          const lo = F ? F.x + 4 : right ? W / 2 + 4 : 4;
+          const hi = F ? F.x + F.w - 4 : right ? W : W / 2;
+          const lx = Math.max(lo, Math.min(hi - (F ? 0 : 4) - lw, crossX - lw / 2 + jolt));
           drawText(ctx, ln, Math.round(lx), crossY - 48 - (lines.length - 1 - k) * 9, "#ffd0a0", s);
         });
       }
@@ -841,7 +945,7 @@ export class Hud {
     const picker = pickerP ? ui[pickerP.player] : null;
     if (pickerP) [crossX, crossY] = crossOf(pickerP.player);
     const group = picker?.group ?? "all";
-    this.drawOrders(ctx, W, H, w, t, right, now, picker ? group : null);
+    this.drawOrders(ctx, W, H, w, t, right, now, picker ? group : null, F);
     if (!picker) {
       if (now < o.until) this.orderCross(ctx, crossX, crossY, w, t, o.type, right, Math.min(1, (o.until - now) * 2.5), now, false);
       return;
@@ -871,7 +975,7 @@ export class Hud {
 
   portraits: Portraits | null = null;
 
-  private drawOrders(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, t: number, right: boolean, now: number, selected: UnitType | "all" | null): void {
+  private drawOrders(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, t: number, right: boolean, now: number, selected: UnitType | "all" | null, F: Frame | null = null): void {
     const ts = w.teams[t];
     const o = this.orders[t];
     const counts: Record<UnitType, number> = { grunt: 0, ranged: 0, heavy: 0 };
@@ -879,8 +983,8 @@ export class Hud {
     const cw = 40;
     const pw = cw * 3 + 4;
     const ph = 17;
-    const x0 = right ? W - MARGIN_X - pw : MARGIN_X;
-    const y0 = H - ph - 6;
+    const x0 = F ? (right ? F.x + F.w - MARGIN_X - pw : F.x + MARGIN_X) : right ? W - MARGIN_X - pw : MARGIN_X;
+    const y0 = (F ? F.y + F.h : H) - ph - 6;
     const flash = now < o.until - 1.2;
     const key = [x0, y0, selected, flash, o.type, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
     this.memo(ctx, `orders${t}`, key, x0 - 6, y0 - 6, pw + 12, ph + 12, (c) => {

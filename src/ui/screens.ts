@@ -9,6 +9,7 @@ import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
 import type { NameEntry } from "./nameEntry";
+import type { MatchMode } from "../game/save";
 import heroJson from "../../data/heroes.json";
 import talentData from "../../data/talents.json";
 
@@ -62,7 +63,7 @@ export interface LobbySlot {
 
 export interface LobbyView {
   rules: Rules;
-  twoVtwo: boolean;
+  mode: MatchMode;
   map: string;
   phase: string;
   slots: LobbySlot[];
@@ -93,12 +94,14 @@ export function promptWidth(items: [string, string][], scale = 0.85): number {
   return items.reduce((a, [, l]) => a + 13 + textWidth(l, scale) + 12, -12);
 }
 
-const TEAM_BOX = ["#1c34a8", "#a81c1c"];
-const TEAM_BRIGHT = ["#4a74ff", "#ff4a3a"];
-const TEAM_CLOTH = ["#3a58e0", "#d83828"];
-const TEAM_TEXT_R = ["#1c3aa8", "#a81c1c"];
+const TEAM_BOX = ["#1c34a8", "#a81c1c", "#1c7a2a", "#9a7410"];
+const TEAM_BRIGHT = ["#4a74ff", "#ff4a3a", "#3ac85a", "#ffcf2a"];
+const TEAM_CLOTH = ["#3a58e0", "#d83828", "#2a9a40", "#d8a818"];
+const TEAM_TEXT_R = ["#1c3aa8", "#a81c1c", "#1a6a24", "#8a6000"];
 const BROWN_S = "#3a2410";
-const TEAM_FIELD = ["#4a64d8", "#c83a2a"];
+const TEAM_FIELD = ["#4a64d8", "#c83a2a", "#2a9a40", "#c8a020"];
+const PLACE = ["1ST", "2ND", "3RD", "4TH"];
+const MODE_NAME: Record<MatchMode, string> = { "1v1": "1 VS 1", "2v2": "2 VS 2", ffa: "FREE FOR ALL" };
 const INK = "#0b0806";
 const BTN = { a: PAD.a, b: PAD.b, r: PAD.z, z: PAD.z };
 
@@ -183,7 +186,16 @@ export class Screens {
   private slots: SelectSlot[] = [];
   private heroes: Record<string, HeroInfo> = (heroJson as unknown as { heroes: Record<string, HeroInfo> }).heroes;
   private roster: string[] = [];
-  private twoVtwo = false;
+  private mode: MatchMode = "1v1";
+  private get twoVtwo(): boolean {
+    return this.mode !== "1v1";
+  }
+  private teamOf(i: number): number {
+    return this.mode === "ffa" ? i : i % 2;
+  }
+  private championSeat(i: number): boolean {
+    return i < 2 || this.mode === "ffa" || (this.mode === "2v2" && this.heroPartners);
+  }
   cameraMode = 1;
   private results: World | null = null;
 
@@ -198,23 +210,37 @@ export class Screens {
   openHint = false;
   peer = false;
 
-  updateSelect(slots: SelectSlot[], heroes: Record<string, HeroInfo>, roster: string[], twoVtwo: boolean, heroPartners = false): void {
+  updateSelect(slots: SelectSlot[], heroes: Record<string, HeroInfo>, roster: string[], mode: MatchMode, heroPartners = false): void {
     this.heroPartners = heroPartners;
     this.slots = slots;
     this.heroes = heroes;
     this.roster = roster;
-    this.twoVtwo = twoVtwo;
+    this.mode = mode;
   }
 
-  updateMaps(maps: MapData[], index: number): void {
+  private pool: number[] = [];
+
+  updateMaps(maps: MapData[], index: number, pool: number[] = maps.map((_, i) => i), mode: MatchMode = this.mode): void {
     this.maps = maps;
     this.mapIndex = index;
+    this.pool = pool;
+    this.fieldMode = mode;
   }
 
+  private fieldMode: MatchMode = "1v1";
+
   private resultPlayers: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [];
-  showResults(w: World, players: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [], _names: Record<string, string> = {}): void {
+  private placing: number[] = [];
+  showResults(w: World, players: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [], _names: Record<string, string> = {}, fallen: number[] = []): void {
     this.results = w;
     this.resultPlayers = players;
+    const keep = (t: number) => {
+      const c = w.core(t);
+      return c?.alive ? c.hp / c.maxHp : 0;
+    };
+    const standing = w.teams.map((_, t) => t).filter((t) => !w.teams[t].out && t !== w.match.winner).sort((a, b) => keep(b) - keep(a));
+    const out = [...w.teams.map((_, t) => t).filter((t) => w.teams[t].out && !fallen.includes(t)), ...fallen.filter((t) => w.teams[t]?.out)];
+    this.placing = [...(w.match.winner >= 0 ? [w.match.winner] : []), ...standing, ...out.reverse()];
   }
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
@@ -251,7 +277,7 @@ export class Screens {
     else if (this.which === "map") this.drawMap(ctx, W, H, blink);
     if (this.cursors && (sel || this.which === "map")) {
       if (sel) {
-        const labels = this.slots.map((sl, i) => (i >= 2 && (!this.twoVtwo || !this.heroPartners) ? "" : sl.cpu ? "CPU" : `${i + 1}`));
+        const labels = this.slots.map((sl, i) => (!this.championSeat(i) || !this.twoVtwo && i >= 2 ? "" : sl.cpu ? "CPU" : `${i + 1}`));
         this.slots.forEach((sl, i) => {
           const c = this.cursors!.chips[i];
           if (c.hero) {
@@ -272,8 +298,9 @@ export class Screens {
     woodFloor(ctx, floorY, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_champion", "CHOOSE YOUR CHAMPION", W / 2, 3, 14);
-    ribbon(ctx, W - 38, 4, 46, 11, this.twoVtwo ? "2 VS 2" : "1 VS 1", 0.55, undefined, nameImage(this.twoVtwo ? "t_2v2" : "t_1v1"));
-    this.hit("mode", W - 38 - 28, 1, 56, 17);
+    const mw = this.mode === "ffa" ? 70 : 46;
+    ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, MODE_NAME[this.mode], 0.55, undefined, nameImage(`t_${this.mode}`));
+    this.hit("mode", W - 15 - mw / 2 - mw / 2 - 5, 1, mw + 10, 17);
     const cam = CAMERA_NAMES[this.cameraMode] ?? CAMERA_NAMES[1];
     const cw = Math.max(64, textWidth(cam, 0.5) + 18);
     ribbon(ctx, 8 + cw / 2, 4, cw, 11, cam, 0.5);
@@ -287,7 +314,7 @@ export class Screens {
     const gy = 25;
     this.roster.forEach((type, k) => {
       const x = gx + k * (sw + gap);
-      const on = [0, 1, 2, 3].filter((i) => (i < 2 || (this.twoVtwo && this.heroPartners)) && this.slots[i]?.ready && this.slots[i].hero === type).map((i) => i % 2);
+      const on = [0, 1, 2, 3].filter((i) => (i < 2 || (this.twoVtwo && this.championSeat(i))) && this.slots[i]?.ready && this.slots[i].hero === type).map((i) => this.teamOf(i));
       const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `hero:${type}`);
       this.hit(`hero:${type}`, x - 2, gy - 2, sw + 4, sh + 4);
       this.shieldAt.set(type, { x: x + sw / 2, y: gy + sh - 22 });
@@ -305,7 +332,7 @@ export class Screens {
       });
     });
 
-    const order = this.twoVtwo ? [0, 2, 1, 3] : [0, 1];
+    const order = this.mode === "ffa" ? [0, 1, 2, 3] : this.twoVtwo ? [0, 2, 1, 3] : [0, 1];
     const slotsN = order.length;
     const bw = this.twoVtwo ? Math.min(72, Math.floor((W - 30) / slotsN) - 14) : Math.min(118, Math.floor(W * 0.3));
     const bgap = this.twoVtwo ? Math.floor((W - bw * slotsN) / (slotsN + 1)) : Math.floor((W - bw * 2) / 3);
@@ -376,7 +403,7 @@ export class Screens {
 
   private kindPlaque(ctx: CanvasRenderingContext2D, i: number, cx: number, y: number, s: SelectSlot): void {
     cx = Math.round(cx);
-    const label = s.cpu ? "CPU" : i >= 2 && !this.heroPartners ? "COMMANDER" : "PLAYER";
+    const label = s.cpu ? "CPU" : !this.championSeat(i) ? "COMMANDER" : "PLAYER";
     const pw = Math.max(26, textWidth(label, 0.5, true) + 10);
     if (s.cpu) cx -= 16;
     const hovered = this.cursors?.cursors.some((c) => c.active && c.hover === `kind:${i}`);
@@ -406,7 +433,7 @@ export class Screens {
   private drawBanner(ctx: CanvasRenderingContext2D, i: number, x: number, y: number, w: number, h: number, blink: boolean): void {
     const s = this.slots[i];
     const active = !!s && (i < 2 || this.twoVtwo);
-    const team = i % 2;
+    const team = this.teamOf(i);
     const ink = TEAM_TEXT_R[team];
     if (!s || !active) {
       this.portraits?.drop(i);
@@ -435,7 +462,7 @@ export class Screens {
       btns.forEach(([bid, t], k) => this.woodButton(ctx, bid, t, x + w / 2, y + h - 34 + k * 15 - (btns.length - 1) * 8));
       return;
     }
-    const commander = i >= 2 && !this.heroPartners;
+    const commander = !this.championSeat(i);
     const human = s.joined && !s.cpu;
     const def = this.heroes[s.hero];
     const naming = this.naming.has(i);
@@ -527,9 +554,12 @@ export class Screens {
     woodFloor(ctx, H - 20, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_field", "CHOOSE THE FIELD", W / 2, 3, 14);
+    const pool = this.pool;
+    const mw = this.fieldMode === "ffa" ? 70 : 46;
+    ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, MODE_NAME[this.fieldMode], 0.55, undefined, nameImage(`t_${this.fieldMode}`));
 
-    const random = this.mapIndex >= this.maps.length;
-    const d = random ? null : this.maps[this.mapIndex];
+    const random = this.mapIndex >= pool.length;
+    const d = random ? null : this.maps[pool[this.mapIndex]];
     const pw = Math.min(250, Math.round(W * 0.6));
     const ph = H - 58;
     const px = 16;
@@ -543,7 +573,7 @@ export class Screens {
     const ih = Math.round(iw * 0.48);
     ctx.fillStyle = "#2a1a0a";
     ctx.fillRect(10, 10, iw + 4, ih + 4);
-    if (!random && this.portraits) hiImage(ctx, this.portraits.mapLive(this.mapIndex, iw * 4, ih * 4), 12, 12, iw, ih);
+    if (!random && this.portraits) hiImage(ctx, this.portraits.mapLive(pool[this.mapIndex], iw * 4, ih * 4), 12, 12, iw, ih);
     else {
       texturedRect(ctx, "parch", 12, 12, iw, ih, "#c8a878", 0, 1);
       drawPlain(ctx, "?", 12 + iw / 2 - textWidth("?", 5, true) / 2, 12 + ih / 2 - 26, "#5a3a18", 5, true);
@@ -567,7 +597,7 @@ export class Screens {
 
     const cx0 = px + pw + 18;
     const cw = W - cx0 - 14;
-    const n = this.maps.length + 1;
+    const n = pool.length + 1;
     const chh = Math.min(62, Math.floor((H - 58 - (n - 1) * 8) / n));
     for (let k = 0; k < n; k++) {
       const sel = k === Math.min(this.mapIndex, n - 1);
@@ -583,14 +613,14 @@ export class Screens {
       const th = chh - 17;
       ctx.fillStyle = "#2a1a0a";
       ctx.fillRect(4, 4, tw + 2, th + 2);
-      if (k < this.maps.length) {
-        const t = this.portraits?.mapThumb(k, tw * 4, th * 4);
+      if (k < pool.length) {
+        const t = this.portraits?.mapThumb(pool[k], tw * 4, th * 4);
         if (t) hiImage(ctx, t, 5, 5, tw, th);
       } else {
         texturedRect(ctx, "parch", 5, 5, tw, th, "#c8a878", 0, 1);
         drawPlain(ctx, "?", 5 + tw / 2 - textWidth("?", 2.4, true) / 2, 5 + th / 2 - 13, "#5a3a18", 2.4, true);
       }
-      const label = k < this.maps.length ? this.maps[k].name.toUpperCase().replace(/^GRUDGE\w*\s*/, "") : "RANDOM";
+      const label = k < pool.length ? this.maps[pool[k]].name.toUpperCase().replace(/^GRUDGE\w*\s*/, "") : "RANDOM";
       drawPlain(ctx, label, 6, th + 8, sel ? "#8a1810" : "#3a2410", 0.62, true);
       pin(ctx, cw / 2, 3, sel ? "#c81818" : "#8a8a90");
       ctx.restore();
@@ -600,15 +630,69 @@ export class Screens {
     prompt(ctx, Math.round((W - promptWidth(it, 0.7)) / 2), H - 13, it, 0.7);
   }
 
+  private drawFfaRows(ctx: CanvasRenderingContext2D, pw: number, ry: number, rh: number, rows: [string, (i: number) => number][], w: World): void {
+    const order = this.placing.length ? this.placing : w.teams.map((_, t) => t);
+    const lw = 74;
+    const colW = (pw - 12 - lw - 8) / order.length;
+    const cx = (k: number) => 12 + lw + colW * (k + 0.5);
+    order.forEach((t, k) => {
+      const x = Math.round(cx(k) - colW / 2 + 2);
+      ctx.fillStyle = "#2a1a0a";
+      ctx.fillRect(x - 1, ry - 13, Math.round(colW - 4) + 2, 10);
+      texturedRect(ctx, "cloth", x, ry - 12, Math.round(colW - 4), 8, TEAM_CLOTH[t], 0, 0.7);
+      const pl = PLACE[k] ?? "";
+      shadowText(ctx, pl, cx(k) - textWidth(pl, 0.45) / 2, ry - 11, "#fff4d8", 0.45);
+      if (w.teams[t]?.out) {
+        ctx.strokeStyle = "#8a1810";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, ry - 4.5);
+        ctx.lineTo(x + Math.round(colW - 4), ry - 4.5);
+        ctx.stroke();
+      }
+    });
+    rows.forEach(([label, f], i) => {
+      const y = ry + i * rh;
+      const vals = order.map((t) => f(t));
+      const best = label === "LOST" ? Math.min(...vals) : Math.max(...vals);
+      drawPlain(ctx, label, 12, y + 2, "#6a4424", 0.5, true);
+      vals.forEach((v, k) => {
+        const sv = String(v);
+        const top = vals.filter((q) => q === best).length === 1 && v === best;
+        drawPlain(ctx, sv, cx(k) - textWidth(sv, 0.72, true) / 2, y + 1, top ? TEAM_TEXT_R[order[k]] : "#4a3018", 0.72, true);
+      });
+      const tot = vals.reduce((a, b) => a + b, 0);
+      const barW = pw - 24;
+      const by = y + 11;
+      ctx.fillStyle = "#3a2410";
+      ctx.fillRect(11, by - 1, barW + 2, 4);
+      if (!tot) {
+        ctx.fillStyle = "#8a7a60";
+        ctx.fillRect(12, by, barW, 2);
+        return;
+      }
+      let bx = 12;
+      vals.forEach((v, k) => {
+        const bw = k === vals.length - 1 ? 12 + barW - bx : Math.round((barW * v) / tot);
+        ctx.fillStyle = TEAM_CLOTH[order[k]];
+        ctx.fillRect(bx, by, bw, 2);
+        bx += bw;
+      });
+    });
+  }
+
   private drawResults(ctx: CanvasRenderingContext2D, W: number, w: World, blink: boolean): void {
     const H = 240;
     const win = w.match.winner;
-    const head = win < 0 ? "A DRAW" : `${win === 0 ? "BLUE" : "RED"} HOUSE WINS`;
+    const head = win < 0 ? "A DRAW" : `${w.teamName(win)} HOUSE WINS`;
     boardBg(ctx, W, H);
     woodFloor(ctx, H - 20, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, `!${head}`, head, W / 2, 3, 14);
-    const ps = this.resultPlayers.length ? this.resultPlayers : w.players.map((p) => ({ tag: null, hero: p.heroType, team: p.team, cpu: true }));
+    const ps0 = this.resultPlayers.length ? this.resultPlayers : w.players.map((p) => ({ tag: null, hero: p.heroType, team: p.team, cpu: true }));
+    const ffa = w.ffa;
+    const place = (t: number) => this.placing.indexOf(t);
+    const ps = ffa ? ps0.map((p, i) => ({ ...p, slot: i })).sort((a, b) => place(a.team) - place(b.team)) : ps0.map((p, i) => ({ ...p, slot: i }));
     const t = w.teams;
     const pw = Math.min(250, Math.round(W * 0.6));
     const ph = H - 52;
@@ -638,7 +722,8 @@ export class Screens {
     ];
     const ry = ih + 22;
     const rh = Math.min(18, (ph - ry - 8) / rows.length);
-    rows.forEach(([label, f], i) => {
+    if (ffa) this.drawFfaRows(ctx, pw, ry + 14, Math.min(rh, (ph - ry - 20) / rows.length), rows, w);
+    else rows.forEach(([label, f], i) => {
       const y = ry + i * rh;
       const a = f(0);
       const b = f(1);
@@ -682,11 +767,16 @@ export class Screens {
       texturedRect(ctx, "cloth", 5, 5, chh - 8, chh - 8, TEAM_CLOTH[p.team], 0, 0.7);
       const icon = this.portraits?.icon(p.hero);
       if (icon) hiImage(ctx, icon, 5, 5, chh - 8, chh - 8);
-      const nm = p.cpu ? "CPU" : p.tag ?? `P${k + 1}`;
+      const nm = p.cpu ? "CPU" : p.tag ?? `P${p.slot + 1}`;
       drawPlain(ctx, nm, chh + 2, chh / 2 - 9, TEAM_TEXT_R[p.team], 0.72, true);
       const hero = (this.heroes[p.hero]?.name ?? p.hero).toUpperCase();
       drawPlain(ctx, hero, chh + 2, chh / 2 + 2, "#4a3018", 0.55, true);
       if (won) waxSeal(ctx, cw - 12, chh / 2, 8, "#c8a020", "combo");
+      else if (ffa) {
+        const pl = PLACE[place(p.team)] ?? "";
+        drawPlain(ctx, pl, cw - 6 - textWidth(pl, 0.62, true), chh / 2 - 9, "#6a4424", 0.62, true);
+        if (w.teams[p.team]?.out) drawPlain(ctx, "FALLEN", cw - 6 - textWidth("FALLEN", 0.45, true), chh / 2 + 2, "#8a1810", 0.45, true);
+      }
       pin(ctx, cw / 2, 3, won ? "#c8a020" : TEAM_BRIGHT[p.team]);
       ctx.restore();
     });

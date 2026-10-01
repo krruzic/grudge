@@ -4,11 +4,12 @@ import type { GameData, HeroDef } from "./config.ts";
 import type {
   Boomerang, Command, Delayed, Missile, Directive, Entity, MatchState, Pad, PadZone, Projectile, SimEvent, Status, TargetClass, TeamState, TerrainMod, Trap, UnitType, Vec2, Zone,
 } from "./types.ts";
-import { UNIT_TYPES } from "./types.ts";
+import { TEAM_NAMES, UNIT_TYPES } from "./types.ts";
 import { updateBoomerangs, updateHero } from "./heroes.ts";
 import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
+import { MapEvents } from "./mapEvents.ts";
 import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, onKill, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
 
 export type { Vec2, Entity, Command } from "./types.ts";
@@ -95,19 +96,22 @@ export class World {
   time = 0;
   private nextId = 1;
   private byId = new Map<number, Entity>();
-  private slotCounter = [0, 0];
+  private slotCounter: number[];
+  readonly teamCount: number;
 
   constructor(map: MapData, readonly data: GameData, seed = 1) {
     this.terrain = new Terrain(map);
     this.dt = 1 / data.match.tickRate;
     this.rng = mulberry32(seed);
     this.nav = new NavGrid(this.terrain, data.heroes.baseline.stepHeight, data.heroes.baseline.maxSlope);
+    this.teamCount = this.terrain.teams;
+    this.slotCounter = new Array(this.teamCount).fill(0);
     this.terrain.pads.forEach((p, i) => {
       const zone = (p.zone ?? "home") as PadZone;
       const side = zone === "neutral" ? -1 : p.side ?? (p.x < this.terrain.width / 2 ? 0 : 1);
       this.pads.push({ index: i, x: p.x, z: p.z, zone, side, structureId: 0, rubbleUntil: 0 });
     });
-    for (let team = 0; team < 2; team++) {
+    for (let team = 0; team < this.teamCount; team++) {
       const hold = this.defaultHold(team);
       this.teams.push({
         resource: data.match.economy.start,
@@ -131,9 +135,12 @@ export class World {
       this.teams[team].coreId = e.id;
       this.nav.setBlocked(c.x, c.z, data.structures.core.radius + 0.4, true);
     }
-    this.bases = [this.computeBase(0), this.computeBase(1)];
+    this.bases = Array.from({ length: this.teamCount }, (_, t) => this.computeBase(t));
     this.arena = new Arena(this);
+    this.mapEvents = new MapEvents(this);
   }
+
+  readonly mapEvents: MapEvents;
 
   readonly bases: { mask: Uint8Array; entrances: Vec2[] }[];
   private posts = { tick: -1, of: new Map<number, [number, number]>() };
@@ -148,7 +155,7 @@ export class World {
       this.posts.tick = this.tick;
       this.posts.of.clear();
       const order: Record<string, number> = { heavy: 0, grunt: 1, ranged: 2 };
-      for (let team = 0; team < 2; team++) {
+      for (let team = 0; team < this.teamCount; team++) {
         const n = this.bases[team].entrances.length;
         if (!n) continue;
         const dirs = this.teams[team].directives;
@@ -346,7 +353,7 @@ export class World {
 
   addEntity(team: number, kind: Entity["kind"], radius: number, x: number, z: number, hp: number): Entity {
     const y = this.groundY(x, z);
-    const facing = team === 0 ? Math.PI / 2 : -Math.PI / 2;
+    const facing = this.teamCount > 2 ? Math.atan2(this.terrain.width / 2 - x, this.terrain.depth / 2 - z) : team === 0 ? Math.PI / 2 : -Math.PI / 2;
     const e: Entity = {
       id: this.nextId++,
       team,
@@ -455,7 +462,44 @@ export class World {
   }
 
   core(team: number): Entity | undefined {
-    return this.byId.get(this.teams[team].coreId);
+    const t = this.teams[team];
+    return t ? this.byId.get(t.coreId) : undefined;
+  }
+
+  get ffa(): boolean {
+    return this.teamCount > 2;
+  }
+
+  standing(team: number): boolean {
+    const t = this.teams[team];
+    return !!t && !t.out;
+  }
+
+  foeCore(team: number, x: number, z: number): Entity | undefined {
+    let best: Entity | undefined;
+    let bd = Infinity;
+    for (let t = 0; t < this.teamCount; t++) {
+      if (t === team || !this.standing(t)) continue;
+      const c = this.core(t);
+      if (!c?.alive) continue;
+      const d = Math.hypot(c.transform.pos.x - x, c.transform.pos.z - z);
+      if (d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  rival(team: number): number {
+    if (this.teamCount === 2) return 1 - team;
+    const own = this.core(team);
+    const c = own ? this.foeCore(team, own.transform.pos.x, own.transform.pos.z) : undefined;
+    return c ? c.team : (team + 1) % this.teamCount;
+  }
+
+  teamName(team: number): string {
+    return TEAM_NAMES[team] ?? "NEUTRAL";
   }
 
   teleport(e: Entity, x: number, z: number): void {
@@ -536,6 +580,7 @@ export class World {
     this.runTimers();
     this.updateHazards();
     this.updateTide();
+    this.mapEvents.update();
     this.applyKnockback(dt);
     this.separate();
     this.cleanup();
@@ -580,19 +625,57 @@ export class World {
       this.emit({ type: "notice", team: -1, text: "SUDDEN DEATH" });
     }
     if (this.match.phase === "sudden" && this.time >= m.matchSeconds + m.suddenDeathSeconds) {
-      const [t0, t1] = this.teams;
-      const a = Math.round(t0.coreDamageDealt);
-      const b = Math.round(t1.coreDamageDealt);
-      if (a !== b) this.endMatch(a > b ? 0 : 1, "core damage");
-      else if (t1.structuresLost !== t0.structuresLost) this.endMatch(t1.structuresLost > t0.structuresLost ? 0 : 1, "structures destroyed");
-      else if (t0.heroKills !== t1.heroKills) this.endMatch(t0.heroKills > t1.heroKills ? 0 : 1, "hero kills");
-      else this.endMatch(-1, "dead even");
+      const keys: [(t: TeamState) => number, string][] = [
+        [(t) => Math.round(t.coreDamageDealt), "core damage"],
+        [(t) => -t.structuresLost, "structures destroyed"],
+        [(t) => t.heroKills, "hero kills"],
+      ];
+      let pool = this.teams.map((_, i) => i).filter((i) => this.standing(i));
+      let reason = "dead even";
+      for (const [key, why] of keys) {
+        const top = Math.max(...pool.map((i) => key(this.teams[i])));
+        const next = pool.filter((i) => key(this.teams[i]) === top);
+        if (next.length < pool.length) reason = why;
+        pool = next;
+        if (pool.length === 1) break;
+      }
+      this.endMatch(pool.length === 1 ? pool[0] : -1, pool.length === 1 ? reason : "dead even");
     }
-    for (let team = 0; team < 2; team++) {
+    for (let team = 0; team < this.teamCount; team++) {
       const core = this.core(team);
       if (!core?.structure) continue;
       core.structure.shielded = (core.structure.ward ?? 0) > 0;
     }
+  }
+
+  eliminate(team: number, by: number): void {
+    const ts = this.teams[team];
+    if (!ts || ts.out) return;
+    ts.out = true;
+    ts.resource = 0;
+    for (const e of this.entities) {
+      if (!e.alive || e.team !== team || e === this.core(team)) continue;
+      if (e.hero) {
+        e.alive = false;
+        e.hero.dead = true;
+        e.hero.respawnAt = Infinity;
+        e.hero.action = null;
+        continue;
+      }
+      if (e.structure?.padIndex !== undefined && e.structure.padIndex >= 0) {
+        const pad = this.pads[e.structure.padIndex];
+        pad.structureId = 0;
+        this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius, false);
+        pad.rubbleUntil = this.time + this.data.structures.rubbleSeconds;
+      } else if (e.structure) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.radius, false);
+      e.hp = 0;
+      e.alive = false;
+      this.emit({ type: "death", id: e.id, kind: e.kind, x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, big: !!e.structure });
+    }
+    const left = this.teams.map((_, i) => i).filter((i) => this.standing(i));
+    this.emit({ type: "notice", team: -1, text: by >= 0 ? `${this.teamName(by)} DESTROYS THE ${this.teamName(team)} KEEP` : `THE ${this.teamName(team)} KEEP FALLS` });
+    this.emit({ type: "eliminated", team, by });
+    if (left.length === 1) this.endMatch(left[0], "last house standing");
   }
 
   endMatch(winner: number, reason: string): void {
@@ -606,26 +689,30 @@ export class World {
     const eco = this.data.match.economy;
     const cu = this.data.match.catchUp;
     if (this.tick % 15 === 0) {
-      const worth = [0, 0];
-      const count = [0, 0];
+      const n = this.teamCount;
+      const worth = new Array(n).fill(0);
+      const count = new Array(n).fill(0);
       for (const e of this.entities) {
-        if (!e.alive || !e.structure || e.structure.type === "core") continue;
+        if (!e.alive || !e.structure || e.structure.type === "core" || e.team >= n) continue;
         const def = this.data.structures.types[e.structure.type];
         worth[e.team] += def.cost + (e.structure.level > 1 ? def.upgradeCost : 0);
         count[e.team]++;
       }
-      for (let t = 0; t < 2; t++) {
-        const o = 1 - t;
-        const deficit = (this.teams[o].resource + worth[o] - this.teams[t].resource - worth[t]) / cu.resourceScale +
-          (count[o] - count[t]) * cu.structureWeight;
+      for (let t = 0; t < n; t++) {
+        let deficit = 0;
+        for (let o = 0; o < n; o++) {
+          if (o === t || !this.standing(o)) continue;
+          const d = (this.teams[o].resource + worth[o] - this.teams[t].resource - worth[t]) / cu.resourceScale + (count[o] - count[t]) * cu.structureWeight;
+          deficit = Math.max(deficit, d);
+        }
         this.teams[t].catchUp = Math.max(0, Math.min(1, deficit));
       }
-      const units = [0, 0];
-      for (const e of this.entities) if (e.alive && e.unit) units[e.team]++;
-      this.teams[0].unitCount = units[0];
-      this.teams[1].unitCount = units[1];
+      const units = new Array(n).fill(0);
+      for (const e of this.entities) if (e.alive && e.unit && e.team < n) units[e.team]++;
+      for (let t = 0; t < n; t++) this.teams[t].unitCount = units[t];
     }
     this.teams.forEach((t, team) => {
+      if (t.out) return;
       const tithe = this.arena.heldBy(team) ? this.data.match.arena.relic.incomeMul : 1;
       t.resource += eco.income * (1 + t.catchUp * cu.incomeBoost) * tithe * dt;
     });
@@ -980,7 +1067,7 @@ export class World {
       o.status.rallyUntil = this.time + r.seconds;
     }
     this.emit({ type: "notice", team, text: `TOWER FELLED · ARMY RALLIES ${r.seconds}S` });
-    this.emit({ type: "notice", team: 1 - team, text: "THEY FELLED A TOWER · THEIR ARMY RALLIES" });
+    for (let o = 0; o < this.teamCount; o++) if (o !== team) this.emit({ type: "notice", team: o, text: `${this.teamName(team)} FELLED A TOWER · THEIR ARMY RALLIES` });
   }
 
   kill(target: Entity, src: Entity | null): void {
@@ -988,8 +1075,8 @@ export class World {
     this.onKillSynergy(target, src);
     onKill(this, src, target);
     const bounty = this.data.match.economy.bounty;
-    const kt = src ? src.team : 1 - target.team;
-    const killerTeam = kt === 0 || kt === 1 ? kt : -1;
+    const kt = src ? src.team : this.teamCount === 2 ? 1 - target.team : -1;
+    const killerTeam = kt >= 0 && kt < this.teamCount ? kt : -1;
     const nobody = { resource: 0, heroKills: 0, kills: 0 };
     const killer = killerTeam >= 0 ? this.teams[killerTeam] : nobody;
     const victim = this.teams[target.team];
@@ -1030,7 +1117,7 @@ export class World {
               this.heal(o, o.maxHp * 0.3);
             }
           }
-          this.emit({ type: "notice", team: -1, text: `THE OGRE FALLS · ${killerTeam === 0 ? "BLUE" : "RED"} HOUSE IS BLESSED` });
+          this.emit({ type: "notice", team: -1, text: `THE OGRE FALLS · ${this.teamName(killerTeam)} HOUSE IS BLESSED` });
         }
         return;
       }
@@ -1041,7 +1128,11 @@ export class World {
     const st = target.structure!;
     if (st.type === "core") {
       this.nav.setBlocked(tp.pos.x, tp.pos.z, this.data.structures.core.radius + 0.4, false);
-      this.endMatch(1 - target.team, "core destroyed");
+      if (this.teamCount === 2) {
+        this.endMatch(1 - target.team, "core destroyed");
+        return;
+      }
+      this.eliminate(target.team, killerTeam);
       return;
     }
     if (st.padIndex < 0) {
@@ -1113,7 +1204,7 @@ export class World {
     }
     if (own) return "tower";
     const mine = this.get(this.teams[e.team]?.coreId ?? -1);
-    const theirs = this.get(this.teams[1 - e.team]?.coreId ?? -1);
+    const theirs = this.foeCore(e.team, p.x, p.z);
     if (mine && theirs) {
       const dm = Math.hypot(mine.transform.pos.x - p.x, mine.transform.pos.z - p.z);
       const dt = Math.hypot(theirs.transform.pos.x - p.x, theirs.transform.pos.z - p.z);
@@ -1534,8 +1625,9 @@ export class World {
   applyModIfOpen(m: TerrainMod): boolean {
     this.applyMod(m);
     const a = this.spawnPoint(0);
-    const b = this.spawnPoint(1);
-    if (this.nav.findPath(a, b)) return true;
+    let open = true;
+    for (let t = 1; t < this.teamCount && open; t++) if (!this.nav.findPath(a, this.spawnPoint(t))) open = false;
+    if (open) return true;
     this.mods.splice(this.mods.indexOf(m), 1);
     const tr = this.terrain;
     m.cells.forEach((c, k) => {

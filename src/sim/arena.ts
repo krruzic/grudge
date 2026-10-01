@@ -51,7 +51,7 @@ export interface Bomb {
   at: number;
 }
 
-export const NEUTRAL = 2;
+export const NEUTRAL = 4;
 
 export class Arena {
   readonly home: Vec2;
@@ -67,9 +67,13 @@ export class Arena {
 
   constructor(private w: World) {
     const cores = w.terrain.cores;
-    const a = cores.find((c) => c.team === 0) ?? { x: w.terrain.width * 0.2, z: w.terrain.depth / 2 };
-    const b = cores.find((c) => c.team === 1) ?? { x: w.terrain.width * 0.8, z: w.terrain.depth / 2 };
-    this.home = this.snap((a.x + b.x) / 2, (a.z + b.z) / 2);
+    if (w.teamCount > 2 && cores.length) {
+      this.home = this.snap(cores.reduce((s, c) => s + c.x, 0) / cores.length, cores.reduce((s, c) => s + c.z, 0) / cores.length);
+    } else {
+      const a = cores.find((c) => c.team === 0) ?? { x: w.terrain.width * 0.2, z: w.terrain.depth / 2 };
+      const b = cores.find((c) => c.team === 1) ?? { x: w.terrain.width * 0.8, z: w.terrain.depth / 2 };
+      this.home = this.snap((a.x + b.x) / 2, (a.z + b.z) / 2);
+    }
     w.nav.setBlocked(this.home.x, this.home.z, 1.2, true);
     const cfg = w.data.match.arena;
     this.relic = { state: "waiting", x: this.home.x, z: this.home.z, y: w.groundY(this.home.x, this.home.z), carrier: 0, since: cfg.relic.firstSeconds, lockId: 0, lockUntil: 0, channel: 0, shrineId: 0, team: -1, stealer: 0 };
@@ -103,10 +107,10 @@ export class Arena {
     if (w.time < this.nextWave) return;
     this.nextWave = w.time + wv.everySeconds;
     const grow = 1 + wv.growPerMinute * (w.time / 60);
-    for (let team = 0; team < 2; team++) {
+    for (let team = 0; team < w.teamCount; team++) {
       const ts = w.teams[team];
       const core = w.core(team);
-      if (!core) continue;
+      if (!core || ts.out) continue;
       const list: { type: UnitType; from: Entity; stat: number }[] = [];
       for (const o of w.entities) {
         if (!o.alive || o.team !== team || !o.structure?.ready || o.structure.type === "core") continue;
@@ -136,7 +140,7 @@ export class Arena {
 
   private frontOf(from: Entity, team: number, i: number): Vec2 {
     const w = this.w;
-    const enemy = w.core(1 - team);
+    const enemy = w.foeCore(team, from.transform.pos.x, from.transform.pos.z);
     const dx = (enemy?.transform.pos.x ?? w.terrain.width / 2) - from.transform.pos.x;
     const dz = (enemy?.transform.pos.z ?? w.terrain.depth / 2) - from.transform.pos.z;
     const dl = Math.hypot(dx, dz) || 1;
@@ -288,7 +292,7 @@ export class Arena {
     r.y = sp.y;
     const where = s.structure!.type === "core" ? "KEEP" : "TOWER";
     w.emit({ type: "relic", state: "shrined", team: c.team, player: c.hero!.player, x: sp.pos.x, y: sp.y, z: sp.pos.z });
-    w.emit({ type: "notice", team: -1, text: `${c.team === 0 ? "BLUE" : "RED"} ENSHRINES THE GRUDGE IN A ${where}` });
+    w.emit({ type: "notice", team: -1, text: `${w.teamName(c.team)} ENSHRINES THE GRUDGE IN A ${where}` });
   }
 
   private updateShrine(): void {
@@ -399,6 +403,7 @@ export class Arena {
       return;
     }
     if (w.time < this.nextOgre) return;
+    const dens = w.terrain.dens;
     const cores = w.terrain.cores;
     const a = cores[0] ?? { x: 0, z: 0 };
     const b = cores[1] ?? { x: w.terrain.width, z: w.terrain.depth };
@@ -407,7 +412,8 @@ export class Arena {
     const al = Math.hypot(ax, az) || 1;
     const side = w.rng() < 0.5 ? 1 : -1;
     const off = Math.min(w.terrain.width, w.terrain.depth) * 0.3;
-    const p = this.snap(this.home.x - (az / al) * off * side, this.home.z + (ax / al) * off * side);
+    const den = dens.length ? dens[Math.floor(w.rng() * dens.length) % dens.length] : null;
+    const p = den ? this.snap(den.x, den.z) : this.snap(this.home.x - (az / al) * off * side, this.home.z + (ax / al) * off * side);
     const e = w.addEntity(NEUTRAL, "unit", cfg.radius, p.x, p.z, cfg.hp);
     e.neutral = true;
     e.unit = {
@@ -576,7 +582,7 @@ export class Arena {
         this.bombs.push({ x: bx, z: bz, y: w.groundY(bx, bz), targetId: o.id, ownerId: e.id, team: e.team, at: w.time + sh.fuse });
         e.hero.bomb = false;
         w.emit({ type: "bomb", state: "planted", x: bx, y: w.groundY(bx, bz), z: bz, team: e.team, fuse: sh.fuse });
-        w.emit({ type: "notice", team: 1 - e.team, text: "BOMB ON YOUR TOWER!" });
+        w.emit({ type: "notice", team: o.team, text: "BOMB ON YOUR TOWER!" });
         break;
       }
     }

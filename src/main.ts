@@ -36,7 +36,7 @@ import { MenuCursors } from "./ui/cursor";
 import { Portraits } from "./ui/portraits";
 import { Audio } from "./audio/sfx";
 import { Menus, type Nav, type RoomInfo } from "./ui/menus";
-import { MAX_TAG, Save, applyRules } from "./game/save";
+import { MAX_TAG, Save, applyRules, type MatchMode } from "./game/save";
 import { NameEntry } from "./ui/nameEntry";
 import { NetLink, type NetMsg } from "./net/link";
 import { mathPrint, mergeCommands, packCommand, worldHash, type Frame, type MatchSpec } from "./net/session";
@@ -78,13 +78,18 @@ async function start(): Promise<void> {
   let seed = Number(params.get("seed") ?? Math.floor(Math.random() * 1e6));
   let mapIndex = Math.max(0, maps.findIndex((m) => m.id === params.get("map")));
   const forceJoin = Number(params.get("join") ?? 0);
-  let pickIndex = params.get("map") === "random" ? maps.length : mapIndex;
+  let mode: MatchMode = params.get("mode") === "2v2" ? "2v2" : params.get("mode") === "ffa" ? "ffa" : "1v1";
+  const houses = (i: number) => maps[i]?.data.teams ?? 2;
+  const fieldsFor = (m: MatchMode) => maps.map((_, i) => i).filter((i) => (houses(i) === 4) === (m === "ffa"));
+  const fields = () => fieldsFor(mode);
+  let pickIndex = params.get("map") === "random" ? fields().length : Math.max(0, fields().indexOf(mapIndex));
   let readySince = -1;
 
   const save = new Save();
   const newWorld = (heroes: string[], count = 2, rules = false, partners = false): World => {
     const w = new World(maps[mapIndex].data, rules ? applyRules(data, save.data.rules) : data, seed++);
-    for (let p = 0; p < count; p++) w.spawnHero(p < 2 || partners || (rules && save.data.rules.partners === 1) ? heroes[p] ?? roster[0] : commanderType, p, p % 2);
+    const ffa = w.ffa;
+    for (let p = 0; p < count; p++) w.spawnHero(ffa || p < 2 || partners || (rules && save.data.rules.partners === 1) ? heroes[p] ?? roster[0] : commanderType, p, ffa ? p : p % 2);
     return w;
   };
 
@@ -256,7 +261,6 @@ async function start(): Promise<void> {
   const slots: SelectSlot[] = Array.from({ length: MAX_PLAYERS }, (_, i) => ({ joined: false, ready: false, hero: i < 2 ? roster[0] : commanderType, cpu: true, level: 2 }));
   const cursors = new MenuCursors(MAX_PLAYERS);
   screens.cursors = cursors;
-  let twoVtwo = params.get("mode") === "2v2";
   const net = new NetLink();
   let netMode: "off" | "host" | "peer" = "off";
   type RSeat = { peer: number; k: number; slot: number; name: string; queue: Command[]; last: Command };
@@ -283,8 +287,8 @@ async function start(): Promise<void> {
   const MATH = mathPrint();
   const present = (i: number) => pads.players[i].connected || i < forceJoin || remoteAt(i) >= 0;
   const padsForCursors = () => pads.players.map((p, i) => (i < forceJoin && !p.connected ? { ...p, connected: true } : p));
-  const slotActive = (i: number) => i < 2 || twoVtwo;
-  const commanderSlot = (i: number) => i >= 2 && save.data.rules.partners === 0;
+  const slotActive = (i: number) => i < 2 || mode !== "1v1";
+  const commanderSlot = (i: number) => i >= 2 && mode !== "ffa" && save.data.rules.partners === 0;
   const heldBy = (slot: number) => cursors.cursors.findIndex((c) => c.active && c.holding === slot);
   const settleCpu = (i: number) => {
     const sl = slots[i];
@@ -330,21 +334,37 @@ async function start(): Promise<void> {
     if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
     settleCpu(i);
   };
-  const setMode = (v: boolean) => {
-    if (twoVtwo === v) return;
-    twoVtwo = v;
+  const setMode = (v: MatchMode) => {
+    if (mode === v) return;
+    const was = mode;
+    const wasCommander = [false, false, ...[2, 3].map(commanderSlot)];
+    mode = v;
     for (const k of [2, 3]) {
-      if (twoVtwo) { if (present(k)) makeHuman(k); else vacant(k); }
-      else if (cursors.cursors[k].holding >= 0) cursors.cursors[k].holding = -1;
+      if (mode === "1v1") {
+        if (cursors.cursors[k].holding >= 0) cursors.cursors[k].holding = -1;
+      } else if (was === "1v1") {
+        if (present(k)) makeHuman(k);
+        else vacant(k);
+      } else if (wasCommander[k] !== commanderSlot(k)) {
+        if (slots[k].open) makeOpen(k);
+        else if (slots[k].cpu) {
+          slots[k].ready = false;
+          settleCpu(k);
+        } else makeHuman(k);
+      }
+    }
+    if (!fields().includes(mapIndex)) {
+      mapIndex = fields()[0] ?? mapIndex;
+      beginAttractWorldOnly();
     }
   };
   const enterSelect = () => {
     const here = [0, 1, 2, 3].filter(present).length;
     const keptCpu = (i: number) => netMode === "host" && slots[i].cpu && slots[i].autoCpu === false && !slots[i].open;
-    if (here >= 3) twoVtwo = true;
-    else if (netMode === "host" && !(twoVtwo && [2, 3].some(keptCpu))) twoVtwo = false;
+    if (here >= 3) { if (mode === "1v1") mode = "2v2"; }
+    else if (netMode === "host" && mode !== "ffa" && !(mode === "2v2" && [2, 3].some(keptCpu))) mode = "1v1";
     cursors.setScale(pixel.w, pixel.h);
-    cursors.reset(twoVtwo ? [0, 2, 1, 3] : [0, 1]);
+    cursors.reset(mode === "ffa" ? [0, 1, 2, 3] : mode === "2v2" ? [0, 2, 1, 3] : [0, 1]);
     slots.forEach((sl, i) => {
       const keep = keptCpu(i);
       sl.ready = false;
@@ -366,7 +386,7 @@ async function start(): Promise<void> {
   const linkMates = () => {
     bots.forEach((b, i) => {
       if (!b) return;
-      const m = people.findIndex((h, j) => h && j !== i && j % 2 === i % 2);
+      const m = mode === "ffa" ? -1 : people.findIndex((h, j) => h && j !== i && j % 2 === i % 2);
       b.mate = m < 0 ? null : m;
     });
   };
@@ -386,15 +406,18 @@ async function start(): Promise<void> {
     const mi = maps.findIndex((m) => m.id === spec.map);
     mapIndex = mi < 0 ? 0 : mi;
     const w = new World(maps[mapIndex].data, applyRules(data, spec.rules), spec.seed);
-    for (let p = 0; p < spec.players; p++) w.spawnHero(p < 2 || spec.rules.partners === 1 ? spec.heroes[p] ?? roster[0] : commanderType, p, p % 2);
+    const ffa = spec.mode === "ffa";
+    for (let p = 0; p < spec.players; p++) w.spawnHero(ffa || p < 2 || spec.rules.partners === 1 ? spec.heroes[p] ?? roster[0] : commanderType, p, ffa ? p : p % 2);
     return w;
   };
   const startNetMatch = (spec: MatchSpec, local: boolean[], remote: boolean[]) => {
     players = spec.players;
+    mode = spec.mode ?? (spec.players === 4 ? "2v2" : "1v1");
     setupControl(local, spec.levels, remote, netMode !== "peer");
     show(buildWorld(spec));
-    matchPlayers = spec.heroes.slice(0, spec.players).map((hero, i) => ({ tag: spec.names[i] ?? null, hero, team: i % 2, cpu: !spec.humans[i] }));
+    matchPlayers = spec.heroes.slice(0, spec.players).map((hero, i) => ({ tag: spec.names[i] ?? null, hero, team: mode === "ffa" ? i : i % 2, cpu: !spec.humans[i] }));
     recorded = false;
+    fallen = [];
     state = "match";
     overAt = -1;
     acc = 0;
@@ -432,16 +455,16 @@ async function start(): Promise<void> {
   };
 
   const beginAttract = () => {
-    players = 2;
-    setupControl([false, false]);
-    show(newWorld([randomHero(), randomHero()]));
+    players = houses(mapIndex) === 4 ? 4 : 2;
+    setupControl(Array(players).fill(false));
+    show(newWorld(Array.from({ length: players }, randomHero), players));
     state = "title";
     screens.set("title");
     hud.show(false);
   };
 
   const beginMatch = () => {
-    players = twoVtwo ? 4 : 2;
+    players = mode === "1v1" ? 2 : 4;
     const humans = slots.slice(0, players).map((s) => s.joined && !s.cpu);
     for (let i = 0; i < players; i++) {
       const sl = slots[i];
@@ -456,7 +479,7 @@ async function start(): Promise<void> {
     const remote = slots.slice(0, players).map((_, i) => remoteAt(i) >= 0);
     const spec: MatchSpec = {
       map: maps[mapIndex].id, seed: seed++, rules: { ...save.data.rules }, heroes: slots.slice(0, players).map((s) => s.hero), players,
-      levels: slots.slice(0, players).map((s) => s.level), humans, names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)),
+      levels: slots.slice(0, players).map((s) => s.level), humans, names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)), mode,
     };
     for (const r of rseats) {
       r.queue = [];
@@ -468,6 +491,7 @@ async function start(): Promise<void> {
 
   let matchPlayers: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [];
   let recorded = true;
+  let fallen: number[] = [];
   const mapHover = ["*", "*", "*", "*"];
   function toMap(): void {
     mapHover.fill("*");
@@ -476,7 +500,11 @@ async function start(): Promise<void> {
     audio.ui("ok");
     state = "map";
     screens.set("map");
-    pickIndex = mapIndex;
+    if (!fields().includes(mapIndex) && fields().length) {
+      mapIndex = fields()[0];
+      beginAttractWorldOnly();
+    }
+    pickIndex = Math.max(0, fields().indexOf(mapIndex));
   }
 
   const fastForward = (seconds: number) => {
@@ -517,6 +545,8 @@ async function start(): Promise<void> {
   };
 
   if (params.get("screen") === "select" || params.get("screen") === "map") {
+    if (!fields().includes(mapIndex)) mapIndex = fields()[0] ?? mapIndex;
+    if (params.get("map") !== "random") pickIndex = Math.max(0, fields().indexOf(mapIndex));
     beginAttract();
     state = params.get("screen") === "map" ? "map" : "select";
     enterSelect();
@@ -545,9 +575,11 @@ async function start(): Promise<void> {
 
   function beginMatchWithBots(): void {
     const hs = (params.get("heroes") ?? "").split(",").filter((h) => roster.includes(h));
-    players = params.get("mode") === "2v2" ? 4 : 2;
+    if (houses(mapIndex) === 4 && params.has("map")) mode = "ffa";
+    if (!fields().includes(mapIndex)) mapIndex = fields()[0] ?? mapIndex;
+    players = mode === "1v1" ? 2 : 4;
     setupControl(Array(players).fill(false));
-    show(newWorld([hs[0] ?? randomHero(), hs[1] ?? hs[0] ?? randomHero(), ...hs.slice(2)], players, false, params.has("partners")));
+    show(newWorld([hs[0] ?? randomHero(), hs[1] ?? hs[0] ?? randomHero(), ...hs.slice(2), ...(mode === "ffa" ? Array.from({ length: Math.max(0, players - Math.max(2, hs.length)) }, randomHero) : [])], players, false, params.has("partners")));
     state = "match";
     screens.set("none");
     hud.show(true);
@@ -628,18 +660,18 @@ async function start(): Promise<void> {
     const i = freeRemoteSlot();
     if (i < 0) return;
     r.slot = i;
-    if ([0, 1, 2, 3].filter(present).length >= 3) setMode(true);
+    if ([0, 1, 2, 3].filter(present).length >= 3 && mode === "1v1") setMode("2v2");
     slots[i].autoCpu = false;
     makeHuman(i);
     slots[i].tag = r.name;
-    if (i >= 2 && !twoVtwo) setMode(true);
+    if (i >= 2 && mode === "1v1") setMode("2v2");
   };
   const lobbyView = () => ({
     build: __BUILD__,
     math: MATH,
     rules: save.data.rules,
-    twoVtwo,
-    map: pickIndex >= maps.length ? "RANDOM FIELD" : (maps[pickIndex]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
+    mode,
+    map: pickIndex >= fields().length ? "RANDOM FIELD" : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
     phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
     slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i) })),
   });
@@ -845,8 +877,8 @@ async function start(): Promise<void> {
       const localHumans = slots.filter((s, i) => !s.cpu && !s.open && slotActive(i) && remoteAt(i) < 0).length;
       net.meta({
         name: `${(save.tagNames()[0] ?? "HOST").toUpperCase()}'S BATTLE`,
-        mode: twoVtwo ? "2 VS 2" : "1 VS 1",
-        map: pickIndex >= maps.length ? "RANDOM" : (maps[pickIndex]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
+        mode: mode === "ffa" ? "FREE FOR ALL" : mode === "2v2" ? "2 VS 2" : "1 VS 1",
+        map: pickIndex >= fields().length ? "RANDOM" : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
         humans: Math.max(1, localHumans + seated),
         seats: 4,
         phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
@@ -940,11 +972,11 @@ async function start(): Promise<void> {
           menus.tagBack();
         }
       }
-      screens.updateSelect(slots, data.heroes.heroes, roster, twoVtwo, save.data.rules.partners === 1);
+      screens.updateSelect(slots, data.heroes.heroes, roster, mode, save.data.rules.partners === 1);
       screens.hosting = netMode === "host";
     } else if (state === "select") {
       cursors.setScale(pixel.w, pixel.h);
-      if (!twoVtwo && [0, 1, 2, 3].filter(present).length >= 3) setMode(true);
+      if (mode === "1v1" && [0, 1, 2, 3].filter(present).length >= 3) setMode("2v2");
       slots.forEach((sl, i) => {
         sl.local = pads.players[i].connected;
         if (present(i) && (sl.open || (sl.cpu && sl.autoCpu))) { sl.autoCpu = false; makeHuman(i); }
@@ -970,10 +1002,10 @@ async function start(): Promise<void> {
             pads.release(i);
             audio.ui("back");
           } else if (id === "mode") {
-            setMode(!twoVtwo);
+            setMode(mode === "1v1" ? "2v2" : mode === "2v2" ? "ffa" : "1v1");
             audio.ui("ok");
           } else if (id === "add") {
-            setMode(true);
+            if (mode === "1v1") setMode("2v2");
             audio.ui("ok");
           } else if (id === "sit") {
             const from = act.by;
@@ -1044,7 +1076,7 @@ async function start(): Promise<void> {
           }
         }
       }
-      screens.updateSelect(slots, data.heroes.heroes, roster, twoVtwo, save.data.rules.partners === 1);
+      screens.updateSelect(slots, data.heroes.heroes, roster, mode, save.data.rules.partners === 1);
       screens.hosting = netMode === "host";
       const allReady = selectReady();
       if (allReady && readySince < 0) readySince = now;
@@ -1070,15 +1102,17 @@ async function start(): Promise<void> {
         if (k !== pickIndex) {
           pickIndex = k;
           audio.ui("move");
-          if (pickIndex < maps.length && pickIndex !== mapIndex) {
-            mapIndex = pickIndex;
+          if (pickIndex < fields().length && fields()[pickIndex] !== mapIndex) {
+            mapIndex = fields()[pickIndex];
             beginAttractWorldOnly();
           }
         }
       }
       if (go) {
         audio.ui("ok");
-        if (pickIndex >= maps.length) mapIndex = Math.floor(Math.random() * maps.length);
+        const pool = fields();
+        if (pickIndex >= pool.length) mapIndex = pool[Math.floor(Math.random() * pool.length)] ?? mapIndex;
+        else mapIndex = pool[pickIndex];
         beginMatch();
       } else if (back) {
         audio.ui("back");
@@ -1171,7 +1205,7 @@ async function start(): Promise<void> {
           const ss: SelectSlot[] = lb.slots.map((sl, i) => ({
             joined: !sl.cpu && !sl.open, ready: sl.ready, hero: sl.hero, cpu: sl.cpu, level: 2, open: sl.open, tag: sl.name, local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i,
           }));
-          screens.updateSelect(ss, data.heroes.heroes, roster, lb.twoVtwo, lb.rules.partners === 1);
+          screens.updateSelect(ss, data.heroes.heroes, roster, lb.mode, lb.rules.partners === 1);
           screens.hosting = false;
         }
       }
@@ -1263,20 +1297,21 @@ async function start(): Promise<void> {
     if (state === "match" && world.match.phase === "over") {
       if (overAt < 0) {
         overAt = now;
-        hud.banner_(world.match.winner < 0 ? "DRAW" : world.match.winner === 0 ? "BLUE WINS" : "RED WINS", now, 3, true);
+        hud.banner_(world.match.winner < 0 ? "DRAW" : `${world.teamName(world.match.winner)} WINS`, now, 3, true);
       } else if (now - overAt > 3) {
         state = "results";
         if (!recorded && matchPlayers.some((p) => !p.cpu)) {
           recorded = true;
-          save.record({ at: Date.now(), mode: players === 4 ? "2v2" : "1v1", map: maps[mapIndex].id, winner: world.match.winner, secs: world.time, players: matchPlayers }, world.teams.map((t) => t.heroKills));
+          save.record({ at: Date.now(), mode, map: maps[mapIndex].id, winner: world.match.winner, secs: world.time, players: matchPlayers }, world.teams.map((t) => t.heroKills));
         }
-        screens.showResults(world, matchPlayers, menus.heroNames);
+        screens.showResults(world, matchPlayers, menus.heroNames, fallen);
         screens.set("results");
         hud.show(false);
       }
     }
 
     if (state === "match" || state === "paused") hud.update(world, mappers.map((m) => m?.ui ?? null), now);
+    if (state === "match") for (const ev of world.events) if (ev.type === "eliminated" && !fallen.includes(ev.team)) fallen.push(ev.team);
     if (state === "match") audio.handle(world.events, (x, y, z) => view.worldToScreen(x, y, z));
     audio.setMusic(state !== "paused", state === "match" && world.match.phase === "sudden" ? 1 : state === "match" ? 0.3 : 0);
     audio.update();
@@ -1289,7 +1324,7 @@ async function start(): Promise<void> {
     hud.split = view.splitCount;
     hud.rectOf = (pl) => view.viewRectOf(pl);
     hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
-    screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : mapIndex);
+    screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : Math.max(0, fields().indexOf(mapIndex)), fields(), mode);
     if (state === "select" || state === "lobby") screens.portraits?.renderStages();
     const viaDriver = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
     const nativeGc = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
@@ -1489,9 +1524,9 @@ async function start(): Promise<void> {
   }
 
   function beginAttractWorldOnly(): void {
-    players = 2;
-    setupControl([false, false]);
-    show(newWorld([randomHero(), randomHero()]));
+    players = houses(mapIndex) === 4 ? 4 : 2;
+    setupControl(Array(players).fill(false));
+    show(newWorld(Array.from({ length: players }, randomHero), players));
   }
 
   requestAnimationFrame((t) => {

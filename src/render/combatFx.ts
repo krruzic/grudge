@@ -1153,7 +1153,7 @@ export class CombatFx implements FxHost {
         break;
       case "callout": {
         if (this.quiet) break;
-        const col = ev.team === 0 ? "#b8ccff" : ev.team === 1 ? "#ffc0b8" : "#fff0c0";
+        const col = ["#b8ccff", "#ffc0b8", "#b8f0c0", "#fff0a0"][ev.team] ?? "#fff0c0";
         const { tex, aspect } = calloutTex(ev.text, col);
         const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
         s.renderOrder = 31;

@@ -586,7 +586,7 @@ export class EntityViews {
       this.root.add(hint);
       this.padHints.push(hint);
     }
-    for (let team = 0; team < 2; team++) {
+    for (let team = 0; team < world.teamCount; team++) {
       const hint = new THREE.Sprite(HINTS.shop);
       hint.renderOrder = 33;
       hint.visible = false;
@@ -747,7 +747,7 @@ export class EntityViews {
     const view: Partial<View> = {};
     if (e.hero) {
       const player = e.hero.player;
-      const pc = this.playerColors[player] ?? team;
+      const pc = this.world.ffa ? team : this.playerColors[player] ?? team;
       const twin = this.world.players.some((q) => q.team === e.team && q.player < player && q.heroType === e.hero!.type);
       const inst = this.heroes.create(e.hero.type, team, `P${player + 1}`, pc, twin ? team.clone().lerp(pc, 0.7) : undefined);
       inst.root.scale.setScalar(this.heroScale);
