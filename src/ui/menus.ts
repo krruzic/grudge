@@ -8,7 +8,7 @@ import type { Portraits } from "./portraits";
 import type { World } from "../sim/world";
 import { DEFAULT_OPTIONS, DEFAULT_RULES, MAX_TAG, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
 
-export type Page = "main" | "network" | "browse" | "rules" | "options" | "records" | "controls";
+export type Page = "main" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls";
 export interface RoomInfo {
   id: number;
   name: string;
@@ -41,13 +41,14 @@ const LIGHT = "#f8e8c0";
 const TEAM_TEXT = ["#1c3aa8", "#a81c1c"];
 const ITEMS = [
   { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, OR TWO AGAINST TWO WITH COMMANDERS." },
+  { art: "!PLAYERS", label: "PLAYERS", blurb: "WHO IS PLAYING ON THIS MACHINE: CONTROLLERS, KEYBOARD AND MOUSE. FREE A SEAT OR TURN THE KEYBOARD OFF." },
   { art: "m_network", label: "VERSUS ONLINE", blurb: "PLAY OVER THE HOUSE NETWORK. ONE MACHINE HOSTS, FRIENDS OPEN ITS PAGE AND JOIN." },
   { art: "m_rules", label: "RULES", blurb: "SET THE TERMS OF COMBAT: TIME, GOLD, SOLDIERS AND MERCY." },
   { art: "m_records", label: "RECORDS", blurb: "EVERY VICTORY AND DEFEAT, WRITTEN DOWN BY NAME AND BY CHAMPION." },
   { art: "m_options", label: "OPTIONS", blurb: "MUSIC, SOUND, SCREEN SHAKE AND BUTTON HINTS." },
   { art: "m_controls", label: "CONTROLS", blurb: "HOW TO FIGHT, BUILD AND COMMAND YOUR ARMY." },
 ];
-const PAGES: Page[] = ["main", "network", "rules", "records", "options", "controls"];
+const PAGES: Page[] = ["main", "players", "network", "rules", "records", "options", "controls"];
 const TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".split("");
 
@@ -290,6 +291,7 @@ export class Menus {
 
   private rowCount(): number {
     if (this.page === "main") return ITEMS.length;
+    if (this.page === "players") return 6;
     if (this.page === "network") return 2;
     if (this.page === "browse") return this.rooms.length + 1;
     if (this.page === "rules") return RULE_ROWS.length + 1;
@@ -312,7 +314,10 @@ export class Menus {
       }
       if (ptr.click && this.hover) act = this.hover;
     }
-    if (nav.dy && n && this.page !== "network") {
+    if (nav.dy && n && this.page === "players") {
+      this.focus = nav.dy > 0 ? (this.focus < 4 ? 4 : this.focus === 4 ? 5 : 0) : this.focus < 4 ? 5 : this.focus === 5 ? 4 : 0;
+      sound("move");
+    } else if (nav.dy && n && this.page !== "network") {
       this.focus = (this.focus + nav.dy + n) % n;
       this.confirm = "";
       sound("move");
@@ -378,6 +383,36 @@ export class Menus {
         this.scrollTop = 0;
         this.roomsAt = -99;
         return "browse";
+      }
+      return null;
+    }
+    if (this.page === "players") {
+      if (dx && this.focus < 4) {
+        const f = Math.max(0, Math.min(3, this.focus + dx));
+        if (f !== this.focus) {
+          this.focus = f;
+          sound("move");
+        }
+      }
+      if (act === "a") {
+        if (this.focus < 4) {
+          const d = this.devices()[this.focus];
+          if (d) {
+            this.releaseSeat(this.focus);
+            sound("back");
+          }
+          return null;
+        }
+        if (this.focus === 4) {
+          this.save.data.options.kbm = this.save.data.options.kbm ? 0 : 1;
+          this.save.write();
+          sound("move");
+          return "options";
+        }
+        if (this.focus === 5) {
+          this.requestDevice();
+          sound("ok");
+        }
       }
       return null;
     }
@@ -453,7 +488,8 @@ export class Menus {
       fieldShade(ctx, W, H, 0.38);
       woodFloor(ctx, H - 20, W, H);
       beam(ctx, 4, 2, W - 8, 17);
-      if (this.page === "network") this.drawNetwork(ctx, W, H, now);
+      if (this.page === "players") this.drawPlayers(ctx, W, H, now);
+      else if (this.page === "network") this.drawNetwork(ctx, W, H, now);
       else if (this.page === "browse") this.drawBrowse(ctx, W, H, now);
       else if (this.page === "rules") this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, ["RESTORE DEFAULTS"]);
       else if (this.page === "options") this.drawRows(ctx, W, H, "m_options", "OPTIONS", OPTION_ROWS as Row<object>[], this.save.data.options, ["RESTORE DEFAULTS", "ERASE ALL RECORDS"]);
@@ -499,6 +535,9 @@ export class Menus {
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
+  devices: () => (string | null)[] = () => [];
+  releaseSeat: (i: number) => void = () => {};
+  requestDevice: () => void = () => {};
   rooms: RoomInfo[] = [];
   roomsAt = -99;
   roomsError = "";
@@ -546,6 +585,59 @@ export class Menus {
       lines.forEach((l, j) => drawPlain(ctx, l, W / 2 - textWidth(l, 0.58) / 2, sy + 5 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
     }
     const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "SELECT"], ["B", "BACK"]];
+    prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
+  }
+
+  private drawPlayers(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
+    artTitle(ctx, "!PLAYERS", "PLAYERS", W / 2, 3, 14);
+    const devs = this.devices();
+    const cw = Math.min(86, Math.floor((W - 40) / 4) - 6);
+    const gap = 6;
+    const x0 = Math.round((W - (cw * 4 + gap * 3)) / 2);
+    const y0 = 26;
+    const ch = 96;
+    const SEAT = ["#2a4ab8", "#b02a1c", "#2a7ab8", "#c86a1c"];
+    for (let i = 0; i < 4; i++) {
+      const x = x0 + i * (cw + gap);
+      const sel = this.focus === i;
+      const d = devs[i];
+      const y = y0 - (sel ? 2 : 0);
+      plank(ctx, x, y, cw, ch, d ? "#8a6040" : "#5a4430");
+      if (sel) {
+        ctx.strokeStyle = "#f0c030";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - 2.5, y - 2.5, cw + 5, ch + 5);
+      }
+      waxSeal(ctx, x + cw / 2, y + 18, 11, d ? SEAT[i] : "#4a4038", "combo");
+      paintedText(ctx, `P${i + 1}`, x + cw / 2, y + 13, "#fff4c8", 0.75);
+      if (d) {
+        const lines = wrap(d, cw - 10, 0.52).slice(0, 3);
+        lines.forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, 0.52) / 2, y + 36 + j * 8, "#fff0c8", 0.52));
+        const t = "A: FREE SEAT";
+        drawText(ctx, t, x + cw / 2 - textWidth(t, 0.45) / 2, y + ch - 13, sel ? "#ffe070" : "#c8b898", 0.45);
+      } else {
+        const lines = ["EMPTY", "PRESS ANY", "BUTTON TO JOIN"];
+        lines.forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, j ? 0.48 : 0.62) / 2, y + 36 + j * 9, j ? "#b8a888" : "#d8c8a8", j ? 0.48 : 0.62));
+      }
+      this.hit(`row:${i}`, x, y, cw, ch);
+    }
+    const ry = y0 + ch + 10;
+    const rw = cw * 4 + gap * 3;
+    const rowsY = [ry, ry + 18];
+    const kbmOn = !!this.save.data.options.kbm;
+    const labels: [string, string][] = [["KEYBOARD + MOUSE PLAYERS", kbmOn ? "ON" : "OFF"], ["FIND A GAMECUBE ADAPTER OR PRO CONTROLLER", "SEARCH"]];
+    labels.forEach(([l, v], k) => {
+      const y = rowsY[k];
+      const sel = this.focus === 4 + k;
+      plank(ctx, x0, y, rw, 14, sel ? "#a07448" : "#6a4a30");
+      drawText(ctx, l, x0 + 8, y + 3, sel ? "#ffe890" : "#f0e4c8", 0.62);
+      drawText(ctx, v, x0 + rw - 8 - textWidth(v, 0.68), y + 3, v === "OFF" ? "#ff9070" : "#c8ffa0", 0.68);
+      this.hit(`row:${4 + k}`, x0, y, rw, 14);
+    });
+    const hint = "PLAYERS HERE PLAY FROM THIS MACHINE · ONLINE, EVERY ONE OF THEM TAKES A SEAT";
+    shadowText(ctx, hint, W / 2 - textWidth(hint, 0.5) / 2, rowsY[1] + 20, "#f0e4c8", 0.5);
+    void now;
+    const p: [string, string][] = [["A", this.focus < 4 ? "FREE SEAT" : "CHANGE"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 

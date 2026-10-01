@@ -41,6 +41,7 @@ export interface SelectSlot {
   autoCpu?: boolean;
   tag?: string | null;
   local?: boolean;
+  open?: boolean;
 }
 
 type HeroInfo = { name: string; blurb: string; abilities?: Record<string, { kind: string }> };
@@ -51,6 +52,8 @@ export interface LobbySlot {
   cpu: boolean;
   name: string | null;
   remote: number;
+  local?: number;
+  open?: boolean;
   active: boolean;
   commander: boolean;
 }
@@ -61,7 +64,7 @@ export interface LobbyView {
   map: string;
   phase: string;
   slots: LobbySlot[];
-  me: number;
+  mine: number[];
   status: string;
 }
 
@@ -187,6 +190,8 @@ export class Screens {
   }
 
   private heroPartners = false;
+  hosting = false;
+
   updateSelect(slots: SelectSlot[], heroes: Record<string, HeroInfo>, roster: string[], twoVtwo: boolean, heroPartners = false): void {
     this.heroPartners = heroPartners;
     this.slots = slots;
@@ -274,17 +279,17 @@ export class Screens {
     const rh = Math.min(26, Math.floor((ph - 20) / Math.max(1, list.length)));
     list.forEach(({ s, i }, k) => {
       const y = ty + 17 + k * rh;
-      const mine = i === lb.me;
+      const mine = lb.mine.includes(i);
       const team = this.teamColors[i % 2];
       band(ctx, rx + 6, y, rw - 12, rh - 3, team, mine ? 0.35 : 0.18);
       const icon = s.commander ? null : this.portraits?.icon(s.hero);
       const isz = rh - 5;
       if (icon) ctx.drawImage(icon, rx + 8, y + 1, isz, isz);
-      const who = mine ? "YOU" : s.cpu ? "CPU" : s.remote === 0 ? s.name ?? "HOST" : s.name ?? "GUEST";
+      const who = mine ? (lb.mine.length > 1 ? `YOU · PAD ${(s.local ?? 0) + 1}` : "YOU") : s.open ? "OPEN SEAT" : s.cpu ? "CPU" : s.remote === 0 ? s.name ?? "HOST" : s.name ?? "GUEST";
       drawPlain(ctx, `P${i + 1} ${who}`, rx + 12 + isz, y + 2, mine ? "#8a1810" : "#3a2410", 0.6, true);
-      const hero = s.commander ? "COMMANDER" : this.heroes[s.hero]?.name ?? s.hero.toUpperCase();
+      const hero = s.open ? "A CPU FILLS IT IF NOBODY COMES" : s.commander ? "COMMANDER" : this.heroes[s.hero]?.name ?? s.hero.toUpperCase();
       drawPlain(ctx, hero, rx + 12 + isz, y + 11, "#3a2410", 0.58, true);
-      const st = s.cpu ? "" : s.ready ? "READY" : "CHOOSING";
+      const st = s.cpu || s.open ? "" : s.ready ? "READY" : "CHOOSING";
       if (st) drawPlain(ctx, st, rx + rw - 10 - textWidth(st, 0.55, true), y + 6, s.ready ? "#2a6a18" : "#8a6a30", 0.55, true);
       if (mine && !s.ready && !s.commander) {
         goldArrow(ctx, rx + 5, y + rh / 2 - 1, -1, 4);
@@ -414,6 +419,23 @@ export class Screens {
       }
       return;
     }
+    if (s.open) {
+      banner(ctx, x, y, w, h, team ? "#6a3a30" : "#303a6a", 10);
+      this.portraits?.drop(i);
+      band(ctx, x + 3, y + 3, w - 6, h - 16, "#000000", 0.35);
+      paintedText(ctx, `P${i + 1}`, x + w / 2, y + 7, "#c8b890", 1.05);
+      const lines = ["OPEN SEAT", "WAITING FOR", "A PLAYER"];
+      lines.forEach((l, k) => shadowText(ctx, l, x + w / 2 - textWidth(l, k ? 0.5 : 0.7) / 2, y + 40 + k * 9 + (k ? 3 : 0), k ? "#c8bca0" : "#f0e4c8", k ? 0.5 : 0.7));
+      const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `seatcpu:${i}`);
+      const t = "+ ADD CPU";
+      const by = y + h - 40;
+      ctx.fillStyle = "#0b0806";
+      ctx.fillRect(x + w / 2 - 26, by - 1, 52, 13);
+      texturedRect(ctx, "wood", x + w / 2 - 25, by, 50, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
+      shadowText(ctx, t, x + w / 2 - textWidth(t, 0.55) / 2, by + 2, hot ? "#fff4b0" : "#e8d8b8", 0.55);
+      this.hit(`seatcpu:${i}`, x + w / 2 - 28, by - 3, 56, 17);
+      return;
+    }
     const commander = i >= 2 && !this.heroPartners;
     const human = s.joined && !s.cpu;
     const showHero = true;
@@ -426,6 +448,18 @@ export class Screens {
     if (!s.cpu && !commander) {
       this.hit(`tag:${i}`, x + 4, y + 3, w - 8, 13);
       if (tagHot) shadowText(ctx, "SIGN NAME", x + w / 2 - textWidth("SIGN NAME", 0.42) / 2, y - 7, "#f8e8c0", 0.42);
+    }
+    if (s.cpu && this.hosting && !commander) {
+      const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `seatopen:${i}`);
+      const ux = x + w - 10;
+      const uy = y + 1;
+      ctx.fillStyle = "#1a120a";
+      ctx.fillRect(ux - 1, uy - 1, 9, 9);
+      ctx.fillStyle = uHot ? "#b83020" : "#6a3a24";
+      ctx.fillRect(ux, uy, 7, 7);
+      shadowText(ctx, "X", ux + 3.5 - textWidth("X", 0.5) / 2, uy + 1, uHot ? "#fff4b0" : "#e8d8b8", 0.5);
+      this.hit(`seatopen:${i}`, ux - 2, uy - 2, 11, 11);
+      if (uHot) shadowText(ctx, "OPEN THIS SEAT", Math.max(2, x + w / 2 - textWidth("OPEN THIS SEAT", 0.42) / 2), y - 7, "#f8e8c0", 0.42);
     }
     if (human && s.local) {
       const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `unplug:${i}`);

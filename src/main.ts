@@ -147,6 +147,16 @@ async function start(): Promise<void> {
     pads.kbmEnabled = o.kbm !== 0;
   };
   applyOptions();
+  menus.devices = () => pads.players.map((p) => {
+    if (!p.connected) return null;
+    if (p.profile === "keyboard") return "KEYBOARD + MOUSE";
+    if (p.profile === "gc-adapter" || p.profile.startsWith("gc_")) return "GAMECUBE CONTROLLER";
+    if (p.profile === "procon2") return "SWITCH 2 PRO CONTROLLER";
+    const id = p.padId.replace(/\(.*?\)/g, "").replace(/[^A-Za-z0-9 ]+/g, " ").trim().toUpperCase();
+    return id ? id.slice(0, 30) : "CONTROLLER";
+  });
+  menus.releaseSeat = (i) => pads.release(i);
+  menus.requestDevice = () => void pads.requestHid();
   const navRep = Array.from({ length: MAX_PLAYERS }, () => ({ dir: "", t: 0 }));
   const readNav = (now: number): Nav => {
     const n: Nav = { dx: 0, dy: 0, a: false, b: false, y: false };
@@ -199,14 +209,17 @@ async function start(): Promise<void> {
   let twoVtwo = params.get("mode") === "2v2";
   const net = new NetLink();
   let netMode: "off" | "host" | "peer" = "off";
-  const remotes = new Map<number, { slot: number; name: string; queue: Command[]; last: Command }>();
-  const remoteAt = (i: number) => {
-    for (const [id, r] of remotes) if (r.slot === i) return id;
-    return -1;
-  };
-  let mySlot = -1;
-  let myHero = "";
-  let myReady = false;
+  type RSeat = { peer: number; k: number; slot: number; name: string; queue: Command[]; last: Command };
+  const peerNames = new Map<number, string>();
+  const rseats: RSeat[] = [];
+  const seatAt = (i: number) => rseats.find((r) => r.slot === i);
+  const remoteAt = (i: number) => seatAt(i)?.peer ?? -1;
+  const mySlots = new Map<number, number>();
+  const myHero: string[] = ["", "", "", ""];
+  const myReady = [false, false, false, false];
+  let wantSent = "";
+  let wantAt = 0;
+  const lobbyLatch = [0, 0, 0, 0];
   let netFrames: Frame[] = [];
   const netHashes = new Map<number, number>();
   let outFrames: Frame[] = [];
@@ -231,6 +244,7 @@ async function start(): Promise<void> {
   };
   const makeHuman = (i: number) => {
     const sl = slots[i];
+    sl.open = false;
     sl.cpu = false;
     sl.joined = true;
     if (commanderSlot(i)) { sl.hero = commanderType; sl.ready = true; return; }
@@ -241,8 +255,21 @@ async function start(): Promise<void> {
     cursors.placeChip(i, null);
     if (cursors.cursors[i].holding < 0) cursors.cursors[i].holding = i;
   };
+  const makeOpen = (i: number) => {
+    const sl = slots[i];
+    sl.cpu = false;
+    sl.joined = false;
+    sl.open = true;
+    sl.ready = true;
+    sl.autoCpu = true;
+    sl.tag = undefined;
+    if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
+    cursors.placeChip(i, null);
+  };
+  const vacant = (i: number) => (netMode === "host" ? makeOpen(i) : (makeCpu(i), (slots[i].autoCpu = true)));
   const makeCpu = (i: number) => {
     const sl = slots[i];
+    sl.open = false;
     sl.cpu = true;
     sl.joined = false;
     if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
@@ -252,7 +279,7 @@ async function start(): Promise<void> {
     if (twoVtwo === v) return;
     twoVtwo = v;
     for (const k of [2, 3]) {
-      if (twoVtwo) { if (present(k)) makeHuman(k); else makeCpu(k); }
+      if (twoVtwo) { if (present(k)) makeHuman(k); else vacant(k); }
       else if (cursors.cursors[k].holding >= 0) cursors.cursors[k].holding = -1;
     }
   };
@@ -263,7 +290,7 @@ async function start(): Promise<void> {
     slots.forEach((sl, i) => {
       sl.ready = false;
       if (present(i)) { sl.autoCpu = false; makeHuman(i); }
-      else { makeCpu(i); sl.autoCpu = true; }
+      else vacant(i);
     });
     readySince = -1;
   };
@@ -323,8 +350,10 @@ async function start(): Promise<void> {
   const leaveNet = (why = "") => {
     net.close();
     netMode = "off";
-    remotes.clear();
-    mySlot = -1;
+    rseats.length = 0;
+    peerNames.clear();
+    mySlots.clear();
+    wantSent = "";
     menus.netBusy = false;
     menus.netStatus = why;
     menus.netAddrs = [];
@@ -352,16 +381,26 @@ async function start(): Promise<void> {
   const beginMatch = () => {
     players = twoVtwo ? 4 : 2;
     const humans = slots.slice(0, players).map((s) => s.joined && !s.cpu);
+    for (let i = 0; i < players; i++) {
+      const sl = slots[i];
+      if (!sl.open) continue;
+      sl.open = false;
+      sl.cpu = true;
+      sl.joined = false;
+      if (!commanderSlot(i)) sl.hero = randomHero();
+    }
+    const humans0 = slots.slice(0, players).map((s) => s.joined && !s.cpu);
+    void humans0;
     const remote = slots.slice(0, players).map((_, i) => remoteAt(i) >= 0);
     const spec: MatchSpec = {
       map: maps[mapIndex].id, seed: seed++, rules: { ...save.data.rules }, heroes: slots.slice(0, players).map((s) => s.hero), players,
       levels: slots.slice(0, players).map((s) => s.level), humans, names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)),
     };
-    for (const r of remotes.values()) {
+    for (const r of rseats) {
       r.queue = [];
       r.last = { moveX: 0, moveZ: 0 };
     }
-    if (netMode === "host") net.toPeer("all", { t: "start", spec, slots: Object.fromEntries([...remotes].map(([id, r]) => [id, r.slot])) });
+    if (netMode === "host") net.toPeer("all", { t: "start", spec, seats: rseats.filter((r) => r.slot >= 0 && r.slot < players).map((r) => [r.peer, r.k, r.slot]) });
     startNetMatch(spec, humans.map((h, i) => h && !remote[i]), remote);
   };
 
@@ -399,8 +438,7 @@ async function start(): Promise<void> {
       const b = bots[i];
       if (b) return b.command(world);
       if (netMode === "host" && state === "match") {
-        const id = remoteAt(i);
-        const r = id >= 0 ? remotes.get(id) : undefined;
+        const r = seatAt(i);
         if (r) {
           const c = mergeCommands(r.queue, r.last);
           r.queue = [];
@@ -436,7 +474,7 @@ async function start(): Promise<void> {
     beginAttract();
     toMenu();
     const pg = params.get("page");
-    if (pg === "network" || pg === "rules" || pg === "options" || pg === "records" || pg === "controls") menus.page = pg;
+    if (pg === "players" || pg === "network" || pg === "rules" || pg === "options" || pg === "records" || pg === "controls") menus.page = pg;
     menus.tab = Number(params.get("tab") ?? 0);
   } else if (params.has("bots")) {
     setupControl([false, false]);
@@ -514,18 +552,17 @@ async function start(): Promise<void> {
     mappers[i] = new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i));
     bots[i] = null;
     view.setHumans(mappers.map((m) => !!m));
-  }, pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot, frames: netFrames.length, remotes: [...remotes.values()].map((r) => r.slot) }; } };
+  }, pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot: [...mySlots.values()][0] ?? -1, mySlots: Object.fromEntries(mySlots), frames: netFrames.length, remotes: rseats.map((r) => [r.peer, r.k, r.slot]) }; } };
 
   let last = performance.now();
   let acc = 0;
 
   const freeRemoteSlot = (): number => {
-    for (const i of [1, 2, 3, 0]) if (!pads.players[i].connected && !(i < forceJoin) && remoteAt(i) < 0) return i;
+    for (const i of [1, 2, 3, 0]) if (!pads.players[i].connected && !(i < forceJoin) && !seatAt(i) && (slots[i].open || slots[i].autoCpu)) return i;
     return -1;
   };
-  const seatRemote = (id: number) => {
-    const r = remotes.get(id);
-    if (!r || r.slot >= 0) return;
+  const seatRemote = (r: RSeat) => {
+    if (r.slot >= 0) return;
     const i = freeRemoteSlot();
     if (i < 0) return;
     r.slot = i;
@@ -540,11 +577,43 @@ async function start(): Promise<void> {
     twoVtwo,
     map: pickIndex >= maps.length ? "RANDOM FIELD" : (maps[pickIndex]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
     phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
-    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, ready: s.ready, cpu: s.cpu, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, active: slotActive(i), commander: commanderSlot(i) })),
+    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i) })),
   });
+  const freeSeat = (r: RSeat, now: number) => {
+    const i = r.slot;
+    r.slot = -1;
+    if (i < 0) return;
+    slots[i].tag = undefined;
+    if (state === "select" || state === "map") makeOpen(i);
+    else if (i < players) {
+      bots[i] = new Bot(i, 0.75, seed + i);
+      people[i] = false;
+      linkMates();
+      hud.banner_(`${r.name} LEFT · A CPU TAKES OVER`, now, 2.5);
+    }
+  };
   const netFromPeer = (id: number, m: NetMsg) => {
-    const r = remotes.get(id);
-    if (!r) return;
+    if (m.t === "want") {
+      const ks = ((m.ks as number[]) ?? []).filter((k) => k >= 0 && k < 4).slice(0, 4);
+      for (const r of rseats.filter((q) => q.peer === id && !ks.includes(q.k))) {
+        if (state !== "match" && state !== "paused") freeSeat(r, performance.now() / 1000);
+        else continue;
+        rseats.splice(rseats.indexOf(r), 1);
+      }
+      for (const k of ks) {
+        if (rseats.some((q) => q.peer === id && q.k === k)) continue;
+        const n = peerNames.get(id) ?? "GUEST";
+        const nm = ks.length > 1 ? `${n.slice(0, 6)}${k + 1}` : n;
+        rseats.push({ peer: id, k, slot: -1, name: nm, queue: [], last: { moveX: 0, moveZ: 0 } });
+      }
+      lobbySentAt = 0;
+      return;
+    }
+    const r = rseats.find((q) => q.peer === id && q.k === Number(m.k ?? 0));
+    if (!r) {
+      if (m.t === "pause" && (state === "match" || state === "paused") && rseats.some((q) => q.peer === id)) setPaused(state === "match");
+      return;
+    }
     const i = r.slot;
     if (m.t === "cmd" && i >= 0 && (state === "match" || state === "paused")) {
       if (r.queue.length < 30) r.queue.push(m.c as Command);
@@ -603,32 +672,25 @@ async function start(): Promise<void> {
         netMode = "peer";
         net.id = Number(m.id);
         menus.netBusy = false;
-        mySlot = -1;
-        myReady = false;
-        myHero = "";
+        mySlots.clear();
+        myReady.fill(false);
+        myHero.fill("");
+        wantSent = "";
         state = "lobby";
         screens.set("lobby");
         continue;
       }
       if (netMode === "host") {
         if (m.t === "joined") {
-          remotes.set(Number(m.id), { slot: -1, name: String(m.name ?? "GUEST").toUpperCase().slice(0, 8), queue: [], last: { moveX: 0, moveZ: 0 } });
-          if (state === "select") seatRemote(Number(m.id));
+          peerNames.set(Number(m.id), String(m.name ?? "GUEST").toUpperCase().slice(0, 8));
           audio.ui("ok");
           lobbySentAt = 0;
         } else if (m.t === "left") {
-          const r = remotes.get(Number(m.id));
-          remotes.delete(Number(m.id));
-          if (r && r.slot >= 0) {
-            const i = r.slot;
-            slots[i].tag = undefined;
-            if (state === "select" || state === "map") { makeCpu(i); slots[i].autoCpu = true; }
-            else if (i < players) {
-              bots[i] = new Bot(i, 0.75, seed + i);
-              people[i] = false;
-              linkMates();
-            }
-            hud.banner_(`${r.name} LEFT · A CPU TAKES OVER`, now, 2.5);
+          const id = Number(m.id);
+          peerNames.delete(id);
+          for (const r of rseats.filter((q) => q.peer === id)) {
+            freeSeat(r, now);
+            rseats.splice(rseats.indexOf(r), 1);
           }
         } else if (m.t === "from") netFromPeer(Number(m.id), m.msg as NetMsg);
         continue;
@@ -636,13 +698,16 @@ async function start(): Promise<void> {
       if (netMode === "peer") {
         if (m.t === "lobby") {
           const lv = m.view as ReturnType<typeof lobbyView>;
-          mySlot = lv.slots.findIndex((s) => s.remote === net.id);
-          if (mySlot >= 0 && !myHero) myHero = lv.slots[mySlot].hero;
-          screens.lobby = { ...lv, me: mySlot, status: mySlot < 0 && lv.phase !== "match" ? "THE BATTLE IS FULL · WAITING FOR A SEAT" : "" };
+          mySlots.clear();
+          lv.slots.forEach((s, i) => { if (s.remote === net.id) mySlots.set(s.local ?? 0, i); });
+          for (const [k, i] of mySlots) if (!myHero[k]) myHero[k] = lv.slots[i].hero;
+          const anyDevice = pads.players.some((p) => p.connected);
+          const status = lv.phase === "match" ? "" : !anyDevice ? "PRESS A BUTTON ON A CONTROLLER OR KEYBOARD TO TAKE A SEAT" : !mySlots.size ? "THE BATTLE IS FULL · WAITING FOR A SEAT" : "";
+          screens.lobby = { ...lv, mine: [...mySlots.values()], status };
           if (state === "results" || state === "match" || state === "paused") {
             if (lv.phase === "lobby") {
               state = "lobby";
-              myReady = false;
+              myReady.fill(false);
               screens.set("lobby");
               hud.show(false);
               beginAttractWorldOnly();
@@ -650,10 +715,11 @@ async function start(): Promise<void> {
           }
         } else if (m.t === "start") {
           const spec = m.spec as MatchSpec;
-          const slot = Number((m.slots as Record<string, number>)?.[net.id] ?? mySlot);
-          if (slot < 0) continue;
-          mySlot = slot;
-          const local = Array.from({ length: spec.players }, (_, i) => i === slot);
+          mySlots.clear();
+          for (const [peer, k, slot] of (m.seats as [number, number, number][]) ?? []) if (peer === net.id) mySlots.set(k, slot);
+          if (!mySlots.size) continue;
+          const mine = new Set(mySlots.values());
+          const local = Array.from({ length: spec.players }, (_, i) => mine.has(i));
           startNetMatch(spec, local, local.map(() => false));
         } else if (m.t === "fs") {
           for (const f of m.f as Frame[]) netFrames.push(f);
@@ -666,10 +732,18 @@ async function start(): Promise<void> {
         }
       }
     }
+    if (netMode === "peer" && net.open) {
+      const ks = JSON.stringify(pads.players.map((p, k) => (p.connected ? k : -1)).filter((k) => k >= 0));
+      if (ks !== wantSent || now - wantAt > 1.5) {
+        wantSent = ks;
+        wantAt = now;
+        net.toHost({ t: "want", ks: JSON.parse(ks) });
+      }
+    }
     if (netMode === "host" && now - lobbySentAt > 0.25) {
       lobbySentAt = now;
-      const seated = [...remotes.values()].filter((r) => r.slot >= 0).length;
-      const localHumans = slots.filter((s, i) => !s.cpu && slotActive(i) && remoteAt(i) < 0).length;
+      const seated = rseats.filter((r) => r.slot >= 0).length;
+      const localHumans = slots.filter((s, i) => !s.cpu && !s.open && slotActive(i) && remoteAt(i) < 0).length;
       net.meta({
         name: `${(save.tagNames()[0] ?? "HOST").toUpperCase()}'S BATTLE`,
         mode: twoVtwo ? "2 VS 2" : "1 VS 1",
@@ -678,7 +752,10 @@ async function start(): Promise<void> {
         seats: 4,
         phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
       });
-      if (state === "select") for (const id of remotes.keys()) seatRemote(id);
+      if (state === "select") {
+        for (const r of rseats) if (r.slot >= 0 && pads.players[r.slot].connected) freeSeat(r, now);
+        for (const r of rseats) seatRemote(r);
+      }
       net.toPeer("all", { t: "lobby", view: lobbyView() });
     }
   };
@@ -756,13 +833,15 @@ async function start(): Promise<void> {
         }
       }
       screens.updateSelect(slots, data.heroes.heroes, roster, twoVtwo, save.data.rules.partners === 1);
+      screens.hosting = netMode === "host";
     } else if (state === "select") {
       cursors.setScale(pixel.w, pixel.h);
       if (!twoVtwo && [0, 1, 2, 3].filter(present).length >= 3) setMode(true);
       slots.forEach((sl, i) => {
         sl.local = pads.players[i].connected;
-        if (present(i) && sl.cpu && sl.autoCpu) { sl.autoCpu = false; makeHuman(i); }
-        if (!present(i) && !sl.cpu) { makeCpu(i); sl.autoCpu = true; }
+        if (present(i) && (sl.open || (sl.cpu && sl.autoCpu))) { sl.autoCpu = false; makeHuman(i); }
+        if (!present(i) && !sl.cpu && !sl.open) vacant(i);
+        if (netMode !== "host" && sl.open) { makeCpu(i); sl.autoCpu = true; }
       });
       const acts = cursors.update(padsForCursors(), dt, now, (slot, by) => slotActive(slot) && !commanderSlot(slot) && (slot === by ? !slots[slot].cpu : slots[slot].cpu));
       for (const act of acts) {
@@ -787,6 +866,13 @@ async function start(): Promise<void> {
           } else if (id === "add") {
             setMode(true);
             audio.ui("ok");
+          } else if (id === "seatcpu") {
+            makeCpu(i);
+            slots[i].autoCpu = false;
+            audio.ui("ok");
+          } else if (id === "seatopen") {
+            makeOpen(i);
+            audio.ui("back");
           } else if (id === "camera") {
             const order = [1, 2, 0];
             save.data.options.split = order[(order.indexOf(save.data.options.split) + 1) % order.length];
@@ -827,6 +913,7 @@ async function start(): Promise<void> {
         }
       }
       screens.updateSelect(slots, data.heroes.heroes, roster, twoVtwo, save.data.rules.partners === 1);
+      screens.hosting = netMode === "host";
       const allReady = selectReady();
       if (allReady && readySince < 0) readySince = now;
       if (!allReady) readySince = -1;
@@ -879,21 +966,32 @@ async function start(): Promise<void> {
         toMenu("");
         state = "menu";
         menus.open("network");
-      } else if (lb && mySlot >= 0 && lb.phase === "lobby" && !lb.slots[mySlot].commander) {
-        if (nav.dx && !myReady) {
-          const k = roster.indexOf(myHero || lb.slots[mySlot].hero);
-          myHero = roster[(k + nav.dx + roster.length) % roster.length];
-          net.toHost({ t: "pick", hero: myHero });
-          lb.slots[mySlot].hero = myHero;
-          audio.ui("move");
-        }
-        if (nav.a) {
-          myReady = !myReady;
-          if (myHero) net.toHost({ t: "pick", hero: myHero });
-          net.toHost({ t: "ready", on: myReady });
-          lb.slots[mySlot].ready = myReady;
-          audio.ui(myReady ? "ok" : "back");
-        }
+      } else if (lb && lb.phase === "lobby") {
+        pads.players.forEach((p, k) => {
+          const i = mySlots.get(k);
+          if (i === undefined || !p.connected || lb.slots[i].commander) return;
+          let dx = p.pressed.right ? 1 : p.pressed.left ? -1 : 0;
+          const sx = p.stickX;
+          if (Math.abs(sx) < 0.35) lobbyLatch[k] = 0;
+          else if (!lobbyLatch[k] && Math.abs(sx) > 0.6) {
+            lobbyLatch[k] = 1;
+            dx = sx > 0 ? 1 : -1;
+          }
+          if (dx && !myReady[k]) {
+            const r = roster.indexOf(myHero[k] || lb.slots[i].hero);
+            myHero[k] = roster[(r + dx + roster.length) % roster.length];
+            net.toHost({ t: "pick", k, hero: myHero[k] });
+            lb.slots[i].hero = myHero[k];
+            audio.ui("move");
+          }
+          if (p.pressed.a) {
+            myReady[k] = !myReady[k];
+            if (myHero[k]) net.toHost({ t: "pick", k, hero: myHero[k] });
+            net.toHost({ t: "ready", k, on: myReady[k] });
+            lb.slots[i].ready = myReady[k];
+            audio.ui(myReady[k] ? "ok" : "back");
+          }
+        });
       }
     } else if (state === "match") {
       if (anyPressed("start")) {
@@ -901,7 +999,7 @@ async function start(): Promise<void> {
         else setPaused(true);
       }
       pads.players.forEach((p, pi) => {
-        const i = netMode === "peer" ? (pi === localPad() ? mySlot : -1) : pi;
+        const i = netMode === "peer" ? mySlots.get(pi) ?? -1 : pi;
         const m = i >= 0 ? mappers[i] : null;
         if (!m) return;
         const h = world.heroForPlayer(i);
@@ -917,7 +1015,7 @@ async function start(): Promise<void> {
         const h = r ? world.heroForPlayer(i) : undefined;
         return r && h ? [{ heroId: h.id, slot: r.slot, dx: r.dx, dz: r.dz, range: r.range }] : [];
       }));
-      if (netMode === "peer" && mySlot >= 0 && mappers[mySlot]) net.toHost({ t: "cmd", c: packCommand(mappers[mySlot]!.take()) });
+      if (netMode === "peer") for (const [k, slot] of mySlots) if (mappers[slot]) net.toHost({ t: "cmd", k, c: packCommand(mappers[slot]!.take()) });
     } else if (state === "paused") {
       const r = menus.updatePause(readNav(now), cursors.takeMouse(), (k) => audio.ui(k));
       if (anyPressed("start") || r === "resume") {
@@ -927,7 +1025,7 @@ async function start(): Promise<void> {
     } else if (state === "results" && netMode === "peer") {
       if (anyPressed("a") || anyPressed("start")) {
         state = "lobby";
-        myReady = false;
+        myReady.fill(false);
         screens.set("lobby");
         hud.show(false);
         beginAttractWorldOnly();
@@ -1016,7 +1114,7 @@ async function start(): Promise<void> {
     if (state === "menu") menus.draw(ctx, pixel.w, pixel.h, now);
     if (state === "paused") menus.drawPause(ctx, pixel.w, pixel.h, now, world);
     if (netMode === "host" && (state === "select" || state === "map")) {
-      const joined = [...remotes.values()].filter((r) => r.slot >= 0).length;
+      const joined = rseats.filter((r) => r.slot >= 0).length;
       const where = hostPublic ? hostPublic : hostAddrs[0] ? `http://${hostAddrs[0]}` : location.host;
       const t = `ONLINE · ${joined} FRIEND${joined === 1 ? "" : "S"} JOINED · OTHERS OPEN ${where} > VERSUS ONLINE > JOIN`;
       drawText(ctx, t, Math.round((pixel.w - textWidth(t, 0.6)) / 2), pixel.h - 9, "#f8e8a0", 0.6);
