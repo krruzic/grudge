@@ -178,12 +178,15 @@ def face_goblin(seed=0):
 def face_human(seed=0):
     cv = Canvas(bg=(0, 0, 0), alpha=0.0)
     for sx in (-1, 1):
-        cx = 32 + sx * 11
-        eye(cv, cx, 27, 5, 4, "#3a5a8a", look=(0, 0))
-        line(cv, cx - 6 * sx, 18, cx, 16, hexc("#2a1a10"), 2)
-        line(cv, cx, 16, cx + 6 * sx, 19, hexc("#2a1a10"), 2)
-    line(cv, 27, 47, 34, 47, hexc("#8a3a2a"), 2)
-    line(cv, 34, 47, 38, 45, hexc("#8a3a2a"), 2)
+        cx = 32 + sx * 12
+        fill_ellipse(cv, cx, 28, 4.6, 2.4, hexc("#f2ece4"))
+        fill_ellipse(cv, cx, 28, 2.2, 2.2, hexc("#5a3a1e"))
+        fill_ellipse(cv, cx, 28, 1.1, 1.1, hexc("#140c08"))
+        cv.px[27][cx - 1] = (1, 1, 1, 1.0)
+        line(cv, cx - 5, 26, cx + 5, 26, hexc("#3a2214"), 1)
+        line(cv, cx - 5 * sx, 21, cx + 5 * sx, 20, hexc("#3a2214"), 2)
+    line(cv, 28, 49, 36, 49, hexc("#9a4a3a"), 1)
+    line(cv, 29, 50, 35, 50, hexc("#c2786a"), 1)
     return cv
 
 
