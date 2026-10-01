@@ -332,6 +332,7 @@ export class GameRenderer {
   }
 
   cinematic = false;
+  windowRect: [number, number, number, number] | null = null;
   private cineT = 0;
 
   private updateCamera(points: THREE.Vector3[], dt: number): void {
@@ -649,6 +650,27 @@ export class GameRenderer {
       this.renderer.setViewport(x, y, w, h);
       this.renderer.setScissor(x, y, w, h);
       this.drawScene(cam, null);
+      this.renderer.setScissorTest(false);
+    } else if (this.windowRect && !this.splitViews.length) {
+      const tw = this.target.width;
+      const th = this.target.height;
+      const [fx, fy, fw, fh] = this.windowRect;
+      const w = Math.max(1, Math.round(fw * tw));
+      const h = Math.max(1, Math.round(fh * th));
+      const x = Math.round(fx * tw);
+      const y = Math.round(th - (fy + fh) * th);
+      this.renderer.setScissor(0, 0, tw, th);
+      this.renderer.setScissorTest(true);
+      this.renderer.clear();
+      if (Math.abs(this.camera.aspect - w / h) > 1e-3) {
+        this.camera.aspect = w / h;
+        this.camera.updateProjectionMatrix();
+      }
+      this.updateCamera(this.entityViews.heroPoints(), dt);
+      shake(this.camera);
+      this.renderer.setViewport(x, y, w, h);
+      this.renderer.setScissor(x, y, w, h);
+      this.drawScene(this.camera);
       this.renderer.setScissorTest(false);
     } else if (!this.splitViews.length) {
       const asp = this.target.width / this.target.height;

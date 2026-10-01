@@ -4,7 +4,7 @@ import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from 
 import { drawNum, drawPlain, drawText, occlude, textWidth, onHiLayer } from "./font";
 import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
-import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor } from "./n64ui";
+import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor, markWindow } from "./n64ui";
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
@@ -710,6 +710,7 @@ export class Screens {
     ctx.fillStyle = "#2a1a0a";
     ctx.fillRect(10, 10, iw + 4, ih + 4);
     ctx.clearRect(12, 12, iw, ih);
+    markWindow(ctx, 12, 12, iw, ih);
     const sub = `${reason}  ·  ${mm}`;
     shadowText(ctx, sub, 12 + iw / 2 - textWidth(sub, 0.6) / 2, 12 + ih - 11, "#fff0c8", 0.6);
     waxSeal(ctx, pw - 26, ih + 10, 17, win < 0 ? "#8a7a60" : TEAM_CLOTH[win], win < 0 ? "none" : "castle");

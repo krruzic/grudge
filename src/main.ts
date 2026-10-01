@@ -1,4 +1,5 @@
 import heroData from "../data/heroes.json";
+import { liveWindow } from "./ui/n64ui";
 import talentData from "../data/talents.json";
 import unitData from "../data/units.json";
 import structureData from "../data/structures.json";
@@ -1323,6 +1324,8 @@ async function start(): Promise<void> {
     view.cinematic = state === "select" || state === "map" || state === "lobby" || (state === "menu" && menus.page !== "main");
     const demoAlpha = runDemo(dt);
     view.render(state === "paused" ? 0 : demoAlpha ?? acc / world.dt, state === "paused" ? 0 : dt);
+    view.windowRect = liveWindow.rect;
+    liveWindow.rect = null;
     const ctx = pixel.begin();
     const uiList = mappers.map((m) => m?.ui ?? null);
     hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);

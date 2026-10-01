@@ -709,7 +709,21 @@ export function inset(ctx: CanvasRenderingContext2D, x: number, y: number, w: nu
   }
 }
 
+export const liveWindow: { rect: [number, number, number, number] | null } = { rect: null };
+
+export function markWindow(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const m = ctx.getTransform();
+  const cw = ctx.canvas.width;
+  const ch = ctx.canvas.height;
+  const cx = m.a * (x + w / 2) + m.c * (y + h / 2) + m.e;
+  const cy = m.b * (x + w / 2) + m.d * (y + h / 2) + m.f;
+  const sx = Math.hypot(m.a, m.b);
+  const sy = Math.hypot(m.c, m.d);
+  liveWindow.rect = [(cx - (w * sx) / 2) / cw, (cy - (h * sy) / 2) / ch, (w * sx) / cw, (h * sy) / ch];
+}
+
 export function windowCut(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  markWindow(ctx, x, y, w, h);
   ctx.fillStyle = "#2a1a0a";
   ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
   ctx.clearRect(x, y, w, h);
