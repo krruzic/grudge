@@ -368,6 +368,11 @@ export class Bot {
     if (rdy("r") && ab.r.bot !== "fight" && useHint("r", dHero)) this.wantR = true;
     if (rdy("b") && (ab.b.bot === "repair" || ab.b.bot === "banner") && useHint("b", 0)) this.wantB = true;
 
+    const lan = w.mapEvents.lantern;
+    if (lan && lan.state !== "rise" && !lowHp && Math.hypot(lan.x - p.x, lan.z - p.z) < 22 && !(ehAlive && dHero < 4)) {
+      this.goal = { x: lan.x, z: lan.z };
+      return;
+    }
     let fight: Entity | undefined;
     if (ehAlive && dHero < 9 + prefer && !(enemyHero!.status.hidden && dHero > 2.5)) fight = enemyHero;
     else if (nearby.length) {

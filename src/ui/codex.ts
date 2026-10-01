@@ -260,6 +260,8 @@ function heroEntry(id: string): CodexEntry {
   };
 }
 
+const MAP_DATA = import.meta.glob("../../data/maps/*.json", { eager: true, import: "default" }) as Record<string, { name: string }>;
+
 export function buildCodex(mapNames: string[]): CodexEntry[] {
   const sc = U.waves.spawnCost;
   const st = S.types;
@@ -392,15 +394,71 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       ],
     },
   ];
-  const MAP_TEXT: Record<string, [string, string]> = {
-    "Grudgeholm Crossing": ["A LONG FIELD SPLIT BY TWO RIVER CHANNELS. THE MIDDLE ISLAND HOLDS THE NEUTRAL PADS AND THE FORDS ARE SLOW TO CROSS. EACH KEEP HAS A NORTH GATE, A SOUTH GATE AND A BRIDGE TO THE EAST.", "THE FORDS ARE THE KILLING GROUND. FIGHT ON THE ISLAND, NOT IN THE WATER."],
-    "Grudgekeep Ruins": ["A SQUARE OF OLD WALLS AND PITS, MIRRORED CORNER TO CORNER. EACH KEEP HAS A FRONT GATE TOWARD THE CENTRE AND A BACK GATE IN THE SIDE.", "THE BACK GATE IS EASY TO FORGET. SO IS THE GRIM WALKING THROUGH IT."],
-    "Frostcross Summit": ["A FREE FOR ALL FIELD. FOUR KEEPS SIT ON THE ARMS OF A FROZEN CROSS WITH THE GRUDGE IN THE MIDDLE. EVERY SO OFTEN AN AVALANCHE SWEEPS DOWN ONE ARM AND FLATTENS WHOEVER IS STANDING IN THE LANE. RIDGE TRAILS CUT ACROSS THE MOUNTAIN CORNERS BETWEEN NEIGHBOURS.", "YOUR NEIGHBOURS ARE CLOSER THAN THE HOUSE ACROSS THE PEAK. SO ARE YOU, TO THEM. WHEN THE SNOW RUMBLES, GET OUT OF THE LANE."],
-    "Grudgetide Shoals": ["TWO ISLAND KEEPS ON A MUD FLAT. EVERY SEVENTY SECONDS THE TIDE COMES IN AND THE FLATS FLOOD, SLOWING EVERYONE ON THEM. EACH HOUSE HAS ITS OWN DRY STONE CAUSEWAY ON ITS OWN FLANK.", "PUSH AT LOW TIDE. AT HIGH TIDE, STICK TO THE CAUSEWAYS AND ISLETS. THE KEEPS ARE ON CLIFFS: YOU CAN DROP OFF THEM BUT NOT CLIMB BACK UP."],
+  const md = (name: string) => Object.values(MAP_DATA).find((m) => m.name === name) as Record<string, any> | undefined;
+  const cr = md("Grudgeholm Crossing")?.mist ?? {};
+  const ru = md("Grudgekeep Ruins")?.lantern ?? {};
+  const fc = md("Frostcross Summit")?.avalanche ?? {};
+  const ga = md("Bellwick Gardens") ?? {};
+  const gg = ga.gates ?? {};
+  const gf = ga.fountain ?? {};
+  const sh2 = md("Grudgetide Shoals")?.tide ?? {};
+  const MAP_TEXT: Record<string, { glyph: string; text: string; tip: string; mech?: { title: string; text: string; tip: string } }> = {
+    "Grudgeholm Crossing": {
+      glyph: "river",
+      text: "A LONG FIELD SPLIT BY TWO RIVER CHANNELS. THE MIDDLE ISLAND HOLDS THE NEUTRAL PADS AND THE FORDS ARE SLOW TO CROSS. EACH KEEP HAS A NORTH GATE, A SOUTH GATE AND A BRIDGE TO THE EAST.",
+      tip: "THE FORDS ARE THE KILLING GROUND. FIGHT ON THE ISLAND, NOT IN THE WATER.",
+      mech: {
+        title: "RIVER MIST",
+        text: `EVERY ${cr.everySeconds ?? 75} SECONDS OR SO A MIST ROLLS DOWN BOTH RIVERS, SITS THERE FOR ABOUT ${cr.holdSeconds ?? 16} SECONDS LOOKING MYSTERIOUS, THEN WANDERS OFF SOUTH. ANYTHING IN THE MIST IS HIDDEN, JUST LIKE TALL GRASS: TOWERS CAN'T SEE IN, AND WHOEVER SWINGS FIRST OUT OF IT GETS THE AMBUSH BONUS.`,
+        tip: "THE FORDS ARE NOW ALSO THE HIDING GROUND. WALK INTO THE MIST CAREFULLY. SOMETHING IN THERE IS WAITING TO HIT YOU, AND IT MIGHT BE A TREE.",
+      },
+    },
+    "Grudgekeep Ruins": {
+      glyph: "castle",
+      text: "A SQUARE OF OLD WALLS AND PITS, MIRRORED CORNER TO CORNER. EACH KEEP HAS A FRONT GATE TOWARD THE CENTRE AND A BACK GATE IN THE SIDE. THE OTHER TWO CORNERS ARE OLD GRAVEYARDS NOBODY VISITS.",
+      tip: "THE BACK GATE IS EASY TO FORGET. SO IS THE GRIM WALKING THROUGH IT.",
+      mech: {
+        title: "THE BONE LANTERN",
+        text: `EVERY ${ru.everySeconds ?? 60} SECONDS SOMETHING IN THE PITS WAKES UP AND A BONE LANTERN FLOATS OUT, THEN DRIFTS OFF TO THE NEAREST EMPTY GRAVEYARD CORNER TO SULK FOR ${ru.restSeconds ?? 25} SECONDS. THE FIRST CHAMPION TO TOUCH IT IS HAUNTED FOR ${ru.hauntSeconds ?? 20} SECONDS: ${Math.round(((ru.damageMul ?? 1.3) - 1) * 100)}% MORE DAMAGE AND ${Math.round(((ru.speedMul ?? 1.15) - 1) * 100)}% MORE SPEED. THE DEAD DO NOT CHECK WHICH SIDE YOU ARE ON.`,
+        tip: "YOU CAN GRAB IT WHILE IT'S STILL DRIFTING. IF YOU WAIT FOR IT IN THE CORNER, SO WILL THE OTHER CHAMPION, AND NOW THERE ARE TWO OF YOU IN A GRAVEYARD.",
+      },
+    },
+    "Grudgetide Shoals": {
+      glyph: "tide",
+      text: "TWO ISLAND KEEPS ON A MUD FLAT. EACH HOUSE HAS ITS OWN DRY STONE CAUSEWAY ON ITS OWN FLANK. THE KEEPS ARE ON CLIFFS: YOU CAN DROP OFF THEM BUT NOT CLIMB BACK UP.",
+      tip: "WEAR BOOTS. NOT THAT YOU CAN.",
+      mech: {
+        title: "THE TIDE",
+        text: `EVERY ${(sh2.lowSeconds ?? 40) + (sh2.highSeconds ?? 30)} SECONDS THE TIDE COMES IN AND THE FLATS FLOOD FOR ${sh2.highSeconds ?? 30} SECONDS, SLOWING EVERYONE ON THEM. THEN IT GOES BACK OUT, AS TIDES DO.`,
+        tip: "PUSH AT LOW TIDE. AT HIGH TIDE, STICK TO THE CAUSEWAYS AND ISLETS.",
+      },
+    },
+    "Frostcross Summit": {
+      glyph: "peak",
+      text: "A FREE FOR ALL FIELD. FOUR KEEPS SIT AT THE FEET OF A FROZEN CROSS, WITH THE GRUDGE UP ON THE SUMMIT IN THE MIDDLE. BETWEEN THE ARMS ARE DEEP ICY BOWLS, CROSSED BY NARROW ROCK CAUSEWAYS THAT LINK EACH KEEP TO ITS NEIGHBOURS. THE OGRE LIVES ON THOSE.",
+      tip: "YOUR NEIGHBOURS ARE CLOSER THAN THE HOUSE ACROSS THE PEAK. SO ARE YOU, TO THEM.",
+      mech: {
+        title: "AVALANCHE",
+        text: `EVERY ${fc.everySeconds ?? 38} SECONDS ONE ARM RUMBLES FOR ${fc.warnSeconds ?? 6} SECONDS, THEN A WALL OF SNOW COMES DOWN IT FROM THE SUMMIT TOWARD THE KEEP. CHAMPIONS TAKE ${fc.heroDamage ?? 140} DAMAGE AND GET SHOVED; SOLDIERS LOSE ${Math.round((fc.unitDamage ?? 0.75) * 100)}% OF THEIR HEALTH. BUILDINGS ARE FINE. THE SNOW STAYS FOR ${fc.driftSeconds ?? 14} SECONDS AND SLOWS EVERYONE WADING THROUGH IT. IT GOES ROUND THE ARMS CLOCKWISE.`,
+        tip: "WHEN THE SNOW RUMBLES, GET OUT OF THE LANE. IF YOU CAN COUNT, YOU KNOW WHICH LANE IS NEXT.",
+      },
+    },
+    "Bellwick Gardens": {
+      glyph: "bell",
+      text: "A FREE FOR ALL FIELD. FOUR KEEPS IN THE CORNERS OF A VERY POSH WALLED GARDEN. A GRAVEL AVENUE RUNS FROM EACH KEEP PAST A ROUNDABOUT TOWER TO THE COURT IN THE MIDDLE. EVERYTHING ELSE IS HEDGES.",
+      tip: "THE AVENUE NEVER CLOSES. THE HEDGES NEVER OPEN. EVERYTHING IN BETWEEN DEPENDS ON THE BELLS.",
+      mech: {
+        title: "BELLS AND THE FOUNTAIN",
+        text: `EVERY ${gg.everySeconds ?? 40} SECONDS THE BELLS RING AND THE IRON GATES SWAP: EITHER THE OUTER GATES NEAR THE KEEPS ARE OPEN, OR THE GATES INTO THE COURT AND THE MIDDLE OF THE BORDERS. THE GRUDGE SITS IN A FOUNTAIN. CHAMPIONS WADING IN THE BASIN HEAL ${gf.heal ?? 32} HEALTH A SECOND.`,
+        tip: "THE FOUNTAIN HEALS EVERYONE. THAT INCLUDES THE THREE PEOPLE TRYING TO DROWN YOU IN IT.",
+      },
+    },
   };
   mapNames.forEach((name, index) => {
-    const [text, tip] = MAP_TEXT[name] ?? ["A FIELD OF BATTLE. IT HAS GRASS ON IT.", "WIN."];
-    entries.push({ cat: "FIELDS", title: name.toUpperCase().replace(/^GRUDGE\w*\s*/, ""), glyph: "river", pages: [{ title: name.toUpperCase(), text, tip, art: { kind: "map", index } }] });
+    const m = MAP_TEXT[name] ?? { glyph: "river", text: "A FIELD OF BATTLE. IT HAS GRASS ON IT.", tip: "WIN." };
+    const pages: CodexEntry["pages"] = [{ title: name.toUpperCase(), text: m.text, tip: m.tip, art: { kind: "map", index } }];
+    if (m.mech) pages.push({ title: m.mech.title, text: m.mech.text, tip: m.mech.tip, art: { kind: "seal", glyph: m.glyph } });
+    entries.push({ cat: "FIELDS", title: name.toUpperCase().replace(/^GRUDGE\w*\s*/, ""), glyph: m.glyph, pages });
   });
   const heroes = Object.keys(TEXT).filter((h) => HEROES[h]);
   return [...heroes.map(heroEntry), ...entries];

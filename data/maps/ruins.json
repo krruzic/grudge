@@ -1,11 +1,12 @@
 {
  "name": "Grudgekeep Ruins",
- "blurb": "A square keep torn in half. Corner to corner, tight halls, broken walls and bottomless pits. One neutral pad on the dais decides it.",
+ "blurb": "A square keep torn in half. Corner to corner, tight halls, broken walls and bottomless pits. One neutral pad on the dais decides it. Bone lanterns rise from the pits and drift to the empty graveyard corners; whoever grabs one is haunted.",
  "emblem": "castle",
  "width": 48,
  "depth": 48,
  "mirror": "diag",
  "surround": "crag",
+ "lantern": {"firstSeconds": 55, "everySeconds": 60, "riseSeconds": 3, "speed": 1.4, "restSeconds": 25, "spots": [{"x": 6.5, "z": 6.5}, {"x": 41.5, "z": 41.5}], "hauntSeconds": 20, "damageMul": 1.3, "speedMul": 1.15},
   "rimHeight": 4.5,
  "waterLevel": -6,
  "notes": "Square, mirrored across the diagonal x = z. Author the half where x < z (team 0 keeps the bottom-left corner). Rects mirror by swapping x/z and w/h; points swap x/z; prop rot becomes 90 - rot. Pits are impassable holes. Each base has two gates: the corner toward the centre and a back gate in the side wall onto the outer lane.",
@@ -300,6 +301,16 @@
   }
  ],
  "props": [
+  {"type": "grave", "x": 5.5, "z": 9.5, "rot": 10},
+  {"type": "grave", "x": 7.5, "z": 11, "rot": -15},
+  {"type": "grave", "x": 3, "z": 11.5, "rot": 30},
+  {"type": "column", "x": 8.5, "z": 9.5, "rot": 0},
+  {"type": "deadtree", "x": 2.5, "z": 13, "rot": 0},
+  {"type": "grave", "x": 40.5, "z": 43.5, "rot": 190},
+  {"type": "grave", "x": 38.5, "z": 44.5, "rot": 170},
+  {"type": "grave", "x": 42.5, "z": 46, "rot": 200},
+  {"type": "column", "x": 38.5, "z": 42.5, "rot": 0},
+  {"type": "deadtree", "x": 35, "z": 45.5, "rot": 0},
   {
    "type": "tower",
    "x": 1.5,

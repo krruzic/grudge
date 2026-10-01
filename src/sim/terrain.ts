@@ -79,6 +79,8 @@ export interface MapData {
   avalanche?: unknown;
   gates?: unknown;
   fountain?: unknown;
+  mist?: unknown;
+  lantern?: unknown;
 }
 
 export enum Kind {
@@ -141,6 +143,8 @@ export class Terrain {
   readonly avalanche?: unknown;
   readonly gates?: unknown;
   readonly fountain?: unknown;
+  readonly mist?: unknown;
+  readonly lantern?: unknown;
 
   get symmetry(): "x" | "diag" | "rot" | "quad" | "none" {
     return this.mirror;
@@ -186,6 +190,8 @@ export class Terrain {
     this.avalanche = data.avalanche;
     this.gates = data.gates;
     this.fountain = data.fountain;
+    this.mist = data.mist;
+    this.lantern = data.lantern;
     const mode = this.mirror;
     const mirror = mode !== "none";
 

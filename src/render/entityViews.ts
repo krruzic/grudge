@@ -1147,7 +1147,7 @@ export class EntityViews {
     const t = this.world.time;
     const s = e.status;
     const kind = !e.alive ? "" : t < s.stunUntil ? "stun" : t < s.markUntil ? "mark" : e.hero && t < e.hero.openingUntil ? "opening" : t < s.hexUntil ? "hex"
-      : t < s.bleedUntil && s.bleedStacks > 0 ? "bleed" : t < s.armorUntil && s.armorMul < 1 ? "armor" : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : (t < s.buffUntil && s.buffDamageMul > 1) || t < s.rallyUntil ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
+      : t < s.bleedUntil && s.bleedStacks > 0 ? "bleed" : t < s.armorUntil && s.armorMul < 1 ? "armor" : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : (t < s.buffUntil && s.buffDamageMul > 1) || t < s.rallyUntil || t < (s.hauntUntil ?? 0) ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
     if (kind !== v.markKind) {
       v.markKind = kind;
       if (v.mark) { v.root.remove(v.mark); v.mark = undefined; }

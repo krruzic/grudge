@@ -750,7 +750,8 @@ export class World {
       }
       if (e.kind !== "structure") {
         const inGrass = this.terrain.hasFlag(Math.floor(e.transform.pos.x), Math.floor(e.transform.pos.z), FLAG_GRASS);
-        s.hidden = (inGrass && this.time - s.lastAttackAt > revealT) || this.time < s.stealthUntil;
+        const cover = inGrass || this.mapEvents.misted(e.transform.pos.x, e.transform.pos.z);
+        s.hidden = (cover && this.time - s.lastAttackAt > revealT) || this.time < s.stealthUntil;
       }
     }
   }
@@ -809,6 +810,7 @@ export class World {
     const s = src.status;
     let m = (this.time < s.buffUntil ? s.buffDamageMul : 1) * s.auraDamageMul * s.supportDamageMul;
     if (this.time < s.rallyUntil) m *= this.data.match.economy.rally.damageMul;
+    if (src.hero) m *= this.mapEvents.hauntMul(src, "damage");
     if (src.hero) m *= src.hero.damageMul * (src.hero.action?.power ?? 1);
     if (src.unit && this.isSudden()) m *= this.data.match.suddenDeath.unitDamageMul;
     return m;
@@ -1162,6 +1164,7 @@ export class World {
     if (this.time < s.slowUntil) m *= s.slowMul;
     if (this.time < s.buffUntil) m *= s.buffSpeedMul;
     if (this.time < s.rallyUntil) m *= this.data.match.economy.rally.speedMul;
+    if (e.hero) m *= this.mapEvents.hauntMul(e, "speed");
     for (const z of this.zones) {
       if (z.haste && z.team === e.team && this.time < z.until && Math.hypot(e.transform.pos.x - z.x, e.transform.pos.z - z.z) <= z.radius) {
         m *= z.haste;

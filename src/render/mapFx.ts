@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
 import blockUrl from "../../assets/textures/wallblock.png?url";
-import { FX } from "./fxKit";
+import { FX, SUMMONER } from "./fxKit";
 import { gateSlots, type FountainDef, type GatesDef, type GateSlot } from "../sim/mapEvents";
 import { chunks, emit, type FxHost } from "./fxParts";
 
@@ -36,6 +36,11 @@ interface Gate {
   posts: [number, number, number][];
 }
 
+const BONE = new THREE.MeshLambertMaterial({ color: 0xe8dcc0 });
+BONE.userData.keep = true;
+const SOUL = new THREE.MeshBasicMaterial({ color: 0x40ff60, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
+SOUL.userData.keep = true;
+
 const IRON = new THREE.MeshLambertMaterial({ color: 0x3a3a40 });
 IRON.userData.keep = true;
 const BAR_H = 2.7;
@@ -53,11 +58,124 @@ export class MapFx {
   private fountain?: FountainDef;
   private sprayAcc = 0;
   private ring = 0;
+  private lanternObj: THREE.Group | null = null;
+  private lanternId = 0;
+  private lanternY = 0;
+  private wispAcc = 0;
+  private mistCells: number[] = [];
+  private mistAcc = 0;
 
   constructor(private world: World, private fx?: FxHost) {
     const gd = world.terrain.gates as GatesDef | undefined;
     if (gd) this.buildGates(gateSlots(world, gd));
     this.fountain = world.terrain.fountain as FountainDef | undefined;
+    const m = world.mapEvents.mistMask;
+    if (m) for (let i = 0; i < m.length; i++) if (m[i]) this.mistCells.push(i);
+  }
+
+  private buildLantern(): THREE.Group {
+    const g = new THREE.Group();
+    const parts: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const b = new THREE.CylinderGeometry(0.045, 0.06, 0.9, 5);
+      b.translate(Math.cos(a) * 0.32, 0, Math.sin(a) * 0.32);
+      parts.push(b);
+      const k = new THREE.SphereGeometry(0.07, 5, 4);
+      k.translate(Math.cos(a) * 0.32, 0.46, Math.sin(a) * 0.32);
+      parts.push(k);
+    }
+    for (const y of [-0.48, 0.5]) {
+      const r = new THREE.CylinderGeometry(y > 0 ? 0.28 : 0.4, y > 0 ? 0.42 : 0.3, 0.14, 8);
+      r.translate(0, y, 0);
+      parts.push(r);
+    }
+    const skull = new THREE.SphereGeometry(0.2, 7, 5);
+    skull.scale(1, 0.9, 1.1);
+    skull.translate(0, 0.72, 0);
+    parts.push(skull);
+    const hook = new THREE.TorusGeometry(0.12, 0.03, 4, 8);
+    hook.translate(0, 0.95, 0);
+    parts.push(hook);
+    const cage = new THREE.Mesh(mergeGeometries(parts.map((q) => q.toNonIndexed()), false)!, BONE);
+    parts.forEach((q) => q.dispose());
+    g.add(cage);
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), SOUL);
+    core.name = "core";
+    g.add(core);
+    g.scale.setScalar(1.5);
+    return g;
+  }
+
+  private syncLantern(time: number, dt: number): void {
+    const w = this.world;
+    const me = w.mapEvents;
+    const l = me.lantern;
+    const def = me.lanternDef;
+    if (!l || !def) {
+      if (this.lanternObj) {
+        this.root.remove(this.lanternObj);
+        this.lanternObj.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+        this.lanternObj = null;
+      }
+    } else {
+      if (!this.lanternObj || this.lanternId !== l.id) {
+        if (this.lanternObj) this.root.remove(this.lanternObj);
+        this.lanternObj = this.buildLantern();
+        this.lanternId = l.id;
+        this.root.add(this.lanternObj);
+      }
+      const o = this.lanternObj;
+      const ground = w.groundY(l.x, l.z);
+      const hover = 1.9 + Math.sin(time * 2.2) * 0.18;
+      let y = ground + hover;
+      if (l.state === "rise") {
+        const k = Math.min(1, (w.time - l.start) / def.riseSeconds);
+        y = ground - 3 + (hover + 3) * (k * k * (3 - 2 * k));
+      }
+      this.lanternY = y;
+      o.position.set(l.x, y, l.z);
+      o.rotation.y = time * 0.9;
+      o.rotation.z = Math.sin(time * 1.7) * 0.12;
+      const core = o.getObjectByName("core") as THREE.Mesh;
+      core.scale.setScalar(1 + Math.sin(time * 9) * 0.12);
+      if (this.fx) {
+        this.wispAcc += dt;
+        if (this.wispAcc > 0.06) {
+          this.wispAcc = 0;
+          emit(this.fx, { tex: SUMMONER.soulFlame, n: 2, x: l.x, y: y + 0.1, z: l.z, size: [0.8, 1.2], grow: 0.6, life: [0.4, 0.7], speed: [0.3, 0.8], up: [0.8, 1.4], additive: true, color: 0x60ff70, jitter: 0.25 });
+          if (Math.random() < 0.4) emit(this.fx, { tex: SUMMONER.ghost, n: 1, x: l.x, y: y - 0.3, z: l.z, size: [0.6, 0.9], grow: 1.2, life: [0.8, 1.2], speed: [0.4, 0.9], up: [0.2, 0.5], opacity: 0.55, color: 0xc8ffd0, jitter: 0.8 });
+          if (l.state === "rise" && Math.random() < 0.6) emit(this.fx, { tex: SUMMONER.graveHand, n: 1, x: l.x, y: ground - 0.2, z: l.z, size: [0.7, 1.0], life: [0.6, 0.9], speed: [0.2, 0.5], up: [1, 2], opacity: 0.85, color: 0xb8e8b0, jitter: 1.6 });
+        }
+      }
+    }
+    if (!this.fx) return;
+    for (const e of w.entities) {
+      if (!e.alive || !e.hero || !(time < (e.status.hauntUntil ?? 0))) continue;
+      if (Math.random() > dt * 10) continue;
+      const a = Math.random() * Math.PI * 2;
+      emit(this.fx, { tex: Math.random() < 0.5 ? SUMMONER.soulFlame : SUMMONER.ghost, n: 1, x: e.transform.pos.x + Math.cos(a) * 0.7, y: e.transform.y + 0.8 + Math.random() * 1.2, z: e.transform.pos.z + Math.sin(a) * 0.7, size: [0.35, 0.6], grow: 0.8, life: [0.4, 0.7], speed: [0.2, 0.6], up: [0.6, 1.2], additive: true, color: 0x90ff9c, opacity: 0.8 });
+    }
+  }
+
+  private syncMist(time: number, dt: number): void {
+    const w = this.world;
+    if (!this.fx || !this.mistCells.length) return;
+    const [tail, front] = w.mapEvents.mistBand(w.time);
+    if (front <= tail) return;
+    this.mistAcc += dt;
+    const W = w.terrain.width;
+    const n = Math.floor(this.mistAcc * 120);
+    if (!n) return;
+    this.mistAcc -= n / 120;
+    for (let k = 0; k < n; k++) {
+      const c = this.mistCells[Math.floor(Math.random() * this.mistCells.length)];
+      const x = (c % W) + Math.random();
+      const z = Math.floor(c / W) + Math.random();
+      if (z > front || z < tail) continue;
+      const lead = front - z < 4;
+      emit(this.fx, { tex: FX.smoke, n: 1, x, y: Math.max(w.groundY(x, z), w.terrain.waterLevel) + 0.5 + Math.random() * 0.9, z, size: [3.8, 5.6], grow: 1.3, life: [2.4, 3.2], speed: [0.15, 0.5], dir: { x: 0, y: 0.05, z: 1 }, cone: 1.2, opacity: lead ? 0.62 : 0.48, color: 0xe4ecee });
+    }
   }
 
   private buildGates(slots: GateSlot[]): void {
@@ -150,6 +268,21 @@ export class MapFx {
   }
 
   handle(ev: { type: string; [k: string]: unknown }): void {
+    if (ev.type === "lantern") {
+      const l = ev as unknown as { stage: string; x: number; z: number; hero: number };
+      if (this.fx && l.stage === "taken") {
+        emit(this.fx, { tex: SUMMONER.burst, n: 1, x: l.x, y: this.lanternY, z: l.z, size: [2.4, 2.4], grow: 1.6, life: [0.4, 0.4], speed: [0, 0], additive: true, color: 0x9cff9c });
+        emit(this.fx, { tex: SUMMONER.ghost, n: 8, x: l.x, y: this.lanternY, z: l.z, size: [0.6, 1.0], life: [0.6, 1.0], speed: [2, 4], additive: true, color: 0xb0ffb8 });
+        emit(this.fx, { tex: SUMMONER.bones, n: 5, x: l.x, y: this.lanternY, z: l.z, size: [0.3, 0.5], life: [0.6, 0.9], speed: [2, 4], up: [1, 3], gravity: 9 });
+      } else if (this.fx && l.stage === "rise") {
+        const y = this.world.groundY(l.x, l.z);
+        emit(this.fx, { tex: FX.smoke, n: 6, x: l.x, y: y + 0.3, z: l.z, size: [1.6, 2.6], grow: 1.6, life: [1.0, 1.6], speed: [0.3, 1], up: [1, 2], opacity: 0.6, color: 0x405848, jitter: 1.5 });
+        emit(this.fx, { tex: SUMMONER.skull, n: 3, x: l.x, y: y + 0.6, z: l.z, size: [0.5, 0.8], life: [1.0, 1.4], speed: [0.3, 0.8], up: [1.5, 2.5], additive: true, color: 0x90ff9c, jitter: 1 });
+      } else if (this.fx && l.stage === "fade") {
+        emit(this.fx, { tex: SUMMONER.ghost, n: 6, x: l.x, y: this.lanternY, z: l.z, size: [0.6, 1.0], life: [0.8, 1.2], speed: [0.5, 1.5], up: [1, 2], opacity: 0.6, color: 0xc8ffd0 });
+      }
+      return;
+    }
     if (ev.type === "gates") {
       const g = ev as unknown as { stage: "warn" | "shift" };
       if (g.stage === "warn" && this.fx) {
@@ -178,6 +311,8 @@ export class MapFx {
     const w = this.world;
     this.syncGates(dt);
     this.syncFountain(dt);
+    this.syncLantern(time, dt);
+    this.syncMist(time, dt);
     if (this.ring > 0 && this.fx) {
       this.ring -= dt;
       if (Math.floor((this.ring + dt) * 4) !== Math.floor(this.ring * 4)) {

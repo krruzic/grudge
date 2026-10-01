@@ -1,5 +1,6 @@
 import { Kind, type Rect } from "./terrain.ts";
 import type { World } from "./world.ts";
+import type { Entity } from "./types.ts";
 
 export interface AvalancheDef {
   firstSeconds: number;
@@ -58,6 +59,41 @@ export function gateSlots(w: World, def: GatesDef): GateSlot[] {
   return out;
 }
 
+export interface MistDef {
+  firstSeconds: number;
+  everySeconds: number;
+  warnSeconds: number;
+  rollSeconds: number;
+  holdSeconds: number;
+  pad: number;
+  x0?: number;
+  x1?: number;
+}
+
+export interface LanternDef {
+  firstSeconds: number;
+  everySeconds: number;
+  riseSeconds: number;
+  speed: number;
+  restSeconds: number;
+  spots: { x: number; z: number }[];
+  hauntSeconds: number;
+  damageMul: number;
+  speedMul: number;
+}
+
+export interface Lantern {
+  state: "rise" | "drift" | "rest";
+  x: number;
+  z: number;
+  fromX: number;
+  fromZ: number;
+  tx: number;
+  tz: number;
+  start: number;
+  id: number;
+}
+
 const DIRS: Record<AvalancheDef["from"], [number, number]> = { n: [0, 1], s: [0, -1], w: [1, 0], e: [-1, 0] };
 
 export function avalancheLanes(w: World, def: AvalancheDef): Lane[] {
@@ -88,8 +124,42 @@ export class MapEvents {
   private gateAt = Infinity;
   private gateWarned = false;
   private fountain?: FountainDef;
+  readonly mist?: MistDef;
+  mistMask: Uint8Array | null = null;
+  mistStart = -Infinity;
+  private mistAt = Infinity;
+  private mistWarned = false;
+  private mistOn = false;
+  readonly lanternDef?: LanternDef;
+  lantern: Lantern | null = null;
+  private lanternAt = Infinity;
+  private lanternSeq = 0;
+  private pits: { x: number; z: number }[] = [];
 
   constructor(private w: World) {
+    this.mist = w.terrain.mist as MistDef | undefined;
+    if (this.mist) {
+      const t = w.terrain;
+      const m = new Uint8Array(t.width * t.depth);
+      const p = this.mist.pad;
+      for (let z = 0; z < t.depth; z++) for (let x = 0; x < t.width; x++) {
+        const k = t.kinds[z * t.width + x];
+        if (k !== Kind.Water && k !== Kind.Ford && k !== Kind.Bridge) continue;
+        if (x < (this.mist.x0 ?? 0) || x >= (this.mist.x1 ?? t.width)) continue;
+        for (let dz = -p; dz <= p; dz++) for (let dx = -p; dx <= p; dx++) {
+          const xx = x + dx;
+          const zz = z + dz;
+          if (xx >= 0 && zz >= 0 && xx < t.width && zz < t.depth && dx * dx + dz * dz <= p * p + 1) m[zz * t.width + xx] = 1;
+        }
+      }
+      this.mistMask = m;
+      this.mistAt = this.mist.firstSeconds;
+    }
+    this.lanternDef = w.terrain.lantern as LanternDef | undefined;
+    if (this.lanternDef) {
+      this.lanternAt = this.lanternDef.firstSeconds;
+      this.pits = this.findPits();
+    }
     this.fountain = w.terrain.fountain as FountainDef | undefined;
     this.gates = w.terrain.gates as GatesDef | undefined;
     if (this.gates) {
@@ -116,7 +186,150 @@ export class MapEvents {
     return this.av ? { arm: this.arm, at: this.nextAt } : null;
   }
 
+  private findPits(): { x: number; z: number }[] {
+    const t = this.w.terrain;
+    const seen = new Uint8Array(t.width * t.depth);
+    const out: { x: number; z: number }[] = [];
+    for (let i = 0; i < seen.length; i++) {
+      if (seen[i] || t.styles[i] !== "pit") continue;
+      const stack = [i];
+      seen[i] = 1;
+      let sx = 0;
+      let sz = 0;
+      let n = 0;
+      while (stack.length) {
+        const c = stack.pop()!;
+        const cx = c % t.width;
+        const cz = Math.floor(c / t.width);
+        sx += cx + 0.5;
+        sz += cz + 0.5;
+        n++;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const xx = cx + dx;
+          const zz = cz + dz;
+          if (xx < 0 || zz < 0 || xx >= t.width || zz >= t.depth) continue;
+          const j = zz * t.width + xx;
+          if (!seen[j] && t.styles[j] === "pit") {
+            seen[j] = 1;
+            stack.push(j);
+          }
+        }
+      }
+      out.push({ x: sx / n, z: sz / n });
+    }
+    return out;
+  }
+
+  misted(x: number, z: number): boolean {
+    const m = this.mistMask;
+    if (!m || !this.mist) return false;
+    const t = this.w.terrain;
+    const cx = Math.floor(x);
+    const cz = Math.floor(z);
+    if (cx < 0 || cz < 0 || cx >= t.width || cz >= t.depth || !m[cz * t.width + cx]) return false;
+    const [tail, front] = this.mistBand(this.w.time);
+    return z < front && z > tail;
+  }
+
+  mistBand(time: number): [number, number] {
+    const d = this.mist;
+    if (!d) return [0, 0];
+    const t = time - this.mistStart;
+    const span = this.w.terrain.depth + 6;
+    if (t < 0 || t > d.rollSeconds * 2 + d.holdSeconds) return [0, 0];
+    const front = Math.min(1, t / d.rollSeconds) * span - 3;
+    const tail = t > d.rollSeconds + d.holdSeconds ? ((t - d.rollSeconds - d.holdSeconds) / d.rollSeconds) * span - 3 : -Infinity;
+    return [tail, front];
+  }
+
+  hauntMul(e: { status: { hauntUntil?: number } }, kind: "damage" | "speed"): number {
+    const d = this.lanternDef;
+    if (!d || !(this.w.time < (e.status.hauntUntil ?? 0))) return 1;
+    return kind === "damage" ? d.damageMul : d.speedMul;
+  }
+
+  private updateMist(d: MistDef): void {
+    const w = this.w;
+    if (!this.mistWarned && w.time >= this.mistAt - d.warnSeconds) {
+      this.mistWarned = true;
+      w.emit({ type: "mist", stage: "warn", seconds: d.warnSeconds });
+      w.emit({ type: "notice", team: -1, text: "MIST ON THE RIVER · ANYTHING IN IT IS HIDDEN" });
+    }
+    if (w.time >= this.mistAt) {
+      this.mistStart = w.time;
+      this.mistOn = true;
+      w.emit({ type: "mist", stage: "in", seconds: d.rollSeconds * 2 + d.holdSeconds });
+      this.mistAt = w.time + d.everySeconds;
+      this.mistWarned = false;
+    }
+    if (this.mistOn && w.time > this.mistStart + d.rollSeconds * 2 + d.holdSeconds) {
+      this.mistOn = false;
+      w.emit({ type: "mist", stage: "out", seconds: 0 });
+    }
+  }
+
+  private updateLantern(d: LanternDef): void {
+    const w = this.w;
+    if (!this.lantern) {
+      if (w.time < this.lanternAt || !this.pits.length || !d.spots.length) return;
+      const pit = this.pits[Math.floor(w.rng() * this.pits.length) % this.pits.length];
+      let spot = d.spots[0];
+      let bd = Infinity;
+      for (const s of d.spots) {
+        const dd = Math.hypot(s.x - pit.x, s.z - pit.z);
+        if (dd < bd) {
+          bd = dd;
+          spot = s;
+        }
+      }
+      this.lantern = { state: "rise", x: pit.x, z: pit.z, fromX: pit.x, fromZ: pit.z, tx: spot.x, tz: spot.z, start: w.time, id: ++this.lanternSeq };
+      w.emit({ type: "lantern", stage: "rise", x: pit.x, y: w.groundY(pit.x, pit.z), z: pit.z, id: this.lanternSeq, hero: 0 });
+      w.emit({ type: "notice", team: -1, text: "THE DEAD STIR · A BONE LANTERN RISES FROM THE PIT" });
+      return;
+    }
+    const l = this.lantern;
+    const t = w.time - l.start;
+    if (l.state === "rise" && t >= d.riseSeconds) {
+      l.state = "drift";
+      l.start = w.time;
+    } else if (l.state === "drift") {
+      const total = Math.hypot(l.tx - l.fromX, l.tz - l.fromZ);
+      const k = Math.min(1, (t * d.speed) / (total || 1));
+      const e = k * k * (3 - 2 * k);
+      l.x = l.fromX + (l.tx - l.fromX) * e;
+      l.z = l.fromZ + (l.tz - l.fromZ) * e;
+      if (k >= 1) {
+        l.state = "rest";
+        l.start = w.time;
+      }
+    } else if (l.state === "rest" && t >= d.restSeconds) {
+      w.emit({ type: "lantern", stage: "fade", x: l.x, y: w.groundY(l.x, l.z), z: l.z, id: l.id, hero: 0 });
+      this.lantern = null;
+      this.lanternAt = w.time + d.everySeconds;
+      return;
+    }
+    if (l.state === "rise") return;
+    let best: Entity | null = null;
+    let bd = 1.7;
+    for (const e of w.entities) {
+      if (!e.alive || !e.hero || e.hero.dead) continue;
+      const dd = Math.hypot(e.transform.pos.x - l.x, e.transform.pos.z - l.z);
+      if (dd < bd || (dd === bd && best && e.id < best.id)) {
+        bd = dd;
+        best = e;
+      }
+    }
+    if (!best) return;
+    best.status.hauntUntil = w.time + d.hauntSeconds;
+    w.emit({ type: "lantern", stage: "taken", x: l.x, y: w.groundY(l.x, l.z), z: l.z, id: l.id, hero: best.id });
+    w.emit({ type: "notice", team: -1, text: `${w.teamName(best.team)} TAKES THE BONE LANTERN · HAUNTED ${d.hauntSeconds}S` });
+    this.lantern = null;
+    this.lanternAt = w.time + d.everySeconds;
+  }
+
   update(): void {
+    if (this.mist) this.updateMist(this.mist);
+    if (this.lanternDef) this.updateLantern(this.lanternDef);
     if (this.av) this.updateAvalanche(this.av);
     if (this.gates) this.updateGates(this.gates);
     if (this.fountain && this.w.tick % 6 === 0) this.updateFountain(this.fountain);

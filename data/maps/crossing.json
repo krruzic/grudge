@@ -1,11 +1,12 @@
 {
  "name": "Grudgeholm Crossing",
- "blurb": "Two river channels split the field. Hold the long island, wade the fords and fight over the neutral pads.",
+ "blurb": "Two river channels split the field. Hold the long island, wade the fords and fight over the neutral pads. Every so often a mist rolls down the rivers and hides whoever is in it.",
  "emblem": "river",
  "width": 104,
  "depth": 48,
  "mirror": "x",
  "surround": "valley",
+ "mist": {"firstSeconds": 60, "everySeconds": 75, "warnSeconds": 5, "rollSeconds": 6, "holdSeconds": 16, "pad": 2, "x0": 30, "x1": 74},
   "rimHeight": 4.5,
  "waterLevel": -0.5,
  "notes": "Authored for the left half (x < 48) and mirrored across x = 48. Height ops run on the (width+1)x(depth+1) vertex grid in order: noise, then shapes (rect or circle, target y or dy, soft edge width in meters, mode max|min|set|add; edge 0 makes a cliff). Cell ops set kinds: wall (style castle|ruin|rim), water (becomes ground where the terrain rises above the water line), ford, bridge (flat deck at y). Flags: dirt, paving, grass (tall grass hides units). Props with solid=true block their cell.",

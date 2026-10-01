@@ -31,6 +31,7 @@ export interface Status {
   buffDamageMul: number;
   buffSpeedMul: number;
   rallyUntil: number;
+  hauntUntil?: number;
   invulnUntil: number;
   lastAttackAt: number;
   lastHitAt: number;
@@ -386,6 +387,8 @@ export type SimEvent =
   | { type: "miss"; x: number; y: number; z: number }
   | { type: "death"; id: number; kind: Entity["kind"]; x: number; y: number; z: number; team: number; big: boolean }
   | { type: "eliminated"; team: number; by: number }
+  | { type: "mist"; stage: "warn" | "in" | "out"; seconds: number }
+  | { type: "lantern"; stage: "rise" | "taken" | "fade"; x: number; y: number; z: number; id: number; hero: number }
   | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number }
   | { type: "avalanche"; stage: "warn" | "slide" | "settle"; arm: number; rect: { x: number; z: number; w: number; h: number }; dx: number; dz: number; seconds: number }
   | { type: "spawn"; id: number }

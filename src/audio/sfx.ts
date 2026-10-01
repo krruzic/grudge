@@ -134,6 +134,21 @@ export class Audio {
           else if (ev.big) { this.tone("sine", 140, 45, 0.22, 0.5, pan); this.hiss(1200, 0.7, 0.18, 0.4, pan); }
           else { this.tone("sine", 190, 70, 0.1, 0.3, pan); this.hiss(1800, 0.8, 0.07, 0.22, pan); }
           break;
+        case "avalanche":
+          if (ev.stage === "warn") { this.hiss(90, 0.7, 2.5, 0.35, 0, "lowpass", 0, 160); this.tone("sine", 42, 38, 2.5, 0.25); }
+          else if (ev.stage === "slide") { this.hiss(400, 0.6, 2.2, 0.5, 0, "lowpass", 0, 120); this.tone("sawtooth", 55, 30, 1.8, 0.18); }
+          break;
+        case "gates":
+          if (ev.stage === "warn") [0, 0.9, 1.8].forEach((at) => { this.tone("sine", 392, 390, 1.2, 0.16, 0, at); this.tone("sine", 988, 980, 0.8, 0.06, 0, at); });
+          else { this.tone("square", 110, 70, 0.5, 0.12); this.hiss(700, 1.5, 0.6, 0.12, 0, "bandpass"); }
+          break;
+        case "mist":
+          if (ev.stage === "warn") this.hiss(600, 0.5, 3, 0.12, 0, "lowpass", 0, 250);
+          break;
+        case "lantern":
+          if (ev.stage === "rise") { this.tone("sine", 300, 620, 1.6, 0.12, pan); this.tone("sine", 310, 600, 1.6, 0.08, pan, 0.15); }
+          else if (ev.stage === "taken") [523, 659, 784, 1046].forEach((f, i) => this.tone("triangle", f, f, 0.3, 0.1, pan, i * 0.07));
+          break;
         case "miss":
           if (this.allow("miss", 2)) this.hiss(2500, 1, 0.18, 0.12, pan, "bandpass", 0, 700);
           break;
