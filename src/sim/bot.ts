@@ -389,6 +389,18 @@ export class Bot {
       if (rdy("b") && ab.b.bot === "fight" && useHint("b", d) && this.rand() < 0.35) this.wantB = true;
       if (rdy("r") && ab.r.bot === "fight" && useHint("r", d) && this.rand() < 0.35) this.wantR = true;
       if (fight.hero?.action?.name === "a" && d < 2.8 && this.rand() < 0.25 * this.skill) this.wantBlock = true;
+      if (prefer > 3) {
+        const tx = fx - p.x;
+        const tz = fz - p.z;
+        const tl = Math.hypot(tx, tz) || 1;
+        const melee = !!fight.hero && (w.heroDef(fight.hero.type).botRange ?? 1.8) <= 3;
+        if (melee && d < 4.5) {
+          this.goal = { x: p.x - (tx / tl) * 4, z: p.z - (tz / tl) * 4 };
+          if (rdy("b") && ab.b.bot === "fight" && this.rand() < 0.5 * this.skill) this.wantB = true;
+          if (enemyAttacking && d < 3 && this.rand() < 0.3 * this.skill) this.wantDodge = true;
+        }
+        if ((this.wantAttack || this.wantB || this.wantR) && !this.wantDodge) this.wantFace = { x: tx / tl, z: tz / tl };
+      }
       return;
     }
     this.fightId = 0;

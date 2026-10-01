@@ -60,7 +60,7 @@
       "hooks": {
         "auraRadius": 7,
         "auraDamageMul": 1.05,
-        "heavyStatMul": 1.25
+        "heavyStatMul": 1.1
       },
       "abilities": {
         "a": {
@@ -97,10 +97,10 @@
           "offset": 1.4,
           "dur": 0.7,
           "hitAt": 0.42,
-          "cooldown": 7,
+          "cooldown": 8.5,
           "knockback": 7,
           "slowMul": 0.5,
-          "slowSeconds": 1.5,
+          "slowSeconds": 1.0,
           "anim": "attack_a",
           "bot": "fight",
           "botRange": 3.2,
@@ -111,29 +111,28 @@
         "r": {
           "kind": "warcry",
           "radius": 10,
-          "damageMul": 1.25,
-          "speedMul": 1.25,
+          "damageMul": 1.12,
+          "speedMul": 1.12,
           "seconds": 6,
           "cooldown": 16,
           "dur": 0.5,
           "anim": "idle",
           "bot": "allies",
-          "resetB": true,
           "callout": "WAR CRY \u00b7 ALLIES HIT HARDER"
         },
         "z": {
           "kind": "quake",
-          "damage": 220,
-          "structureDamage": 140,
+          "damage": 170,
+          "structureDamage": 100,
           "radius": 6,
-          "stunSeconds": 1.2,
+          "stunSeconds": 1.0,
           "knockback": 9,
           "dur": 1.0,
           "hitAt": 0.7,
           "anim": "attack_a",
           "bot": "fight",
           "botRange": 4,
-          "vsSlowedMul": 1.5,
+          "vsSlowedMul": 1.3,
           "stunBonus": 0.6,
           "callout": "EARTHQUAKE \u00b7 STUNS",
           "variance": 0.3
@@ -215,8 +214,8 @@
         "z": {
           "kind": "ballista",
           "anim": "attack_a",
-          "hp": 450,
-          "damage": 80,
+          "hp": 520,
+          "damage": 95,
           "range": 11,
           "cooldown": 1.8,
           "seconds": 20,
@@ -241,7 +240,7 @@
       "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills reset Leap.",
       "health": "low",
       "speed": "swift",
-      "damage": "mid",
+      "damage": "high",
       "defaultBuild": "barracks",
       "botRange": 1.6,
       "hooks": {
@@ -250,54 +249,56 @@
         "awayRadius": 28,
         "stepHeight": 1.4,
         "maxSlope": 3.5,
-        "killResetsB": 1
+        "killResetsB": 1,
+        "speedMul": 1.07
       },
       "abilities": {
         "a": {
           "kind": "combo",
           "hits": [
             {
-              "damage": 26,
-              "range": 2.0,
-              "arcDeg": 100,
-              "dur": 0.22,
-              "hitAt": 0.08,
+              "damage": 24,
+              "range": 2.4,
+              "arcDeg": 60,
+              "dur": 0.16,
+              "hitAt": 0.03,
               "lunge": 3.5,
-              "knockback": 0.6
+              "knockback": 0.15
             },
             {
-              "damage": 26,
-              "range": 2.0,
-              "arcDeg": 100,
-              "dur": 0.22,
-              "hitAt": 0.08,
+              "damage": 24,
+              "range": 2.4,
+              "arcDeg": 60,
+              "dur": 0.16,
+              "hitAt": 0.03,
               "lunge": 3.5,
-              "knockback": 0.6
+              "knockback": 0.15
             },
             {
-              "damage": 26,
-              "range": 2.0,
-              "arcDeg": 100,
-              "dur": 0.22,
-              "hitAt": 0.08,
+              "damage": 24,
+              "range": 2.4,
+              "arcDeg": 60,
+              "dur": 0.16,
+              "hitAt": 0.03,
               "lunge": 3.5,
-              "knockback": 0.6
+              "knockback": 0.15
             },
             {
-              "damage": 48,
-              "range": 2.3,
-              "arcDeg": 140,
-              "dur": 0.34,
-              "hitAt": 0.14,
+              "damage": 40,
+              "range": 2.6,
+              "arcDeg": 90,
+              "dur": 0.26,
+              "hitAt": 0.05,
               "lunge": 4.5,
               "knockback": 3.0
             }
           ],
-          "comboWindow": 0.4,
+          "comboWindow": 0.22,
           "anim": "attack_a",
           "bot": "fight",
           "crit": 0.12,
-          "variance": 0.18
+          "variance": 0.18,
+          "comboCooldown": 0.05
         },
         "b": {
           "kind": "leap",
@@ -550,14 +551,14 @@
       "hooks": {
         "controlTowerMul": 1.5,
         "speedMul": 0.92,
-        "structureMul": 1.3
+        "structureMul": 1.2
       },
       "abilities": {
         "a": {
           "kind": "combo",
           "hits": [
             {
-              "damage": 54,
+              "damage": 50,
               "range": 2.9,
               "arcDeg": 160,
               "dur": 0.46,
@@ -566,7 +567,7 @@
               "knockback": 1.5
             },
             {
-              "damage": 86,
+              "damage": 80,
               "range": 3.1,
               "arcDeg": 190,
               "dur": 0.58,
@@ -586,7 +587,7 @@
           "anim": "attack_b",
           "range": 8.5,
           "width": 1.1,
-          "damage": 80,
+          "damage": 70,
           "knockback": 9,
           "stunSeconds": 0.3,
           "dur": 0.62,

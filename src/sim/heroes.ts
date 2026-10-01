@@ -23,8 +23,9 @@ export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Ent
     const dx = o.transform.pos.x - t.pos.x;
     const dz = o.transform.pos.z - t.pos.z;
     const len = Math.hypot(dx, dz) || 1;
-    const along = mag > 0.3 ? (dx * cmd.moveX + dz * cmd.moveZ) / (len * mag) : 1;
+    const along = mag > 0.3 ? (dx * cmd.moveX + dz * cmd.moveZ) / (len * mag) : reach > 4 ? (dx * Math.sin(t.facing) + dz * Math.cos(t.facing)) / len : 1;
     if (mag > 0.3 && along < 0.3) continue;
+    if (mag <= 0.3 && reach > 4 && along < 0.5) continue;
     const score = d + (o.hero ? -1.5 : 0) + (o.structure ? 1 : 0) - along * 2;
     if (score < bestScore) { bestScore = score; best = o; }
   }
@@ -259,7 +260,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
         begin(e, "a", "combo", hit.dur / spd, hit.hitAt / spd, dx, dz, idx);
         h.comboIndex = idx + 1;
         h.comboUntil = w.time + hit.dur / spd + (ab.a.comboWindow ?? 0.35);
-        const cd = b.comboCooldown ?? 0;
+        const cd = ab.a.comboCooldown ?? b.comboCooldown ?? 0;
         h.cooldowns.a = h.comboUntil + (idx === hits.length - 1 ? cd : cd * 0.5);
       } else if (ab.a.shots) {
         const shots = ab.a.shots;
