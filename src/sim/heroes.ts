@@ -189,6 +189,13 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     h.action = null;
     const k = (w.time - j.start) / j.dur;
     if (k < 0) return;
+    if (!j.launched) {
+      j.launched = true;
+      const p = w.jumpPads[j.pad];
+      p.launchAt = w.time;
+      p.readyAt = w.time + w.jumpCooldown;
+      w.emit({ type: "jumppad", stage: "launch", pad: j.pad, id: e.id, x: j.fx, y: t.y, z: j.fz, windup: 0, dur: j.dur });
+    }
     const f = Math.min(1, k);
     t.pos.x = j.fx + (j.tx - j.fx) * f;
     t.pos.z = j.fz + (j.tz - j.fz) * f;
@@ -203,17 +210,17 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     return;
   }
   if (!h.action && w.jumpPads.length && w.time >= (h.jumpReadyAt ?? 0) && !w.arena.carrying(e) && h.morphAt === undefined) {
-    const i = w.jumpPads.findIndex((p) => Math.hypot(p.x - t.pos.x, p.z - t.pos.z) < 1.1);
+    const i = w.jumpPads.findIndex((p) => w.time >= p.readyAt && w.time - p.chargeAt > w.jumpCharge + 0.05 && Math.hypot(p.x - t.pos.x, p.z - t.pos.z) < 1.1);
     if (i >= 0) {
       const p = w.jumpPads[i];
       const d = Math.hypot(p.tx - p.x, p.tz - p.z);
-      const windup = 0.3;
+      const windup = w.jumpCharge;
       const dur = Math.min(2.6, Math.max(1.0, 0.5 + d / 22));
       h.jump = { fx: p.x, fz: p.z, tx: p.tx, tz: p.tz, start: w.time + windup, dur, peak: 3.5 + d * 0.14, pad: i };
-      p.launchAt = w.time;
+      p.chargeAt = w.time;
       w.teleport(e, p.x, p.z);
       e.transform.facing = Math.atan2(p.tx - p.x, p.tz - p.z);
-      w.emit({ type: "jumppad", stage: "launch", pad: i, id: e.id, x: p.x, y: t.y, z: p.z, windup, dur });
+      w.emit({ type: "jumppad", stage: "charge", pad: i, id: e.id, x: p.x, y: t.y, z: p.z, windup, dur });
       return;
     }
   }

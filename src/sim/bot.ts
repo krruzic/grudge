@@ -96,6 +96,7 @@ export class Bot {
       let best: Vec2 | null = null;
       let bestCost = direct - 12;
       for (const jp of w.jumpPads) {
+        if (w.time < jp.readyAt - 1) continue;
         const toPad = Math.hypot(jp.x - p.x, jp.z - p.z);
         if (toPad > 26) continue;
         const cost = toPad + Math.hypot(g.x - jp.tx, g.z - jp.tz) + 4;

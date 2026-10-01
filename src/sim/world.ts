@@ -731,14 +731,31 @@ export class World {
     return { x: hx * fwd - hz * right, z: hz * fwd + hx * right, leash };
   }
 
-  jumpPads: { x: number; z: number; tx: number; tz: number; launchAt: number }[] = [];
+  jumpPads: { x: number; z: number; tx: number; tz: number; launchAt: number; chargeAt: number; readyAt: number; failAt: number }[] = [];
+  readonly jumpCharge = 1.0;
+  readonly jumpCooldown = 5;
+
+  cancelJump(e: Entity): void {
+    const j = e.hero?.jump;
+    if (!j || this.time >= j.start) return;
+    e.hero!.jump = undefined;
+    const p = this.jumpPads[j.pad];
+    if (p) {
+      p.readyAt = this.time + this.jumpCooldown;
+      p.failAt = this.time;
+      p.chargeAt = -99;
+    }
+    e.hero!.jumpReadyAt = this.time + 0.5;
+    const t = e.transform;
+    this.emit({ type: "jumppad", stage: "fail", pad: j.pad, id: e.id, x: t.pos.x, y: t.y, z: t.pos.z, windup: 0, dur: 0 });
+  }
 
   initJumpPads(): void {
     this.jumpPads = this.terrain.jumppads.map((j) => {
       const i = this.nav.nearestOpen(j.b.x, j.b.z, 6);
       const tx = i >= 0 ? (i % this.nav.w) + 0.5 : j.b.x;
       const tz = i >= 0 ? Math.floor(i / this.nav.w) + 0.5 : j.b.z;
-      return { x: j.a.x, z: j.a.z, tx, tz, launchAt: -99 };
+      return { x: j.a.x, z: j.a.z, tx, tz, launchAt: -99, chargeAt: -99, readyAt: 0, failAt: -99 };
     });
   }
 
@@ -1184,6 +1201,7 @@ export class World {
       }
     }
     target.hp -= amount;
+    if (target.hero?.jump && amount > 0) this.cancelJump(target);
     xpForDamage(this, src, target, amount);
     if (src && src.alive && src.status.stealUntil && this.time < src.status.stealUntil) this.heal(src, amount * (src.status.stealMul ?? 0));
     const b = this.data.heroes.baseline;

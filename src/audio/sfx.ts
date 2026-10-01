@@ -143,7 +143,9 @@ export class Audio {
           else { this.tone("square", 110, 70, 0.5, 0.12); this.hiss(700, 1.5, 0.6, 0.12, 0, "bandpass"); }
           break;
         case "jumppad":
-          if (ev.stage === "launch") { this.tone("square", 140, 90, 0.25, 0.08, pan); this.tone("sine", 220, 720, 0.35, 0.16, pan, 0.3); this.hiss(1800, 0.8, 0.3, 0.08, pan, "bandpass", 0.3, 400); }
+          if (ev.stage === "charge") this.tone("square", 110, 70, 0.9, 0.06, pan);
+          else if (ev.stage === "launch") { this.tone("sine", 220, 720, 0.35, 0.16, pan); this.hiss(1800, 0.8, 0.3, 0.08, pan, "bandpass", 0, 400); }
+          else if (ev.stage === "fail") this.tone("triangle", 300, 120, 0.25, 0.12, pan);
           else { this.tone("sine", 120, 50, 0.25, 0.3, pan); this.hiss(900, 0.7, 0.25, 0.2, pan); }
           break;
         case "tide":

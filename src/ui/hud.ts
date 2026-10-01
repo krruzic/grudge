@@ -1074,7 +1074,7 @@ export class Hud {
         g.beginPath();
         g.arc(ax, ay, 1.4, 0, Math.PI * 2);
         g.fill();
-        g.fillStyle = "#e8b830";
+        g.fillStyle = w.time < jp.readyAt ? "#6a6458" : "#e8b830";
         g.beginPath();
         g.arc(ax, ay, 0.95, 0, Math.PI * 2);
         g.fill();

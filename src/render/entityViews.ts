@@ -1302,7 +1302,7 @@ export class EntityViews {
     if (h.jump) {
       const j = h.jump;
       const k = (w.time - j.start) / j.dur;
-      if (k < 0) lift = 0.52 - 0.3 * Math.min(1, (k * j.dur + 0.3) / 0.3);
+      if (k < 0) lift = 0.52 - 0.3 * Math.min(1, (k * j.dur + w.jumpCharge) / w.jumpCharge);
       else {
         const f = Math.min(1, k);
         lift = 0.5 * (1 - f) + Math.sin(f * Math.PI) * j.peak;

@@ -161,15 +161,20 @@ export class MapFx {
     this.world.jumpPads.forEach((p, i) => {
       const s = this.springs[i];
       if (!s) return;
-      let k = 1 + Math.sin(t * 2.2 + i) * 0.03;
-      const wind = t - p.launchAt;
-      if (wind >= 0 && wind < 0.3) {
-        const q = wind / 0.3;
-        k = 1 - 0.62 * q * q;
-      } else if (wind >= 0.3 && wind < 1.4) {
-        const q = wind - 0.3;
-        k = 1 + 0.55 * Math.exp(-q * 4.5) * Math.cos(q * 22);
+      const cooling = t < p.readyAt;
+      let k = cooling ? 0.55 : 1 + Math.sin(t * 2.2 + i) * 0.03;
+      const charge = t - p.chargeAt;
+      const sinceLaunch = t - p.launchAt;
+      const sinceFail = t - p.failAt;
+      if (charge >= 0 && charge < this.world.jumpCharge && p.launchAt < p.chargeAt) {
+        const q = charge / this.world.jumpCharge;
+        k = 1 - 0.62 * q * q + Math.sin(charge * 60) * 0.02 * q;
+      } else if (sinceLaunch >= 0 && sinceLaunch < 1.1) {
+        k = 0.55 + 0.75 * Math.exp(-sinceLaunch * 4.5) * Math.cos(sinceLaunch * 22) * (sinceLaunch < 0.05 ? 0 : 1) + 0.45 * Math.min(1, sinceLaunch * 20) * Math.exp(-sinceLaunch * 3);
+      } else if (sinceFail >= 0 && sinceFail < 0.8) {
+        k = 0.55 + 0.25 * Math.exp(-sinceFail * 6) * Math.cos(sinceFail * 30);
       }
+      if (cooling && t - p.readyAt > -0.6) k = 0.55 + 0.45 * (1 - (p.readyAt - t) / 0.6);
       s.spring.scale.y = 0.32 * k;
       s.deck.position.y = 0.18 + 0.32 * k + 0.02;
     });
@@ -418,8 +423,11 @@ export class MapFx {
   handle(ev: { type: string; [k: string]: unknown }): void {
     if (ev.type === "jumppad") {
       const j = ev as unknown as { stage: string; x: number; y: number; z: number; windup: number };
-      if (j.stage === "launch") this.pendingBursts.push({ at: this.world.time + j.windup, x: j.x, y: j.y, z: j.z });
-      else if (this.fx) {
+      if (j.stage === "launch") this.pendingBursts.push({ at: this.world.time, x: j.x, y: j.y, z: j.z });
+      else if (j.stage === "fail" && this.fx) {
+        emit(this.fx, { tex: FX.smoke, n: 5, x: j.x, y: j.y + 0.6, z: j.z, size: [0.8, 1.2], grow: 1.4, life: [0.5, 0.8], speed: [0.6, 1.4], up: [0.5, 1.2], opacity: 0.6, color: 0x908880 });
+        chunks(this.fx, 3, j.x, j.y + 0.5, j.z, { size: [0.06, 0.12], speed: [1.5, 3], up: [1, 2] });
+      } else if (j.stage === "land" && this.fx) {
         emit(this.fx, { tex: FX.dust, n: 12, x: j.x, y: j.y + 0.2, z: j.z, size: [1.2, 2.0], grow: 1.6, life: [0.5, 0.9], speed: [3, 6], flatSpread: true, opacity: 0.8 });
         chunks(this.fx, 4, j.x, j.y + 0.3, j.z, { size: [0.1, 0.2], speed: [2, 4], up: [2, 4] });
         this.fx.shake = Math.max(this.fx.shake, 0.3);
