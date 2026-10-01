@@ -1328,6 +1328,7 @@ export class Hud {
       const local = !!ui[p.player];
       const tag = shown.length > 1 || teamHeroes.length > 1 ? `P${p.player + 1}` : "";
       const h = this.memo(ctx, `pp${p.player}`, this.panelKey(w, e, px0, py0, blockW, right, now, local, tag), px0 - 10, py0 - 6, blockW + 20, 64, (c) => this.drawPlayerPanel(c, w, e, px0, py0, blockW, right, now, local, tag));
+      this.panelAt[p.player] = { x: right ? px0 + blockW : px0, y: py0 + h, right };
       if (!r) y = py0 + h;
     }
     const crossOf = (pl: number | undefined): [number, number] => {
@@ -1382,8 +1383,8 @@ export class Hud {
       return;
     }
     for (const learner of w.players.filter((p) => p.team === t && ui[p.player]?.learnReady && ui[p.player]!.buildMenu === "closed")) {
-      const [lx, ly] = crossOf(learner.player);
-      this.drawLearnCards(ctx, W, lx, ly, w, learner.heroId, right, now);
+      const at = this.panelAt[learner.player];
+      if (at) this.drawLearnCards(ctx, W, at.x, at.y + 2, w, learner.heroId, at.right, now);
     }
     if (menuUi && menuHero !== undefined) {
       const c = this.buildCross(w, t, menuHero, menuUi);
@@ -1470,8 +1471,9 @@ export class Hud {
   }
 
   private mini: { x: number; y: number; w: number; h: number } | null = null;
+  private panelAt: Record<number, { x: number; y: number; right: boolean }> = {};
 
-  private drawLearnCards(ctx: CanvasRenderingContext2D, W: number, cx: number, cy: number, w: World, heroId: number, right: boolean, now: number): void {
+  private drawLearnCards(ctx: CanvasRenderingContext2D, W: number, ax0: number, top: number, w: World, heroId: number, right: boolean, now: number): void {
     const hero = w.getAny(heroId);
     const opt = hero?.alive ? options(w, hero) : null;
     if (!opt || !hero?.hero) return;
@@ -1479,10 +1481,8 @@ export class Hud {
     const r = 12;
     const gap = 8;
     const tw = r * 4 + gap;
-    let x0 = right ? Math.max(4, cx - 58 - tw) : Math.min(W - tw - 4, cx + 58);
-    let yc = Math.round(Math.min(cy, 240 - r - 8));
-    const m = this.mini;
-    if (m && x0 < m.x + m.w + 3 && x0 + tw > m.x - 3 && yc + r + 4 > m.y) yc = Math.round(m.y - r - 6);
+    const x0 = right ? Math.min(W - 4, ax0) - tw : Math.max(4, ax0);
+    const yc = Math.round(top + r + 2);
     const bob = Math.sin(now * 4) * 0.8;
     opt.list.forEach((o, k) => {
       const x = x0 + r + k * (r * 2 + gap);
@@ -1518,15 +1518,17 @@ export class Hud {
       }
       const bx = x + (k ? r * 0.72 : -r * 0.72);
       const by = y + r * 0.72;
-      padButton(ctx, bx, by, 3.6, "#e8c030", "");
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      const d = k ? 1 : -1;
-      ctx.moveTo(bx + d * 1.9, by);
-      ctx.lineTo(bx - d * 1.2, by - 1.7);
-      ctx.lineTo(bx - d * 1.2, by + 1.7);
-      ctx.closePath();
-      ctx.fill();
+      onHiLayer(ctx, (c) => {
+        padButton(c, bx, by, 3.6, "#e8c030", "");
+        c.fillStyle = INK;
+        c.beginPath();
+        const d = k ? 1 : -1;
+        c.moveTo(bx + d * 1.9, by);
+        c.lineTo(bx - d * 1.2, by - 1.7);
+        c.lineTo(bx - d * 1.2, by + 1.7);
+        c.closePath();
+        c.fill();
+      });
     });
   }
 

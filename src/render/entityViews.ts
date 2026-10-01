@@ -706,6 +706,13 @@ export class EntityViews {
     this.batches.view();
     this.structBatch.fillView();
     this.sprites.fill(camera);
+    for (const hint of [...this.padHints, ...this.shopHints]) {
+      const base = hint.userData.base as [number, number] | undefined;
+      if (!hint.visible || !base) continue;
+      const f = Math.min(3, Math.max(1, camera.position.distanceTo(hint.position) / 75));
+      hint.scale.set(base[0] * f, base[1] * f, 1);
+      hint.updateMatrixWorld();
+    }
     let n = 0;
     const bl = this.blobs;
     for (const v of this.views.values()) n = this.addBlobs(v, n);
@@ -1505,6 +1512,7 @@ export class EntityViews {
         const s = 1 + Math.sin(time * 3) * 0.04;
         const k = 1.15 * s;
         hint.scale.set(up ? k : k * 2, k, 1);
+        hint.userData.base = [up ? k : k * 2, k];
         hint.position.set(p.x, w.groundY(p.x, p.z) + (up ? 0 : 0.5), p.z);
         if (up) hint.center.set(1 + 1.1 / 1.15, 0.5 + 0.5 / 1.15);
         else hint.center.set(0.5, 0.5);
@@ -1519,6 +1527,7 @@ export class EntityViews {
       hint.position.set(core.transform.pos.x, core.transform.y, core.transform.pos.z);
       hint.center.set(1 + 1.45 / 1.25, 0.5 + 0.88 / 1.25);
       hint.scale.set(1.25 * s, 1.25 * s, 1);
+      hint.userData.base = [1.25 * s, 1.25 * s];
     });
   }
 }
