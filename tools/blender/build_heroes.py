@@ -78,13 +78,36 @@ def build_engineer(images):
     LTH_D = (0.5, 0.38, 0.28)
     GLOVE = (0.75, 0.55, 0.4)
 
-    c.lathe([(0.0, 1.14), (0.2, 1.15), (0.3, 1.2), (0.345, 1.3), (0.355, 1.42), (0.33, 1.52), (0.27, 1.58), (0.0, 1.61)], (0, -0.04, 0), "flesh", "head", segs=16, sx=1.05)
-    c.decal((0, -0.392, 1.4), 0.5, 0.34, "face_dwarf", "head", curve=0.07, cols=5)
-    c.ico(0.085, (0, -0.43, 1.34), "flesh", "head", scale=(1.0, 0.95, 0.9), sub=2, shade=(1.0, 0.82, 0.76))
+    hc = Vector((0, -0.04, 1.37))
+    hf = human_head(w=0.335, d=0.3, h=0.24, face=0.255, jaw=0.15, chin=0.0)
+    c.ico(1.0, tuple(hc), "flesh", "head", sub=3, deform=hf)
+
+    def surf(xr, zr, out=0.0):
+        y = -math.sqrt(max(0.0, 1 - xr * xr - zr * zr))
+        return hc + hf(Vector((xr, y, zr))) + Vector((0, -out, 0))
+
+    c.limb(tuple(surf(-0.5, 0.17, 0.0)), tuple(surf(0.5, 0.17, 0.0)), 0.02, 0.02, "flesh", "head", segs=6)
     for sx in (-1, 1):
-        c.ico(0.05, (0.035 * sx, -0.47, 1.31), "flesh", "head", sub=1, shade=(1.0, 0.8, 0.74))
-        c.ico(0.06, (0.355 * sx, -0.06, 1.38), "flesh", "head", scale=(0.45, 0.8, 1.0), sub=2)
-        curl(c, (0.06 * sx, -0.4, 1.47), [(0.07 * sx, -0.01, 0.02), (0.06 * sx, 0.0, 0.0), (0.03 * sx, 0.01, -0.02)], 0.03, "hair", "head", shade=BEARD, taper=0.85)
+        e = surf(0.3 * sx, 0.04, 0.0)
+        c.ico(1.0, tuple(e), "plain", "head", sub=2, scale=(0.03, 0.01, 0.017), shade=(1.2, 1.17, 1.1))
+        c.ico(1.0, tuple(e + Vector((0.004 * -sx, -0.008, 0.0))), "plain", "head", sub=1, scale=(0.011, 0.004, 0.012), shade=(0.25, 0.45, 0.85))
+        c.ico(1.0, tuple(e + Vector((0.004 * -sx, -0.0115, 0.0))), "plain", "head", sub=1, scale=(0.0055, 0.002, 0.006), shade=(0.02, 0.02, 0.02))
+        c.ico(0.0025, tuple(e + Vector((0.002 * -sx, -0.013, 0.006))), "plain", "head", sub=1, shade=(1.6, 1.6, 1.6))
+        lid = [e + Vector((-0.032 * sx * k, -0.004 - 0.005 * (1 - abs(k)), 0.012 + 0.006 * (1 - abs(k)))) for k in (-1, -0.5, 0, 0.5, 1)]
+        tube(c, lid, [0.005, 0.008, 0.009, 0.008, 0.005], "flesh", "head", segs=5, shade=(0.85, 0.68, 0.62), cap=False)
+        low = [e + Vector((-0.03 * sx * k, -0.003, -0.014 - 0.003 * (1 - abs(k)))) for k in (-1, 0, 1)]
+        tube(c, low, [0.004, 0.006, 0.004], "flesh", "head", segs=5, shade=(0.9, 0.72, 0.66), cap=False)
+        brow = [surf(0.1 * sx, 0.2, 0.03), surf(0.24 * sx, 0.25, 0.035), surf(0.4 * sx, 0.23, 0.03), surf(0.52 * sx, 0.16, 0.02)]
+        tube(c, brow, [0.022, 0.028, 0.024, 0.012], "hair", "head", segs=7, shade=BEARD)
+        for k in range(3):
+            q = surf((0.2 + k * 0.12) * sx, 0.24, 0.045)
+            c.cone(0.012, 0.0, 0.05, tuple(q), "hair", "head", segs=5, rot=(0.3, 0.6 * sx, 0.0), shade=BEARD)
+        c.ico(0.06, tuple(Vector((0.33 * sx, -0.06, 1.37))), "flesh", "head", scale=(0.45, 0.8, 1.0), sub=2)
+    c.ico(1.0, tuple(surf(0.0, -0.06, 0.06)), "flesh", "head", sub=2, scale=(0.055, 0.05, 0.05), shade=(1.0, 0.82, 0.76))
+    c.ico(1.0, tuple(surf(0.0, -0.2, 0.09)), "flesh", "head", sub=2, scale=(0.075, 0.065, 0.065), shade=(1.05, 0.72, 0.66))
+    for sx in (-1, 1):
+        c.ico(1.0, tuple(surf(0.11 * sx, -0.27, 0.06)), "flesh", "head", sub=2, scale=(0.035, 0.03, 0.03), shade=(1.0, 0.72, 0.66))
+        curl(c, (0.06 * sx, -0.4, 1.47), [(0.07 * sx, -0.01, 0.02), (0.06 * sx, 0.0, 0.0), (0.03 * sx, 0.01, -0.02)], 0.03, "hair", "head", shade=BEARD, taper=0.85) if False else None
     folded(c, [(0.3, 1.32), (0.355, 1.22), (0.36, 1.08), (0.3, 0.96), (0.2, 0.88), (0.0, 0.84)], (0, -0.2, 0), "hair", "head", segs=16, folds=8, amp=0.06, sy=0.55, shade=BEARD)
     for sx in (-1, 0, 1):
         x = 0.1 * sx
