@@ -48,8 +48,8 @@ export class NetLink {
     this.role = "host";
   }
 
-  join(name: string, address?: string): void {
-    this.connect(NetLink.url(address), { t: "join", name });
+  join(name: string, address?: string, room?: number): void {
+    this.connect(NetLink.url(address), { t: "join", name, room: room ?? null });
     this.role = "peer";
   }
 
@@ -70,6 +70,10 @@ export class NetLink {
 
   toPeer(to: number | "all", msg: NetMsg): void {
     if (this.open && this.role === "host") this.ws!.send(JSON.stringify({ t: "send", to, msg }));
+  }
+
+  meta(meta: Record<string, unknown>): void {
+    if (this.open && this.role === "host") this.ws!.send(JSON.stringify({ t: "meta", meta }));
   }
 
   toHost(msg: NetMsg): void {

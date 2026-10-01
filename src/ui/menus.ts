@@ -8,7 +8,17 @@ import type { Portraits } from "./portraits";
 import type { World } from "../sim/world";
 import { DEFAULT_OPTIONS, DEFAULT_RULES, MAX_TAG, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
 
-export type Page = "main" | "network" | "rules" | "options" | "records" | "controls";
+export type Page = "main" | "network" | "browse" | "rules" | "options" | "records" | "controls";
+export interface RoomInfo {
+  id: number;
+  name: string;
+  mode: string;
+  map: string;
+  humans: number;
+  seats: number;
+  phase: string;
+  age: number;
+}
 export interface Nav {
   dx: number;
   dy: number;
@@ -23,7 +33,7 @@ export interface Pointer {
   click: boolean;
   right: boolean;
 }
-export type MenuResult = "fight" | "title" | "options" | "host" | "join" | "leave" | null;
+export type MenuResult = "fight" | "title" | "options" | "host" | "join" | "browse" | "leave" | null;
 
 const INK = "#0b0806";
 const BROWN = "#3a2410";
@@ -281,6 +291,7 @@ export class Menus {
   private rowCount(): number {
     if (this.page === "main") return ITEMS.length;
     if (this.page === "network") return 2;
+    if (this.page === "browse") return this.rooms.length + 1;
     if (this.page === "rules") return RULE_ROWS.length + 1;
     if (this.page === "options") return OPTION_ROWS.length + 2;
     if (this.page === "records") return this.tab === 0 ? this.roster.length : this.tab === 1 ? this.save.tagNames().length : this.save.data.log.length;
@@ -323,11 +334,16 @@ export class Menus {
     if (nav.a) act = "a";
     if (nav.b || ptr.right || act === "back") {
       sound("back");
-      if (this.page === "network" && this.netBusy) {
+      if ((this.page === "network" || this.page === "browse") && this.netBusy) {
         this.netBusy = false;
         return "leave";
       }
       if (this.page === "main") return "title";
+      if (this.page === "browse") {
+        this.page = "network";
+        this.focus = 1;
+        return null;
+      }
       const from = this.page;
       this.page = "main";
       this.focus = PAGES.indexOf(from);
@@ -349,7 +365,25 @@ export class Menus {
     if (this.page === "network") {
       if (act === "a" && !this.netBusy) {
         sound("ok");
-        return this.focus === 0 ? "host" : "join";
+        if (this.focus === 0) return "host";
+        this.page = "browse";
+        this.focus = 0;
+        this.scrollTop = 0;
+        this.roomsAt = -99;
+        return "browse";
+      }
+      return null;
+    }
+    if (this.page === "browse") {
+      if (act === "a" && !this.netBusy) {
+        const r = this.focus === 0 ? null : this.rooms[this.focus - 1];
+        if (r && (r.phase !== "lobby" || r.humans >= r.seats)) {
+          sound("back");
+          return null;
+        }
+        sound("ok");
+        this.joinRoom = r ? r.id : null;
+        return "join";
       }
       return null;
     }
@@ -413,6 +447,7 @@ export class Menus {
       woodFloor(ctx, H - 20, W, H);
       beam(ctx, 4, 2, W - 8, 17);
       if (this.page === "network") this.drawNetwork(ctx, W, H, now);
+      else if (this.page === "browse") this.drawBrowse(ctx, W, H, now);
       else if (this.page === "rules") this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, ["RESTORE DEFAULTS"]);
       else if (this.page === "options") this.drawRows(ctx, W, H, "m_options", "OPTIONS", OPTION_ROWS as Row<object>[], this.save.data.options, ["RESTORE DEFAULTS", "ERASE ALL RECORDS"]);
       else if (this.page === "records") this.drawRecords(ctx, W, H);
@@ -457,6 +492,10 @@ export class Menus {
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
+  rooms: RoomInfo[] = [];
+  roomsAt = -99;
+  roomsError = "";
+  joinRoom: number | null = null;
   netStatus = "";
   netBusy = false;
   netAddrs: string[] = [];
@@ -465,7 +504,7 @@ export class Menus {
     artTitle(ctx, "m_network", "VERSUS ONLINE", W / 2, 3, 14);
     const opts: [string, string, string, string][] = [
       ["t_host", "HOST A BATTLE", "castle", "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS."],
-      ["t_join", "JOIN A BATTLE", "banner", "JOIN THE MACHINE THAT SERVED THIS PAGE. YOU SEE ITS RULES BEFORE THE FIGHT."],
+      ["t_join", "JOIN A BATTLE", "banner", "SEE EVERY BATTLE ON THIS SERVER AND TAKE A SEAT. YOU SEE THE HOST'S RULES BEFORE THE FIGHT."],
     ];
     const cw = Math.min(170, Math.floor((W - 50) / 2));
     const ch = 112;
@@ -500,6 +539,66 @@ export class Menus {
       lines.forEach((l, j) => drawPlain(ctx, l, W / 2 - textWidth(l, 0.58) / 2, sy + 5 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
     }
     const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "SELECT"], ["B", "BACK"]];
+    prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
+  }
+
+  private drawBrowse(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
+    artTitle(ctx, "!BATTLES ON THIS SERVER", "BATTLES ON THIS SERVER", W / 2, 3, 14);
+    const px = 14;
+    const py = 26;
+    const pw = W - 28;
+    const ph = H - 52;
+    parchment(ctx, px, py, pw, ph);
+    const rh = 22;
+    const head = (t: string, x: number, right = false) => drawPlain(ctx, t, right ? x - textWidth(t, 0.55, true) : x, py + 6, "#8a5a2a", 0.55, true);
+    const c = { name: px + 34, mode: px + pw * 0.52, map: px + pw * 0.64, seats: px + pw - 64, state: px + pw - 10 };
+    head("BATTLE", c.name);
+    head("MODE", c.mode);
+    head("FIELD", c.map);
+    head("SEATS", c.seats, true);
+    head("STATE", c.state, true);
+    band(ctx, px + 6, py + 15, pw - 12, 1, "#6a4424", 0.5);
+    const vis = Math.floor((ph - 30) / rh);
+    const n = this.rooms.length + 1;
+    if (this.focus < this.scrollTop) this.scrollTop = this.focus;
+    if (this.focus >= this.scrollTop + vis) this.scrollTop = this.focus - vis + 1;
+    for (let k = this.scrollTop; k < Math.min(n, this.scrollTop + vis); k++) {
+      const y = py + 20 + (k - this.scrollTop) * rh;
+      const sel = k === this.focus;
+      this.hit(`row:${k}`, px + 4, y, pw - 8, rh - 2);
+      if (sel) {
+        ctx.fillStyle = INK;
+        ctx.fillRect(px + 5, y - 1, pw - 10, rh);
+        texturedRect(ctx, "banner", px + 6, y, pw - 12, rh - 2, "#a8301c", 0, 0.5);
+      }
+      const ink = (col: string) => (sel ? LIGHT : col);
+      if (k === 0) {
+        waxSeal(ctx, px + 19, y + 10, 7, "#a8141a", "dash");
+        drawPlain(ctx, "QUICK JOIN", c.name, y + 3, ink(BROWN), 0.85, true);
+        drawPlain(ctx, "TAKE THE FIRST OPEN SEAT ON THE SERVER", c.name, y + 13, ink("#6a4424"), 0.5, true);
+        continue;
+      }
+      const r = this.rooms[k - 1];
+      const open = r.phase === "lobby" && r.humans < r.seats;
+      waxSeal(ctx, px + 19, y + 10, 7, open ? "#2a7a20" : "#6a6058", open ? "banner" : "castle");
+      const nm = r.name.length > 20 ? r.name.slice(0, 20) : r.name;
+      drawPlain(ctx, nm, c.name, y + 3, ink(BROWN), 0.8, true);
+      const age = r.age < 60 ? `OPENED ${r.age}S AGO` : `OPENED ${Math.floor(r.age / 60)} MIN AGO`;
+      drawPlain(ctx, age, c.name, y + 13, ink("#8a5a2a"), 0.45, true);
+      drawPlain(ctx, r.mode, c.mode, y + 6, ink(BROWN), 0.6, true);
+      const map = (r.map || "-").replace(/^GRUDGE\w*\s*/, "");
+      drawPlain(ctx, map.slice(0, 14), c.map, y + 6, ink(BROWN), 0.6, true);
+      num(ctx, `${r.humans} / ${r.seats}`, c.seats, y + 5, ink(open ? "#2a6a18" : "#8a1810"), 0.75);
+      const st = r.phase === "match" ? "FIGHTING" : r.humans >= r.seats ? "FULL" : "OPEN";
+      num(ctx, st, c.state, y + 5, ink(st === "OPEN" ? "#2a6a18" : "#8a1810"), 0.65);
+    }
+    if (!this.rooms.length) {
+      const t = this.roomsError || "NO BATTLES YET · GO BACK AND HOST ONE";
+      drawPlain(ctx, t, W / 2 - textWidth(t, 0.7, true) / 2, py + ph / 2, "#6a4424", 0.7, true);
+    }
+    const t = this.netBusy ? this.netStatus : `REFRESHES BY ITSELF · ${this.rooms.length} BATTLE${this.rooms.length === 1 ? "" : "S"}`;
+    drawPlain(ctx, t, px + pw - 8 - textWidth(t, 0.48, true), py + ph - 10, this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : "#8a5a2a", 0.48, true);
+    const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "JOIN"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 

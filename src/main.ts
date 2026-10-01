@@ -33,7 +33,7 @@ import { Screens, type SelectSlot } from "./ui/screens";
 import { MenuCursors } from "./ui/cursor";
 import { Portraits } from "./ui/portraits";
 import { Audio } from "./audio/sfx";
-import { Menus, type Nav } from "./ui/menus";
+import { Menus, type Nav, type RoomInfo } from "./ui/menus";
 import { Save, applyRules } from "./game/save";
 import { NetLink, type NetMsg } from "./net/link";
 import { mergeCommands, packCommand, worldHash, type Frame, type MatchSpec } from "./net/session";
@@ -214,6 +214,7 @@ async function start(): Promise<void> {
   let desync = false;
   let hostAddrs: string[] = [];
   let hostPublic = "";
+  let roomFetch = false;
   const present = (i: number) => pads.players[i].connected || i < forceJoin || remoteAt(i) >= 0;
   const padsForCursors = () => pads.players.map((p, i) => (i < forceJoin && !p.connected ? { ...p, connected: true } : p));
   const slotActive = (i: number) => i < 2 || twoVtwo;
@@ -666,6 +667,16 @@ async function start(): Promise<void> {
     }
     if (netMode === "host" && now - lobbySentAt > 0.25) {
       lobbySentAt = now;
+      const seated = [...remotes.values()].filter((r) => r.slot >= 0).length;
+      const localHumans = slots.filter((s, i) => !s.cpu && slotActive(i) && remoteAt(i) < 0).length;
+      net.meta({
+        name: `${(save.tagNames()[0] ?? "HOST").toUpperCase()}'S BATTLE`,
+        mode: twoVtwo ? "2 VS 2" : "1 VS 1",
+        map: pickIndex >= maps.length ? "RANDOM" : (maps[pickIndex]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
+        humans: Math.max(1, localHumans + seated),
+        seats: 4,
+        phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
+      });
       if (state === "select") for (const id of remotes.keys()) seatRemote(id);
       net.toPeer("all", { t: "lobby", view: lobbyView() });
     }
@@ -703,12 +714,30 @@ async function start(): Promise<void> {
       if (r === "options") applyOptions();
       if (r === "host" || r === "join") {
         menus.netBusy = true;
-        menus.netStatus = r === "host" ? "OPENING THE GATES..." : "LOOKING FOR THE HOST...";
+        menus.netStatus = r === "host" ? "OPENING THE GATES..." : "TAKING A SEAT...";
         menus.netAddrs = [];
         const name = save.tagNames()[0] ?? (r === "host" ? "HOST" : "GUEST");
         if (r === "host") net.host(name);
-        else net.join(name, params.get("host") ?? undefined);
+        else net.join(name, params.get("host") ?? undefined, menus.joinRoom ?? undefined);
       } else if (r === "leave") leaveNet("");
+      if (menus.page === "browse" && now - menus.roomsAt > 2 && !roomFetch) {
+        menus.roomsAt = now;
+        const hostParam = params.get("host");
+        const base = hostParam ? `${location.protocol === "https:" ? "https" : "http"}://${hostParam}` : "";
+        roomFetch = true;
+        fetch(`${base}/net/info`, { cache: "no-store" })
+          .then((res) => res.json())
+          .then((j: { rooms?: RoomInfo[] }) => {
+            menus.rooms = (j.rooms ?? []).sort((a, b) => Number(a.phase !== "lobby") - Number(b.phase !== "lobby") || b.humans - a.humans);
+            menus.roomsError = "";
+            if (menus.focus > menus.rooms.length) menus.focus = menus.rooms.length;
+          })
+          .catch(() => {
+            menus.rooms = [];
+            menus.roomsError = "COULD NOT REACH THE SERVER";
+          })
+          .finally(() => { roomFetch = false; });
+      }
       if (r === "fight") {
         state = "select";
         enterSelect();

@@ -22,6 +22,7 @@ interface Peer {
   name: string;
 }
 
+
 export function lanAddresses(port: number): string[] {
   const out: string[] = [];
   for (const list of Object.values(networkInterfaces())) {
@@ -33,11 +34,30 @@ export function lanAddresses(port: number): string[] {
   return out;
 }
 
+export interface RoomMeta {
+  name: string;
+  mode: string;
+  map: string;
+  humans: number;
+  seats: number;
+  phase: string;
+}
+
+interface Room {
+  id: number;
+  host: Peer;
+  peers: Map<number, Peer>;
+  meta: RoomMeta;
+  created: number;
+}
+
+const MAX_ROOMS = 32;
+
 export class NetRelay {
   private wss = new WebSocketServer({ noServer: true });
-  private host: Peer | null = null;
-  private peers = new Map<number, Peer>();
+  private rooms = new Map<number, Room>();
   private nextId = 1;
+  private nextRoom = 1;
   port = 0;
 
   constructor() {
@@ -58,18 +78,24 @@ export class NetRelay {
 
   info(req: IncomingMessage, res: ServerResponse): void {
     const port = this.port || Number((req.headers.host ?? "").split(":")[1] ?? 0);
+    const rooms = [...this.rooms.values()].map((r) => ({ id: r.id, ...r.meta, peers: r.peers.size, age: Math.round((Date.now() - r.created) / 1000) }));
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store");
-    res.end(JSON.stringify({ hosting: !!this.host, players: this.peers.size, addrs: lanAddresses(port), public: publicUrl() }));
+    res.end(JSON.stringify({ hosting: rooms.length > 0, players: rooms.reduce((n, r) => n + r.peers, 0), rooms, addrs: lanAddresses(port), public: publicUrl() }));
   }
 
   private send(ws: WebSocket, msg: unknown): void {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
   }
 
+  private openRoom(): Room | undefined {
+    return [...this.rooms.values()].find((r) => r.meta.phase === "lobby" && r.meta.humans < r.meta.seats);
+  }
+
   private accept(ws: WebSocket, port: number): void {
     let me: Peer | null = null;
     let role: "host" | "peer" | null = null;
+    let room: Room | null = null;
     ws.on("message", (raw) => {
       let m: { t: string; [k: string]: unknown };
       try {
@@ -78,49 +104,66 @@ export class NetRelay {
         return;
       }
       if (!role && m.t === "host") {
-        if (this.host) return this.send(ws, { t: "error", msg: "SOMEONE IS ALREADY HOSTING" });
+        if (this.rooms.size >= MAX_ROOMS) return this.send(ws, { t: "error", msg: "THE SERVER IS FULL OF BATTLES · TRY LATER" });
         role = "host";
-        me = { ws, id: 0, name: String(m.name ?? "HOST") };
-        this.host = me;
-        return this.send(ws, { t: "hosting", addrs: lanAddresses(port), public: publicUrl() });
+        me = { ws, id: 0, name: String(m.name ?? "HOST").slice(0, 12) };
+        room = { id: this.nextRoom++, host: me, peers: new Map(), created: Date.now(), meta: { name: `${me.name.toUpperCase()}'S BATTLE`, mode: "1 VS 1", map: "", humans: 1, seats: 4, phase: "lobby" } };
+        this.rooms.set(room.id, room);
+        return this.send(ws, { t: "hosting", room: room.id, addrs: lanAddresses(port), public: publicUrl() });
       }
       if (!role && m.t === "join") {
-        if (!this.host) return this.send(ws, { t: "error", msg: "NOBODY IS HOSTING YET" });
+        const want = m.room !== undefined && m.room !== null ? this.rooms.get(Number(m.room)) : this.openRoom() ?? [...this.rooms.values()][0];
+        if (!want) return this.send(ws, { t: "error", msg: m.room ? "THAT BATTLE IS OVER" : "NOBODY IS HOSTING YET" });
         role = "peer";
+        room = want;
         me = { ws, id: this.nextId++, name: String(m.name ?? "GUEST").slice(0, 12) };
-        this.peers.set(me.id, me);
-        this.send(ws, { t: "welcome", id: me.id });
-        return this.send(this.host.ws, { t: "joined", id: me.id, name: me.name });
+        room.peers.set(me.id, me);
+        this.send(ws, { t: "welcome", id: me.id, room: room.id, name: room.meta.name });
+        return this.send(room.host.ws, { t: "joined", id: me.id, name: me.name });
+      }
+      if (!room) return;
+      if (role === "host" && m.t === "meta") {
+        const v = (m.meta ?? {}) as Partial<RoomMeta>;
+        room.meta = {
+          name: String(v.name ?? room.meta.name).slice(0, 24),
+          mode: String(v.mode ?? room.meta.mode).slice(0, 12),
+          map: String(v.map ?? room.meta.map).slice(0, 32),
+          humans: Math.max(0, Math.min(8, Number(v.humans ?? room.meta.humans))),
+          seats: Math.max(1, Math.min(8, Number(v.seats ?? room.meta.seats))),
+          phase: v.phase === "match" ? "match" : "lobby",
+        };
+        return;
       }
       if (role === "host" && m.t === "send") {
         const text = JSON.stringify(m.msg);
         if (m.to === "all") {
-          for (const p of this.peers.values()) if (p.ws.readyState === p.ws.OPEN) p.ws.send(text);
+          for (const p of room.peers.values()) if (p.ws.readyState === p.ws.OPEN) p.ws.send(text);
         } else {
-          const p = this.peers.get(Number(m.to));
+          const p = room.peers.get(Number(m.to));
           if (p && p.ws.readyState === p.ws.OPEN) p.ws.send(text);
         }
         return;
       }
       if (role === "host" && m.t === "kick") {
-        this.peers.get(Number(m.id))?.ws.close();
+        room.peers.get(Number(m.id))?.ws.close();
         return;
       }
-      if (role === "peer" && m.t === "up" && this.host && me) {
-        return this.send(this.host.ws, { t: "from", id: me.id, msg: m.msg });
+      if (role === "peer" && m.t === "up" && me) {
+        return this.send(room.host.ws, { t: "from", id: me.id, msg: m.msg });
       }
     });
     ws.on("close", () => {
-      if (role === "host" && this.host === me) {
-        this.host = null;
-        for (const p of this.peers.values()) {
+      if (!room) return;
+      if (role === "host" && room.host === me) {
+        this.rooms.delete(room.id);
+        for (const p of room.peers.values()) {
           this.send(p.ws, { t: "hostgone" });
           p.ws.close();
         }
-        this.peers.clear();
+        room.peers.clear();
       } else if (role === "peer" && me) {
-        this.peers.delete(me.id);
-        if (this.host) this.send(this.host.ws, { t: "left", id: me.id });
+        room.peers.delete(me.id);
+        this.send(room.host.ws, { t: "left", id: me.id });
       }
     });
   }

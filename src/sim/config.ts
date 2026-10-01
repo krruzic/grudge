@@ -155,6 +155,7 @@ export interface AbilityDef {
   perchRadius?: number;
   vs?: Partial<Record<string, number>>;
   guardMul?: number;
+  structureMul?: number;
 }
 
 export interface HeroDef {

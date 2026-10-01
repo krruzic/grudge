@@ -1200,7 +1200,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       let best: Entity | null = null;
       let bestD = reach;
       for (const o of w.entities) {
-        if (!o.alive || o.team === e.team || o.structure) continue;
+        if (!o.alive || o.team === e.team || o.neutral) continue;
         const dx = o.transform.pos.x - t.pos.x;
         const dz = o.transform.pos.z - t.pos.z;
         const along = dx * a.dirX + dz * a.dirZ;
@@ -1218,7 +1218,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const victims: Entity[] = [];
       if (fx?.pierce) {
         for (const o of w.entities) {
-          if (!o.alive || o.team === e.team || o.structure) continue;
+          if (!o.alive || o.team === e.team || o.neutral) continue;
           const dx = o.transform.pos.x - t.pos.x;
           const dz = o.transform.pos.z - t.pos.z;
           const along = dx * a.dirX + dz * a.dirZ;
@@ -1234,10 +1234,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const tz = t.pos.z + a.dirZ * len;
       w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx, tz, team: e.team, hit: victims.length > 0, style: fx?.pull ? "vine" : undefined, src: e.id });
       for (const o of victims) {
-        const hit = w.damage(e, o, (def.damage ?? 70) * mul, {
+        const hit = w.damage(e, o, (def.damage ?? 70) * mul * (o.structure ? def.structureMul ?? 1.5 : 1), {
           knockback: fx?.pull ? 0 : def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, slowMul: def.slowMul, slowSeconds: def.slowSeconds, big: true, vsStunnedMul: def.vsStunnedMul,
         });
-        if (hit && fx?.pull && o.alive && w.time >= o.status.ccImmuneUntil) {
+        if (hit && fx?.pull && o.alive && !o.structure && w.time >= o.status.ccImmuneUntil) {
           const dx = t.pos.x - o.transform.pos.x;
           const dz = t.pos.z - o.transform.pos.z;
           const d = Math.hypot(dx, dz) || 1;
@@ -1249,7 +1249,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       if (fx?.splinter) {
         w.emit({ type: "slam", x: tx, y: w.groundY(tx, tz), z: tz, radius: fx.splinter.radius, team: e.team, src: e.id });
         for (const o of w.entities.slice()) {
-          if (!o.alive || o.team === e.team || o.structure) continue;
+          if (!o.alive || o.team === e.team || o.neutral) continue;
           if (Math.hypot(o.transform.pos.x - tx, o.transform.pos.z - tz) - o.radius > fx.splinter.radius) continue;
           w.damage(e, o, fx.splinter.damage * mul, { fromX: tx, fromZ: tz, knockback: 4 });
         }
