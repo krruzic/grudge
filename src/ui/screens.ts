@@ -8,6 +8,7 @@ import { artTitle, band, drawLogo, banner, beam, fieldShade, goldArrow, nameImag
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
+import type { NameEntry } from "./nameEntry";
 import talentData from "../../data/talents.json";
 
 type TNode = { id: string; next?: TNode[] };
@@ -443,7 +444,9 @@ export class Screens {
     const hy = y + 26;
     const hasTree = !commander && !!TREES[s.hero];
     const hh = h - notch - 50;
-    if (showHero && this.portraits) {
+    const naming = this.naming.has(i);
+    if (naming) this.portraits?.drop(i);
+    else if (showHero && this.portraits) {
       const cv = this.portraits.stage(i, s.hero, team, s.ready);
       const k = Math.min((w + 30) / cv.width, (hh + 14) / cv.height);
       const dw = cv.width * k;
@@ -453,8 +456,8 @@ export class Screens {
       this.portraits?.drop(i);
       paintedText(ctx, "?", x + w / 2, hy + hh / 2 - 18, "#6a4a28", 3.4);
     }
-    this.kindPlaque(ctx, i, x + w / 2, y + 18, s);
-    if (hasTree) {
+    if (!naming) this.kindPlaque(ctx, i, x + w / 2, y + 18, s);
+    if (hasTree && !naming) {
       const tw = w >= 100 ? 1 : 0.7;
       ctx.save();
       drawTree(ctx, s.hero, "a", x + 4, hy + 8, false, tw);
@@ -463,6 +466,10 @@ export class Screens {
     }
     const name = (showHero ? def?.name ?? s.hero : "RANDOM").toUpperCase();
     const ry = y + h - notch - 22;
+    if (naming) {
+      this.naming.get(i)!.draw(ctx, x + 3, y + 18, w - 6, h - notch - 20, performance.now() / 1000);
+      return;
+    }
     ribbon(ctx, x + w / 2, ry, w + 6, 11, name, Math.min(0.8, (w + 2) / Math.max(1, textWidth(name, 1, true))), undefined, showHero ? nameImage(s.hero) : null);
     if (showHero) {
       (["a", "b", "r", "z"] as const).forEach((a, j) => {
@@ -479,6 +486,8 @@ export class Screens {
       shadowText(ctx, t, x + w - 8 - textWidth(t, 0.5) / 2, y + 26, "#f4ecd8", 0.5);
     }
   }
+
+  naming = new Map<number, NameEntry>();
 
   private drawMap(ctx: CanvasRenderingContext2D, W: number, H: number, _blink: boolean): void {
     fieldShade(ctx, W, H, 0.3);

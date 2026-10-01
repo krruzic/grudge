@@ -34,7 +34,8 @@ import { MenuCursors } from "./ui/cursor";
 import { Portraits } from "./ui/portraits";
 import { Audio } from "./audio/sfx";
 import { Menus, type Nav, type RoomInfo } from "./ui/menus";
-import { Save, applyRules } from "./game/save";
+import { MAX_TAG, Save, applyRules } from "./game/save";
+import { NameEntry } from "./ui/nameEntry";
 import { NetLink, type NetMsg } from "./net/link";
 import { mathPrint, mergeCommands, packCommand, worldHash, type Frame, type MatchSpec } from "./net/session";
 import { drawText, textWidth } from "./ui/font";
@@ -181,18 +182,56 @@ async function start(): Promise<void> {
     });
     return n;
   };
+  const kbEditor = (): [number, NameEntry] | null => {
+    const k = pads.keyboardSlot();
+    if (k < 0) return null;
+    const slot = state === "lobby" ? mySlots.get(k) : k;
+    const ne = slot === undefined ? undefined : screens.naming.get(slot);
+    return ne && slot !== undefined ? [slot, ne] : null;
+  };
   window.addEventListener("keydown", (e) => {
-    if (state !== "select" || menus.tagSlot < 0 || menus.tagMode !== "type") return;
-    if (/^Key[A-Z]$/.test(e.code)) menus.typeKey(e.code.slice(3));
-    else if (/^Digit[0-9]$/.test(e.code)) menus.typeKey(e.code.slice(5));
-    else if (e.code === "Minus") menus.typeKey("-");
-    else if (e.code === "Backspace") menus.tagAction("tg:del");
-    else if (e.code === "Enter") finishTag(menus.tagAction("tg:ok"));
-    else if (e.code === "Escape") menus.tagBack();
-    else return;
+    const ed = kbEditor();
+    if (!ed) return;
+    const ne = ed[1];
+    if (/^Key[A-Z]$/.test(e.code)) ne.type(e.code.slice(3));
+    else if (/^Digit[0-9]$/.test(e.code)) ne.type(e.code.slice(5));
+    else if (e.code === "Minus") ne.type("-");
+    else if (e.code === "Backspace") ne.back();
+    else if (e.code === "Enter" || e.code === "Escape") {
+      nameDone(ed[0], e.code === "Enter" ? { done: true, tag: ne.text.trim() || null } : { done: true }, pads.keyboardSlot());
+    } else return;
     e.preventDefault();
+    e.stopImmediatePropagation();
     audio.ui("move");
-  });
+  }, true);
+  const nameDone = (slot: number, r: { done: boolean; tag?: string | null }, k = slot) => {
+    screens.naming.delete(slot);
+    if (r.tag === undefined) {
+      audio.ui("back");
+      return;
+    }
+    audio.ui("ok");
+    const tag = r.tag ? save.addTag(r.tag) : null;
+    if (state === "lobby") net.toHost({ t: "tag", k, tag });
+    else slots[slot].tag = tag;
+  };
+  let namingAte = false;
+  const runNaming = (padOf: (slot: number) => number, now: number) => {
+    namingAte = screens.naming.size > 0;
+    for (const [slot, ne] of [...screens.naming]) {
+      const k = padOf(slot);
+      const p = k >= 0 ? pads.players[k] : undefined;
+      if (!p?.connected) {
+        screens.naming.delete(slot);
+        continue;
+      }
+      const r = ne.update(p, now);
+      if (r?.done) nameDone(slot, r, k);
+      else if (Object.values(p.pressed).some(Boolean)) audio.ui("move");
+    }
+  };
+  const naming = (k: number) => [...screens.naming.keys()].some((s) => (state === "lobby" ? mySlots.get(k) === s : s === k));
+  const cursorPads = (list: typeof pads.players) => list.map((p, k) => (naming(k) ? { ...p, connected: false } : p));
   function finishTag(r: { done: boolean; tag?: string | null }): void {
     if (!r.done) return;
     audio.ui("ok");
@@ -629,6 +668,13 @@ async function start(): Promise<void> {
       return;
     }
     const i = r.slot;
+    if (m.t === "tag" && i >= 0) {
+      const t = m.tag === null ? null : String(m.tag ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 6);
+      slots[i].tag = t || undefined;
+      if (!t) slots[i].tag = r.name;
+      lobbySentAt = 0;
+      return;
+    }
     if (m.t === "seat" && state === "select") {
       const to = Number(m.slot);
       const tgt = slots[to];
@@ -824,7 +870,8 @@ async function start(): Promise<void> {
     const anyPressed = (k: keyof (typeof pads.players)[0]["pressed"]) => pads.players.some((p) => p.pressed[k]);
     if (pads.players.some((p) => Object.values(p.pressed).some(Boolean))) audio.unlock();
 
-    pads.typing = state === "select" && menus.tagSlot >= 0 && menus.tagMode === "type";
+    pads.typing = !!kbEditor();
+    if (state !== "select" && state !== "lobby") screens.naming.clear();
     if (state !== "lobby") cursors.tagOf = null;
     if (state === "title") {
       if (anyPressed("start") || anyPressed("a") || cursors.takeClick()) {
@@ -887,7 +934,8 @@ async function start(): Promise<void> {
         if (!present(i) && !sl.cpu && !sl.open) vacant(i);
         if (netMode !== "host" && sl.open) { makeCpu(i); sl.autoCpu = true; }
       });
-      const acts = cursors.update(padsForCursors(), dt, now, (slot, by) => slotActive(slot) && !commanderSlot(slot) && (slot === by ? !slots[slot].cpu : slots[slot].cpu));
+      runNaming((slot) => (pads.players[slot]?.connected ? slot : -1), now);
+      const acts = cursors.update(cursorPads(padsForCursors()), dt, now, (slot, by) => slotActive(slot) && !commanderSlot(slot) && (slot === by ? !slots[slot].cpu : slots[slot].cpu));
       for (const act of acts) {
         if (act.type === "hover") {
           if (!slots[act.slot].ready && slots[act.slot].hero !== act.hero) { slots[act.slot].hero = act.hero; audio.ui("move"); }
@@ -954,9 +1002,9 @@ async function start(): Promise<void> {
           } else if (id === "lvl") {
             slots[i].level = (slots[i].level % 3) + 1;
             audio.ui("move");
-          } else if (id === "tag" && !slots[i].cpu && !commanderSlot(i)) {
-            tagFor = i;
-            menus.openTag(i);
+          } else if (id === "tag" && !slots[i].cpu && !commanderSlot(i) && act.by === i && !screens.naming.has(i)) {
+            screens.naming.set(i, new NameEntry(slots[i].tag, () => save.tagNames(), MAX_TAG));
+            if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
             audio.ui("ok");
           } else if (id === "go" && selectReady()) {
             toMap();
@@ -987,7 +1035,7 @@ async function start(): Promise<void> {
       if (!allReady) readySince = -1;
       screens.readyBanner = allReady;
       screens.openHint = !allReady && slots.some((sl, i) => slotActive(i) && sl.open) && slots.every((sl, i) => !slotActive(i) || sl.open || (sl.ready && heldBy(i) < 0));
-      if (allReady && now - readySince > 0.25 && anyPressed("start")) toMap();
+      if (allReady && now - readySince > 0.25 && anyPressed("start") && !namingAte && !screens.naming.size) toMap();
     } else if (state === "map") {
       cursors.setScale(pixel.w, pixel.h);
       let back = false;
@@ -1043,7 +1091,8 @@ async function start(): Promise<void> {
         }
         for (const c of cursors.cursors) if (c.holding >= 0 && ![...mySlots.values()].includes(c.holding)) c.holding = -1;
         const kOf = (i: number) => [...mySlots].find(([, v]) => v === i)?.[0] ?? -1;
-        const acts = cursors.update(pads.players, dt, now, (slot, by) => lb.phase === "lobby" && mySlots.get(by) === slot && !lb.slots[slot].commander);
+        runNaming((slot) => [...mySlots].find(([, v]) => v === slot)?.[0] ?? -1, now);
+        const acts = cursors.update(cursorPads(pads.players), dt, now, (slot, by) => lb.phase === "lobby" && mySlots.get(by) === slot && !lb.slots[slot].commander);
         let leave = false;
         for (const act of acts) {
           if (act.type === "hover") {
@@ -1074,7 +1123,12 @@ async function start(): Promise<void> {
           } else if (act.type === "button") {
             const [id, arg] = act.id.split(":");
             const i = Number(arg);
-            if (id === "take" && mySlots.has(act.by)) {
+            if (id === "tag" && mySlots.get(act.by) === i && !screens.naming.has(i)) {
+              screens.naming.set(i, new NameEntry("", () => save.tagNames(), MAX_TAG));
+              cursors.cursors[act.by].holding = -1;
+              dropped.add(i);
+              audio.ui("ok");
+            } else if (id === "take" && mySlots.has(act.by)) {
               const from = mySlots.get(act.by)!;
               cursors.cursors[act.by].holding = -1;
               dropped.delete(from);
