@@ -179,12 +179,11 @@ def face_human(seed=0):
     cv = Canvas(bg=(0, 0, 0), alpha=0.0)
     for sx in (-1, 1):
         cx = 32 + sx * 11
-        eye(cv, cx, 26, 5, 4, "#4a2a10", look=(-sx, 0))
-        line(cv, cx - 7, 18 + sx, cx + 7, 18 - sx, hexc("#1a1008"), 3)
-    for sx in (-1, 1):
-        line(cv, 32, 42, 32 + sx * 12, 40, hexc("#140c06"), 3)
-        line(cv, 32 + sx * 12, 40, 32 + sx * 16, 34, hexc("#140c06"), 2)
-    line(cv, 27, 50, 37, 50, hexc("#8a3a2a"), 2)
+        eye(cv, cx, 27, 5, 4, "#3a5a8a", look=(0, 0))
+        line(cv, cx - 6 * sx, 18, cx, 16, hexc("#2a1a10"), 2)
+        line(cv, cx, 16, cx + 6 * sx, 19, hexc("#2a1a10"), 2)
+    line(cv, 27, 47, 34, 47, hexc("#8a3a2a"), 2)
+    line(cv, 34, 47, 38, 45, hexc("#8a3a2a"), 2)
     return cv
 
 

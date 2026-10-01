@@ -72,52 +72,137 @@ def build_engineer(images):
     c = charkit.Char("engineer", images)
     YEL = (1.1, 0.72, 0.04)
     YEL_D = (0.8, 0.48, 0.03)
-    c.lathe([(0.0, 1.14), (0.28, 1.16), (0.34, 1.28), (0.35, 1.42), (0.3, 1.56), (0.0, 1.6)], (0, -0.04, 0), "flesh", "head", segs=8, sx=1.05)
-    c.decal((0, -0.39, 1.4), 0.5, 0.34, "face_dwarf", "head", curve=0.07)
-    c.ico(0.08, (0, -0.42, 1.34), "flesh", "head", scale=(1.0, 1.0, 0.9), shade=(1.0, 0.85, 0.8))
-    c.lathe([(0.3, 1.3), (0.36, 1.18), (0.3, 1.0), (0.14, 0.86), (0.0, 0.8)], (0, -0.2, 0), "hair", "head", segs=7, sy=0.55)
+    BEARD = (1.25, 1.22, 1.18)
+    CAP = (0.95, 0.8, 0.7)
+    LTH = (0.8, 0.6, 0.45)
+    LTH_D = (0.5, 0.38, 0.28)
+    GLOVE = (0.75, 0.55, 0.4)
+
+    c.lathe([(0.0, 1.14), (0.2, 1.15), (0.3, 1.2), (0.345, 1.3), (0.355, 1.42), (0.33, 1.52), (0.27, 1.58), (0.0, 1.61)], (0, -0.04, 0), "flesh", "head", segs=16, sx=1.05)
+    c.decal((0, -0.392, 1.4), 0.5, 0.34, "face_dwarf", "head", curve=0.07, cols=5)
+    c.ico(0.085, (0, -0.43, 1.34), "flesh", "head", scale=(1.0, 0.95, 0.9), sub=2, shade=(1.0, 0.82, 0.76))
     for sx in (-1, 1):
-        c.limb((0.03 * sx, -0.43, 1.3), (0.16 * sx, -0.44, 1.26), 0.045, 0.02, "hair", "head", segs=4)
-    c.lathe([(0.0, 1.46), (0.37, 1.46), (0.37, 1.54), (0.33, 1.64), (0.2, 1.7), (0.0, 1.72)], (0, -0.04, 0), "leather", "head", segs=8, sx=1.05, shade=(0.95, 0.8, 0.7))
+        c.ico(0.05, (0.035 * sx, -0.47, 1.31), "flesh", "head", sub=1, shade=(1.0, 0.8, 0.74))
+        c.ico(0.06, (0.355 * sx, -0.06, 1.38), "flesh", "head", scale=(0.45, 0.8, 1.0), sub=2)
+        curl(c, (0.06 * sx, -0.4, 1.47), [(0.07 * sx, -0.01, 0.02), (0.06 * sx, 0.0, 0.0), (0.03 * sx, 0.01, -0.02)], 0.03, "hair", "head", shade=BEARD, taper=0.85)
+    folded(c, [(0.3, 1.32), (0.355, 1.22), (0.36, 1.08), (0.3, 0.96), (0.2, 0.88), (0.0, 0.84)], (0, -0.2, 0), "hair", "head", segs=16, folds=8, amp=0.06, sy=0.55, shade=BEARD)
+    for sx in (-1, 0, 1):
+        x = 0.1 * sx
+        top = (x, -0.32, 0.92)
+        for k in range(4):
+            c.ico(0.042 - k * 0.004, (x, -0.33 - k * 0.005, 0.88 - k * 0.07), "hair", "head", scale=(1.0, 0.9, 1.25), sub=1, shade=BEARD)
+        ring(c, 0.032, 0.012, (x, -0.35, 0.6), "gold", "head", segs=10)
+        c.cone(0.03, 0.0, 0.07, (x, -0.35, 0.55), "hair", "head", segs=6, rot=(math.pi, 0, 0), shade=BEARD)
+    for sx in (-1, 1):
+        curl(c, (0.04 * sx, -0.44, 1.3), [(0.08 * sx, -0.01, -0.02), (0.07 * sx, 0.0, -0.05), (0.02 * sx, 0.0, -0.06)], 0.035, "hair", "head", shade=BEARD, taper=0.82)
+
+    c.lathe([(0.0, 1.44), (0.36, 1.44), (0.375, 1.5), (0.37, 1.56), (0.34, 1.63), (0.25, 1.69), (0.12, 1.72), (0.0, 1.73)], (0, -0.04, 0), "leather", "head", segs=16, sx=1.05, shade=CAP)
+    for k in range(5):
+        a = math.radians(30 + k * 30)
+        c.limb((math.cos(a) * 0.05, -0.04 - math.sin(a) * 0.05, 1.73), (math.cos(a) * 0.37, -0.04 + math.sin(a) * 0.37 * 0 - math.sin(a) * 0.0, 1.5), 0.008, 0.008, "leather", "head", segs=4, shade=LTH_D) if False else None
+    c.lathe([(0.366, 1.45), (0.378, 1.47), (0.378, 1.5), (0.366, 1.51)], (0, -0.04, 0), "leather", "head", segs=16, sx=1.05, caps=False, shade=LTH_D)
+    for k in range(10):
+        a = k / 10 * math.tau
+        c.ico(0.012, (math.cos(a) * 0.392, -0.04 + math.sin(a) * 0.373, 1.485), "iron", "head", sub=1)
+    for sx in (-1, 1):
+        flap = [[(0.36 * sx + 0.03 * sx * t, -0.12 + 0.18 * u, 1.46 - 0.24 * t) for u in (0.0, 0.5, 1.0)] for t in (0.0, 0.5, 1.0)]
+        sheet(c, flap, "leather", "head", thick=0.02, shade=CAP)
+        c.limb((0.385 * sx, -0.02, 1.22), (0.25 * sx, -0.15, 1.12), 0.01, 0.01, "leather", "head", segs=4, shade=LTH_D)
     c.tbox((0.46, 0.2), (0.4, 0.14), 0.04, (0, -0.33, 1.46), "leather", "head", shade=(0.7, 0.6, 0.5))
-    c.box((0.72, 0.05, 0.06), (0, -0.2, 1.53), "leather", "head", shade=(0.4, 0.35, 0.3))
+    c.lathe([(0.375, 1.53), (0.385, 1.55), (0.385, 1.59), (0.375, 1.61)], (0, -0.04, 0), "leather", "head", segs=16, sx=1.05, caps=False, shade=(0.4, 0.35, 0.3))
     for sx in (-1, 1):
-        c.lathe([(0.09, 0.0), (0.1, 0.02), (0.1, 0.08), (0.08, 0.1)], (0.12 * sx, -0.34, 1.56), "gold", "head", segs=8, rot=(math.pi / 2, 0, 0))
-        c.lathe([(0.0, -0.01), (0.075, 0.0), (0.0, 0.03)], (0.12 * sx, -0.42, 1.56), "plain", "head", segs=8, rot=(math.pi / 2, 0, 0), shade=(0.55, 0.85, 1.0))
-    c.lathe([(0.3, 0.6), (0.4, 0.72), (0.44, 0.9), (0.42, 1.06), (0.3, 1.18), (0.0, 1.2)], (0, 0.01, 0), "cloth", "spine", segs=8, sy=0.85, shade=YEL)
+        g = (0.12 * sx, -0.36, 1.57)
+        c.lathe([(0.075, 0.0), (0.095, 0.01), (0.1, 0.05), (0.1, 0.09), (0.085, 0.11), (0.07, 0.09)], g, "gold", "head", segs=14, rot=(math.pi / 2, 0, 0))
+        c.lathe([(0.0, 0.08), (0.078, 0.085), (0.0, 0.1)], g, "plain", "head", segs=14, rot=(math.pi / 2, 0, 0), shade=(0.55, 0.85, 1.0))
+        for k in range(4):
+            a = k / 4 * math.tau + 0.4
+            c.ico(0.01, (g[0] + math.cos(a) * 0.098, g[1] - 0.09, g[2] + math.sin(a) * 0.098), "iron", "head", sub=1)
+    c.limb((-0.03, -0.46, 1.57), (0.03, -0.46, 1.57), 0.012, 0.012, "gold", "head", segs=5)
+
+    folded(c, [(0.3, 0.6), (0.4, 0.72), (0.44, 0.88), (0.43, 1.0), (0.38, 1.1), (0.3, 1.18), (0.0, 1.2)], (0, 0.01, 0), "cloth", "spine", segs=18, folds=6, amp=0.025, sy=0.85, shade=YEL)
     c.tbox((0.5, 0.06), (0.38, 0.06), 0.55, (0, -0.37, 0.5), "cloth", "spine", rot=(-0.08, 0, 0), shade=YEL)
+    c.tbox((0.2, 0.03), (0.2, 0.03), 0.14, (0.08, -0.405, 0.78), "cloth", "spine", rot=(-0.08, 0, 0), shade=YEL_D)
+    c.limb((0.04, -0.42, 0.88), (0.04, -0.43, 0.98), 0.01, 0.01, "iron", "spine", segs=4)
+    c.tbox((0.03, 0.03), (0.01, 0.01), 0.12, (0.1, -0.42, 0.87), "wood", "spine", shade=(1.2, 0.3, 0.2))
+    c.limb((0.15, -0.42, 0.86), (0.15, -0.43, 0.98), 0.012, 0.012, "wood", "spine", segs=4)
+    c.box((0.06, 0.03, 0.03), (0.15, -0.43, 0.99), "iron", "spine")
     for sx in (-1, 1):
-        c.box((0.04, 0.03, 0.4), (0.17 * sx, -0.4, 0.98), "leather", "chest", rot=(0, 0.2 * sx, 0), shade=(0.6, 0.5, 0.4))
-    c.lathe([(0.43, 0.64), (0.45, 0.68), (0.45, 0.76), (0.43, 0.8)], (0, 0.01, 0), "leather", "hips", segs=8, sy=0.88, shade=(0.6, 0.45, 0.35))
-    c.box((0.14, 0.06, 0.12), (0, -0.42, 0.72), "gold", "hips")
+        c.box((0.05, 0.03, 0.42), (0.17 * sx, -0.4, 0.98), "leather", "chest", rot=(0, 0.2 * sx, 0), shade=(0.6, 0.5, 0.4))
+        c.ico(0.025, (0.17 * sx, -0.425, 0.82), "gold", "chest", sub=1)
+        c.ico(0.025, (0.2 * sx, -0.4, 1.15), "gold", "chest", sub=1)
+    c.lathe([(0.43, 0.64), (0.455, 0.67), (0.455, 0.77), (0.43, 0.8)], (0, 0.01, 0), "leather", "hips", segs=18, sy=0.88, shade=(0.6, 0.45, 0.35))
+    c.box((0.15, 0.06, 0.13), (0, -0.42, 0.72), "gold", "hips")
+    c.box((0.08, 0.065, 0.07), (0, -0.425, 0.72), "leather", "hips", shade=LTH_D)
     for sx, sz in ((-1, 0.14), (1, 0.12)):
-        c.box((0.14, 0.1, sz), (0.3 * sx, -0.34, 0.66), "leather", "hips", rot=(0, 0, 0.3 * sx), shade=(0.75, 0.6, 0.45))
-    c.limb((0.26, -0.38, 0.68), (0.26, -0.45, 0.88), 0.02, 0.02, "iron", "hips", segs=4)
-    c.box((0.08, 0.04, 0.06), (0.26, -0.46, 0.9), "iron", "hips")
-    c.tbox((0.44, 0.3), (0.4, 0.26), 0.44, (0, 0.34, 0.72), "wood", "chest")
-    c.lathe([(0.07, 0.0), (0.08, 0.3), (0.05, 0.36)], (0.12, 0.36, 1.14), "iron", "chest", segs=6)
-    c.lathe([(0.04, 0.0), (0.0, 0.02)], (0.12, 0.36, 1.5), "iron", "chest", segs=6)
+        c.tbox((0.14, 0.1), (0.13, 0.09), sz, (0.3 * sx, -0.34, 0.59), "leather", "hips", rot=(0, 0, 0.3 * sx), shade=(0.75, 0.6, 0.45))
+        c.box((0.145, 0.105, 0.04), (0.3 * sx, -0.345, 0.59 + sz), "leather", "hips", rot=(0, 0, 0.3 * sx), shade=LTH_D)
+    c.limb((0.26, -0.38, 0.68), (0.26, -0.45, 0.88), 0.018, 0.018, "wood", "hips", segs=6)
+    c.tbox((0.12, 0.05), (0.12, 0.05), 0.06, (0.26, -0.455, 0.88), "iron", "hips")
+    c.lathe([(0.0, 0.0), (0.06, 0.0), (0.065, 0.08), (0.04, 0.12), (0.015, 0.14), (0.01, 0.22), (0.0, 0.22)], (-0.36, -0.1, 0.62), "iron", "hips", segs=10, rot=(0, 0.3, 0), shade=(0.9, 0.8, 0.5))
+
+    c.tbox((0.46, 0.32), (0.42, 0.28), 0.46, (0, 0.34, 0.7), "wood", "chest")
+    for cx in (-1, 1):
+        for cz in (0.7, 1.16):
+            c.box((0.07, 0.07, 0.07), (0.22 * cx, 0.48, cz), "gold", "chest")
+        c.box((0.04, 0.33, 0.47), (0.12 * cx, 0.34, 0.93), "leather", "chest", shade=LTH_D)
+        c.limb((0.2 * cx, 0.18, 1.12), (0.25 * cx, -0.05, 1.18), 0.025, 0.025, "leather", "chest", segs=4, shade=LTH_D)
+    c.lathe([(0.075, 0.0), (0.08, 0.3), (0.07, 0.34), (0.09, 0.4), (0.09, 0.48), (0.06, 0.5)], (0.12, 0.38, 1.12), "iron", "chest", segs=10)
+    c.lathe([(0.0, 0.0), (0.12, 0.0), (0.0, 0.05)], (0.12, 0.38, 1.66), "iron", "chest", segs=10)
+    c.lathe([(0.0, -0.02), (0.07, -0.02), (0.075, 0.0), (0.07, 0.02), (0.0, 0.025)], (-0.12, 0.5, 1.02), "gold", "chest", segs=12, rot=(-math.pi / 2, 0, 0))
+    c.lathe([(0.0, 0.0), (0.06, 0.0), (0.0, 0.004)], (-0.12, 0.525, 1.02), "plain", "chest", segs=12, rot=(-math.pi / 2, 0, 0), shade=(1.3, 1.25, 1.15))
+    c.box((0.008, 0.01, 0.05), (-0.11, 0.53, 1.03), "plain", "chest", rot=(0, 0.6, 0), shade=(0.8, 0.1, 0.1))
+    coil = [(-0.24 + 0.03 * math.sin(k * 0.9), 0.34 + 0.08 * math.cos(k * 1.2), 0.75 + k * 0.05) for k in range(9)]
+    for p0, p1 in zip(coil, coil[1:]):
+        c.limb(p0, p1, 0.018, 0.018, "gold", "chest", segs=6)
+    c.lathe([(0.0, -0.02), (0.09, -0.02), (0.1, 0.0), (0.09, 0.02), (0.0, 0.02)], (0.25, 0.32, 0.85), "iron", "chest", segs=12, rot=(0, math.pi / 2, 0))
+    for k in range(8):
+        a = k / 8 * math.tau
+        c.box((0.03, 0.035, 0.03), (0.27, 0.32 + math.cos(a) * 0.1, 0.85 + math.sin(a) * 0.1), "iron", "chest", rot=(a, 0, 0))
+
     for side, sx in (("R", -1), ("L", 1)):
         a0, a1, _ = B[f"arm_{side}"]
         f0, f1, _ = B[f"forearm_{side}"]
         t0, t1, _ = B[f"thigh_{side}"]
         s0, s1, _ = B[f"shin_{side}"]
-        c.ico(0.15, a0, TEAM, f"arm_{side}", scale=(1.15, 1.15, 1.0))
-        c.limb(a0, a1, 0.11, 0.1, "flesh", f"arm_{side}", segs=6)
-        c.lathe([(0.11, 0.0), (0.16, 0.1), (0.16, 0.24), (0.13, 0.3)], (f1[0], f1[1], f1[2] - 0.02), "leather", f"forearm_{side}", segs=7, shade=(0.8, 0.6, 0.45))
-        c.limb(f0, f1, 0.1, 0.1, "flesh", f"forearm_{side}", segs=6)
-        c.ico(0.15, hand_pos(B, side), "leather", f"hand_{side}", scale=(1.0, 1.1, 1.0), shade=(0.8, 0.6, 0.45))
-        c.limb(t0, t1, 0.13, 0.12, "cloth", f"thigh_{side}", segs=6, shade=YEL_D)
-        c.limb(s0, s1, 0.12, 0.12, "cloth", f"shin_{side}", segs=6, shade=YEL_D)
-        c.lathe([(0.15, 0.0), (0.16, 0.14), (0.14, 0.2)], (s1[0], -0.02, 0.04), "iron", f"shin_{side}", segs=7)
+        c.ico(0.155, a0, TEAM, f"arm_{side}", scale=(1.15, 1.15, 1.0), sub=2)
+        for k in range(5):
+            a = k / 5 * math.pi + 0.3
+            c.ico(0.014, (a0[0] + math.cos(a) * 0.17 * sx, a0[1] + math.sin(a) * 0.0 - 0.05, a0[2] + math.sin(a) * 0.15), "iron", f"arm_{side}", sub=1)
+        c.lathe_ab([(0.11, 0.0), (0.12, 0.4), (0.105, 1.0)], a0, a1, "flesh", f"arm_{side}", segs=10)
+        c.lathe_ab([(0.1, 0.0), (0.105, 0.5), (0.1, 1.0)], f0, f1, "flesh", f"forearm_{side}", segs=10)
+        c.lathe([(0.11, 0.0), (0.16, 0.08), (0.17, 0.2), (0.16, 0.26), (0.13, 0.3)], (f1[0], f1[1], f1[2] - 0.02), "leather", f"forearm_{side}", segs=12, shade=GLOVE)
+        ring(c, 0.165, 0.012, (f1[0], f1[1], f1[2] + 0.12), "leather", f"forearm_{side}", segs=12, shade=LTH_D)
+        hx, hy, hz = hand_pos(B, side)
+        c.ico(0.13, (hx, hy, hz + 0.02), "leather", f"hand_{side}", scale=(1.0, 1.1, 1.0), sub=2, shade=GLOVE)
+        for k in range(4):
+            fx = hx + (k - 1.5) * 0.05
+            c.lathe_ab([(0.035, 0.0), (0.032, 0.6), (0.0, 1.0)], (fx, hy - 0.08, hz - 0.03), (fx, hy - 0.12, hz - 0.12), "leather", f"hand_{side}", segs=6, shade=GLOVE)
+        c.lathe_ab([(0.038, 0.0), (0.032, 0.6), (0.0, 1.0)], (hx - 0.1 * sx, hy - 0.05, hz + 0.04), (hx - 0.1 * sx, hy - 0.12, hz - 0.03), "leather", f"hand_{side}", segs=6, shade=GLOVE)
+        c.lathe_ab([(0.13, 0.0), (0.14, 0.4), (0.125, 1.0)], t0, t1, "cloth", f"thigh_{side}", segs=10, shade=YEL_D)
+        c.lathe_ab([(0.122, 0.0), (0.125, 0.5), (0.12, 1.0)], s0, s1, "cloth", f"shin_{side}", segs=10, shade=YEL_D)
+        c.ico(0.11, s0, "leather", f"shin_{side}", scale=(1.1, 1.0, 0.8), sub=2, shade=LTH_D)
+        c.lathe([(0.15, 0.0), (0.165, 0.08), (0.165, 0.16), (0.145, 0.21)], (s1[0], -0.02, 0.04), "iron", f"shin_{side}", segs=12)
         c.tbox((0.26, 0.4), (0.22, 0.26), 0.14, (s1[0], -0.08, 0.0), "leather", f"shin_{side}", shift=(0, 0.06), shade=(0.6, 0.45, 0.35))
+        c.lathe([(0.0, 0.0), (0.13, 0.0), (0.14, 0.05), (0.12, 0.1), (0.0, 0.12)], (s1[0], -0.2, 0.0), "iron", f"shin_{side}", segs=12, sx=1.0, sy=0.8)
+        c.tbox((0.27, 0.42), (0.26, 0.41), 0.03, (s1[0], -0.08, -0.01), "leather", f"shin_{side}", shade=(0.25, 0.18, 0.14))
+        c.box((0.28, 0.04, 0.03), (s1[0], -0.14, 0.11), "leather", f"shin_{side}", shade=LTH_D)
     hx, hy, hz = hand_pos(B)
-    lo = (hx, hy + 0.02, hz - 0.12)
+    lo = (hx, hy + 0.02, hz - 0.14)
     hi = (hx + 0.08, hy + 0.22, hz + 0.95)
-    c.limb(lo, hi, 0.045, 0.045, "iron", "hand_R", segs=5)
-    c.box((0.3, 0.1, 0.12), (hi[0], hi[1], hi[2] + 0.04), "gold", "hand_R")
+    c.lathe_ab([(0.05, 0.0), (0.05, 1.0)], lo, hi, "gold", "hand_R", segs=10)
+    for k in range(5):
+        t = 0.05 + k * 0.05
+        p = Vector(lo) + (Vector(hi) - Vector(lo)) * t
+        ring(c, 0.055, 0.012, tuple(p), "leather", "hand_R", segs=10, rot=(0.23, 0.08, 0), shade=LTH_D)
+    c.ico(0.06, lo, "gold", "hand_R", sub=1)
+    c.box((0.34, 0.11, 0.13), (hi[0], hi[1], hi[2] + 0.04), "gold", "hand_R")
     for sx in (-1, 1):
-        c.box((0.08, 0.1, 0.22), (hi[0] + 0.12 * sx, hi[1], hi[2] + 0.16), "gold", "hand_R")
+        c.box((0.09, 0.11, 0.25), (hi[0] + 0.13 * sx, hi[1], hi[2] + 0.18), "gold", "hand_R")
+        c.box((0.05, 0.115, 0.06), (hi[0] + 0.1 * sx, hi[1], hi[2] + 0.28), "gold", "hand_R")
+    c.lathe_ab([(0.04, 0.0), (0.04, 1.0)], (hi[0] - 0.12, hi[1], hi[2] - 0.04), (hi[0] + 0.12, hi[1], hi[2] - 0.04), "iron", "hand_R", segs=10)
+    for k in range(5):
+        x = hi[0] - 0.1 + k * 0.05
+        ring(c, 0.042, 0.007, (x, hi[1], hi[2] - 0.04), "iron", "hand_R", segs=8, rot=(0, math.pi / 2, 0))
     return c, B
 
 
@@ -500,6 +585,27 @@ def curl(c, start, dirs, r0, mat, bone, segs=6, shade=(1, 1, 1), taper=0.85):
         r *= taper
 
 
+def human_head(w=0.215, d=0.24, h=0.225, face=0.2, jaw=0.32, chin=0.02):
+    def f(v):
+        x, y, z = v.x, v.y, v.z
+        if z < 0:
+            k = -z
+            x *= 1 - jaw * k ** 1.6
+            if y < 0:
+                y *= 1 - 0.1 * k
+        if z > 0.2 and y > 0:
+            y *= 1.08
+        X, Y, Z = x * w, y * d, z * h
+        if z < -0.55 and y < 0:
+            Y -= chin * (-z - 0.55) / 0.45
+        if Y < -face:
+            Y = -face + (Y + face) * 0.35
+        if abs(x) > 0.55 and -0.3 < z < 0.25 and y < -0.3:
+            X *= 1.04
+        return Vector((X, Y, Z))
+    return f
+
+
 def build_duelist(images):
     B = rig(hip=0.9, chest=1.26, neck=1.44, head_top=1.84, sh_x=0.3, hand_z=0.8, leg_x=0.14)
     c = charkit.Char("duelist", images)
@@ -511,14 +617,18 @@ def build_duelist(images):
     LTH = (0.55, 0.38, 0.28)
     BOOT = (0.3, 0.22, 0.18)
 
-    c.lathe([(0.0, 1.4), (0.12, 1.41), (0.19, 1.45), (0.235, 1.54), (0.25, 1.62), (0.245, 1.7), (0.21, 1.78), (0.12, 1.82), (0.0, 1.83)], (0, -0.02, 0), "flesh", "head", segs=16, sy=1.05)
-    c.decal((0, -0.312, 1.6), 0.42, 0.32, "face_human", "head", curve=0.07, cols=5)
-    c.lathe_ab([(0.035, 0.0), (0.033, 0.4), (0.025, 0.8), (0.0, 1.0)], (0, -0.3, 1.6), (0, -0.37, 1.52), "flesh", "head", segs=8)
+    hc = (0, -0.02, 1.615)
+    c.ico(1.0, hc, "flesh", "head", sub=3, deform=human_head())
+    c.decal((0, -0.237, 1.61), 0.36, 0.3, "face_human", "head", curve=0.06, cols=5)
+    c.lathe_ab([(0.032, 0.0), (0.03, 0.4), (0.022, 0.8), (0.0, 1.0)], (0, -0.232, 1.62), (0, -0.29, 1.545), "flesh", "head", segs=8)
     for sx in (-1, 1):
-        curl(c, (0.015 * sx, -0.33, 1.5), [(0.05 * sx, -0.005, -0.005), (0.04 * sx, 0.0, 0.01), (0.015 * sx, 0.0, 0.035), (-0.012 * sx, 0.0, 0.02)], 0.016, "hair", "head", shade=HAIR, taper=0.8)
-        c.ico(0.07, (0.2 * sx, -0.08, 1.58), "flesh", "head", scale=(0.4, 0.7, 1.0), sub=1)
-    c.lathe_ab([(0.03, 0.0), (0.025, 0.5), (0.0, 1.0)], (0, -0.3, 1.45), (0, -0.33, 1.36), "hair", "head", segs=6, shade=HAIR)
-    c.lathe([(0.262, 1.34), (0.28, 1.44), (0.285, 1.56), (0.275, 1.68), (0.24, 1.78), (0.15, 1.84), (0.0, 1.86)], (0, 0.06, 0), "hair", "head", segs=16, shade=HAIR, caps=False)
+        c.ico(0.012, (0.018 * sx, -0.27, 1.545), "flesh", "head", sub=1, shade=(0.85, 0.7, 0.65))
+        curl(c, (0.01 * sx, -0.245, 1.52), [(0.04 * sx, -0.002, -0.006), (0.035 * sx, 0.01, 0.004), (0.014 * sx, 0.012, 0.026), (-0.008 * sx, 0.006, 0.016)], 0.014, "hair", "head", shade=HAIR, taper=0.8)
+        c.ico(0.06, (0.215 * sx, -0.01, 1.6), "flesh", "head", scale=(0.32, 0.6, 0.95), sub=2)
+    c.lathe_ab([(0.026, 0.0), (0.022, 0.5), (0.0, 1.0)], (0, -0.18, 1.44), (0, -0.2, 1.37), "hair", "head", segs=6, shade=HAIR)
+    c.lathe([(0.205, 1.68), (0.215, 1.74), (0.18, 1.8), (0.1, 1.845), (0.0, 1.855)], (0, 0.0, 0), "hair", "head", segs=16, sy=1.12, shade=HAIR)
+    back = cloak_rows(1.78, 1.4, 0.2, 0.235, math.radians(5), math.radians(175), 12, 3, cy=0.02)
+    sheet(c, back, "hair", "head", thick=0.04, shade=HAIR)
     hair = cloak_rows(1.78, 1.24, 0.27, 0.33, math.radians(-25), math.radians(205), 16, 4, cy=0.06, tatter=0.07, flare=0.08, seed=3)
     sheet(c, hair, "hair", "head", thick=0.05, shade=HAIR)
     for k in range(7):
@@ -606,11 +716,12 @@ def build_duelist(images):
         c.lathe_ab([(0.018, 0.0), (0.015, 0.6), (0.0, 1.0)], (hx - 0.05 * sx, hy - 0.02, hz + 0.04), (hx - 0.04 * sx, hy - 0.07, hz - 0.01), "leather", f"hand_{side}", segs=5, shade=LTH)
 
         folded(c, [(0.095, 0.0), (0.11, 0.3), (0.105, 0.7), (0.085, 1.0)], (0, 0, 0), "cloth", f"thigh_{side}", segs=10, folds=3, amp=0.04, shade=BLK) if False else c.lathe_ab([(0.095, 0.0), (0.112, 0.35), (0.105, 0.7), (0.085, 1.0)], t0, t1, "cloth", f"thigh_{side}", segs=10, shade=BLK)
-        c.lathe([(0.085, 0.0), (0.088, 0.1), (0.092, 0.3), (0.098, 0.4)], (s1[0], -0.01, 0.04), "leather", f"shin_{side}", segs=12, shade=BOOT)
-        c.lathe([(0.098, 0.38), (0.14, 0.42), (0.165, 0.5), (0.17, 0.56), (0.15, 0.58), (0.13, 0.5), (0.105, 0.44)], (s1[0], -0.01, 0.04), "leather", f"shin_{side}", segs=14, shade=(0.4, 0.28, 0.22))
-        c.tbox((0.15, 0.32), (0.11, 0.16), 0.1, (s1[0], -0.1, 0.0), "leather", f"shin_{side}", shift=(0, 0.06), shade=(0.45, 0.3, 0.22))
-        c.tbox((0.1, 0.08), (0.09, 0.07), 0.06, (s1[0], 0.04, -0.005), "leather", f"shin_{side}", shade=(0.2, 0.15, 0.12))
-        c.tbox((0.16, 0.33), (0.155, 0.32), 0.02, (s1[0], -0.1, -0.005), "leather", f"shin_{side}", shade=(0.2, 0.15, 0.12))
+        c.lathe([(0.1, 0.0), (0.108, 0.1), (0.112, 0.25), (0.118, 0.36), (0.124, 0.42)], (s1[0], -0.01, 0.04), "leather", f"shin_{side}", segs=14, shade=BOOT)
+        c.lathe([(0.124, 0.38), (0.16, 0.42), (0.185, 0.5), (0.19, 0.56), (0.17, 0.58), (0.15, 0.5), (0.128, 0.44)], (s1[0], -0.01, 0.04), "leather", f"shin_{side}", segs=16, shade=(0.4, 0.28, 0.22))
+        c.lathe_ab([(0.095, 0.0), (0.1, 0.3), (0.09, 0.62), (0.06, 0.88), (0.0, 1.0)], (s1[0], 0.02, 0.07), (s1[0], -0.27, 0.06), "leather", f"shin_{side}", segs=12, shade=BOOT)
+        c.tbox((0.17, 0.3), (0.165, 0.29), 0.025, (s1[0], -0.12, -0.005), "leather", f"shin_{side}", shade=(0.2, 0.15, 0.12))
+        c.tbox((0.11, 0.09), (0.1, 0.08), 0.06, (s1[0], 0.06, -0.005), "leather", f"shin_{side}", shade=(0.2, 0.15, 0.12))
+        c.limb((s1[0] - 0.1, -0.12, 0.09), (s1[0] + 0.1, -0.12, 0.09), 0.012, 0.012, "leather", f"shin_{side}", segs=5, shade=(0.25, 0.18, 0.14))
         c.limb((s1[0], 0.06, 0.08), (s1[0], 0.13, 0.08), 0.008, 0.008, "gold", f"shin_{side}", segs=4)
         ring(c, 0.02, 0.006, (s1[0], 0.14, 0.08), "gold", f"shin_{side}", rot=(0, 1.57, 0), segs=8)
 
