@@ -10,7 +10,7 @@
   },
   "zoneRange": {
     "home": 11,
-    "forward": 10,
+    "forward": 11.5,
     "neutral": 11.5
   },
   "core": {

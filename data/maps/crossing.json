@@ -158,9 +158,9 @@
    "shape": "circle",
    "x": 52,
    "z": 24,
-   "r": 2,
+   "r": 1.0,
    "y": 1.7,
-   "edge": 3.5,
+   "edge": 2.0,
    "mode": "max",
    "wobble": 0.8
   },
@@ -753,6 +753,50 @@
    "z": 13,
    "w": 3,
    "h": 22
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 27.5,
+   "z": 12.5,
+   "r": 2.6,
+   "y": 3.0,
+   "edge": 3,
+   "mode": "max",
+   "wobble": 0.6
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 27.5,
+   "z": 35.5,
+   "r": 2.6,
+   "y": 1.0,
+   "edge": 2.5,
+   "mode": "set",
+   "wobble": 0.4
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 52,
+   "z": 19.5,
+   "r": 2.4,
+   "y": 0.8,
+   "edge": 1.5,
+   "mode": "set",
+   "wobble": 0.3
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 52,
+   "z": 28.5,
+   "r": 2.4,
+   "y": 0.8,
+   "edge": 1.5,
+   "mode": "set",
+   "wobble": 0.3
   }
  ],
  "props": [
@@ -954,8 +998,8 @@
   },
   {
    "type": "rock",
-   "x": 26.5,
-   "z": 34.5,
+   "x": 31.5,
+   "z": 32.5,
    "solid": true
   },
   {
@@ -978,14 +1022,14 @@
   },
   {
    "type": "rock",
-   "x": 49.5,
-   "z": 19.5,
+   "x": 48.0,
+   "z": 17.8,
    "solid": true
   },
   {
    "type": "rock",
-   "x": 49.5,
-   "z": 28.5,
+   "x": 48.0,
+   "z": 30.2,
    "solid": true,
    "scale": 1.2
   },
@@ -1034,23 +1078,23 @@
   },
   {
    "zone": "forward",
-   "x": 28,
-   "z": 8
+   "x": 27.5,
+   "z": 12.5
   },
   {
    "zone": "forward",
-   "x": 29,
-   "z": 35
+   "x": 27.5,
+   "z": 35.5
   },
   {
    "zone": "neutral",
    "x": 52,
-   "z": 13
+   "z": 19.5
   },
   {
    "zone": "neutral",
    "x": 52,
-   "z": 35
+   "z": 28.5
   }
  ],
  "spawns": [
