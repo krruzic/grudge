@@ -127,7 +127,7 @@ export function structurePlaceholder(type: string, team: THREE.Color): THREE.Gro
     add(g, new THREE.CylinderGeometry(1.35, 1.35, 0.25, 4), tm, 0, 2.6, 0).rotation.y = Math.PI / 4;
     add(g, new THREE.ConeGeometry(1.2, 0.8, 4), dark, 0, 3.1, 0).rotation.y = Math.PI / 4;
     add(g, new THREE.IcosahedronGeometry(0.38, 0), lam(0x9dff9a, 0.7), 0, 1.35, 0, "spin");
-  } else if (type === "barracks") {
+  } else if (type === "barracks" || type === "outpost") {
     add(g, new THREE.BoxGeometry(2.4, 1.5, 1.9), lam(0xb8a58a), 0, 1.1, 0);
     const roof = add(g, new THREE.CylinderGeometry(1.4, 1.4, 2.6, 3), tm, 0, 2.25, 0);
     roof.rotation.z = Math.PI / 2;

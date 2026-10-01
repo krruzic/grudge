@@ -1070,7 +1070,9 @@ export class Hud {
     }
     return mui.buildMenu === "tower"
       ? { title: "TOWERS", items: [["DAMAGE", c("damage")], ["CONTROL", c("control")], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 }
-      : { title: "OUTPOSTS", items: [["RANGE", c("range")], ["BARRACKS", c("barracks")], ["FOUNDRY", c("foundry")], ["CANCEL", ""]], lit: -1, until: 0 };
+      : w.terrain.outposts
+        ? { title: "OUTPOSTS", items: [["OUTPOST", c("outpost")], ["", ""], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 }
+        : { title: "OUTPOSTS", items: [["RANGE", c("range")], ["BARRACKS", c("barracks")], ["FOUNDRY", c("foundry")], ["CANCEL", ""]], lit: -1, until: 0 };
   }
 
   private crossN = 0;

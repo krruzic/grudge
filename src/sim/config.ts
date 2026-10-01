@@ -259,6 +259,7 @@ export interface StructureDef {
   heroHealMul?: number;
   damageMul?: number;
   unit?: UnitType;
+  mix?: Partial<Record<UnitType, number>>;
   cadence?: number;
   upgrade: Record<string, number>;
 }

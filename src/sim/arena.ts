@@ -101,6 +101,17 @@ export class Arena {
     this.updateBombs();
   }
 
+  private pickMix(mix: Partial<Record<UnitType, number>>): UnitType {
+    const keys = Object.keys(mix) as UnitType[];
+    const total = keys.reduce((s, k) => s + (mix[k] ?? 0), 0);
+    let r = this.w.rng() * total;
+    for (const k of keys) {
+      r -= mix[k] ?? 0;
+      if (r < 0) return k;
+    }
+    return keys[keys.length - 1];
+  }
+
   private updateWaves(): void {
     const w = this.w;
     const wv = w.data.units.waves;
@@ -119,7 +130,7 @@ export class Arena {
         const up = o.structure.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
         const blessed = this.relic.state === "shrined" && this.relic.shrineId === o.id;
         const rc = w.data.match.arena.relic;
-        for (let k = 0; k < o.structure.level + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
+        for (let k = 0; k < o.structure.level + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.mix ? this.pickMix(def.mix) : def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
       }
       let n = 0;
       let broke = false;

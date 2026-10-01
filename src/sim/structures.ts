@@ -62,7 +62,8 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
     w.emit({ type: "notice", team, text: "ENEMY PAD" });
     return false;
   }
-  const type = kind === "default" ? w.heroDef(hero.hero!.type).defaultBuild : kind;
+  const want = kind === "default" ? w.heroDef(hero.hero!.type).defaultBuild : kind;
+  const type = w.terrain.outposts && w.data.structures.types[want].class === "production" ? "outpost" : want;
   const cost = buildCost(w, type, false, team);
   if (ts.resource < cost) {
     w.emit({ type: "notice", team, text: `NEED ${cost}` });

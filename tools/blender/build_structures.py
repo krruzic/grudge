@@ -156,7 +156,34 @@ def foundry(images):
     return b, (s, (-0.6, -1.0, 1.55))
 
 
-BUILDERS = {"damage": damage, "control": control, "support": support, "barracks": barracks, "range": range_, "foundry": foundry}
+def outpost(images):
+    b = charkit.Char("outpost", images)
+    plinth(b)
+    b.box((1.7, 1.5, 1.2), (-0.2, 0.25, 0.9), "wood", "root", meters=1.0)
+    b.box((1.8, 1.6, 0.18), (-0.2, 0.25, 1.55), T, "root")
+    b.box((1.25, 1.7, 0.1), (-0.62, 0.25, 1.95), "roof", "root", rot=(0, -0.72, 0), meters=1.0)
+    b.box((1.25, 1.7, 0.1), (0.22, 0.25, 1.95), "roof", "root", rot=(0, 0.72, 0), meters=1.0)
+    b.box((0.55, 0.08, 0.85), (-0.2, -0.52, 0.72), "wood", "root")
+    b.box((0.24, 0.24, 0.24), (-0.2, -0.55, 1.3), "gold", "root", rot=(0, math.pi / 4, 0))
+    b.cone(0.24, 0.2, 1.4, (0.35, 0.65, 2.3), "brick", "root", segs=6, meters=1.0)
+    b.cone(0.3, 0.3, 0.16, (0.35, 0.65, 3.0), "iron", "root", segs=6)
+    b.cone(0.46, 0.46, 0.08, (1.0, -0.75, 0.95), "cloth", "root", segs=8, rot=(math.pi / 2, 0, 0))
+    b.cone(0.3, 0.3, 0.1, (1.0, -0.77, 0.95), T, "root", segs=8, rot=(math.pi / 2, 0, 0))
+    b.cone(0.11, 0.11, 0.12, (1.0, -0.79, 0.95), "gold", "root", segs=6, rot=(math.pi / 2, 0, 0))
+    for sx in (-1, 1):
+        b.limb((1.0 + 0.25 * sx, -0.65, 0.3), (1.0 + 0.1 * sx, -0.7, 0.9), 0.035, 0.035, "wood", "root", segs=4)
+    b.box((0.45, 0.28, 0.22), (1.05, 0.55, 0.42), "iron", "root")
+    b.box((0.2, 0.2, 0.25), (1.05, 0.55, 0.22), "iron", "root")
+    b.box((0.4, 0.4, 0.4), (-1.15, -0.6, 0.5), "wood", "root", rot=(0, 0.3, 0))
+    for i in range(3):
+        b.limb((-1.2 + i * 0.1, -0.15, 0.3), (-1.25 + i * 0.1, -0.2, 1.2), 0.02, 0.02, "wood", "root", segs=3)
+    s = charkit.Char("spin_outpost", images)
+    s.box((0.5, 0.04, 0.34), (0.26, 0, 0), C, "root")
+    b.limb((-1.15, 0.85, 0.3), (-1.15, 0.85, 2.6), 0.04, 0.04, "wood", "root", segs=4)
+    return b, (s, (-1.15, 0.85, 2.4))
+
+
+BUILDERS = {"damage": damage, "control": control, "support": support, "barracks": barracks, "range": range_, "foundry": foundry, "outpost": outpost}
 
 
 def build_one(name, images):

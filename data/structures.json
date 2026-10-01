@@ -127,6 +127,17 @@
         "cadence": 0.7,
         "unitStat": 1.2
       }
+    },
+    "outpost": {
+      "name": "Outpost",
+      "class": "production",
+      "cost": 75,
+      "upgradeCost": 100,
+      "hp": 920,
+      "unit": "grunt",
+      "mix": { "grunt": 0.45, "ranged": 0.35, "heavy": 0.2 },
+      "cadence": 12,
+      "upgrade": { "hp": 1.3, "cadence": 0.7, "unitStat": 1.2 }
     }
   },
   "upgradeSeconds": 10,

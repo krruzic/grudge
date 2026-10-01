@@ -40,7 +40,7 @@ type Talent = { id: string; name: string; desc: string; combo?: string };
 const HEROES = (heroJson as unknown as { heroes: Record<string, Hero> }).heroes;
 const TALENTS = (talentJson as unknown as { heroes: Record<string, Record<"r" | "b" | "a" | "z", Talent[]>> }).heroes;
 const U = unitJson as unknown as { waves: { everySeconds: number; spawnCost: Record<string, number> }; types: Record<string, { hp: number; bounty: number }>; popCap: number };
-const S = structJson as unknown as { types: Record<string, { name: string; cost: number; upgradeCost: number }>; buildSeconds: number; rubbleSeconds: number };
+const S = structJson as unknown as { types: Record<string, { name: string; cost: number; upgradeCost: number; mix?: Record<string, number> }>; buildSeconds: number; rubbleSeconds: number };
 const M = matchJson as unknown as {
   economy: { start: number; income: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   arena: {
@@ -316,6 +316,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       glyph: "castle",
       pages: [
         { title: "WHERE TROOPS COME FROM", text: `TROOPS ONLY COME FROM OUTPOSTS. BUILD THEM ON PADS WITH X: A BARRACKS MAKES GRUNTS, A RANGE MAKES ARCHERS, A FOUNDRY MAKES BRUTES. EACH COSTS ${st.barracks.cost} GOLD. EVERY ${U.waves.everySeconds} SECONDS EACH OUTPOST SENDS ITS SOLDIER, AND YOU PAY FOR EACH ONE AS IT COMES OUT.`, tip: "NO GOLD, NO TROOPS. IF YOUR OUTPOSTS GO QUIET, CHECK YOUR PURSE.", art: { kind: "seal", glyph: "castle" } },
+        { title: "MIXED OUTPOSTS", text: `SOME FIELDS ARE TOO CRAMPED FOR SPECIALISTS. THERE YOU CAN ONLY BUILD A PLAIN OUTPOST, ${st.outpost.cost} GOLD, AND EVERY SOLDIER IT SENDS IS PICKED AT RANDOM: ABOUT ${Math.round((st.outpost.mix?.grunt ?? 0) * 100)}% GRUNTS, ${Math.round((st.outpost.mix?.ranged ?? 0) * 100)}% ARCHERS AND ${Math.round((st.outpost.mix?.heavy ?? 0) * 100)}% BRUTES. RIGHT NOW THAT'S THE RUINS.`, tip: "YOU DON'T GET TO CHOOSE. NEITHER DO THEY. IT'S VERY DEMOCRATIC.", art: { kind: "seal", glyph: "castle" } },
         { title: "UPGRADES AND FORWARD OUTPOSTS", text: `UPGRADE AN OUTPOST (Y AT ITS PAD, ${st.barracks.upgradeCost} GOLD) TO SEND TWO SOLDIERS AT A TIME, WITH BETTER STATS. OUTPOSTS ON FORWARD OR NEUTRAL PADS MAKE TOUGHER SOLDIERS, AND STANDING NEAR ONE HEALS YOU LIKE YOUR OWN TURF.`, tip: "A FORWARD OUTPOST IS A SECOND HOME. LOSE IT AND YOU'LL FEEL IT.", art: { kind: "seal", glyph: "banner" } },
       ],
     },
@@ -415,7 +416,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
     },
     "Grudgekeep Ruins": {
       glyph: "castle",
-      text: "A SQUARE OF OLD WALLS AND PITS, MIRRORED CORNER TO CORNER. EACH KEEP HAS A FRONT GATE TOWARD THE CENTRE AND A BACK GATE IN THE SIDE. THE OTHER TWO CORNERS ARE OLD GRAVEYARDS NOBODY VISITS.",
+      text: "A SQUARE OF OLD WALLS AND PITS, MIRRORED CORNER TO CORNER. EACH KEEP HAS A FRONT GATE TOWARD THE CENTRE AND A BACK GATE IN THE SIDE. THE OTHER TWO CORNERS ARE OLD GRAVEYARDS NOBODY VISITS. THERE'S SO LITTLE ROOM THAT EVERY OUTPOST HERE IS A MIXED ONE: YOU BUILD IT, IT DECIDES WHO TO SEND.",
       tip: "THE BACK GATE IS EASY TO FORGET. SO IS THE GRIM WALKING THROUGH IT.",
       mech: {
         title: "THE BONE LANTERN",

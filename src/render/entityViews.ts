@@ -1426,7 +1426,7 @@ export class EntityViews {
         v.spin.position.y = v.spin.userData.baseY + Math.sin(time * 2) * 0.15;
         v.spin.rotation.y = time;
       } else if (st.type === "foundry") v.spin.rotation.z = time * 3;
-      else if (st.type === "range") v.spin.rotation.y = Math.sin(time * 2) * 0.3;
+      else if (st.type === "range" || st.type === "outpost") v.spin.rotation.y = Math.sin(time * 2) * 0.3;
       else if (st.type === "barracks") v.spin.rotation.y = Math.sin(time * 2) * 0.3;
     }
     if (st.ready && (st.type === "damage" || st.type === "control" || st.type === "support")) {
