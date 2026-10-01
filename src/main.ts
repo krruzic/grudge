@@ -297,7 +297,7 @@ async function start(): Promise<void> {
     });
     readySince = -1;
   };
-  const selectReady = () => slots.every((sl, i) => !slotActive(i) || (sl.ready && heldBy(i) < 0)) && cursors.cursors.every((c) => !c.active || c.holding < 0 || !slotActive(c.holding));
+  const selectReady = () => slots.every((sl, i) => !slotActive(i) || (sl.ready && !sl.open && heldBy(i) < 0)) && cursors.cursors.every((c) => !c.active || c.holding < 0 || !slotActive(c.holding));
   let state: State = "title";
   const stickLatch = [false, false, false, false];
   const randomHero = () => roster[Math.floor(Math.random() * roster.length)];
@@ -940,6 +940,7 @@ async function start(): Promise<void> {
       if (allReady && readySince < 0) readySince = now;
       if (!allReady) readySince = -1;
       screens.readyBanner = allReady;
+      screens.openHint = !allReady && slots.some((sl, i) => slotActive(i) && sl.open) && slots.every((sl, i) => !slotActive(i) || sl.open || (sl.ready && heldBy(i) < 0));
       if (allReady && now - readySince > 0.25 && anyPressed("start")) toMap();
     } else if (state === "map") {
       cursors.setScale(pixel.w, pixel.h);

@@ -191,6 +191,7 @@ export class Screens {
 
   private heroPartners = false;
   hosting = false;
+  openHint = false;
   peer = false;
 
   updateSelect(slots: SelectSlot[], heroes: Record<string, HeroInfo>, roster: string[], twoVtwo: boolean, heroPartners = false): void {
@@ -310,6 +311,14 @@ export class Screens {
       if (blink || !lb.status) center(ctx, W, t, floorY - 10, "#fff0c0", 0.55);
     }
 
+    if (this.openHint && !this.peer) {
+      const sw2 = Math.min(300, W - 60);
+      scroll(ctx, W / 2, 124, sw2, 30);
+      const t1 = "SEATS STILL OPEN";
+      drawPlain(ctx, t1, W / 2 - textWidth(t1, 1.05, true) / 2, 127, "#3a2410", 1.05, true);
+      const t2 = this.twoVtwo ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1" : "WAIT FOR A PLAYER OR + ADD CPU";
+      drawPlain(ctx, t2, W / 2 - textWidth(t2, 0.55, true) / 2, 142, "#8a1810", 0.55, true);
+    }
     if (this.readyBanner) {
       const sw2 = Math.min(280, W - 60);
       scroll(ctx, W / 2, 124, sw2, 34);
