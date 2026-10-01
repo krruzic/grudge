@@ -3,12 +3,14 @@
     "health": {
       "low": 600,
       "mid": 800,
-      "high": 1000
+      "high": 1000,
+      "sturdy": 980
     },
     "speed": {
       "low": 4.0,
       "mid": 4.8,
-      "high": 5.6
+      "high": 5.6,
+      "swift": 6.3
     },
     "damage": {
       "low": 0.8,
@@ -142,7 +144,7 @@
     "engineer": {
       "name": "Engineer",
       "blurb": "Cheaper structures and upgrades. Repairs. Raises siege works and a ballista to perch on them.",
-      "health": "mid",
+      "health": "sturdy",
       "speed": "mid",
       "damage": "mid",
       "defaultBuild": "damage",
@@ -213,7 +215,7 @@
         "z": {
           "kind": "ballista",
           "anim": "attack_a",
-          "hp": 180,
+          "hp": 450,
           "damage": 80,
           "range": 11,
           "cooldown": 1.8,
@@ -238,7 +240,7 @@
       "name": "Raider",
       "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills reset Leap.",
       "health": "low",
-      "speed": "high",
+      "speed": "swift",
       "damage": "mid",
       "defaultBuild": "barracks",
       "botRange": 1.6,
