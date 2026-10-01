@@ -544,34 +544,35 @@
       "blurb": "Keeper. Walls come with snares at each end; snares inside the Thorn zone re-arm.",
       "health": "high",
       "speed": "mid",
-      "damage": "low",
+      "damage": "mid",
       "defaultBuild": "control",
       "botRange": 2.2,
       "hooks": {
         "controlTowerMul": 1.5,
-        "speedMul": 0.92
+        "speedMul": 0.92,
+        "structureMul": 1.3
       },
       "abilities": {
         "a": {
           "kind": "combo",
           "hits": [
             {
-              "damage": 48,
+              "damage": 54,
               "range": 2.9,
-              "arcDeg": 210,
-              "dur": 0.5,
-              "hitAt": 0.24,
-              "lunge": 1.0,
-              "knockback": 3.5
+              "arcDeg": 160,
+              "dur": 0.46,
+              "hitAt": 0.22,
+              "lunge": 1.2,
+              "knockback": 1.5
             },
             {
-              "damage": 76,
+              "damage": 86,
               "range": 3.1,
-              "arcDeg": 240,
-              "dur": 0.66,
-              "hitAt": 0.34,
-              "lunge": 1.5,
-              "knockback": 6.5
+              "arcDeg": 190,
+              "dur": 0.58,
+              "hitAt": 0.3,
+              "lunge": 1.6,
+              "knockback": 4.5
             }
           ],
           "comboWindow": 0.4,

@@ -300,7 +300,7 @@ export interface MatchData {
     cannon: { firstSeconds: number; everySeconds: number; volleys: number; spacing: number; warnSeconds: number; radius: number; damage: number; structureDamage: number; knockback: number; spread: number };
     shop: {
       radius: number;
-      bomb: { cost: number; fuse: number; coreDamage: number; plantReach: number; throwRange: number; throwSeconds: number; groundFuse: number; stickReach: number; splash: number; splashDamage: number; structureSplash: number };
+      bomb: { cost: number; fuse: number; coreDamage: number; plantReach: number; throwRange: number; throwSeconds: number; groundFuse: number; stickReach: number; splash: number; splashDamage: number; splashUnitMul?: number; structureSplash: number };
       ward: { cost: number; cooldown: number };
       cannon: { cost: number; shots: number; radius: number; aimSpeed: number; aimSeconds: number; spread: number };
     };

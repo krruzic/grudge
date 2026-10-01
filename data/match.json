@@ -117,8 +117,9 @@
         "throwSeconds": 0.6,
         "groundFuse": 3,
         "stickReach": 1.6,
-        "splash": 3.2,
-        "splashDamage": 90,
+        "splash": 4.6,
+        "splashDamage": 140,
+        "splashUnitMul": 1.8,
         "structureSplash": 220
       },
       "ward": {

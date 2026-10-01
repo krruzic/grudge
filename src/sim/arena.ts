@@ -578,7 +578,7 @@ export class Arena {
       this.bombs.splice(i, 1);
       const owner = w.get(b.ownerId) ?? null;
       w.emit({ type: "bomb", state: "boom", x: b.x, y: b.y, z: b.z, team: b.team, fuse: 0 });
-      w.emit({ type: "cannonHit", x: b.x, y: b.y, z: b.z, radius: 3.4 });
+      w.emit({ type: "cannonHit", x: b.x, y: b.y, z: b.z, radius: sh.splash + 0.2 });
       const t = b.targetId ? w.get(b.targetId) : undefined;
       if (t?.alive && t.structure) {
         if (t.structure.type === "core") w.damage(owner, t, sh.coreDamage, { big: true, structureDamage: sh.coreDamage });
@@ -592,7 +592,7 @@ export class Arena {
           if (!b.targetId) w.damage(owner, o, sh.structureSplash, { big: true, structureDamage: sh.structureSplash });
           continue;
         }
-        w.damage(owner, o, sh.splashDamage, { knockback: 9, fromX: b.x, fromZ: b.z, big: true, stun: 0.3 });
+        w.damage(owner, o, sh.splashDamage * (o.unit ? sh.splashUnitMul ?? 1 : 1), { knockback: 9, fromX: b.x, fromZ: b.z, big: true, stun: 0.3 });
       }
     }
   }

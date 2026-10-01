@@ -778,6 +778,7 @@ export class World {
         }
       }
       if (hk.heroDamageMul && target.hero && src.hero) amount *= hk.heroDamageMul;
+      if (hk.structureMul && target.structure && opts.structureDamage === undefined) amount *= hk.structureMul;
       if (!target.structure) {
         const pos = this.data.match.positional;
         const dx = src.transform.pos.x - tp.pos.x;
