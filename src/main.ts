@@ -1393,6 +1393,69 @@ async function start(): Promise<void> {
       }
       return null;
     }
+    if (spec.scene) {
+      const key = `scene|${spec.scene}`;
+      if (!demo || demo.key !== key) {
+        const w = new World(maps[demoMap].data, demoData, 11);
+        const me = w.spawnHero("warlord", 0, 0);
+        const foe = w.spawnHero("warden", 1, 1);
+        for (const h of [me, foe]) {
+          w.teleport(h, h === me ? 4 : 96, h === me ? 4 : 44);
+          h.status.stunUntil = 1e9;
+          h.status.invulnUntil = 1e9;
+        }
+        if (spec.scene === "grudge") {
+          const r = w.arena.relic;
+          r.state = "home";
+          r.x = w.arena.home.x;
+          r.z = w.arena.home.z;
+          r.y = w.groundY(r.x, r.z);
+        }
+        if (spec.scene === "troops") {
+          const types = ["grunt", "ranged", "heavy"] as const;
+          types.forEach((t, k) => {
+            const u = spawnUnit(w, 0, t, DEMO_SPOT.x - 2.2 + k * 2.2, DEMO_SPOT.z, 1);
+            if (u?.unit) {
+              u.unit.damage = 0;
+              u.transform.facing = u.transform.prevFacing = 0;
+            }
+          });
+          const ad = w.teams[0].directives;
+          ad.grunt = ad.ranged = ad.heavy = "hold";
+          for (const t of types) ad.holdPoint[t] = { x: DEMO_SPOT.x, z: DEMO_SPOT.z };
+        }
+        if (!demo || !demo.mapShown) view.setMap(mapViews[demoMap], w.terrain);
+        view.setWorld(w);
+        demo = { key, w, t: 0, acc: 0, loop: 0, len: 1e9, presses: [], dist: 0, btn: "attack", mapShown: true, kind: spec.scene };
+      }
+      const d = demo;
+      const w = d.w;
+      d.acc += Math.min(dt, 0.1);
+      while (d.acc >= w.dt) {
+        d.acc -= w.dt;
+        d.t += w.dt;
+        let k = 0;
+        for (const u of w.entities) {
+          if (!u.unit) continue;
+          u.unit.repathAt = 1e9;
+          if (spec.scene === "troops") w.teleport(u, DEMO_SPOT.x - 2.6 + k++ * 2.6, DEMO_SPOT.z);
+          u.transform.facing = u.transform.prevFacing = 0.22 + Math.sin(d.t * 0.3) * 0.25;
+        }
+        w.step([{ moveX: 0, moveZ: 0 }, { moveX: 0, moveZ: 0 }]);
+      }
+      const core = w.core(0)!;
+      const tgt = spec.scene === "grudge" ? { x: w.arena.home.x, y: w.groundY(w.arena.home.x, w.arena.home.z) + 1.0, z: w.arena.home.z }
+        : spec.scene === "keep" ? { x: core.transform.pos.x, y: core.transform.y + 1.6, z: core.transform.pos.z }
+        : { x: DEMO_SPOT.x, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.9, z: DEMO_SPOT.z };
+      view.demoCam = {
+        rect: menus.demoRect,
+        target: tgt,
+        yaw: spec.scene === "keep" ? 0.9 + Math.sin(d.t * 0.25) * 0.25 : 0.22 + Math.sin(d.t * 0.3) * 0.25,
+        pitch: spec.scene === "keep" ? 0.42 : 0.3,
+        dist: spec.scene === "keep" ? 15 : spec.scene === "grudge" ? 8 : 7,
+      };
+      return d.acc / w.dt;
+    }
     const base = `${spec.hero}|${spec.slot}|${spec.picks}`;
     if (base !== demoBase) {
       demoBase = base;

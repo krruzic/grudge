@@ -9,7 +9,8 @@ export type CodexArt =
   | { kind: "portrait"; hero: string }
   | { kind: "map"; index: number }
   | { kind: "seal"; glyph: string; color?: string }
-  | { kind: "unit"; type: string };
+  | { kind: "unit"; type: string }
+  | { kind: "scene"; scene: "grudge" | "keep" | "troops" };
 
 export interface CodexPick {
   id: string;
@@ -298,8 +299,8 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       title: "YOUR TROOPS",
       glyph: "banner",
       pages: [
-        { title: "THREE KINDS OF SOLDIER", text: `GRUNTS (${sc.grunt} GOLD): CHEAP, QUICK, GOOD AT HACKING BRUTES APART. ARCHERS (${sc.ranged} GOLD): SHOOT FROM RANGE, SHRED GRUNTS. BRUTES (${sc.heavy} GOLD): BIG, SLOW, SMASH ARCHERS AND BUILDINGS.`, tip: "GRUNTS BEAT BRUTES. ARCHERS BEAT GRUNTS. BRUTES BEAT ARCHERS. A MIXED ARMY BEATS ANY SINGLE KIND.", art: { kind: "unit", type: "grunt" } },
-        { title: "VETERANS", text: "TROOPS THAT GET KILLS RANK UP: VETERAN, ELITE, THEN HEROIC. EACH RANK HITS HARDER, HAS MORE HEALTH AND HEALS A BIT. HEROIC TROOPS SLOWLY REGENERATE.", tip: `KEEPING TROOPS ALIVE MATTERS. THE ARMY CAP IS ${U.popCap}, SO DON'T THROW THEM AWAY.`, art: { kind: "unit", type: "heavy" } },
+        { title: "THREE KINDS OF SOLDIER", text: `GRUNTS (${sc.grunt} GOLD): CHEAP, QUICK, GOOD AT HACKING BRUTES APART. ARCHERS (${sc.ranged} GOLD): SHOOT FROM RANGE, SHRED GRUNTS. BRUTES (${sc.heavy} GOLD): BIG, SLOW, SMASH ARCHERS AND BUILDINGS.`, tip: "GRUNTS BEAT BRUTES. ARCHERS BEAT GRUNTS. BRUTES BEAT ARCHERS. A MIXED ARMY BEATS ANY SINGLE KIND.", art: { kind: "scene", scene: "troops" } },
+        { title: "VETERANS", text: "TROOPS THAT GET KILLS RANK UP: VETERAN, ELITE, THEN HEROIC. EACH RANK HITS HARDER, HAS MORE HEALTH AND HEALS A BIT. HEROIC TROOPS SLOWLY REGENERATE.", tip: `KEEPING TROOPS ALIVE MATTERS. THE ARMY CAP IS ${U.popCap}, SO DON'T THROW THEM AWAY.`, art: { kind: "seal", glyph: "rank", color: "#c8a020" } },
       ],
     },
     {
@@ -346,7 +347,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       title: "KEEP AND SHOP",
       glyph: "castle",
       pages: [
-        { title: "THE KEEP", text: "YOUR KEEP IS YOUR LIFE. LOSE IT AND YOU LOSE. IF TIME RUNS OUT, WHOEVER DID MORE DAMAGE TO THE OTHER KEEP WINS. YOUR KEEP HAS A WARD THAT SOAKS DAMAGE AT FIRST.", tip: "EVERY HIT ON THEIR KEEP COUNTS. EVEN ONE BRUTE SMACKING IT ADDS UP.", art: { kind: "seal", glyph: "castle" } },
+        { title: "THE KEEP", text: "YOUR KEEP IS YOUR LIFE. LOSE IT AND YOU LOSE. IF TIME RUNS OUT, WHOEVER DID MORE DAMAGE TO THE OTHER KEEP WINS. YOUR KEEP HAS A WARD THAT SOAKS DAMAGE AT FIRST.", tip: "EVERY HIT ON THEIR KEEP COUNTS. EVEN ONE BRUTE SMACKING IT ADDS UP.", art: { kind: "scene", scene: "keep" } },
         { title: "THE SHOP", text: `PRESS Y AT YOUR KEEP. BOMB (${sh.bomb.cost}): THROW IT, OR STICK IT TO A BUILDING. IT FLATTENS A TOWER AND DOES ${sh.bomb.coreDamage} TO A KEEP. SHIELD (${sh.ward.cost}): RESTORES YOUR KEEP'S WARD. CANNON (${sh.cannon.cost}): AIM ${sh.cannon.shots} SHELLS ANYWHERE ON THE FIELD.`, tip: "A BOMB THROWN INTO A CLUMP OF TROOPS DELETES THEM. THEY DON'T LIKE THAT.", art: { kind: "seal", glyph: "trap" } },
         { title: "RECALL", text: "AWAY FROM YOUR KEEP, PRESS Y TO RECALL: STAND STILL FOR 6 SECONDS AND YOU'RE TELEPORTED HOME. MOVING, ATTACKING OR GETTING HIT CANCELS IT. ONCE PER LIFE.", tip: "RECALL THE MOMENT YOU SEE SOMEONE SNEAKING INTO YOUR BASE, NOT WHEN THE KEEP IS ON FIRE.", art: { kind: "seal", glyph: "leap" } },
       ],
@@ -365,7 +366,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       title: "THE GRUDGE",
       glyph: "hex",
       pages: [
-        { title: "THE RELIC", text: `AFTER ${rel.firstSeconds} SECONDS THE GRUDGE APPEARS IN THE MIDDLE OF THE FIELD. PICK IT UP AND CARRY IT HOME. YOU'RE SLOWER WHILE CARRYING AND CAN'T ATTACK.`, tip: "SEND SOMEONE WITH ESCORTS. A LONE CARRIER IS A GIFT.", art: { kind: "seal", glyph: "hex" } },
+        { title: "THE RELIC", text: `AFTER ${rel.firstSeconds} SECONDS THE GRUDGE APPEARS IN THE MIDDLE OF THE FIELD. PICK IT UP AND CARRY IT HOME. YOU'RE SLOWER WHILE CARRYING AND CAN'T ATTACK. PRESS L TO DROP IT.`, tip: "SEND SOMEONE WITH ESCORTS. A LONE CARRIER IS A GIFT. IF THEY'RE ABOUT TO CATCH YOU, DROP IT BEHIND A FRIEND.", art: { kind: "scene", scene: "grudge" } },
         { title: "ENSHRINING IT", text: `STAND AT A TOWER, OUTPOST OR YOUR KEEP FOR ${rel.enshrineSeconds} SECONDS TO ENSHRINE IT. A TOWER SHRINE HITS HARDER AND FURTHER, AN OUTPOST SHRINE SENDS EXTRA, TOUGHER TROOPS, THE KEEP SHRINE REGROWS ITS WARD. ANY SHRINE GIVES ${pct(rel.incomeMul)} MORE GOLD.`, tip: `THE ENEMY CAN STEAL IT BACK BY STANDING ON IT FOR ${rel.stealSeconds} SECONDS. GUARD YOUR SHRINE.`, art: { kind: "seal", glyph: "castle", color: "#c8a020" } },
       ],
     },

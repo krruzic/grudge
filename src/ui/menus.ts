@@ -1125,10 +1125,11 @@ export class Menus {
   demoRect: [number, number, number, number] | null = null;
   demoPick = 0;
 
-  codexDemo(): { hero: string; slot: "a" | "b" | "r" | "z"; picks: number } | null {
+  codexDemo(): { hero: string; slot: "a" | "b" | "r" | "z"; picks: number; scene?: string } | null {
     if (this.page !== "codex" || !this.demoRect) return null;
     const e = this.codexEntries()[this.focus];
     const pg = e?.pages[Math.min(this.codexPage, e.pages.length - 1)];
+    if (pg?.art.kind === "scene") return { hero: "", slot: "a", picks: 0, scene: pg.art.scene };
     if (!pg || pg.art.kind !== "shot") return null;
     return { hero: pg.art.hero, slot: pg.art.slot, picks: pg.picks?.length ?? 0 };
   }
@@ -1171,7 +1172,7 @@ export class Menus {
     const py = 25;
     this.demoRect = null;
     if (entry && page) {
-      const live = page.art.kind === "shot";
+      const live = page.art.kind === "shot" || page.art.kind === "scene";
       card(ctx, px, py, pw, ph, 0, null, () => {
         const evo = !!page.picks;
         const wide = live || page.art.kind === "map";
@@ -1407,14 +1408,14 @@ export class Menus {
 }
 
 const PAD_GROUPS: [string, [string, string][]][] = [
-  ["FIGHT", [["STICK", "MOVE"], ["A", "ATTACK · HOLD TO CHARGE · WITH A BOMB: THROW"], ["B", "SECONDARY · HOLD TO CHARGE OR AIM"], ["R", "SPECIAL · HOLD TO AIM WHERE IT LANDS"], ["Z", "SUPER WHEN THE METER IS FULL"], ["L", "BLOCK · L+A SHOVE · L+X DODGE · CANCELS AN AIM"]]],
+  ["FIGHT", [["STICK", "MOVE"], ["A", "ATTACK · HOLD TO CHARGE · WITH A BOMB: THROW"], ["B", "SECONDARY · HOLD TO CHARGE OR AIM"], ["R", "SPECIAL · HOLD TO AIM WHERE IT LANDS"], ["Z", "SUPER WHEN THE METER IS FULL"], ["L", "BLOCK · L+A SHOVE · L+X DODGE · CANCELS AN AIM · DROPS THE GRUDGE"]]],
   ["COMMAND", [["C", "ORDERS: UP ATTACK · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD · LEVEL UP: LEFT / RIGHT"], ["D-PAD", "LEFT / RIGHT: WHO OBEYS · UP / DOWN: ZOOM"]]],
-  ["BUILD", [["X", "AT A PAD: OUTPOSTS · THEY SEND TROOPS FOR GOLD"], ["Y", "AT A PAD: TOWERS · KEEP: SHOP · ELSEWHERE: RECALL (ONCE PER LIFE)"], ["START", "PAUSE"]]],
+  ["BUILD", [["X", "AT A PAD: OUTPOSTS · 2V2: HOLD AWAY FROM A PAD TO BECOME THE HERALD"], ["Y", "AT A PAD: TOWERS · KEEP: SHOP · ELSEWHERE: RECALL (ONCE PER LIFE)"], ["START", "PAUSE"]]],
 ];
 const KEY_GROUPS: [string, [string, string][]][] = [
-  ["FIGHT", [["WASD", "MOVE"], ["E", "ATTACK · HOLD TO CHARGE"], ["Q", "SECONDARY · HOLD TO CHARGE"], ["X", "SPECIAL · HOLD + WASD TO AIM"], ["C", "SUPER · HOLD + WASD TO AIM"], ["Z", "BLOCK · Z + E: SHOVE · CANCELS AN AIM"], ["SPACE", "DODGE"]]],
+  ["FIGHT", [["WASD", "MOVE"], ["E", "ATTACK · HOLD TO CHARGE"], ["Q", "SECONDARY · HOLD TO CHARGE"], ["X", "SPECIAL · HOLD + WASD TO AIM"], ["C", "SUPER · HOLD + WASD TO AIM"], ["Z", "BLOCK · Z + E: SHOVE · CANCELS AN AIM · DROPS THE GRUDGE"], ["SPACE", "DODGE"]]],
   ["COMMAND", [["ARROWS", "ORDERS · LEFT / RIGHT LEARNS ON LEVEL UP"], ["3 / 4", "WHO OBEYS"], ["1 / 2", "ZOOM"]]],
-  ["BUILD", [["F / L-MOUSE", "OUTPOSTS AT A PAD"], ["R / R-MOUSE", "TOWERS · SHOP AT THE KEEP · ELSEWHERE: RECALL"], ["ENTER", "PAUSE"]]],
+  ["BUILD", [["F / L-MOUSE", "OUTPOSTS AT A PAD · 2V2: HOLD F ELSEWHERE TO BECOME THE HERALD"], ["R / R-MOUSE", "TOWERS · SHOP AT THE KEEP · ELSEWHERE: RECALL"], ["ENTER", "PAUSE"]]],
 ];
 
 export function drawControlSheet(ctx: CanvasRenderingContext2D, px: number, py: number, pw: number, ph: number): void {

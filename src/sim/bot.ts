@@ -144,7 +144,7 @@ export class Bot {
     cmd.dodge = this.wantDodge;
     cmd.recall = this.wantRecall;
     this.wantRecall = false;
-    cmd.block = this.wantBlock;
+    cmd.block = this.wantBlock && !w.arena.carrying(me);
     this.wantAttack = this.wantB = this.wantR = this.wantZ = this.wantDodge = false;
     if (this.wantBlock && this.rand() < 0.1) this.wantBlock = false;
     return cmd;

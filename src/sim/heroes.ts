@@ -235,6 +235,10 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     }
     return;
   }
+  if (w.arena.carrying(e) && cmd.block && !h.blocking) {
+    w.arena.drop(e, t.pos.x, t.pos.z);
+    cmd = { ...cmd, block: false };
+  }
   if (w.arena.carrying(e)) cmd = { ...cmd, attack: false, secondary: false, special: false, super: false, dodge: false, build: undefined };
   if (def.hooks.wrenchDamage) {
     const on = onWorks(w, e);

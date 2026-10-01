@@ -139,6 +139,12 @@ const STROKES: Record<string, Draw> = {
     c.moveTo(0.15, -0.95); c.arc(-0.1, -0.45, 0.5, -1.05, 1.05, true);
     c.moveTo(0.15, -0.95); c.quadraticCurveTo(-0.35, -0.45, 0.15, 0.05);
   },
+  rank: (c) => {
+    for (const oy of [-0.55, -0.05, 0.45]) {
+      c.moveTo(-0.7, oy + 0.3); c.lineTo(0, oy - 0.2); c.lineTo(0.7, oy + 0.3);
+    }
+    c.moveTo(0, -0.95); c.lineTo(0.12, -0.72); c.lineTo(-0.12, -0.72); c.closePath();
+  },
   bell: (c) => {
     c.moveTo(-0.7, 0.55); c.quadraticCurveTo(-0.45, 0.35, -0.45, -0.15); c.quadraticCurveTo(-0.45, -0.75, 0, -0.75);
     c.quadraticCurveTo(0.45, -0.75, 0.45, -0.15); c.quadraticCurveTo(0.45, 0.35, 0.7, 0.55); c.closePath();
