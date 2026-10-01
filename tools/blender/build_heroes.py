@@ -843,56 +843,124 @@ def build_duelist(images):
     return c, B
 
 
+def branch(c, start, dirs, r0, mat, bone, shade=(1, 1, 1), taper=0.75, segs=6):
+    pts = [Vector(start)]
+    for d in dirs:
+        pts.append(pts[-1] + Vector(d))
+    radii = [r0 * taper ** k for k in range(len(pts))]
+    tube(c, pts, radii, mat, bone, segs=segs, shade=shade)
+    return pts
+
+
 def build_warden(images):
     B = rig(hip=0.88, chest=1.3, neck=1.52, head_top=1.92, sh_x=0.5, hand_z=0.66, leg_x=0.22)
     c = charkit.Char("warden", images)
     BK = "moss_bark"
     GRN = (0.8, 1.2, 0.62)
+    BARK = (0.9, 0.85, 0.75)
     LEAF = (0.75, 1.35, 0.45)
-    c.tbox((0.44, 0.4), (0.4, 0.36), 0.44, (0, -0.02, 1.48), BK, "head", shade=GRN)
-    c.tbox((0.3, 0.08), (0.36, 0.08), 0.12, (0, -0.22, 1.72), BK, "head", rot=(0.2, 0, 0), shade=(0.56, 0.84, 0.434))
+    LEAF2 = (0.95, 1.2, 0.4)
+    MOSS = (0.55, 1.1, 0.35)
+    VOID = (0.04, 0.03, 0.02)
+
+    folded(c, [(0.0, 1.26), (0.2, 1.27), (0.23, 1.36), (0.235, 1.5), (0.22, 1.64), (0.2, 1.74), (0.17, 1.82), (0.0, 1.84)], (0, -0.02, 0), BK, "head",
+           segs=18, folds=9, amp=0.06, sy=0.95, shade=GRN)
+    c.limb((-0.17, -0.205, 1.69), (0.17, -0.205, 1.69), 0.045, 0.045, BK, "head", segs=7, shade=(0.6, 0.9, 0.47))
     for sx in (-1, 1):
-        c.box((0.09, 0.04, 0.06), (0.1 * sx, -0.23, 1.66), "plain", "head", shade=(0.55, 1.0, 0.25))
-    c.box((0.14, 0.04, 0.06), (0, -0.23, 1.54), "plain", "head", shade=(0.08, 0.05, 0.03))
+        c.ico(1.0, (0.09 * sx, -0.2, 1.62), "plain", "head", sub=2, scale=(0.055, 0.03, 0.04), shade=VOID)
+        c.ico(1.0, (0.09 * sx, -0.225, 1.62), "plain", "head", sub=2, scale=(0.03, 0.012, 0.018), shade=(0.6, 1.6, 0.3))
+        c.ico(0.06, (0.17 * sx, -0.16, 1.47), BK, "head", sub=1, scale=(0.9, 0.7, 1.0), shade=GRN)
+    c.ico(0.05, (0.0, -0.225, 1.56), BK, "head", sub=1, scale=(0.8, 0.9, 1.2), shade=(0.7, 1.0, 0.55))
+    crack = [(-0.08, -0.215, 1.45), (-0.03, -0.225, 1.43), (0.02, -0.222, 1.445), (0.08, -0.212, 1.43)]
+    tube(c, crack, [0.012, 0.016, 0.014, 0.01], "plain", "head", segs=5, shade=VOID, cap=False)
+    for k in range(9):
+        a = math.radians(200 + k * 17.5)
+        x = math.cos(a) * 0.2
+        y = -0.02 + math.sin(a) * 0.19
+        ln = 0.18 + 0.12 * ((k * 7) % 5) / 4
+        branch(c, (x, y, 1.39), [(x * 0.08, -0.01, -ln * 0.5), (x * 0.05 + 0.01 * math.sin(k), -0.01, -ln * 0.5)], 0.025, "plain", "head", shade=MOSS, taper=0.6, segs=5)
     for sx in (-1, 1):
-        pts = [(0.14 * sx, 0.0, 1.9), (0.3 * sx, 0.02, 2.08), (0.36 * sx, 0.0, 2.3), (0.34 * sx, -0.02, 2.46)]
-        for p0, p1 in zip(pts, pts[1:]):
-            c.limb(p0, p1, 0.045, 0.035, "bark", "head", segs=4)
-        c.limb((0.3 * sx, 0.02, 2.08), (0.5 * sx, 0.0, 2.2), 0.035, 0.015, "bark", "head", segs=4)
-        c.limb((0.35 * sx, 0.0, 2.26), (0.24 * sx, 0.04, 2.42), 0.03, 0.01, "bark", "head", segs=4)
-    c.tbox((0.62, 0.44), (0.9, 0.56), 0.6, (0, 0.0, 0.96), BK, "chest", shade=GRN)
-    c.tbox((0.9, 0.56), (0.7, 0.46), 0.1, (0, 0.0, 1.56), BK, "chest", shade=(0.64, 1.08, 0.434))
+        p = branch(c, (0.12 * sx, 0.0, 1.8), [(0.14 * sx, 0.02, 0.12), (0.14 * sx, -0.01, 0.1), (0.1 * sx, -0.02, 0.1), (0.05 * sx, 0.0, 0.08)], 0.045, "bark", "head", shade=BARK, taper=0.78)
+        q1 = branch(c, tuple(p[1]), [(0.02 * sx, 0.02, 0.14), (-0.02 * sx, 0.01, 0.1)], 0.03, "bark", "head", shade=BARK, taper=0.7)
+        q2 = branch(c, tuple(p[2]), [(0.06 * sx, 0.04, 0.12), (0.02 * sx, 0.02, 0.08)], 0.025, "bark", "head", shade=BARK, taper=0.7)
+        q3 = branch(c, tuple(p[3]), [(0.1 * sx, 0.02, -0.04), (0.06 * sx, 0.0, 0.02)], 0.02, "bark", "head", shade=BARK, taper=0.7)
+        for q, sc in ((q1[-1], 0.85), (q2[-1], 0.8), (p[4], 0.75), (q3[-1], 0.6), (p[2] + Vector((0.0, -0.05, 0.03)), 0.55)):
+            c.ico(0.11 * sc, tuple(q), "leaves", "head", sub=2, scale=(1.3, 1.1, 0.8), shade=LEAF if sc > 0.7 else LEAF2)
+    c.ico(0.15, (0, 0.06, 1.86), "leaves", "head", scale=(1.4, 1.1, 0.7), sub=2, shade=LEAF)
+    c.lathe([(0.0, 0.0), (0.012, 0.0), (0.012, 0.05), (0.04, 0.06), (0.045, 0.08), (0.0, 0.1)], (0.13, -0.12, 1.79), "plain", "head", segs=8, shade=(1.3, 0.35, 0.25))
+    for k in range(3):
+        c.ico(0.012, (0.13 + (k - 1) * 0.015, -0.16, 1.87 + (k % 2) * 0.01), "plain", "head", sub=1, shade=(1.4, 1.4, 1.3))
+
+    folded(c, [(0.31, 0.86), (0.4, 0.96), (0.45, 1.12), (0.48, 1.3), (0.46, 1.46), (0.38, 1.56), (0.22, 1.62), (0.0, 1.63)], (0, 0.0, 0), BK, "chest",
+           segs=24, folds=11, amp=0.05, sy=0.62, shade=GRN)
+    for (x, z, r) in ((0.2, 1.1, 0.12), (-0.25, 1.35, 0.1), (0.05, 0.95, 0.08), (-0.1, 1.5, 0.09)):
+        c.ico(r, (x, -0.27, z), "leaves", "chest", sub=1, scale=(1.0, 0.35, 0.8), shade=MOSS)
+    vine = [(math.cos(t * 3.4) * 0.44, math.sin(t * 3.4) * 0.29, 0.9 + t * 0.62) for t in [k / 20 for k in range(21)]]
+    tube(c, vine, [0.02] * 21, "plain", "chest", segs=5, shade=(0.35, 0.75, 0.25))
+    for k in range(0, 21, 4):
+        x, y, z = vine[k]
+        c.ico(0.04, (x * 1.06, y * 1.1, z + 0.02), "leaves", "chest", sub=1, scale=(1.3, 0.5, 0.8), shade=LEAF2)
+    sash = [(-0.44, -0.24, 1.55), (-0.15, -0.31, 1.35), (0.15, -0.3, 1.1), (0.42, -0.24, 0.92)]
+    tube(c, sash, [0.06] * 4, TEAM, "chest", segs=6)
+    back = [(-0.44, 0.24, 1.55), (-0.15, 0.31, 1.35), (0.15, 0.3, 1.1), (0.42, 0.24, 0.92)]
+    tube(c, back, [0.06] * 4, TEAM, "chest", segs=6, shade=(0.8, 0.8, 0.8))
+    c.ico(0.06, (-0.05, -0.33, 1.27), "leaves", "chest", sub=2, scale=(1.0, 0.5, 1.0), shade=LEAF)
+    c.ico(0.03, (-0.05, -0.36, 1.27), "gold", "chest", sub=1)
     for sx in (-1, 1):
-        c.ico(0.26, (0.5 * sx, 0.0, 1.52), "leaves", "chest", scale=(1.3, 1.2, 0.85), shade=LEAF)
-        c.ico(0.16, (0.28 * sx, 0.12, 2.0), "leaves", "head", scale=(1.2, 1.0, 0.8), shade=LEAF)
-        c.ico(0.14, (0.4 * sx, 0.0, 2.3), "leaves", "head", scale=(1.1, 1.0, 0.8), shade=LEAF)
-    c.ico(0.2, (0, 0.06, 1.98), "leaves", "head", scale=(1.3, 1.1, 0.7), shade=LEAF)
-    c.ico(0.22, (0, 0.34, 1.2), "leaves", "chest", scale=(1.4, 0.8, 1.2), shade=LEAF)
-    c.box((1.05, 0.1, 0.16), (0, -0.28, 1.26), TEAM, "chest", rot=(0, 0.66, 0))
-    c.box((1.05, 0.1, 0.16), (0, 0.28, 1.26), TEAM, "chest", rot=(0, 0.66, 0), shade=(0.8, 0.8, 0.8))
-    c.tbox((0.56, 0.4), (0.62, 0.44), 0.2, (0, 0.0, 0.8), BK, "hips", shade=(0.68, 1.02, 0.527))
+        c.ico(0.26, (0.5 * sx, 0.0, 1.55), "leaves", "chest", sub=2, scale=(1.3, 1.2, 0.85), shade=LEAF)
+        c.ico(0.16, (0.62 * sx, -0.12, 1.47), "leaves", "chest", sub=2, scale=(1.0, 1.0, 0.8), shade=LEAF2)
+        for k in range(3):
+            branch(c, (0.48 * sx, 0.05 - k * 0.08, 1.62), [(0.12 * sx, 0.02, 0.12 + k * 0.03), (0.05 * sx, 0.0, 0.08)], 0.03, "bark", "chest", shade=BARK, taper=0.6, segs=5)
+    folded(c, [(0.29, 0.72), (0.33, 0.78), (0.34, 0.86), (0.31, 0.92)], (0, 0.0, 0), BK, "hips", segs=18, folds=7, amp=0.06, sy=0.7, shade=(0.68, 1.02, 0.527))
+    for k in range(7):
+        a = math.radians(-90 + (k - 3) * 25)
+        branch(c, (math.cos(a) * 0.3, math.sin(a) * 0.21, 0.76), [(math.cos(a) * 0.04, math.sin(a) * 0.03, -0.12), (0.0, 0.0, -0.08)], 0.03, "plain", "hips", shade=MOSS, taper=0.6, segs=5)
+
     for side, sx in (("R", -1), ("L", 1)):
         a0, a1, _ = B[f"arm_{side}"]
         f0, f1, _ = B[f"forearm_{side}"]
         t0, t1, _ = B[f"thigh_{side}"]
         s0, s1, _ = B[f"shin_{side}"]
-        c.limb(a0, a1, 0.14, 0.12, BK, f"arm_{side}", segs=5, shade=GRN)
-        c.limb(f0, f1, 0.13, 0.15, BK, f"forearm_{side}", segs=5, shade=GRN)
+        mid = (Vector(a0) + Vector(a1)) / 2 + Vector((0.03 * sx, 0.02, 0))
+        tube(c, [a0, tuple(mid), a1], [0.14, 0.12, 0.12], BK, f"arm_{side}", segs=9, shade=GRN)
+        c.ico(0.06, tuple(mid + Vector((0.09 * sx, -0.05, 0.0))), BK, f"arm_{side}", sub=1, shade=(0.7, 1.0, 0.55))
+        c.ico(0.12, a1, BK, f"forearm_{side}", sub=1, shade=GRN)
+        midf = (Vector(f0) + Vector(f1)) / 2 + Vector((0.02 * sx, -0.02, 0))
+        tube(c, [f0, tuple(midf), f1], [0.12, 0.13, 0.15], BK, f"forearm_{side}", segs=9, shade=GRN)
+        c.ico(0.07, tuple(midf + Vector((0.0, 0.1, 0.02))), "leaves", f"forearm_{side}", sub=1, scale=(1.2, 0.6, 0.8), shade=MOSS)
         hx, hy, hz = hand_pos(B, side)
-        c.tbox((0.2, 0.18), (0.24, 0.2), 0.2, (hx, hy, hz - 0.08), BK, f"hand_{side}", shade=GRN)
-        for k in range(3):
-            c.limb((hx + (k - 1) * 0.07, hy - 0.06, hz - 0.08), (hx + (k - 1) * 0.09, hy - 0.1, hz - 0.26), 0.035, 0.015, "bark", f"hand_{side}", segs=4)
-        c.limb(t0, t1, 0.17, 0.15, BK, f"thigh_{side}", segs=5, shade=GRN)
-        c.limb(s0, s1, 0.15, 0.18, BK, f"shin_{side}", segs=5, shade=GRN)
-        c.tbox((0.34, 0.38), (0.28, 0.3), 0.14, (s1[0], -0.04, 0.0), BK, f"shin_{side}", shade=(0.64, 0.96, 0.496))
-        for k in range(3):
-            c.cone(0.04, 0.0, 0.12, (s1[0] + (k - 1) * 0.1, -0.22, 0.04), "bark", f"shin_{side}", segs=4, rot=(-1.3, 0, 0))
+        c.ico(0.14, (hx, hy, hz), BK, f"hand_{side}", sub=2, scale=(1.0, 0.95, 1.0), shade=GRN)
+        for k in range(4):
+            fx = (k - 1.5) * 0.06
+            branch(c, (hx + fx, hy - 0.06, hz - 0.06), [(fx * 0.4, -0.04, -0.12), (fx * 0.3, -0.02, -0.1), (0.0, 0.03, -0.06)], 0.03, "bark", f"hand_{side}", shade=BARK, taper=0.72, segs=5)
+        branch(c, (hx - 0.1 * sx, hy - 0.06, hz), [(-0.06 * sx, -0.06, -0.08), (0.0, -0.02, -0.08)], 0.03, "bark", f"hand_{side}", shade=BARK, taper=0.7, segs=5)
+        midt = (Vector(t0) + Vector(t1)) / 2 + Vector((0.02 * sx, 0.0, 0))
+        tube(c, [t0, tuple(midt), t1], [0.17, 0.16, 0.15], BK, f"thigh_{side}", segs=9, shade=GRN)
+        c.ico(0.14, t1, BK, f"shin_{side}", sub=1, shade=GRN)
+        tube(c, [s0, tuple((Vector(s0) + Vector(s1)) / 2), s1], [0.15, 0.16, 0.19], BK, f"shin_{side}", segs=9, shade=GRN)
+        c.ico(0.19, (s1[0], -0.02, 0.12), BK, f"shin_{side}", sub=2, scale=(1.0, 1.1, 0.7), shade=(0.64, 0.96, 0.496))
+        for k in range(5):
+            a = math.radians(-90 + (k - 2) * 38)
+            branch(c, (s1[0] + math.cos(a) * 0.12, -0.02 + math.sin(a) * 0.12, 0.1), [(math.cos(a) * 0.1, math.sin(a) * 0.1, -0.06), (math.cos(a) * 0.08, math.sin(a) * 0.08, -0.04)],
+                   0.045, "bark", f"shin_{side}", shade=BARK, taper=0.62, segs=6)
     lx, ly, lz = hand_pos(B, "L")
-    for k in range(5):
-        c.box((0.07, 0.15, 1.1 - abs(k - 2) * 0.06), (lx + 0.14, ly - 0.3 + k * 0.15, lz + 0.22), "wood", "hand_L", shade=(0.9 - 0.05 * (k % 2),) * 3)
-    for z in (-0.14, 0.52):
-        c.box((0.1, 0.8, 0.07), (lx + 0.18, ly, lz + 0.22 + z), "iron", "hand_L")
-    c.box((0.1, 0.16, 0.16), (lx + 0.2, ly, lz + 0.22), TEAM, "hand_L")
+    sc = Vector((lx + 0.16, ly, lz + 0.22))
+    R = 0.5
+    rot = (0, math.pi / 2, 0)
+    for k in range(7):
+        y = (k - 3) * 0.14
+        edge = abs(y) + 0.07
+        h = 2 * math.sqrt(max(0.0, R * R - edge * edge)) if edge < R else 0.1
+        h = max(h, 2 * math.sqrt(max(0.0, R * R - y * y)) * 0.86)
+        c.box((0.07, 0.138, h), (sc.x, sc.y + y, sc.z), "wood", "hand_L", shade=(0.95 - 0.07 * (k % 2),) * 3)
+    ring(c, R, 0.035, tuple(sc), "iron", "hand_L", rot=rot, segs=24, tsegs=5)
+    c.lathe([(0.0, 0.0), (0.12, 0.0), (0.11, 0.05), (0.06, 0.09), (0.0, 0.1)], (sc.x - 0.04, sc.y, sc.z), "iron", "hand_L", segs=14, rot=(0, -math.pi / 2, 0))
+    c.lathe([(0.2, 0.0), (0.21, 0.01), (0.2, 0.02), (0.13, 0.02), (0.12, 0.01), (0.13, 0.0)], (sc.x - 0.04, sc.y, sc.z), TEAM, "hand_L", segs=20, rot=(0, -math.pi / 2, 0))
+    vine = [(sc.x - 0.05, sc.y + math.cos(t * 5.2) * R * 0.95, sc.z + math.sin(t * 5.2) * R * 0.95) for t in [k / 14 * 0.9 + 0.1 for k in range(15)]]
+    tube(c, vine, [0.018] * 15, "plain", "hand_L", segs=5, shade=(0.35, 0.75, 0.25))
+    for k in range(0, 15, 3):
+        x, y, z = vine[k]
+        c.ico(0.045, (x - 0.01, y, z), "leaves", "hand_L", sub=1, scale=(0.5, 1.2, 0.9), shade=LEAF2)
     return c, B
 
 
