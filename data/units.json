@@ -72,10 +72,10 @@
       "bounty": 6
     },
     "heavy": {
-      "hp": 480,
+      "hp": 380,
       "speed": 3.5,
       "radius": 0.7,
-      "damage": 42,
+      "damage": 32,
       "range": 1.8,
       "cooldown": 1.6,
       "aggro": 6.5,
@@ -87,10 +87,10 @@
         "grunt": 0.45,
         "ranged": 2.4,
         "heavy": 1.0,
-        "hero": 1.0,
+        "hero": 0.8,
         "structure": 1.8
       },
-      "knockbackResist": 0.3,
+      "knockbackResist": 0.15,
       "bounty": 12
     }
   },
