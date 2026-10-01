@@ -40,7 +40,13 @@ export function updateUnit(w: World, e: Entity): void {
   } else if (directive === "push" || directive === "focus") {
     const core = w.core(1 - e.team);
     if (core) goal = { x: core.transform.pos.x, z: core.transform.pos.z };
-  } else if (directive === "hold" || directive === "defend") {
+  } else if (directive === "defend") {
+    const { post, rank } = w.defendPost(e);
+    const off = slotOffset(rank, 0.8);
+    anchor = post;
+    leash = Math.max(4, u.range + 1);
+    goal = { x: post.x + off.x, z: post.z + off.z };
+  } else if (directive === "hold") {
     const hp = team.directives.holdPoint[u.type];
     const off = slotOffset(u.slot, 1.0);
     anchor = hp;
@@ -67,7 +73,9 @@ export function updateUnit(w: World, e: Entity): void {
 
   let target = u.targetId ? w.get(u.targetId) : undefined;
   if (target && (!attackable(w, target) || !w.canSee(e, target))) target = undefined;
-  if (target && anchor && Math.hypot(target.transform.pos.x - anchor.x, target.transform.pos.z - anchor.z) > leash + 2) target = undefined;
+  const defending = directive === "defend";
+  const intruder = (o: Entity) => defending && w.inBase(e.team, o.transform.pos.x, o.transform.pos.z);
+  if (target && anchor && !intruder(target) && Math.hypot(target.transform.pos.x - anchor.x, target.transform.pos.z - anchor.z) > leash + 2) target = undefined;
 
   if (!target || w.time >= u.retargetAt) {
     u.retargetAt = w.time + 0.4 + (e.id % 5) * 0.03;
@@ -87,6 +95,13 @@ export function updateUnit(w: World, e: Entity): void {
         const vs = def.vs[w.classOf(o)] ?? 1;
         const score = d - vs * 1.5 + (o.structure ? 2 : 0) + (o.id === u.targetId ? -1 : 0);
         if (score < bestScore) { bestScore = score; best = o; }
+      }
+    }
+    if (!best && defending) {
+      for (const o of w.entities) {
+        if (o.team === e.team || !attackable(w, o) || !intruder(o) || !w.canSee(e, o)) continue;
+        const d = w.dist(e, o);
+        if (d < bestScore) { bestScore = d; best = o; }
       }
     }
     if (!best && directive === "nearest") {

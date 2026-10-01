@@ -218,7 +218,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       const dz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);
       begin(e, "dodge", "dodge", b.dodgeSeconds, 99, dx, dz);
       e.status.invulnUntil = w.time + b.dodgeSeconds;
-      h.cooldowns.dodge = w.time + b.dodgeCooldown;
+      h.cooldowns.dodge = w.time + b.dodgeSeconds + b.dodgeCooldown;
     } else if (cmd.super && h.meter >= b.superMax && !act) {
       startAbility(w, e, "z", cmd);
       h.meter = 0;

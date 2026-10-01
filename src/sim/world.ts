@@ -130,7 +130,175 @@ export class World {
       this.teams[team].coreId = e.id;
       this.nav.setBlocked(c.x, c.z, data.structures.core.radius + 0.4, true);
     }
+    this.bases = [this.computeBase(0), this.computeBase(1)];
     this.arena = new Arena(this);
+  }
+
+  readonly bases: { mask: Uint8Array; entrances: Vec2[] }[];
+  private posts = { tick: -1, of: new Map<number, [number, number]>() };
+
+  inBase(team: number, x: number, z: number): boolean {
+    const i = this.nav.index(Math.floor(x), Math.floor(z));
+    return i >= 0 && this.bases[team].mask[i] === 1;
+  }
+
+  defendPost(e: Entity): { post: Vec2; rank: number } {
+    if (this.posts.tick !== this.tick) {
+      this.posts.tick = this.tick;
+      this.posts.of.clear();
+      const order: Record<string, number> = { heavy: 0, grunt: 1, ranged: 2 };
+      for (let team = 0; team < 2; team++) {
+        const n = this.bases[team].entrances.length;
+        if (!n) continue;
+        const dirs = this.teams[team].directives;
+        const list = this.entities.filter((o) => o.alive && o.unit && !o.neutral && o.team === team && dirs[o.unit.type] === "defend");
+        list.sort((a, b) => (order[a.unit!.type] ?? 3) - (order[b.unit!.type] ?? 3) || a.id - b.id);
+        list.forEach((o, k) => this.posts.of.set(o.id, [k % n, Math.floor(k / n)]));
+      }
+    }
+    const a = this.posts.of.get(e.id);
+    const base = this.bases[e.team];
+    if (!a || !base.entrances.length) return { post: this.defaultHold(e.team), rank: e.unit?.slot ?? 0 };
+    return { post: base.entrances[a[0]], rank: a[1] };
+  }
+
+  private computeBase(team: number): { mask: Uint8Array; entrances: Vec2[] } {
+    const nav = this.nav;
+    const W = nav.w;
+    const D = nav.d;
+    const mask = new Uint8Array(W * D);
+    const own = this.terrain.cores.find((k) => (k.team ?? 0) === team);
+    const foe = this.terrain.cores.find((k) => (k.team ?? 0) !== team);
+    if (!own) return { mask, entrances: [] };
+    let x0 = Infinity;
+    let z0 = Infinity;
+    let x1 = -Infinity;
+    let z1 = -Infinity;
+    const castle = (i: number) => i >= 0 && this.terrain.styles[i] === "castle";
+    const visited = new Uint8Array(W * D);
+    for (let i = 0; i < W * D; i++) {
+      if (visited[i] || !castle(i)) continue;
+      const seg = [i];
+      visited[i] = 1;
+      let near = Infinity;
+      let mine = true;
+      for (let q = 0; q < seg.length; q++) {
+        const c = seg[q];
+        const cx = (c % W) + 0.5;
+        const cz = Math.floor(c / W) + 0.5;
+        const d = Math.hypot(cx - own.x, cz - own.z);
+        near = Math.min(near, d);
+        if (foe && Math.hypot(cx - foe.x, cz - foe.z) < d) mine = false;
+        for (const n of [nav.index(c % W + 1, Math.floor(c / W)), nav.index(c % W - 1, Math.floor(c / W)), nav.index(c % W, Math.floor(c / W) + 1), nav.index(c % W, Math.floor(c / W) - 1)]) {
+          if (castle(n) && !visited[n]) {
+            visited[n] = 1;
+            seg.push(n);
+          }
+        }
+      }
+      if (!mine || near > 14) continue;
+      for (const c of seg) {
+        x0 = Math.min(x0, c % W);
+        z0 = Math.min(z0, Math.floor(c / W));
+        x1 = Math.max(x1, c % W);
+        z1 = Math.max(z1, Math.floor(c / W));
+      }
+    }
+    if (x0 === Infinity) {
+      x0 = own.x - 10;
+      x1 = own.x + 10;
+      z0 = own.z - 10;
+      z1 = own.z + 10;
+    }
+    x0 = Math.max(0, Math.min(x0, Math.floor(own.x) - 3));
+    z0 = Math.max(0, Math.min(z0, Math.floor(own.z) - 3));
+    x1 = Math.min(W - 1, Math.max(x1, Math.floor(own.x) + 3));
+    z1 = Math.min(D - 1, Math.max(z1, Math.floor(own.z) + 3));
+    const inBox = (cx: number, cz: number) => cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1;
+    const seeds: number[] = [];
+    const r = Math.ceil(this.data.structures.core.radius + 1.5);
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const i = nav.index(Math.floor(own.x) + dx, Math.floor(own.z) + dz);
+        if (nav.open(i) && !mask[i]) {
+          mask[i] = 1;
+          seeds.push(i);
+        }
+      }
+    }
+    for (let q = 0; q < seeds.length; q++) {
+      const c = seeds[q];
+      const cx = c % W;
+      const cz = Math.floor(c / W);
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const n = nav.index(cx + dx, cz + dz);
+          if (n < 0 || mask[n] || !inBox(cx + dx, cz + dz) || !nav.passable(c, n)) continue;
+          mask[n] = 1;
+          seeds.push(n);
+        }
+      }
+    }
+    const edge: number[] = [];
+    for (const c of seeds) {
+      const cx = c % W;
+      const cz = Math.floor(c / W);
+      let out = false;
+      for (let dz = -1; dz <= 1 && !out; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const n = nav.index(cx + dx, cz + dz);
+          if (n >= 0 && !mask[n] && !inBox(cx + dx, cz + dz) && nav.passable(c, n)) { out = true; break; }
+        }
+      }
+      if (out) edge.push(c);
+    }
+    const seen = new Uint8Array(W * D);
+    const entrances: Vec2[] = [];
+    const isEdge = new Uint8Array(W * D);
+    for (const c of edge) isEdge[c] = 1;
+    for (const c of edge) {
+      if (seen[c]) continue;
+      const group = [c];
+      seen[c] = 1;
+      for (let q = 0; q < group.length; q++) {
+        const g = group[q];
+        for (let dz = -2; dz <= 2; dz++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const n = nav.index((g % W) + dx, Math.floor(g / W) + dz);
+            if (n >= 0 && isEdge[n] && !seen[n]) {
+              seen[n] = 1;
+              group.push(n);
+            }
+          }
+        }
+      }
+      let mx = 0;
+      let mz = 0;
+      for (const g of group) {
+        mx += (g % W) + 0.5;
+        mz += Math.floor(g / W) + 0.5;
+      }
+      mx /= group.length;
+      mz /= group.length;
+      const dx = own.x - mx;
+      const dz = own.z - mz;
+      const dl = Math.hypot(dx, dz) || 1;
+      let px = mx + (dx / dl) * 2;
+      let pz = mz + (dz / dl) * 2;
+      const pi = nav.index(Math.floor(px), Math.floor(pz));
+      if (!(pi >= 0 && mask[pi])) {
+        let best = group[0];
+        let bd = Infinity;
+        for (const g of group) {
+          const d = Math.hypot((g % W) + 0.5 - mx, Math.floor(g / W) + 0.5 - mz);
+          if (d < bd) { bd = d; best = g; }
+        }
+        px = (best % W) + 0.5;
+        pz = Math.floor(best / W) + 0.5;
+      }
+      entrances.push({ x: px, z: pz });
+    }
+    return { mask, entrances };
   }
 
   readonly arena: Arena;
