@@ -77,6 +77,7 @@ export interface MapData {
   spawns: MapPoint[];
   dens?: MapPoint[];
   patrols?: { a: MapPoint; b: MapPoint }[];
+  jumppads?: { a: MapPoint; b: MapPoint }[];
   avalanche?: unknown;
   gates?: unknown;
   fountain?: unknown;
@@ -138,6 +139,7 @@ export class Terrain {
   readonly spawns: MapPoint[] = [];
   readonly dens: MapPoint[] = [];
   readonly patrols: { a: MapPoint; b: MapPoint }[] = [];
+  readonly jumppads: { a: MapPoint; b: MapPoint }[] = [];
   private mirror: "x" | "diag" | "rot" | "quad" | "none" = "none";
   readonly teams: number = 2;
   readonly tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
@@ -307,6 +309,13 @@ export class Terrain {
     both(data.pads, this.pads, false);
     both(data.spawns, this.spawns, true);
     both(data.dens ?? [], this.dens, false);
+    for (const r of data.jumppads ?? []) {
+      const A: MapPoint[] = [];
+      const B: MapPoint[] = [];
+      both([r.a], A, false);
+      both([r.b], B, false);
+      for (let i = 0; i < Math.min(A.length, B.length); i++) this.jumppads.push({ a: A[i], b: B[i] });
+    }
     for (const r of data.patrols ?? []) {
       const A: MapPoint[] = [];
       const B: MapPoint[] = [];

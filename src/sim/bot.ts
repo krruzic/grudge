@@ -89,6 +89,23 @@ export class Bot {
         this.lastDirective = d;
       }
     }
+    if (this.goal && w.jumpPads.length && !w.arena.carrying(me)) {
+      const p = me.transform.pos;
+      const g = this.goal;
+      const direct = Math.hypot(g.x - p.x, g.z - p.z);
+      let best: Vec2 | null = null;
+      let bestCost = direct - 12;
+      for (const jp of w.jumpPads) {
+        const toPad = Math.hypot(jp.x - p.x, jp.z - p.z);
+        if (toPad > 26) continue;
+        const cost = toPad + Math.hypot(g.x - jp.tx, g.z - jp.tz) + 4;
+        if (cost < bestCost) {
+          bestCost = cost;
+          best = { x: jp.x, z: jp.z };
+        }
+      }
+      if (best) this.goal = best;
+    }
     if (this.goal) {
       const p = me.transform.pos;
       const dist = Math.hypot(this.goal.x - p.x, this.goal.z - p.z);

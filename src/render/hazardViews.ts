@@ -803,7 +803,7 @@ export class HazardViews {
   }
 
   handle(ev: { type: string; id?: number }): void {
-    if (ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph") {
+    if (ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph" || ev.type === "jumppad") {
       this.mapFx.handle(ev);
       return;
     }

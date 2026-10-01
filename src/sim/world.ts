@@ -138,6 +138,7 @@ export class World {
     this.bases = Array.from({ length: this.teamCount }, (_, t) => this.computeBase(t));
     this.arena = new Arena(this);
     this.mapEvents = new MapEvents(this);
+    this.initJumpPads();
   }
 
   readonly mapEvents: MapEvents;
@@ -728,6 +729,17 @@ export class World {
       leash = 1.3;
     }
     return { x: hx * fwd - hz * right, z: hz * fwd + hx * right, leash };
+  }
+
+  jumpPads: { x: number; z: number; tx: number; tz: number; launchAt: number }[] = [];
+
+  initJumpPads(): void {
+    this.jumpPads = this.terrain.jumppads.map((j) => {
+      const i = this.nav.nearestOpen(j.b.x, j.b.z, 6);
+      const tx = i >= 0 ? (i % this.nav.w) + 0.5 : j.b.x;
+      const tz = i >= 0 ? Math.floor(i / this.nav.w) + 0.5 : j.b.z;
+      return { x: j.a.x, z: j.a.z, tx, tz, launchAt: -99 };
+    });
   }
 
   get morphCfg() {

@@ -1058,6 +1058,27 @@ export class Hud {
           else g.fillRect(ax, ay + r.h * s * (1 - k), r.w * s, r.h * s * k);
         }
       }
+      for (const jp of w.jumpPads) {
+        const [ax, ay] = P(jp.x, jp.z);
+        const [bx, by] = P(jp.tx, jp.tz);
+        g.save();
+        g.setLineDash([1.2, 1.2]);
+        g.lineWidth = 0.5;
+        g.strokeStyle = "rgba(255,232,150,0.75)";
+        g.beginPath();
+        g.moveTo(ax, ay);
+        g.lineTo(bx, by);
+        g.stroke();
+        g.restore();
+        g.fillStyle = INK;
+        g.beginPath();
+        g.arc(ax, ay, 1.4, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = "#e8b830";
+        g.beginPath();
+        g.arc(ax, ay, 0.95, 0, Math.PI * 2);
+        g.fill();
+      }
       for (const gt of w.mapEvents.gateList) {
         if (!gt.shut) continue;
         const [gx, gy] = P(gt.slot.x, gt.slot.z);

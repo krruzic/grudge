@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
 import blockUrl from "../../assets/textures/wallblock.png?url";
+import woodUrl from "../../assets/textures/wood.png?url";
+import ironUrl from "../../assets/textures/iron.png?url";
+import cobbleUrl from "../../assets/textures/cobble.png?url";
 import { FX, SUMMONER } from "./fxKit";
 import { gateSlots, type FountainDef, type GatesDef, type GateSlot } from "../sim/mapEvents";
 import { chunks, emit, type FxHost } from "./fxParts";
@@ -68,10 +71,125 @@ export class MapFx {
   private morphs: { id: number; start: number; until: number; team: number; acc: number }[] = [];
   teamColors: THREE.Color[] = [];
 
+  private springs: { spring: THREE.Object3D; deck: THREE.Object3D; launch: number; release: number }[] = [];
+  private pendingBursts: { at: number; x: number; y: number; z: number }[] = [];
+
+  private texture(url: string, rep = 1): THREE.Texture {
+    const t = new THREE.TextureLoader().load(url);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(rep, rep);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.NearestFilter;
+    return t;
+  }
+
+  private buildJumpPads(): void {
+    const w = this.world;
+    if (!w.jumpPads.length) return;
+    const wood = new THREE.MeshLambertMaterial({ map: this.texture(woodUrl, 1), color: 0xd8b890 });
+    const iron = new THREE.MeshLambertMaterial({ map: this.texture(ironUrl, 2), color: 0x9a9aa4 });
+    const stone = new THREE.MeshLambertMaterial({ map: this.texture(cobbleUrl, 1.5), color: 0xb8b0a0 });
+    const paint = new THREE.MeshLambertMaterial({ color: 0xe8b830 });
+    const red = new THREE.MeshLambertMaterial({ color: 0xb82818 });
+    const helix: THREE.Vector3[] = [];
+    for (let k = 0; k <= 120; k++) {
+      const t = k / 120;
+      const a = t * Math.PI * 2 * 4.5;
+      helix.push(new THREE.Vector3(Math.cos(a) * 0.55, t, Math.sin(a) * 0.55));
+    }
+    const springGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(helix), 120, 0.065, 6, false);
+    const footGeo = new THREE.CylinderGeometry(1.25, 1.4, 0.22, 12);
+    const plateGeo = new THREE.CylinderGeometry(0.85, 0.9, 0.08, 14);
+    const deckGeo = new THREE.CylinderGeometry(0.95, 0.95, 0.13, 16);
+    const rimGeo = new THREE.TorusGeometry(0.95, 0.045, 5, 18);
+    const boltGeo = new THREE.SphereGeometry(0.05, 5, 4);
+    const arrow = new THREE.Shape();
+    arrow.moveTo(0, 0.62);
+    arrow.lineTo(0.42, 0.08);
+    arrow.lineTo(0.16, 0.08);
+    arrow.lineTo(0.16, -0.55);
+    arrow.lineTo(-0.16, -0.55);
+    arrow.lineTo(-0.16, 0.08);
+    arrow.lineTo(-0.42, 0.08);
+    arrow.closePath();
+    const arrowGeo = new THREE.ShapeGeometry(arrow);
+    arrowGeo.rotateX(-Math.PI / 2);
+    arrowGeo.rotateY(Math.PI);
+    w.jumpPads.forEach((p) => {
+      const g = new THREE.Group();
+      const y = w.groundY(p.x, p.z);
+      g.position.set(p.x, y, p.z);
+      g.rotation.y = Math.atan2(p.tx - p.x, p.tz - p.z);
+      const foot = new THREE.Mesh(footGeo, stone);
+      foot.position.y = 0.02;
+      g.add(foot);
+      const plate = new THREE.Mesh(plateGeo, iron);
+      plate.position.y = 0.16;
+      g.add(plate);
+      const spring = new THREE.Mesh(springGeo, iron);
+      spring.position.y = 0.18;
+      spring.scale.y = 0.32;
+      g.add(spring);
+      const deck = new THREE.Group();
+      deck.position.y = 0.52;
+      const top = new THREE.Mesh(deckGeo, wood);
+      deck.add(top);
+      const rim = new THREE.Mesh(rimGeo, iron);
+      rim.rotation.x = Math.PI / 2;
+      deck.add(rim);
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const b = new THREE.Mesh(boltGeo, iron);
+        b.position.set(Math.cos(a) * 0.82, 0.07, Math.sin(a) * 0.82);
+        deck.add(b);
+      }
+      const ar = new THREE.Mesh(arrowGeo, paint);
+      ar.position.y = 0.072;
+      deck.add(ar);
+      const tip = new THREE.Mesh(new THREE.CircleGeometry(0.1, 8), red);
+      tip.rotation.x = -Math.PI / 2;
+      tip.position.set(0, 0.075, 0.12);
+      deck.add(tip);
+      g.add(deck);
+      this.root.add(g);
+      this.springs.push({ spring, deck, launch: -99, release: -99 });
+    });
+  }
+
+  private syncJumpPads(): void {
+    const t = this.world.time;
+    this.world.jumpPads.forEach((p, i) => {
+      const s = this.springs[i];
+      if (!s) return;
+      let k = 1 + Math.sin(t * 2.2 + i) * 0.03;
+      const wind = t - p.launchAt;
+      if (wind >= 0 && wind < 0.3) {
+        const q = wind / 0.3;
+        k = 1 - 0.62 * q * q;
+      } else if (wind >= 0.3 && wind < 1.4) {
+        const q = wind - 0.3;
+        k = 1 + 0.55 * Math.exp(-q * 4.5) * Math.cos(q * 22);
+      }
+      s.spring.scale.y = 0.32 * k;
+      s.deck.position.y = 0.18 + 0.32 * k + 0.02;
+    });
+    for (let i = this.pendingBursts.length - 1; i >= 0; i--) {
+      const b = this.pendingBursts[i];
+      if (t < b.at) continue;
+      this.pendingBursts.splice(i, 1);
+      if (!this.fx) continue;
+      emit(this.fx, { tex: FX.dust, n: 10, x: b.x, y: b.y + 0.3, z: b.z, size: [1.0, 1.6], grow: 1.6, life: [0.4, 0.7], speed: [3, 5], flatSpread: true, opacity: 0.75 });
+      emit(this.fx, { tex: FX.streak, n: 6, x: b.x, y: b.y + 0.6, z: b.z, size: [0.5, 0.9], life: [0.3, 0.5], speed: [7, 11], dir: { x: 0, y: 1, z: 0 }, cone: 0.3, additive: true, color: 0xfff0c0 });
+      chunks(this.fx, 5, b.x, b.y + 0.5, b.z, { size: [0.08, 0.16], speed: [2, 4], up: [3, 5] });
+      this.fx.shake = Math.max(this.fx.shake, 0.15);
+    }
+  }
+
   constructor(private world: World, private fx?: FxHost) {
     const gd = world.terrain.gates as GatesDef | undefined;
     if (gd) this.buildGates(gateSlots(world, gd));
     this.fountain = world.terrain.fountain as FountainDef | undefined;
+    this.buildJumpPads();
     const m = world.mapEvents.mistMask;
     if (m) for (let i = 0; i < m.length; i++) if (m[i]) this.mistCells.push(i);
   }
@@ -298,6 +416,16 @@ export class MapFx {
   }
 
   handle(ev: { type: string; [k: string]: unknown }): void {
+    if (ev.type === "jumppad") {
+      const j = ev as unknown as { stage: string; x: number; y: number; z: number; windup: number };
+      if (j.stage === "launch") this.pendingBursts.push({ at: this.world.time + j.windup, x: j.x, y: j.y, z: j.z });
+      else if (this.fx) {
+        emit(this.fx, { tex: FX.dust, n: 12, x: j.x, y: j.y + 0.2, z: j.z, size: [1.2, 2.0], grow: 1.6, life: [0.5, 0.9], speed: [3, 6], flatSpread: true, opacity: 0.8 });
+        chunks(this.fx, 4, j.x, j.y + 0.3, j.z, { size: [0.1, 0.2], speed: [2, 4], up: [2, 4] });
+        this.fx.shake = Math.max(this.fx.shake, 0.3);
+      }
+      return;
+    }
     if (ev.type === "morph") {
       const m = ev as unknown as { stage: string; id: number; team: number; x: number; y: number; z: number; seconds: number };
       if (m.stage === "start") this.morphs.push({ id: m.id, start: this.now, until: this.now + m.seconds, team: m.team, acc: 0 });
@@ -353,6 +481,7 @@ export class MapFx {
     this.now = time;
     const w = this.world;
     this.syncGates(dt);
+    this.syncJumpPads();
     this.syncMorphs(dt);
     this.syncFountain(dt);
     this.syncLantern(time, dt);

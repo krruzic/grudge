@@ -142,6 +142,10 @@ export class Audio {
           if (ev.stage === "warn") [0, 0.9, 1.8].forEach((at) => { this.tone("sine", 392, 390, 1.2, 0.16, 0, at); this.tone("sine", 988, 980, 0.8, 0.06, 0, at); });
           else { this.tone("square", 110, 70, 0.5, 0.12); this.hiss(700, 1.5, 0.6, 0.12, 0, "bandpass"); }
           break;
+        case "jumppad":
+          if (ev.stage === "launch") { this.tone("square", 140, 90, 0.25, 0.08, pan); this.tone("sine", 220, 720, 0.35, 0.16, pan, 0.3); this.hiss(1800, 0.8, 0.3, 0.08, pan, "bandpass", 0.3, 400); }
+          else { this.tone("sine", 120, 50, 0.25, 0.3, pan); this.hiss(900, 0.7, 0.25, 0.2, pan); }
+          break;
         case "tide":
           this.hiss(ev.high ? 500 : 900, 0.6, 2.4, 0.22, 0, "lowpass", 0, ev.high ? 200 : 1600);
           break;

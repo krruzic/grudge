@@ -1299,6 +1299,24 @@ export class EntityViews {
     let lift = 0;
     if (a?.kind === "quake" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 1.8;
     if (a?.kind === "leap" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 2.6;
+    if (h.jump) {
+      const j = h.jump;
+      const k = (w.time - j.start) / j.dur;
+      if (k < 0) lift = 0.52 - 0.3 * Math.min(1, (k * j.dur + 0.3) / 0.3);
+      else {
+        const f = Math.min(1, k);
+        lift = 0.5 * (1 - f) + Math.sin(f * Math.PI) * j.peak;
+        v.body.rotation.x = Math.sin(f * Math.PI) * 0.35 - 0.1;
+        v.trailT = (v.trailT ?? 0) - dt;
+        if (v.trailT <= 0) {
+          v.trailT = 0.05;
+          const p = v.root.position;
+          this.fx.trail(p.x, p.y + lift + 1.0 * this.heroScale, p.z, e.team, 1.1 * this.heroScale);
+        }
+      }
+      if (k >= 0 && k < 0.15) this.play(v, "dodge", 0.8);
+      else if (k < 0) this.play(v, "block");
+    } else if (w.jumpPads.some((p) => Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z) < 0.95)) lift = Math.max(lift, 0.5);
     v.body.position.y = lift;
     const stealth = w.time < e.status.stealthUntil;
     if (stealth !== v.stealthed) {

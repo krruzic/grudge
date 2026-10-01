@@ -108,6 +108,8 @@ export interface HeroState {
   respawnAt: number;
   morphAt?: number;
   frozenCd?: Record<string, number>;
+  jump?: { fx: number; fz: number; tx: number; tz: number; start: number; dur: number; peak: number; pad: number };
+  jumpReadyAt?: number;
   morphBack?: boolean;
   morphed?: { type: string; level: number; xp: number; maxHp: number; damageMul: number; speed: number; path: Record<string, number[]>; picks: string[]; stepHeight: number; maxSlope: number };
   recallUsed?: boolean;
@@ -398,6 +400,7 @@ export type SimEvent =
   | { type: "death"; id: number; kind: Entity["kind"]; x: number; y: number; z: number; team: number; big: boolean }
   | { type: "eliminated"; team: number; by: number }
   | { type: "tide"; high: boolean }
+  | { type: "jumppad"; stage: "launch" | "land"; pad: number; id: number; x: number; y: number; z: number; windup: number; dur: number }
   | { type: "morph"; stage: "start" | "done"; id: number; to: string; back: boolean; x: number; y: number; z: number; team: number; seconds: number }
   | { type: "mist"; stage: "warn" | "in" | "out"; seconds: number }
   | { type: "lantern"; stage: "rise" | "taken" | "fade"; x: number; y: number; z: number; id: number; hero: number }

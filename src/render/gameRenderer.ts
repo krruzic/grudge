@@ -597,7 +597,7 @@ export class GameRenderer {
     this.scene.matrixWorldAutoUpdate = false;
     this.time += dt;
     for (const ev of this.world.events) {
-      if (ev.type === "mod" || ev.type === "modEnd" || ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph") this.hazards.handle(ev);
+      if (ev.type === "mod" || ev.type === "modEnd" || ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph" || ev.type === "jumppad") this.hazards.handle(ev);
       if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {
         this.entityViews.onHit(ev.id);
         this.entityViews.onImpact(ev.id, ev.src, ev.fx, ev.fz, ev.big);
