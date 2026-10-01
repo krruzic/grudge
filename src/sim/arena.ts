@@ -320,15 +320,13 @@ export class Arena {
     r.channel += w.dt;
     if (r.channel < cfg.stealSeconds) return;
     const sp = s.transform;
-    r.state = "carried";
-    r.carrier = thief.id;
     r.team = -1;
     r.shrineId = 0;
     r.stealer = 0;
     r.channel = 0;
-    r.since = w.time;
     w.emit({ type: "relic", state: "stolen", team: thief.team, player: thief.hero!.player, x: sp.pos.x, y: sp.y, z: sp.pos.z });
-    w.emit({ type: "notice", team: -1, text: `P${thief.hero!.player + 1} STOLE THE GRUDGE!` });
+    w.emit({ type: "notice", team: -1, text: `P${thief.hero!.player + 1} BROKE THE SHRINE · THE GRUDGE RETURNS` });
+    this.reset();
   }
 
   private updateCannon(): void {

@@ -39,15 +39,15 @@
       "slopeSpeedMul": 1.0,
       "vs": {
         "grunt": 1.0,
-        "ranged": 1.2,
-        "heavy": 1.6,
+        "ranged": 0.6,
+        "heavy": 2.2,
         "hero": 0.7,
         "structure": 0.9
       },
       "bounty": 5
     },
     "ranged": {
-      "hp": 105,
+      "hp": 120,
       "speed": 3.28,
       "radius": 0.4,
       "damage": 15,
@@ -63,16 +63,16 @@
       "maxSlope": 1.05,
       "slopeSpeedMul": 1.0,
       "vs": {
-        "grunt": 1.7,
+        "grunt": 3.2,
         "ranged": 1.0,
-        "heavy": 0.6,
+        "heavy": 0.5,
         "hero": 0.8,
         "structure": 0.7
       },
       "bounty": 6
     },
     "heavy": {
-      "hp": 560,
+      "hp": 480,
       "speed": 2.48,
       "radius": 0.7,
       "damage": 42,
@@ -84,8 +84,8 @@
       "maxSlope": 1.05,
       "slopeSpeedMul": 0.7,
       "vs": {
-        "grunt": 0.55,
-        "ranged": 2.0,
+        "grunt": 0.45,
+        "ranged": 2.4,
         "heavy": 1.0,
         "hero": 1.0,
         "structure": 1.8
