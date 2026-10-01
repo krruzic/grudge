@@ -423,8 +423,21 @@ export class Hud {
     if (!this.visible) return;
     this.drawClock(ctx, W, w, now);
     this.drawRelic(ctx, W, H, w, now);
-    for (let t = 0; t < 2; t++) this.drawTeam(ctx, W, H, w, ui, t, now);
+    const k = w.players.length >= 4 || this.split >= 3 ? 0.74 : w.players.length >= 3 ? 0.86 : 1;
+    this.dense = k < 1;
+    for (let t = 0; t < 2; t++) {
+      if (k === 1) {
+        this.drawTeam(ctx, W, H, w, ui, t, now);
+        continue;
+      }
+      ctx.save();
+      ctx.scale(k, k);
+      this.drawTeam(ctx, W / k, H / k, w, ui, t, now);
+      ctx.restore();
+    }
   }
+
+  private dense = false;
 
   private drawBanner(ctx: CanvasRenderingContext2D, W: number, now: number): void {
     const age = now - this.bannerAt;
@@ -715,6 +728,7 @@ export class Hud {
     }
     const recent = Math.max(picker.lastOrderAt, picker.groupAt);
     const fresh = now - recent < 1.6;
+    if (this.dense && !fresh) return;
     this.orderCross(ctx, crossX, crossY, w, t, group, right, fresh ? 1 : 0.5, now, now - picker.groupAt < 1.6);
     void mui;
     void cui;
