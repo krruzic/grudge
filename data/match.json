@@ -10,7 +10,7 @@
   },
   "economy": {
     "start": 200,
-    "income": 2.0,
+    "income": 3.5,
     "respawnCooldownPenalty": 2,
     "padIncome": {
       "home": 0.35,
