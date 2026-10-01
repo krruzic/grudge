@@ -1,7 +1,7 @@
 {
   "notes": "Costs, stats and upgrade multipliers. Tower range comes from the pad zone (zoneRange) times the type's rangeMul.",
   "padRadius": 3.2,
-  "buildSeconds": 10,
+  "buildSeconds": 7,
   "buildStartHpFrac": 0.3,
   "structureRadius": 1.3,
   "zoneRange": {
@@ -126,12 +126,13 @@
     }
   },
   "towerLimit": 3,
-  "upgradeSeconds": 12,
+  "upgradeSeconds": 10,
   "rubbleSeconds": 20,
   "builderRadius": 3.6,
   "builderRates": {
     "hero": 1.0,
     "unit": 0.4,
-    "max": 2.0
+    "max": 3.2,
+    "teamwork": 0.6
   }
 }

@@ -272,7 +272,7 @@ export interface StructureData {
   upgradeSeconds: number;
   rubbleSeconds: number;
   builderRadius: number;
-  builderRates: { hero: number; unit: number; max: number };
+  builderRates: { hero: number; unit: number; max: number; teamwork: number };
   types: Record<StructureType, StructureDef>;
 }
 

@@ -107,11 +107,14 @@ export function builderRate(w: World, e: Entity): number {
   const sd = w.data.structures;
   const r = sd.builderRates;
   let rate = 0;
+  let heroes = 0;
   for (const o of w.entities) {
     if (!o.alive || o.team !== e.team || o.structure) continue;
     if (w.dist(o, e) - o.radius - e.radius > sd.builderRadius) continue;
+    if (o.hero) heroes++;
     rate += o.hero ? r.hero : r.unit;
   }
+  if (heroes >= 2) rate += r.teamwork * (heroes - 1);
   return Math.min(r.max, rate);
 }
 
@@ -168,7 +171,7 @@ export function updateStructure(w: World, e: Entity): void {
   const def = sd.types[st.type];
   const dt = w.dt;
   if (!st.ready || st.upgrading) {
-    const rate = builderRate(w, e);
+    const rate = st.ready ? Math.max(1, builderRate(w, e)) : builderRate(w, e);
     const secs = st.ready ? sd.upgradeSeconds : sd.buildSeconds;
     const step = (rate * dt) / secs;
     st.progress = Math.min(1, (st.progress ?? 0) + step);

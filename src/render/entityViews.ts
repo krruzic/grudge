@@ -1046,7 +1046,7 @@ export class EntityViews {
       v.work.group.visible = building;
       if (building) {
         setBar(v.work, st.progress ?? 0, 1 / 60, time);
-        const idle = builderRate(w, e) <= 0;
+        const idle = !st.ready && builderRate(w, e) <= 0;
         v.work.fg.material.color.set(idle && Math.floor(time * 3) % 2 === 0 ? 0x806020 : 0xffd040);
       }
     }
