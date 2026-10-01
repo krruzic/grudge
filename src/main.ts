@@ -1336,7 +1336,8 @@ async function start(): Promise<void> {
   const demoMap = Math.max(0, maps.findIndex((m) => m.id === "crossing"));
   let demoBase = "";
   let demoLoop = 0;
-  let demo: { key: string; w: World; t: number; acc: number; loop: number; len: number; presses: number[]; dist: number; btn: keyof Command; mapShown: boolean } | null = null;
+  let demo: { key: string; w: World; t: number; acc: number; loop: number; len: number; presses: number[]; dist: number; btn: keyof Command; mapShown: boolean; kind: string } | null = null;
+  const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner"]);
   const BIG = new Set(["quake", "zone", "summon", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth", "teslatower", "palisade", "wall", "repair"]);
   const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry"]);
   const DEMO_SPOT = { x: 23.5, z: 7 };
@@ -1378,12 +1379,12 @@ async function start(): Promise<void> {
       const kind = (me.hero?.ab ?? w.heroDef(spec.hero).abilities)[spec.slot].kind;
       const big = BIG.has(kind);
       const far = FAR.has(kind) || (spec.slot === "a" && kind === "shoot");
-      const dist = big ? 4.5 : far ? 6.5 : 2.8;
+      const dist = kind === "works" ? 8 : big ? 4.5 : far ? 6.5 : 2.8;
       const presses = spec.slot === "a" ? [0.6, 0.95, 1.3, 1.65] : [0.6];
       const btn = ({ a: "attack", b: "secondary", r: "special", z: "super" } as const)[spec.slot];
       if (!demo || !demo.mapShown) view.setMap(mapViews[demoMap], w.terrain);
       view.setWorld(w);
-      demo = { key, w, t: -1, acc: 0, loop, len: big ? 4.6 : 3.4, presses, dist, btn, mapShown: true };
+      demo = { key, w, t: -1, acc: 0, loop, len: kind === "works" ? 5.5 : big ? 4.6 : 3.4, presses, dist, btn, mapShown: true, kind };
     }
     const d = demo;
     const w = d.w;
@@ -1413,6 +1414,23 @@ async function start(): Promise<void> {
       const td = w.teams[1].directives;
       td.grunt = td.ranged = td.heavy = "hold";
       td.holdPoint.grunt = { x: cx + 0.7, z: DEMO_SPOT.z };
+      if (ALLY_KINDS.has(d.kind)) {
+        for (let k = 0; k < 3; k++) {
+          const u = spawnUnit(w, 0, "grunt", DEMO_SPOT.x - 1.2 + (k === 1 ? -0.8 : 0), DEMO_SPOT.z - 1.6 + k * 1.6, 1);
+          if (u?.unit) {
+            u.unit.damage = 0;
+            u.transform.facing = u.transform.prevFacing = Math.PI / 2;
+          }
+        }
+        const ad = w.teams[0].directives;
+        ad.grunt = ad.ranged = ad.heavy = "hold";
+        ad.holdPoint.grunt = { x: DEMO_SPOT.x - 1.4, z: DEMO_SPOT.z };
+      }
+      if (d.kind === "repair") {
+        const st = w.addEntity(0, "structure", 1.2, DEMO_SPOT.x - 1, DEMO_SPOT.z + 3.2, 620);
+        st.structure = { type: "damage", padIndex: -1, level: 1, builtAt: 0, ready: true, nextAction: 1e9, range: 0, damage: 0, lastFireAt: -99, shielded: false };
+        st.hp = 180;
+      }
     };
     if (d.t < 0) {
       reset();
@@ -1424,6 +1442,18 @@ async function start(): Promise<void> {
       const t = d.t;
       d.t += w.dt;
       const cmd: Command = { moveX: 0, moveZ: 0 };
+      if (d.kind === "works" && t > 1.4) {
+        const m = w.mods.find((q) => q.owner === me.id && q.kind === "works" && q.cx !== undefined);
+        if (m) {
+          const dx = m.cx! - me.transform.pos.x;
+          const dz = m.cz! - me.transform.pos.z;
+          const dl = Math.hypot(dx, dz);
+          if (dl > 0.4) {
+            cmd.moveX = dx / dl;
+            cmd.moveZ = dz / dl;
+          }
+        }
+      }
       if (d.presses.some((p) => t < p && d.t >= p)) {
         (cmd as unknown as Record<string, unknown>)[d.btn] = true;
         cmd.moveX = 1;

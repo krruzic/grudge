@@ -5,13 +5,23 @@ import { drawNum, drawText, fontReady, onTextLost, textWidth } from "../ui/font"
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
-import { DUELIST, ENGINEER, FX, HERALD, RAIDER, WARLORD } from "./fxKit";
+import { DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
 import { spikeGeo, spikeMat } from "./warlordFx";
 import { wardenSlap } from "./wardenFx";
 import { KITS, type HeroKit } from "./kits";
 import { Particles } from "./particles";
 import "./heroFx";
-import { chunks, decal, emit, Ribbon, shockwave, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
+import { chunks, decal, DECAL_3D, emit, FISSURE_TEX, Ribbon, shockwave, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
+
+FISSURE_TEX.set(FX.crack, "crack");
+FISSURE_TEX.set(WARLORD.crackRing, "crack");
+FISSURE_TEX.set(WARLORD.lavaCrack, "lava");
+FISSURE_TEX.set(WARDEN.mossCrack, "moss");
+FISSURE_TEX.set(WARDEN.roots, "moss");
+for (const t of [WARLORD.rune, WARDEN.rune, HERALD.halo, HERALD.laurel, SUMMONER.circle, SUMMONER.hex]) DECAL_3D.set(t, "sigil");
+DECAL_3D.set(WARLORD.ring, "ring");
+DECAL_3D.set(ENGINEER.gear, "gear");
+DECAL_3D.set(RAIDER.smokeRing, "smoke");
 
 const woodTex = new THREE.TextureLoader().load(woodUrl);
 woodTex.colorSpace = THREE.SRGBColorSpace;

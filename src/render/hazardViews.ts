@@ -6,6 +6,7 @@ import type { World } from "../sim/world";
 import { composite, ENGINEER, FX, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
 import type { FxHost } from "./fxParts";
 import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
+import { buildFissures } from "./fxParts";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -273,10 +274,10 @@ const KEEP_MAT = new Set<THREE.Material>([STONE_CHUNK, STAKE, ROPE, WOOD, WOOD_D
 function free(root: THREE.Object3D): void {
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    if (mesh.geometry && !KEEP_GEO.has(mesh.geometry) && !(o instanceof THREE.Sprite)) mesh.geometry.dispose();
+    if (mesh.geometry && !KEEP_GEO.has(mesh.geometry) && !mesh.geometry.userData.model && !(o instanceof THREE.Sprite)) mesh.geometry.dispose();
     const m = mesh.material as THREE.Material | THREE.Material[] | undefined;
     if (!m) return;
-    for (const mat of Array.isArray(m) ? m : [m]) if (!KEEP_MAT.has(mat)) mat.dispose();
+    for (const mat of Array.isArray(m) ? m : [m]) if (!KEEP_MAT.has(mat) && !mat.userData.keep) mat.dispose();
   });
 }
 
@@ -370,8 +371,10 @@ export class HazardViews {
     );
     decal.rotation.x = -Math.PI / 2;
     decal.position.y = 0.12;
+    decal.visible = false;
     g.add(decal);
     const gy = (x: number, z: number) => this.world.groundY(this.cx + x, this.cz + z) - this.cy;
+    if (style === "lava" || style === "crater" || style === "sinkhole") g.add(buildFissures(gy, r * 0.9, style === "lava" ? "lava" : "crack").group);
     const scatter = (n: number, make: () => THREE.Mesh, lift = 0) => {
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2;

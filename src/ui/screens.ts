@@ -458,7 +458,7 @@ export class Screens {
       this.hit(`tag:${i}`, x + 4, y + 3, w - 8, 13);
       if (tagHot) shadowText(ctx, "SIGN NAME", x + w / 2 - textWidth("SIGN NAME", 0.42) / 2, y - 7, "#f8e8c0", 0.42);
     }
-    if (s.cpu && !this.peer && !commander && this.cursors?.cursors.some((c) => c.active)) this.woodButton(ctx, `sit:${i}`, "SIT HERE", x + w / 2, y - 15);
+    const sitHere = s.cpu && !this.peer && !commander && !!this.cursors?.cursors.some((c) => c.active);
     const xBox = (bid: string, tip: string) => {
       const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === bid);
       const ux = x + w - 11;
@@ -509,6 +509,7 @@ export class Screens {
       const cx = x + (w / 4) * (j + 0.5);
       abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
     });
+    if (sitHere) onHiLayer(ctx, (t) => this.woodButton(t, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16));
     if (s.ready && !commander && human) {
       onHiLayer(ctx, (t) => {
         waxSeal(t, fx + fw - 12, fy + 13, 10, "#a8141a", "combo");

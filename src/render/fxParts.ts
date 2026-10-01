@@ -220,20 +220,194 @@ export function chunks(h: FxHost, n: number, x: number, y: number, z: number, op
 
 const planeGeo = new THREE.PlaneGeometry(1, 1);
 export const SHARED_PLANE_GEOS = new Set<THREE.BufferGeometry>([planeGeo, leafGeo]);
-export function shockwave(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, normal: THREE.Vector3, r0: number, r1: number, dur: number, color: THREE.ColorRepresentation = 0xffffff, opacity = 1): void {
-  const m = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+const torusGeo = new THREE.TorusGeometry(1, 0.05, 4, 36);
+torusGeo.userData.model = true;
+export function shockwave(h: FxHost, _tex: THREE.Texture, x: number, y: number, z: number, normal: THREE.Vector3, r0: number, r1: number, dur: number, color: THREE.ColorRepresentation = 0xffffff, opacity = 1): void {
+  const m = new THREE.Mesh(torusGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.clone().normalize());
-  m.rotateZ(Math.random() * Math.PI * 2);
   m.position.set(x, y, z);
   h.root.add(m);
   h.add(m, dur, (k) => {
     const e = 1 - (1 - k) * (1 - k) * (1 - k);
-    m.scale.setScalar((r0 + (r1 - r0) * e) * 2);
-    (m.material as THREE.MeshBasicMaterial).opacity = opacity * (1 - k * k);
+    const r = Math.max(0.05, r0 + (r1 - r0) * e);
+    m.scale.set(r, r, r * 0.5 * (1 - k * 0.6));
+    (m.material as THREE.MeshBasicMaterial).opacity = opacity * 0.85 * (1 - k * k);
   });
 }
 
-export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): THREE.Mesh {
+export type FissureStyle = "crack" | "lava" | "moss";
+export const FISSURE_TEX = new Map<THREE.Texture, FissureStyle>();
+const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+boxGeo.userData.model = true;
+const FIS_MAT: Record<FissureStyle, THREE.Material> = {
+  crack: new THREE.MeshLambertMaterial({ color: 0x1c140c, flatShading: true }),
+  lava: new THREE.MeshLambertMaterial({ color: 0x24140a, flatShading: true }),
+  moss: new THREE.MeshLambertMaterial({ color: 0x1e2a10, flatShading: true }),
+};
+const LAVA_CORE = new THREE.MeshBasicMaterial({ color: 0xff7a1c });
+const LIP_MAT = new THREE.MeshLambertMaterial({ color: 0x6a5238, flatShading: true });
+const MOSS_LIP = new THREE.MeshLambertMaterial({ color: 0x3a5a1c, flatShading: true });
+for (const m of [...Object.values(FIS_MAT), LAVA_CORE, LIP_MAT, MOSS_LIP]) m.userData.keep = true;
+
+export function buildFissures(gy: (x: number, z: number) => number, r: number, style: FissureStyle, seed = Math.random()): { group: THREE.Group; parts: { o: THREE.Object3D; d: number }[] } {
+  let sd = Math.floor(seed * 1e6) || 1;
+  const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  const group = new THREE.Group();
+  const parts: { o: THREE.Object3D; d: number }[] = [];
+  const n = Math.max(4, Math.round(4 + r * 1.6));
+  const wk = Math.min(1.6, Math.max(0.6, r / 3));
+  for (let i = 0; i < n; i++) {
+    let a = (i / n) * Math.PI * 2 + rnd() * 0.6;
+    const reach = r * (0.65 + rnd() * 0.35);
+    const segs = 5;
+    let px = Math.cos(a) * r * 0.08;
+    let pz = Math.sin(a) * r * 0.08;
+    for (let s2 = 1; s2 <= segs; s2++) {
+      a += (rnd() - 0.5) * 0.7;
+      const d = r * 0.08 + (reach - r * 0.08) * (s2 / segs);
+      const nx = Math.cos(a) * d;
+      const nz = Math.sin(a) * d;
+      const len = Math.hypot(nx - px, nz - pz);
+      const w = (0.3 - s2 * 0.04) * wk * (0.8 + rnd() * 0.4);
+      const mx = (px + nx) / 2;
+      const mz = (pz + nz) / 2;
+      const yaw = -Math.atan2(nz - pz, nx - px);
+      const seg = new THREE.Group();
+      seg.position.set(mx, gy(mx, mz), mz);
+      seg.rotation.y = yaw;
+      const cut = new THREE.Mesh(boxGeo, FIS_MAT[style]);
+      cut.scale.set(len + w * 0.6, 0.08, w);
+      cut.position.y = 0.01;
+      seg.add(cut);
+      if (style === "lava") {
+        const core = new THREE.Mesh(boxGeo, LAVA_CORE);
+        core.scale.set(len + w * 0.4, 0.09, w * 0.45);
+        core.position.y = 0.015;
+        seg.add(core);
+      }
+      for (const side of [-1, 1]) {
+        if (rnd() < 0.45) continue;
+        const lip = new THREE.Mesh(boxGeo, style === "moss" ? MOSS_LIP : LIP_MAT);
+        const ls = w * (0.5 + rnd() * 0.6);
+        lip.scale.set(ls * 1.4, ls * 0.6, ls);
+        lip.position.set((rnd() - 0.5) * len * 0.6, ls * 0.15, side * (w * 0.5 + ls * 0.3));
+        lip.rotation.set(rnd() * 0.6, rnd() * 3, side * (0.3 + rnd() * 0.4));
+        seg.add(lip);
+      }
+      group.add(seg);
+      parts.push({ o: seg, d });
+      px = nx;
+      pz = nz;
+    }
+  }
+  return { group, parts };
+}
+
+export function fissures(h: FxHost, x: number, y: number, z: number, r: number, style: FissureStyle, life: number, grow = 0.25): void {
+  const ground = (px: number, pz: number) => (h.world ? h.world.groundY(x + px, z + pz) : y) - y;
+  const { group, parts } = buildFissures(ground, r, style);
+  group.position.set(x, y, z);
+  for (const p of parts) p.o.visible = false;
+  h.root.add(group);
+  h.add(group, life, (k) => {
+    const t = k * life;
+    for (const p of parts) {
+      const on = t >= grow * (p.d / Math.max(0.1, r));
+      p.o.visible = on;
+    }
+    group.position.y = y - (k > 0.8 ? ((k - 0.8) / 0.2) * 0.25 : 0);
+  });
+}
+
+export const DECAL_3D = new Map<THREE.Texture, "sigil" | "ring" | "gear" | "smoke">();
+
+export function sigil3d(h: FxHost, x: number, y: number, z: number, r: number, life: number, color: THREE.ColorRepresentation, spin: number, grow: number, opacity = 1): void {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  for (const [rr, th] of [[1, 1.4], [0.72, 1]] as const) {
+    const ring = new THREE.Mesh(torusGeo, mat);
+    ring.rotation.x = Math.PI / 2;
+    ring.scale.set(rr, rr, 0.6 * th);
+    g.add(ring);
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const b = new THREE.Mesh(boxGeo, mat);
+    b.scale.set(0.24, 0.03, 0.06);
+    b.position.set(Math.cos(a) * 0.86, 0, Math.sin(a) * 0.86);
+    b.rotation.y = -a;
+    g.add(b);
+  }
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.Mesh(boxGeo, mat);
+    b.scale.set(1.4, 0.03, 0.04);
+    b.rotation.y = (i / 3) * Math.PI;
+    g.add(b);
+  }
+  g.position.set(x, y + 0.12, z);
+  h.root.add(g);
+  h.add(g, life, (k) => {
+    const t = k * life;
+    const e = grow > 0 ? Math.min(1, t / grow) : 1;
+    g.scale.setScalar(Math.max(0.01, r * (1 - (1 - e) * (1 - e))));
+    g.rotation.y = t * spin;
+    mat.opacity = opacity * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3);
+  });
+}
+
+const gearShape = (() => {
+  const sh = new THREE.Shape();
+  const teeth = 10;
+  for (let i = 0; i < teeth * 4; i++) {
+    const a = (i / (teeth * 4)) * Math.PI * 2;
+    const rr = i % 4 < 2 ? 1 : 0.8;
+    if (i === 0) sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    else sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  sh.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 0.35, 0, Math.PI * 2, true);
+  sh.holes.push(hole);
+  return sh;
+})();
+const gearGeo = new THREE.ExtrudeGeometry(gearShape, { depth: 0.18, bevelEnabled: false, curveSegments: 8 });
+gearGeo.rotateX(-Math.PI / 2);
+gearGeo.userData.model = true;
+const GEAR_MAT = new THREE.MeshLambertMaterial({ color: 0xd0a030, flatShading: true });
+GEAR_MAT.userData.keep = true;
+
+function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: number, spin: number): void {
+  const m = new THREE.Mesh(gearGeo, GEAR_MAT);
+  m.position.set(x, y, z);
+  h.root.add(m);
+  h.add(m, life, (k) => {
+    const t = k * life;
+    const e = Math.min(1, t / 0.2);
+    m.scale.setScalar(Math.max(0.01, r * 0.8 * e));
+    m.rotation.y = t * spin;
+    m.position.y = y + 0.05 + Math.sin(Math.min(1, t / 0.25) * Math.PI) * 0.4 - (k > 0.75 ? ((k - 0.75) / 0.25) * 0.3 : 0);
+  });
+}
+
+export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): THREE.Mesh | null {
+  const fis = FISSURE_TEX.get(tex);
+  if (fis) {
+    fissures(h, x, y, z, radius, fis, Math.max(dur, 1.2), opts.grow ?? 0.25);
+    return null;
+  }
+  const d3 = DECAL_3D.get(tex);
+  if (d3 === "sigil") {
+    sigil3d(h, x, y, z, radius, dur, opts.color ?? 0xffe0a0, opts.spin ?? 1, opts.grow ?? 0.2, opts.opacity ?? 1);
+    return null;
+  }
+  if (d3 === "gear") {
+    gear3d(h, x, y, z, radius, dur, opts.spin ?? 2);
+    return null;
+  }
+  if (d3 === "ring" || d3 === "smoke") {
+    shockwave(h, tex, x, y + 0.15, z, new THREE.Vector3(0, 1, 0), radius * 0.15, radius, Math.max(0.35, dur), d3 === "smoke" ? 0x8a8a90 : opts.color ?? 0xffe0c0, opts.opacity ?? 0.9);
+    return null;
+  }
   const m = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({
     map: tex, color: opts.color ?? 0xffffff, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3,
     blending: opts.additive ? THREE.AdditiveBlending : THREE.NormalBlending,

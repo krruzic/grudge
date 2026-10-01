@@ -167,10 +167,7 @@ function chainLine(h: FxHost, x0: number, y0: number, z0: number, x1: number, y1
 function bloodroarFx(h: FxHost, x: number, z: number, gy: number, r: number): void {
   emit(h, { tex: WARLORD.rage, n: 1, x, y: gy + 2.6, z, color: 0xff6060, size: [2.6, 2.6], grow: 1.6, life: [0.3, 0.3], speed: [0, 0], additive: true, order: 6 });
   for (let k = 0; k < 3; k++) h.after(k * 0.13, () => decal(h, WARLORD.ring, x, gy + 0.02 * k, z, r, 0.55, { grow: 0.5, additive: true, color: 0xff3030, opacity: 0.85 }));
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    h.after((i % 2) * 0.1, () => emit(h, { tex: WARLORD.shout, n: 1, x: x + Math.cos(a) * 0.8, y: gy + 2.2, z: z + Math.sin(a) * 0.8, color: 0xff5050, size: [1.1, 1.1], grow: 2.4, life: [0.5, 0.5], speed: [r * 0.9, r * 0.9], dir: { x: Math.cos(a), y: 0, z: Math.sin(a) }, cone: 0.01, additive: true }));
-  }
+  for (let k = 0; k < 3; k++) h.after(k * 0.12, () => shockwave(h, WARLORD.ring, x, gy + 2.2, z, UP, 0.6, r * 0.9, 0.55, 0xffb060, 0.9));
   emit(h, { tex: RAIDER_DROP, n: 18, x, y: gy + 2.2, z, size: [0.25, 0.4], life: [0.6, 1], speed: [2, 5], up: [2, 4], gravity: 14, floor: gy + 0.05, jitter: 1 });
   emit(h, { tex: FX.smoke, n: 6, x, y: gy + 1, z, color: 0xa02020, size: [1.2, 1.8], grow: 1.6, life: [0.7, 1.1], speed: [1, 2.5], flatSpread: true, up: [0.3, 0.8], drag: 2, opacity: 0.6 });
   h.shake = Math.max(h.shake, 0.3);
@@ -187,10 +184,7 @@ function warcry(h: FxHost, src: { team: number; transform: { pos: { x: number; z
   emit(h, { tex: WARLORD.helm, n: 1, x, y: hy + 1.4, z, size: [1.4, 1.4], grow: 1.25, life: [1, 1], speed: [0, 0], up: [0.8, 0.8], fadeIn: 0.1, order: 7 });
   decal(h, WARLORD.rune, x, gy, z, 2.4, 1.2, { grow: 0.15, spin: 1.5, additive: true, color: 0xff9060 });
   for (let k = 0; k < 3; k++) h.after(k * 0.13, () => decal(h, WARLORD.ring, x, gy + 0.02 * k, z, r, 0.55, { grow: 0.5, additive: true, color: 0xffa060, opacity: 0.85 }));
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    h.after((i % 2) * 0.1, () => emit(h, { tex: WARLORD.shout, n: 1, x: x + Math.cos(a) * 0.8, y: hy - 0.4, z: z + Math.sin(a) * 0.8, size: [1.1, 1.1], grow: 2.4, life: [0.5, 0.5], speed: [r * 0.9, r * 0.9], dir: { x: Math.cos(a), y: 0, z: Math.sin(a) }, cone: 0.01, additive: true }));
-  }
+  for (let k = 0; k < 3; k++) h.after(k * 0.12, () => shockwave(h, WARLORD.ring, x, hy - 0.4, z, UP, 0.6, r * 0.9, 0.55, 0xffb060, 0.9));
   emit(h, { tex: WARLORD.ember, n: 16, x, y: gy + 0.4, z, size: [0.25, 0.5], life: [0.8, 1.4], speed: [0.5, 2], up: [2.5, 5], drag: 1, additive: true, jitter: 2.5 });
   emit(h, { tex: WARLORD.dust, n: 8, x, y: gy + 0.3, z, size: [1, 1.4], grow: 1.8, life: [0.6, 0.9], speed: [3, 5], flatSpread: true, drag: 3, opacity: 0.8 });
   h.shake = Math.max(h.shake, 0.3);

@@ -582,3 +582,17 @@
 - Menu backgrounds are a solid baked wooden war-table (`boardBg`); the live game only shows through framed windows (main menu, title, pause, results, Codex).
 - Portraits are drawn on the high-res text layer (`hiImage`) instead of being squeezed into the 240-line canvas: the roster, champion-select stages, Records, pause, results, the Codex and the Choose the Field previews (rendered at 4× size). Icons render at 128 px and stages at 224×288, with a gentler turntable sway so heroes mostly face you.
 - Champion select, bottom half: each player slot is a pinned card. It has the P#/name and CPU/PLAYER plaque, a framed cloth inset with the live portrait clipped to it, the evolution trees and SWORN seal over it, and the champion name and ability icons below. Open seats and "+ ADD CPU" are pinned cards too, SIT HERE sits above the card, and the "sworn" and "seats open" notices are pinned cards on the high-res layer.
+- No flat PNG ground effects. `decal()` (used by every hero kit) now routes textures to 3D builders:
+  - Crack, lava, moss and root decals → `fissures()`: jagged segmented trenches cut into the terrain that follow its height and spread outward, with a glowing molten core for lava and rubble lips along the edges.
+  - Runes, halos, laurels and summon/hex circles → `sigil3d()`: spinning glowing rings with notches and spokes.
+  - Engineer gear → an extruded 3D gear that rises, spins and sinks.
+  - Rings and the smoke ring → 3D shockwaves.
+  - `shockwave()` itself is now an expanding flattened torus instead of a textured plane.
+  - War Cry's flat "shout" sprites became 3D rings bursting out at head height.
+  - Zones (brambles, sinkhole, crater, lava, …) no longer lay a textured square on the ground (hidden). Their 3D pieces stay, and lava, crater and sinkhole zones get persistent 3D fissures.
+  - Particles (dust, sparks, embers, smoke) stay as sprites, since that's what they are.
+- Codex demos:
+  - Moves that help allies (War Cry, Brambles, Repair, banners and rallies) get three of your own grunts standing beside the hero, so the buff has someone to land on. They don't attack.
+  - Repair also gets a damaged allied tower next to the hero.
+  - Stig's Siege Ramp demo walks him up the ramp after he raises it (longer loop, grunts placed past the platform).
+- SIT HERE sits back at the bottom of the CPU's portrait frame, drawn on the high-res layer so it renders over the 3D portrait.
