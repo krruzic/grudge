@@ -24,6 +24,7 @@ export interface AimInfo {
   b?: number;
   r?: number;
   z?: number;
+  ready?: { b: boolean; r: boolean; z: boolean };
 }
 
 const TAP = 0.2;
@@ -101,9 +102,11 @@ export class CommandMapper {
       if (k === "b" && !bAims) continue;
       const range = aim?.[k];
       if (p.pressed[btn]) {
-        if (!range) {
+        if (!range || aim?.ready?.[k] === false) {
+          this.holdAt[slot] = -1;
           if (k === "r") c.special = true;
-          else c.super = true;
+          else if (k === "z") c.super = true;
+          else c.secondary = true;
           continue;
         }
         this.holdAt[slot] = now;
@@ -111,6 +114,10 @@ export class CommandMapper {
       }
       if (this.holdAt[slot] < 0) continue;
       const held = now - this.holdAt[slot];
+      if (p.pressed.block && range) {
+        this.holdAt[slot] = -1;
+        continue;
+      }
       if (p.held[btn]) {
         if (held > TAP && range) {
           this.place.dx += p.stickX * 12 * dt;

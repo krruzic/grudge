@@ -68,9 +68,16 @@ function placeRange(def: AbilityDef): number | undefined {
   return r || (def.range ?? 8);
 }
 
-export function placeRanges(w: World, e: Entity): { facing: number; b?: number; r?: number; z?: number } {
+export function placeRanges(w: World, e: Entity): { facing: number; b?: number; r?: number; z?: number; ready: { b: boolean; r: boolean; z: boolean } } {
   const ab = abilities(w, e);
-  return { facing: e.transform.facing, b: placeRange(ab.b), r: placeRange(ab.r), z: placeRange(ab.z) };
+  const h = e.hero!;
+  return {
+    facing: e.transform.facing,
+    b: placeRange(ab.b),
+    r: placeRange(ab.r),
+    z: placeRange(ab.z),
+    ready: { b: ready(e, "b", w.time), r: ready(e, "r", w.time), z: h.meter >= w.data.heroes.baseline.superMax },
+  };
 }
 
 function reachOf(def: AbilityDef): number {
