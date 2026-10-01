@@ -187,82 +187,101 @@ def heavy(images):
     bh = _bh()
     B = rig(0.72, 1.3, 1.7, 0.56, 0.24, 0.6)
     c = charkit.Char("heavy", images)
-    OG = "grey_ogre"
-    LTH = (0.5, 0.35, 0.25)
-    ogre_face(c, bh, Vector((0, -0.22, 1.44)), 0.3, 0.3, 0.17, OG)
-    bh.folded(c, [(0.31, 1.5), (0.325, 1.6), (0.315, 1.68), (0.27, 1.73), (0.0, 1.75)], (0, -0.2, 0), T, "head", segs=14, folds=5, amp=0.04, sx=1.1)
-    bh.tube(c, [(0.1, 0.1, 1.58), (0.16, 0.22, 1.52), (0.2, 0.3, 1.4)], [0.04, 0.035, 0.02], T, "head", segs=5)
-    bh.tube(c, [(0.06, 0.1, 1.58), (0.04, 0.24, 1.5), (0.02, 0.32, 1.38)], [0.04, 0.035, 0.02], T, "head", segs=5)
-    bh.folded(c, [(0.36, 0.72), (0.5, 0.9), (0.58, 1.1), (0.56, 1.3), (0.34, 1.42), (0.0, 1.44)], (0, 0.04, 0), OG, "chest", segs=16, folds=3, amp=0.03, sy=0.8)
+    SK = "grey_ogre"
+    IR = (1.0, 1.0, 1.05)
+    IR_D = (0.62, 0.62, 0.68)
+    RIV = (1.35, 1.35, 1.4)
+    LTH = (0.45, 0.32, 0.25)
+    VOID = (0.03, 0.03, 0.04)
+    hy = -0.16
+    c.lathe([(0.0, 1.26), (0.2, 1.27), (0.24, 1.32), (0.25, 1.46), (0.245, 1.56), (0.22, 1.62), (0.12, 1.66), (0.0, 1.67)], (0, hy, 0), "iron", "head", segs=16, shade=IR)
+    for z in (1.33, 1.58):
+        c.lathe([(0.248, z - 0.02), (0.258, z), (0.248, z + 0.02)], (0, hy, 0), T, "head", segs=16, caps=False)
+    c.tbox((0.3, 0.06), (0.3, 0.06), 0.045, (0, hy - 0.225, 1.46), "plain", "head", shade=VOID)
     for sx in (-1, 1):
-        c.tbox((0.34, 0.06), (0.36, 0.06), 0.3, (0.18 * sx, -0.44, 1.02), "iron", "chest", rot=(0.15, 0, 0))
-        for zz in (1.06, 1.26):
-            c.ico(0.018, (0.3 * sx, -0.47, zz), "iron", "chest", sub=1, shade=(1.3, 1.3, 1.35))
-        bh.tube(c, [(-0.45 * sx, -0.32, 1.38), (0.0, -0.46, 1.15), (0.45 * sx, -0.3, 0.92)], [0.035] * 3, "leather", "chest", segs=6, shade=LTH)
-    c.ico(0.05, (0, -0.48, 1.15), "gold", "chest", sub=2)
-    c.lathe([(0.0, 0.14), (0.24, 0.12), (0.32, 0.04), (0.33, -0.04), (0.26, -0.08)], (0.6, 0.02, 1.36), T, "chest", segs=12, sy=1.15, rot=(0, 0.35, 0))
-    c.lathe([(0.33, -0.03), (0.345, -0.05), (0.32, -0.09)], (0.6, 0.02, 1.36), "iron", "chest", segs=12, sy=1.15, caps=False, rot=(0, 0.35, 0))
-    for k2 in range(3):
-        c.cone(0.035, 0.0, 0.12, (0.62 + (k2 - 1) * 0.08, 0.02, 1.52), "iron", "chest", segs=5)
-    c.lathe([(0.4, 0.62), (0.445, 0.67), (0.445, 0.75), (0.43, 0.8)], (0, 0.04, 0), "leather", "hips", segs=16, sy=0.82, shade=(0.45, 0.32, 0.25))
-    c.box((0.16, 0.06, 0.12), (0, -0.33, 0.71), "gold", "hips")
-    for fy, mat, sh in ((-1, C, (1, 1, 1)), (1, T, (0.85, 0.85, 0.85))):
-        rows = [[(x, fy * (0.36 + 0.04 * (0.7 - z)), z) for x in (-0.17, -0.06, 0.06, 0.17)] for z in (0.7, 0.45, 0.22)]
-        rows[-1] = [(x, y, z - (0.04 if k2 in (1, 2) else 0.0)) for k2, (x, y, z) in enumerate(rows[-1])]
-        bh.sheet(c, rows, mat, "hips", thick=0.02, shade=sh)
+        c.ico(1.0, (0.07 * sx, hy - 0.235, 1.483), "plain", "head", sub=1, scale=(0.03, 0.01, 0.014), shade=(1.6, 0.8, 0.15))
+    for k in range(5):
+        c.box((0.022, 0.02, 0.1), ((k - 2) * 0.05, hy - 0.24, 1.38), "iron", "head", shade=IR_D)
+    for k in range(6):
+        a = k / 6 * math.tau
+        c.ico(0.012, (math.cos(a) * 0.255, hy + math.sin(a) * 0.255, 1.33), "iron", "head", sub=1, shade=RIV)
+    fin = [[(0.0, hy - 0.2 + 0.44 * (k / 6), 1.6 + 0.04 * math.sin(k / 6 * math.pi) + dz * (0.06 + 0.12 * math.sin(k / 6 * math.pi))) for k in range(7)] for dz in (0.0, 1.0)]
+    bh.sheet(c, fin, T, "head", thick=0.03)
+    bh.tube(c, fin[1], [0.018] * 7, "iron", "head", segs=5, shade=RIV)
+    for sx in (-1, 1):
+        bh.tube(c, [(0.24 * sx, hy, 1.5), (0.33 * sx, hy - 0.05, 1.54), (0.38 * sx, hy - 0.15, 1.6), (0.36 * sx, hy - 0.26, 1.62)], [0.05, 0.04, 0.025, 0.0], "iron", "head", segs=7, shade=IR_D)
+    c.lathe([(0.27, 1.22), (0.34, 1.26), (0.36, 1.34), (0.3, 1.4)], (0, hy + 0.04, 0), "iron", "chest", segs=16, shade=IR_D)
+    c.lathe([(0.36, 0.72), (0.5, 0.86), (0.6, 1.04), (0.62, 1.2), (0.56, 1.32), (0.36, 1.4), (0.0, 1.42)], (0, 0.06, 0), "iron", "chest", segs=14, sy=0.82, shade=IR)
+    for z in (0.86, 1.04, 1.22):
+        r = {0.86: 0.5, 1.04: 0.6, 1.22: 0.615}[z]
+        c.lathe([(r + 0.005, z - 0.03), (r + 0.02, z), (r + 0.005, z + 0.03)], (0, 0.06, 0), T, "chest", segs=14, sy=0.82, caps=False)
+        for k in range(8):
+            a = k / 8 * math.tau
+            c.ico(0.016, (math.cos(a) * (r + 0.02), 0.06 + math.sin(a) * (r + 0.02) * 0.82, z), "iron", "chest", sub=1, shade=RIV)
+    c.lathe([(0.0, 0.0), (0.16, 0.0), (0.17, 0.02), (0.15, 0.05), (0.0, 0.06)], (0, -0.43, 1.06), "iron", "chest", segs=16, rot=(math.pi / 2, 0, 0), shade=IR_D)
+    c.lathe([(0.11, 0.0), (0.12, 0.01), (0.11, 0.02), (0.05, 0.02), (0.04, 0.01), (0.05, 0.0)], (0, -0.49, 1.06), T, "chest", segs=16, rot=(math.pi / 2, 0, 0))
+    c.cone(0.05, 0.0, 0.1, (0, -0.52, 1.06), "iron", "chest", segs=8, rot=(math.pi / 2, 0, 0), shade=RIV)
+    for sx in (-1, 1):
+        for k, (r, z) in enumerate(((0.34, 1.42), (0.31, 1.33), (0.27, 1.24))):
+            c.lathe([(0.0, 0.1), (r * 0.6, 0.08), (r, 0.0), (r * 0.96, -0.05), (r * 0.6, -0.03)], (0.6 * sx, 0.04, z), "iron", "chest", segs=12, sy=1.1, rot=(0, 0.3 * sx, 0), shade=IR if k == 0 else IR_D)
+            c.lathe([(r, -0.01), (r * 1.03, -0.03), (r * 0.98, -0.055)], (0.6 * sx, 0.04, z), T, "chest", segs=12, sy=1.1, caps=False, rot=(0, 0.3 * sx, 0))
+        for k in range(3):
+            a = (k - 1) * 0.55
+            c.lathe_ab([(0.05, 0.0), (0.035, 0.5), (0.0, 1.0)], (0.62 * sx + math.sin(a) * 0.1, 0.04 + math.cos(a) * 0.0 + (k - 1) * 0.14, 1.5), (0.7 * sx + math.sin(a) * 0.12, 0.04 + (k - 1) * 0.18, 1.72), "iron", "chest", segs=7, shade=IR)
+    chain = [(0.5, -0.38, 1.24), (0.2, -0.5, 0.98), (-0.2, -0.48, 0.86), (-0.48, -0.36, 0.84)]
+    for k in range(9):
+        t = k / 8
+        seg = min(2, int(t * 3))
+        lt = t * 3 - seg
+        p = Vector(chain[seg]) + (Vector(chain[seg + 1]) - Vector(chain[seg])) * lt
+        bh.ring(c, 0.028, 0.008, tuple(p), "iron", "chest", rot=(0, (k % 2) * 1.57, 0.5), segs=8, shade=IR_D)
+    c.lathe([(0.42, 0.62), (0.47, 0.66), (0.47, 0.76), (0.44, 0.8)], (0, 0.04, 0), "leather", "hips", segs=18, sy=0.82, shade=LTH)
+    c.box((0.18, 0.06, 0.14), (0, -0.37, 0.71), "iron", "hips", shade=IR_D)
+    c.ico(0.035, (0, -0.4, 0.71), "gold", "hips", sub=1)
+    for k in range(7):
+        a = math.radians(-90 + (k - 3) * 26)
+        x, y = math.cos(a) * 0.48, 0.04 + math.sin(a) * 0.4
+        c.tbox((0.17, 0.03), (0.2, 0.03), 0.26, (x, y, 0.38), "iron", "hips", rot=(0, 0, a + math.pi / 2), shade=IR if k % 2 == 0 else IR_D)
+    rows = [[(x, -0.43 - 0.03 * (0.64 - z), z) for x in (-0.13, -0.04, 0.04, 0.13)] for z in (0.64, 0.42, 0.2)]
+    rows[-1] = [(x, y, z - (0.05 if k in (1, 2) else 0.0)) for k, (x, y, z) in enumerate(rows[-1])]
+    bh.sheet(c, rows, C, "hips", thick=0.02)
     for side, sx in (("R", -1), ("L", 1)):
         a0, a1, _ = B[f"arm_{side}"]
         t0, t1, _ = B[f"thigh_{side}"]
         mid = ((a0[0] + a1[0]) / 2 + 0.03 * sx, -0.02, (a0[2] + a1[2]) / 2)
-        bh.tube(c, [a0, mid, a1], [0.16, 0.17, 0.13], OG, f"arm_{side}", segs=9)
-        c.lathe([(0.15, 0.0), (0.17, 0.04), (0.17, 0.16), (0.15, 0.2)], (a1[0], a1[1], a1[2] + 0.08), "iron", f"arm_{side}", segs=10)
-        c.ico(0.15, (a1[0], a1[1] - 0.02, a1[2] - 0.02), OG, f"arm_{side}", sub=2)
-        for k2 in range(3):
-            fx = a1[0] + (k2 - 1) * 0.06
-            bh.tube(c, [(fx, a1[1] - 0.12, a1[2] - 0.02), (fx, a1[1] - 0.18, a1[2] - 0.07)], [0.04, 0.03], OG, f"arm_{side}", segs=5)
+        bh.tube(c, [a0, mid, a1], [0.15, 0.16, 0.13], SK, f"arm_{side}", segs=10, shade=(0.75, 0.85, 1.0))
+        c.lathe([(0.15, 0.0), (0.185, 0.04), (0.19, 0.24), (0.165, 0.3)], (a1[0], a1[1], a1[2] + 0.06), "iron", f"arm_{side}", segs=14, shade=IR)
+        c.lathe([(0.19, 0.22), (0.2, 0.25), (0.19, 0.28)], (a1[0], a1[1], a1[2] + 0.06), T, f"arm_{side}", segs=14, caps=False)
+        c.ico(0.16, (a1[0], a1[1] - 0.02, a1[2] - 0.03), "iron", f"arm_{side}", sub=2, scale=(1.0, 1.05, 0.9), shade=IR_D)
+        for k in range(4):
+            fx = a1[0] + (k - 1.5) * 0.06
+            c.box((0.05, 0.06, 0.05), (fx, a1[1] - 0.15, a1[2] - 0.01), "iron", f"arm_{side}", shade=IR)
+            c.cone(0.018, 0.0, 0.05, (fx, a1[1] - 0.2, a1[2] - 0.01), "iron", f"arm_{side}", segs=5, rot=(math.pi / 2, 0, 0), shade=RIV)
         mt = ((t0[0] + t1[0]) / 2, -0.01, (t0[2] + t1[2]) / 2)
-        bh.tube(c, [t0, mt, t1], [0.16, 0.16, 0.14], OG, f"thigh_{side}", segs=9)
-        c.lathe([(0.15, 0.0), (0.165, 0.1), (0.165, 0.22), (0.14, 0.26)], (t1[0], 0.0, 0.08), "leather", f"thigh_{side}", segs=10, shade=(0.55, 0.38, 0.28))
-        for zz in (0.14, 0.24):
-            bh.ring(c, 0.165, 0.012, (t1[0], 0.0, zz), "leather", f"thigh_{side}", segs=10, shade=(0.35, 0.25, 0.2))
-    feet(c, B, "leather", (0.5, 0.36, 0.28), w=0.26, l=0.4)
-    hx, hy, hz = B["arm_R"][1]
-    c.lathe_ab([(0.04, 0.0), (0.04, 1.0)], (hx, hy + 0.2, hz - 0.1), (hx, hy - 0.9, hz + 0.1), "wood", "arm_R", segs=8)
-    for k2 in range(3):
-        p0 = Vector((hx, hy + 0.12 - k2 * 0.05, hz - 0.085 + k2 * 0.01))
-        bh.ring(c, 0.045, 0.01, tuple(p0), "leather", "arm_R", segs=8, rot=(1.57, 0, 0), shade=LTH)
-    c.tbox((0.3, 0.3), (0.3, 0.3), 0.44, (hx, hy - 0.95, hz - 0.12), "stone", "arm_R", rot=(math.pi / 2, 0, 0))
-    for yy in (-0.78, -1.12):
-        c.box((0.34, 0.05, 0.34), (hx, hy + yy, hz + 0.1), "iron", "arm_R")
-    for k2 in range(4):
-        a = k2 * math.pi / 2
-        c.cone(0.04, 0.0, 0.12, (hx + math.cos(a) * 0.18, hy - 0.95, hz + 0.1 + math.sin(a) * 0.18), "iron", "arm_R", segs=5, rot=(0, -a + math.pi / 2, 0) if False else (math.sin(a) * -1.57, math.cos(a) * 1.57, 0))
+        bh.tube(c, [t0, mt, t1], [0.16, 0.16, 0.14], SK, f"thigh_{side}", segs=9, shade=(0.75, 0.85, 1.0))
+        c.lathe([(0.16, 0.0), (0.18, 0.06), (0.18, 0.3), (0.17, 0.36), (0.19, 0.4), (0.17, 0.44)], (t1[0], 0.0, 0.06), "iron", f"thigh_{side}", segs=14, shade=IR)
+        c.ico(0.1, (t1[0], -0.16, 0.42), "iron", f"thigh_{side}", sub=2, scale=(1.0, 0.6, 1.0), shade=IR_D)
+        c.tbox((0.3, 0.46), (0.26, 0.32), 0.12, (t1[0], -0.08, 0.0), "iron", f"thigh_{side}", shift=(0, 0.06), shade=IR_D)
+        for k in range(3):
+            c.tbox((0.28 - k * 0.02, 0.08), (0.26 - k * 0.02, 0.07), 0.05, (t1[0], -0.26 + k * 0.08, 0.08 + k * 0.01), "iron", f"thigh_{side}", rot=(0.2, 0, 0), shade=IR)
+    hx, hyy, hz = B["arm_R"][1]
+    top = Vector((hx, hyy + 0.1, hz + 0.12))
+    end = Vector((hx - 0.25, hyy - 0.55, hz - 0.62))
+    c.lathe_ab([(0.045, 0.0), (0.045, 1.0)], tuple(top), tuple(end), "wood", "arm_R", segs=8)
+    for k in range(4):
+        bh.ring(c, 0.05, 0.011, tuple(top + (end - top) * (0.05 + k * 0.06)), "leather", "arm_R", segs=8, rot=(1.4, 0, 0), shade=LTH)
+    c.ico(0.06, tuple(top), "iron", "arm_R", sub=1, shade=IR_D)
+    hc = end + (end - top).normalized() * 0.05
+    c.box((0.42, 0.3, 0.3), tuple(hc), "iron", "arm_R", shade=IR)
+    for dy in (-0.16, 0.16):
+        c.box((0.46, 0.04, 0.34), tuple(hc + Vector((0, dy, 0))), T, "arm_R", shade=(0.7, 0.7, 0.7))
+    for sx in (-1, 1):
+        c.lathe([(0.0, 0.0), (0.17, 0.0), (0.17, 0.03), (0.0, 0.035)], tuple(hc + Vector((0.21 * sx, 0, 0))), "iron", "arm_R", segs=12, rot=(0, math.pi / 2 * sx, 0), shade=IR_D)
+        c.cone(0.06, 0.0, 0.14, tuple(hc + Vector((0.28 * sx, 0, 0))), "iron", "arm_R", segs=8, rot=(0, math.pi / 2 * sx, 0), shade=RIV)
+    for k in range(4):
+        a = k * math.pi / 2 + math.pi / 4
+        c.cone(0.035, 0.0, 0.1, tuple(hc + Vector((0, math.cos(a) * 0.17, math.sin(a) * 0.17))), "iron", "arm_R", segs=6, rot=(-math.sin(a) * 1.57 if False else (math.atan2(math.cos(a), math.sin(a)) * -1), 0, 0), shade=RIV)
     return c, B
-
-
-def clips(heavy_unit=False):
-    s = 0.7 if heavy_unit else 1.0
-    return {
-        "idle": {"bones": {
-            "chest": [(0, (0, 0, 0)), (12, (3, 0, 0)), (24, (0, 0, 0))],
-            "head": [(0, (0, 0, 0)), (12, (-3, 0, 3)), (24, (0, 0, 0))],
-        }},
-        "walk": {
-            "bones": {
-                "thigh_R": [(0, (-35 * s, 0, 0)), (6, (35 * s, 0, 0)), (12, (-35 * s, 0, 0))],
-                "thigh_L": [(0, (35 * s, 0, 0)), (6, (-35 * s, 0, 0)), (12, (35 * s, 0, 0))],
-                "arm_R": [(0, (25 * s, 0, 0)), (6, (-25 * s, 0, 0)), (12, (25 * s, 0, 0))],
-                "arm_L": [(0, (-25 * s, 0, 0)), (6, (25 * s, 0, 0)), (12, (-25 * s, 0, 0))],
-                "chest": [(0, (8, 0, -4)), (6, (8, 0, 4)), (12, (8, 0, -4))],
-            },
-            "loc": {"hips": [(0, (0, 0, 0)), (3, (0, 0.04, 0)), (6, (0, 0, 0)), (9, (0, 0.04, 0)), (12, (0, 0, 0))]},
-        },
-        "attack": {"bones": {
-            "arm_R": [(0, (0, 0, 0)), (4, (-130, 0, -10)), (7, (-20, 0, 0)), (12, (0, 0, 0))],
-            "chest": [(0, (0, 0, 0)), (4, (-8, 0, 15)), (7, (15, 0, -10)), (12, (0, 0, 0))],
-            "arm_L": [(0, (0, 0, 0)), (4, (-60, 0, 0)), (7, (-60, 0, 0)), (12, (0, 0, 0))],
-        }},
-    }
 
 
 def ogre(images):
