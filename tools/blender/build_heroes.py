@@ -311,45 +311,181 @@ def build_raider(images):
     return c, B
 
 
+def folded(c, profile, loc, mat, bone, segs=20, folds=6, amp=0.06, sx=1.0, sy=1.0, phase=0.0, caps=True, rot=(0, 0, 0), shade=(1, 1, 1), grow=0.0):
+    bm = bmesh.new()
+    rings = []
+    zs = [z for _, z in profile]
+    zlo, zhi = min(zs), max(zs)
+    for r, z in profile:
+        if r <= 1e-6:
+            rings.append([bm.verts.new((0, 0, z))])
+            continue
+        k = 1.0 if zhi == zlo else (zhi - z) / (zhi - zlo)
+        a = amp * (1.0 + grow * k)
+        line = []
+        for i in range(segs):
+            t = phase + i / segs * math.tau
+            rr = r * (1.0 + a * math.sin(t * folds))
+            line.append(bm.verts.new((math.cos(t) * rr * sx, math.sin(t) * rr * sy, z)))
+        rings.append(line)
+    for a_, b_ in zip(rings, rings[1:]):
+        for i in range(segs):
+            j = (i + 1) % segs
+            if len(a_) == 1:
+                bm.faces.new((a_[0], b_[i], b_[j]))
+            elif len(b_) == 1:
+                bm.faces.new((a_[j], a_[i], b_[0]))
+            else:
+                bm.faces.new((a_[i], a_[j], b_[j], b_[i]))
+    if caps and len(rings[0]) > 1:
+        bm.faces.new(list(reversed(rings[0])))
+    if caps and len(rings[-1]) > 1:
+        bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    c.add_bm(bm, mat, bone, c.xform(loc, rot), shade=shade, uv_mode="cyl")
+
+
+def skull(c, r, loc, bone, rot=(0, 0, 0), shade=(1.0, 0.95, 0.85)):
+    x, y, z = loc
+    c.ico(r, (x, y, z + r * 0.15), "bone", bone, scale=(0.95, 1.0, 1.0), sub=2, shade=shade)
+    c.tbox((r * 1.1, r * 0.9), (r * 1.2, r * 1.0), r * 0.7, (x, y - r * 0.15, z - r * 0.85), "bone", bone, shade=shade)
+    for sx in (-1, 1):
+        c.ico(r * 0.28, (x + r * 0.38 * sx, y - r * 0.85, z + r * 0.1), "plain", bone, sub=1, shade=(0.05, 0.03, 0.04))
+    c.ico(r * 0.14, (x, y - r * 0.92, z - r * 0.25), "plain", bone, sub=1, shade=(0.05, 0.03, 0.04))
+
+
 def build_summoner(images):
     B = rig(hip=0.85, chest=1.22, neck=1.42, head_top=1.78, sh_x=0.32, hand_z=0.8, leg_x=0.14)
     c = charkit.Char("summoner", images)
     ROBE = (0.46, 0.16, 0.62)
+    ROBE_DK = (0.3, 0.1, 0.42)
+    ROBE_IN = (0.16, 0.06, 0.22)
     DARK = (0.12, 0.08, 0.14)
-    c.lathe([(0.0, 1.42), (0.2, 1.44), (0.25, 1.56), (0.24, 1.7), (0.0, 1.78)], (0, 0.0, 0), "plain", "head", segs=7, shade=DARK)
+    VOID = (0.03, 0.02, 0.05)
+    TWINE = (0.62, 0.5, 0.36)
+
+    c.lathe([(0.0, 1.42), (0.19, 1.44), (0.24, 1.52), (0.25, 1.6), (0.23, 1.7), (0.12, 1.77), (0.0, 1.79)], (0, 0.02, 0), "plain", "head", segs=14, shade=VOID)
     for sx in (-1, 1):
-        c.box((0.09, 0.03, 0.05), (0.08 * sx, -0.25, 1.6), "eye", "head", rot=(0, 0, -0.25 * sx))
-    c.lathe([(0.33, 1.4), (0.36, 1.5), (0.34, 1.68), (0.26, 1.86), (0.14, 2.06), (0.06, 2.24), (0.0, 2.3)], (0, 0.08, 0), "plain", "head", segs=8, shade=ROBE)
-    c.lathe([(0.35, 1.42), (0.38, 1.5), (0.36, 1.58)], (0, 0.04, 0), PAINT, "head", segs=8, caps=False)
-    c.limb((0, 0.14, 2.24), (0.05, 0.32, 2.14), 0.05, 0.01, "plain", "head", segs=4, shade=ROBE)
-    c.lathe([(0.28, 1.1), (0.32, 1.22), (0.34, 1.36), (0.24, 1.44)], (0, 0, 0), "plain", "chest", segs=8, sy=0.85, shade=ROBE)
-    c.lathe([(0.46, 0.02), (0.44, 0.3), (0.36, 0.62), (0.3, 0.9), (0.28, 1.1)], (0, 0.02, 0), "plain", "hips", segs=10, sy=0.9, shade=ROBE)
-    c.lathe([(0.47, 0.0), (0.475, 0.06), (0.46, 0.12)], (0, 0.02, 0), PAINT, "hips", segs=10, sy=0.9, caps=False)
-    c.tbox((0.12, 0.04), (0.12, 0.04), 1.3, (0, -0.33, 0.0), PAINT, "hips", rot=(0.12, 0, 0))
-    c.lathe([(0.31, 0.88), (0.33, 0.92), (0.33, 1.0), (0.31, 1.04)], (0, 0.02, 0), PAINT, "hips", segs=8, sy=0.9)
-    c.ico(0.07, (0, -0.34, 1.26), CRYSTAL, "chest")
+        c.ico(0.035, (0.08 * sx, -0.22, 1.6), "eye", "head", scale=(1.3, 0.6, 0.8), sub=2, rot=(0, 0, -0.25 * sx))
+        c.box((0.07, 0.015, 0.012), (0.085 * sx, -0.225, 1.645), "plain", "head", rot=(0, 0, -0.35 * sx), shade=VOID)
+    c.tbox((0.15, 0.08), (0.17, 0.09), 0.06, (0, -0.17, 1.44), "bone", "head", shade=(0.75, 0.72, 0.62))
+    for k in range(5):
+        c.box((0.018, 0.012, 0.025), (-0.05 + k * 0.025, -0.21, 1.49), "bone", "head", shade=(0.95, 0.92, 0.82))
+
+    op = math.radians(52)
+    a0 = -math.pi / 2 + op
+    a1 = 1.5 * math.pi - op
+    hood = cloak_rows(1.36, 1.78, 0.37, 0.335, a0, a1, 18, 4, cy=0.07)
+    sheet(c, hood, "plain", "head", thick=0.03, shade=ROBE)
+    lin = cloak_rows(1.38, 1.77, 0.33, 0.3, a0 + 0.06, a1 - 0.06, 16, 3, cy=0.07)
+    sheet(c, lin, "plain", "head", thick=0.01, shade=ROBE_IN)
+    folded(c, [(0.335, 1.72), (0.33, 1.8), (0.28, 1.9), (0.21, 2.0), (0.15, 2.08), (0.09, 2.17), (0.0, 2.24)],
+           (0, 0.07, 0), "plain", "head", segs=18, folds=5, amp=0.035, shade=ROBE)
+    c.lathe_ab([(0.075, 0.0), (0.06, 0.35), (0.045, 0.65), (0.025, 0.9), (0.0, 1.0)], (0, 0.09, 2.18), (0.02, 0.33, 2.2), "plain", "head", segs=8, shade=ROBE)
+    c.lathe_ab([(0.028, 0.0), (0.018, 0.6), (0.0, 1.0)], (0.02, 0.33, 2.2), (0.06, 0.43, 2.07), "plain", "head", segs=6, shade=ROBE)
+    c.ico(0.03, (0.06, 0.43, 2.06), "gold", "head", sub=1)
+    edge = []
+    for k in range(9):
+        t = op * (k / 8 * 2 - 1)
+        rr = 0.35 if abs(t) < op * 0.99 else 0.35
+        z = 1.66 + 0.18 * (1 - abs(t) / op) ** 0.7
+        edge.append((math.cos(-math.pi / 2 + t) * rr, 0.07 + math.sin(-math.pi / 2 + t) * rr, z))
+    for x, y, _ in (edge[0], edge[-1]):
+        pass
+    sides = [(math.cos(a) * 0.36, 0.07 + math.sin(a) * 0.36) for a in (a0, a1)]
+    for (x, y), e in zip(sides, (edge[0], edge[-1])):
+        c.limb((x * 1.03, y, 1.37), (x, y, 1.66), 0.022, 0.022, PAINT, "head", segs=6)
+        c.limb((x, y, 1.66), e, 0.022, 0.022, PAINT, "head", segs=6)
+    for p0, p1 in zip(edge, edge[1:]):
+        c.limb(p0, p1, 0.022, 0.022, PAINT, "head", segs=6)
+    for k in range(1, 8):
+        x, y, z = edge[k]
+        top = 1.78 + 0.002
+        if z < top:
+            continue
+    fill = [[(math.cos(-math.pi / 2 + t) * 0.338, 0.07 + math.sin(-math.pi / 2 + t) * 0.338, zz) for t in [op * (k / 8 * 2 - 1) for k in range(9)]] for zz in (1.9, 1.78)]
+    fill.append([(x, y + 0.005, z) for x, y, z in edge])
+    sheet(c, fill, "plain", "head", thick=0.025, shade=ROBE)
+
+    rows = cloak_rows(1.42, 1.08, 0.24, 0.42, 0.0, math.tau, 22, 3, cy=0.01, tatter=0.06, flare=0.0, seed=11)
+    sheet(c, rows, "plain", "chest", thick=0.02, shade=ROBE_DK)
+    ring(c, 0.255, 0.025, (0, 0.01, 1.4), PAINT, "chest", segs=18)
+    folded(c, [(0.27, 1.06), (0.31, 1.16), (0.33, 1.28), (0.31, 1.38), (0.24, 1.44)], (0, 0, 0), "plain", "chest", segs=16, folds=4, amp=0.03, sy=0.85, shade=ROBE)
+    ring(c, 0.045, 0.012, (0, -0.31, 1.26), "gold", "chest", rot=(1.57, 0, 0), segs=12)
+    c.ico(0.055, (0, -0.32, 1.26), CRYSTAL, "chest", sub=2, scale=(1.0, 0.7, 1.25))
+    for k in range(4):
+        a = k / 4 * math.tau + math.pi / 4
+        c.cone(0.012, 0.0, 0.05, (math.cos(a) * 0.05, -0.31, 1.26 + math.sin(a) * 0.06), "gold", "chest", segs=4, rot=(1.57, 0, -a))
+
+    folded(c, [(0.46, 0.04), (0.45, 0.2), (0.41, 0.42), (0.36, 0.64), (0.31, 0.86), (0.28, 1.08)], (0, 0.02, 0), "plain", "hips",
+           segs=24, folds=7, amp=0.05, grow=1.2, sy=0.9, shade=ROBE)
+    rows = cloak_rows(0.24, 0.0, 0.445, 0.48, 0.0, math.tau, 28, 2, cy=0.02, tatter=0.05, seed=5)
+    sheet(c, rows, "plain", "hips", thick=0.015, shade=ROBE_DK)
+    ring(c, 0.45, 0.022, (0, 0.02, 0.22), PAINT, "hips", segs=24)
+    rows = [[(x, -0.385 + 0.12 * (1.02 - z), z) for x in (-0.07, -0.025, 0.025, 0.07)] for z in (1.02, 0.7, 0.38, 0.06)]
+    sheet(c, rows, PAINT, "hips", thick=0.012)
+    for zz in (0.95, 0.63, 0.31):
+        c.ico(0.022, (0, -0.39 + 0.12 * (1.02 - zz), zz), "gold", "hips", sub=1)
+    ring(c, 0.305, 0.03, (0, 0.02, 0.95), "leather", "hips", segs=18, tsegs=6, shade=TWINE)
+    c.ico(0.045, (0.17, -0.25, 0.94), "leather", "hips", sub=1, shade=TWINE)
+    for k, (x, ln) in enumerate(((0.15, 0.16), (0.2, 0.24))):
+        c.limb((x, -0.26, 0.92), (x + 0.01, -0.27, 0.92 - ln), 0.012, 0.012, "leather", "hips", segs=4, shade=TWINE)
+        skull(c, 0.045, (x + 0.01, -0.28, 0.92 - ln - 0.05), "hips")
+    c.limb((-0.24, -0.12, 0.92), (-0.3, -0.1, 0.72), 0.008, 0.008, "iron", "hips", segs=4)
+    c.tbox((0.17, 0.06), (0.17, 0.06), 0.22, (-0.32, -0.08, 0.5), "leather", "hips", rot=(0, 0, 0.12), shade=(0.4, 0.15, 0.18))
+    c.tbox((0.15, 0.065), (0.15, 0.065), 0.2, (-0.32, -0.08, 0.51), "plain", "hips", rot=(0, 0, 0.12), shade=(0.92, 0.88, 0.75))
+    for cx in (-1, 1):
+        for cz in (0.52, 0.7):
+            c.box((0.03, 0.07, 0.03), (-0.32 + cx * 0.075, -0.08, cz), "gold", "hips")
+    for sx in (-1, 1):
+        c.lathe_ab([(0.06, 0.0), (0.05, 0.5), (0.025, 0.85), (0.0, 1.0)], (0.12 * sx, -0.3, 0.04), (0.14 * sx, -0.52, 0.06), "leather", "hips", segs=8, shade=DARK)
+
     for side, sx in (("R", -1), ("L", 1)):
         a0, a1, _ = B[f"arm_{side}"]
         f0, f1, _ = B[f"forearm_{side}"]
-        c.ico(0.14, a0, "plain", f"arm_{side}", scale=(1.1, 1.0, 0.9), shade=ROBE)
-        c.limb(a0, a1, 0.1, 0.11, "plain", f"arm_{side}", segs=6, shade=ROBE)
-        c.lathe_ab([(0.11, 0.0), (0.13, 0.4), (0.18, 0.85), (0.2, 1.0)], f0, f1, "plain", f"forearm_{side}", segs=7, shade=ROBE)
-        c.lathe_ab([(0.205, 0.9), (0.21, 1.0)], f0, f1, PAINT, f"forearm_{side}", segs=7, caps=False)
+        c.ico(0.14, a0, "plain", f"arm_{side}", scale=(1.1, 1.0, 0.9), sub=2, shade=ROBE)
+        c.lathe_ab([(0.1, 0.0), (0.11, 0.5), (0.115, 1.0)], a0, a1, "plain", f"arm_{side}", segs=10, shade=ROBE)
+        c.lathe_ab([(0.11, 0.0), (0.125, 0.3), (0.16, 0.65), (0.21, 0.92), (0.22, 1.0)], f0, f1, "plain", f"forearm_{side}", segs=14, shade=ROBE)
+        c.lathe_ab([(0.195, 0.88), (0.205, 0.96), (0.2, 1.0)], f0, f1, "plain", f"forearm_{side}", segs=14, shade=ROBE_IN, caps=False)
+        c.lathe_ab([(0.215, 0.88), (0.232, 0.94), (0.225, 1.0), (0.21, 0.95)], f0, f1, PAINT, f"forearm_{side}", segs=14, caps=False)
         hx, hy, hz = hand_pos(B, side)
-        c.ico(0.07, (hx, hy, hz + 0.02), "bone", f"hand_{side}")
-        for k in range(3):
-            c.limb((hx + (k - 1) * 0.035, hy - 0.03, hz), (hx + (k - 1) * 0.05, hy - 0.08, hz - 0.14), 0.02, 0.008, "bone", f"hand_{side}", segs=3)
+        c.ico(0.055, (hx, hy, hz + 0.03), "bone", f"hand_{side}", scale=(1.0, 0.75, 1.1), sub=2)
+        for k in range(4):
+            fx = hx + (k - 1.5) * 0.028
+            p0 = (fx, hy - 0.02, hz - 0.01)
+            p1 = (fx + (k - 1.5) * 0.012, hy - 0.06, hz - 0.08)
+            p2 = (fx + (k - 1.5) * 0.02, hy - 0.08, hz - 0.15)
+            c.limb(p0, p1, 0.013, 0.011, "bone", f"hand_{side}", segs=5)
+            c.ico(0.013, p1, "bone", f"hand_{side}", sub=1)
+            c.limb(p1, p2, 0.011, 0.005, "bone", f"hand_{side}", segs=5)
+        c.limb((hx - 0.05 * sx, hy - 0.02, hz + 0.02), (hx - 0.07 * sx, hy - 0.07, hz - 0.05), 0.014, 0.006, "bone", f"hand_{side}", segs=5)
         t0, t1, _ = B[f"thigh_{side}"]
         s0, s1, _ = B[f"shin_{side}"]
-        c.limb(t0, t1, 0.08, 0.07, "plain", f"thigh_{side}", segs=5, shade=DARK)
-        c.limb(s0, s1, 0.07, 0.06, "plain", f"shin_{side}", segs=5, shade=DARK)
-        c.tbox((0.14, 0.3), (0.1, 0.14), 0.1, (s1[0], -0.1, 0.0), "leather", f"shin_{side}", shift=(0, 0.06), shade=(0.5, 0.35, 0.3))
+        c.limb(t0, t1, 0.08, 0.07, "plain", f"thigh_{side}", segs=8, shade=DARK)
+        c.limb(s0, s1, 0.07, 0.06, "plain", f"shin_{side}", segs=8, shade=DARK)
     hx, hy, hz = hand_pos(B)
-    pts = [(hx, hy, hz - 0.78), (hx + 0.02, hy, hz), (hx - 0.03, hy - 0.02, hz + 0.6), (hx + 0.04, hy - 0.02, hz + 1.1),
-           (hx - 0.06, hy - 0.02, hz + 1.32), (hx - 0.2, hy - 0.02, hz + 1.3), (hx - 0.22, hy - 0.02, hz + 1.16)]
-    for p0, p1 in zip(pts, pts[1:]):
-        c.limb(p0, p1, 0.04, 0.036, "wood", "hand_R", segs=5)
-    c.ico(0.12, (hx - 0.08, hy - 0.02, hz + 1.12), CRYSTAL, "hand_R", scale=(0.85, 0.85, 1.25), sub=1)
+    pts = [(hx, hy, hz - 0.78), (hx + 0.025, hy, hz - 0.4), (hx + 0.02, hy, hz), (hx - 0.03, hy - 0.02, hz + 0.4), (hx - 0.02, hy - 0.02, hz + 0.75),
+           (hx + 0.04, hy - 0.02, hz + 1.05), (hx - 0.01, hy - 0.02, hz + 1.25), (hx - 0.12, hy - 0.02, hz + 1.35), (hx - 0.21, hy - 0.02, hz + 1.29), (hx - 0.23, hy - 0.02, hz + 1.16)]
+    for k, (p0, p1) in enumerate(zip(pts, pts[1:])):
+        c.limb(p0, p1, 0.042 - k * 0.002, 0.04 - k * 0.002, "wood", "hand_R", segs=8)
+        c.ico(0.042 - k * 0.002, p1, "wood", "hand_R", sub=1)
+    for zz in (0.12, 0.2, 0.28):
+        ring(c, 0.045, 0.009, (hx + 0.02, hy, hz + zz), "leather", "hand_R", segs=10, shade=TWINE)
+    for k in range(3):
+        c.ico(0.02, (hx + 0.022 + (k % 2) * 0.012, hy - 0.04, hz + 0.55 + k * 0.17), "wood", "hand_R", sub=1, shade=(0.8, 0.75, 0.7))
+    cx, cy, cz = hx - 0.08, hy - 0.02, hz + 1.12
+    c.ico(0.11, (cx, cy, cz), CRYSTAL, "hand_R", scale=(0.85, 0.85, 1.3), sub=2)
+    for k in range(3):
+        a = k / 3 * math.tau
+        p0 = (cx + math.cos(a) * 0.07, cy + math.sin(a) * 0.07, cz - 0.16)
+        p1 = (cx + math.cos(a) * 0.12, cy + math.sin(a) * 0.12, cz)
+        p2 = (cx + math.cos(a) * 0.07, cy + math.sin(a) * 0.07, cz + 0.13)
+        c.limb((cx, cy, cz - 0.2), p0, 0.018, 0.016, "wood", "hand_R", segs=6)
+        c.limb(p0, p1, 0.016, 0.013, "wood", "hand_R", segs=6)
+        c.limb(p1, p2, 0.013, 0.004, "wood", "hand_R", segs=6)
+    c.limb((cx - 0.13, cy, cz + 0.06), (cx - 0.13, cy, cz - 0.12), 0.006, 0.006, "leather", "hand_R", segs=4, shade=TWINE)
+    skull(c, 0.04, (cx - 0.13, cy, cz - 0.16), "hand_R")
+    c.limb((cx - 0.13, cy - 0.02, cz - 0.2), (cx - 0.11, cy - 0.04, cz - 0.34), 0.018, 0.0, "plain", "hand_R", segs=4, shade=(0.2, 0.55, 0.3))
     return c, B
 
 
