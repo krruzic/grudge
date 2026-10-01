@@ -255,6 +255,37 @@ export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r:
   h.shake = Math.max(h.shake, 0.3);
 }
 
+export function wardenSnap(h: FxHost, x: number, y: number, z: number, r: number): void {
+  const gy = ground(h, x, z, y);
+  const mat = new THREE.MeshLambertMaterial({ map: barkTex, color: 0xa8b870, flatShading: true });
+  const n = 6;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.3;
+    const d = r * 0.7;
+    const A = new THREE.Vector3(x + Math.cos(a) * d, gy - 0.2, z + Math.sin(a) * d);
+    const top = new THREE.Vector3(x + Math.cos(a + 0.9) * 0.25, gy + 1.9 + Math.random() * 0.5, z + Math.sin(a + 0.9) * 0.25);
+    const M1 = A.clone().add(new THREE.Vector3(Math.cos(a) * 0.6, 1.2, Math.sin(a) * 0.6));
+    const M2 = top.clone().add(new THREE.Vector3(Math.cos(a) * 0.5, 0.4, Math.sin(a) * 0.5));
+    const geo = new THREE.TubeGeometry(new THREE.CubicBezierCurve3(A, M1, M2, top), 14, 0.11, 5, false);
+    const total = geo.index!.count;
+    geo.setDrawRange(0, 0);
+    const vine = new THREE.Mesh(geo, mat);
+    h.root.add(vine);
+    h.add(vine, 0.9, (k) => {
+      const grow = Math.min(1, k / 0.18);
+      geo.setDrawRange(0, Math.floor((total * (1 - Math.pow(1 - grow, 3))) / 6) * 6);
+      vine.position.y = k > 0.6 ? -Math.pow((k - 0.6) / 0.4, 2) * 2.4 : 0;
+    });
+  }
+  h.after(1, () => mat.dispose());
+  emit(h, { tex: WARDEN.natureBurst, n: 1, x, y: gy + 1, z, size: [2.4, 2.4], grow: 1.3, life: [0.22, 0.22], speed: [0, 0], order: 5 });
+  emit(h, { tex: FX.dust, n: 6, x, y: gy + 0.4, z, size: [0.9, 1.3], grow: 1.8, life: [0.5, 0.8], speed: [1.5, 3], flatSpread: true, drag: 3, opacity: 0.85 });
+  tumblers(h, LEAVES, 8, x, gy + 1.2, z, { speed: [1.5, 3.5], up: [3, 5], size: [0.35, 0.5], life: [1.6, 2.2] });
+  emit(h, { tex: WARDEN.thorn, n: 6, x, y: gy + 1, z, size: [0.35, 0.5], life: [0.4, 0.6], speed: [3, 6], up: [1, 3], gravity: 14, spin: 10, floor: gy + 0.05 });
+  shockwave(h, FX.shock, x, gy + 0.2, z, new THREE.Vector3(0, 1, 0), 0.3, r * 1.4, 0.3, 0xc0ff90);
+  h.shake = Math.max(h.shake, 0.3);
+}
+
 KITS.warden = {
   trail: 0xd8ffc0,
   hit(h, ev, src, dx, dz) {
@@ -265,7 +296,11 @@ KITS.warden = {
     else return false;
     return true;
   },
-  event(_h, ev) {
+  event(h, ev) {
+    if (ev.type === "slam" && ev.trap) {
+      wardenSnap(h, ev.x, ev.y, ev.z, ev.radius / 1.5);
+      return true;
+    }
     return ev.type === "slam" && !!ev.zone;
   },
 };

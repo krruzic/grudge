@@ -186,6 +186,54 @@ export class HazardViews {
 
   constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {}
 
+  private snareMesh(team: number, r: number): THREE.Object3D {
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.15, r * 1.02, 24), new THREE.MeshBasicMaterial({ map: BRAMBLE_DECAL, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.06;
+    g.add(ring);
+    const glow = new THREE.Mesh(new THREE.RingGeometry(r * 0.92, r * 1.05, 28), new THREE.MeshBasicMaterial({ color: this.teamColors[team], transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.y = 0.08;
+    glow.name = "glow";
+    g.add(glow);
+    const jaws = new THREE.Group();
+    jaws.name = "jaws";
+    const n = 7;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.3;
+      const rr = r * (0.55 + Math.random() * 0.3);
+      const A = new THREE.Vector3(Math.cos(a) * rr, -0.1, Math.sin(a) * rr);
+      const tip = new THREE.Vector3(Math.cos(a) * rr * 0.25, 0.55 + Math.random() * 0.25, Math.sin(a) * rr * 0.25);
+      const M = A.clone().lerp(tip, 0.5).add(new THREE.Vector3(Math.cos(a) * 0.35, 0.25, Math.sin(a) * 0.35));
+      const curve = new THREE.QuadraticBezierCurve3(A, M, tip);
+      const vine = new THREE.Group();
+      vine.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 8, 0.07, 5, false), VINE));
+      for (let k = 0; k < 4; k++) {
+        const u = 0.2 + k * 0.2;
+        const th = new THREE.Mesh(thornGeo, THORN);
+        const side = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.4, Math.random() - 0.5).normalize();
+        th.position.copy(curve.getPoint(u)).addScaledVector(side, 0.08);
+        th.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), side);
+        vine.add(th);
+      }
+      if (i % 2 === 0) {
+        const lf = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.35), i % 4 ? LEAF_B : LEAF_A);
+        lf.position.copy(curve.getPoint(0.45)).add(new THREE.Vector3(0, 0.06, 0));
+        lf.rotation.set(-1.2, Math.random() * 6, 0);
+        vine.add(lf);
+      }
+      vine.userData.a = a;
+      jaws.add(vine);
+    }
+    g.add(jaws);
+    const center = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22, 0), new THREE.MeshLambertMaterial({ map: vineTex, color: 0x8a6a40, flatShading: true }));
+    center.position.y = 0.05;
+    center.scale.set(1, 0.6, 1);
+    g.add(center);
+    return g;
+  }
+
   private trapMesh(team: number): THREE.Object3D {
     const g = new THREE.Group();
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.12, 8), new THREE.MeshLambertMaterial({ color: 0x4a4440, flatShading: true }));
@@ -469,12 +517,22 @@ export class HazardViews {
       seenT.add(t.id);
       let o = this.traps.get(t.id);
       if (!o) {
-        o = this.trapMesh(t.team);
+        const owner = w.getAny(t.ownerId);
+        o = owner?.hero?.type === "warden" ? this.snareMesh(t.team, t.radius) : this.trapMesh(t.team);
+        o.userData.snare = owner?.hero?.type === "warden";
         o.position.set(t.x, w.groundY(t.x, t.z) + 0.06, t.z);
         this.traps.set(t.id, o);
         this.root.add(o);
       }
-      o.rotation.y = time * (w.time < t.armAt ? 6 : 0.5);
+      if (o.userData.snare) {
+        const arming = w.time < t.armAt;
+        const jaws = o.getObjectByName("jaws")!;
+        const open = arming ? 0.35 + 0.65 * (1 - (t.armAt - w.time) / 0.6) : 1;
+        jaws.scale.set(1, Math.max(0.2, Math.min(1, open)), 1);
+        jaws.children.forEach((v, k) => { v.rotation.y = Math.sin(time * 1.4 + k) * 0.05; });
+        const gl = o.getObjectByName("glow") as THREE.Mesh;
+        (gl.material as THREE.MeshBasicMaterial).opacity = arming ? 0.2 : 0.35 + 0.2 * Math.sin(time * 3);
+      } else o.rotation.y = time * (w.time < t.armAt ? 6 : 0.5);
     }
     for (const [id, o] of this.traps) if (!seenT.has(id)) { this.root.remove(o); free(o); this.traps.delete(id); }
     const seenZ = new Set<number>();

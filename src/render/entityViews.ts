@@ -1,3 +1,4 @@
+import { FX } from "./fxKit";
 import { KITS } from "./kits";
 import * as THREE from "three";
 import { builderRate, padNear } from "../sim/structures";
@@ -63,6 +64,7 @@ interface View {
   lastZ?: number;
   rank?: number;
   badge?: THREE.Sprite;
+  chargeAura?: THREE.Group;
   hands?: { hand: THREE.Object3D; arm: THREE.Object3D; last: THREE.Vector3 }[];
   framed?: boolean;
 }
@@ -901,6 +903,34 @@ export class EntityViews {
       });
     }
     if (v.blockFx) v.blockFx.visible = h.blocking;
+    if (h.charging && !v.chargeAura) {
+      const col = new THREE.Color(KITS[h.type]?.trail ?? this.teamColors[e.team].getHex());
+      const g = new THREE.Group();
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.burst, color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      glow.position.y = 1.4;
+      const ring = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: FX.shock, color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.15;
+      g.add(glow, ring);
+      v.root.add(g);
+      v.chargeAura = g;
+    }
+    if (v.chargeAura) {
+      v.chargeAura.visible = !!h.charging;
+      if (h.charging) {
+        const k = Math.min(1, (h.chargeT ?? 0) / 0.8);
+        const [glow, ring] = v.chargeAura.children as [THREE.Sprite, THREE.Mesh];
+        const full = k >= 1;
+        glow.scale.setScalar((1.4 + k * 2.2) * (full ? 1 + Math.sin(time * 30) * 0.15 : 1));
+        glow.material.opacity = 0.35 + k * 0.5;
+        glow.material.rotation = time * 4;
+        const ph = (time * 2.5) % 1;
+        ring.scale.setScalar(2.4 - ph * 1.8);
+        (ring.material as THREE.MeshBasicMaterial).opacity = (0.4 + k * 0.6) * ph;
+        this.fx.chargeSparks(v.root.position.x, v.root.position.y, v.root.position.z, k, glow.material.color.getHex(), full);
+        v.body.position.y -= 0.12 * k;
+      }
+    }
     if (e.hp < e.maxHp && !v.stealthed && w.calm(e) && Math.random() < dt * 5) {
       const turf = w.turf(e);
       if (turf === "home" || turf === "tower") this.fx.regen(v.root.position.x, v.root.position.y, v.root.position.z);

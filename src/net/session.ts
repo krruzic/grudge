@@ -30,13 +30,13 @@ export function packCommand(c: Command): Command {
 }
 
 export function mergeCommands(queue: Command[], last: Command): Command {
-  if (!queue.length) return { moveX: last.moveX, moveZ: last.moveZ, block: last.block };
+  if (!queue.length) return { moveX: last.moveX, moveZ: last.moveZ, block: last.block, charging: last.charging };
   const newest = queue[queue.length - 1];
-  const out: Command = { moveX: newest.moveX, moveZ: newest.moveZ, block: newest.block };
+  const out: Command = { moveX: newest.moveX, moveZ: newest.moveZ, block: newest.block, charging: newest.charging };
   const o = out as unknown as Record<string, unknown>;
   for (const c of queue) {
     for (const [k, v] of Object.entries(c)) {
-      if (k === "moveX" || k === "moveZ" || k === "block" || v === undefined || v === false) continue;
+      if (k === "moveX" || k === "moveZ" || k === "block" || k === "charging" || v === undefined || v === false) continue;
       if (o[k] === undefined) o[k] = v;
     }
   }

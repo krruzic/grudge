@@ -59,6 +59,13 @@ function begin(e: Entity, name: HeroAction["name"], kind: string, dur: number, h
   return a;
 }
 
+export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7 };
+
+export function placeRanges(w: World, e: Entity): { facing: number; r?: number; z?: number } {
+  const ab = abilities(w, e);
+  return { facing: e.transform.facing, r: PLACEABLE[ab.r.kind], z: PLACEABLE[ab.z.kind] };
+}
+
 function reachOf(def: AbilityDef): number {
   return def.range ?? def.botRange ?? def.radius ?? 3;
 }
@@ -108,6 +115,21 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   if (def.kind === "dash") {
     a.hitIds = [];
     e.status.invulnUntil = w.time + a.dur;
+  }
+  if (cmd.place && (slot === "r" || slot === "z") && PLACEABLE[def.kind]) {
+    const rng = PLACEABLE[def.kind];
+    let px = cmd.place.dx;
+    let pz = cmd.place.dz;
+    const d = Math.hypot(px, pz);
+    if (d > rng) { px *= rng / d; pz *= rng / d; }
+    a.placed = true;
+    a.toX = Math.max(1, Math.min(w.terrain.width - 1, e.transform.pos.x + px));
+    a.toZ = Math.max(1, Math.min(w.terrain.depth - 1, e.transform.pos.z + pz));
+    if (d > 0.3) {
+      a.dirX = px / d;
+      a.dirZ = pz / d;
+      e.transform.facing = Math.atan2(a.dirX, a.dirZ);
+    }
   }
   w.emit({ type: "act", src: e.id, slot, kind: def.kind, phase: "start", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, dirX: dx, dirZ: dz, combo: 0, toX: a.toX, toZ: a.toZ });
 }
@@ -164,6 +186,14 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     const on = onWorks(w, e);
     if (on && !h.onWorks) w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: "ON THE RAMP · A THROWS WRENCH", owner: e.id });
     h.onWorks = on;
+  }
+  const charging = !h.action && !h.aim ? cmd.charging : undefined;
+  if (charging && (charging === "a" || ready(e, "b", w.time))) {
+    h.chargeT = h.charging === charging ? (h.chargeT ?? 0) + dt : 0;
+    h.charging = charging;
+  } else {
+    h.charging = undefined;
+    h.chargeT = 0;
   }
   const act = h.action;
   const canChainCombo = act?.name === "a" && act.kind === "combo" && act.fired && w.time < h.comboUntil;
@@ -235,6 +265,10 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     }
   }
 
+  if (cmd.charge && h.action && h.action !== act && h.action.t === 0 && (h.action.name === "a" || h.action.name === "b")) {
+    h.action.power = 1 + cmd.charge * (h.action.name === "a" ? 0.8 : 0.6);
+    if (cmd.charge >= 0.99) w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: "FULL POWER!", owner: e.id });
+  }
   const a = h.action;
   if (a) {
     a.t += dt;
@@ -294,7 +328,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     if (turf === "home" || turf === "tower") e.hp = Math.min(e.maxHp, e.hp + e.maxHp * pc.homeRegenFrac * dt);
   }
   h.blocking = !!cmd.block;
-  const mul = w.speedMul(e) * (h.blocking ? b.blockMoveMul : 1);
+  const mul = w.speedMul(e) * (h.blocking ? b.blockMoveMul : 1) * (h.charging ? 0.45 : 1);
   const tx = cmd.moveX * h.speed * mul;
   const tz = cmd.moveZ * h.speed * mul;
   const dvx = tx - h.vel.x;
@@ -606,7 +640,8 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     const m = meleeMods(w, e, fin, !!a.jab);
     const arc = m.arc ?? hit.arcDeg;
     const dmg = (a.jab ? hit.damage * 0.55 : hit.damage) * mul * m.dmgMul + m.extra;
-    const targets = arcHit(w, e, a.dirX, a.dirZ, hit.range, arc, dmg, hit.knockback * (a.jab ? 0.5 : 1) * m.knockMul, fin || m.extra > 0);
+    const pw = a.power ?? 1;
+    const targets = arcHit(w, e, a.dirX, a.dirZ, hit.range * (1 + (pw - 1) * 0.3), arc, dmg, hit.knockback * (a.jab ? 0.5 : 1) * m.knockMul * pw, fin || m.extra > 0 || pw > 1.3);
     afterMelee(w, e, targets, dmg * targets.length, fin, a.dirX, a.dirZ, hit.range, !!a.jab);
     return;
   }
@@ -759,14 +794,16 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       for (const [type, n] of Object.entries(units) as [UnitType, number][]) {
         for (let i = 0; i < n; i++) {
           const ang = k++ * 2.1 + t.facing;
-          const u = spawnUnit(w, e.team, type, t.pos.x + Math.sin(ang) * 2, t.pos.z + Math.cos(ang) * 2, 1);
+          const sx = a.placed ? a.toX! : t.pos.x;
+          const sz = a.placed ? a.toZ! : t.pos.z;
+          const u = spawnUnit(w, e.team, type, sx + Math.sin(ang) * 2, sz + Math.cos(ang) * 2, 1);
           if (u) {
             u.expiresAt = w.time + (def.seconds ?? 20);
             u.owner = e.id;
           }
         }
       }
-      w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: 3, team: e.team, seconds: 0.35, src: e.id });
+      w.emit({ type: "telegraph", x: a.placed ? a.toX! : t.pos.x, y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y, z: a.placed ? a.toZ! : t.pos.z, radius: 3, team: e.team, seconds: 0.35, src: e.id });
       if (def.hexRadius) {
         const hexSec = w.heroDef(e.hero!.type).abilities.b.hexSeconds ?? 6;
         w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.hexRadius, team: e.team, seconds: 0.5, src: e.id });
@@ -850,7 +887,8 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       let plat: number[] | null = null;
       let pcx = 0;
       let pcz = 0;
-      for (let dist = def.range ?? 5; dist >= 2.5 && !plat; dist -= 0.5) {
+      const startDist = a.placed ? Math.max(2.5, Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z)) : def.range ?? 5;
+      for (let dist = startDist; dist >= 2.5 && !plat; dist -= 0.5) {
         pcx = Math.floor(t.pos.x + a.dirX * dist);
         pcz = Math.floor(t.pos.z + a.dirZ * dist);
         const cells: number[] = [];
@@ -1007,8 +1045,8 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     }
     case "wall": {
       const len = def.length ?? 6;
-      const cx = t.pos.x + a.dirX * (def.offset ?? 2.5);
-      const cz = t.pos.z + a.dirZ * (def.offset ?? 2.5);
+      const cx = a.placed ? a.toX! : t.pos.x + a.dirX * (def.offset ?? 2.5);
+      const cz = a.placed ? a.toZ! : t.pos.z + a.dirZ * (def.offset ?? 2.5);
       const cells: number[] = [];
       for (let s = -len / 2; s <= len / 2; s += 0.5) {
         const x = cx - a.dirZ * s;
@@ -1123,10 +1161,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     }
     case "zone": {
       w.zones.push({
-        id: w.newId(), team: e.team, ownerId: e.id, x: t.pos.x, z: t.pos.z, radius: def.radius ?? 6,
+        id: w.newId(), team: e.team, ownerId: e.id, x: a.placed ? a.toX! : t.pos.x, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6,
         until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4,
       });
-      w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true, src: e.id });
+      w.emit({ type: "slam", x: a.placed ? a.toX! : t.pos.x, y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true, src: e.id });
       return;
     }
     default:

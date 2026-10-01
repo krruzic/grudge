@@ -13,6 +13,7 @@ import cobbleTex from "../assets/textures/cobble.png?url";
 import waterTex from "../assets/textures/water.png?url";
 import { World } from "./sim/world";
 import { Bot } from "./sim/bot";
+import { placeRanges } from "./sim/heroes";
 import { forceAbility } from "./sim/heroes";
 import { padNear } from "./sim/structures";
 import type { GameData } from "./sim/config";
@@ -866,13 +867,18 @@ async function start(): Promise<void> {
         const m = i >= 0 ? mappers[i] : null;
         if (!m) return;
         const h = world.heroForPlayer(i);
-        m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h), !!h?.hero?.picks.length);
+        m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h), !!h?.hero?.picks.length, h?.alive && h.hero ? placeRanges(world, h) : null);
         if (view.camMode !== 0 && !commanderSlot(i)) {
           if (p.pressed.down) view.zoomStep(i, 1);
           if (p.pressed.up) view.zoomStep(i, -1);
         }
       });
       view.setMenus(mappers.map((m) => !!m && m.ui.buildMenu !== "closed"));
+      view.setReticles(mappers.flatMap((m, i) => {
+        const r = m?.ui.reticle;
+        const h = r ? world.heroForPlayer(i) : undefined;
+        return r && h ? [{ heroId: h.id, slot: r.slot, dx: r.dx, dz: r.dz, range: r.range }] : [];
+      }));
       if (netMode === "peer" && mySlot >= 0 && mappers[mySlot]) net.toHost({ t: "cmd", c: packCommand(mappers[mySlot]!.take()) });
     } else if (state === "paused") {
       const r = menus.updatePause(readNav(now), cursors.takeMouse(), (k) => audio.ui(k));

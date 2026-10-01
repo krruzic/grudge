@@ -552,7 +552,7 @@ export class World {
   damageMulOf(src: Entity): number {
     const s = src.status;
     let m = (this.time < s.buffUntil ? s.buffDamageMul : 1) * s.auraDamageMul * s.supportDamageMul;
-    if (src.hero) m *= src.hero.damageMul;
+    if (src.hero) m *= src.hero.damageMul * (src.hero.action?.power ?? 1);
     if (src.unit && this.isSudden()) m *= this.data.match.suddenDeath.unitDamageMul;
     return m;
   }
@@ -1189,7 +1189,7 @@ export class World {
       const victims = this.entities.filter((o) => o.alive && o.team !== tr.team && o.kind !== "structure" &&
         Math.hypot(o.transform.pos.x - tr.x, o.transform.pos.z - tr.z) < tr.radius + o.radius);
       if (!victims.length) continue;
-      this.emit({ type: "slam", x: tr.x, y: this.groundY(tr.x, tr.z), z: tr.z, radius: tr.radius * 1.5, team: tr.team });
+      this.emit({ type: "slam", x: tr.x, y: this.groundY(tr.x, tr.z), z: tr.z, radius: tr.radius * 1.5, team: tr.team, src: tr.ownerId, trap: true });
       for (const v of victims) this.damage(owner, v, tr.damage, { stun: tr.stun, fromX: tr.x, fromZ: tr.z, big: true });
       const rearm = owner?.hero ? this.heroDef(owner.hero.type).abilities.z.rearmSeconds : undefined;
       if (rearm && this.zones.some((z) => z.ownerId === tr.ownerId && t < z.until && Math.hypot(z.x - tr.x, z.z - tr.z) <= z.radius)) {

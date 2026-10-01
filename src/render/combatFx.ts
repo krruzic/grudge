@@ -9,7 +9,7 @@ import { FX } from "./fxKit";
 import { wardenSlap } from "./wardenFx";
 import { KITS, type HeroKit } from "./kits";
 import "./heroFx";
-import { emit, Ribbon, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
+import { emit, Ribbon, shockwave, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
 
 const woodTex = new THREE.TextureLoader().load(woodUrl);
 woodTex.colorSpace = THREE.SRGBColorSpace;
@@ -773,6 +773,8 @@ export class CombatFx implements FxHost {
     const se = sid !== undefined ? this.world?.getAny(sid) : undefined;
     const sk = se?.hero ? KITS[se.hero.type] : undefined;
     if (ev.type === "act") {
+      const pw = se?.hero?.action?.power ?? 1;
+      if (se && ev.phase === "fire" && pw > 1.25) this.chargeRelease(ev.x, ev.y, ev.z, ev.dirX, ev.dirZ, pw, sk?.trail ?? 0xfff0b0);
       if (se && sk?.act) sk.act(this, ev, se);
       return;
     }
@@ -1457,6 +1459,33 @@ export class CombatFx implements FxHost {
       f.position.set(x, y, z);
       this.items.push({ obj: f, t: 0, dur: 0.15, tick: (k) => { f.scale.setScalar(0.5 + k * 0.4); f.material.opacity = 0.9 * (1 - k); } });
     }
+  }
+
+  chargeSparks(x: number, y: number, z: number, k: number, color: THREE.ColorRepresentation, full: boolean): void {
+    if (Math.random() < 0.7) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 1.5 - k * 0.4;
+      const sx = x + Math.cos(a) * r;
+      const sz = z + Math.sin(a) * r;
+      const sy = y + 0.3 + Math.random() * 1.6;
+      const s = this.sprite(FX.twinkle, color, true, 1);
+      s.position.set(sx, sy, sz);
+      this.items.push({ obj: s, t: 0, dur: 0.3, tick: (q) => {
+        s.position.set(sx + (x - sx) * q, sy + (y + 1.3 - sy) * q, sz + (z - sz) * q);
+        s.scale.setScalar(0.35 + k * 0.3);
+        s.material.opacity = 1 - q * 0.5;
+      } });
+    }
+    if (full && Math.random() < 0.25) emit(this, { tex: FX.zap, n: 1, x, y: y + 1.3, z, color, size: [0.9, 1.3], life: [0.08, 0.14], speed: [0, 0], additive: true, jitter: 0.9 });
+  }
+
+  chargeRelease(x: number, y: number, z: number, dirX: number, dirZ: number, power: number, color: THREE.ColorRepresentation): void {
+    const k = Math.min(1, (power - 1) / 0.8);
+    emit(this, { tex: FX.burst, n: 1, x: x + dirX * 1.2, y: y + 1.2, z: z + dirZ * 1.2, color, size: [2 + k * 2, 2 + k * 2], grow: 1.4, life: [0.15, 0.15], speed: [0, 0], additive: true, order: 7 });
+    shockwave(this, FX.shock, x + dirX * 1.2, y + 1.1, z + dirZ * 1.2, new THREE.Vector3(dirX, 0, dirZ), 0.3, 1.5 + k * 2, 0.25, color);
+    shockwave(this, FX.shock, x, y + 0.15, z, new THREE.Vector3(0, 1, 0), 0.4, 1.8 + k * 1.8, 0.35, 0xfff0c0, 0.8);
+    emit(this, { tex: FX.dust, n: 4 + Math.round(k * 4), x, y: y + 0.3, z, size: [0.9, 1.3], grow: 1.8, life: [0.4, 0.7], speed: [2, 4], flatSpread: true, drag: 3, opacity: 0.85 });
+    this.shake = Math.max(this.shake, 0.2 + k * 0.3);
   }
 
   regen(x: number, y: number, z: number): void {

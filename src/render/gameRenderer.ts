@@ -8,6 +8,7 @@ import { outlineConfig, type HeroModels } from "./heroModels";
 import { EntityViews } from "./entityViews";
 import { CombatFx } from "./combatFx";
 import { HazardViews } from "./hazardViews";
+import { Reticles, type ReticleReq } from "./reticle";
 import type { UnitModels } from "./unitModels";
 import type { StructureModels } from "./structureModels";
 
@@ -272,6 +273,12 @@ export class GameRenderer {
   setHints(on: boolean): void {
     this.hints = on;
     this.entityViews.hints = on;
+  }
+
+  private reticles = new Reticles();
+  private reticleReqs: ReticleReq[] = [];
+  setReticles(r: ReticleReq[]): void {
+    this.reticleReqs = r;
   }
 
   setMenus(open: boolean[]): void {
@@ -560,6 +567,8 @@ export class GameRenderer {
     this.combatFx.syncBanners(this.world, performance.now() / 1000);
     this.combatFx.update(dt);
     this.hazards.sync(this.time, dt);
+    if (!this.reticles.root.parent) this.scene.add(this.reticles.root);
+    this.reticles.sync(this.world, this.reticleReqs, this.time);
     this.syncSplit();
     const shake = (cam: THREE.PerspectiveCamera) => {
       if (this.combatFx.shake <= 0) return;

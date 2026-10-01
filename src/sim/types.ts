@@ -75,6 +75,8 @@ export interface HeroAction {
   toX?: number;
   toZ?: number;
   hitIds?: number[];
+  power?: number;
+  placed?: boolean;
   jab?: boolean;
   fromX2?: number;
   fromZ2?: number;
@@ -93,6 +95,8 @@ export interface HeroState {
   cooldowns: Record<string, number>;
   meter: number;
   blocking: boolean;
+  charging?: "a" | "b";
+  chargeT?: number;
   dead: boolean;
   respawnAt: number;
   lastTargetId: number;
@@ -349,6 +353,9 @@ export interface Command {
   aimAt?: Vec2;
   directive?: { type: UnitType | "all"; dir: Directive };
   say?: string;
+  charge?: number;
+  charging?: "a" | "b";
+  place?: { dx: number; dz: number };
 }
 
 export type SimEvent =
@@ -358,7 +365,7 @@ export type SimEvent =
   | { type: "spawn"; id: number }
   | { type: "rankUp"; id: number; rank: number; x: number; y: number; z: number; team: number }
   | { type: "build"; id: number; padIndex: number; team: number; upgrade: boolean }
-  | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean; src?: number }
+  | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean; trap?: boolean; src?: number }
   | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number; src?: number }
   | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number }
   | { type: "heal"; x: number; y: number; z: number; team: number; src?: number }
