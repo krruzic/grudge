@@ -4,7 +4,7 @@ import { abilities } from "../sim/talents";
 
 export interface ReticleReq {
   heroId: number;
-  slot: "r" | "z";
+  slot: "b" | "r" | "z";
   dx: number;
   dz: number;
   range: number;
@@ -132,7 +132,7 @@ export class Reticles {
         return;
       }
       p.area.visible = true;
-      const r = def.kind === "zone" ? def.radius ?? 6 : def.kind === "works" ? (def.size ?? 2) * 0.9 + 0.5 : 3;
+      const r = def.kind === "zone" || def.kind === "leap" || def.kind === "hex" ? def.radius ?? 2.5 : def.kind === "works" ? (def.size ?? 2) * 0.9 + 0.5 : 3;
       p.area.position.set(tx, gy + 0.12, tz);
       p.area.scale.setScalar(r * pulse);
       p.area.rotation.z = -time * 0.8;

@@ -17,11 +17,12 @@ export interface MapperUi {
   lastOrderAt: number;
   learnReady: boolean;
   charge: { slot: "a" | "b"; k: number } | null;
-  reticle: { slot: "r" | "z"; dx: number; dz: number; range: number } | null;
+  reticle: { slot: "b" | "r" | "z"; dx: number; dz: number; range: number } | null;
 }
 
 export interface AimInfo {
   facing: number;
+  b?: number;
   r?: number;
   z?: number;
 }
@@ -62,7 +63,7 @@ export class CommandMapper {
     return p.cY > 0 ? "down" : "up";
   }
 
-  private holdAt: Record<"a" | "b" | "r" | "z", number> = { a: -1, b: -1, r: -1, z: -1 };
+  private holdAt: Record<"a" | "b" | "r" | "z" | "bp", number> = { a: -1, b: -1, r: -1, z: -1, bp: -1 };
   private lastNow = 0;
 
   update(p: PadState, now: number, atPad = false, atHome = false, canLearn = false, aim: AimInfo | null = null): void {
@@ -74,7 +75,9 @@ export class CommandMapper {
     c.block = p.held.block;
     c.charging = undefined;
     this.ui.charge = null;
+    const bAims = !!aim?.b;
     for (const k of ["a", "b"] as const) {
+      if (k === "b" && bAims) continue;
       const btn = k === "a" ? "a" : "b";
       if (p.pressed[btn]) this.holdAt[k] = now;
       if (this.holdAt[k] < 0) continue;
@@ -92,9 +95,11 @@ export class CommandMapper {
       if (held > TAP) c.charge = Math.min(1, (held - TAP) / CHARGE_FULL);
     }
     this.ui.reticle = null;
-    for (const k of ["r", "z"] as const) {
-      const btn = k === "r" ? "r" : "z";
+    for (const slot of ["bp", "r", "z"] as const) {
+      const k = slot === "bp" ? "b" : slot;
+      const btn = k;
       if (k === "z" && p.held.start) continue;
+      if (k === "b" && !bAims) continue;
       const range = aim?.[k];
       if (p.pressed[btn]) {
         if (!range) {
@@ -102,11 +107,11 @@ export class CommandMapper {
           else c.super = true;
           continue;
         }
-        this.holdAt[k] = now;
+        this.holdAt[slot] = now;
         this.place = { dx: Math.sin(aim!.facing) * Math.min(range, 4), dz: Math.cos(aim!.facing) * Math.min(range, 4) };
       }
-      if (this.holdAt[k] < 0) continue;
-      const held = now - this.holdAt[k];
+      if (this.holdAt[slot] < 0) continue;
+      const held = now - this.holdAt[slot];
       if (p.held[btn]) {
         if (held > TAP && range) {
           this.place.dx += p.stickX * 12 * dt;
@@ -121,9 +126,10 @@ export class CommandMapper {
         }
         continue;
       }
-      this.holdAt[k] = -1;
+      this.holdAt[slot] = -1;
       if (k === "r") c.special = true;
-      else c.super = true;
+      else if (k === "z") c.super = true;
+      else c.secondary = true;
       if (held > TAP && range) c.place = { ...this.place };
     }
     if (p.pressed.dodge) c.dodge = true;

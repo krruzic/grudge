@@ -788,8 +788,21 @@ export class World {
     if (target.unit) {
       const vet = this.data.units.veterancy;
       if (target.neutral) {
-        killer.resource += this.data.match.arena.ogre.bounty;
-        if (killerTeam >= 0) this.emit({ type: "notice", team: -1, text: "THE OGRE FALLS" });
+        const og = this.data.match.arena.ogre;
+        killer.resource += og.bounty;
+        if (killerTeam >= 0) {
+          for (const o of this.entities) {
+            if (!o.alive || o.team !== killerTeam || o.structure) continue;
+            o.status.buffUntil = this.time + og.blessSeconds;
+            o.status.buffDamageMul = og.blessDamage;
+            o.status.buffSpeedMul = og.blessSpeed;
+            if (o.hero) {
+              gainXp(this, o, og.blessXp);
+              this.heal(o, o.maxHp * 0.3);
+            }
+          }
+          this.emit({ type: "notice", team: -1, text: `THE OGRE FALLS · ${killerTeam === 0 ? "BLUE" : "RED"} HOUSE IS BLESSED` });
+        }
         return;
       }
       killer.resource += this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank;

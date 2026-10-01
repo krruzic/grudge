@@ -283,7 +283,7 @@ export interface MatchData {
       ward: { cost: number; cooldown: number };
       cannon: { cost: number; shots: number; radius: number; aimSpeed: number; aimSeconds: number; spread: number };
     };
-    ogre: { firstSeconds: number; respawnSeconds: number; hp: number; damage: number; speed: number; radius: number; aggro: number; range: number; cooldown: number; knockback: number; bounty: number; leash: number };
+    ogre: { firstSeconds: number; respawnSeconds: number; hp: number; damage: number; speed: number; radius: number; aggro: number; range: number; cooldown: number; knockback: number; bounty: number; leash: number; blessSeconds: number; blessDamage: number; blessSpeed: number; blessXp: number };
   };
   rolls: { variance: number; critChance: number; critMul: number };
   pacing: {

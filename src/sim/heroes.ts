@@ -59,11 +59,17 @@ function begin(e: Entity, name: HeroAction["name"], kind: string, dur: number, h
   return a;
 }
 
-export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7 };
+export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7, leap: 0, hex: 0, banner: 0 };
 
-export function placeRanges(w: World, e: Entity): { facing: number; r?: number; z?: number } {
+function placeRange(def: AbilityDef): number | undefined {
+  const r = PLACEABLE[def.kind];
+  if (r === undefined) return undefined;
+  return r || (def.range ?? 8);
+}
+
+export function placeRanges(w: World, e: Entity): { facing: number; b?: number; r?: number; z?: number } {
   const ab = abilities(w, e);
-  return { facing: e.transform.facing, r: PLACEABLE[ab.r.kind], z: PLACEABLE[ab.z.kind] };
+  return { facing: e.transform.facing, b: placeRange(ab.b), r: placeRange(ab.r), z: placeRange(ab.z) };
 }
 
 function reachOf(def: AbilityDef): number {
@@ -87,9 +93,12 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
   if (def.kind === "leap") {
     const p = e.transform.pos;
-    const target = aimTarget(w, e, cmd, (def.range ?? 7) + 1);
-    let tx = p.x + dx * (def.range ?? 7);
-    let tz = p.z + dz * (def.range ?? 7);
+    const target = cmd.place ? null : aimTarget(w, e, cmd, (def.range ?? 7) + 1);
+    const pd = cmd.place ? Math.min(def.range ?? 7, Math.hypot(cmd.place.dx, cmd.place.dz)) : def.range ?? 7;
+    const pdx = cmd.place && pd > 0.3 ? cmd.place.dx / Math.hypot(cmd.place.dx, cmd.place.dz) : dx;
+    const pdz = cmd.place && pd > 0.3 ? cmd.place.dz / Math.hypot(cmd.place.dx, cmd.place.dz) : dz;
+    let tx = p.x + pdx * pd;
+    let tz = p.z + pdz * pd;
     if (target) {
       const d = Math.min(def.range ?? 7, w.dist(e, target) - 0.8);
       tx = p.x + dx * d;
@@ -116,8 +125,8 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
     a.hitIds = [];
     e.status.invulnUntil = w.time + a.dur;
   }
-  if (cmd.place && (slot === "r" || slot === "z") && PLACEABLE[def.kind]) {
-    const rng = PLACEABLE[def.kind];
+  if (cmd.place && slot !== "a" && def.kind !== "leap" && placeRange(def) !== undefined) {
+    const rng = placeRange(def)!;
     let px = cmd.place.dx;
     let pz = cmd.place.dz;
     const d = Math.hypot(px, pz);
@@ -707,7 +716,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       return;
     }
     case "banner": {
-      const range = def.range ?? 6;
+      const range = a.placed ? Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z) : def.range ?? 6;
       let bx = t.pos.x + a.dirX * range;
       let bz = t.pos.z + a.dirZ * range;
       for (let k = 0; k <= 12; k++) {
@@ -771,10 +780,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       return;
     }
     case "hex": {
-      const target = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, def.range ?? 8);
+      const target = a.placed ? null : aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, def.range ?? 8);
       const range = def.range ?? 8;
-      const x = target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.7;
-      const z = target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.7;
+      const x = a.placed ? a.toX! : target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.7;
+      const z = a.placed ? a.toZ! : target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.7;
       const delay = def.delay ?? 0.8;
       const ec = def.fx?.echo;
       const n = 1 + (ec?.count ?? 0);

@@ -96,8 +96,12 @@
       "range": 1.6,
       "cooldown": 1.7,
       "knockback": 11,
-      "bounty": 80,
-      "leash": 16
+      "bounty": 200,
+      "leash": 16,
+      "blessSeconds": 45,
+      "blessDamage": 1.25,
+      "blessSpeed": 1.1,
+      "blessXp": 250
     },
     "shop": {
       "radius": 5,
