@@ -20,8 +20,19 @@ export interface Frame {
 
 const round = (v: number) => Math.round(v * 1000) / 1000;
 
+export function mathPrint(): string {
+  let h = 0;
+  for (let i = 1; i < 40; i++) {
+    const v = i * 0.37;
+    for (const r of [Math.sin(v), Math.cos(v), Math.atan2(v, 1.3), Math.exp(-v), Math.pow(v, 1.7), Math.hypot(v, 0.9), Math.sqrt(v)]) {
+      h = (Math.imul(h, 31) + (Math.round(r * 1e15) | 0)) | 0;
+    }
+  }
+  return (h >>> 0).toString(36);
+}
+
 export function packCommand(c: Command): Command {
-  const out: Command = { moveX: round(c.moveX), moveZ: round(c.moveZ) };
+  const out: Command = { moveX: round(c.moveX) + 0, moveZ: round(c.moveZ) + 0 };
   for (const [k, v] of Object.entries(c)) {
     if (k === "moveX" || k === "moveZ" || v === undefined || v === false || v === null) continue;
     (out as unknown as Record<string, unknown>)[k] = v;

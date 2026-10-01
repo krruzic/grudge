@@ -171,6 +171,10 @@ export class MenuCursors {
       }
       if (b) out.push({ type: "back", by: i });
     });
+    if (this.mouseSlot < 0 && this.mouse.down) {
+      const over = this.at(this.mouse.x, this.mouse.y);
+      if (over && !over.id.startsWith("hero:")) out.push({ type: "button", id: over.id, by: -1 });
+    }
     this.mouse.down = false;
     this.mouse.right = false;
     return out;

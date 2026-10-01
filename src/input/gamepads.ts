@@ -105,6 +105,7 @@ export class Gamepads {
       this.keys.add(e.code);
       this.tapped.add(e.code);
       this.keyTouched = true;
+      this.kbByMouse = false;
       this.kbHold = false;
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
@@ -121,8 +122,11 @@ export class Gamepads {
       this.mouse.y = this.mouse.oy = e.clientY;
       if (e.button === 0) { this.mouse.left = true; this.tapped.add("Mouse0"); }
       if (e.button === 2) { this.mouse.right = true; this.tapped.add("Mouse2"); }
-      this.keyTouched = true;
-      this.kbHold = false;
+      if (this.mouseClaims || this.slots.includes(KEYBOARD)) {
+        if (!this.slots.includes(KEYBOARD)) this.kbByMouse = true;
+        this.keyTouched = true;
+        this.kbHold = false;
+      }
     });
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) this.mouse.left = false;
@@ -149,6 +153,7 @@ export class Gamepads {
   }
 
   claimKeyboard(): void {
+    if (!this.kbHold && this.kbmEnabled && !this.slots.includes(KEYBOARD)) this.kbByMouse = true;
     if (!this.kbHold && this.kbmEnabled) this.keyTouched = true;
   }
 
@@ -165,6 +170,8 @@ export class Gamepads {
   }
 
   private kbHold = false;
+  mouseClaims = true;
+  private kbByMouse = false;
   private waitRelease = new Set<number>();
 
   release(slot: number): void {
@@ -340,6 +347,12 @@ export class Gamepads {
   poll(): void {
     const pads = navigator.getGamepads();
     this.assignSlots(pads);
+    const kb = this.slots.indexOf(KEYBOARD);
+    if (kb >= 0 && this.kbByMouse && this.slots.some((s) => s !== null && s !== KEYBOARD)) {
+      this.kbByMouse = false;
+      this.release(kb);
+      this.kbHold = false;
+    }
     for (let s = 0; s < this.players.length; s++) {
       const st = this.players[s];
       const idx = this.slots[s];

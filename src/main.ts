@@ -36,7 +36,7 @@ import { Audio } from "./audio/sfx";
 import { Menus, type Nav, type RoomInfo } from "./ui/menus";
 import { Save, applyRules } from "./game/save";
 import { NetLink, type NetMsg } from "./net/link";
-import { mergeCommands, packCommand, worldHash, type Frame, type MatchSpec } from "./net/session";
+import { mathPrint, mergeCommands, packCommand, worldHash, type Frame, type MatchSpec } from "./net/session";
 import { drawText, textWidth } from "./ui/font";
 import type { LobbySlot } from "./ui/screens";
 
@@ -229,6 +229,8 @@ async function start(): Promise<void> {
   let hostAddrs: string[] = [];
   let hostPublic = "";
   let roomFetch = false;
+  let mathWarned = false;
+  const MATH = mathPrint();
   const present = (i: number) => pads.players[i].connected || i < forceJoin || remoteAt(i) >= 0;
   const padsForCursors = () => pads.players.map((p, i) => (i < forceJoin && !p.connected ? { ...p, connected: true } : p));
   const slotActive = (i: number) => i < 2 || twoVtwo;
@@ -578,6 +580,8 @@ async function start(): Promise<void> {
     if (i >= 2 && !twoVtwo) setMode(true);
   };
   const lobbyView = () => ({
+    build: __BUILD__,
+    math: MATH,
     rules: save.data.rules,
     twoVtwo,
     map: pickIndex >= maps.length ? "RANDOM FIELD" : (maps[pickIndex]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
@@ -721,6 +725,16 @@ async function start(): Promise<void> {
       if (netMode === "peer") {
         if (m.t === "lobby") {
           const lv = m.view as ReturnType<typeof lobbyView>;
+          if (lv.build && lv.build !== __BUILD__) {
+            leaveNet("THE HOST RUNS ANOTHER VERSION · REFRESH BOTH PAGES");
+            state = "menu";
+            menus.open("network");
+            continue;
+          }
+          if (lv.math && lv.math !== MATH && !mathWarned) {
+            mathWarned = true;
+            hud.banner_("DIFFERENT BROWSER FROM THE HOST · USE THE SAME ONE OR YOU MAY DESYNC", now, 6);
+          }
           mySlots.clear();
           lv.slots.forEach((s, i) => { if (s.remote === net.id) mySlots.set(s.local ?? 0, i); });
           for (const [k, i] of mySlots) if (!myHero[k]) myHero[k] = lv.slots[i].hero;
@@ -796,7 +810,8 @@ async function start(): Promise<void> {
 
     pads.poll();
     pumpNet(now);
-    if (cursors.mouseUsed && pads.keyboardSlot() < 0) pads.claimKeyboard();
+    pads.mouseClaims = !pads.players.some((p) => p.connected && p.profile !== "keyboard");
+    if (cursors.mouseUsed && pads.keyboardSlot() < 0 && pads.mouseClaims) pads.claimKeyboard();
     cursors.mouseSlot = pads.keyboardSlot();
     for (const p of pads.players) {
       if ((p.pressed.start && p.held.z) || (p.pressed.z && p.held.start)) showPads = !showPads;
