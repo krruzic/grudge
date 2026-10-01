@@ -1503,9 +1503,9 @@ export class EntityViews {
         const up = !!st;
         hint.material = up ? HINTS.upgrade : HINTS.build;
         const s = 1 + Math.sin(time * 3) * 0.04;
-        const k = 1.9 * s;
+        const k = 1.15 * s;
         hint.scale.set(up ? k : k * 2, k, 1);
-        hint.position.set(p.x, w.groundY(p.x, p.z) + (up ? 1.7 : 1.0), p.z);
+        hint.position.set(p.x, w.groundY(p.x, p.z) + (up ? 3.0 : 0.8), p.z);
       }
     });
     this.shopHints.forEach((hint, team) => {
@@ -1514,8 +1514,8 @@ export class EntityViews {
       hint.visible = this.hints && !!core && !!shopper;
       if (!hint.visible || !core) return;
       const s = 1 + Math.sin(time * 3) * 0.03;
-      hint.position.set(core.transform.pos.x, core.transform.y + 2.4, core.transform.pos.z);
-      hint.scale.set(2.1 * s, 2.1 * s, 1);
+      hint.position.set(core.transform.pos.x, core.transform.y + 4.4, core.transform.pos.z);
+      hint.scale.set(1.25 * s, 1.25 * s, 1);
     });
   }
 }
