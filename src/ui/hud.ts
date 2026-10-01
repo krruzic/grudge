@@ -579,10 +579,13 @@ export class Hud {
         texturedRect(ctx, "stone", 0, Math.round(H / 2 - t / 2), W, t, "#8a8070", 0, 0.5);
       }
     }
-    if (this.banner && now < this.bannerUntil) this.drawBanner(ctx, W, now);
+    const bannerOn = !!this.banner && now < this.bannerUntil;
+    this.bannerLineY = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
+    if (bannerOn && (this.bannerBig || !this.visible)) this.drawBanner(ctx, W, now);
     if (!this.visible) return;
     this.drawClock(ctx, W, w, now);
-    this.drawRelic(ctx, W, H, w, now);
+    this.drawRelic(ctx, W, H, w, now, bannerOn && !this.bannerBig);
+    if (bannerOn && !this.bannerBig) this.drawBanner(ctx, W, now);
     if (this.minimap) this.drawMinimap(ctx, W, H, w, now);
     if (this.card && now < this.card.until) this.drawCard(ctx, W, w, now);
     if (w.ffa) {
@@ -825,12 +828,20 @@ export class Hud {
     const left = this.bannerUntil - now;
     const pop = age < 0.12 ? 1.4 - (age / 0.12) * 0.4 : 1;
     const big = this.bannerBig;
-    const base = big ? 3.6 : 0.85;
+    const base = big ? 3.6 : 0.72;
     const s = base * pop;
+    if (!big) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, left * 5);
+      const ss = 0.72 * (age < 0.12 ? 1.15 - (age / 0.12) * 0.15 : 1);
+      drawText(ctx, this.banner, Math.round((W - textWidth(this.banner, ss)) / 2), this.bannerLineY, "#ffffff", ss);
+      ctx.restore();
+      return;
+    }
     const tw = textWidth(this.banner, s, true);
     ctx.save();
     ctx.globalAlpha = Math.min(1, left * 5);
-    const y = big ? 96 - (s - base) * 5 : MARGIN_Y + 31 - (s - base) * 4;
+    const y = big ? 96 - (s - base) * 5 : this.bannerLineY - (s - base) * 4;
     drawNum(ctx, this.banner, Math.round((W - tw) / 2), y, "#ffffff", s);
     ctx.restore();
   }
@@ -1159,7 +1170,9 @@ export class Hud {
     });
   }
 
-  private drawRelic(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number): void {
+  private bannerLineY = MARGIN_Y + 19;
+
+  private drawRelic(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number, hideLine = false): void {
     const r = w.arena.relic;
     const cfg = w.data.match.arena.relic;
     let text: string;
@@ -1184,7 +1197,7 @@ export class Hud {
     }
     const y = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
     const flash = r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0) ? Math.floor(now * 3) % 2 === 0 : false;
-    drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
+    if (!hideLine) drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
     if (r.state === "waiting" || !this.locate) return;
     const lift = r.state === "carried" ? 4.5 : r.state === "shrined" ? 6 : 1.5;
     const sp = this.locate(r.x, r.y + lift, r.z);
