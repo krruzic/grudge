@@ -1220,8 +1220,12 @@ async function start(): Promise<void> {
         const m = i >= 0 ? mappers[i] : null;
         if (!m) return;
         const h = world.heroForPlayer(i);
+        const ws = world.players.find((q) => q.player === i);
+        if (ws) m.ui.commander = ws.commander;
+        m.morphable = h ? world.morphState(h) : null;
+        m.morphHold = world.morphCfg?.holdSeconds ?? 0.6;
         m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h), !!h?.hero?.picks.length, h?.alive && h.hero ? placeRanges(world, h) : null);
-        if (view.camMode !== 0 && !commanderSlot(i)) {
+        if (view.camMode !== 0 && !m.ui.commander) {
           if (p.pressed.down) view.zoomStep(i, 1);
           if (p.pressed.up) view.zoomStep(i, -1);
         }

@@ -16,6 +16,8 @@ export interface MapperUi {
   lastOrderAt: number;
   learnReady: boolean;
   charge: { slot: "a" | "b"; k: number } | null;
+  morph: number;
+  morphBack: boolean;
   reticle: { slot: "b" | "r" | "z"; dx: number; dz: number; range: number } | null;
 }
 
@@ -48,7 +50,7 @@ export class CommandMapper {
   smash = { from: 0.3, to: 0.85, within: 0.12 };
 
   constructor(private flickThreshold: number, commander = false) {
-    this.ui = { buildMenu: "closed", commander, group: "all", groupAt: -99, lastOrderAt: -99, learnReady: false, charge: null, reticle: null };
+    this.ui = { buildMenu: "closed", commander, group: "all", groupAt: -99, lastOrderAt: -99, learnReady: false, charge: null, reticle: null, morph: 0, morphBack: false };
   }
 
   private flick(p: PadState): Flick | null {
@@ -65,6 +67,9 @@ export class CommandMapper {
 
   private holdAt: Record<"a" | "b" | "r" | "z" | "bp", number> = { a: -1, b: -1, r: -1, z: -1, bp: -1 };
   private lastNow = 0;
+  morphable: "to" | "back" | null = null;
+  morphHold = 0.6;
+  private xHeldFor = -1;
 
   update(p: PadState, now: number, atPad = false, atHome = false, canLearn = false, aim: AimInfo | null = null): void {
     const c = this.pending;
@@ -162,6 +167,20 @@ export class CommandMapper {
     const mr = !!p.mouseRight;
     const mrPressed = mr && !this.mouseRightWas;
     this.mouseRightWas = mr;
+    const xHeld = !!p.held.x && !p.held.block && !atPad && !!this.morphable;
+    if (!xHeld) {
+      this.xHeldFor = -1;
+      this.ui.morph = 0;
+    } else if (this.xHeldFor >= 0) {
+      this.xHeldFor += dt;
+      this.ui.morph = Math.min(1, this.xHeldFor / this.morphHold);
+      this.ui.morphBack = this.morphable === "back";
+      if (this.xHeldFor >= this.morphHold) {
+        c.morph = true;
+        this.xHeldFor = -1e9;
+        this.ui.morph = 0;
+      }
+    } else if (p.pressed.x) this.xHeldFor = 0;
     if (p.pressed.x && !blockDodge && atPad) {
       this.xDown = true;
       this.xUsed = false;

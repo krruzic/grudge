@@ -48,6 +48,7 @@ const M = matchJson as unknown as {
     relic: { firstSeconds: number; enshrineSeconds: number; stealSeconds: number; incomeMul: number };
     ogre: { firstSeconds: number; hp: number; bounty: number; blessSeconds: number; respawnSeconds: number };
     cannon: { firstSeconds: number; everySeconds: number; damage: number; structureDamage: number };
+    morph?: { holdSeconds: number; channelSeconds: number; revertCost: number };
   };
 };
 const pct = (m: number) => `${Math.round((m - 1) * 100)}%`;
@@ -383,6 +384,15 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       glyph: "ballista",
       pages: [
         { title: "INCOMING", text: `FROM ${can.firstSeconds} SECONDS ON, EVERY ${can.everySeconds} SECONDS OR SO, A WILD CANNON SHELLS THE FIELD. YOU GET A WARNING CIRCLE A MOMENT BEFORE EACH SHELL LANDS. ${can.damage} TO TROOPS AND HEROES, ${can.structureDamage} TO BUILDINGS, NEVER THE KEEP.`, tip: "WALK OUT OF THE CIRCLES. THIS IS ALL OF THE ADVICE.", art: { kind: "seal", glyph: "ballista" } },
+      ],
+    },
+    {
+      cat: "ARENA",
+      title: "THE HERALD",
+      glyph: "banner",
+      pages: [
+        { title: "THE COMMANDER", text: "IN 2V2 THE THIRD AND FOURTH SEATS CAN BE HERALDS: A SKINNY FELLOW WITH A BIG FLAG WHO RUNS THE ARMY. HE SEES THE WHOLE ARMY AT ONCE, D-PAD UP SENDS A GROUP TO SIEGE, D-PAD DOWN MAKES THEM HOLD, AND HIS ORDERS BEAT HIS PARTNER'S. B PLANTS A WAR BANNER TROOPS GATHER AT, R BLOWS A HORN THAT SPEEDS THEM UP, Z HEALS AND GUARDS EVERYONE NEARBY.", tip: "HE HAS NO TALENTS. HE HAS AN ARMY. THAT'S BETTER, PROBABLY.", art: { kind: "seal", glyph: "banner" } },
+        { title: "TAKE UP THE BANNER", text: `IN A 2V2 WITH NO HERALDS, HOLD X AWAY FROM A PAD FOR ${M.arena.morph?.holdSeconds ?? 0.6} SECONDS AND YOUR CHAMPION BECOMES THE HERALD: PLAIN, NO LEVELS, NO TALENTS, BUT IN CHARGE OF THE ARMY. ONE HERALD PER HOUSE. YOU STAY THAT WAY UNTIL YOU DIE AND COME BACK AS YOURSELF, OR HOLD X AT YOUR KEEP TO TURN BACK FOR ${M.arena.morph?.revertCost ?? 50} GOLD.`, tip: "FOR WHEN THE ARMY NEEDS A BABYSITTER MORE THAN THE FIGHT NEEDS YOU.", art: { kind: "seal", glyph: "rally" } },
       ],
     },
     {

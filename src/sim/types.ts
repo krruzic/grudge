@@ -106,6 +106,9 @@ export interface HeroState {
   chargeT?: number;
   dead: boolean;
   respawnAt: number;
+  morphAt?: number;
+  morphBack?: boolean;
+  morphed?: { type: string; level: number; xp: number; maxHp: number; damageMul: number; speed: number; path: Record<string, number[]>; picks: string[]; stepHeight: number; maxSlope: number };
   recallUsed?: boolean;
   recallAt?: number;
   recallFrom?: number;
@@ -380,6 +383,7 @@ export interface Command {
   charge?: number;
   charging?: "a" | "b";
   place?: { dx: number; dz: number };
+  morph?: boolean;
 }
 
 export type SimEvent =
@@ -388,6 +392,7 @@ export type SimEvent =
   | { type: "death"; id: number; kind: Entity["kind"]; x: number; y: number; z: number; team: number; big: boolean }
   | { type: "eliminated"; team: number; by: number }
   | { type: "tide"; high: boolean }
+  | { type: "morph"; stage: "start" | "done"; id: number; to: string; back: boolean; x: number; y: number; z: number; team: number; seconds: number }
   | { type: "mist"; stage: "warn" | "in" | "out"; seconds: number }
   | { type: "lantern"; stage: "rise" | "taken" | "fade"; x: number; y: number; z: number; id: number; hero: number }
   | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number }

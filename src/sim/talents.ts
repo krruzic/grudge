@@ -91,7 +91,7 @@ export function learn(w: World, e: Entity, choice: number): void {
 
 export function gainXp(w: World, e: Entity | null | undefined, amount: number): void {
   const hero = e?.hero ? e : e?.owner ? w.get(e.owner) : undefined;
-  if (!hero?.hero || !(amount > 0)) return;
+  if (!hero?.hero || !(amount > 0) || hero.hero.morphed) return;
   const h = hero.hero;
   const cfg = w.data.talents?.xp;
   if (!cfg) return;

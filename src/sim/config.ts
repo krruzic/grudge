@@ -298,6 +298,7 @@ export interface MatchData {
   };
   positional: { backstabMul: number; ambushMul: number; fallMin: number; fallDamageFrac: number; fallStun: number; knockDropMin: number };
   arena: {
+    morph?: { type: string; holdSeconds: number; channelSeconds: number; revertCost: number };
     relic: { pickupRadius: number; deliverReach: number; carrySpeedMul: number; returnSeconds: number; dropLockSeconds: number; firstSeconds: number; enshrineSeconds: number; stealSeconds: number; stealReach: number; towerDamageMul: number; towerRangeMul: number; keepWardRegen: number; incomeMul: number; outpostExtra: number; outpostStatMul: number };
     cannon: { firstSeconds: number; everySeconds: number; volleys: number; spacing: number; warnSeconds: number; radius: number; damage: number; structureDamage: number; knockback: number; spread: number };
     shop: {

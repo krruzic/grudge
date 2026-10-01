@@ -444,6 +444,7 @@ export class HazardViews {
   constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {
     this.root.add(this.sprites.root);
     this.mapFx = new MapFx(world, fx);
+    this.mapFx.teamColors = teamColors;
     this.root.add(this.mapFx.root);
   }
 
@@ -802,7 +803,7 @@ export class HazardViews {
   }
 
   handle(ev: { type: string; id?: number }): void {
-    if (ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist") {
+    if (ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph") {
       this.mapFx.handle(ev);
       return;
     }

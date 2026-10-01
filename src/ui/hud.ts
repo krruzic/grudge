@@ -1379,7 +1379,7 @@ export class Hud {
     if (bxc > 0) y += 14;
     if (out) return;
     const anyLocal = ui.some(Boolean);
-    const teamHeroes = w.players.filter((p) => p.team === t && !p.commander);
+    const teamHeroes = w.players.filter((p) => p.team === t && (!p.commander || !!ui[p.player]));
     const shown = teamHeroes.filter((p, k) => !!ui[p.player] || (!anyLocal && k === 0));
     const rectPx = (pl: number) => {
       const r = F ? null : this.rectOf?.(pl);
@@ -1447,6 +1447,29 @@ export class Hud {
       drawText(ctx, l1, Math.round(crossX - textWidth(l1, 0.85) / 2), crossY - 8, Math.floor(now * 4) % 2 ? "#ffd870" : "#ffffff", 0.85);
       drawText(ctx, l2, Math.round(crossX - textWidth(l2, 0.72) / 2), crossY + 6, "#e8e0d0", 0.72);
       return;
+    }
+    for (const pl of w.players.filter((p) => p.team === t && (ui[p.player]?.morph ?? 0) > 0)) {
+      const at = this.panelAt[pl.player];
+      if (!at) continue;
+      const k = ui[pl.player]!.morph;
+      const r = 11;
+      const x = at.right ? at.x - r - 2 : at.x + r + 2;
+      const yy = at.y + r + 4;
+      ctx.save();
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(x, yy, r + 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2a1c12";
+      ctx.beginPath();
+      ctx.arc(x, yy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ringMeter(ctx, x, yy, r - 0.8, k, "#ffd040");
+      waxSeal(ctx, x, yy, r * 0.62, ui[pl.player]!.morphBack ? "#6a4a2a" : col, ui[pl.player]!.morphBack ? "combo" : "banner");
+      onHiLayer(ctx, (c) => {
+        padButton(c, x + r * 0.72, yy + r * 0.72, 3.6, "#5a5a66", "X");
+      });
     }
     for (const learner of w.players.filter((p) => p.team === t && ui[p.player]?.learnReady && ui[p.player]!.buildMenu === "closed")) {
       const at = this.panelAt[learner.player];

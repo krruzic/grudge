@@ -118,6 +118,7 @@
       "blessSpeed": 1.1,
       "blessXp": 250
     },
+    "morph": { "type": "herald", "holdSeconds": 0.6, "channelSeconds": 0.9, "revertCost": 50 },
     "shop": {
       "radius": 5,
       "bomb": {

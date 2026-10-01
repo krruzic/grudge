@@ -132,6 +132,8 @@ const BAR_BG = new THREE.Color(0x101010);
 const BAR_GHOST = new THREE.Color(0xfff0d0);
 
 interface View {
+  heroType?: string;
+  popAt?: number;
   batched?: THREE.SkinnedMesh;
   blobs?: THREE.Mesh[];
   rings?: THREE.Mesh[];
@@ -1050,9 +1052,32 @@ export class EntityViews {
     for (const e of w.entities) {
       if (!e.alive && !e.hero) continue;
       let v = this.views.get(e.id);
+      if (v && e.hero && v.heroType !== e.hero.type) {
+        this.root.remove(v.root);
+        disposeTree(v.root);
+        const ring = this.rings.get(e.id);
+        if (ring) {
+          this.root.remove(ring);
+          ring.geometry.dispose();
+          this.rings.delete(e.id);
+        }
+        this.views.delete(e.id);
+        v = undefined;
+        const nv = this.createView(e);
+        nv.popAt = time;
+        this.views.set(e.id, nv);
+        v = nv;
+      }
       if (!v) {
         v = this.createView(e);
         this.views.set(e.id, v);
+      }
+      if (e.hero && !v.heroType) v.heroType = e.hero.type;
+      if (v.popAt !== undefined) {
+        const k = Math.min(1, (time - v.popAt) / 0.45);
+        const s = k < 1 ? 0.2 + 0.8 * (1 - Math.pow(1 - k, 3)) + Math.sin(k * Math.PI) * 0.18 : 1;
+        v.root.scale.setScalar(s);
+        if (k >= 1) v.popAt = undefined;
       }
       v.seen = true;
       const t = e.transform;

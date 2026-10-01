@@ -10,7 +10,7 @@ import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
 import { MapEvents } from "./mapEvents.ts";
-import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, onKill, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
+import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, onKill, recompute, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
 
 export type { Vec2, Entity, Command } from "./types.ts";
 
@@ -553,6 +553,7 @@ export class World {
       if (e.alive && cmd.build) tryBuild(this, e, cmd.build);
       if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
       if (cmd.learn !== undefined && e.hero?.picks.length) learn(this, e, cmd.learn);
+      if (cmd.morph && e.alive) this.startMorph(e);
       if (cmd.say) this.emit({ type: "notice", team: slot.team, text: cmd.say.slice(0, 48) });
       if (e.alive) gainXp(this, e, this.data.talents?.xp.passive * dt);
       if (cmd.directive) {
@@ -564,6 +565,7 @@ export class World {
           this.setDirective(slot.team, cmd.directive.type, cmd.directive.dir, e);
         } else this.emit({ type: "notice", team: slot.team, text: "COMMANDER HAS ORDERS" });
       }
+      if (e.hero) this.tickMorph(e);
       updateHero(this, e, cmd);
     }
     this.arena.update();
@@ -645,6 +647,111 @@ export class World {
       const core = this.core(team);
       if (!core?.structure) continue;
       core.structure.shielded = (core.structure.ward ?? 0) > 0;
+    }
+  }
+
+  get morphCfg() {
+    return this.data.match.arena.morph;
+  }
+
+  morphState(e: Entity): "to" | "back" | null {
+    const m = this.morphCfg;
+    const h = e.hero;
+    if (!m || !h || !e.alive || h.morphAt !== undefined || this.ffa || this.teamCount !== 2) return null;
+    const slot = this.players.find((p) => p.heroId === e.id);
+    if (!slot) return null;
+    if (h.morphed) return this.arena.inShop(e) ? "back" : null;
+    if (slot.commander) return null;
+    const team = this.players.filter((p) => p.team === slot.team);
+    if (team.length < 2 || team.some((p) => p.commander)) return null;
+    return "to";
+  }
+
+  startMorph(e: Entity): void {
+    const st = this.morphState(e);
+    const m = this.morphCfg;
+    if (!st || !m) return;
+    const h = e.hero!;
+    if (st === "back") {
+      const ts = this.teams[e.team];
+      const cost = Math.round(m.revertCost * this.costMul());
+      if (ts.resource < cost) {
+        this.emit({ type: "notice", team: e.team, text: `NEED ${cost}` });
+        return;
+      }
+      ts.resource -= cost;
+    }
+    h.morphAt = this.time + m.channelSeconds;
+    h.morphBack = st === "back";
+    h.action = null;
+    const p = e.transform;
+    this.emit({ type: "morph", stage: "start", id: e.id, to: st === "back" ? h.morphed!.type : m.type, back: st === "back", x: p.pos.x, y: p.y, z: p.pos.z, team: e.team, seconds: m.channelSeconds });
+  }
+
+  tickMorph(e: Entity): void {
+    const h = e.hero!;
+    if (h.morphAt === undefined || this.time < h.morphAt) return;
+    h.morphAt = undefined;
+    if (h.morphBack) this.unmorph(e);
+    else this.morphTo(e, this.morphCfg!.type);
+    const p = e.transform;
+    this.emit({ type: "morph", stage: "done", id: e.id, to: h.type, back: !h.morphed, x: p.pos.x, y: p.y, z: p.pos.z, team: e.team, seconds: 0 });
+    const slot = this.players.find((q) => q.heroId === e.id);
+    if (slot) this.emit({ type: "notice", team: -1, text: h.morphed ? `P${slot.player + 1} TAKES UP THE BANNER` : `P${slot.player + 1} PUTS DOWN THE BANNER` });
+  }
+
+  private morphTo(e: Entity, type: string): void {
+    const h = e.hero!;
+    const frac = e.hp / e.maxHp;
+    h.morphed = { type: h.type, level: h.level, xp: h.xp, maxHp: e.maxHp, damageMul: h.damageMul, speed: h.speed, path: h.path, picks: h.picks, stepHeight: h.stepHeight, maxSlope: h.maxSlope };
+    const def = this.heroDef(type);
+    const tiers = this.data.heroes.tiers;
+    const b = this.data.heroes.baseline;
+    h.type = type;
+    h.level = 1;
+    h.speed = tiers.speed[def.speed] * (def.hooks.speedMul ?? 1);
+    h.damageMul = tiers.damage[def.damage];
+    h.path = { a: [], b: [], r: [], z: [] };
+    h.picks = [];
+    h.stepHeight = def.hooks.stepHeight ?? b.stepHeight;
+    h.maxSlope = def.hooks.maxSlope ?? b.maxSlope;
+    h.cooldowns = {};
+    h.comboIndex = 0;
+    e.maxHp = tiers.health[def.health];
+    e.hp = Math.max(1, e.maxHp * frac);
+    recompute(this, e);
+    const slot = this.players.find((q) => q.heroId === e.id);
+    if (slot) {
+      slot.heroType = type;
+      slot.commander = true;
+    }
+  }
+
+  unmorph(e: Entity): void {
+    const h = e.hero!;
+    const m = h.morphed;
+    if (!m) return;
+    const frac = e.hp / e.maxHp;
+    h.type = m.type;
+    h.level = m.level;
+    h.xp = m.xp;
+    h.damageMul = m.damageMul;
+    h.speed = m.speed;
+    h.path = m.path as typeof h.path;
+    h.picks = m.picks as typeof h.picks;
+    h.stepHeight = m.stepHeight;
+    h.maxSlope = m.maxSlope;
+    h.cooldowns = {};
+    h.comboIndex = 0;
+    h.morphed = undefined;
+    h.morphAt = undefined;
+    e.maxHp = m.maxHp;
+    e.hp = Math.max(1, e.maxHp * frac);
+    recompute(this, e);
+    const slot = this.players.find((q) => q.heroId === e.id);
+    if (slot) {
+      slot.heroType = m.type;
+      slot.commander = false;
     }
   }
 

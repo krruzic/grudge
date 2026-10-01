@@ -161,6 +161,8 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
 
   if (h.dead) {
     if (w.time >= h.respawnAt) {
+      h.morphAt = undefined;
+      if (h.morphed) w.unmorph(e);
       const sp = w.spawnPoint(e.team);
       w.teleport(e, sp.x, sp.z);
       e.hp = e.maxHp;
@@ -174,6 +176,11 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       h.recallAt = undefined;
       w.emit({ type: "spawn", id: e.id });
     }
+    return;
+  }
+  if (h.morphAt !== undefined) {
+    h.vel.x = h.vel.z = 0;
+    h.blocking = false;
     return;
   }
   if (h.recallAt !== undefined) {
