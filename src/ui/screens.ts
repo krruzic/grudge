@@ -191,6 +191,7 @@ export class Screens {
 
   private heroPartners = false;
   hosting = false;
+  peer = false;
 
   updateSelect(slots: SelectSlot[], heroes: Record<string, HeroInfo>, roster: string[], twoVtwo: boolean, heroPartners = false): void {
     this.heroPartners = heroPartners;
@@ -213,14 +214,12 @@ export class Screens {
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
     if (this.which === "none") return;
-    if (this.which === "lobby") {
-      if (this.lobby) this.drawLobby(ctx, W, H, this.lobby, Math.floor(now * 2) % 2 === 0);
-      return;
-    }
+    const sel = this.which === "select" || (this.which === "lobby" && !!this.lobby);
+    this.peer = this.which === "lobby";
     if (this.which === "title") fieldShade(ctx, W, H, 0.12);
     else if (this.which === "pause" || this.which === "results") fieldShade(ctx, W, H, 0.45);
     const blink = Math.floor(now * 2) % 2 === 0;
-    if (this.cursors && (this.which === "select" || this.which === "map")) this.cursors.hits = [];
+    if (this.cursors && (sel || this.which === "map")) this.cursors.hits = [];
     if (this.which === "title") {
       drawLogo(ctx, W / 2, 30, 84);
       center(ctx, W, "A FEUD TOURNAMENT. THE FALLEN RISE AGAIN.", 120, "#f0e4c8", 0.9);
@@ -232,10 +231,10 @@ export class Screens {
       center(ctx, W, "PRESS ANY BUTTON OR KEY TO JOIN  ·  CLICK ONCE FOR SOUND", H - 29, "#f0e4c8", 0.7);
       if (this.adapterStatus) center(ctx, W, this.adapterStatus, H - 19, "#e8d090", 0.62);
       if (this.adapterDebug) center(ctx, W, this.adapterDebug, H - 10, "#c8b898", 0.55);
-    } else if (this.which === "select") this.drawSelect(ctx, W, H, now, blink);
+    } else if (sel) this.drawSelect(ctx, W, H, now, blink);
     else if (this.which === "map") this.drawMap(ctx, W, H, blink);
-    if (this.cursors && (this.which === "select" || this.which === "map")) {
-      if (this.which === "select") {
+    if (this.cursors && (sel || this.which === "map")) {
+      if (sel) {
         const labels = this.slots.map((sl, i) => (i >= 2 && (!this.twoVtwo || !this.heroPartners) ? "" : sl.cpu ? "CPU" : `${i + 1}`));
         this.slots.forEach((sl, i) => {
           const c = this.cursors!.chips[i];
@@ -249,60 +248,6 @@ export class Screens {
       this.cursors.drawCursors(ctx, now);
     }
     if (this.which === "results" && this.results) this.drawResults(ctx, W, this.results, blink);
-  }
-
-  private drawLobby(ctx: CanvasRenderingContext2D, W: number, H: number, lb: LobbyView, blink: boolean): void {
-    fieldShade(ctx, W, H, 0.4);
-    woodFloor(ctx, H - 22, W, H);
-    beam(ctx, 4, 2, W - 8, 17);
-    artTitle(ctx, "t_join", "JOIN A BATTLE", W / 2, 3, 14);
-    const lw = Math.round((W - 30) * 0.46);
-    const lx = 10;
-    const ty = 26;
-    const rows = RULE_ROWS as Row<Rules>[];
-    const lh = 16 + rows.length * 10 + 6;
-    parchment(ctx, lx, ty, lw, lh);
-    drawPlain(ctx, "THE HOST'S RULES", lx + lw / 2 - textWidth("THE HOST'S RULES", 0.62) / 2, ty + 6, "#8a1810", 0.62, true);
-    rows.forEach((r, i) => {
-      const y = ty + 17 + i * 10;
-      drawPlain(ctx, r.label, lx + 9, y, "#3a2410", 0.55, true);
-      const v = r.fmt(lb.rules[r.key] as number);
-      drawPlain(ctx, v, lx + lw - 9 - textWidth(v, 0.58, true), y, "#6a1810", 0.58, true);
-    });
-    const rx = lx + lw + 10;
-    const rw = W - rx - 10;
-    const ph = lh;
-    parchment(ctx, rx, ty, rw, ph);
-    const head = `${lb.twoVtwo ? "2 VS 2" : "1 VS 1"}  ·  ${lb.map}`;
-    drawPlain(ctx, head, rx + rw / 2 - textWidth(head, 0.62) / 2, ty + 6, "#8a1810", 0.62, true);
-    const list = lb.slots.map((s, i) => ({ s, i })).filter(({ s }) => s.active);
-    const rh = Math.min(26, Math.floor((ph - 20) / Math.max(1, list.length)));
-    list.forEach(({ s, i }, k) => {
-      const y = ty + 17 + k * rh;
-      const mine = lb.mine.includes(i);
-      const team = this.teamColors[i % 2];
-      band(ctx, rx + 6, y, rw - 12, rh - 3, team, mine ? 0.35 : 0.18);
-      const icon = s.commander ? null : this.portraits?.icon(s.hero);
-      const isz = rh - 5;
-      if (icon) ctx.drawImage(icon, rx + 8, y + 1, isz, isz);
-      const who = mine ? (lb.mine.length > 1 ? `YOU · PAD ${(s.local ?? 0) + 1}` : "YOU") : s.open ? "OPEN SEAT" : s.cpu ? "CPU" : s.remote === 0 ? s.name ?? "HOST" : s.name ?? "GUEST";
-      drawPlain(ctx, `P${i + 1} ${who}`, rx + 12 + isz, y + 2, mine ? "#8a1810" : "#3a2410", 0.6, true);
-      const hero = s.open ? "A CPU FILLS IT IF NOBODY COMES" : s.commander ? "COMMANDER" : this.heroes[s.hero]?.name ?? s.hero.toUpperCase();
-      drawPlain(ctx, hero, rx + 12 + isz, y + 11, "#3a2410", 0.58, true);
-      const st = s.cpu || s.open ? "" : s.ready ? "READY" : "CHOOSING";
-      if (st) drawPlain(ctx, st, rx + rw - 10 - textWidth(st, 0.55, true), y + 6, s.ready ? "#2a6a18" : "#8a6a30", 0.55, true);
-      if (mine && !s.ready && !s.commander) {
-        goldArrow(ctx, rx + 5, y + rh / 2 - 1, -1, 4);
-        goldArrow(ctx, rx + rw - 5, y + rh / 2 - 1, 1, 4);
-      }
-    });
-    const status = lb.status || (lb.phase === "match" ? "A MATCH IS UNDER WAY · YOU'LL JOIN THE NEXT ONE" : "WAITING FOR THE HOST TO START");
-    if (blink || !lb.status) center(ctx, W, status, ty + lh + 8, "#f0e4c8", 0.72);
-    const it: [string, string][] = [["A", "READY"], ["B", "LEAVE"]];
-    const pw = promptWidth(it, 0.75);
-    const hint = "STICK: CHAMPION";
-    drawText(ctx, hint, Math.round((W - pw - textWidth(hint, 0.7) - 10) / 2), H - 16, "#f0e4c8", 0.7);
-    prompt(ctx, Math.round((W - pw + textWidth(hint, 0.7) + 10) / 2), H - 17, it, 0.75);
   }
 
   private drawSelect(ctx: CanvasRenderingContext2D, W: number, H: number, _now: number, blink: boolean): void {
@@ -349,14 +294,21 @@ export class Screens {
       for (const [i, bx] of [[2, 14], [3, W - 14 - 40]] as const) {
         rolledBanner(ctx, bx, by, 40);
         this.portraits?.drop(i);
+        if (this.peer) continue;
         const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `add:${i}`);
         for (const [line, dy] of [["+ ADD", 17], ["CPU", 25]] as const) shadowText(ctx, line, bx + 20 - textWidth(line, 0.55) / 2, by + dy, hot ? "#fff4b0" : "#c8bca0", 0.55);
         this.hit(`add:${i}`, bx - 2, by - 2, 44, 38);
       }
     }
 
-    const it: [string, string][] = [["A", "TAKE / PLACE SEAL"], ["B", "BACK"], ["S", "START"]];
+    const it: [string, string][] = this.peer ? [["A", "TAKE / PLACE SEAL"], ["B", "LEAVE"]] : [["A", "TAKE / PLACE SEAL"], ["B", "BACK"], ["S", "START"]];
     prompt(ctx, Math.round((W - promptWidth(it, 0.7)) / 2), H - 13, it, 0.7);
+    if (this.peer && this.lobby) {
+      const lb = this.lobby;
+      const r = lb.rules;
+      const t = lb.status || (lb.phase === "match" ? "A MATCH IS UNDER WAY · YOU'LL JOIN THE NEXT ONE" : `${lb.map} · ${r.minutes} MIN · ${r.popCap} SOLDIERS · GOLD X${r.goldRate} · WAITING FOR THE HOST`);
+      if (blink || !lb.status) center(ctx, W, t, floorY - 10, "#fff0c0", 0.55);
+    }
 
     if (this.readyBanner) {
       const sw2 = Math.min(280, W - 60);
@@ -426,14 +378,15 @@ export class Screens {
       paintedText(ctx, `P${i + 1}`, x + w / 2, y + 7, "#c8b890", 1.05);
       const lines = ["OPEN SEAT", "WAITING FOR", "A PLAYER"];
       lines.forEach((l, k) => shadowText(ctx, l, x + w / 2 - textWidth(l, k ? 0.5 : 0.7) / 2, y + 40 + k * 9 + (k ? 3 : 0), k ? "#c8bca0" : "#f0e4c8", k ? 0.5 : 0.7));
-      const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `seatcpu:${i}`);
-      const t = "+ ADD CPU";
+      const bid = this.peer ? `take:${i}` : `seatcpu:${i}`;
+      const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === bid);
+      const t = this.peer ? "SIT HERE" : "+ ADD CPU";
       const by = y + h - 40;
       ctx.fillStyle = "#0b0806";
       ctx.fillRect(x + w / 2 - 26, by - 1, 52, 13);
       texturedRect(ctx, "wood", x + w / 2 - 25, by, 50, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
       shadowText(ctx, t, x + w / 2 - textWidth(t, 0.55) / 2, by + 2, hot ? "#fff4b0" : "#e8d8b8", 0.55);
-      this.hit(`seatcpu:${i}`, x + w / 2 - 28, by - 3, 56, 17);
+      this.hit(bid, x + w / 2 - 28, by - 3, 56, 17);
       return;
     }
     const commander = i >= 2 && !this.heroPartners;

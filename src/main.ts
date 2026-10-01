@@ -219,7 +219,7 @@ async function start(): Promise<void> {
   const myReady = [false, false, false, false];
   let wantSent = "";
   let wantAt = 0;
-  const lobbyLatch = [0, 0, 0, 0];
+  const dropped = new Set<number>();
   let netFrames: Frame[] = [];
   const netHashes = new Map<number, number>();
   let outFrames: Frame[] = [];
@@ -615,6 +615,24 @@ async function start(): Promise<void> {
       return;
     }
     const i = r.slot;
+    if (m.t === "seat" && state === "select") {
+      const to = Number(m.slot);
+      const tgt = slots[to];
+      if (!tgt || !slotActive(to) || commanderSlot(to) || to === i || seatAt(to) || pads.players[to]?.connected || !(tgt.open || tgt.autoCpu)) return;
+      const hero = i >= 0 ? slots[i].hero : roster[0];
+      if (i >= 0) {
+        slots[i].tag = undefined;
+        makeOpen(i);
+      }
+      r.slot = to;
+      slots[to].autoCpu = false;
+      makeHuman(to);
+      slots[to].hero = hero;
+      slots[to].tag = r.name;
+      lobbySentAt = 0;
+      audio.ui("move");
+      return;
+    }
     if (m.t === "cmd" && i >= 0 && (state === "match" || state === "paused")) {
       if (r.queue.length < 30) r.queue.push(m.c as Command);
     } else if (m.t === "pick" && i >= 0 && state === "select" && !slots[i].ready && roster.includes(String(m.hero)) && !commanderSlot(i)) {
@@ -782,6 +800,7 @@ async function start(): Promise<void> {
     if (pads.players.some((p) => Object.values(p.pressed).some(Boolean))) audio.unlock();
 
     pads.typing = state === "select" && menus.tagSlot >= 0 && menus.tagMode === "type";
+    if (state !== "lobby") cursors.tagOf = null;
     if (state === "title") {
       if (anyPressed("start") || anyPressed("a") || cursors.takeClick()) {
         audio.ui("ok");
@@ -960,38 +979,83 @@ async function start(): Promise<void> {
       }
     } else if (state === "lobby") {
       const lb = screens.lobby;
-      const nav = readNav(now);
-      if (nav.b) {
-        audio.ui("back");
-        toMenu("");
-        state = "menu";
-        menus.open("network");
-      } else if (lb && lb.phase === "lobby") {
-        pads.players.forEach((p, k) => {
-          const i = mySlots.get(k);
-          if (i === undefined || !p.connected || lb.slots[i].commander) return;
-          let dx = p.pressed.right ? 1 : p.pressed.left ? -1 : 0;
-          const sx = p.stickX;
-          if (Math.abs(sx) < 0.35) lobbyLatch[k] = 0;
-          else if (!lobbyLatch[k] && Math.abs(sx) > 0.6) {
-            lobbyLatch[k] = 1;
-            dx = sx > 0 ? 1 : -1;
-          }
-          if (dx && !myReady[k]) {
-            const r = roster.indexOf(myHero[k] || lb.slots[i].hero);
-            myHero[k] = roster[(r + dx + roster.length) % roster.length];
-            net.toHost({ t: "pick", k, hero: myHero[k] });
-            lb.slots[i].hero = myHero[k];
-            audio.ui("move");
-          }
-          if (p.pressed.a) {
-            myReady[k] = !myReady[k];
-            if (myHero[k]) net.toHost({ t: "pick", k, hero: myHero[k] });
-            net.toHost({ t: "ready", k, on: myReady[k] });
-            lb.slots[i].ready = myReady[k];
-            audio.ui(myReady[k] ? "ok" : "back");
-          }
+      cursors.setScale(pixel.w, pixel.h);
+      cursors.tagOf = (k) => mySlots.get(k) ?? -1;
+      if (lb) {
+        const held = (i: number) => cursors.cursors.some((c) => c.active && c.holding === i);
+        lb.slots.forEach((sl, i) => {
+          if (!held(i)) cursors.placeChip(i, sl.ready && !sl.open && sl.active && !sl.commander ? sl.hero : null);
         });
+        for (const [k, i] of mySlots) {
+          const sl = lb.slots[i];
+          if (lb.phase === "lobby" && !sl.ready && !sl.commander && !held(i) && !dropped.has(i)) cursors.cursors[k].holding = i;
+          if (sl.ready) dropped.delete(i);
+        }
+        for (const c of cursors.cursors) if (c.holding >= 0 && ![...mySlots.values()].includes(c.holding)) c.holding = -1;
+        const kOf = (i: number) => [...mySlots].find(([, v]) => v === i)?.[0] ?? -1;
+        const acts = cursors.update(pads.players, dt, now, (slot, by) => lb.phase === "lobby" && mySlots.get(by) === slot && !lb.slots[slot].commander);
+        let leave = false;
+        for (const act of acts) {
+          if (act.type === "hover") {
+            const k = kOf(act.slot);
+            if (k >= 0 && lb.slots[act.slot].hero !== act.hero) {
+              lb.slots[act.slot].hero = act.hero;
+              myHero[k] = act.hero;
+              net.toHost({ t: "pick", k, hero: act.hero });
+              audio.ui("move");
+            }
+          } else if (act.type === "place") {
+            const k = kOf(act.slot);
+            if (k < 0) continue;
+            lb.slots[act.slot].hero = act.hero;
+            lb.slots[act.slot].ready = true;
+            myHero[k] = act.hero;
+            myReady[k] = true;
+            net.toHost({ t: "pick", k, hero: act.hero });
+            net.toHost({ t: "ready", k, on: true });
+            audio.ui("ok");
+          } else if (act.type === "pick") {
+            const k = kOf(act.slot);
+            if (k < 0) continue;
+            lb.slots[act.slot].ready = false;
+            myReady[k] = false;
+            net.toHost({ t: "ready", k, on: false });
+            audio.ui("move");
+          } else if (act.type === "button") {
+            const [id, arg] = act.id.split(":");
+            const i = Number(arg);
+            if (id === "take" && mySlots.has(act.by)) {
+              const from = mySlots.get(act.by)!;
+              cursors.cursors[act.by].holding = -1;
+              dropped.delete(from);
+              net.toHost({ t: "seat", k: act.by, slot: i });
+              audio.ui("ok");
+            } else if (id === "unplug") {
+              const k = kOf(i);
+              if (k >= 0) {
+                pads.release(k);
+                audio.ui("back");
+              }
+            }
+          } else if (act.type === "back") {
+            if (cursors.cursors[act.by]?.holding >= 0) {
+              dropped.add(cursors.cursors[act.by].holding);
+              cursors.cursors[act.by].holding = -1;
+            } else leave = true;
+          }
+        }
+        if (leave) {
+          audio.ui("back");
+          toMenu("");
+          state = "menu";
+          menus.open("network");
+        } else {
+          const ss: SelectSlot[] = lb.slots.map((sl, i) => ({
+            joined: !sl.cpu && !sl.open, ready: sl.ready, hero: sl.hero, cpu: sl.cpu, level: 2, open: sl.open, tag: sl.name, local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i,
+          }));
+          screens.updateSelect(ss, data.heroes.heroes, roster, lb.twoVtwo, lb.rules.partners === 1);
+          screens.hosting = false;
+        }
       }
     } else if (state === "match") {
       if (anyPressed("start")) {
@@ -1103,7 +1167,7 @@ async function start(): Promise<void> {
     hud.split = view.splitCount;
     hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
     screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : mapIndex);
-    if (state === "select") screens.portraits?.renderStages();
+    if (state === "select" || state === "lobby") screens.portraits?.renderStages();
     const viaDriver = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
     const nativeGc = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
     const gcText = viaDriver || nativeGc ? "GAMECUBE ADAPTER CONNECTED" : pads.gc.status.startsWith("LINUX") ? pads.gc.status : pads.gc.connected ? `GAMECUBE ADAPTER READY · ${pads.gc.ports.filter((p) => p.connected).length} CONTROLLER(S)` : pads.gc.status;

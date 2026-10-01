@@ -48,6 +48,7 @@ export class MenuCursors {
   private mouse = { x: 0, y: 0, moved: false, down: false, right: false };
   mouseUsed = false;
   mouseSlot = -1;
+  tagOf: ((i: number) => number) | null = null;
   private scale = { w: 427, h: 240 };
 
   constructor(n: number) {
@@ -218,7 +219,8 @@ export class MenuCursors {
         const ch = this.chips[c.holding];
         chip(ctx, ch.x, ch.y, c.holding, this.chipCpu[c.holding], false);
       }
-      glove(ctx, c.x, c.y, i, c.holding >= 0 ? "glove_grab" : c.grabbable ? "glove_open" : "glove_point", press);
+      const tg = this.tagOf?.(i) ?? i;
+      glove(ctx, c.x, c.y, tg >= 0 ? tg : i, c.holding >= 0 ? "glove_grab" : c.grabbable ? "glove_open" : "glove_point", press);
     });
   }
 }
