@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { layerTexture } from "./mergedModel";
 import type { Terrain } from "../sim/terrain";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./terrainMesh";
 
@@ -74,6 +76,66 @@ function waterMaterial(map: THREE.Texture): THREE.Material {
   return mat;
 }
 
+function mergeProps(scene: THREE.Object3D): void {
+  scene.updateMatrixWorld(true);
+  const list: THREE.Mesh[] = [];
+  scene.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) || Array.isArray(o.material)) return;
+    const m = o.material as THREE.MeshLambertMaterial;
+    if (m.name === "tallgrass" || !m.map || m.transparent || m.alphaTest > 0 || m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) return;
+    const img = m.map.image as { width?: number } | undefined;
+    if (img?.width !== 64) return;
+    list.push(o);
+  });
+  if (list.length < 2) return;
+  const keys = (g: THREE.BufferGeometry) => Object.keys(g.attributes).sort().join(",");
+  const want = keys(list[0].geometry);
+  const parts = list.filter((o) => keys(o.geometry) === want);
+  if (parts.length < 2) return;
+  const mats: THREE.MeshLambertMaterial[] = [];
+  const inv = scene.matrixWorld.clone().invert();
+  const geos = parts.map((o) => {
+    const mat = o.material as THREE.MeshLambertMaterial;
+    if (!mats.includes(mat)) mats.push(mat);
+    const g = o.geometry.clone().applyMatrix4(inv.clone().multiply(o.matrixWorld));
+    const n = g.getAttribute("position").count;
+    g.setAttribute("aMat", new THREE.BufferAttribute(new Float32Array(n).fill(mats.indexOf(mat)), 1));
+    return g;
+  });
+  const geo = mergeGeometries(geos, false);
+  if (!geo) return;
+  for (const g of geos) g.dispose();
+  const tex = layerTexture(mats.map((m) => m.map));
+  const tint = mats.map((m) => new THREE.Vector4(m.color.r, m.color.g, m.color.b, m.side === THREE.FrontSide ? 0 : 1));
+  const double = tint.some((t) => t.w > 0);
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: double ? THREE.DoubleSide : THREE.FrontSide, name: "props" });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uLayers = { value: tex };
+    shader.uniforms.uTint = { value: tint };
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute float aMat;\nflat varying int vMat;\nvarying vec2 vUv0;")
+      .replace("#include <uv_vertex>", "#include <uv_vertex>\nvMat = int(aMat + 0.5);\nvUv0 = uv;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", `#include <common>\nuniform highp sampler2DArray uLayers;\nuniform vec4 uTint[${mats.length}];\nflat varying int vMat;\nvarying vec2 vUv0;`)
+      .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (!gl_FrontFacing && uTint[vMat].w < 0.5) discard;")
+      .replace("#include <map_fragment>", "diffuseColor *= texture(uLayers, vec3(vUv0, float(vMat)));\ndiffuseColor.rgb *= uTint[vMat].rgb;");
+  };
+  mat.customProgramCacheKey = () => `props-${mats.length}`;
+  const merged = new THREE.Mesh(geo, mat);
+  merged.name = "Props";
+  merged.receiveShadow = true;
+  merged.castShadow = true;
+  for (const o of parts) {
+    o.removeFromParent();
+    o.geometry.dispose();
+  }
+  scene.add(merged);
+  for (const m of mats) {
+    m.map?.dispose();
+    m.dispose();
+  }
+}
+
 export async function loadMap(url: string, terrain: Terrain, textureUrls: Record<keyof TerrainTextures, string>, light?: TerrainLight): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
   const [gltf, ...texs] = await Promise.all([
@@ -109,6 +171,8 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
       fx.push({ name: o.name.replace(/\.\d+$/, ""), position: p });
     }
   });
+
+  mergeProps(gltf.scene);
 
   return {
     root,

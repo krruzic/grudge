@@ -17,7 +17,7 @@ interface Merged {
 const merged = new WeakMap<THREE.BufferGeometry, Merged>();
 const MAX = 16;
 
-function layerTexture(maps: (THREE.Texture | null)[]): THREE.DataArrayTexture {
+export function layerTexture(maps: (THREE.Texture | null)[]): THREE.DataArrayTexture {
   let size = 8;
   for (const m of maps) {
     const img = m?.image as { width?: number } | undefined;

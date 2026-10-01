@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import woodUrl from "../../assets/textures/wood.png?url";
 import ironUrl from "../../assets/textures/iron.png?url";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { dyeColor } from "./heroModels";
+import { layerTexture } from "./mergedModel";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -17,6 +19,7 @@ const WOOD = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xf0d4b0 });
 const WOOD_DARK = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xa88462 });
 const IRON = new THREE.MeshLambertMaterial({ map: ironTex, color: 0xb0b0b8 });
 const ROPE = new THREE.MeshLambertMaterial({ color: 0xd8c898 });
+for (const m of [WOOD, WOOD_DARK, IRON, ROPE]) m.userData.keep = true;
 
 function beam(a: THREE.Vector3, b: THREE.Vector3, r: number, mat: THREE.Material, sides = 5): THREE.Mesh {
   const d = b.clone().sub(a);
@@ -34,9 +37,87 @@ function box(w: number, h: number, d: number, mat: THREE.Material, x: number, y:
 
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
+const LAYERS = [WOOD, WOOD_DARK, IRON, ROPE];
+let partsMat: THREE.MeshLambertMaterial | null = null;
+function ready(t: THREE.Texture): boolean {
+  const im = t.image as HTMLImageElement | undefined;
+  return !!im && im.complete !== false && (im.width ?? 0) > 0;
+}
+function sharedParts(): THREE.MeshLambertMaterial | null {
+  if (partsMat) return partsMat;
+  if (!ready(woodTex) || !ready(ironTex)) return null;
+  const arr = layerTexture([woodTex, ironTex, null]);
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, name: "ballista" });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uLayers = { value: arr };
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute float aLayer;\nflat varying int vLayer;\nvarying vec2 vUv0;")
+      .replace("#include <uv_vertex>", "#include <uv_vertex>\nvLayer = int(aLayer + 0.5);\nvUv0 = uv;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform highp sampler2DArray uLayers;\nflat varying int vLayer;\nvarying vec2 vUv0;")
+      .replace("#include <map_fragment>", "diffuseColor *= texture(uLayers, vec3(vUv0, float(vLayer)));");
+  };
+  mat.customProgramCacheKey = () => "ballista-parts";
+  mat.userData.keep = true;
+  partsMat = mat;
+  return mat;
+}
+
+function tagParts(geo: THREE.BufferGeometry, mat: THREE.MeshLambertMaterial): THREE.BufferGeometry {
+  const n = geo.getAttribute("position").count;
+  const layer = mat.map === woodTex ? 0 : mat.map === ironTex ? 1 : 2;
+  const col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) col.set([mat.color.r, mat.color.g, mat.color.b], i * 3);
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.setAttribute("aLayer", new THREE.BufferAttribute(new Float32Array(n).fill(layer), 1));
+  return geo;
+}
+
+function mergeStatic(parent: THREE.Object3D): void {
+  const by = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  const parts = sharedParts();
+  for (const o of [...parent.children]) {
+    if (!(o instanceof THREE.Mesh) || o.name) continue;
+    o.updateMatrix();
+    let geo = o.geometry.clone().applyMatrix4(o.matrix);
+    o.geometry.dispose();
+    parent.remove(o);
+    let mat = o.material as THREE.Material;
+    if (parts && LAYERS.includes(mat as THREE.MeshLambertMaterial)) {
+      geo = tagParts(geo, mat as THREE.MeshLambertMaterial);
+      mat = parts;
+    }
+    by.set(mat, [...(by.get(mat) ?? []), geo]);
+  }
+  for (const [mat, geos] of by) {
+    const list = geos.every((q) => q.index) ? geos : geos.map((q) => (q.index ? q.toNonIndexed() : q));
+    parent.add(new THREE.Mesh(mergeGeometries(list)!, mat));
+    for (const q of geos) q.dispose();
+    for (const q of list) if (!geos.includes(q)) q.dispose();
+  }
+}
+
+const templates = new Map<number, THREE.Group>();
+
 export function ballistaMesh(team: THREE.Color): THREE.Group {
+  const key = team.getHex();
+  let t = templates.get(key);
+  if (!t) {
+    const fresh = buildBallista(team);
+    if (!partsMat) return fresh;
+    t = fresh;
+    t.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.geometry.userData.model = true;
+    });
+    templates.set(key, t);
+  }
+  return t.clone(true);
+}
+
+function buildBallista(team: THREE.Color): THREE.Group {
   const g = new THREE.Group();
   const cloth = new THREE.MeshLambertMaterial({ color: dyeColor(team), side: THREE.DoubleSide });
+  cloth.userData.keep = true;
 
   for (const s of [1, -1]) {
     const leg = box(1.5, 0.16, 0.2, WOOD_DARK, 0, 0.08, 0);
@@ -121,6 +202,7 @@ export function ballistaMesh(team: THREE.Color): THREE.Group {
   flag.rotation.y = Math.PI / 2;
   yaw.add(flag);
 
+  for (const o of [g, yaw, tilt, string, bolt]) mergeStatic(o);
   g.scale.setScalar(1.3);
   return g;
 }

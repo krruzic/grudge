@@ -54,9 +54,12 @@ function withOutlineNormals(geo: THREE.BufferGeometry): THREE.BufferGeometry {
   const g = geo.clone();
   const pos = g.getAttribute("position");
   const nor = g.getAttribute("normal");
+  const starts = geo.userData.partStarts as number[] | undefined;
+  const part = new Int32Array(pos.count);
+  starts?.forEach((s, p) => part.fill(p, s));
   const sums = new Map<string, THREE.Vector3>();
   const key = (i: number) =>
-    `${Math.round(pos.getX(i) * 1000)},${Math.round(pos.getY(i) * 1000)},${Math.round(pos.getZ(i) * 1000)}`;
+    `${Math.round(pos.getX(i) * 1000)},${Math.round(pos.getY(i) * 1000)},${Math.round(pos.getZ(i) * 1000)},${part[i]}`;
   for (let i = 0; i < pos.count; i++) {
     const k = key(i);
     const v = sums.get(k) ?? new THREE.Vector3();

@@ -307,14 +307,23 @@ varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;`,
       .replace(
         "#include <map_fragment>",
         `vec2 wuv = vWPos.xz;
-vec3 cg = texture2D(tGrass, wuv / 7.0).rgb;
-vec3 cd = texture2D(tDirt, wuv / 6.0).rgb;
-vec3 cp = texture2D(tCobble, wuv / 4.0).rgb;
+vec3 dpx = dFdx(vWPos);
+vec3 dpy = dFdy(vWPos);
 vec3 an = abs(normalize(vWNrm));
 an = pow(an, vec3(4.0)); an /= (an.x + an.y + an.z);
-vec3 cr = texture2D(tRock, vWPos.zy / 5.0).rgb * an.x + texture2D(tRock, vWPos.xz / 5.0).rgb * an.y + texture2D(tRock, vWPos.xy / 5.0).rgb * an.z;
 vec4 sw = vSplat / max(0.001, vSplat.x + vSplat.y + vSplat.z + vSplat.w);
-diffuseColor.rgb *= cg * sw.x + cd * sw.y + cr * sw.z + cp * sw.w;`,
+vec3 tsum = vec3(0.0);
+if (sw.x > 0.0) tsum += textureGrad(tGrass, wuv / 7.0, dpx.xz / 7.0, dpy.xz / 7.0).rgb * sw.x;
+if (sw.y > 0.0) tsum += textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb * sw.y;
+if (sw.z > 0.0) {
+  vec3 cr = vec3(0.0);
+  if (an.x > 0.0) cr += textureGrad(tRock, vWPos.zy / 5.0, dpx.zy / 5.0, dpy.zy / 5.0).rgb * an.x;
+  if (an.y > 0.0) cr += textureGrad(tRock, vWPos.xz / 5.0, dpx.xz / 5.0, dpy.xz / 5.0).rgb * an.y;
+  if (an.z > 0.0) cr += textureGrad(tRock, vWPos.xy / 5.0, dpx.xy / 5.0, dpy.xy / 5.0).rgb * an.z;
+  tsum += cr * sw.z;
+}
+if (sw.w > 0.0) tsum += textureGrad(tCobble, wuv / 4.0, dpx.xz / 4.0, dpy.xz / 4.0).rgb * sw.w;
+diffuseColor.rgb *= tsum;`,
       );
   };
 

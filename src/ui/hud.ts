@@ -1,8 +1,8 @@
 import type { World } from "../sim/world";
-import { setTextLayer } from "./font";
+import { fontLoaded, setTextLayer, textLayer } from "./font";
 import { UNIT_TYPES, type Directive, type Entity, type UnitType } from "../sim/types";
 import type { Portraits } from "./portraits";
-import { parchment, texturedRect } from "./n64ui";
+import { parchment, texturedRect, uiImagesReady } from "./n64ui";
 import { onHiLayer } from "./font";
 import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
@@ -331,6 +331,28 @@ for (const [p, url] of Object.entries(talentUrls)) {
   talentImgs.set(p.split("/").pop()!.replace(".png", ""), im);
 }
 
+const iconBakes = new Map<string, HTMLCanvasElement>();
+function scaledIcon(id: string, im: HTMLImageElement, px: number): HTMLCanvasElement | HTMLImageElement {
+  if (px >= im.naturalWidth) return im;
+  const key = `${id}|${px}`;
+  let c = iconBakes.get(key);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = c.height = px;
+    const g = c.getContext("2d")!;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(im, 0, 0, px, px);
+    iconBakes.set(key, c);
+    if (iconBakes.size > 300) {
+      const old = iconBakes.keys().next().value!;
+      iconBakes.get(old)!.width = 0;
+      iconBakes.delete(old);
+    }
+  }
+  return c;
+}
+
 export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number, dim = false, low = false): void {
   const im = talentImgs.get(id);
   ctx.save();
@@ -345,7 +367,9 @@ export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number,
       c.globalAlpha *= a;
       c.imageSmoothingEnabled = true;
       c.imageSmoothingQuality = "high";
-      c.drawImage(im, x, y, size, size);
+      const m = c.getTransform();
+      const px = Math.round(size * Math.hypot(m.a, m.b));
+      c.drawImage(px > 0 && !m.b && !m.c ? scaledIcon(id, im, px) : im, x, y, size, size);
       c.restore();
     });
   } else {
@@ -410,6 +434,7 @@ export class Hud {
   }
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
+    this.crossN = 0;
     if (this.split >= 2) {
       const t = 3;
       ctx.fillStyle = INK;
@@ -440,6 +465,79 @@ export class Hud {
 
   private dense = false;
   rectOf: ((player: number) => { x: number; y: number; w: number; h: number } | null) | null = null;
+
+  private memos = new Map<string, { low: HTMLCanvasElement; hi: HTMLCanvasElement; key: string; out: number; at: number[] }>();
+
+  private memo(ctx: CanvasRenderingContext2D, id: string, key: string, x: number, y: number, w: number, h: number, draw: (c: CanvasRenderingContext2D) => number): number {
+    const L = textLayer();
+    const m = ctx.getTransform();
+    if (ctx !== L.low || !L.hi || m.b || m.c || ctx.globalAlpha !== 1) return draw(ctx);
+    const r = L.hk / L.lk;
+    const lx = Math.floor(m.a * x + m.e);
+    const ly = Math.floor(m.d * y + m.f);
+    const hx = Math.floor((m.a * x + m.e) * r);
+    const hy = Math.floor((m.d * y + m.f) * r);
+    const lw = Math.ceil(m.a * w) + 2;
+    const lh = Math.ceil(m.d * h) + 2;
+    const hw = Math.ceil(m.a * w * r) + 2;
+    const hh = Math.ceil(m.d * h * r) + 2;
+    const full = `${key}|${m.a},${m.d},${m.e},${m.f},${r},${x},${y}|${fontLoaded()}|${uiImagesReady()}`;
+    let c = this.memos.get(id);
+    if (!c) {
+      c = { low: document.createElement("canvas"), hi: document.createElement("canvas"), key: "", out: 0, at: [] };
+      this.memos.set(id, c);
+    }
+    if (c.key !== full) {
+      if (c.low.width !== lw || c.low.height !== lh) {
+        c.low.width = lw;
+        c.low.height = lh;
+      }
+      if (c.hi.width !== hw || c.hi.height !== hh) {
+        c.hi.width = hw;
+        c.hi.height = hh;
+      }
+      const lc = c.low.getContext("2d")!;
+      const hc = c.hi.getContext("2d")!;
+      lc.setTransform(1, 0, 0, 1, 0, 0);
+      lc.clearRect(0, 0, lw, lh);
+      hc.setTransform(1, 0, 0, 1, 0, 0);
+      hc.clearRect(0, 0, hw, hh);
+      lc.imageSmoothingEnabled = ctx.imageSmoothingEnabled;
+      lc.setTransform(m.a, 0, 0, m.d, m.e - lx, m.f - ly);
+      setTextLayer(lc, hc, L.hk, L.lk, lx * r - hx, ly * r - hy);
+      try {
+        c.out = draw(lc);
+      } finally {
+        setTextLayer(L.low!, L.hi, L.hk, L.lk, L.dx, L.dy);
+      }
+      c.key = full;
+    }
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(c.low, lx, ly);
+    ctx.restore();
+    L.hi.save();
+    L.hi.setTransform(1, 0, 0, 1, 0, 0);
+    L.hi.drawImage(c.hi, hx, hy);
+    L.hi.restore();
+    return c.out;
+  }
+
+  private panelKey(w: World, e: Entity, x0: number, y0: number, blockW: number, right: boolean, now: number, local: boolean, tag: string): string {
+    const h = e.hero!;
+    const cd = (k: "b" | "r") => Math.ceil((h.cooldowns[k] ?? 0) - w.time);
+    const frac = h.meter / w.data.heroes.baseline.superMax;
+    const cfgXp = w.data.talents?.xp;
+    const commander = !!w.players.find((p) => p.heroId === e.id)?.commander;
+    const talents = (["r", "b", "a", "z"] as const).map((slot) => {
+      const id = learned(w, e, slot)[0]?.id ?? "";
+      return id + (talentImgs.get(id)?.complete ? "+" : "-");
+    }).join(",");
+    return [
+      x0, y0, blockW, right, local, tag, h.dead, h.dead ? Math.ceil(h.respawnAt - w.time) : 0, cd("b"), cd("r"), frac, frac >= 1 ? Math.floor(now * 5) % 2 : 0,
+      !!cfgXp, commander, h.level, h.xp, talents, local && h.picks.length ? Math.floor(now * 3) % 3 : -1,
+    ].join("|");
+  }
 
   private drawPlayerPanel(ctx: CanvasRenderingContext2D, w: World, e: Entity, x0: number, y0: number, blockW: number, right: boolean, now: number, local: boolean, tag: string): number {
     const h = e.hero!;
@@ -612,31 +710,35 @@ export class Hud {
     const ts = w.teams[t];
     const core = w.core(t);
     const shield = !!core?.structure?.shielded && !w.isSudden();
-    let y = MARGIN_Y + 2;
-
-    coreIcon(ctx, ax(5), y + 3.5, 4.2, col, shield);
-    meter(ctx, ax(14, blockW - 14), y + 1, blockW - 14, 5, core ? core.hp / core.maxHp : 0, col);
+    const y00 = MARGIN_Y + 2;
     const ward = core?.structure?.ward ?? 0;
-    if (ward > 0 && !w.isSudden()) meter(ctx, ax(14, blockW - 14), y + 8, blockW - 14, 2, ward / w.data.structures.core.ward, "#9fe0ff");
-    y += ward > 0 && !w.isSudden() ? 15 : 12;
-
+    const sudden = w.isSudden();
     this.shownCoin[t] += (ts.resource - this.shownCoin[t]) * Math.min(1, 0.25);
     const coin = String(Math.round(this.shownCoin[t]));
     const army = `${ts.unitCount}/${w.data.units.popCap}`;
-    const cw = 8 + textWidth("×", 0.9) + 1.5 + textWidth(coin, 1.15, true);
-    const aw = 9 + textWidth("×", 0.9) + 1.5 + textWidth(army, 1.15, true);
-    let cx = ax(0, cw);
-    coinIcon(ctx, cx + 3, y + 5, 3.8);
-    cx += 8;
-    cx += times(ctx, cx, y + 1);
-    drawNum(ctx, coin, cx, y, "#ffd848", 1.15);
-    let bx = right ? ax(cw + 10, aw) : ax(cw + 10);
-    armyIcon(ctx, bx + 3.5, y + 5, 3.6, col);
-    bx += 9;
-    bx += times(ctx, bx, y + 1);
     const capped = ts.unitCount >= w.data.units.popCap;
-    drawNum(ctx, army, bx, y, capped ? "#ff8a6a" : "#ffffff", 1.15);
-    y += 16;
+    const hpFrac = core ? core.hp / core.maxHp : 0;
+    const headKey = [x0, right, col, shield, hpFrac, sudden, ward, coin, army, capped].join("|");
+    let y = this.memo(ctx, `head${t}`, headKey, x0 - 8, y00 - 6, blockW + 16, 40, (c) => {
+      let y = y00;
+      coreIcon(c, ax(5), y + 3.5, 4.2, col, shield);
+      meter(c, ax(14, blockW - 14), y + 1, blockW - 14, 5, hpFrac, col);
+      if (ward > 0 && !sudden) meter(c, ax(14, blockW - 14), y + 8, blockW - 14, 2, ward / w.data.structures.core.ward, "#9fe0ff");
+      y += ward > 0 && !sudden ? 15 : 12;
+      const cw = 8 + textWidth("×", 0.9) + 1.5 + textWidth(coin, 1.15, true);
+      const aw = 9 + textWidth("×", 0.9) + 1.5 + textWidth(army, 1.15, true);
+      let cx = ax(0, cw);
+      coinIcon(c, cx + 3, y + 5, 3.8);
+      cx += 8;
+      cx += times(c, cx, y + 1);
+      drawNum(c, coin, cx, y, "#ffd848", 1.15);
+      let bx = right ? ax(cw + 10, aw) : ax(cw + 10);
+      armyIcon(c, bx + 3.5, y + 5, 3.6, col);
+      bx += 9;
+      bx += times(c, bx, y + 1);
+      drawNum(c, army, bx, y, capped ? "#ff8a6a" : "#ffffff", 1.15);
+      return y + 16;
+    });
 
     let bxc = 0;
     for (const p of w.players) {
@@ -670,7 +772,9 @@ export class Hud {
       const r = rectPx(p.player);
       const px0 = r ? (right ? r.x + r.w - MARGIN_X - blockW : r.x + MARGIN_X) : x0;
       const py0 = r ? (r.y < 2 ? y + 2 : r.y + MARGIN_Y + 2) : y + 2;
-      const h = this.drawPlayerPanel(ctx, w, e, px0, py0, blockW, right, now, !!ui[p.player], shown.length > 1 || teamHeroes.length > 1 ? `P${p.player + 1}` : "");
+      const local = !!ui[p.player];
+      const tag = shown.length > 1 || teamHeroes.length > 1 ? `P${p.player + 1}` : "";
+      const h = this.memo(ctx, `pp${p.player}`, this.panelKey(w, e, px0, py0, blockW, right, now, local, tag), px0 - 10, py0 - 6, blockW + 20, 64, (c) => this.drawPlayerPanel(c, w, e, px0, py0, blockW, right, now, local, tag));
       if (!r) y = py0 + h;
     }
     const crossOf = (pl: number | undefined): [number, number] => {
@@ -777,10 +881,18 @@ export class Hud {
     const ph = 17;
     const x0 = right ? W - MARGIN_X - pw : MARGIN_X;
     const y0 = H - ph - 6;
+    const flash = now < o.until - 1.2;
+    const key = [x0, y0, selected, flash, o.type, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
+    this.memo(ctx, `orders${t}`, key, x0 - 6, y0 - 6, pw + 12, ph + 12, (c) => {
+      this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash);
+      return 0;
+    });
+  }
+
+  private drawOrdersBody(ctx: CanvasRenderingContext2D, x0: number, y0: number, pw: number, ph: number, cw: number, t: number, ts: World["teams"][number], o: { type: UnitType | "all"; until: number }, counts: Record<UnitType, number>, selected: UnitType | "all" | null, flash: boolean): void {
     ctx.fillStyle = INK;
     ctx.fillRect(x0 - 1, y0 - 1, pw + 2, ph + 2);
     texturedRect(ctx, "wood", x0, y0, pw, ph, "#6a4a30", 0, 0.6);
-    const flash = now < o.until - 1.2;
     UNIT_TYPES.forEach((k, i) => {
       const cx = x0 + 2 + i * cw;
       if (selected && (selected === "all" || selected === k)) {
@@ -857,7 +969,20 @@ export class Hud {
       : { title: "OUTPOSTS", items: [["RANGE", c("range")], ["BARRACKS", c("barracks")], ["FOUNDRY", c("foundry")], ["CANCEL", ""]], lit: -1, until: 0 };
   }
 
+  private crossN = 0;
+
   private drawCross(ctx: CanvasRenderingContext2D, x: number, y: number, c: Cross, right: boolean, alpha: number): void {
+    const key = [x, y, c.title, c.items.flat().join(","), c.lit, alpha].join("|");
+    const side = (i: number) => Math.max(textWidth(c.items[i][0], 0.75), c.items[i][1] ? textWidth(c.items[i][1], 0.8, true) : 0);
+    const half = Math.max(textWidth(c.title, 0.8) / 2, textWidth(c.items[0][0], 0.75) / 2, textWidth(c.items[3][0], 0.75) / 2, 9 + 4.6 + 3 + Math.max(side(1), side(2))) + 6;
+    const top = 9 + (c.items[0][1] ? 32 : 23) + 6;
+    this.memo(ctx, `cross${this.crossN++}`, key, x - half, y - top, half * 2, top + 9 + 5 + 8 + 12 + 6, (g) => {
+      this.drawCrossBody(g, x, y, c, right, alpha);
+      return 0;
+    });
+  }
+
+  private drawCrossBody(ctx: CanvasRenderingContext2D, x: number, y: number, c: Cross, right: boolean, alpha: number): void {
     ctx.save();
     ctx.globalAlpha = alpha;
     const r = 4.6;

@@ -2,6 +2,8 @@ import * as THREE from "three";
 import type { World } from "../sim/world";
 import type { Particles } from "./particles";
 import stoneUrl from "../../assets/textures/stone.png?url";
+import { FxBatch, fxBatch, FxInst } from "./fxInstances";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 export interface FxHost {
   root: THREE.Group;
@@ -131,7 +133,8 @@ export function emit(h: FxHost, o: EmitOpts): void {
 const leafGeo = new THREE.PlaneGeometry(1, 1);
 export function tumblers(h: FxHost, texes: THREE.Texture[], n: number, x: number, y: number, z: number, opts: { speed: Range; up: Range; size: Range; life: Range; dir?: { x: number; z: number }; spread?: number; floorY?: number }): void {
   for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(leafGeo, new THREE.MeshBasicMaterial({ map: texes[i % texes.length], transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, depthWrite: true }));
+    const tex = texes[i % texes.length];
+    const m = fxBatch(h.root, `leaf|${tex.uuid}`, () => new FxBatch(leafGeo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, depthWrite: true }), false, true)).spawn();
     const sz = rr(opts.size);
     m.scale.setScalar(sz);
     m.position.set(x + (Math.random() - 0.5) * 0.4, y + (Math.random() - 0.5) * 0.4, z + (Math.random() - 0.5) * 0.4);
@@ -144,7 +147,6 @@ export function tumblers(h: FxHost, texes: THREE.Texture[], n: number, x: number
     const phase = Math.random() * 6;
     const floor = opts.floorY ?? (h.world ? h.world.groundY(x, z) + 0.05 : y - 1);
     let landed = false;
-    h.root.add(m);
     let t = 0;
     h.add(m, rr(opts.life), (k, dt) => {
       t += dt;
@@ -165,7 +167,7 @@ export function tumblers(h: FxHost, texes: THREE.Texture[], n: number, x: number
           m.rotation.set(-Math.PI / 2, 0, Math.random() * 6);
         }
       }
-      (m.material as THREE.MeshBasicMaterial).opacity = k < 0.8 ? 1 : 1 - (k - 0.8) / 0.2;
+      m.opacity = k < 0.8 ? 1 : 1 - (k - 0.8) / 0.2;
     });
   }
 }
@@ -185,7 +187,10 @@ const chunkGeos = [0, 1, 2].map((s) => {
 export const SHARED_CHUNK_GEOS = new Set<THREE.BufferGeometry>(chunkGeos);
 export function chunks(h: FxHost, n: number, x: number, y: number, z: number, opts: { size: Range; speed: Range; up: Range; color?: THREE.ColorRepresentation; life?: number; dir?: { x: number; z: number }; spread?: number; tex?: THREE.Texture }): void {
   for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(chunkGeos[i % 3], new THREE.MeshLambertMaterial({ map: opts.tex ?? stoneTex, color: opts.color ?? 0xb8ab98, flatShading: true, transparent: true }));
+    const map = opts.tex ?? stoneTex;
+    const geo = chunkGeos[i % 3];
+    const m = fxBatch(h.root, `chunk|${map.uuid}|${i % 3}`, () => new FxBatch(geo, new THREE.MeshLambertMaterial({ map, flatShading: true, transparent: true }))).spawn();
+    m.color.set(opts.color ?? 0xb8ab98);
     const sz = rr(opts.size);
     m.scale.setScalar(sz);
     m.position.set(x, y, z);
@@ -197,7 +202,6 @@ export function chunks(h: FxHost, n: number, x: number, y: number, z: number, op
     let vz = Math.sin(a) * sp;
     let vy = rr(opts.up);
     const spin = (Math.random() - 0.5) * 16;
-    h.root.add(m);
     h.add(m, (opts.life ?? 1.3) * (0.8 + Math.random() * 0.4), (k, dt) => {
       vy -= 24 * dt;
       m.position.x += vx * dt;
@@ -223,15 +227,15 @@ export const SHARED_PLANE_GEOS = new Set<THREE.BufferGeometry>([planeGeo, leafGe
 const torusGeo = new THREE.TorusGeometry(1, 0.05, 4, 36);
 torusGeo.userData.model = true;
 export function shockwave(h: FxHost, _tex: THREE.Texture, x: number, y: number, z: number, normal: THREE.Vector3, r0: number, r1: number, dur: number, color: THREE.ColorRepresentation = 0xffffff, opacity = 1): void {
-  const m = new THREE.Mesh(torusGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const m = fxBatch(h.root, "shock", () => new FxBatch(torusGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))).spawn();
+  m.color.set(color);
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.clone().normalize());
   m.position.set(x, y, z);
-  h.root.add(m);
   h.add(m, dur, (k) => {
     const e = 1 - (1 - k) * (1 - k) * (1 - k);
     const r = Math.max(0.05, r0 + (r1 - r0) * e);
     m.scale.set(r, r, r * 0.5 * (1 - k * 0.6));
-    (m.material as THREE.MeshBasicMaterial).opacity = opacity * 0.85 * (1 - k * k);
+    m.opacity = opacity * 0.85 * (1 - k * k);
   });
 }
 
@@ -303,47 +307,83 @@ export function buildFissures(gy: (x: number, z: number) => number, r: number, s
   return { group, parts };
 }
 
+const FIS_KEYS = new Map<THREE.Material, string>([[FIS_MAT.crack, "fc"], [FIS_MAT.lava, "fl"], [FIS_MAT.moss, "fm"], [LAVA_CORE, "fk"], [LIP_MAT, "fp"], [MOSS_LIP, "fq"]]);
+
 export function fissures(h: FxHost, x: number, y: number, z: number, r: number, style: FissureStyle, life: number, grow = 0.25): void {
   const ground = (px: number, pz: number) => (h.world ? h.world.groundY(x + px, z + pz) : y) - y;
   const { group, parts } = buildFissures(ground, r, style);
   group.position.set(x, y, z);
-  for (const p of parts) p.o.visible = false;
-  h.root.add(group);
-  h.add(group, life, (k) => {
-    const t = k * life;
-    for (const p of parts) {
-      const on = t >= grow * (p.d / Math.max(0.1, r));
-      p.o.visible = on;
+  group.updateMatrixWorld(true);
+  const pieces: { inst: FxInst; s: THREE.Vector3; y: number; at: number }[] = [];
+  const reveal = grow / Math.max(0.1, r);
+  for (const p of parts) {
+    for (const o of p.o.children) {
+      if (!(o instanceof THREE.Mesh)) continue;
+      const mat = o.material as THREE.Material;
+      const key = FIS_KEYS.get(mat) ?? "fx";
+      const inst = fxBatch(h.root, key, () => new FxBatch(boxGeo, mat.clone())).spawn();
+      const sc = new THREE.Vector3();
+      o.matrixWorld.decompose(inst.position, inst.quaternion, sc);
+      inst.scale.set(0, 0, 0);
+      pieces.push({ inst, s: sc, y: inst.position.y, at: reveal * p.d });
     }
-    group.position.y = y - (k > 0.8 ? ((k - 0.8) / 0.2) * 0.25 : 0);
+  }
+  const root = new THREE.Group();
+  h.root.add(root);
+  h.add(root, life, (k) => {
+    const t = k * life;
+    const drop = k > 0.8 ? ((k - 0.8) / 0.2) * 0.25 : 0;
+    for (const q of pieces) {
+      if (k >= 1) q.inst.removeFromParent();
+      else if (t >= q.at) q.inst.scale.copy(q.s);
+      else q.inst.scale.set(0, 0, 0);
+      q.inst.position.y = q.y - drop;
+    }
   });
 }
 
 export const DECAL_3D = new Map<THREE.Texture, "sigil" | "ring" | "gear" | "smoke">();
 
-export function sigil3d(h: FxHost, x: number, y: number, z: number, r: number, life: number, color: THREE.ColorRepresentation, spin: number, grow: number, opacity = 1): void {
-  const g = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+let sigilShape: THREE.BufferGeometry | null = null;
+function sigilGeo(): THREE.BufferGeometry {
+  if (sigilShape) return sigilShape;
+  const parts: THREE.Object3D[] = [];
   for (const [rr, th] of [[1, 1.4], [0.72, 1]] as const) {
-    const ring = new THREE.Mesh(torusGeo, mat);
+    const ring = new THREE.Mesh(torusGeo);
     ring.rotation.x = Math.PI / 2;
     ring.scale.set(rr, rr, 0.6 * th);
-    g.add(ring);
+    parts.push(ring);
   }
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
-    const b = new THREE.Mesh(boxGeo, mat);
+    const b = new THREE.Mesh(boxGeo);
     b.scale.set(0.24, 0.03, 0.06);
     b.position.set(Math.cos(a) * 0.86, 0, Math.sin(a) * 0.86);
     b.rotation.y = -a;
-    g.add(b);
+    parts.push(b);
   }
   for (let i = 0; i < 3; i++) {
-    const b = new THREE.Mesh(boxGeo, mat);
+    const b = new THREE.Mesh(boxGeo);
     b.scale.set(1.4, 0.03, 0.04);
     b.rotation.y = (i / 3) * Math.PI;
-    g.add(b);
+    parts.push(b);
   }
+  const geos = parts.map((o) => {
+    const m = o as THREE.Mesh;
+    m.updateMatrix();
+    const q = m.geometry.clone().applyMatrix4(m.matrix);
+    for (const k of Object.keys(q.attributes)) if (k !== "position" && k !== "normal" && k !== "uv") q.deleteAttribute(k);
+    return q;
+  });
+  sigilShape = mergeGeometries(geos, false)!;
+  sigilShape.userData.model = true;
+  return sigilShape;
+}
+
+export function sigil3d(h: FxHost, x: number, y: number, z: number, r: number, life: number, color: THREE.ColorRepresentation, spin: number, grow: number, opacity = 1): void {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  g.add(new THREE.Mesh(sigilGeo(), mat));
   g.position.set(x, y + 0.12, z);
   h.root.add(g);
   h.add(g, life, (k) => {
@@ -389,7 +429,7 @@ function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: num
   });
 }
 
-export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): THREE.Mesh | null {
+export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): FxInst | null {
   const fis = FISSURE_TEX.get(tex);
   if (fis) {
     fissures(h, x, y, z, radius, fis, Math.max(dur, 1.2), opts.grow ?? 0.25);
@@ -408,13 +448,14 @@ export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: nu
     shockwave(h, tex, x, y + 0.15, z, new THREE.Vector3(0, 1, 0), radius * 0.15, radius, Math.max(0.35, dur), d3 === "smoke" ? 0x8a8a90 : opts.color ?? 0xffe0c0, opts.opacity ?? 0.9);
     return null;
   }
-  const m = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({
-    map: tex, color: opts.color ?? 0xffffff, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3,
-    blending: opts.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-  }));
+  const add = !!opts.additive;
+  const m = fxBatch(h.root, `pdecal|${tex.uuid}|${add ? 1 : 0}`, () => new FxBatch(planeGeo, new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3,
+    blending: add ? THREE.AdditiveBlending : THREE.NormalBlending,
+  }), false, !add)).spawn();
+  m.color.set(opts.color ?? 0xffffff);
   m.rotation.set(-Math.PI / 2, 0, opts.rot ?? Math.random() * Math.PI * 2);
   m.position.set(x, y + 0.08, z);
-  h.root.add(m);
   const rz = m.rotation.z;
   const op = opts.opacity ?? 1;
   const grow = opts.grow ?? 0;
@@ -424,7 +465,7 @@ export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: nu
     const e = 1 - (1 - g) * (1 - g);
     m.scale.set(radius * 2 * e * (opts.stretch ?? 1), radius * 2 * e, 1);
     m.rotation.z = rz + k * (opts.spin ?? 0);
-    (m.material as THREE.MeshBasicMaterial).opacity = op * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3);
+    m.opacity = op * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3);
   });
   return m;
 }

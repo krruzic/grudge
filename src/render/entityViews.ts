@@ -8,25 +8,126 @@ import type { Entity } from "../sim/types";
 import type { HeroModels } from "./heroModels";
 import type { StructureModels } from "./structureModels";
 import { structurePlaceholder, unitPlaceholder } from "./kit";
-import { blobShadow } from "./placeholders";
+import { blobBatch, blobShadow, footRingBatch } from "./placeholders";
 import type { CombatFx } from "./combatFx";
 import type { UnitModels } from "./unitModels";
+import { UnitBatches } from "./unitBatch";
+import { MeshBatches } from "./meshBatch";
+import { StructureBatch } from "./structureBatch";
+import { SpriteBatches } from "./spriteBatch";
+import { FxBatch, type FxInst } from "./fxInstances";
 import { ballistaMesh, syncBallista } from "./ballista";
 import { drawText, fontReady, textWidth } from "../ui/font";
 import { padButton } from "../ui/hud";
 
 interface Bar {
   group: THREE.Group;
-  fg: THREE.Sprite;
-  ghost: THREE.Sprite;
   width: number;
   color: THREE.Color;
+  fgColor: THREE.Color;
   frac: number;
   ghostFrac: number;
   holdUntil: number;
 }
 
+const BAR_MAX = 1536;
+class BarBatch {
+  readonly mesh: THREE.Mesh;
+  private rect: THREE.InstancedBufferAttribute;
+  private center: THREE.InstancedBufferAttribute;
+  private col: THREE.InstancedBufferAttribute;
+  private geo: THREE.InstancedBufferGeometry;
+  private n = 0;
+  private v = new THREE.Vector3();
+
+  constructor() {
+    const base = new THREE.PlaneGeometry(1, 1);
+    this.geo = new THREE.InstancedBufferGeometry();
+    this.geo.index = base.index;
+    this.geo.setAttribute("position", base.getAttribute("position"));
+    this.center = new THREE.InstancedBufferAttribute(new Float32Array(BAR_MAX * 3), 3);
+    this.rect = new THREE.InstancedBufferAttribute(new Float32Array(BAR_MAX * 3), 3);
+    this.col = new THREE.InstancedBufferAttribute(new Float32Array(BAR_MAX * 4), 4);
+    for (const a of [this.center, this.rect, this.col]) a.setUsage(THREE.DynamicDrawUsage);
+    this.geo.setAttribute("iCenter", this.center);
+    this.geo.setAttribute("iRect", this.rect);
+    this.geo.setAttribute("iColor", this.col);
+    this.geo.instanceCount = 0;
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: `attribute vec3 iCenter;
+attribute vec3 iRect;
+attribute vec4 iColor;
+varying vec4 vCol;
+void main() {
+  vCol = iColor;
+  vec4 mv = modelViewMatrix * vec4(iCenter, 1.0);
+  mv.x += iRect.x + (position.x + 0.5) * iRect.y;
+  mv.y += position.y * iRect.z;
+  gl_Position = projectionMatrix * mv;
+}`,
+      fragmentShader: `varying vec4 vCol;
+void main() {
+  gl_FragColor = vCol;
+  #include <colorspace_fragment>
+}`,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    });
+    this.mesh = new THREE.Mesh(this.geo, mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 20;
+    this.mesh.matrixAutoUpdate = false;
+  }
+
+  begin(): void {
+    this.n = 0;
+  }
+
+  private quad(x: number, y: number, z: number, x0: number, w: number, h: number, c: THREE.Color, a: number): void {
+    if (this.n >= BAR_MAX) return;
+    const i = this.n++;
+    this.center.array[i * 3] = x;
+    this.center.array[i * 3 + 1] = y;
+    this.center.array[i * 3 + 2] = z;
+    this.rect.array[i * 3] = x0;
+    this.rect.array[i * 3 + 1] = w;
+    this.rect.array[i * 3 + 2] = h;
+    this.col.array[i * 4] = c.r;
+    this.col.array[i * 4 + 1] = c.g;
+    this.col.array[i * 4 + 2] = c.b;
+    this.col.array[i * 4 + 3] = a;
+  }
+
+  add(bar: Bar): void {
+    const m = bar.group.matrixWorld.elements;
+    const k = Math.hypot(m[0], m[1], m[2]);
+    const x = m[12];
+    const y = m[13];
+    const z = m[14];
+    const w = bar.width * k;
+    this.quad(x, y, z, -(w + 0.08 * k) / 2, w + 0.08 * k, 0.2 * k, BAR_BG, 0.85);
+    this.quad(x, y, z, -w / 2, Math.max(0.001, w * bar.ghostFrac), 0.13 * k, BAR_GHOST, 1);
+    this.quad(x, y, z, -w / 2, Math.max(0.001, w * bar.frac), 0.13 * k, bar.fgColor, 1);
+  }
+
+  end(): void {
+    this.geo.instanceCount = this.n;
+    this.mesh.visible = this.n > 0;
+    for (const a of [this.center, this.rect, this.col]) {
+      a.clearUpdateRanges();
+      a.addUpdateRange(0, this.n * a.itemSize);
+      a.needsUpdate = true;
+    }
+  }
+}
+const BAR_BG = new THREE.Color(0x101010);
+const BAR_GHOST = new THREE.Color(0xfff0d0);
+
 interface View {
+  batched?: THREE.SkinnedMesh;
+  blobs?: THREE.Mesh[];
+  rings?: THREE.Mesh[];
   dome?: THREE.Mesh;
   gear?: THREE.Sprite;
   auraT?: number;
@@ -127,7 +228,7 @@ export function disposeTree(root: THREE.Object3D, shared: Set<THREE.Material> = 
     const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
     if (!m) return;
     for (const mat of Array.isArray(m) ? m : [m]) {
-      if (shared.has(mat)) continue;
+      if (shared.has(mat) || mat.userData.keep) continue;
       const map = (mat as THREE.SpriteMaterial).map;
       if (map?.userData.owned) map.dispose();
       mat.dispose();
@@ -327,21 +428,7 @@ const rankTexes = [1, 2, 3].map(rankTex);
 function makeBar(width: number, color: THREE.Color, y: number): Bar {
   const group = new THREE.Group();
   group.position.y = y;
-  const bg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x101010, depthTest: false, transparent: true, opacity: 0.85 }));
-  bg.scale.set(width + 0.08, 0.2, 1);
-  bg.renderOrder = 20;
-  const fg = new THREE.Sprite(new THREE.SpriteMaterial({ color, depthTest: false }));
-  fg.center.set(0, 0.5);
-  fg.position.x = -width / 2;
-  fg.scale.set(width, 0.13, 1);
-  fg.renderOrder = 22;
-  const ghost = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xfff0d0, depthTest: false }));
-  ghost.center.set(0, 0.5);
-  ghost.position.x = -width / 2;
-  ghost.scale.set(width, 0.13, 1);
-  ghost.renderOrder = 21;
-  group.add(bg, ghost, fg);
-  return { group, fg, ghost, width, color: color.clone(), frac: 1, ghostFrac: 1, holdUntil: 0 };
+  return { group, width, color: color.clone(), fgColor: color.clone(), frac: 1, ghostFrac: 1, holdUntil: 0 };
 }
 
 function setBar(bar: Bar, frac: number, dt = 0, time = 0, pulse = false): void {
@@ -350,11 +437,8 @@ function setBar(bar: Bar, frac: number, dt = 0, time = 0, pulse = false): void {
   if (f > bar.ghostFrac) bar.ghostFrac = f;
   bar.frac = f;
   if (time >= bar.holdUntil) bar.ghostFrac = Math.max(f, bar.ghostFrac - dt * 0.8);
-  bar.fg.scale.x = Math.max(0.001, bar.width * f);
-  bar.ghost.scale.x = Math.max(0.001, bar.width * bar.ghostFrac);
-  const m = bar.fg.material;
-  if (pulse && f < 0.3 && f > 0) m.color.copy(bar.color).lerp(red, 0.5 + 0.5 * Math.sin(time * 14));
-  else m.color.copy(bar.color);
+  if (pulse && f < 0.3 && f > 0) bar.fgColor.copy(bar.color).lerp(red, 0.5 + 0.5 * Math.sin(time * 14));
+  else bar.fgColor.copy(bar.color);
 }
 
 const silMats = new Map<string, THREE.MeshBasicMaterial>();
@@ -383,6 +467,57 @@ function silMat(team: number, skinned: boolean): THREE.MeshBasicMaterial {
   return m;
 }
 
+interface SilEntry { proxy: THREE.Mesh; src: THREE.Mesh }
+export const silScene = new THREE.Scene();
+silScene.matrixWorldAutoUpdate = false;
+silScene.matrixAutoUpdate = false;
+export const SIL_ORDER = 1000;
+const silList: SilEntry[] = [];
+
+export function syncSilhouettes(scene: THREE.Object3D): void {
+  for (let i = silList.length - 1; i >= 0; i--) {
+    const { proxy, src } = silList[i];
+    let o: THREE.Object3D | null = src;
+    let vis = true;
+    while (o && o !== scene) {
+      if (!o.visible) vis = false;
+      o = o.parent;
+    }
+    if (!o) {
+      silScene.remove(proxy);
+      silList.splice(i, 1);
+      continue;
+    }
+    proxy.visible = vis;
+    if (!vis) continue;
+    proxy.matrixWorld.copy(src.matrixWorld);
+    if (proxy instanceof THREE.SkinnedMesh && src instanceof THREE.SkinnedMesh) proxy.bindMatrixInverse.copy(src.bindMatrixInverse);
+  }
+}
+
+function batchable(body: THREE.Object3D): THREE.SkinnedMesh | null {
+  const meshes: THREE.Mesh[] = [];
+  body.traverse((o) => {
+    if (o instanceof THREE.Mesh) meshes.push(o);
+  });
+  const m = meshes[0];
+  if (meshes.length !== 1 || !(m instanceof THREE.SkinnedMesh) || Array.isArray(m.material) || m.material.name !== "merged") return null;
+  return m;
+}
+
+function batchMaterial(src: THREE.SkinnedMesh, team: number): THREE.Material {
+  const base = src.material as THREE.MeshLambertMaterial;
+  const m = base.clone();
+  m.onBeforeCompile = base.onBeforeCompile;
+  m.customProgramCacheKey = base.customProgramCacheKey;
+  m.stencilWrite = true;
+  m.stencilRef = 1;
+  m.stencilFunc = THREE.AlwaysStencilFunc;
+  m.stencilZPass = THREE.ReplaceStencilOp;
+  m.userData.team = team;
+  return m;
+}
+
 export function markSilhouette(obj: THREE.Object3D, team: number): void {
   const meshes: THREE.Mesh[] = [];
   obj.traverse((o) => {
@@ -394,8 +529,10 @@ export function markSilhouette(obj: THREE.Object3D, team: number): void {
     if (proxy instanceof THREE.SkinnedMesh && o instanceof THREE.SkinnedMesh) proxy.bind(o.skeleton, o.bindMatrix);
     proxy.userData.silProxy = true;
     proxy.frustumCulled = o.frustumCulled;
-    proxy.layers.set(1 + team);
-    o.add(proxy);
+    proxy.matrixAutoUpdate = false;
+    proxy.renderOrder = SIL_ORDER;
+    silScene.add(proxy);
+    silList.push({ proxy, src: o });
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of mats) {
       m.stencilWrite = true;
@@ -411,7 +548,8 @@ export class EntityViews {
   quiet = false;
   private views = new Map<number, View>();
   private rings = new Map<number, THREE.Mesh>();
-  private padMarkers: THREE.Mesh[] = [];
+  private padMarkers: FxInst[] = [];
+  private padBatch = new FxBatch(new THREE.RingGeometry(1.7, 2.0, 24), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide }), false, true);
   private padHints: THREE.Sprite[] = [];
   private shopHints: THREE.Sprite[] = [];
   humans: boolean[] = [];
@@ -429,19 +567,17 @@ export class EntityViews {
     private units: UnitModels,
     private playerColors: THREE.Color[] = [],
   ) {
+    this.structBatch = new StructureBatch(structures, (t) => teamColors[t] ?? teamColors[0]);
     if (silColors !== teamColors) {
       silColors = teamColors;
       silMats.clear();
     }
     for (const p of world.pads) {
-      const m = new THREE.Mesh(
-        new THREE.RingGeometry(1.7, 2.0, 24),
-        new THREE.MeshBasicMaterial({ color: 0xffd060, transparent: true, opacity: 0.0, depthWrite: false, side: THREE.DoubleSide }),
-      );
+      const m = this.padBatch.spawn();
+      m.color.set(0xffd060);
+      m.opacity = 0;
       m.rotation.x = -Math.PI / 2;
       m.position.set(p.x, world.groundY(p.x, p.z) + 0.3, p.z);
-      m.renderOrder = 3;
-      this.root.add(m);
       this.padMarkers.push(m);
       const hint = new THREE.Sprite(HINTS.build);
       hint.renderOrder = 33;
@@ -471,12 +607,108 @@ export class EntityViews {
     for (const v of this.views.values()) disposeTree(v.root);
     for (const c of this.corpses) disposeTree(c.v.root);
     for (const r of this.rings.values()) r.geometry.dispose();
+    silScene.remove(this.batches.silRoot);
+    this.batches.dispose();
+    this.statics.dispose();
+    this.structBatch.dispose();
+    this.sprites.dispose();
+    this.padBatch.mesh.geometry.dispose();
+    (this.padBatch.mesh.material as THREE.Material).dispose();
+    this.bars.mesh.geometry.dispose();
+    this.blobs.dispose();
+    this.footRings.dispose();
+    (this.footRings.material as THREE.Material).dispose();
     this.views.clear();
     this.corpses = [];
   }
 
     private hidden: THREE.Object3D[] = [];
   private sphere = new THREE.Sphere();
+  private bars = new BarBatch();
+  private batches = new UnitBatches();
+  private statics = new MeshBatches();
+  private sprites = new SpriteBatches();
+  private spriteSeen = new WeakSet<THREE.Sprite>();
+  private spriteScan = 0;
+  private structBatch: StructureBatch;
+  private blobs = blobBatch(1024);
+  private footRings = footRingBatch(16);
+  readonly extras = new THREE.Group();
+
+  fillUnits(): void {
+    if (!this.batches.root.parent) {
+      this.padBatch.mesh.renderOrder = 3;
+      this.extras.add(this.batches.root, this.statics.root, this.structBatch.root, this.bars.mesh, this.blobs, this.sprites.root, this.padBatch.mesh, this.footRings);
+      silScene.add(this.batches.silRoot);
+    }
+    this.batches.fill(this.extras.parent ?? this.root);
+    this.structBatch.fillFrame(this.extras.parent ?? this.root);
+    this.padBatch.flush();
+    if (this.spriteScan++ % 10 === 0) {
+      this.root.traverse((o) => {
+        if (!(o instanceof THREE.Sprite) || this.spriteSeen.has(o)) return;
+        this.spriteSeen.add(o);
+        this.sprites.add(o);
+      });
+    }
+  }
+
+  private addBlobs(v: View, n: number): number {
+    if (!v.blobs || !v.root.visible || !v.root.parent) return n;
+    for (const m of v.blobs) {
+      if (n >= 1024) return n;
+      let o: THREE.Object3D | null = m;
+      while (o && o !== v.root && (o.visible || o.userData.batchHidden)) o = o.parent;
+      if (o !== v.root) continue;
+      this.blobs.setMatrixAt(n++, m.matrixWorld);
+    }
+    return n;
+  }
+
+  fillView(camera: THREE.Camera): void {
+    const b = this.bars;
+    b.begin();
+    if (!this.quiet) {
+      for (const v of this.views.values()) {
+        if (!v.root.visible || !v.root.parent) continue;
+        if (v.bar.group.visible && v.bar.group.parent) b.add(v.bar);
+        if (v.work && v.work.group.visible && v.work.group.parent) b.add(v.work);
+      }
+    }
+    b.end();
+    this.statics.fill(this.extras.parent ?? this.root);
+    this.batches.view();
+    this.structBatch.fillView();
+    this.sprites.fill(camera);
+    let n = 0;
+    const bl = this.blobs;
+    for (const v of this.views.values()) n = this.addBlobs(v, n);
+    for (const c of this.corpses) n = this.addBlobs(c.v, n);
+    let rn = 0;
+    const fr = this.footRings;
+    for (const v of this.views.values()) {
+      if (!v.rings || !v.root.visible || !v.root.parent) continue;
+      for (const m of v.rings) {
+        if (rn >= 16) break;
+        let o: THREE.Object3D | null = m;
+        while (o && o !== v.root && (o.visible || o.userData.batchHidden)) o = o.parent;
+        if (o !== v.root) continue;
+        fr.setMatrixAt(rn, m.matrixWorld);
+        fr.setColorAt(rn, (m.material as THREE.MeshBasicMaterial).color);
+        rn++;
+      }
+    }
+    fr.count = rn;
+    fr.visible = rn > 0;
+    fr.instanceMatrix.needsUpdate = true;
+    fr.instanceColor!.needsUpdate = true;
+    bl.count = n;
+    bl.visible = n > 0;
+    bl.instanceMatrix.clearUpdateRanges();
+    bl.instanceMatrix.addUpdateRange(0, n * 16);
+    bl.instanceMatrix.needsUpdate = true;
+  }
+
   cullTo(frustum: THREE.Frustum): void {
     for (const o of this.root.children) {
       if (!o.visible) continue;
@@ -557,7 +789,9 @@ export class EntityViews {
       }
       root.add(g, blobShadow(e.radius * 1.2));
       g.scale.setScalar((inst ? 1.3 : e.unit.type === "heavy" ? 1.45 : 1.4) * (e.neutral ? 1.55 : 1));
-      markSilhouette(g, e.team);
+      const skin = inst ? batchable(inst.body) : null;
+      if (skin) view.batched = skin;
+      else markSilhouette(g, e.team);
       bar = e.neutral ? makeBar(2, team, 4.4) : makeBar(e.unit.type === "heavy" ? 1.1 : 0.8, team, e.unit.type === "heavy" ? 2.3 : 1.7);
       bar.group.visible = !!e.neutral;
     } else {
@@ -608,6 +842,38 @@ export class EntityViews {
       weapon: view.weapon, spin: view.spin, level2: view.level2, shield: view.shield, blockFx: view.blockFx, work: view.work,
       mats, flash: 0, joltX: 0, joltZ: 0, freeze: 0, stepDist: 0,
     };
+    root.traverse((o) => {
+      if (o instanceof THREE.Mesh && o.userData.footRing && !o.userData.batchHidden) {
+        o.visible = false;
+        o.userData.batchHidden = true;
+        (v.rings ??= []).push(o);
+        return;
+      }
+      if (!(o instanceof THREE.Mesh) || !o.userData.blob) return;
+      o.layers.set(31);
+      o.visible = false;
+      o.userData.batchHidden = true;
+      (v.blobs ??= []).push(o);
+    });
+    if (e.structure) {
+      const flash = () => v.flash > 0;
+      const done = [...this.structBatch.add(body, e.team, flash), ...this.statics.addTree(body, `${e.team}`, flash, (m) => !m.userData.structKind && !(m.material as THREE.Material).transparent)];
+      const used = new Set(done.map((m) => m.material));
+      v.mats = v.mats.filter((m) => !used.has(m));
+      let meshes = 0;
+      body.traverse((o) => {
+        if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) meshes++;
+      });
+      if (meshes === done.length) {
+        body.visible = false;
+        body.userData.batchHidden = true;
+      }
+    }
+    if (view.batched) {
+      const sm = view.batched;
+      const tm = e.team;
+      this.batches.add(sm, v.body, `${sm.geometry.uuid}|${tm}`, () => ({ material: batchMaterial(sm, tm), sil: silMat(tm, true).clone() }), () => v.flash > 0);
+    }
     if (e.unit) this.fx.spawnFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
     return v;
   }
@@ -1070,16 +1336,18 @@ export class EntityViews {
     v.bar.group.visible = e.hp < e.maxHp;
     if (u.rank !== (v.rank ?? 0)) {
       v.rank = u.rank;
-      if (!v.badge) {
-        v.badge = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true }));
+      if (v.badge) {
+        v.root.remove(v.badge);
+        v.badge.material.dispose();
+        v.badge = undefined;
+      }
+      if (u.rank > 0) {
+        v.badge = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true, map: rankTexes[Math.min(3, u.rank) - 1] }));
         v.badge.renderOrder = 23;
         v.badge.scale.set(0.6, 0.6, 1);
         v.badge.position.y = v.bar.group.position.y + 0.32;
         v.root.add(v.badge);
       }
-      v.badge.material.map = rankTexes[Math.min(3, u.rank) - 1];
-      v.badge.material.needsUpdate = true;
-      v.badge.visible = u.rank > 0;
     }
     if (v.mixer) {
       if (u.attackAnimAt !== v.lastAttack && w.time - u.attackAnimAt < 0.3) {
@@ -1133,7 +1401,7 @@ export class EntityViews {
       if (building) {
         setBar(v.work, st.progress ?? 0, 1 / 60, time);
         const idle = !st.ready && builderRate(w, e) <= 0;
-        v.work.fg.material.color.set(idle && Math.floor(time * 3) % 2 === 0 ? 0x806020 : 0xffd040);
+        v.work.fgColor.set(idle && Math.floor(time * 3) % 2 === 0 ? 0x806020 : 0xffd040);
       }
     }
     if (st.siege) {
@@ -1182,8 +1450,7 @@ export class EntityViews {
     const w = this.world;
     const heroes = w.entities.filter((e) => e.hero && e.alive);
     w.pads.forEach((p, i) => {
-      const m = this.padMarkers[i];
-      const mat = m.material as THREE.MeshBasicMaterial;
+      const mat = this.padMarkers[i];
       let near: Entity | undefined;
       for (const h of heroes) {
         if (Math.hypot(h.transform.pos.x - p.x, h.transform.pos.z - p.z) <= w.data.structures.padRadius) near = h;
@@ -1202,7 +1469,7 @@ export class EntityViews {
       } else {
         mat.opacity = 0;
       }
-      m.visible = mat.opacity > 0.01;
+      if (mat.opacity <= 0.01) mat.opacity = 0;
       const hint = this.padHints[i];
       const human = !!near && !!this.humans[near.hero!.player];
       hint.visible = this.hints && !!buildable && human && !this.menus[near!.hero!.player];

@@ -2,11 +2,13 @@ import woodUrl from "../../assets/textures/wood.png?url";
 import blockUrl from "../../assets/textures/wallblock.png?url";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
 import { composite, ENGINEER, FX, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
 import type { FxHost } from "./fxParts";
 import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
 import { buildFissures } from "./fxParts";
+import { SpriteBatches } from "./spriteBatch";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -281,11 +283,148 @@ function free(root: THREE.Object3D): void {
   });
 }
 
+type GrowU = { uGrowT: { value: number }; uGrowIn: { value: THREE.Vector2 }; uGrowMul: { value: THREE.Vector2 }; uSway: { value: THREE.Vector2 } };
+const GROW_HEAD = "attribute vec3 aGrowCenter;\nattribute vec2 aGrowDelay;\nuniform float uGrowT;\nuniform vec2 uGrowIn;\nuniform vec2 uGrowMul;\nuniform vec2 uSway;\n";
+const GROW_BODY = `
+float gT = uGrowT - aGrowDelay.x;
+float gK = gT / 0.3 - 1.0;
+float gE = gT <= 0.0 ? 0.001 : gT >= 0.3 ? 1.0 : 1.0 + 2.7 * gK * gK * gK + 1.7 * gK * gK;
+vec2 gS = max(vec2(0.001), gE * uGrowIn) * uGrowMul;
+float gC = cos(aGrowDelay.y);
+float gN = sin(aGrowDelay.y);
+vec3 gD = transformed - aGrowCenter;
+gD = vec3(gC * gD.x - gN * gD.z, gD.y, gN * gD.x + gC * gD.z) * vec3(gS.x, gS.y, gS.x);
+float gA = uSway.x * sin(uSway.y + aGrowCenter.x);
+gD.xy = vec2(cos(gA) * gD.x - sin(gA) * gD.y, sin(gA) * gD.x + cos(gA) * gD.y);
+transformed = aGrowCenter + vec3(gC * gD.x + gN * gD.z, gD.y, -gN * gD.x + gC * gD.z);
+`;
+function growMat(base: THREE.Material, u: GrowU): THREE.Material {
+  const m = base.clone();
+  m.onBeforeCompile = (s) => {
+    Object.assign(s.uniforms, u);
+    s.vertexShader = GROW_HEAD + s.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n" + GROW_BODY);
+  };
+  m.customProgramCacheKey = () => "grow";
+  return m;
+}
+type Piece = { mesh: THREE.Mesh; c?: THREE.Vector3; d?: number; yaw?: number };
+function mergeInto(parent: THREE.Object3D, pieces: Piece[], u?: GrowU): void {
+  parent.updateMatrixWorld(true);
+  const inv = parent.matrixWorld.clone().invert();
+  const by = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  for (const p of pieces) {
+    const src = p.mesh.geometry;
+    const geo = src.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, p.mesh.matrixWorld));
+    if (!KEEP_GEO.has(src) && !src.userData.model) src.dispose();
+    p.mesh.removeFromParent();
+    if (u) {
+      const n = geo.getAttribute("position").count;
+      const c = new Float32Array(n * 3);
+      const d = new Float32Array(n * 2);
+      for (let i = 0; i < n; i++) {
+        c[i * 3] = p.c!.x;
+        c[i * 3 + 1] = p.c!.y;
+        c[i * 3 + 2] = p.c!.z;
+        d[i * 2] = p.d!;
+        d[i * 2 + 1] = p.yaw!;
+      }
+      geo.setAttribute("aGrowCenter", new THREE.BufferAttribute(c, 3));
+      geo.setAttribute("aGrowDelay", new THREE.BufferAttribute(d, 2));
+    }
+    const mat = p.mesh.material as THREE.Material;
+    const list = by.get(mat) ?? [];
+    list.push(geo);
+    by.set(mat, list);
+  }
+  for (const [mat, geos] of by) {
+    const merged = mergeGeometries(geos.every((q) => q.index) ? geos : geos.map((q) => (q.index ? q.toNonIndexed() : q)))!;
+    merged.computeBoundingSphere();
+    if (u) merged.boundingSphere!.radius += 0.6;
+    parent.add(new THREE.Mesh(merged, u ? growMat(mat, u) : mat));
+  }
+}
+const WALL_CELLS = 64;
+const WALL_HIDDEN = -100;
+const WALL_HEAD = `attribute vec4 aCellO;\nuniform vec2 uCell[${WALL_CELLS}];\n`;
+const WALL_NORMAL = `
+vec2 wN = uCell[int(aCellO.w)];
+objectNormal.xy = vec2(cos(wN.y) * objectNormal.x - sin(wN.y) * objectNormal.y, sin(wN.y) * objectNormal.x + cos(wN.y) * objectNormal.y);
+`;
+const WALL_BODY = `
+vec2 wC = uCell[int(aCellO.w)];
+vec3 wD = transformed - aCellO.xyz;
+wD.xy = vec2(cos(wC.y) * wD.x - sin(wC.y) * wD.y, sin(wC.y) * wD.x + cos(wC.y) * wD.y);
+transformed = wC.x < ${WALL_HIDDEN / 2}.0 ? aCellO.xyz : aCellO.xyz + vec3(0.0, wC.x, 0.0) + wD;
+`;
+function wallMat(base: THREE.Material, u: { value: Float32Array }): THREE.Material {
+  const m = base.clone();
+  m.onBeforeCompile = (s) => {
+    s.uniforms.uCell = u;
+    s.vertexShader = WALL_HEAD + s.vertexShader
+      .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\n" + WALL_NORMAL)
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\n" + WALL_BODY);
+  };
+  m.customProgramCacheKey = () => "wallcells";
+  return m;
+}
+function mergeWall(g: THREE.Group, cells: THREE.Object3D[]): void {
+  const u = { value: new Float32Array(WALL_CELLS * 2) };
+  for (let k = 0; k < cells.length; k++) u.value[k * 2] = WALL_HIDDEN;
+  g.userData.cellU = u;
+  g.userData.cells = cells;
+  const by = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  cells.forEach((cell, k) => {
+    cell.updateMatrixWorld(true);
+    for (const mesh of meshesOf(cell)) {
+      const geo = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+      if (!KEEP_GEO.has(mesh.geometry)) mesh.geometry.dispose();
+      const n = geo.getAttribute("position").count;
+      const o = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) {
+        o[i * 4] = cell.position.x;
+        o[i * 4 + 1] = cell.position.y;
+        o[i * 4 + 2] = cell.position.z;
+        o[i * 4 + 3] = k;
+      }
+      geo.setAttribute("aCellO", new THREE.BufferAttribute(o, 4));
+      const mat = mesh.material as THREE.Material;
+      const list = by.get(mat) ?? [];
+      list.push(geo);
+      by.set(mat, list);
+    }
+    cell.clear();
+  });
+  for (const [mat, geos] of by) {
+    const merged = mergeGeometries(geos)!;
+    for (const q of geos) q.dispose();
+    merged.computeBoundingSphere();
+    merged.boundingSphere!.radius += 0.5;
+    g.add(new THREE.Mesh(merged, wallMat(mat, u)));
+  }
+}
+function syncWall(o: THREE.Object3D): void {
+  const a = (o.userData.cellU as { value: Float32Array }).value;
+  (o.userData.cells as THREE.Object3D[]).forEach((c, k) => {
+    a[k * 2] = c.visible ? c.position.y - c.userData.baseY : WALL_HIDDEN;
+    a[k * 2 + 1] = c.rotation.z;
+  });
+}
+function mergeFlat(parent: THREE.Object3D): void {
+  mergeInto(parent, meshesOf(parent).map((mesh) => ({ mesh })));
+  for (const c of [...parent.children]) if (!(c as THREE.Mesh).isMesh && !c.children.length) parent.remove(c);
+}
+function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  root.traverse((o) => { if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh); });
+  return out;
+}
+
 export class HazardViews {
   readonly root = new THREE.Group();
   private traps = new Map<number, THREE.Object3D>();
   private zones = new Map<number, THREE.Object3D>();
   private mods = new Map<number, THREE.Object3D>();
+  private sprites = new SpriteBatches();
 
   private now = 0;
 
@@ -295,9 +434,16 @@ export class HazardViews {
     this.zones.clear();
     this.mods.clear();
     this.dying = [];
+    this.sprites.dispose();
   }
 
-  constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {}
+  constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {
+    this.root.add(this.sprites.root);
+  }
+
+  fillView(camera: THREE.Camera): void {
+    this.sprites.fill(camera);
+  }
 
   private snareMesh(team: number, r: number): THREE.Object3D {
     const g = new THREE.Group();
@@ -374,7 +520,13 @@ export class HazardViews {
     decal.visible = false;
     g.add(decal);
     const gy = (x: number, z: number) => this.world.groundY(this.cx + x, this.cz + z) - this.cy;
-    if (style === "lava" || style === "crater" || style === "sinkhole") g.add(buildFissures(gy, r * 0.9, style === "lava" ? "lava" : "crack").group);
+    if (style === "lava" || style === "crater" || style === "sinkhole") {
+      const fis = buildFissures(gy, r * 0.9, style === "lava" ? "lava" : "crack").group;
+      g.add(fis);
+      mergeInto(fis, meshesOf(fis).map((mesh) => ({ mesh })));
+      for (const s of [...fis.children]) if (!(s as THREE.Mesh).isMesh) fis.remove(s);
+    }
+    const grows: { o: THREE.Object3D; d: number }[] = [];
     const scatter = (n: number, make: () => THREE.Mesh, lift = 0) => {
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2;
@@ -389,9 +541,7 @@ export class HazardViews {
     if (style === "bramble") {
       decal.material = new THREE.MeshBasicMaterial({ map: BRAMBLE_DECAL, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
       const grow = (o: THREE.Object3D, x: number, z: number) => {
-        o.userData.delay = (Math.hypot(x, z) / r) * 0.55 + Math.random() * 0.1;
-        o.userData.grow = true;
-        o.scale.setScalar(0.001);
+        grows.push({ o, d: (Math.hypot(x, z) / r) * 0.55 + Math.random() * 0.1 });
         g.add(o);
       };
       const arches = Math.round(r * 6);
@@ -494,6 +644,7 @@ export class HazardViews {
           m.position.set(x, gy(x, z) + 0.08, z);
           rocks.add(m);
         });
+        mergeInto(rocks, meshesOf(rocks).map((mesh) => ({ mesh })));
         ring(Math.round(r * 1.5), [0.5, 1], (x, z) => sprite(FX.dust, 0.9 + Math.random() * 0.5, x, z, 0, false, "drift"));
       } else if (style === "bones") {
         ring(Math.round(r * 2.4), [0.15, 0.9], (x, z, i) => {
@@ -508,6 +659,7 @@ export class HazardViews {
         const coil = teslaCoil(0.8);
         coil.position.y = gy(0, 0);
         g.add(coil);
+        mergeInto(coil, meshesOf(coil).map((mesh) => ({ mesh })));
         const arc = new THREE.Sprite(new THREE.SpriteMaterial({ map: ENGINEER.arc, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
         arc.name = "zap";
         arc.userData.top = gy(0, 0) + 2.1;
@@ -516,6 +668,7 @@ export class HazardViews {
       } else if (style === "lava") {
         ring(Math.round(r * 1.6), [0.2, 0.95], (x, z) => sprite(WARLORD.lavaGlow, 0.9 + Math.random() * 0.6, x, z, -0.2, true, "glow"));
         ring(Math.round(r * 2), [0.1, 1], (x, z) => sprite(WARLORD.ember, 0.3, x, z, 0.2, true, "ember"));
+        const chunks: Piece[] = [];
         ring(Math.round(r * 1.2), [0.5, 1], (x, z) => {
           const m = new THREE.Mesh(chunkGeo, STONE_CHUNK);
           const s2 = 0.3 + Math.random() * 0.35;
@@ -523,7 +676,9 @@ export class HazardViews {
           m.rotation.set(Math.random() * 3, Math.random() * 3, 0);
           m.position.set(x, gy(x, z) + 0.1, z);
           g.add(m);
+          chunks.push({ mesh: m });
         });
+        mergeInto(g, chunks);
       } else if (style === "smoke") {
         ring(Math.round(r * 4), [0, 1], (x, z) => sprite(RAIDER.smoke, 1.6 + Math.random() * 1.2, x, z, 0.1, false, "smoke"));
         ring(4, [0.2, 0.8], (x, z) => sprite(RAIDER.shadow, 1.2, x, z, 0.6, false, "smoke"));
@@ -532,21 +687,24 @@ export class HazardViews {
           const f = crossQuad(FLOWER, 0.35 + Math.random() * 0.15, 0.35);
           f.position.set(x, gy(x, z), z);
           f.rotation.y = Math.random() * 3;
-          f.userData.grow = true;
-          f.userData.delay = Math.random() * 0.4;
-          f.scale.setScalar(0.001);
+          grows.push({ o: f, d: Math.random() * 0.4 });
           g.add(f);
         });
         ring(Math.round(r * 1.2), [0.1, 0.9], (x, z) => {
           const t = crossQuad(MOSS_TUFT, 0.6, 0.4);
           t.position.set(x, gy(x, z), z);
-          t.userData.grow = true;
-          t.userData.delay = Math.random() * 0.4;
-          t.scale.setScalar(0.001);
+          grows.push({ o: t, d: Math.random() * 0.4 });
           g.add(t);
         });
         ring(5, [0.2, 0.8], (x, z) => sprite(WARDEN.wisp, 0.6, x, z, 0.8, true, "wisp"));
       }
+    }
+    if (grows.length) {
+      const u: GrowU = { uGrowT: { value: 0 }, uGrowIn: { value: new THREE.Vector2(1, 1) }, uGrowMul: { value: new THREE.Vector2(1, 1) }, uSway: { value: new THREE.Vector2() } };
+      g.userData.growU = u;
+      g.userData.pops = grows.filter(({ o }) => o.children.length > 2).map(({ o, d }) => ({ d, p: o.position.clone(), done: false }));
+      mergeInto(g, grows.flatMap(({ o, d }) => meshesOf(o).map((mesh) => ({ mesh, c: o.position.clone(), d, yaw: o.rotation.y }))), u);
+      for (const { o } of grows) g.remove(o);
     }
     return g;
   }
@@ -564,6 +722,7 @@ export class HazardViews {
     if (!m) return null;
     const g = new THREE.Group();
     const W = this.world.terrain.width;
+    const cells: THREE.Object3D[] = [];
     m.cells.forEach((c, k) => {
       const x = (c % W) + 0.5;
       const z = Math.floor(c / W) + 0.5;
@@ -609,7 +768,7 @@ export class HazardViews {
           }
           cell.userData.baseY = y;
           cell.userData.delay = Math.abs(k - (m.cells.length - 1) / 2) * 0.05;
-          g.add(cell);
+          cells.push(cell);
           return;
         }
         const block = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 1.0), MOSS_STONE);
@@ -628,9 +787,11 @@ export class HazardViews {
         }
         cell.userData.baseY = y;
         cell.userData.delay = Math.abs(k - (m.cells.length - 1) / 2) * 0.05;
-        g.add(cell);
+        cells.push(cell);
       }
     });
+    if (m.kind === "wall") mergeWall(g, cells);
+    else mergeFlat(g);
     return g;
   }
 
@@ -643,12 +804,13 @@ export class HazardViews {
         obj.userData.wall = m?.kind === "wall";
         if (!obj.userData.wall) obj.scale.y = 0.01;
         else if (this.fx) {
-          const c0 = obj.children[0]?.position;
-          const c1 = obj.children[obj.children.length - 1]?.position;
+          const cells = obj.userData.cells as THREE.Object3D[];
+          const c0 = cells[0]?.position;
+          const c1 = cells[cells.length - 1]?.position;
           const dx = c1 && c0 ? c1.x - c0.x : 1;
           const dz = c1 && c0 ? c1.z - c0.z : 0;
           const dl = Math.hypot(dx, dz) || 1;
-          for (const c of obj.children) wardenWallBlock(this.fx, c.position.x, c.userData.baseY, c.position.z, c.userData.delay, dz / dl, -dx / dl, m?.style === "wood");
+          for (const c of cells) wardenWallBlock(this.fx, c.position.x, c.userData.baseY, c.position.z, c.userData.delay, dz / dl, -dx / dl, m?.style === "wood");
         }
         this.mods.set(ev.id, obj);
         this.root.add(obj);
@@ -658,7 +820,7 @@ export class HazardViews {
       if (obj) {
         this.mods.delete(ev.id);
         if (obj.userData.wall && this.fx) {
-          for (const c of obj.children) wardenWallCrumble(this.fx, c.position.x, c.userData.baseY, c.position.z);
+          for (const c of obj.userData.cells as THREE.Object3D[]) wardenWallCrumble(this.fx, c.position.x, c.userData.baseY, c.position.z);
           this.dying.push({ obj, at: this.now });
         } else {
           this.root.remove(obj);
@@ -675,10 +837,11 @@ export class HazardViews {
     const w = this.world;
     this.dying = this.dying.filter(({ obj, at }) => {
       const k = (time - at) / 0.5;
-      for (const c of obj.children) {
+      for (const c of obj.userData.cells as THREE.Object3D[]) {
         c.position.y = c.userData.baseY - 2.7 * Math.min(1, k * k);
         c.rotation.z = Math.sin(time * 40 + c.position.x) * 0.04;
       }
+      syncWall(obj);
       if (k >= 1) {
         this.root.remove(obj);
         free(obj);
@@ -724,24 +887,28 @@ export class HazardViews {
         o.userData.bramble = (z.style ?? "bramble") === "bramble";
         o.scale.setScalar(1);
         if (o.userData.bramble && this.fx) wardenBrambleCast(this.fx, z.x, this.cy, z.z, z.radius);
+        this.sprites.addTree(o);
         this.zones.set(z.id, o);
         this.root.add(o);
       }
       const left = z.until - w.time;
       if (o.userData.bramble) {
         const age = time - o.userData.born;
+        for (const p of (o.userData.pops ?? []) as { d: number; p: THREE.Vector3; done: boolean }[]) {
+          if (p.done || age <= p.d) continue;
+          p.done = true;
+          if (this.fx) wardenSprout(this.fx, o.position.x + p.p.x, o.position.y + p.p.y, o.position.z + p.p.z);
+        }
+        const u = o.userData.growU as GrowU | undefined;
+        const out = left < 0.6 ? Math.max(0.001, left / 0.6) : 1;
+        if (u) {
+          u.uGrowT.value = age;
+          u.uGrowIn.value.set(1, out);
+          u.uGrowMul.value.set(0.6 + 0.4 * out, 1);
+          u.uSway.value.set(0.04, (time * 1.3) % (Math.PI * 2));
+        }
         for (const c of o.children) {
-          if (c.userData.grow) {
-            const t = age - c.userData.delay;
-            if (t > 0 && !c.userData.popped) {
-              c.userData.popped = true;
-              if (this.fx && c.children.length > 2) wardenSprout(this.fx, o.position.x + c.position.x, o.position.y + c.position.y, o.position.z + c.position.z);
-            }
-            const e = t <= 0 ? 0.001 : t >= 0.3 ? 1 : easeBack(t / 0.3);
-            const out = left < 0.6 ? Math.max(0.001, left / 0.6) : 1;
-            c.scale.set(Math.max(0.001, e) * (0.6 + 0.4 * out), Math.max(0.001, e * out), Math.max(0.001, e) * (0.6 + 0.4 * out));
-            c.rotation.z = Math.sin(time * 1.3 + c.position.x) * 0.04;
-          } else if (c.name === "wisp") {
+          if (c.name === "wisp") {
             const a = c.userData.phase + time * 0.6;
             c.position.set(Math.cos(a) * c.userData.rad, 0.6 + Math.sin(time * 2 + c.userData.phase) * 0.3, Math.sin(a) * c.userData.rad);
             (c as THREE.Sprite).material.opacity = 0.7 * Math.min(1, age * 2, left / 0.6);
@@ -776,11 +943,13 @@ export class HazardViews {
             sp.material.rotation = -a;
           }
           sp.material.opacity = life * (Math.random() < 0.6 ? 1 : 0.2);
-        } else if (c.userData.grow && !o.userData.bramble) {
-          const t2 = time - (o.userData.born ?? time) - (c.userData.delay ?? 0);
-          const e2 = t2 <= 0 ? 0.001 : t2 >= 0.3 ? 1 : easeBack(t2 / 0.3);
-          c.scale.setScalar(Math.max(0.001, e2 * (left < 0.6 ? left / 0.6 : 1)));
         }
+      }
+      const gu = o.userData.growU as GrowU | undefined;
+      if (gu && !o.userData.bramble) {
+        const k = left < 0.6 ? left / 0.6 : 1;
+        gu.uGrowT.value = time - (o.userData.born ?? time);
+        gu.uGrowIn.value.set(k, k);
       }
       if (!o.userData.bramble) ((o.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = life;
       const arc = o.getObjectByName("arc") as THREE.Mesh | undefined;
@@ -802,13 +971,14 @@ export class HazardViews {
         o.scale.y = Math.min(1, o.scale.y + dt * 6);
         continue;
       }
-      for (const c of o.children) {
+      for (const c of o.userData.cells as THREE.Object3D[]) {
         const t = time - o.userData.born - c.userData.delay;
         const e = t <= 0 ? 0 : t >= 0.26 ? 1 : easeBack(t / 0.26);
         c.position.y = c.userData.baseY - 2.7 * (1 - e);
         c.visible = t > 0;
         c.rotation.z = t > 0 && t < 0.3 ? Math.sin(t * 90) * 0.03 : 0;
       }
+      syncWall(o);
     }
   }
 }

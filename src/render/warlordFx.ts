@@ -3,6 +3,7 @@ import { FX, RAIDER, WARLORD } from "./fxKit";
 
 const RAIDER_DROP = RAIDER.drop;
 import { chunks, decal, emit, shockwave, type FxHost } from "./fxParts";
+import { FxBatch, fxBatch } from "./fxInstances";
 import { KITS } from "./kits";
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -29,20 +30,19 @@ function slabs(h: FxHost, x: number, z: number, r: number, n: number, up: number
     const sx = x + Math.cos(a) * d;
     const sz = z + Math.sin(a) * d;
     const gy = ground(h, sx, sz, 0);
-    const m = new THREE.Mesh(slabGeo, slabMat);
+    const m = fxBatch(h.root, "slab", () => new FxBatch(slabGeo, slabMat.clone())).spawn();
     const s = 0.7 + Math.random() * 0.7;
-    m.scale.set(s, s, s);
+    m.scale.set(0, 0, 0);
     m.rotation.order = "YXZ";
     const tilt = 0.5 + Math.random() * 0.5;
     m.rotation.set(-tilt, -a + Math.PI / 2, (Math.random() - 0.5) * 0.4);
-    h.root.add(m);
     const delay = (d / r) * 0.08;
     h.add(m, life, (k) => {
       const t = k * life - delay;
       const e = t <= 0 ? 0 : t < 0.1 ? t / 0.1 : 1;
       const sink = k > 0.75 ? (k - 0.75) / 0.25 : 0;
       m.position.set(sx, gy - 0.4 + (up * s) * e - sink * 0.9, sz);
-      m.visible = t > 0;
+      m.scale.setScalar(t > 0 ? s : 0);
     });
   }
 }
@@ -54,20 +54,21 @@ function spikes(h: FxHost, x: number, z: number, r: number, n: number, life: num
     const sx = x + Math.cos(a) * d;
     const sz = z + Math.sin(a) * d;
     const gy = ground(h, sx, sz, 0);
-    const m = new THREE.Mesh(spikeGeo, spikeMat);
+    const m = fxBatch(h.root, "spike", () => new FxBatch(spikeGeo, spikeMat.clone())).spawn();
     const s = 0.7 + Math.random() * 0.8;
-    m.scale.set(s, s * (0.9 + Math.random() * 0.6), s);
+    const sy = s * (0.9 + Math.random() * 0.6);
+    m.scale.set(0, 0, 0);
     m.rotation.set(Math.cos(a) * 0.35 + (Math.random() - 0.5) * 0.2, Math.random() * 3, -Math.sin(a) * 0.35);
-    h.root.add(m);
     const delay = (d / r) * 0.18;
-    const hgt = 1.6 * m.scale.y;
+    const hgt = 1.6 * sy;
     let popped = false;
     h.add(m, life, (k) => {
       const t = k * life - delay;
       const e = t <= 0 ? 0 : t < 0.08 ? t / 0.08 : 1;
       const sink = k > 0.72 ? (k - 0.72) / 0.28 : 0;
       m.position.set(sx, gy - hgt / 2 + hgt * 0.9 * e - sink * hgt, sz);
-      m.visible = t > 0;
+      if (t > 0) m.scale.set(s, sy, s);
+      else m.scale.set(0, 0, 0);
       if (!popped && t > 0) {
         popped = true;
         emit(h, { tex: WARLORD.dust, n: 1, x: sx, y: gy + 0.5, z: sz, size: [1, 1.4], grow: 1.8, life: [0.5, 0.8], speed: [0.5, 1.4], flatSpread: true, drag: 2, opacity: 0.85 });

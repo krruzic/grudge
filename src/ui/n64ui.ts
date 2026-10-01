@@ -98,6 +98,10 @@ export function stoneBg(ctx: CanvasRenderingContext2D, W: number, H: number): vo
 }
 
 const bakes = new Map<string, HTMLCanvasElement>();
+export function uiImagesReady(): boolean {
+  return Object.values(imgs).every((im) => im.complete && im.naturalWidth > 0);
+}
+
 export function texturedRect(ctx: CanvasRenderingContext2D, key: string, x: number, y: number, w: number, h: number, tint: string | null, r = 3, scale = 1): void {
   const im = imgs[key];
   if (w <= 0 || h <= 0) return;

@@ -5,6 +5,7 @@ import type { Terrain } from "../sim/terrain";
 import type { MapView } from "./mapView";
 import { Effects, makeSky } from "./fx";
 import { FRAME, outlineConfig, type HeroModels } from "./heroModels";
+import { silScene, syncSilhouettes } from "./entityViews";
 import { EntityViews } from "./entityViews";
 import { CombatFx } from "./combatFx";
 import { HazardViews } from "./hazardViews";
@@ -290,7 +291,7 @@ export class GameRenderer {
   private relicView: RelicView | null = null;
 
   setWorld(world: World): void {
-    this.scene.remove(this.entityViews.root, this.combatFx.root);
+    this.scene.remove(this.entityViews.root, this.entityViews.extras, this.combatFx.root);
     this.entityViews.dispose();
     this.hazards?.dispose();
     if (this.relicView) this.scene.remove(this.relicView.root);
@@ -306,7 +307,7 @@ export class GameRenderer {
     this.entityViews = new EntityViews(world, this.teamColors, this.heroModels, this.structureModels, this.cfg.heroScale, this.combatFx, this.unitModels, this.cfg.playerColors.map((c) => new THREE.Color(c)));
     this.entityViews.humans = this.humanList;
     this.entityViews.hints = this.hints;
-    this.scene.add(this.entityViews.root, this.combatFx.root);
+    this.scene.add(this.entityViews.root, this.entityViews.extras, this.combatFx.root);
     this.camInit = false;
   }
 
@@ -549,23 +550,18 @@ export class GameRenderer {
     cam.updateMatrixWorld();
     this.cullMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.cullMat);
-    this.entityViews.cullTo(this.frustum);
     if (this.matrixFrame !== FRAME.id) {
       this.matrixFrame = FRAME.id;
       this.scene.updateMatrixWorld();
+      this.entityViews.fillUnits();
     }
+    this.entityViews.cullTo(this.frustum);
     this.sky.updateMatrixWorld(true);
+    this.entityViews.fillView(cam);
+    this.hazards?.fillView(cam);
+    if (silScene.parent !== this.scene) this.scene.add(silScene);
+    syncSilhouettes(this.scene);
     this.renderer.render(this.scene, cam);
-    const auto = this.renderer.autoClear;
-    this.renderer.autoClear = false;
-    const bg = this.scene.background;
-    this.scene.background = null;
-    cam.layers.disableAll();
-    for (let team = 0; team < this.teamColors.length; team++) cam.layers.enable(1 + team);
-    this.renderer.render(this.scene, cam);
-    this.scene.background = bg;
-    cam.layers.set(0);
-    this.renderer.autoClear = auto;
     this.entityViews.uncull();
   }
 

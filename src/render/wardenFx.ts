@@ -3,6 +3,37 @@ import barkUrl from "../../assets/textures/moss_bark.png?url";
 import { FX, WARDEN } from "./fxKit";
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
 import { KITS } from "./kits";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+
+const TUBE_MAX = 12;
+function tubeBundle(h: FxHost, geos: THREE.BufferGeometry[], src: THREE.Material, life: number, tick: (k: number, shown: number[], sink: number[]) => void): void {
+  const shown = new Array<number>(TUBE_MAX).fill(0);
+  const sink = new Array<number>(TUBE_MAX).fill(0);
+  const parts = geos.map((g, i) => {
+    const q = g.toNonIndexed();
+    g.dispose();
+    const n = q.getAttribute("position").count;
+    const k = new Float32Array(n);
+    for (let j = 0; j < n; j++) k[j] = j;
+    q.setAttribute("aK", new THREE.BufferAttribute(k, 1));
+    q.setAttribute("aTube", new THREE.BufferAttribute(new Float32Array(n).fill(i), 1));
+    return q;
+  });
+  const geo = mergeGeometries(parts, false)!;
+  for (const q of parts) q.dispose();
+  const mat = src.clone();
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uShown = { value: shown };
+    shader.uniforms.uSink = { value: sink };
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\nattribute float aK;\nattribute float aTube;\nuniform float uShown[${TUBE_MAX}];\nuniform float uSink[${TUBE_MAX}];`)
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nint ti = int(aTube + 0.5);\ntransformed.y += uSink[ti];\nif (aK >= uShown[ti]) transformed = vec3(0.0);");
+  };
+  mat.customProgramCacheKey = () => "tube-bundle";
+  const mesh = new THREE.Mesh(geo, mat);
+  h.root.add(mesh);
+  h.add(mesh, life, (k) => tick(k, shown, sink));
+}
 
 const LEAVES = [WARDEN.leaf, WARDEN.leaf, WARDEN.leafAutumn];
 const barkTex = new THREE.TextureLoader().load(barkUrl);
@@ -222,6 +253,8 @@ export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r:
   decal(h, WARDEN.mossCrack, x, gy + 0.03, z, 2.2, 2.5, { grow: 0.1 });
   chunks(h, 6, x, gy + 0.4, z, { size: [0.18, 0.3], speed: [2, 5], up: [6, 9] });
   const roots = 9;
+  const rootGeos: THREE.BufferGeometry[] = [];
+  const rootInfo: { total: number; delay: number; landed: boolean; ex: number; ez: number; ey: number }[] = [];
   for (let i = 0; i < roots; i++) {
     const a = (i / roots) * Math.PI * 2 + Math.random() * 0.3;
     const d0 = 0.6;
@@ -234,28 +267,28 @@ export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r:
     const M2 = A.clone().lerp(E, 0.75).add(new THREE.Vector3(0, 1.0 + Math.random() * 0.5, 0));
     const curve = new THREE.CubicBezierCurve3(A, M1, M2, E);
     const geo = new THREE.TubeGeometry(curve, 16, 0.16 + Math.random() * 0.06, 6, false);
-    const total = geo.index!.count;
-    const tex = barkTex.clone();
-    tex.repeat.set(1, 6);
-    tex.needsUpdate = true;
-    const root = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex, color: 0xb89870, flatShading: true }));
-    geo.setDrawRange(0, 0);
-    h.root.add(root);
-    const delay = Math.random() * 0.08;
-    let landed = false;
-    h.add(root, 1.4, (k) => {
-      const t = k * 1.4 - delay;
+    rootInfo.push({ total: geo.index!.count, delay: Math.random() * 0.08, landed: false, ex, ez, ey: E.y });
+    rootGeos.push(geo);
+  }
+  const rootTex = barkTex.clone();
+  rootTex.repeat.set(1, 6);
+  rootTex.needsUpdate = true;
+  const rootMat = new THREE.MeshLambertMaterial({ map: rootTex, color: 0xb89870, flatShading: true });
+  tubeBundle(h, rootGeos, rootMat, 1.4, (k, shown, sink) => {
+    rootInfo.forEach((ri, i) => {
+      const t = k * 1.4 - ri.delay;
       const grow = t <= 0 ? 0 : Math.min(1, t / 0.28);
-      geo.setDrawRange(0, Math.floor((total * (1 - Math.pow(1 - grow, 2))) / 6) * 6);
-      root.position.y = t > 0.9 ? -Math.pow((t - 0.9) / 0.5, 2) * 2.2 : 0;
-      if (!landed && grow >= 1) {
-        landed = true;
-        emit(h, { tex: FX.dust, n: 2, x: ex, y: E.y + 0.7, z: ez, size: [0.8, 1.1], grow: 1.8, life: [0.5, 0.7], speed: [0.8, 1.6], flatSpread: true, drag: 3, opacity: 0.9 });
-        chunks(h, 1, ex, E.y + 0.6, ez, { size: [0.12, 0.2], speed: [1, 2], up: [3, 5] });
+      shown[i] = Math.floor((ri.total * (1 - Math.pow(1 - grow, 2))) / 6) * 6;
+      sink[i] = t > 0.9 ? -Math.pow((t - 0.9) / 0.5, 2) * 2.2 : 0;
+      if (!ri.landed && grow >= 1) {
+        ri.landed = true;
+        emit(h, { tex: FX.dust, n: 2, x: ri.ex, y: ri.ey + 0.7, z: ri.ez, size: [0.8, 1.1], grow: 1.8, life: [0.5, 0.7], speed: [0.8, 1.6], flatSpread: true, drag: 3, opacity: 0.9 });
+        chunks(h, 1, ri.ex, ri.ey + 0.6, ri.ez, { size: [0.12, 0.2], speed: [1, 2], up: [3, 5] });
       }
     });
-    h.after(1.6, () => tex.dispose());
-  }
+  });
+  rootMat.dispose();
+  h.after(1.6, () => rootTex.dispose());
   emit(h, { tex: WARDEN.wisp, n: 10, x, y: gy + 0.5, z, size: [0.5, 0.8], life: [1.2, 1.8], speed: [1, r * 0.5], flatSpread: true, up: [1, 2.5], drag: 1.5, additive: true, jitter: r });
   h.shake = Math.max(h.shake, 0.3);
 }
@@ -264,6 +297,7 @@ export function wardenSnap(h: FxHost, x: number, y: number, z: number, r: number
   const gy = ground(h, x, z, y);
   const mat = new THREE.MeshLambertMaterial({ map: barkTex, color: 0xa8b870, flatShading: true });
   const n = 6;
+  const vines: THREE.BufferGeometry[] = [];
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.3;
     const d = r * 0.7;
@@ -271,18 +305,17 @@ export function wardenSnap(h: FxHost, x: number, y: number, z: number, r: number
     const top = new THREE.Vector3(x + Math.cos(a + 0.9) * 0.25, gy + 1.9 + Math.random() * 0.5, z + Math.sin(a + 0.9) * 0.25);
     const M1 = A.clone().add(new THREE.Vector3(Math.cos(a) * 0.6, 1.2, Math.sin(a) * 0.6));
     const M2 = top.clone().add(new THREE.Vector3(Math.cos(a) * 0.5, 0.4, Math.sin(a) * 0.5));
-    const geo = new THREE.TubeGeometry(new THREE.CubicBezierCurve3(A, M1, M2, top), 14, 0.11, 5, false);
-    const total = geo.index!.count;
-    geo.setDrawRange(0, 0);
-    const vine = new THREE.Mesh(geo, mat);
-    h.root.add(vine);
-    h.add(vine, 0.9, (k) => {
-      const grow = Math.min(1, k / 0.18);
-      geo.setDrawRange(0, Math.floor((total * (1 - Math.pow(1 - grow, 3))) / 6) * 6);
-      vine.position.y = k > 0.6 ? -Math.pow((k - 0.6) / 0.4, 2) * 2.4 : 0;
-    });
+    vines.push(new THREE.TubeGeometry(new THREE.CubicBezierCurve3(A, M1, M2, top), 14, 0.11, 5, false));
   }
-  h.after(1, () => mat.dispose());
+  const totals = vines.map((g) => g.index!.count);
+  tubeBundle(h, vines, mat, 0.9, (k, shown, sink) => {
+    const grow = Math.min(1, k / 0.18);
+    totals.forEach((total, i) => {
+      shown[i] = Math.floor((total * (1 - Math.pow(1 - grow, 3))) / 6) * 6;
+      sink[i] = k > 0.6 ? -Math.pow((k - 0.6) / 0.4, 2) * 2.4 : 0;
+    });
+  });
+  mat.dispose();
   emit(h, { tex: WARDEN.natureBurst, n: 1, x, y: gy + 1, z, size: [2.4, 2.4], grow: 1.3, life: [0.22, 0.22], speed: [0, 0], order: 5 });
   emit(h, { tex: FX.dust, n: 6, x, y: gy + 0.4, z, size: [0.9, 1.3], grow: 1.8, life: [0.5, 0.8], speed: [1.5, 3], flatSpread: true, drag: 3, opacity: 0.85 });
   tumblers(h, LEAVES, 8, x, gy + 1.2, z, { speed: [1.5, 3.5], up: [3, 5], size: [0.35, 0.5], life: [1.6, 2.2] });

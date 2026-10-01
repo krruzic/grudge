@@ -53,24 +53,59 @@ export function blobShadow(radius = 0.75): THREE.Mesh {
     blobTex.minFilter = THREE.LinearFilter;
     blobTex.needsUpdate = true;
   }
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(radius * 2, radius * 2),
-    new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, opacity: 0.55, depthWrite: false, fog: true }),
-  );
+  blobGeo ??= markGeo(new THREE.PlaneGeometry(2, 2));
+  blobMat ??= keepMat(new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, opacity: 0.55, depthWrite: false, fog: true }));
+  const m = new THREE.Mesh(blobGeo, blobMat);
+  m.scale.set(radius, radius, 1);
   m.rotation.x = -Math.PI / 2;
   m.position.y = 0.03;
   m.renderOrder = 1;
+  m.userData.blob = true;
   return m;
 }
 
+let blobGeo: THREE.BufferGeometry | undefined;
+let blobMat: THREE.MeshBasicMaterial | undefined;
+function markGeo(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  g.userData.model = true;
+  return g;
+}
+function keepMat<T extends THREE.Material>(m: T): T {
+  m.userData.keep = true;
+  return m;
+}
+
+export function blobBatch(max: number): THREE.InstancedMesh {
+  blobShadow();
+  const im = new THREE.InstancedMesh(blobGeo!, blobMat!, max);
+  im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  im.count = 0;
+  im.frustumCulled = false;
+  im.renderOrder = 1;
+  im.matrixAutoUpdate = false;
+  return im;
+}
+
+let ringGeo: THREE.BufferGeometry | undefined;
 export function footRing(teamColor: THREE.Color): THREE.Mesh {
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.62, 0.8, 16),
-    new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9, depthWrite: false }),
-  );
+  ringGeo ??= markGeo(new THREE.RingGeometry(0.62, 0.8, 16));
+  const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.04;
+  ring.userData.footRing = true;
   return ring;
+}
+
+export function footRingBatch(max: number): THREE.InstancedMesh {
+  ringGeo ??= markGeo(new THREE.RingGeometry(0.62, 0.8, 16));
+  const im = new THREE.InstancedMesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false }), max);
+  im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  im.setColorAt(0, new THREE.Color());
+  im.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+  im.count = 0;
+  im.frustumCulled = false;
+  im.matrixAutoUpdate = false;
+  return im;
 }
 
 export function playerTag(label: string, teamColor: THREE.Color): THREE.Sprite {

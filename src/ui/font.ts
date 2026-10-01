@@ -15,7 +15,7 @@ let markReady: () => void = () => {};
 export const fontReady = new Promise<void>((r) => (markReady = r));
 let fillMask: HTMLCanvasElement | null = null;
 let lineMask: HTMLCanvasElement | null = null;
-const cache = new Map<string, { c: HTMLCanvasElement; w: number; h: number }>();
+const cache = new Map<string, { c: HTMLCanvasElement; w: number; h: number; sized?: Map<number, HTMLCanvasElement> }>();
 const widths = new Map<string, number>();
 
 function mask(src: ImageData, channel: number): HTMLCanvasElement {
@@ -121,7 +121,7 @@ function layer(w: number, h: number, src: HTMLCanvasElement, s: string, dx: numb
 const PADX = 2;
 const PADY = 1;
 
-type Baked = { c: HTMLCanvasElement; w: number; h: number };
+type Baked = { c: HTMLCanvasElement; w: number; h: number; sized?: Map<number, HTMLCanvasElement> };
 const flushers: (() => void)[] = [];
 export function onTextLost(fn: () => void): void {
   flushers.push(fn);
@@ -171,6 +171,7 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
     const oldest = cache.keys().next().value!;
     const ev = cache.get(oldest)!;
     ev.c.width = ev.c.height = 0;
+    if (ev.sized) for (const c of ev.sized.values()) c.width = c.height = 0;
     cache.delete(oldest);
   }
   return baked;
@@ -180,12 +181,24 @@ let lowCtx: CanvasRenderingContext2D | null = null;
 let hiCtx: CanvasRenderingContext2D | null = null;
 let hiK = 1;
 let lowK = 1;
+let hiDx = 0;
+let hiDy = 0;
 
-export function setTextLayer(low: CanvasRenderingContext2D, hi: CanvasRenderingContext2D, hk: number, lk: number): void {
+export function setTextLayer(low: CanvasRenderingContext2D, hi: CanvasRenderingContext2D, hk: number, lk: number, dx = 0, dy = 0): void {
   lowCtx = low;
   hiCtx = hi;
   hiK = hk;
   lowK = lk;
+  hiDx = dx;
+  hiDy = dy;
+}
+
+export function fontLoaded(): boolean {
+  return !!fillMask;
+}
+
+export function textLayer(): { low: CanvasRenderingContext2D | null; hi: CanvasRenderingContext2D | null; hk: number; lk: number; dx: number; dy: number } {
+  return { low: lowCtx, hi: hiCtx, hk: hiK, lk: lowK, dx: hiDx, dy: hiDy };
 }
 
 export function onHiLayer(ctx: CanvasRenderingContext2D, fn: (c: CanvasRenderingContext2D) => void): void {
@@ -196,12 +209,35 @@ export function onHiLayer(ctx: CanvasRenderingContext2D, fn: (c: CanvasRendering
   const m = ctx.getTransform();
   const r = hiK / lowK;
   hiCtx.save();
-  hiCtx.setTransform(m.a * r, m.b * r, m.c * r, m.d * r, m.e * r, m.f * r);
+  hiCtx.setTransform(m.a * r, m.b * r, m.c * r, m.d * r, m.e * r + hiDx, m.f * r + hiDy);
   hiCtx.globalAlpha = ctx.globalAlpha;
   fn(hiCtx);
   hiCtx.restore();
 }
 
+
+function sized(b: Baked, pw: number, ph: number): HTMLCanvasElement {
+  if (pw <= 0 || ph <= 0 || pw >= b.c.width || ph >= b.c.height) return b.c;
+  const key = pw * 4096 + ph;
+  b.sized ??= new Map();
+  let c = b.sized.get(key);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = pw;
+    c.height = ph;
+    const g = c.getContext("2d")!;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(b.c, 0, 0, pw, ph);
+    if (b.sized.size > 4) {
+      const old = b.sized.keys().next().value!;
+      b.sized.get(old)!.width = 0;
+      b.sized.delete(old);
+    }
+    b.sized.set(key, c);
+  }
+  return c;
+}
 
 function blit(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale: number, edge: boolean, shadow: boolean): void {
   if (!fillMask || !s) return;
@@ -213,7 +249,10 @@ function blit(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, co
     const q = t.imageSmoothingQuality;
     t.imageSmoothingEnabled = true;
     t.imageSmoothingQuality = "high";
-    t.drawImage(b.c, x - PADX * k, y - PADY * k - 0.5 * scale, (b.w / HK) * k, (b.h / HK) * k);
+    const dw = (b.w / HK) * k;
+    const dh = (b.h / HK) * k;
+    const m = t.getTransform();
+    t.drawImage(m.b || m.c ? b.c : sized(b, Math.round(dw * m.a), Math.round(dh * m.d)), x - PADX * k, y - PADY * k - 0.5 * scale, dw, dh);
     t.imageSmoothingEnabled = smooth;
     t.imageSmoothingQuality = q;
   });
