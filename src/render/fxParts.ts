@@ -1,9 +1,11 @@
 import * as THREE from "three";
 import type { World } from "../sim/world";
+import type { Particles } from "./particles";
 import stoneUrl from "../../assets/textures/stone.png?url";
 
 export interface FxHost {
   root: THREE.Group;
+  particles?: Particles;
   world?: World;
   shake: number;
   add(obj: THREE.Object3D, dur: number, tick: (k: number, dt: number) => void): void;
@@ -62,6 +64,35 @@ function randomDir(dir: THREE.Vector3 | null, cone: number, flat: boolean): THRE
 
 export function emit(h: FxHost, o: EmitOpts): void {
   const dir = o.dir ? new THREE.Vector3(o.dir.x, o.dir.y, o.dir.z).normalize() : null;
+  if (h.particles) {
+    const P = h.particles;
+    for (let i = 0; i < o.n; i++) {
+      const p = P.spawn(o.tex, o.color ?? 0xffffff, !!o.additive, o.depthTest ?? true, o.order ?? 0);
+      if (!p) return;
+      const j = o.jitter ?? 0;
+      p.x = o.x + (Math.random() - 0.5) * j;
+      p.y = o.y + (Math.random() - 0.5) * j * 0.5;
+      p.z = o.z + (Math.random() - 0.5) * j;
+      const v = randomDir(dir, o.cone ?? Math.PI, !!o.flatSpread).multiplyScalar(rr(o.speed));
+      if (o.up) v.y += rr(o.up);
+      p.vx = v.x;
+      p.vy = v.y;
+      p.vz = v.z;
+      p.size0 = rr(o.size);
+      p.grow = o.grow ?? 1;
+      p.spin = (Math.random() - 0.5) * 2 * (o.spin ?? 0);
+      p.rot = Math.random() * Math.PI * 2;
+      p.op = o.opacity ?? 1;
+      p.gravity = o.gravity ?? 0;
+      p.drag = o.drag ?? 0;
+      p.fadeIn = o.fadeIn ?? 0;
+      p.life = rr(o.life);
+      if (o.floor !== undefined) p.floor = o.floor;
+      p.sx = p.sy = p.size0;
+      p.a = p.fadeIn > 0 ? 0 : p.op;
+    }
+    return;
+  }
   for (let i = 0; i < o.n; i++) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({
       map: o.tex, color: o.color ?? 0xffffff, transparent: true, depthWrite: false, depthTest: o.depthTest ?? true,

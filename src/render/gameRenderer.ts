@@ -148,7 +148,9 @@ export class GameRenderer {
     private unitModels: UnitModels,
   ) {
     outlineConfig.enabled = cfg.outlines;
+    THREE.Material.prototype.dispose = function () {};
     this.renderer = new THREE.WebGLRenderer({ antialias: false });
+    this.renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
     this.renderer.setPixelRatio(1);
     this.renderer.shadowMap.enabled = cfg.shadows;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -542,6 +544,10 @@ export class GameRenderer {
     fog.near = cam.userData.fogNear ?? fog.near;
     fog.far = cam.userData.fogFar ?? fog.far;
     this.sky.position.copy(cam.position);
+    cam.updateMatrixWorld();
+    this.cullMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    this.frustum.setFromProjectionMatrix(this.cullMat);
+    this.entityViews.cullTo(this.frustum);
     this.renderer.render(this.scene, cam);
     const auto = this.renderer.autoClear;
     this.renderer.autoClear = false;
@@ -555,7 +561,11 @@ export class GameRenderer {
     this.scene.background = bg;
     cam.layers.set(0);
     this.renderer.autoClear = auto;
+    this.entityViews.uncull();
   }
+
+  private frustum = new THREE.Frustum();
+  private cullMat = new THREE.Matrix4();
 
   render(alpha: number, dt: number): void {
     this.time += dt;

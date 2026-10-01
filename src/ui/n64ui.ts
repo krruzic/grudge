@@ -97,7 +97,45 @@ export function stoneBg(ctx: CanvasRenderingContext2D, W: number, H: number): vo
   ctx.fillRect(0, 0, W, H);
 }
 
+const bakes = new Map<string, HTMLCanvasElement>();
 export function texturedRect(ctx: CanvasRenderingContext2D, key: string, x: number, y: number, w: number, h: number, tint: string | null, r = 3, scale = 1): void {
+  const im = imgs[key];
+  if (w <= 0 || h <= 0) return;
+  if (!im || !im.complete || !im.naturalWidth) {
+    ctx.fillStyle = "#303030";
+    ctx.fillRect(x, y, w, h);
+    return;
+  }
+  const m = ctx.getTransform();
+  const k = Math.max(1, Math.hypot(m.a, m.b));
+  const pw = Math.max(1, Math.ceil(w * k));
+  const ph = Math.max(1, Math.ceil(h * k));
+  const id = `${key}|${pw}|${ph}|${tint}|${r}|${scale}|${k.toFixed(2)}`;
+  let c = bakes.get(id);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = pw;
+    c.height = ph;
+    const g = c.getContext("2d")!;
+    g.scale(pw / w, ph / h);
+    bakeRect(g, key, w, h, tint, r, scale);
+    bakes.set(id, c);
+    if (bakes.size > 400) {
+      const old = bakes.keys().next().value!;
+      const oc = bakes.get(old)!;
+      oc.width = oc.height = 0;
+      bakes.delete(old);
+    }
+  } else {
+    bakes.delete(id);
+    bakes.set(id, c);
+  }
+  ctx.drawImage(c, x, y, w, h);
+}
+
+function bakeRect(ctx: CanvasRenderingContext2D, key: string, w: number, h: number, tint: string | null, r: number, scale: number): void {
+  const x = 0;
+  const y = 0;
   withClip(ctx, () => ctx.roundRect(x, y, w, h, r), () => {
     ctx.fillStyle = pattern(ctx, key, scale, x, y);
     ctx.fillRect(x, y, w, h);

@@ -9,6 +9,7 @@ import { DUELIST, ENGINEER, FX, HERALD, RAIDER, WARLORD } from "./fxKit";
 import { spikeGeo, spikeMat } from "./warlordFx";
 import { wardenSlap } from "./wardenFx";
 import { KITS, type HeroKit } from "./kits";
+import { Particles } from "./particles";
 import "./heroFx";
 import { chunks, decal, emit, Ribbon, shockwave, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
 
@@ -402,17 +403,6 @@ const pillarTex = canvasTex(64, (ctx, s) => {
   }
 });
 
-const slashTex = canvasTex(64, (ctx, s) => {
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.arc(s / 2, s * 0.95, s * 0.7, Math.PI * 1.2, Math.PI * 1.8);
-  ctx.lineWidth = 9;
-  ctx.strokeStyle = "rgba(160,200,255,0.6)";
-  ctx.stroke();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = "rgba(255,255,255,0.95)";
-  ctx.stroke();
-});
 
 const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
 const talentTex = new Map<string, THREE.Texture>();
@@ -452,7 +442,11 @@ export class CombatFx implements FxHost {
   world?: World;
   private banners: THREE.Group[] = [];
 
-  constructor(readonly teamColors: THREE.Color[]) {}
+  readonly particles = new Particles();
+
+  constructor(readonly teamColors: THREE.Color[]) {
+    this.root.add(this.particles.root);
+  }
 
   add(obj: THREE.Object3D, dur: number, tick: (k: number, dt: number) => void): void {
     if (!obj.parent) this.root.add(obj);
@@ -545,27 +539,24 @@ export class CombatFx implements FxHost {
     const ux = dx / d;
     const uz = dz / d;
     for (let i = 0; i < n; i++) {
-      const s = this.sprite(streakTex, color, true, 1);
+      const p = this.particles.spawn(streakTex, color, true);
+      if (!p) return;
       const a = (Math.random() - 0.5) * 1.6;
-      const vx = (ux * Math.cos(a) - uz * Math.sin(a)) * speed * (0.6 + Math.random() * 0.6);
-      const vz = (ux * Math.sin(a) + uz * Math.cos(a)) * speed * (0.6 + Math.random() * 0.6);
-      let vy = (Math.random() * 0.8 + 0.2) * speed * 0.6;
-      s.position.set(x, y, z);
-      const len = 0.35 + Math.random() * 0.3;
-      this.items.push({
-        obj: s, t: 0, dur: 0.18 + Math.random() * 0.12,
-        tick: (k, dt) => {
-          s.position.x += vx * dt;
-          s.position.y += vy * dt;
-          s.position.z += vz * dt;
-          vy -= 18 * dt;
-          s.scale.set(len * (1 - k * 0.5), 0.12, 1);
-          s.material.rotation = Math.atan2(vy, Math.hypot(vx, vz) * Math.sign(vx || 1));
-          s.material.opacity = 1 - k;
-        },
-      });
+      const sp = speed * (0.6 + Math.random() * 0.6);
+      p.vx = (ux * Math.cos(a) - uz * Math.sin(a)) * sp;
+      p.vz = (ux * Math.sin(a) + uz * Math.cos(a)) * sp;
+      p.vy = (Math.random() * 0.8 + 0.2) * speed * 0.6;
+      p.x = x;
+      p.y = y;
+      p.z = z;
+      p.gravity = 18;
+      p.size0 = 0.14;
+      p.stretch = (0.35 + Math.random() * 0.3) / 0.14;
+      p.rot = Math.atan2(p.vy, Math.hypot(p.vx, p.vz) * Math.sign(p.vx || 1));
+      p.life = 0.18 + Math.random() * 0.12;
     }
   }
+
 
   private debris(x: number, y: number, z: number, colors: THREE.ColorRepresentation[], n: number, size: number, speed: number): void {
     for (let i = 0; i < n; i++) {
@@ -620,37 +611,23 @@ export class CombatFx implements FxHost {
 
   trail(x: number, y: number, z: number, team: number, size: number): void {
     const c = this.teamColors[team].clone().lerp(new THREE.Color(1, 1, 1), 0.4);
-    const s = this.sprite(glowTex, c, true, 0.6);
-    s.position.set(x, y, z);
-    this.items.push({
-      obj: s, t: 0, dur: 0.25,
-      tick: (k) => {
-        s.scale.set(size * (1 - k * 0.5), size * 1.6 * (1 - k * 0.3), 1);
-        s.material.opacity = 0.5 * (1 - k);
-      },
-    });
+    const p = this.particles.spawn(glowTex, c, true);
+    if (!p) return;
+    p.x = x;
+    p.y = y;
+    p.z = z;
+    p.size0 = size;
+    p.stretch = 0.65;
+    p.op = 0.5;
+    p.life = 0.25;
+    p.grow = 0.7;
   }
 
+
   dust(x: number, y: number, z: number, size: number, n = 2, spread = 0.8, color: THREE.ColorRepresentation = 0xd8ccb0): void {
-    for (let i = 0; i < n; i++) {
-      const s = this.sprite(puffTex, color, false, 0.7);
-      const a = Math.random() * Math.PI * 2;
-      const vx = Math.cos(a) * spread * (0.4 + Math.random() * 0.6);
-      const vz = Math.sin(a) * spread * (0.4 + Math.random() * 0.6);
-      s.position.set(x + vx * 0.1, y + 0.15, z + vz * 0.1);
-      const sz = size * (0.7 + Math.random() * 0.5);
-      this.items.push({
-        obj: s, t: 0, dur: 0.45 + Math.random() * 0.2,
-        tick: (k, dt) => {
-          s.position.x += vx * dt * (1 - k);
-          s.position.z += vz * dt * (1 - k);
-          s.position.y += dt * 0.5;
-          s.scale.setScalar(sz * (0.5 + k));
-          s.material.opacity = 0.6 * (1 - k);
-        },
-      });
-    }
+    emit(this, { tex: puffTex, n, x, y: y + 0.15, z, color, size: [size * 0.7, size * 1.2], grow: 1.8, life: [0.45, 0.65], speed: [spread * 0.4, spread], flatSpread: true, up: [0.4, 0.6], drag: 2, opacity: 0.6 });
   }
+
 
   private pending: { at: number; run: () => void }[] = [];
   private clock = 0;
@@ -719,40 +696,22 @@ export class CombatFx implements FxHost {
   }
 
   private burst(x: number, y: number, z: number, tex: THREE.Texture, color: THREE.ColorRepresentation, n: number, size: number, dur: number, spread: number, additive: boolean, rise = 0.5): void {
-    for (let i = 0; i < n; i++) {
-      const s = this.sprite(tex, color, additive, 0.9);
-      const a = Math.random() * Math.PI * 2;
-      const v = spread * (0.5 + Math.random() * 0.5);
-      const vx = Math.cos(a) * v;
-      const vz = Math.sin(a) * v;
-      const vy = rise * (0.5 + Math.random());
-      s.position.set(x, y, z);
-      const sz = size * (0.7 + Math.random() * 0.6);
-      this.items.push({
-        obj: s, t: 0, dur: dur * (0.7 + Math.random() * 0.5),
-        tick: (k, dt) => {
-          s.position.x += vx * dt * (1 - k);
-          s.position.y += vy * dt;
-          s.position.z += vz * dt * (1 - k);
-          s.scale.setScalar(sz * (0.6 + k * 0.8));
-          s.material.opacity = 0.9 * (1 - k);
-        },
-      });
-    }
+    emit(this, { tex, n, x, y, z, color, additive, size: [size * 0.7, size * 1.3], grow: 2, life: [dur * 0.7, dur * 1.2], speed: [spread * 0.5, spread], flatSpread: true, up: [rise * 0.5, rise * 1.5], drag: 1.5, opacity: 0.9 });
   }
 
+
   private flash(x: number, y: number, z: number, tex: THREE.Texture, color: THREE.ColorRepresentation, size: number, dur: number): void {
-    const s = this.sprite(tex, color);
-    s.position.set(x, y, z);
-    s.material.rotation = Math.random() * Math.PI;
-    this.items.push({
-      obj: s, t: 0, dur,
-      tick: (k) => {
-        s.scale.setScalar(size * (0.5 + k * 0.8));
-        s.material.opacity = 1 - k * k;
-      },
-    });
+    const p = this.particles.spawn(tex, color, true);
+    if (!p) return;
+    p.x = x;
+    p.y = y;
+    p.z = z;
+    p.size0 = size * 0.5;
+    p.grow = 2.6;
+    p.rot = Math.random() * Math.PI;
+    p.life = dur;
   }
+
 
   private label(x: number, y: number, z: number, tex: THREE.Texture): void {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
@@ -1473,19 +1432,21 @@ export class CombatFx implements FxHost {
     if (Math.random() < 0.7) {
       const a = Math.random() * Math.PI * 2;
       const r = 1.5 - k * 0.4;
-      const sx = x + Math.cos(a) * r;
-      const sz = z + Math.sin(a) * r;
-      const sy = y + 0.3 + Math.random() * 1.6;
-      const s = this.sprite(FX.twinkle, color, true, 1);
-      s.position.set(sx, sy, sz);
-      this.items.push({ obj: s, t: 0, dur: 0.3, tick: (q) => {
-        s.position.set(sx + (x - sx) * q, sy + (y + 1.3 - sy) * q, sz + (z - sz) * q);
-        s.scale.setScalar(0.35 + k * 0.3);
-        s.material.opacity = 1 - q * 0.5;
-      } });
+      const p = this.particles.spawn(FX.twinkle, color, true);
+      if (p) {
+        p.x = x + Math.cos(a) * r;
+        p.z = z + Math.sin(a) * r;
+        p.y = y + 0.3 + Math.random() * 1.6;
+        p.life = 0.3;
+        p.vx = (x - p.x) / 0.3;
+        p.vz = (z - p.z) / 0.3;
+        p.vy = (y + 1.3 - p.y) / 0.3;
+        p.size0 = 0.35 + k * 0.3;
+      }
     }
     if (full && Math.random() < 0.25) emit(this, { tex: FX.zap, n: 1, x, y: y + 1.3, z, color, size: [0.9, 1.3], life: [0.08, 0.14], speed: [0, 0], additive: true, jitter: 0.9 });
   }
+
 
   chargeRelease(x: number, y: number, z: number, dirX: number, dirZ: number, power: number, color: THREE.ColorRepresentation): void {
     const k = Math.min(1, (power - 1) / 0.8);
@@ -1501,12 +1462,9 @@ export class CombatFx implements FxHost {
   }
 
   regen(x: number, y: number, z: number): void {
-    const s = this.sprite(plusTex, 0x90ff90, false, 0.9);
-    const ox = (Math.random() - 0.5) * 1.2;
-    const oz = (Math.random() - 0.5) * 1.2;
-    s.position.set(x + ox, y + 0.8 + Math.random() * 1.2, z + oz);
-    this.items.push({ obj: s, t: 0, dur: 0.9, tick: (k, dt) => { s.position.y += dt * 1.4; s.scale.setScalar(0.32 * (1 - k * 0.3)); s.material.opacity = 0.9 * (1 - k); } });
+    emit(this, { tex: plusTex, n: 1, x: x + (Math.random() - 0.5) * 1.2, y: y + 0.8 + Math.random() * 1.2, z: z + (Math.random() - 0.5) * 1.2, color: 0x90ff90, size: [0.32, 0.32], grow: 0.7, life: [0.9, 0.9], speed: [0, 0], up: [1.4, 1.4], opacity: 0.9 });
   }
+
 
   buildFx(x: number, y: number, z: number, team: number): void {
     this.burst(x, y + 0.4, z, puffTex, 0xd8c8a8, 10, 1.4, 0.8, 2.5, false, 0.6);
@@ -1520,6 +1478,7 @@ export class CombatFx implements FxHost {
   private frameDt = 1 / 60;
   update(dt: number): void {
     this.frameDt = dt;
+    this.particles.update(dt);
     this.clock += dt;
     for (let i = this.pending.length - 1; i >= 0; i--) {
       if (this.pending[i].at <= this.clock) {

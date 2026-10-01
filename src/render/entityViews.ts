@@ -433,7 +433,26 @@ export class EntityViews {
     this.corpses = [];
   }
 
-    heroPoint(id: number): THREE.Vector3 | null {
+    private hidden: THREE.Object3D[] = [];
+  private sphere = new THREE.Sphere();
+  cullTo(frustum: THREE.Frustum): void {
+    for (const o of this.root.children) {
+      if (!o.visible) continue;
+      this.sphere.center.copy(o.position);
+      this.sphere.center.y += 1.2;
+      this.sphere.radius = 3.5;
+      if (frustum.intersectsSphere(this.sphere)) continue;
+      o.visible = false;
+      this.hidden.push(o);
+    }
+  }
+
+  uncull(): void {
+    for (const o of this.hidden) o.visible = true;
+    this.hidden.length = 0;
+  }
+
+  heroPoint(id: number): THREE.Vector3 | null {
     const v = this.views.get(id);
     return v && v.framed !== false && v.seen ? v.root.position.clone() : null;
   }
