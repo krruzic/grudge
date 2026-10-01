@@ -1434,14 +1434,15 @@ async function start(): Promise<void> {
       while (d.acc >= w.dt) {
         d.acc -= w.dt;
         d.t += w.dt;
+        w.step([{ moveX: 0, moveZ: 0 }, { moveX: 0, moveZ: 0 }]);
         let k = 0;
         for (const u of w.entities) {
           if (!u.unit) continue;
-          u.unit.repathAt = 1e9;
+          u.unit.moving = false;
+          u.unit.path = [];
           if (spec.scene === "troops") w.teleport(u, DEMO_SPOT.x - 2.6 + k++ * 2.6, DEMO_SPOT.z);
           u.transform.facing = u.transform.prevFacing = 0.22 + Math.sin(d.t * 0.3) * 0.25;
         }
-        w.step([{ moveX: 0, moveZ: 0 }, { moveX: 0, moveZ: 0 }]);
       }
       const core = w.core(0)!;
       const tgt = spec.scene === "grudge" ? { x: w.arena.home.x, y: w.groundY(w.arena.home.x, w.arena.home.z) + 1.0, z: w.arena.home.z }
