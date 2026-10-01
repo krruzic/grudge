@@ -712,7 +712,9 @@ def build_duelist(images):
     c.lathe([(0.19, 1.735), (0.2, 1.77), (0.17, 1.82), (0.1, 1.855), (0.0, 1.865)], (0, 0.02, 0), "hair", "head", segs=16, sy=1.12, shade=HAIR)
     back = cloak_rows(1.78, 1.4, 0.2, 0.235, math.radians(5), math.radians(175), 12, 3, cy=0.02)
     sheet(c, back, "hair", "head", thick=0.04, shade=HAIR)
-    for row, (rad, z0, ln, cnt, a0, a1) in enumerate(((0.215, 1.66, 0.42, 11, -42, 222), (0.24, 1.58, 0.34, 8, -25, 205))):
+    shell = cloak_rows(1.79, 1.6, 0.2, 0.215, math.radians(-50), math.radians(230), 16, 3, cy=0.02)
+    sheet(c, shell, "hair", "head", thick=0.035, shade=HAIR)
+    for row, (rad, z0, ln, cnt, a0, a1) in enumerate(((0.205, 1.76, 0.5, 11, -42, 222), (0.225, 1.7, 0.42, 8, -25, 205))):
         for k in range(cnt):
             a = math.radians(a0 + (a1 - a0) * k / (cnt - 1))
             dx, dy = math.cos(a), math.sin(a)
@@ -886,7 +888,7 @@ def build_warden(images):
         q3 = branch(c, tuple(p[3]), [(0.1 * sx, 0.02, -0.04), (0.06 * sx, 0.0, 0.02)], 0.02, "bark", "head", shade=BARK, taper=0.7)
         for q, sc in ((q1[-1], 0.85), (q2[-1], 0.8), (p[4], 0.75), (q3[-1], 0.6), (p[2] + Vector((0.0, -0.05, 0.03)), 0.55)):
             c.ico(0.11 * sc, tuple(q), "leaves", "head", sub=2, scale=(1.3, 1.1, 0.8), shade=LEAF if sc > 0.7 else LEAF2)
-    c.ico(0.15, (0, 0.06, 1.86), "leaves", "head", scale=(1.4, 1.1, 0.7), sub=2, shade=LEAF)
+    c.ico(0.15, (0, 0.06, 1.86), "leaves_fall", "head", scale=(1.4, 1.1, 0.7), sub=2, shade=(1.0, 0.95, 0.95))
     c.lathe([(0.0, 0.0), (0.012, 0.0), (0.012, 0.05), (0.04, 0.06), (0.045, 0.08), (0.0, 0.1)], (0.13, -0.12, 1.79), "plain", "head", segs=8, shade=(1.3, 0.35, 0.25))
     for k in range(3):
         c.ico(0.012, (0.13 + (k - 1) * 0.015, -0.16, 1.87 + (k % 2) * 0.01), "plain", "head", sub=1, shade=(1.4, 1.4, 1.3))
@@ -908,7 +910,7 @@ def build_warden(images):
     c.ico(0.03, (-0.05, -0.36, 1.27), "gold", "chest", sub=1)
     for sx in (-1, 1):
         c.ico(0.26, (0.5 * sx, 0.0, 1.55), "leaves", "chest", sub=2, scale=(1.3, 1.2, 0.85), shade=LEAF)
-        c.ico(0.16, (0.62 * sx, -0.12, 1.47), "leaves", "chest", sub=2, scale=(1.0, 1.0, 0.8), shade=LEAF2)
+        c.ico(0.16, (0.62 * sx, -0.12, 1.47), "leaves_fall", "chest", sub=2, scale=(1.0, 1.0, 0.8), shade=(1.0, 0.9, 0.9) if sx > 0 else (1.15, 1.15, 1.0))
         for k in range(3):
             branch(c, (0.48 * sx, 0.05 - k * 0.08, 1.62), [(0.12 * sx, 0.02, 0.12 + k * 0.03), (0.05 * sx, 0.0, 0.08)], 0.03, "bark", "chest", shade=BARK, taper=0.6, segs=5)
     folded(c, [(0.29, 0.72), (0.33, 0.78), (0.34, 0.86), (0.31, 0.92)], (0, 0.0, 0), BK, "hips", segs=18, folds=7, amp=0.06, sy=0.7, shade=(0.68, 1.02, 0.527))
@@ -943,6 +945,78 @@ def build_warden(images):
             a = math.radians(-90 + (k - 2) * 38)
             branch(c, (s1[0] + math.cos(a) * 0.12, -0.02 + math.sin(a) * 0.12, 0.1), [(math.cos(a) * 0.1, math.sin(a) * 0.1, -0.06), (math.cos(a) * 0.08, math.sin(a) * 0.08, -0.04)],
                    0.045, "bark", f"shin_{side}", shade=BARK, taper=0.62, segs=6)
+    import random
+    rnd = random.Random(42)
+    FALL = [(1.0, 0.45, 0.1), (0.85, 0.2, 0.08), (1.05, 0.75, 0.12), (0.6, 0.3, 0.1), (0.95, 0.58, 0.1)]
+
+    def leaf(p, n, size, col):
+        p = Vector(p)
+        n = Vector(n).normalized()
+        t = n.cross(Vector((0, 0, 1)))
+        if t.length < 1e-3:
+            t = Vector((1, 0, 0))
+        t.normalize()
+        a = rnd.uniform(0, math.tau)
+        d = (t * math.cos(a) + n.cross(t) * math.sin(a)).normalized()
+        pts = [tuple(p + n * 0.012 + d * size * (u - 0.5) + n * size * 0.12 * math.sin(u * math.pi)) for u in (0.0, 0.25, 0.5, 0.75, 1.0)]
+        blade(c, pts, [0.0, size * 0.32, size * 0.38, size * 0.25, 0.0], "plain", bone_of[0], thick=0.004, side=tuple(n), shade=col)
+
+    bone_of = ["chest"]
+    prof = [(0.86, 0.31), (0.96, 0.4), (1.12, 0.45), (1.3, 0.48), (1.46, 0.46), (1.56, 0.38)]
+
+    def trunk_r(z):
+        for (z0, r0), (z1, r1) in zip(prof, prof[1:]):
+            if z0 <= z <= z1:
+                return r0 + (r1 - r0) * (z - z0) / (z1 - z0)
+        return prof[-1][1]
+
+    for k in range(38):
+        z = rnd.uniform(0.92, 1.52)
+        a = rnd.uniform(0, math.tau)
+        rr = trunk_r(z) * 1.07
+        x, y = math.cos(a) * rr, math.sin(a) * rr * 0.62
+        leaf((x, y, z), (math.cos(a), math.sin(a) * 1.6, 0.15), rnd.uniform(0.1, 0.15), FALL[k % 5])
+    for k in range(10):
+        a = rnd.uniform(0, math.tau)
+        z = rnd.uniform(0.95, 1.5)
+        c.box((0.12, 0.03, rnd.uniform(0.14, 0.26)), (math.cos(a) * 0.47, math.sin(a) * 0.3, z), "bark", "chest", rot=(0, rnd.uniform(-0.2, 0.2), a + math.pi / 2), shade=(0.55, 0.5, 0.42))
+    for k in range(9):
+        a = k / 9 * math.tau + 0.2
+        pts = [(math.cos(a) * 0.475, math.sin(a) * 0.3, z) for z in (0.92, 1.12, 1.32, 1.48)]
+        tube(c, pts, [0.012] * 4, "plain", "chest", segs=4, shade=(0.12, 0.09, 0.06), cap=False)
+    for (x, y, z) in ((0.22, -0.27, 1.22), (-0.3, 0.25, 1.05), (0.38, 0.18, 1.4)):
+        ring(c, 0.045, 0.018, (x, y, z), "bark", "chest", rot=(1.57, 0, math.atan2(y, x) - 1.57), segs=10, shade=(0.55, 0.48, 0.4))
+        c.ico(0.035, (x * 1.02, y * 1.02, z), "plain", "chest", sub=1, scale=(1.0, 0.5, 1.0), shade=(0.08, 0.06, 0.04))
+    for k in range(6):
+        a = rnd.uniform(0, math.tau)
+        z = rnd.uniform(0.95, 1.5)
+        c.ico(rnd.uniform(0.06, 0.09), (math.cos(a) * trunk_r(z) * 1.03, math.sin(a) * trunk_r(z) * 0.64, z), "plain", "chest", sub=1, scale=(1.0, 0.35, 0.8), shade=(0.62, 0.78, 0.42))
+    for side, sx in (("R", -1), ("L", 1)):
+        for part, (p0, p1, r) in (("arm", (B[f"arm_{side}"][0], B[f"arm_{side}"][1], 0.13)), ("forearm", (B[f"forearm_{side}"][0], B[f"forearm_{side}"][1], 0.14)),
+                                  ("thigh", (B[f"thigh_{side}"][0], B[f"thigh_{side}"][1], 0.16)), ("shin", (B[f"shin_{side}"][0], B[f"shin_{side}"][1], 0.17))):
+            bone_of[0] = f"{part}_{side}"
+            p0 = Vector(p0)
+            p1 = Vector(p1)
+            ax = (p1 - p0).normalized()
+            ref = Vector((1, 0, 0)) if abs(ax.x) < 0.9 else Vector((0, 1, 0))
+            u = ax.cross(ref).normalized()
+            v = ax.cross(u)
+            for k in range(4):
+                t = rnd.uniform(0.15, 0.85)
+                a = rnd.uniform(0, math.tau)
+                n = u * math.cos(a) + v * math.sin(a)
+                leaf(tuple(p0 + (p1 - p0) * t + n * (r + 0.03)), tuple(n), rnd.uniform(0.09, 0.12), FALL[(k + len(part)) % 5])
+            a = rnd.uniform(0, math.tau)
+            n = u * math.cos(a) + v * math.sin(a)
+            c.box((0.09, 0.03, 0.18), tuple(p0 + (p1 - p0) * 0.5 + n * r), "bark", bone_of[0], rot=(0, 0, math.atan2(n.y, n.x) + math.pi / 2), shade=(0.55, 0.5, 0.42))
+    bone_of[0] = "head"
+    for k in range(5):
+        a = rnd.uniform(math.pi * 0.1, math.pi * 0.9)
+        leaf((math.cos(a) * 0.22, -0.02 + math.sin(a) * 0.21, rnd.uniform(1.5, 1.75)), (math.cos(a), math.sin(a), 0.2), rnd.uniform(0.05, 0.07), FALL[k % 5])
+    for sx in (-1, 1):
+        c.ico(0.14, (0.38 * sx, -0.08, 1.7), "leaves_fall", "chest", sub=2, scale=(1.1, 1.0, 0.8), shade=(0.95, 0.7, 0.7) if sx > 0 else (1.1, 1.0, 0.9))
+        c.ico(0.11, (0.66 * sx, 0.1, 1.42), "leaves_fall", "chest", sub=2, scale=(1.0, 1.0, 0.8), shade=(1.2, 1.2, 1.05))
+    c.ico(0.1, (0.12, 0.14, 1.92), "leaves", "head", sub=2, scale=(1.2, 1.0, 0.8), shade=(1.35, 0.45, 0.12))
     lx, ly, lz = hand_pos(B, "L")
     sc = Vector((lx + 0.16, ly, lz + 0.22))
     R = 0.5

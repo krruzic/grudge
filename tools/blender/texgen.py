@@ -534,6 +534,7 @@ GENERATORS = {
     "water": water,
     "leaves": leaves,
     "pine": lambda: leaves(21, "#123a24", "#1f5a34", "#4f8f4a"),
+    "leaves_fall": lambda: leaves(23, "#5a1e06", "#b4500f", "#e8a42a"),
     "bark": bark,
     "tallgrass": tallgrass,
     "cloth": cloth,
