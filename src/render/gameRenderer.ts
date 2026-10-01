@@ -569,12 +569,17 @@ export class GameRenderer {
     this.entityViews.uncull();
   }
 
+  quiet = false;
+  demoCam: { rect: [number, number, number, number]; target: { x: number; y: number; z: number }; yaw: number; pitch: number; dist: number } | null = null;
+  private demoCamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
   private matrixFrame = -1;
   private frustum = new THREE.Frustum();
   private cullMat = new THREE.Matrix4();
 
   render(alpha: number, dt: number): void {
     FRAME.id++;
+    this.combatFx.quiet = this.quiet;
+    this.entityViews.quiet = this.quiet || !!this.demoCam;
     this.scene.matrixWorldAutoUpdate = false;
     this.time += dt;
     for (const ev of this.world.events) {
@@ -607,7 +612,32 @@ export class GameRenderer {
     this.map.update(this.time, this.world.tideLevel());
     this.effects.update(this.time, dt);
     this.renderer.setRenderTarget(this.target);
-    if (!this.splitViews.length) {
+    if (this.demoCam) {
+      const d = this.demoCam;
+      const tw = this.target.width;
+      const th = this.target.height;
+      const [fx, fy, fw, fh] = d.rect;
+      const w = Math.max(1, Math.round(fw * tw));
+      const h = Math.max(1, Math.round(fh * th));
+      const x = Math.round(fx * tw);
+      const y = Math.round(th - (fy + fh) * th);
+      this.renderer.setScissor(0, 0, tw, th);
+      this.renderer.setScissorTest(true);
+      this.renderer.clear();
+      const cam = this.demoCamera;
+      cam.aspect = w / h;
+      cam.updateProjectionMatrix();
+      const cp = Math.cos(d.pitch);
+      cam.position.set(d.target.x + Math.sin(d.yaw) * cp * d.dist, d.target.y + Math.sin(d.pitch) * d.dist, d.target.z + Math.cos(d.yaw) * cp * d.dist);
+      cam.lookAt(d.target.x, d.target.y, d.target.z);
+      cam.userData.fogNear = d.dist * 7;
+      cam.userData.fogFar = d.dist * 18;
+      shake(cam);
+      this.renderer.setViewport(x, y, w, h);
+      this.renderer.setScissor(x, y, w, h);
+      this.drawScene(cam, null);
+      this.renderer.setScissorTest(false);
+    } else if (!this.splitViews.length) {
       const asp = this.target.width / this.target.height;
       if (Math.abs(this.camera.aspect - asp) > 1e-3) {
         this.camera.aspect = asp;

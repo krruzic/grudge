@@ -53,7 +53,7 @@
   "heroes": {
     "warlord": {
       "name": "Warlord",
-      "blurb": "Brute. Slam cows and slows; Quake crushes the slowed. Warcry refreshes Slam.",
+      "blurb": "Brute. Slam cows and slows; Quake crushes the slowed. War Cry rouses every ally nearby.",
       "health": "mid",
       "speed": "mid",
       "damage": "mid",

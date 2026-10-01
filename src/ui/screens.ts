@@ -1,10 +1,10 @@
 import type { World } from "../sim/world";
 import { CAMERA_NAMES, RULE_ROWS, type Row, type Rules } from "../game/save";
 import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from "../sim/terrain";
-import { drawNum, drawPlain, drawText, occlude, textWidth } from "./font";
+import { drawNum, drawPlain, drawText, occlude, textWidth, onHiLayer } from "./font";
 import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
-import { artTitle, band, card, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor } from "./n64ui";
+import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor } from "./n64ui";
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
@@ -97,6 +97,7 @@ const TEAM_BOX = ["#1c34a8", "#a81c1c"];
 const TEAM_BRIGHT = ["#4a74ff", "#ff4a3a"];
 const TEAM_CLOTH = ["#3a58e0", "#d83828"];
 const TEAM_TEXT_R = ["#1c3aa8", "#a81c1c"];
+const BROWN_S = "#3a2410";
 const TEAM_FIELD = ["#4a64d8", "#c83a2a"];
 const INK = "#0b0806";
 const BTN = { a: PAD.a, b: PAD.b, r: PAD.z, z: PAD.z };
@@ -220,12 +221,12 @@ export class Screens {
     if (this.which === "none") return;
     const sel = this.which === "select" || (this.which === "lobby" && !!this.lobby);
     this.peer = this.which === "lobby";
-    if (this.which === "title") fieldShade(ctx, W, H, 0.12);
-    else if (this.which === "pause" || this.which === "results") fieldShade(ctx, W, H, 0.45);
+    if (this.which === "title") boardBg(ctx, W, H);
+    else if (this.which === "pause" || this.which === "results") boardBg(ctx, W, H);
     const blink = Math.floor(now * 2) % 2 === 0;
     if (this.cursors && (sel || this.which === "map")) this.cursors.hits = [];
     if (this.which === "title") {
-      fieldShade(ctx, W, H, 0.25);
+      boardBg(ctx, W, H);
       const cw = Math.min(250, W - 60);
       const ch = 168;
       const cx = Math.round((W - cw) / 2);
@@ -266,7 +267,7 @@ export class Screens {
   }
 
   private drawSelect(ctx: CanvasRenderingContext2D, W: number, H: number, _now: number, blink: boolean): void {
-    fieldShade(ctx, W, H, 0.3);
+    boardBg(ctx, W, H);
     const floorY = H - 20;
     woodFloor(ctx, floorY, W, H);
     beam(ctx, 4, 2, W - 8, 17);
@@ -297,7 +298,7 @@ export class Screens {
         ctx.fillStyle = "#2a1a0a";
         ctx.fillRect(2, 6, iw + 4, iw + 4);
         texturedRect(ctx, "cloth", 4, 8, iw, iw, on.length ? TEAM_FIELD[on[0]] : "#7a2a1c", 0, 0.7);
-        if (icon) ctx.drawImage(icon, 2, 6, iw + 4, iw + 4);
+        if (icon) hiImage(ctx, icon, 4, 8, iw, iw);
         const name = (this.heroes[type]?.name ?? type).toUpperCase();
         const ns = Math.min(0.62, (sw - 4) / Math.max(1, textWidth(name, 1, true)));
         drawPlain(ctx, name, sw / 2 - textWidth(name, ns, true) / 2, sh - 10, on.length ? "#8a1810" : "#3a2410", ns, true);
@@ -312,13 +313,14 @@ export class Screens {
     const bh = floorY - by - 6;
     order.forEach((i, k) => this.drawBanner(ctx, i, bgap + k * (bw + bgap), by, bw, bh, blink));
     if (!this.twoVtwo) {
-      for (const [i, bx] of [[2, 14], [3, W - 14 - 40]] as const) {
-        rolledBanner(ctx, bx, by, 40);
+      for (const [i, bx] of [[2, 12], [3, W - 12 - 44]] as const) {
         this.portraits?.drop(i);
         if (this.peer) continue;
         const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `add:${i}`);
-        for (const [line, dy] of [["+ ADD", 17], ["CPU", 25]] as const) shadowText(ctx, line, bx + 20 - textWidth(line, 0.55) / 2, by + dy, hot ? "#fff4b0" : "#c8bca0", 0.55);
-        this.hit(`add:${i}`, bx - 2, by - 2, 44, 38);
+        card(ctx, bx, by + 4, 44, 34, hot ? 0 : i === 2 ? -0.04 : 0.04, hot ? "#c81818" : "#8a8a90", () => {
+          for (const [line, dy] of [["+ ADD", 10], ["CPU", 19]] as const) drawPlain(ctx, line, 22 - textWidth(line, 0.55, true) / 2, dy, hot ? "#8a1810" : "#6a4424", 0.55, true);
+        });
+        this.hit(`add:${i}`, bx - 2, by + 2, 48, 38);
       }
     }
 
@@ -333,22 +335,29 @@ export class Screens {
 
     if (this.openHint && !this.peer) {
       const sw2 = Math.min(300, W - 60);
-      scroll(ctx, W / 2, 124, sw2, 30);
-      const t1 = "SEATS STILL OPEN";
-      drawPlain(ctx, t1, W / 2 - textWidth(t1, 1.05, true) / 2, 127, "#3a2410", 1.05, true);
-      const t2 = this.twoVtwo ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1" : "WAIT FOR A PLAYER OR + ADD CPU";
-      drawPlain(ctx, t2, W / 2 - textWidth(t2, 0.55, true) / 2, 142, "#8a1810", 0.55, true);
+      onHiLayer(ctx, (t) => {
+        card(t, W / 2 - sw2 / 2, 124, sw2, 32, 0.01, "#c81818", () => {
+          const t1 = "SEATS STILL OPEN";
+          drawPlain(t, t1, sw2 / 2 - textWidth(t1, 1.05, true) / 2, 5, "#3a2410", 1.05, true);
+          const t2 = this.twoVtwo ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1" : "WAIT FOR A PLAYER OR + ADD CPU";
+          drawPlain(t, t2, sw2 / 2 - textWidth(t2, 0.55, true) / 2, 20, "#8a1810", 0.55, true);
+        });
+      });
     }
     if (this.readyBanner) {
       const sw2 = Math.min(280, W - 60);
-      scroll(ctx, W / 2, 124, sw2, 34);
-      this.hit("go", W / 2 - sw2 / 2, 124, sw2, 34);
-      const t = "THE GRUDGE IS SWORN!";
-      drawPlain(ctx, t, W / 2 - textWidth(t, 1.35, true) / 2, 128, "#3a2410", 1.35, true);
-      if (blink) {
-        const p = "PRESS START";
-        drawPlain(ctx, p, W / 2 - textWidth(p, 0.7, true) / 2, 146, "#8a1810", 0.7, true);
-      }
+      this.hit("go", W / 2 - sw2 / 2, 124, sw2, 36);
+      onHiLayer(ctx, (t) => {
+        card(t, W / 2 - sw2 / 2, 124, sw2, 36, -0.012, "#c81818", () => {
+          const tt = "THE GRUDGE IS SWORN!";
+          drawPlain(t, tt, sw2 / 2 - textWidth(tt, 1.35, true) / 2, 5, "#3a2410", 1.35, true);
+          if (blink) {
+            const p = "PRESS START";
+            drawPlain(t, p, sw2 / 2 - textWidth(p, 0.7, true) / 2, 23, "#8a1810", 0.7, true);
+          }
+          waxSeal(t, sw2 - 16, 18, 10, "#a8141a", "combo");
+        });
+      });
     }
   }
 
@@ -398,118 +407,122 @@ export class Screens {
     const s = this.slots[i];
     const active = !!s && (i < 2 || this.twoVtwo);
     const team = i % 2;
+    const ink = TEAM_TEXT_R[team];
     if (!s || !active) {
-      rolledBanner(ctx, x, y, w);
       this.portraits?.drop(i);
-      if (s) {
-        const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `add:${i}`);
+      if (!s) return;
+      const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `add:${i}`);
+      card(ctx, x, y, w, 32, hot ? 0 : team ? 0.03 : -0.03, hot ? "#c81818" : "#8a8a90", () => {
         const t = "+ ADD CPU";
-        shadowText(ctx, t, x + w / 2 - textWidth(t, 0.55) / 2, y + 18, hot ? "#fff4b0" : "#c8bca0", 0.55);
-        this.hit(`add:${i}`, x, y - 2, w, 30);
-      }
+        drawPlain(ctx, t, w / 2 - textWidth(t, 0.6, true) / 2, 13, hot ? "#8a1810" : "#6a4424", 0.6, true);
+      });
+      this.hit(`add:${i}`, x, y - 2, w, 34);
       return;
     }
     if (s.open) {
-      banner(ctx, x, y, w, h, team ? "#6a3a30" : "#303a6a", 10);
       this.portraits?.drop(i);
-      band(ctx, x + 3, y + 3, w - 6, h - 16, "#000000", 0.35);
-      paintedText(ctx, `P${i + 1}`, x + w / 2, y + 7, "#c8b890", 1.05);
-      const lines = this.peer ? ["OPEN SEAT", "WAITING FOR", "A PLAYER"] : ["OPEN SEAT", "WAITING FOR A PLAYER"];
-      lines.forEach((l, k) => shadowText(ctx, l, x + w / 2 - textWidth(l, k ? 0.45 : 0.7) / 2, y + 34 + k * 9 + (k ? 3 : 0), k ? "#c8bca0" : "#f0e4c8", k ? 0.45 : 0.7));
+      card(ctx, x, y, w, h, team ? 0.012 : -0.012, TEAM_BRIGHT[team], () => {
+        const t = `SEAT ${i + 1}`;
+        drawPlain(ctx, t, w / 2 - textWidth(t, 0.8, true) / 2, 8, ink, 0.8, true);
+        inset(ctx, 6, 24, w - 12, h - 92, "#2a2018");
+        texturedRect(ctx, "cloth", 6, 24, w - 12, h - 92, TEAM_CLOTH[team], 0, 0.7);
+        band(ctx, 6, 24, w - 12, h - 92, "#000000", 0.45);
+        waxSeal(ctx, w / 2, 24 + (h - 92) / 2, 14, "#5a4a3a", "none");
+        const lines = this.peer ? ["OPEN SEAT", "WAITING FOR", "A PLAYER"] : ["OPEN SEAT", "WAITING FOR A PLAYER"];
+        lines.forEach((l, k) => drawPlain(ctx, l, w / 2 - textWidth(l, k ? 0.48 : 0.68, true) / 2, h - 62 + k * 9, k ? "#6a4424" : BROWN_S, k ? 0.48 : 0.68, true));
+      });
       const btns: [string, string][] = this.peer ? [[`take:${i}`, "SIT HERE"]] : [[`sit:${i}`, "SIT HERE"], [`seatcpu:${i}`, "+ ADD CPU"]];
-      btns.forEach(([bid, t], k) => this.woodButton(ctx, bid, t, x + w / 2, y + h - 40 - (btns.length - 1 - k) * 16));
+      btns.forEach(([bid, t], k) => this.woodButton(ctx, bid, t, x + w / 2, y + h - 34 + k * 15 - (btns.length - 1) * 8));
       return;
     }
     const commander = i >= 2 && !this.heroPartners;
     const human = s.joined && !s.cpu;
-    const showHero = true;
-    const notch = 10;
-    banner(ctx, x, y, w, h, showHero ? TEAM_CLOTH[team] : "#c8bc9c", notch);
+    const def = this.heroes[s.hero];
+    const naming = this.naming.has(i);
     const tagged = !s.cpu && !commander && !!s.tag;
     const label = tagged ? s.tag! : `P${i + 1}`;
     const tagHot = !s.cpu && !commander && !!this.cursors?.cursors.some((c) => c.active && c.hover === `tag:${i}`);
-    paintedText(ctx, label, x + w / 2, y + 7, tagHot ? "#fff4b0" : tagged ? "#f8e8c0" : "#f0c030", tagged ? Math.min(1.05, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 1.05);
+    const iy = 30;
+    const ih = h - iy - 34;
+    card(ctx, x, y, w, h, 0, s.ready ? "#c8a020" : TEAM_BRIGHT[team], () => {
+      const ls = tagged ? Math.min(0.95, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 0.95;
+      drawPlain(ctx, label, w / 2 - textWidth(label, ls, true) / 2, 7, tagHot ? "#c81818" : ink, ls, true);
+      inset(ctx, 5, iy, w - 10, ih, "#2a2018");
+      texturedRect(ctx, "cloth", 5, iy, w - 10, ih, TEAM_CLOTH[team], 0, 0.7);
+      band(ctx, 5, iy + ih - 10, w - 10, 10, "#000000", 0.25);
+      const name = (def?.name ?? s.hero).toUpperCase();
+      const ns = Math.min(0.8, (w - 10) / Math.max(1, textWidth(name, 1, true)));
+      drawPlain(ctx, name, w / 2 - textWidth(name, ns, true) / 2, iy + ih + 5, BROWN_S, ns, true);
+    });
     if (!s.cpu && !commander) {
       this.hit(`tag:${i}`, x + 4, y + 3, w - 8, 13);
       if (tagHot) shadowText(ctx, "SIGN NAME", x + w / 2 - textWidth("SIGN NAME", 0.42) / 2, y - 7, "#f8e8c0", 0.42);
     }
-    if (s.cpu && !this.peer && !commander && this.cursors?.cursors.some((c) => c.active)) this.woodButton(ctx, `sit:${i}`, "SIT HERE", x + w / 2, y + h - 42);
-    if (s.cpu && this.hosting && !commander) {
-      const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `seatopen:${i}`);
-      const ux = x + w - 10;
-      const uy = y + 1;
+    if (s.cpu && !this.peer && !commander && this.cursors?.cursors.some((c) => c.active)) this.woodButton(ctx, `sit:${i}`, "SIT HERE", x + w / 2, y - 15);
+    const xBox = (bid: string, tip: string) => {
+      const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === bid);
+      const ux = x + w - 11;
+      const uy = y + 3;
       ctx.fillStyle = "#1a120a";
       ctx.fillRect(ux - 1, uy - 1, 9, 9);
       ctx.fillStyle = uHot ? "#b83020" : "#6a3a24";
       ctx.fillRect(ux, uy, 7, 7);
       shadowText(ctx, "X", ux + 3.5 - textWidth("X", 0.5) / 2, uy + 1, uHot ? "#fff4b0" : "#e8d8b8", 0.5);
-      this.hit(`seatopen:${i}`, ux - 2, uy - 2, 11, 11);
-      if (uHot) shadowText(ctx, "OPEN THIS SEAT", Math.max(2, x + w / 2 - textWidth("OPEN THIS SEAT", 0.42) / 2), y - 7, "#f8e8c0", 0.42);
-    }
-    if (human && s.local) {
-      const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `unplug:${i}`);
-      const ux = x + w - 10;
-      const uy = y + 1;
-      ctx.fillStyle = "#1a120a";
-      ctx.fillRect(ux - 1, uy - 1, 9, 9);
-      ctx.fillStyle = uHot ? "#b83020" : "#6a3a24";
-      ctx.fillRect(ux, uy, 7, 7);
-      shadowText(ctx, "X", ux + 3.5 - textWidth("X", 0.5) / 2, uy + 1, uHot ? "#fff4b0" : "#e8d8b8", 0.5);
-      this.hit(`unplug:${i}`, ux - 2, uy - 2, 11, 11);
-      if (uHot) shadowText(ctx, "UNPLUG · ANY BUTTON REJOINS", Math.max(2, x + w / 2 - textWidth("UNPLUG · ANY BUTTON REJOINS", 0.42) / 2), y - 7, "#f8e8c0", 0.42);
-    }
-
-    const def = this.heroes[s.hero];
-    const hy = y + 26;
-    const hasTree = !commander && !!TREES[s.hero];
-    const hh = h - notch - 50;
-    const naming = this.naming.has(i);
-    if (naming) this.portraits?.drop(i);
-    else if (showHero && this.portraits) {
-      const cv = this.portraits.stage(i, s.hero, team, s.ready);
-      const k = Math.min((w + 30) / cv.width, (hh + 14) / cv.height);
-      const dw = cv.width * k;
-      const dh = cv.height * k;
-      ctx.drawImage(cv, x + (w - dw) / 2, hy + hh - dh + 4, dw, dh);
-    } else {
-      this.portraits?.drop(i);
-      paintedText(ctx, "?", x + w / 2, hy + hh / 2 - 18, "#6a4a28", 3.4);
-    }
-    if (!naming) this.kindPlaque(ctx, i, x + w / 2, y + 18, s);
-    if (hasTree && !naming) {
-      const tw = w >= 100 ? 1 : 0.7;
-      ctx.save();
-      drawTree(ctx, s.hero, "a", x + 4, hy + 8, false, tw);
-      drawTree(ctx, s.hero, "b", x + w - 4 - Math.round(23 * tw), hy + 8, true, tw);
-      ctx.restore();
-    }
-    const name = (showHero ? def?.name ?? s.hero : "RANDOM").toUpperCase();
-    const ry = y + h - notch - 22;
+      this.hit(bid, ux - 2, uy - 2, 11, 11);
+      if (uHot) shadowText(ctx, tip, Math.max(2, x + w / 2 - textWidth(tip, 0.42) / 2), y - 7, "#f8e8c0", 0.42);
+    };
+    if (s.cpu && this.hosting && !commander) xBox(`seatopen:${i}`, "OPEN THIS SEAT");
+    if (human && s.local) xBox(`unplug:${i}`, "UNPLUG · ANY BUTTON REJOINS");
     if (naming) {
-      this.naming.get(i)!.draw(ctx, x + 3, y + 18, w - 6, h - notch - 20, performance.now() / 1000);
+      this.portraits?.drop(i);
+      this.naming.get(i)!.draw(ctx, x + 3, y + 18, w - 6, h - 20, performance.now() / 1000);
       return;
     }
-    ribbon(ctx, x + w / 2, ry, w + 6, 11, name, Math.min(0.8, (w + 2) / Math.max(1, textWidth(name, 1, true))), undefined, showHero ? nameImage(`!${name}`) : null);
-    if (showHero) {
-      (["a", "b", "r", "z"] as const).forEach((a, j) => {
-        const cx = x + (w / 4) * (j + 0.5);
-        abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, ry + 17, 8);
+    this.kindPlaque(ctx, i, x + w / 2, y + 17, s);
+    const fx = x + 5;
+    const fy = y + iy;
+    const fw = w - 10;
+    if (this.portraits) {
+      const cv = this.portraits.stage(i, s.hero, team, s.ready);
+      const k = Math.min(fw / cv.width, (ih + 4) / cv.height);
+      const dw = cv.width * k;
+      const dh = cv.height * k;
+      onHiLayer(ctx, (t) => {
+        t.save();
+        t.beginPath();
+        t.rect(fx, fy, fw, ih);
+        t.clip();
+        t.imageSmoothingEnabled = true;
+        t.drawImage(cv, fx + (fw - dw) / 2, fy + ih - dh + 3, dw, dh);
+        t.restore();
       });
-    } else if (blink) {
-      const t = "PRESS A";
-      shadowText(ctx, t, x + w / 2 - textWidth(t, 0.5) / 2, ry + 14, "#f0c030", 0.5);
     }
+    const hasTree = !commander && !!TREES[s.hero];
+    if (hasTree) {
+      const tw = w >= 100 ? 1 : 0.7;
+      onHiLayer(ctx, (t) => {
+        drawTree(t, s.hero, "a", fx + 2, fy + 3, false, tw);
+        drawTree(t, s.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
+      });
+    }
+    (["a", "b", "r", "z"] as const).forEach((a, j) => {
+      const cx = x + (w / 4) * (j + 0.5);
+      abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
+    });
     if (s.ready && !commander && human) {
-      waxSeal(ctx, x + w - 8, y + 14, 10, "#a8141a", "combo");
-      const t = "SWORN";
-      shadowText(ctx, t, x + w - 8 - textWidth(t, 0.5) / 2, y + 26, "#f4ecd8", 0.5);
+      onHiLayer(ctx, (t) => {
+        waxSeal(t, fx + fw - 12, fy + 13, 10, "#a8141a", "combo");
+        const tt = "SWORN";
+        shadowText(t, tt, fx + fw - 12 - textWidth(tt, 0.5) / 2, fy + 25, "#f4ecd8", 0.5);
+      });
     }
+    void blink;
   }
 
   naming = new Map<number, NameEntry>();
 
   private drawMap(ctx: CanvasRenderingContext2D, W: number, H: number, _blink: boolean): void {
-    fieldShade(ctx, W, H, 0.3);
+    boardBg(ctx, W, H);
     woodFloor(ctx, H - 20, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_field", "CHOOSE THE FIELD", W / 2, 3, 14);
@@ -529,7 +542,7 @@ export class Screens {
     const ih = Math.round(iw * 0.48);
     ctx.fillStyle = "#2a1a0a";
     ctx.fillRect(10, 10, iw + 4, ih + 4);
-    if (!random && this.portraits) ctx.drawImage(this.portraits.mapLive(this.mapIndex, iw, ih), 12, 12, iw, ih);
+    if (!random && this.portraits) hiImage(ctx, this.portraits.mapLive(this.mapIndex, iw * 4, ih * 4), 12, 12, iw, ih);
     else {
       texturedRect(ctx, "parch", 12, 12, iw, ih, "#c8a878", 0, 1);
       drawPlain(ctx, "?", 12 + iw / 2 - textWidth("?", 5, true) / 2, 12 + ih / 2 - 26, "#5a3a18", 5, true);
@@ -570,8 +583,8 @@ export class Screens {
       ctx.fillStyle = "#2a1a0a";
       ctx.fillRect(4, 4, tw + 2, th + 2);
       if (k < this.maps.length) {
-        const t = this.portraits?.mapThumb(k, tw, th);
-        if (t) ctx.drawImage(t, 5, 5, tw, th);
+        const t = this.portraits?.mapThumb(k, tw * 4, th * 4);
+        if (t) hiImage(ctx, t, 5, 5, tw, th);
       } else {
         texturedRect(ctx, "parch", 5, 5, tw, th, "#c8a878", 0, 1);
         drawPlain(ctx, "?", 5 + tw / 2 - textWidth("?", 2.4, true) / 2, 5 + th / 2 - 13, "#5a3a18", 2.4, true);
@@ -590,7 +603,7 @@ export class Screens {
     const H = 240;
     const win = w.match.winner;
     const head = win < 0 ? "A DRAW" : `${win === 0 ? "BLUE" : "RED"} HOUSE WINS`;
-    fieldShade(ctx, W, H, 0.3);
+    boardBg(ctx, W, H);
     woodFloor(ctx, H - 20, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, `!${head}`, head, W / 2, 3, 14);
@@ -667,7 +680,7 @@ export class Screens {
       ctx.fillRect(4, 4, chh - 6, chh - 6);
       texturedRect(ctx, "cloth", 5, 5, chh - 8, chh - 8, TEAM_CLOTH[p.team], 0, 0.7);
       const icon = this.portraits?.icon(p.hero);
-      if (icon) ctx.drawImage(icon, 3, 3, chh - 4, chh - 4);
+      if (icon) hiImage(ctx, icon, 5, 5, chh - 8, chh - 8);
       const nm = p.cpu ? "CPU" : p.tag ?? `P${k + 1}`;
       drawPlain(ctx, nm, chh + 2, chh / 2 - 9, TEAM_TEXT_R[p.team], 0.72, true);
       const hero = (this.heroes[p.hero]?.name ?? p.hero).toUpperCase();

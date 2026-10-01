@@ -408,6 +408,7 @@ export function markSilhouette(obj: THREE.Object3D, team: number): void {
 
 export class EntityViews {
   readonly root = new THREE.Group();
+  quiet = false;
   private views = new Map<number, View>();
   private rings = new Map<number, THREE.Mesh>();
   private padMarkers: THREE.Mesh[] = [];
@@ -786,6 +787,11 @@ export class EntityViews {
       }
       else if (e.unit) this.syncUnit(e, v, facing, time, adt);
       else this.syncStructure(e, v, time);
+      if (this.quiet) {
+        v.bar.group.visible = false;
+        if (v.work) v.work.group.visible = false;
+        for (const c of v.root.children) if (c instanceof THREE.Sprite) c.visible = false;
+      }
       if (e.kind !== "structure" && e.alive) this.footsteps(e, v);
       if (e.kind !== "structure") this.syncMark(e, v, time);
       this.syncTalentFx(e, v, time, dt);

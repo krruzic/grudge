@@ -264,6 +264,26 @@ export function wall(ctx: CanvasRenderingContext2D, W: number, H: number): void 
   ctx.globalCompositeOperation = "source-over";
 }
 
+export function boardBg(ctx: CanvasRenderingContext2D, W: number, H: number): void {
+  bakedPlate(ctx, "board", 0, 0, W, H, (g) => {
+    g.fillStyle = pattern(g, "wood", 1.4, 0, 0);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = "rgba(40,22,10,0.55)";
+    g.fillRect(0, 0, W, H);
+    for (let y = 22; y < H; y += 26) {
+      g.fillStyle = "rgba(0,0,0,0.35)";
+      g.fillRect(0, y, W, 1);
+      g.fillStyle = "rgba(255,220,170,0.06)";
+      g.fillRect(0, y + 1, W, 1);
+    }
+    const v = g.createRadialGradient(W / 2, H * 0.5, H * 0.2, W / 2, H * 0.5, W * 0.65);
+    v.addColorStop(0, "rgba(0,0,0,0)");
+    v.addColorStop(1, "rgba(8,4,2,0.7)");
+    g.fillStyle = v;
+    g.fillRect(0, 0, W, H);
+  });
+}
+
 export function fieldShade(ctx: CanvasRenderingContext2D, W: number, H: number, dim = 0.32): void {
   ctx.fillStyle = `rgba(12,8,4,${dim})`;
   ctx.fillRect(0, 0, W, H);
@@ -706,4 +726,12 @@ export function boardTitle(ctx: CanvasRenderingContext2D, W: number, key: string
 export function tag(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, sel: boolean, k: number, body: () => void): void {
   card(ctx, x - (sel ? 8 : 0), y, w, h, sel ? 0 : k % 2 ? 0.025 : -0.025, sel ? "#c81818" : "#8a8a90", body);
   if (sel) goldArrow(ctx, x - 14, y + h / 2, -1, 6);
+}
+
+export function hiImage(ctx: CanvasRenderingContext2D, im: CanvasImageSource, x: number, y: number, w: number, h: number): void {
+  onHiLayer(ctx, (t) => {
+    t.imageSmoothingEnabled = true;
+    t.imageSmoothingQuality = "high";
+    t.drawImage(im, x, y, w, h);
+  });
 }

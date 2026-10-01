@@ -515,7 +515,10 @@ export class CombatFx implements FxHost {
     });
   }
 
+  quiet = false;
+
   private number(x: number, y: number, z: number, amount: number, color: string, big: boolean, mul = 1): void {
+    if (this.quiet) return;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: numberTex(String(amount), color), transparent: true, depthTest: false }));
     s.renderOrder = 31;
     const base = (big ? 1.5 : 1.0) * mul;
@@ -889,6 +892,7 @@ export class CombatFx implements FxHost {
         this.cannonHit(ev.x, ev.y, ev.z, ev.radius);
         break;
       case "callout": {
+        if (this.quiet) break;
         const col = ev.team === 0 ? "#b8ccff" : ev.team === 1 ? "#ffc0b8" : "#fff0c0";
         const { tex, aspect } = calloutTex(ev.text, col);
         const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
@@ -920,6 +924,7 @@ export class CombatFx implements FxHost {
         break;
       }
       case "learned": {
+        if (this.quiet) break;
         const { tex, aspect } = calloutTex(ev.name, "#ffe890");
         this.floatSprite(tex, aspect, ev.x, ev.y + 4.4, ev.z, 0.65, 2.2);
         const it = talentTexture(ev.icon);

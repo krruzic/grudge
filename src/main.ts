@@ -18,6 +18,7 @@ import { allLearned, gainXp, learn } from "./sim/talents";
 import { forceAbility } from "./sim/heroes";
 import { padNear } from "./sim/structures";
 import type { GameData } from "./sim/config";
+import { spawnUnit } from "./sim/structures";
 import type { Command } from "./sim/types";
 import { Terrain, type MapData } from "./sim/terrain";
 import { Gamepads, type InputConfig } from "./input/gamepads";
@@ -534,7 +535,7 @@ async function start(): Promise<void> {
     beginAttract();
     toMenu();
     const pg = params.get("page");
-    if (pg === "players" || pg === "network" || pg === "rules" || pg === "options" || pg === "records" || pg === "controls") menus.page = pg;
+    if (pg === "players" || pg === "network" || pg === "rules" || pg === "options" || pg === "records" || pg === "controls" || pg === "codex") menus.page = pg;
     menus.tab = Number(params.get("tab") ?? 0);
   } else if (params.has("bots")) {
     setupControl([false, false]);
@@ -1279,7 +1280,8 @@ async function start(): Promise<void> {
     audio.setMusic(state !== "paused", state === "match" && world.match.phase === "sudden" ? 1 : state === "match" ? 0.3 : 0);
     audio.update();
     view.cinematic = state === "select" || state === "map" || state === "lobby" || (state === "menu" && menus.page !== "main");
-    view.render(state === "paused" ? 0 : acc / world.dt, state === "paused" ? 0 : dt);
+    const demoAlpha = runDemo(dt);
+    view.render(state === "paused" ? 0 : demoAlpha ?? acc / world.dt, state === "paused" ? 0 : dt);
     const ctx = pixel.begin();
     const uiList = mappers.map((m) => m?.ui ?? null);
     hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);
@@ -1325,6 +1327,135 @@ async function start(): Promise<void> {
     padsEl.textContent = showPads ? pads.debugText() : "";
     requestAnimationFrame(frame);
   };
+
+  const demoData = {
+    ...data,
+    units: { ...data.units, waves: { ...data.units.waves, firstSeconds: 1e9 } },
+    match: { ...data.match, arena: { ...data.match.arena, relic: { ...data.match.arena.relic, firstSeconds: 1e9 }, ogre: { ...data.match.arena.ogre, firstSeconds: 1e9 }, cannon: { ...data.match.arena.cannon, firstSeconds: 1e9 } } },
+  } as GameData;
+  const demoMap = Math.max(0, maps.findIndex((m) => m.id === "crossing"));
+  let demoBase = "";
+  let demoLoop = 0;
+  let demo: { key: string; w: World; t: number; acc: number; loop: number; len: number; presses: number[]; dist: number; btn: keyof Command; mapShown: boolean } | null = null;
+  const BIG = new Set(["quake", "zone", "summon", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth", "teslatower", "palisade", "wall", "repair"]);
+  const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry"]);
+  const DEMO_SPOT = { x: 23.5, z: 7 };
+  function runDemo(dt: number): number | null {
+    const spec = state === "menu" ? menus.codexDemo() : null;
+    if (!spec || !menus.demoRect) {
+      if (demo) {
+        demo = null;
+        view.demoCam = null;
+        if (shownMap !== demoMap) view.setMap(mapViews[shownMap], world.terrain);
+        view.setWorld(world);
+      }
+      return null;
+    }
+    const base = `${spec.hero}|${spec.slot}|${spec.picks}`;
+    if (base !== demoBase) {
+      demoBase = base;
+      demoLoop = 0;
+    }
+    menus.demoPick = demoLoop;
+    const pick = spec.picks ? demoLoop % spec.picks : -1;
+    const key = `${base}|${pick}`;
+    if (!demo || demo.key !== key) {
+      const loop = demoLoop;
+      const w = new World(maps[demoMap].data, demoData, 11);
+      const me = w.spawnHero(spec.hero, 0, 0);
+      const foe = w.spawnHero(spec.hero === "warlord" ? "warden" : "warlord", 1, 1);
+      if (pick >= 0 && me.hero) {
+        gainXp(w, me, 99999);
+        for (const s2 of ["r", "b", "a", "z"] as const) {
+          learn(w, me, s2 === spec.slot ? pick : 0);
+          if (s2 === spec.slot) break;
+        }
+        while (me.hero.picks.length) learn(w, me, 0);
+      }
+      w.teleport(foe, 96, 44);
+      foe.status.stunUntil = 1e9;
+      foe.status.invulnUntil = 1e9;
+      const kind = (me.hero?.ab ?? w.heroDef(spec.hero).abilities)[spec.slot].kind;
+      const big = BIG.has(kind);
+      const far = FAR.has(kind) || (spec.slot === "a" && kind === "shoot");
+      const dist = big ? 4.5 : far ? 6.5 : 2.8;
+      const presses = spec.slot === "a" ? [0.6, 0.95, 1.3, 1.65] : [0.6];
+      const btn = ({ a: "attack", b: "secondary", r: "special", z: "super" } as const)[spec.slot];
+      if (!demo || !demo.mapShown) view.setMap(mapViews[demoMap], w.terrain);
+      view.setWorld(w);
+      demo = { key, w, t: -1, acc: 0, loop, len: big ? 4.6 : 3.4, presses, dist, btn, mapShown: true };
+    }
+    const d = demo;
+    const w = d.w;
+    const me = w.heroForPlayer(0)!;
+    const reset = () => {
+      w.teleport(me, DEMO_SPOT.x, DEMO_SPOT.z);
+      me.transform.facing = me.transform.prevFacing = Math.PI / 2;
+      me.alive = true;
+      me.hp = me.maxHp;
+      me.hero!.action = null;
+      me.hero!.cooldowns = {};
+      me.hero!.meter = 9999;
+      me.status.stealthUntil = 0;
+      me.status.hidden = false;
+      for (const u of w.entities) if (u.unit || (u.structure && u.structure.padIndex < 0 && u.structure.type !== "core")) u.alive = false;
+      w.zones.length = 0;
+      w.traps.length = 0;
+      for (const m of w.mods) m.until = w.time;
+      const cx = DEMO_SPOT.x + d.dist + 1;
+      for (let k = 0; k < 6; k++) {
+        const u = spawnUnit(w, 1, "grunt", cx + Math.floor(k / 3) * 1.4, DEMO_SPOT.z - 1.4 + (k % 3) * 1.4, 1);
+        if (u?.unit) {
+          u.unit.damage = 0;
+          u.transform.facing = u.transform.prevFacing = -Math.PI / 2;
+        }
+      }
+      const td = w.teams[1].directives;
+      td.grunt = td.ranged = td.heavy = "hold";
+      td.holdPoint.grunt = { x: cx + 0.7, z: DEMO_SPOT.z };
+    };
+    if (d.t < 0) {
+      reset();
+      d.t = 0;
+    }
+    d.acc += Math.min(dt, 0.1);
+    while (d.acc >= w.dt) {
+      d.acc -= w.dt;
+      const t = d.t;
+      d.t += w.dt;
+      const cmd: Command = { moveX: 0, moveZ: 0 };
+      if (d.presses.some((p) => t < p && d.t >= p)) {
+        (cmd as unknown as Record<string, unknown>)[d.btn] = true;
+        cmd.moveX = 1;
+      }
+      w.step([cmd, { moveX: 0, moveZ: 0 }]);
+      if (d.t >= d.len) {
+        d.loop++;
+        demoLoop++;
+        if (spec.picks > 1) {
+          d.key = "";
+          break;
+        }
+        d.t = 0;
+        reset();
+      }
+    }
+    if (!d.key) {
+      d.t = -1;
+      return d.acc / w.dt;
+    }
+    const kind = (me.hero?.ab ?? w.heroDef(spec.hero).abilities)[spec.slot].kind;
+    const big = BIG.has(kind);
+    const far = FAR.has(kind);
+    view.demoCam = {
+      rect: menus.demoRect,
+      target: { x: DEMO_SPOT.x + d.dist * 0.45, y: me.transform.y + 0.8, z: DEMO_SPOT.z },
+      yaw: 0.22,
+      pitch: big ? 0.6 : 0.38,
+      dist: big ? 15 : far ? 12.5 : 9.5,
+    };
+    return d.acc / w.dt;
+  }
 
   function beginAttractWorldOnly(): void {
     players = 2;

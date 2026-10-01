@@ -15,9 +15,9 @@ interface Stage {
   flourishUntil: number;
 }
 
-const ICON = 64;
-const STAGE_W = 112;
-const STAGE_H = 144;
+const ICON = 128;
+const STAGE_W = 224;
+const STAGE_H = 288;
 const NEUTRAL = new THREE.Color("#c8a040");
 
 export class Portraits {
@@ -70,6 +70,37 @@ export class Portraits {
 
   units: UnitModels | null = null;
 
+  unitShot(type: string, w: number, h: number): HTMLCanvasElement | null {
+    const key = `unitshot:${type}:${w}x${h}`;
+    let c = this.icons.get(key);
+    if (c) return c;
+    const inst = this.units?.create(type, this.teamColors[0], 0);
+    if (!inst) return null;
+    c = document.createElement("canvas");
+    const root = new THREE.Group();
+    root.add(inst.body);
+    const act = inst.actions.get("attack") ?? inst.actions.get("idle");
+    act?.play();
+    inst.mixer.update(0.01);
+    if (act) {
+      act.time = act.getClip().duration * 0.45;
+      inst.mixer.update(0);
+    }
+    root.rotation.y = 0.5;
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(inst.body);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const ht = Math.max(size.y, size.x * 0.8, 0.5);
+    const dist = ht * 2.3;
+    this.camera.fov = 30;
+    this.camera.position.set(center.x + dist * 0.2, center.y + ht * 0.15, center.z + dist);
+    this.camera.lookAt(center.x, center.y, center.z);
+    this.shoot(root, w, h, c);
+    this.icons.set(key, c);
+    return c;
+  }
+
   unitIcon(type: string, team: number): HTMLCanvasElement | null {
     const key = `unit:${type}:${team}`;
     let c = this.icons.get(key);
@@ -115,6 +146,40 @@ export class Portraits {
     return c;
   }
 
+  private shots = new Map<string, HTMLCanvasElement>();
+
+  actionShot(type: string, clip: string, frac: number, w = 96, h = 112, yaw = 0.5): HTMLCanvasElement {
+    const key = `${type}|${clip}|${frac.toFixed(2)}|${w}x${h}|${yaw}`;
+    const hit = this.shots.get(key);
+    if (hit) return hit;
+    const c = document.createElement("canvas");
+    const p = this.pose(type, this.teamColors[0] ?? NEUTRAL);
+    const act = p.actions.get(clip) ?? p.actions.get("attack_a");
+    if (act && p.mixer) {
+      for (const a of p.actions.values()) a.stop();
+      act.reset();
+      act.setLoop(THREE.LoopOnce, 1);
+      act.clampWhenFinished = true;
+      act.play();
+      p.mixer.update(0);
+      act.time = Math.min(act.getClip().duration - 0.01, frac * act.getClip().duration);
+      p.mixer.update(0);
+    }
+    p.root.rotation.y = yaw;
+    p.root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(p.body);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const ht = Math.max(size.y, size.x * 0.8, 0.5);
+    const dist = ht * 2.3;
+    this.camera.fov = 30;
+    this.camera.position.set(center.x + dist * 0.2, center.y + ht * 0.15, center.z + dist);
+    this.camera.lookAt(center.x, center.y, center.z);
+    this.shoot(p.root, w, h, c);
+    this.shots.set(key, c);
+    return c;
+  }
+
   stage(slot: number, type: string, team: number, ready: boolean): HTMLCanvasElement {
     const key = `${type}|${team}`;
     let s = this.stages.get(slot);
@@ -148,7 +213,7 @@ export class Portraits {
     this.last = now;
     for (const s of this.stages.values()) {
       s.mixer?.update(dt);
-      s.root.rotation.y = 0.4 + Math.sin(now * 0.7) * 0.45;
+      s.root.rotation.y = 0.35 + Math.sin(now * 0.6) * 0.22;
       const dist = s.height * 2.1;
       this.camera.fov = 30;
       this.camera.position.set(s.center.x, s.center.y + s.height * 0.12, s.center.z + dist);

@@ -1,14 +1,15 @@
 import { drawPlain, drawText, occlude, onHiLayer, textWidth } from "./font";
-import { artTitle, band, banner, beam, boardTitle, card, drawLogo, fieldShade, goldArrow, inset, nameImage, paintedText, parchment, pin, plank, ribbon, scroll, shadowText, tag, texturedRect, waxSeal, windowCut, woodDisc, woodFloor } from "./n64ui";
+import { artTitle, hiImage, boardBg, band, banner, beam, boardTitle, card, drawLogo, fieldShade, goldArrow, inset, nameImage, paintedText, parchment, pin, plank, ribbon, scroll, shadowText, tag, texturedRect, waxSeal, windowCut, woodDisc, woodFloor } from "./n64ui";
 import { padButton, PAD, talentIcon } from "./hud";
 import { learned } from "../sim/talents";
+import { buildCodex, type CodexArt, type CodexEntry } from "./codex";
 import { prompt, promptWidth, wrap } from "./screens";
 import type { Hit, MenuCursors } from "./cursor";
 import type { Portraits } from "./portraits";
 import type { World } from "../sim/world";
 import { DEFAULT_OPTIONS, DEFAULT_RULES, MAX_TAG, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
 
-export type Page = "main" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls";
+export type Page = "main" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls" | "codex";
 export interface RoomInfo {
   id: number;
   name: string;
@@ -43,6 +44,7 @@ const ITEMS = [
   { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, OR TWO AGAINST TWO WITH COMMANDERS." },
   { art: "!PLAYERS", label: "PLAYERS", blurb: "WHO IS PLAYING ON THIS MACHINE: CONTROLLERS, KEYBOARD AND MOUSE. FREE A SEAT OR TURN THE KEYBOARD OFF." },
   { art: "m_network", label: "VERSUS ONLINE", blurb: "PLAY OVER THE HOUSE NETWORK. ONE MACHINE HOSTS, FRIENDS OPEN ITS PAGE AND JOIN." },
+  { art: "!CODEX", label: "CODEX", blurb: "EVERY CHAMPION, EVERY EVOLUTION, EVERY TRICK FOR YOUR ARMY AND BASE. ALSO SOME LIES ABOUT A TREE." },
   { art: "m_rules", label: "RULES", blurb: "SET THE TERMS OF COMBAT: TIME, GOLD, SOLDIERS AND MERCY." },
   { art: "m_records", label: "RECORDS", blurb: "EVERY VICTORY AND DEFEAT, WRITTEN DOWN BY NAME AND BY CHAMPION." },
   { art: "m_options", label: "OPTIONS", blurb: "MUSIC, SOUND, SCREEN SHAKE AND BUTTON HINTS." },
@@ -57,8 +59,8 @@ function upArrow(ctx: CanvasRenderingContext2D, x: number, y: number): void {
 }
 
 const ROMAN_N = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
-const MAIN_GLYPHS = ["combo", "rally", "banner", "works", "castle", "repair", "pad"];
-const PAGES: Page[] = ["main", "players", "network", "rules", "records", "options", "controls"];
+const MAIN_GLYPHS = ["combo", "rally", "banner", "hex", "works", "castle", "repair", "pad"];
+const PAGES: Page[] = ["main", "players", "network", "codex", "rules", "records", "options", "controls"];
 const TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".split("");
 
@@ -168,7 +170,7 @@ export class Menus {
 
   drawPause(ctx: CanvasRenderingContext2D, W: number, H: number, now: number, w: World): void {
     this.hits = [];
-    fieldShade(ctx, W, H, 0.45);
+    boardBg(ctx, W, H);
     boardTitle(ctx, W, "!PAUSED", "PAUSED");
     woodFloor(ctx, H - 20, W, H);
     if (this.pauseView === "controls") {
@@ -205,7 +207,7 @@ export class Menus {
           if (!e?.hero) continue;
           inset(ctx, x + 1, y, 20, 20, "#3a2a1c");
           const icon = this.portraits?.icon(p.heroType);
-          if (icon) ctx.drawImage(icon, x, y - 1, 22, 22);
+          if (icon) hiImage(ctx, icon, x + 1, y, 20, 20);
           const nm = `P${p.player + 1} ${(this.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
           drawPlain(ctx, nm, x + 25, y, BROWN, 0.55, true);
           const lv = `LV ${e.hero.level ?? 1}`;
@@ -296,6 +298,7 @@ export class Menus {
     if (this.page === "browse") return this.rooms.length + 1;
     if (this.page === "rules") return RULE_ROWS.length + 1;
     if (this.page === "options") return OPTION_ROWS.length + 2;
+    if (this.page === "codex") return this.codexEntries().length;
     if (this.page === "records") return this.tab === 0 ? this.roster.length : this.tab === 1 ? this.save.tagNames().length : this.save.data.log.length;
     return 0;
   }
@@ -334,7 +337,7 @@ export class Menus {
       act = "";
     } else if (act.startsWith("row:")) {
       this.focus = Number(act.slice(4));
-      act = "a";
+      act = this.page === "codex" ? "" : "a";
     }
     if (nav.a) act = "a";
     if (nav.b || ptr.right || act === "back") {
@@ -457,6 +460,23 @@ export class Menus {
       }
       return null;
     }
+    if (this.page === "codex") {
+      const pages = this.codexEntries()[this.focus]?.pages.length ?? 1;
+      if (this.focus !== this.codexFocus) {
+        this.codexFocus = this.focus;
+        this.codexPage = 0;
+      }
+      let flip = dx || (act === "a" ? 1 : 0);
+      if (act.startsWith("cpg:")) flip = Number(act.slice(4));
+      if (flip) {
+        const np = Math.max(0, Math.min(pages - 1, this.codexPage + flip));
+        if (np !== this.codexPage) {
+          this.codexPage = np;
+          sound("move");
+        }
+      }
+      return null;
+    }
     if (this.page === "records") {
       if (dx) {
         this.tab = (this.tab + dx + TABS.length) % TABS.length;
@@ -483,9 +503,10 @@ export class Menus {
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
     this.hits = [];
+    this.demoRect = null;
     if (this.page === "main") this.drawMain(ctx, W, H, now);
     else {
-      fieldShade(ctx, W, H, 0.38);
+      boardBg(ctx, W, H);
       woodFloor(ctx, H - 20, W, H);
       beam(ctx, 4, 2, W - 8, 17);
       if (this.page === "players") this.drawPlayers(ctx, W, H, now);
@@ -494,12 +515,13 @@ export class Menus {
       else if (this.page === "rules") this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, ["RESTORE DEFAULTS"]);
       else if (this.page === "options") this.drawRows(ctx, W, H, "m_options", "OPTIONS", OPTION_ROWS as Row<object>[], this.save.data.options, ["RESTORE DEFAULTS", "ERASE ALL RECORDS"]);
       else if (this.page === "records") this.drawRecords(ctx, W, H);
+      else if (this.page === "codex") this.drawCodex(ctx, W, H);
       else this.drawControls(ctx, W, H);
     }
   }
 
   private drawMain(ctx: CanvasRenderingContext2D, W: number, H: number, _now: number): void {
-    fieldShade(ctx, W, H, 0.3);
+    boardBg(ctx, W, H);
     woodFloor(ctx, H - 20, W, H);
     const it = ITEMS[this.focus];
     const pw = Math.min(250, Math.round(W * 0.6));
@@ -907,7 +929,7 @@ export class Menus {
     if (this.focus >= this.scrollTop + vis) this.scrollTop = this.focus - vis + 1;
     const icon = (type: string, x: number, y: number, sz = 13) => {
       const im = this.portraits?.icon(type);
-      if (im) ctx.drawImage(im, x, y, sz, sz);
+      if (im) hiImage(ctx, im, x, y, sz, sz);
     };
     const rowAt = (k: number, draw: (y: number, sel: boolean) => void) => {
       if (k < this.scrollTop || k >= this.scrollTop + vis) return;
@@ -1037,6 +1059,168 @@ export class Menus {
     const p: [string, string][] = [["B", "DONE"]];
     if (this.tab === 1 && this.save.tagNames().length) p.unshift(["Y", this.confirm.startsWith("strike:") ? "AGAIN TO STRIKE" : "STRIKE NAME"]);
     const hint = "STICK LEFT / RIGHT: BOOKMARK";
+    const pwid = promptWidth(p, 0.7) + 14 + textWidth(hint, 0.6);
+    const x0 = Math.round((W - pwid) / 2);
+    shadowText(ctx, hint, x0, H - 12, "#f0e4c8", 0.6);
+    prompt(ctx, x0 + textWidth(hint, 0.6) + 14, H - 13, p, 0.7);
+  }
+
+  private codex: CodexEntry[] | null = null;
+  demoRect: [number, number, number, number] | null = null;
+  demoPick = 0;
+
+  codexDemo(): { hero: string; slot: "a" | "b" | "r" | "z"; picks: number } | null {
+    if (this.page !== "codex" || !this.demoRect) return null;
+    const e = this.codexEntries()[this.focus];
+    const pg = e?.pages[Math.min(this.codexPage, e.pages.length - 1)];
+    if (!pg || pg.art.kind !== "shot") return null;
+    return { hero: pg.art.hero, slot: pg.art.slot, picks: pg.picks?.length ?? 0 };
+  }
+  private codexPage = 0;
+  private codexFocus = 0;
+
+  private codexEntries(): CodexEntry[] {
+    if (!this.codex) this.codex = buildCodex(Object.values(this.mapNames));
+    return this.codex;
+  }
+
+  private codexArt(ctx: CanvasRenderingContext2D, art: CodexArt, x: number, y: number, w: number, h: number): void {
+    inset(ctx, x, y, w, h, "#3a2a1c");
+    const bg = art.kind === "seal" ? art.color ?? "#7a1a14" : "#7a1a14";
+    if (art.kind !== "map") texturedRect(ctx, "cloth", x, y, w, h, bg, 0, 0.7);
+    const P = this.portraits;
+    if (art.kind === "portrait" && P) {
+      hiImage(ctx, P.actionShot(art.hero, "idle", 0.3, w * 4, h * 4), x, y, w, h);
+    } else if (art.kind === "map" && P) {
+      const im = P.mapThumb(art.index, w * 2, h * 2);
+      if (im) hiImage(ctx, im, x, y, w, h);
+    } else if (art.kind === "unit" && P) {
+      const im = P.unitShot(art.type, w * 4, h * 4);
+      if (im) hiImage(ctx, im, x, y, w, h);
+    } else if (art.kind === "seal") waxSeal(ctx, x + w / 2, y + h / 2, Math.min(w, h) * 0.32, "#c8a020", art.glyph);
+  }
+
+  private drawCodex(ctx: CanvasRenderingContext2D, W: number, H: number): void {
+    boardTitle(ctx, W, "!CODEX", "CODEX");
+    const entries = this.codexEntries();
+    if (this.focus !== this.codexFocus) {
+      this.codexFocus = this.focus;
+      this.codexPage = 0;
+    }
+    const entry = entries[this.focus];
+    const page = entry?.pages[Math.min(this.codexPage, entry.pages.length - 1)];
+    const pw = Math.min(272, Math.round(W * 0.64));
+    const ph = H - 50;
+    const px = 12;
+    const py = 25;
+    this.demoRect = null;
+    if (entry && page) {
+      const live = page.art.kind === "shot";
+      card(ctx, px, py, pw, ph, 0, null, () => {
+        const evo = !!page.picks;
+        const wide = live || page.art.kind === "map";
+        const aw = wide ? pw - 24 : 88;
+        const ah = wide ? (evo ? 74 : 96) : 104;
+        if (live) {
+          windowCut(ctx, 12, 12, aw, ah);
+          this.demoRect = [(px + 12) / W, (py + 12) / H, aw / W, ah / H];
+        } else this.codexArt(ctx, page.art, 12, 12, aw, ah);
+        const tx = wide ? 12 : 12 + aw + 10;
+        const tw = pw - tx - 12;
+        let y = wide ? 12 + ah + 7 : 12;
+        const ts = Math.min(0.85, tw / Math.max(1, textWidth(page.title, 1, true)));
+        drawPlain(ctx, page.title, tx, y, "#8a1810", ts, true);
+        y += 12;
+        const body = wrap(page.text, tw, 0.55);
+        body.forEach((l, j) => drawPlain(ctx, l, tx, y + j * 8, BROWN, 0.55));
+        y += body.length * 8 + 3;
+        if (page.picks) {
+          const colW = (pw - 30) / 2;
+          page.picks.forEach((pk, k) => {
+            const cx = 12 + k * (colW + 6);
+            let py2 = y;
+            const on = page.picks!.length > 1 && k === this.demoPick % page.picks!.length;
+            if (on) {
+              ctx.fillStyle = "rgba(168,48,28,0.14)";
+              ctx.fillRect(cx - 3, py2 - 3, colW + 6, ph - py2 - 18);
+            }
+            talentIcon(ctx, pk.id, cx, py2, 18);
+            const ns = Math.min(0.66, (colW - 24) / Math.max(1, textWidth(pk.name, 1, true)));
+            drawPlain(ctx, pk.name, cx + 22, py2 + 4, on ? "#8a1810" : BROWN, ns, true);
+            py2 += 22;
+            const desc = pk.combo ? pk.desc.replace(/\s*WITH [A-Z' ]+:?[^.]*\.?/g, "").trim() : pk.desc;
+            const dl = wrap(desc, colW, 0.5).slice(0, 4);
+            dl.forEach((l, j) => drawPlain(ctx, l, cx, py2 + j * 7, "#4a3018", 0.5));
+            py2 += dl.length * 7 + 2;
+            if (pk.combo) wrap(pk.combo, colW, 0.5).slice(0, 3).forEach((l, j) => drawPlain(ctx, l, cx, py2 + j * 7, "#a8141a", 0.5));
+          });
+          y = ph - 22;
+        }
+        if (page.tip && !page.picks) {
+          const tl = wrap(page.tip, pw - 40, 0.52);
+          const ty = Math.max(y + 2, ph - 22 - tl.length * 7.5);
+          waxSeal(ctx, 18, ty + 4, 5, "#a8141a", "combo");
+          tl.forEach((l, j) => drawPlain(ctx, l, 28, ty + j * 7.5, "#8a1810", 0.52));
+        }
+        const n = entry.pages.length;
+        const pg = `${this.codexPage + 1} / ${n}`;
+        const cx = pw - 34;
+        drawPlain(ctx, pg, cx - textWidth(pg, 0.6, true) / 2, ph - 12, "#6a4424", 0.6, true);
+        if (this.codexPage > 0) goldArrow(ctx, cx - 22, ph - 8, -1, 4.5);
+        if (this.codexPage < n - 1) goldArrow(ctx, cx + 22, ph - 8, 1, 4.5);
+      });
+      this.hit("cpg:-1", px + pw - 66, py + ph - 18, 22, 16);
+      this.hit("cpg:1", px + pw - 22, py + ph - 18, 22, 16);
+    }
+    const cx0 = px + pw + 14;
+    const cw = W - cx0 - 10;
+    const th = 13;
+    const gap = 3;
+    const ch = 10;
+    const rows: { kind: "cat" | "entry"; k: number; label: string }[] = [];
+    let last = "";
+    entries.forEach((e2, k) => {
+      if (e2.cat !== last) {
+        rows.push({ kind: "cat", k: -1, label: e2.cat });
+        last = e2.cat;
+      }
+      rows.push({ kind: "entry", k, label: e2.title });
+    });
+    const height = (r: { kind: string }) => (r.kind === "cat" ? ch : th + gap);
+    const avail = H - 50;
+    const focusRow = rows.findIndex((r) => r.k === this.focus);
+    let start = Math.min(this.scrollTop, focusRow);
+    const span = (a: number, b: number) => rows.slice(a, b + 1).reduce((q, r) => q + height(r), 0);
+    while (span(start, focusRow) > avail) start++;
+    while (start > 0 && rows[start - 1].kind === "cat" && span(start - 1, focusRow) <= avail) start--;
+    this.scrollTop = start;
+    let y = 25;
+    for (let i = start; i < rows.length; i++) {
+      const r = rows[i];
+      if (y + height(r) > 25 + avail) break;
+      if (r.kind === "cat") {
+        shadowText(ctx, r.label, cx0 + 2, y + 1, "#f0c030", 0.5);
+        y += ch;
+        continue;
+      }
+      const sel = r.k === this.focus;
+      const e2 = entries[r.k];
+      this.hit(`row:${r.k}`, cx0 - 6, y - 1, cw + 6, th + 2);
+      const x = cx0 - (sel ? 6 : 0);
+      ctx.fillStyle = INK;
+      ctx.fillRect(x - 1, y - 1, cw + 2, th + 2);
+      texturedRect(ctx, "parch", x, y, cw, th, sel ? "#f0d8a0" : null, 0, 1);
+      if (sel) goldArrow(ctx, x - 6, y + th / 2, -1, 4.5);
+      if (e2.cat === "CHAMPIONS" && this.portraits) {
+        const id = this.roster.find((h) => (this.heroNames[h] ?? h).toUpperCase() === e2.title);
+        const im = id ? this.portraits.icon(id) : null;
+        if (im) hiImage(ctx, im, x + 1, y, th, th);
+      } else waxSeal(ctx, x + 7, y + th / 2, 4.5, sel ? "#a8141a" : "#6a3a2a", e2.glyph);
+      drawPlain(ctx, r.label, x + 16, y + 2.5, sel ? "#8a1810" : BROWN, 0.55, true);
+      y += th + gap;
+    }
+    const p: [string, string][] = [["A", "TURN PAGE"], ["B", "BACK"]];
+    const hint = "UP / DOWN: ENTRY · LEFT / RIGHT: PAGE";
     const pwid = promptWidth(p, 0.7) + 14 + textWidth(hint, 0.6);
     const x0 = Math.round((W - pwid) / 2);
     shadowText(ctx, hint, x0, H - 12, "#f0e4c8", 0.6);
