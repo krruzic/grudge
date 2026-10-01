@@ -402,14 +402,16 @@ export class GameRenderer {
 
     const depthToWidth = (aspect / Math.sin(pitch)) * 1.25;
     const need = Math.max(max.x - min.x, (max.z - min.z) * depthToWidth) + margin;
-    const fullMap = Math.max(t.width, t.depth * depthToWidth) + 4;
+    const fullMap = Math.max(t.width, t.depth * depthToWidth) * 1.3 + 12;
     const lo = Math.min(minWidth, fullMap);
     const width = THREE.MathUtils.clamp(need, lo, Math.max(lo, Math.min(maxWidth, fullMap)));
 
-    if (width < t.width) focus.x = THREE.MathUtils.clamp(focus.x, width / 2, t.width - width / 2);
+    const slack = 6 + width * 0.15;
+    if (width < t.width + slack * 2) focus.x = THREE.MathUtils.clamp(focus.x, width / 2 - slack, t.width - width / 2 + slack);
     else focus.x = t.width / 2;
     const viewDepth = width / depthToWidth;
-    if (viewDepth < t.depth) focus.z = THREE.MathUtils.clamp(focus.z, viewDepth / 2, t.depth - viewDepth / 2);
+    const zs = 4 + viewDepth * 0.15;
+    if (viewDepth < t.depth + zs * 2) focus.z = THREE.MathUtils.clamp(focus.z, viewDepth / 2 - zs, t.depth - viewDepth / 2 + zs);
     else focus.z = t.depth / 2;
 
     this.keepInView(cam, focus, width, keep);
@@ -427,7 +429,7 @@ export class GameRenderer {
 
   camMode = 1;
   private merged = false;
-  private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90];
+  private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90, 120, 150];
   private zoomIndex = new Map<number, number>();
   private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroIds: number[]; player: number }[] = [];
 

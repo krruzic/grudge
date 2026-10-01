@@ -132,7 +132,14 @@ import sys
 sys.path.insert(0, "tools")
 from map_grow import grow
 grow(data, [(12, 4)])
-for p, (x, z) in zip(data["pads"][:3], [(9.5, 22.5), (9.5, 33.5), (14, 28)]):
+for p, (x, z) in zip(data["pads"][:3], [(12.5, 22.5), (12.5, 33), (3, 22.5)]):
     p["x"], p["z"] = x, z
+for q in data["props"]:
+    if (q["type"], q["x"], q["z"]) == ("crate", 3, 24):
+        q["x"], q["z"] = 2, 34.5
+    if (q["type"], q["x"], q["z"]) == ("banner", 4, 21):
+        q["x"], q["z"] = 15.2, 24.8
+data["ops"].append({"op": "dirt", "x": 6, "z": 26, "w": 10, "h": 4})
+data["ops"].append({"op": "dirt", "x": 6, "z": 20, "w": 3, "h": 16})
 json.dump(data, open("data/maps/heights.json", "w"), indent=1)
 print("ok", len(ops), len(props))

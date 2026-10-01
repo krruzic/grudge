@@ -290,7 +290,7 @@ async function start(): Promise<void> {
   };
   const enterSelect = () => {
     const here = [0, 1, 2, 3].filter(present).length;
-    const keptCpu = (i: number) => netMode === "host" && slots[i].cpu && !slots[i].autoCpu && !slots[i].open;
+    const keptCpu = (i: number) => netMode === "host" && slots[i].cpu && slots[i].autoCpu === false && !slots[i].open;
     if (here >= 3) twoVtwo = true;
     else if (netMode === "host" && !(twoVtwo && [2, 3].some(keptCpu))) twoVtwo = false;
     cursors.setScale(pixel.w, pixel.h);
@@ -910,6 +910,30 @@ async function start(): Promise<void> {
           } else if (id === "add") {
             setMode(true);
             audio.ui("ok");
+          } else if (id === "sit") {
+            const from = act.by;
+            const ok = from >= 0 && from !== i && slotActive(i) && !commanderSlot(i) && !seatAt(i) && pads.players[from]?.connected && !pads.players[i]?.connected && (slots[i].open || slots[i].cpu);
+            if (ok && pads.move(from, i)) {
+              const hero = slots[from].hero;
+              const tag = slots[from].tag;
+              const cf = cursors.cursors[from];
+              const ct = cursors.cursors[i];
+              ct.x = cf.x;
+              ct.y = cf.y;
+              cf.holding = -1;
+              slots[from].tag = undefined;
+              if (netMode === "host") makeOpen(from);
+              else {
+                makeCpu(from);
+                slots[from].autoCpu = true;
+              }
+              slots[i].autoCpu = false;
+              makeHuman(i);
+              if (roster.includes(hero)) slots[i].hero = hero;
+              slots[i].tag = tag;
+              lobbySentAt = 0;
+              audio.ui("ok");
+            } else audio.ui("back");
           } else if (id === "seatcpu") {
             makeCpu(i);
             slots[i].autoCpu = false;

@@ -174,6 +174,15 @@ export class Gamepads {
   private kbByMouse = false;
   private waitRelease = new Set<number>();
 
+  move(from: number, to: number): boolean {
+    if (from === to || this.slots[from] === null || this.slots[to] !== null) return false;
+    this.slots[to] = this.slots[from];
+    this.slots[from] = null;
+    this.players[to] = this.players[from];
+    this.players[from] = emptyState();
+    return true;
+  }
+
   release(slot: number): void {
     const idx = this.slots[slot];
     if (idx === null || idx === undefined) return;

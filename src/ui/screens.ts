@@ -332,6 +332,15 @@ export class Screens {
     }
   }
 
+  private woodButton(ctx: CanvasRenderingContext2D, bid: string, t: string, cx: number, by: number): void {
+    const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === bid);
+    ctx.fillStyle = "#0b0806";
+    ctx.fillRect(cx - 26, by - 1, 52, 13);
+    texturedRect(ctx, "wood", cx - 25, by, 50, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
+    shadowText(ctx, t, cx - textWidth(t, 0.55) / 2, by + 2, hot ? "#fff4b0" : "#e8d8b8", 0.55);
+    this.hit(bid, cx - 28, by - 3, 56, 17);
+  }
+
   private hit(id: string, x: number, y: number, w: number, h: number): void {
     this.cursors?.hits.push({ id, x, y, w, h });
   }
@@ -385,17 +394,10 @@ export class Screens {
       this.portraits?.drop(i);
       band(ctx, x + 3, y + 3, w - 6, h - 16, "#000000", 0.35);
       paintedText(ctx, `P${i + 1}`, x + w / 2, y + 7, "#c8b890", 1.05);
-      const lines = ["OPEN SEAT", "WAITING FOR", "A PLAYER"];
-      lines.forEach((l, k) => shadowText(ctx, l, x + w / 2 - textWidth(l, k ? 0.5 : 0.7) / 2, y + 40 + k * 9 + (k ? 3 : 0), k ? "#c8bca0" : "#f0e4c8", k ? 0.5 : 0.7));
-      const bid = this.peer ? `take:${i}` : `seatcpu:${i}`;
-      const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === bid);
-      const t = this.peer ? "SIT HERE" : "+ ADD CPU";
-      const by = y + h - 40;
-      ctx.fillStyle = "#0b0806";
-      ctx.fillRect(x + w / 2 - 26, by - 1, 52, 13);
-      texturedRect(ctx, "wood", x + w / 2 - 25, by, 50, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
-      shadowText(ctx, t, x + w / 2 - textWidth(t, 0.55) / 2, by + 2, hot ? "#fff4b0" : "#e8d8b8", 0.55);
-      this.hit(bid, x + w / 2 - 28, by - 3, 56, 17);
+      const lines = this.peer ? ["OPEN SEAT", "WAITING FOR", "A PLAYER"] : ["OPEN SEAT", "WAITING FOR A PLAYER"];
+      lines.forEach((l, k) => shadowText(ctx, l, x + w / 2 - textWidth(l, k ? 0.45 : 0.7) / 2, y + 34 + k * 9 + (k ? 3 : 0), k ? "#c8bca0" : "#f0e4c8", k ? 0.45 : 0.7));
+      const btns: [string, string][] = this.peer ? [[`take:${i}`, "SIT HERE"]] : [[`sit:${i}`, "SIT HERE"], [`seatcpu:${i}`, "+ ADD CPU"]];
+      btns.forEach(([bid, t], k) => this.woodButton(ctx, bid, t, x + w / 2, y + h - 40 - (btns.length - 1 - k) * 16));
       return;
     }
     const commander = i >= 2 && !this.heroPartners;
@@ -411,6 +413,7 @@ export class Screens {
       this.hit(`tag:${i}`, x + 4, y + 3, w - 8, 13);
       if (tagHot) shadowText(ctx, "SIGN NAME", x + w / 2 - textWidth("SIGN NAME", 0.42) / 2, y - 7, "#f8e8c0", 0.42);
     }
+    if (s.cpu && !this.peer && !commander && this.cursors?.cursors.some((c) => c.active)) this.woodButton(ctx, `sit:${i}`, "SIT HERE", x + w / 2, y + h - 42);
     if (s.cpu && this.hosting && !commander) {
       const uHot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `seatopen:${i}`);
       const ux = x + w - 10;
