@@ -1145,6 +1145,8 @@ export class World {
 
   nearestStandable(e: Entity, x: number, z: number): Vec2 | null {
     const y = e.transform.y;
+    const slide = !!e.hero;
+    let up: Vec2 | null = null;
     for (let r = 0.25; r <= 3; r += 0.25) {
       let best: Vec2 | null = null;
       let bestDy = Infinity;
@@ -1157,11 +1159,16 @@ export class World {
         e.transform.y = h;
         const ok = this.canStand(e, px, pz);
         e.transform.y = y;
-        if (ok && Math.abs(h - y) < bestDy) { bestDy = Math.abs(h - y); best = { x: px, z: pz }; }
+        if (!ok) continue;
+        if (slide && h > y + 0.05) {
+          up ??= { x: px, z: pz };
+          continue;
+        }
+        if (Math.abs(h - y) < bestDy) { bestDy = Math.abs(h - y); best = { x: px, z: pz }; }
       }
       if (best) return best;
     }
-    return null;
+    return up;
   }
 
   private stuckHere(e: Entity): boolean {

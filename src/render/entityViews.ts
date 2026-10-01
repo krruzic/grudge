@@ -46,6 +46,8 @@ interface View {
   blockFx?: THREE.Mesh;
   lastAction?: object | null;
   seen: boolean;
+  fallY?: number;
+  fallV?: number;
   wasDead?: boolean;
   stealthed?: boolean;
   baseVisible?: boolean;
@@ -759,6 +761,17 @@ export class EntityViews {
         t.prevY + (t.y - t.prevY) * alpha,
         t.prevPos.z + (t.pos.z - t.prevPos.z) * alpha,
       );
+      if (e.hero) {
+        const gy = v.root.position.y;
+        if (v.fallY !== undefined && gy < v.fallY - 0.4) {
+          v.fallV = (v.fallV ?? 0) + 30 * dt;
+          v.fallY = Math.max(gy, v.fallY - v.fallV * dt);
+          v.root.position.y = v.fallY;
+        } else {
+          v.fallY = gy;
+          v.fallV = 0;
+        }
+      }
       let d = t.facing - t.prevFacing;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       const facing = t.prevFacing + d * alpha;
