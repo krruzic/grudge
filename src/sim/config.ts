@@ -230,8 +230,8 @@ export interface VeterancyDef {
 
 export interface UnitData {
   popCap: number;
-  waves: { firstSeconds: number; everySeconds: number; core: UnitType[]; growPerMinute: number };
-  squads: { size: number; cost: Record<UnitType, number>; cooldown: number; forwardStatMul: number };
+  waves: { firstSeconds: number; everySeconds: number; spawnCost: Record<UnitType, number>; growPerMinute: number };
+  squads: { forwardStatMul: number };
   separationPush: number;
   repathSeconds: number;
   hiddenRevealSeconds: number;
@@ -283,7 +283,7 @@ export interface MatchData {
   matchSeconds: number;
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
-  economy: { start: number; income: number; bounty: { hero: number; structure: number } };
+  economy: { start: number; income: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number };
   terrain: {
     highGroundDelta: number;

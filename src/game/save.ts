@@ -68,7 +68,7 @@ export const RULE_ROWS: Row<Rules>[] = [
   { key: "popCap", label: "SOLDIER CAP", values: [8, 12, 16, 20, 24], fmt: String, blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD." },
   { key: "startGold", label: "STARTING GOLD", values: [0, 100, 200, 400, 800], fmt: String, blurb: "GOLD IN THE COFFERS AT THE FIRST HORN." },
   { key: "goldRate", label: "GOLD RATE", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST THE COFFERS FILL." },
-  { key: "troops", label: "TROOP OUTPUT", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST KEEPS AND OUTPOSTS SEND SOLDIERS, AND HOW SOON YOU CAN CALL MORE." },
+  { key: "troops", label: "TROOP OUTPUT", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW OFTEN OUTPOSTS SEND SOLDIERS." },
   { key: "respawn", label: "HERO RETURNS", values: [3, 6, 10, 15], fmt: (v) => `${v} SEC`, blurb: "HOW LONG A FALLEN CHAMPION STAYS DOWN." },
   { key: "partners", label: "2 VS 2 ALLIES", values: [1, 0], fmt: (v) => (v ? "CHAMPIONS" : "COMMANDERS"), blurb: "IN 2 VS 2, PLAYERS 3 AND 4 FIGHT AS CHAMPIONS OR LEAD AS COMMANDERS." },
   { key: "mercy", label: "MERCY", values: [1, 0], fmt: onOff, blurb: "THE LOSING HOUSE EARNS AND BUILDS FASTER." },
@@ -186,7 +186,6 @@ export function applyRules(base: GameData, r: Rules): GameData {
   const troops = r.troops || 1;
   d.units.waves.everySeconds = base.units.waves.everySeconds / troops;
   d.units.waves.firstSeconds = base.units.waves.firstSeconds / Math.min(troops, 2);
-  d.units.squads.cooldown = base.units.squads.cooldown / troops;
   if (!r.mercy) {
     d.match.catchUp.incomeBoost = 0;
     d.match.catchUp.productionBoost = 0;

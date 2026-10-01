@@ -51,7 +51,7 @@ export interface PlayerSlot {
 
 function newStatus(): Status {
   return {
-    slowUntil: 0, slowMul: 1, stunUntil: 0, kvx: 0, kvz: 0, buffUntil: 0, buffDamageMul: 1, buffSpeedMul: 1,
+    slowUntil: 0, slowMul: 1, stunUntil: 0, kvx: 0, kvz: 0, buffUntil: 0, buffDamageMul: 1, buffSpeedMul: 1, rallyUntil: 0,
     invulnUntil: 0, lastAttackAt: -99, hidden: false, supportDamageMul: 1, auraDamageMul: 1, stealthUntil: 0, ambushMul: 1, guardUntil: 0, guardMul: 1, cowedUntil: 0, hexUntil: 0, hexOwner: 0,
     bleedStacks: 0, bleedDps: 0, bleedUntil: 0, bleedOwner: 0, shield: 0, shieldUntil: 0, shieldBurst: 0, armorMul: 1, armorUntil: 0, ccImmuneUntil: 0,
     markUntil: 0, markTeam: -1, markOwner: 0, markMul: 1, markAll: false, markWeaken: 1,
@@ -506,7 +506,6 @@ export class World {
       if (!e) continue;
       const cmd = commands[slot.player] ?? { moveX: 0, moveZ: 0 };
       if (e.alive && cmd.build) tryBuild(this, e, cmd.build);
-      if (e.alive && cmd.call) this.arena.callSquad(e, cmd.call);
       if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
       if (cmd.learn !== undefined && e.hero?.picks.length) learn(this, e, cmd.learn);
       if (cmd.say) this.emit({ type: "notice", team: slot.team, text: cmd.say.slice(0, 48) });
@@ -720,6 +719,7 @@ export class World {
   damageMulOf(src: Entity): number {
     const s = src.status;
     let m = (this.time < s.buffUntil ? s.buffDamageMul : 1) * s.auraDamageMul * s.supportDamageMul;
+    if (this.time < s.rallyUntil) m *= this.data.match.economy.rally.damageMul;
     if (src.hero) m *= src.hero.damageMul * (src.hero.action?.power ?? 1);
     if (src.unit && this.isSudden()) m *= this.data.match.suddenDeath.unitDamageMul;
     return m;
@@ -929,6 +929,24 @@ export class World {
     this.emit({ type: "rankUp", id: e.id, rank: next, x: p.pos.x, y: p.y, z: p.pos.z, team: e.team });
   }
 
+  loseGold(team: number, amount: number, why: string): void {
+    const ts = this.teams[team];
+    const lost = Math.min(ts.resource, Math.round(amount));
+    if (lost <= 0) return;
+    ts.resource -= lost;
+    this.emit({ type: "notice", team, text: `${why} · -${lost} GOLD` });
+  }
+
+  rally(team: number): void {
+    const r = this.data.match.economy.rally;
+    for (const o of this.entities) {
+      if (!o.alive || o.team !== team || o.structure) continue;
+      o.status.rallyUntil = this.time + r.seconds;
+    }
+    this.emit({ type: "notice", team, text: `TOWER FELLED · ARMY RALLIES ${r.seconds}S` });
+    this.emit({ type: "notice", team: 1 - team, text: "THEY FELLED A TOWER · THEIR ARMY RALLIES" });
+  }
+
   kill(target: Entity, src: Entity | null): void {
     const tp = target.transform;
     this.onKillSynergy(target, src);
@@ -953,6 +971,7 @@ export class World {
       target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds;
       killer.resource += bounty.hero;
       killer.heroKills++;
+      this.loseGold(target.team, this.data.match.economy.loss.heroDeath, "HERO DOWN");
       return;
     }
     target.alive = false;
@@ -996,6 +1015,10 @@ export class World {
     this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius, false);
     killer.resource += bounty.structure;
     this.teams[target.team].structuresLost++;
+    if (this.data.structures.types[st.type as "damage"]?.class === "tower") {
+      this.loseGold(target.team, this.data.match.economy.loss.tower, "TOWER LOST");
+      if (killerTeam >= 0) this.rally(killerTeam);
+    }
     pad.rubbleUntil = this.time + this.data.structures.rubbleSeconds;
     pad.rubbleTeam = target.team;
   }
@@ -1009,6 +1032,7 @@ export class World {
     let m = 1;
     if (this.time < s.slowUntil) m *= s.slowMul;
     if (this.time < s.buffUntil) m *= s.buffSpeedMul;
+    if (this.time < s.rallyUntil) m *= this.data.match.economy.rally.speedMul;
     for (const z of this.zones) {
       if (z.haste && z.team === e.team && this.time < z.until && Math.hypot(e.transform.pos.x - z.x, e.transform.pos.z - z.z) <= z.radius) {
         m *= z.haste;

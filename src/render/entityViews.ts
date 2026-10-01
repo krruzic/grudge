@@ -875,7 +875,7 @@ export class EntityViews {
     const t = this.world.time;
     const s = e.status;
     const kind = !e.alive ? "" : t < s.stunUntil ? "stun" : t < s.markUntil ? "mark" : e.hero && t < e.hero.openingUntil ? "opening" : t < s.hexUntil ? "hex"
-      : t < s.bleedUntil && s.bleedStacks > 0 ? "bleed" : t < s.armorUntil && s.armorMul < 1 ? "armor" : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : t < s.buffUntil && s.buffDamageMul > 1 ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
+      : t < s.bleedUntil && s.bleedStacks > 0 ? "bleed" : t < s.armorUntil && s.armorMul < 1 ? "armor" : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : (t < s.buffUntil && s.buffDamageMul > 1) || t < s.rallyUntil ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
     if (kind !== v.markKind) {
       v.markKind = kind;
       if (v.mark) { v.root.remove(v.mark); v.mark = undefined; }
@@ -1076,7 +1076,7 @@ export class EntityViews {
         else this.play(v, "idle");
       }
       v.body.rotation.x = w.time < e.status.stunUntil ? 0.25 : 0;
-      v.root.scale.setScalar(w.time < e.status.buffUntil ? 1.08 : 1);
+      v.root.scale.setScalar(w.time < e.status.buffUntil || w.time < e.status.rallyUntil ? 1.08 : 1);
       v.mixer.update(dt);
       return;
     }
@@ -1088,7 +1088,7 @@ export class EntityViews {
       v.weapon.rotation.x = k >= 0 && k < 1 ? -Math.sin(k * Math.PI) * (u.type === "ranged" ? 0.4 : 1.7) : 0;
     }
     v.body.rotation.x = w.time < e.status.stunUntil ? 0.25 : 0;
-    const buff = w.time < e.status.buffUntil;
+    const buff = w.time < e.status.buffUntil || w.time < e.status.rallyUntil;
     v.root.scale.setScalar(buff ? 1.08 : 1);
   }
 

@@ -7,10 +7,9 @@ const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "hold",
 const TOWER_BY_FLICK: Partial<Record<Flick, StructureType>> = { up: "damage", left: "control" };
 const PROD_BY_FLICK: Partial<Record<Flick, StructureType>> = { left: "barracks", up: "range", right: "foundry" };
 const SHOP_BY_FLICK: Partial<Record<Flick, ShopItem>> = { up: "bomb", left: "ward", right: "cannon" };
-const CALL_BY_FLICK: Partial<Record<Flick, UnitType>> = { left: "grunt", up: "ranged", right: "heavy" };
 
 export interface MapperUi {
-  buildMenu: "closed" | "prod" | "tower" | "call" | "shop" | "learn";
+  buildMenu: "closed" | "prod" | "tower" | "shop" | "learn";
   commander: boolean;
   group: UnitType | "all";
   groupAt: number;
@@ -156,11 +155,11 @@ export class CommandMapper {
     const mr = !!p.mouseRight;
     const mrPressed = mr && !this.mouseRightWas;
     this.mouseRightWas = mr;
-    if (p.pressed.x && !blockDodge) {
+    if (p.pressed.x && !blockDodge && atPad) {
       this.xDown = true;
       this.xUsed = false;
       this.tDown = false;
-      this.ui.buildMenu = atPad ? "prod" : "call";
+      this.ui.buildMenu = "prod";
     }
     this.ui.learnReady = canLearn;
     if ((atPad || atHome) && !this.xDown && (p.pressed.y || mrPressed)) {
@@ -170,11 +169,7 @@ export class CommandMapper {
     }
     const f = this.flick(p);
     if (f) {
-      if (this.xDown && this.ui.buildMenu === "call") {
-        if (f !== "down") c.call = CALL_BY_FLICK[f];
-        this.xUsed = true;
-        this.ui.buildMenu = "closed";
-      } else if (this.xDown) {
+      if (this.xDown) {
         if (f !== "down") c.build = PROD_BY_FLICK[f];
         this.xUsed = true;
         this.ui.buildMenu = "closed";
@@ -199,8 +194,7 @@ export class CommandMapper {
     }
 
     if (this.xDown && !p.held.x) {
-      if (!this.xUsed && this.ui.buildMenu === "call") c.call = "grunt";
-      else if (!this.xUsed) c.build = "default";
+      if (!this.xUsed) c.build = "default";
       this.xDown = false;
       this.ui.buildMenu = "closed";
     }

@@ -11,6 +11,15 @@
   "economy": {
     "start": 200,
     "income": 3.5,
+    "loss": {
+      "heroDeath": 50,
+      "tower": 75
+    },
+    "rally": {
+      "seconds": 10,
+      "damageMul": 1.2,
+      "speedMul": 1.15
+    },
     "bounty": {
       "hero": 60,
       "structure": 50,

@@ -107,7 +107,7 @@ export class Arena {
       const ts = w.teams[team];
       const core = w.core(team);
       if (!core) continue;
-      const list: { type: UnitType; from: Entity; stat: number }[] = wv.core.map((type) => ({ type, from: core, stat: grow }));
+      const list: { type: UnitType; from: Entity; stat: number }[] = [];
       for (const o of w.entities) {
         if (!o.alive || o.team !== team || !o.structure?.ready || o.structure.type === "core") continue;
         const def = w.data.structures.types[o.structure.type];
@@ -118,11 +118,19 @@ export class Arena {
         for (let k = 0; k < o.structure.level + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
       }
       let n = 0;
+      let broke = false;
       for (const item of list) {
         if (ts.unitCount >= w.data.units.popCap) break;
+        const cost = Math.round((wv.spawnCost[item.type] ?? 0) * w.costMul());
+        if (ts.resource < cost) {
+          broke = true;
+          continue;
+        }
+        ts.resource -= cost;
         const p = this.frontOf(item.from, team, n++);
         spawnUnit(w, team, item.type, p.x, p.z, item.stat);
       }
+      if (broke) w.emit({ type: "notice", team, text: "NO GOLD · OUTPOSTS IDLE" });
     }
   }
 
@@ -595,58 +603,6 @@ export class Arena {
         w.damage(owner, o, sh.splashDamage * (o.unit ? sh.splashUnitMul ?? 1 : 1), { knockback: 9, fromX: b.x, fromZ: b.z, big: true, stun: 0.3 });
       }
     }
-  }
-
-  callSquad(hero: Entity, type: UnitType): boolean {
-    const w = this.w;
-    const team = hero.team;
-    const ts = w.teams[team];
-    const sq = w.data.units.squads;
-    if (w.time < ts.callReadyAt) return false;
-    const cost = Math.round(sq.cost[type] * w.costMul());
-    const room = w.data.units.popCap - ts.unitCount;
-    if (room <= 0) {
-      w.emit({ type: "notice", team, text: "ARMY FULL" });
-      return false;
-    }
-    if (ts.resource < cost) {
-      w.emit({ type: "notice", team, text: `NEED ${cost}` });
-      return false;
-    }
-    let from: Entity | undefined;
-    let best = Infinity;
-    const core0 = w.core(team);
-    const coreD = core0 ? w.dist(hero, core0) : Infinity;
-    for (const o of w.entities) {
-      if (!o.alive || o.team !== team || !o.structure?.ready || o.structure.padIndex < 0) continue;
-      const def = o.structure.type === "core" ? null : w.data.structures.types[o.structure.type];
-      if (def?.class !== "production") continue;
-      const d = w.dist(hero, o) - (def.unit === type ? 4 : 0);
-      if (d < best && d < coreD) { best = d; from = o; }
-    }
-    const base = from ?? w.core(team);
-    if (!base) return false;
-    const enemy = w.core(1 - team);
-    const dx = (enemy?.transform.pos.x ?? w.terrain.width / 2) - base.transform.pos.x;
-    const dz = (enemy?.transform.pos.z ?? w.terrain.depth / 2) - base.transform.pos.z;
-    const dl = Math.hypot(dx, dz) || 1;
-    const out = base.radius + 1.6;
-    const cx = base.transform.pos.x + (dx / dl) * out;
-    const cz = base.transform.pos.z + (dz / dl) * out;
-    const fst = from?.structure;
-    const upStat = fst && fst.type !== "core" && fst.level > 1 ? w.data.structures.types[fst.type].upgrade.unitStat ?? 1 : 1;
-    const zone = fst && fst.padIndex >= 0 ? w.pads[fst.padIndex]?.zone : undefined;
-    const blessed = !!from && this.relic.state === "shrined" && this.relic.shrineId === from.id;
-    const stat = from ? upStat * (zone && zone !== "home" ? sq.forwardStatMul : 1) * (blessed ? w.data.match.arena.relic.outpostStatMul : 1) : 1;
-    const n = Math.min(sq.size, room);
-    for (let i = 0; i < n; i++) {
-      const a = ((i - (n - 1) / 2) * 0.9);
-      spawnUnit(w, team, type, cx - (dz / dl) * a, cz + (dx / dl) * a, stat);
-    }
-    ts.resource -= cost;
-    ts.callReadyAt = w.time + sq.cooldown;
-    w.emit({ type: "squad", team, unitType: type, x: cx, y: w.groundY(cx, cz), z: cz });
-    return true;
   }
 }
 

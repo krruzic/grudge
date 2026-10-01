@@ -95,23 +95,16 @@
     }
   },
   "squads": {
-    "size": 3,
-    "cost": {
-      "grunt": 60,
-      "ranged": 80,
-      "heavy": 110
-    },
-    "cooldown": 3,
     "forwardStatMul": 1.15
   },
   "waves": {
     "firstSeconds": 8,
     "everySeconds": 16,
-    "core": [
-      "grunt",
-      "grunt",
-      "ranged"
-    ],
+    "spawnCost": {
+      "grunt": 12,
+      "ranged": 16,
+      "heavy": 25
+    },
     "growPerMinute": 0.06
   }
 }

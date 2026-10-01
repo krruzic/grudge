@@ -844,14 +844,6 @@ export class Hud {
       const wardWait = Math.ceil(ts.wardReadyAt - w.time);
       return { title: "KEEP SHOP", items: [["BOMB", k(sh.bomb.cost)], ["SHIELD", wardWait > 0 ? `${wardWait}S` : k(sh.ward.cost)], ["CANNON", k(sh.cannon.cost)], ["CANCEL", ""]], lit: -1, until: 0 };
     }
-    if (mui.buildMenu === "call") {
-      const ts = w.teams[team];
-      const sq = w.data.units.squads;
-      const k = (u: UnitType) => String(Math.round(sq.cost[u] * w.costMul()));
-      const full = ts.unitCount >= w.data.units.popCap;
-      const title = full ? "ARMY FULL" : w.time < ts.callReadyAt ? "MUSTERING..." : `CALL ${Math.min(sq.size, w.data.units.popCap - ts.unitCount)} TROOPS`;
-      return { title, items: [["ARCHERS", k("ranged")], ["GRUNTS", k("grunt")], ["BRUTES", k("heavy")], ["CANCEL", ""]], lit: -1, until: 0 };
-    }
     const pad = padNear(w, hero);
     if (!pad) return { title: "NO PAD HERE", items: [["", ""], ["", ""], ["", ""], ["", ""]], lit: -1, until: 0 };
     const c = (k: Parameters<typeof buildCost>[1]) => String(buildCost(w, k, false, team));

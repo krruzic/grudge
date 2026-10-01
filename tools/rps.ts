@@ -4,13 +4,13 @@ const { spawnUnit } = await import("../src/sim/structures.ts");
 const R = new URL("..", import.meta.url).pathname;
 const json = (p: string) => JSON.parse(readFileSync(R + p, "utf8"));
 const data = { heroes: json("data/heroes.json"), units: json("data/units.json"), structures: json("data/structures.json"), match: json("data/match.json"), talents: json("data/talents.json") };
-const cost = data.units.squads.cost;
+const cost = data.units.waves.spawnCost;
 const fight = (a: string, b: string, seed: number) => {
   const w = new World(json("data/maps/crossing.json"), data, seed);
   w.spawnHero("warlord", 0, 0); w.spawnHero("warlord", 1, 1);
   for (const p of w.players) { const e = w.get(p.heroId)!; w.teleport(e, 5 + p.team * 2, 5); e.status.invulnUntil = 1e9; }
   for (const u of w.entities) if (u.unit) u.alive = false;
-  const na = Math.round(660 / cost[a]), nb = Math.round(660 / cost[b]);
+  const na = Math.round(132 / cost[a]), nb = Math.round(132 / cost[b]);
   for (let i = 0; i < na; i++) spawnUnit(w, 0, a, 40 + (i % 3), 20 + Math.floor(i / 3), 1);
   for (let i = 0; i < nb; i++) spawnUnit(w, 1, b, 52 + (i % 3), 20 + Math.floor(i / 3), 1);
   for (const t of w.teams) t.directives.grunt = t.directives.ranged = t.directives.heavy = "nearest";

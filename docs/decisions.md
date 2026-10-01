@@ -531,3 +531,10 @@
   - Thorn: combo 54/86→50/80, building bonus ×1.3→×1.2, long-arm slap 80→70.
   - Grim (glass cannon): damage tier high, 7% faster, near-instant flurry (light hits 0.16 s with 0.03 s wind-up, finisher 0.26 s), 24/24/24/40 damage, almost no knockback on light hits, 2.4 m reach, narrow 60°/90° arcs, chain window 0.22 s and 0.05 s recovery. Per-hero `comboCooldown` now overrides the baseline. Highest single-target damage (199/s).
   - Stig: ballista 520 HP, 95 damage (compensates for one ballista at a time).
+- Economy rework (supersedes keep waves and squad calls):
+  - Keeps no longer send troops, and the X squad-call is gone. X only opens the outpost menu at a pad.
+  - Outposts are the only source of troops. They still send their troop every 16 s (two at level 2, plus the Grudge-shrine bonus), but each soldier costs gold as it spawns: grunt 12, archer 16, brute 25 (`units.waves.spawnCost`, scaled by the cost rule). If the team can't pay, that outpost's troop is skipped and the team gets "NO GOLD · OUTPOSTS IDLE".
+  - Losses: your hero dying costs your team 50 gold, and losing a tower costs 75 (`economy.loss`), on top of the bounty the enemy already gets. Gold never goes below 0, and a notice shows the loss.
+  - Felling an enemy tower rallies the whole army, heroes included: +20% damage and +15% speed for 10 s (`economy.rally`). It has its own timer (`status.rallyUntil`) so it can't be overwritten by War Cry, the Ogre blessing or the Herald's aura, and it shows with the existing buff marker.
+  - Bots build more outposts (a longer build plan with forward and neutral barracks, a second range and a forward foundry) so they keep turning gold into troops.
+  - `tools/rps.ts` compares troops at equal spawn cost.

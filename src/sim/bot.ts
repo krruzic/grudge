@@ -12,8 +12,12 @@ const PLAN: PlanItem[] = [
   { zone: "home", type: "damage" },
   { zone: "forward", type: "range" },
   { zone: "home", type: "foundry" },
+  { zone: "forward", type: "barracks" },
   { zone: "forward", type: "damage" },
+  { zone: "neutral", type: "barracks" },
+  { zone: "home", type: "range" },
   { zone: "neutral", type: "control" },
+  { zone: "forward", type: "foundry" },
 ];
 
 export class Bot {
@@ -35,11 +39,9 @@ export class Bot {
   private wantZ = false;
   private wantDodge = false;
   private wantBlock = false;
-  private callAt = 0;
   picks: number[] | null = null;
   private wantBuy: { item: "bomb" | "ward" | "cannon"; at?: Vec2 } | null = null;
   private tend: Pad | null = null;
-  private callIndex = 0;
   private wantFace: Vec2 | null = null;
   mate: number | null = null;
   role: "solo" | "attack" | "support" = "solo";
@@ -112,18 +114,6 @@ export class Bot {
         const d = Math.hypot(dx, dz) || 1;
         cmd.moveX = dx / d;
         cmd.moveZ = dz / d;
-      }
-    }
-    if (w.time >= this.callAt) {
-      this.callAt = w.time + 1.5 + this.rand() * 2;
-      const order = ["grunt", "grunt", "ranged", "heavy"] as const;
-      const type = order[this.callIndex % order.length];
-      const ts = w.teams[me.team];
-      const cost = w.data.units.squads.cost[type];
-      const spare = (this.buildType ? 60 : 0) + (this.role === "attack" ? 160 : 0);
-      if (ts.resource >= cost + spare && ts.unitCount < w.data.units.popCap) {
-        cmd.call = type;
-        this.callIndex++;
       }
     }
     if (this.buildPad && this.buildType && Math.hypot(this.buildPad.x - me.transform.pos.x, this.buildPad.z - me.transform.pos.z) < 2.2) {

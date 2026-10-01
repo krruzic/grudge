@@ -30,6 +30,7 @@ export interface Status {
   buffUntil: number;
   buffDamageMul: number;
   buffSpeedMul: number;
+  rallyUntil: number;
   invulnUntil: number;
   lastAttackAt: number;
   hidden: boolean;
@@ -358,7 +359,6 @@ export interface Command {
   special?: boolean;
   super?: boolean;
   build?: StructureType | "default" | "upgrade";
-  call?: UnitType;
   learn?: number;
   buy?: ShopItem;
   aimAt?: Vec2;
