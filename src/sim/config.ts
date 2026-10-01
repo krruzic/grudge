@@ -107,6 +107,7 @@ export interface AbilityDef {
   cooldown?: number;
   knockback?: number;
   slowMul?: number;
+  allySpeedMul?: number;
   slowSeconds?: number;
   damageMul?: number;
   speedMul?: number;

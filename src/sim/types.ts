@@ -215,6 +215,7 @@ export interface Zone {
   slowMul: number;
   style?: string;
   heal?: number;
+  haste?: number;
 }
 
 export interface Delayed {

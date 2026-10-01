@@ -279,7 +279,7 @@ export class Screens {
       const icon = this.portraits?.icon(type);
       shield(ctx, x, gy, sw, sh, on.length ? TEAM_FIELD[on[0]] : "#b04a2a", icon ?? null, on.length === 1 ? TEAM_BRIGHT[on[0]] : on.length === 2 ? "#f0c030" : "#8a8a94");
       const name = (this.heroes[type]?.name ?? type).toUpperCase();
-      ribbon(ctx, x + sw / 2, gy + sh - 3, sw + 4, 9, name, Math.min(0.5, (sw + 2) / Math.max(1, textWidth(name, 1, true))), undefined, nameImage(type));
+      ribbon(ctx, x + sw / 2, gy + sh - 3, sw + 4, 9, name, Math.min(0.5, (sw + 2) / Math.max(1, textWidth(name, 1, true))), undefined, nameImage(`!${name}`));
     });
 
     const order = this.twoVtwo ? [0, 2, 1, 3] : [0, 1];
@@ -467,7 +467,7 @@ export class Screens {
       this.naming.get(i)!.draw(ctx, x + 3, y + 18, w - 6, h - notch - 20, performance.now() / 1000);
       return;
     }
-    ribbon(ctx, x + w / 2, ry, w + 6, 11, name, Math.min(0.8, (w + 2) / Math.max(1, textWidth(name, 1, true))), undefined, showHero ? nameImage(s.hero) : null);
+    ribbon(ctx, x + w / 2, ry, w + 6, 11, name, Math.min(0.8, (w + 2) / Math.max(1, textWidth(name, 1, true))), undefined, showHero ? nameImage(`!${name}`) : null);
     if (showHero) {
       (["a", "b", "r", "z"] as const).forEach((a, j) => {
         const cx = x + (w / 4) * (j + 0.5);

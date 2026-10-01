@@ -106,24 +106,30 @@ export class NameEntry {
     ctx.fillStyle = INK;
     ctx.fillRect(x + pad - 1, y + pad - 1, w - pad * 2 + 2, fieldH + 2);
     texturedRect(ctx, "parch", x + pad, y + pad, w - pad * 2, fieldH, null, 0, 1);
-    const caret = this.text.length < this.max && Math.floor(now * 2.5) % 2 ? "_" : "";
-    const shown = this.text + caret;
     const fs = Math.min(0.75, (w - 12) / Math.max(1, textWidth("WWWWWW", 1, true)));
-    drawPlain(ctx, shown, x + w / 2 - textWidth(this.text + "_", fs, true) / 2, y + pad + 2, "#3a2410", fs, true);
+    const tw = textWidth(this.text, fs, true);
+    const cw0 = textWidth("W", fs, true) * 0.8;
+    const tx = x + w / 2 - (tw + cw0 + 1) / 2;
+    drawPlain(ctx, this.text, tx, y + pad + 2, "#3a2410", fs, true);
+    if (this.text.length < this.max && Math.floor(now * 2.5) % 2) {
+      ctx.fillStyle = "#3a2410";
+      ctx.fillRect(tx + tw + 1, y + pad + fieldH - 3, cw0, 1.5);
+    }
     let cy = y + pad + fieldH + 3;
     const names = this.names();
     const rowH = Math.max(6, Math.min(11, (h - fieldH - pad * 2 - 14) / (KEY_ROWS + 2)));
     const hl = (rx: number, ry: number, rw: number, on: boolean) => {
       if (!on) return;
       ctx.fillStyle = "#f0c030";
-      ctx.fillRect(rx - 1, ry - 5, rw + 2, rowH - 1);
+      ctx.fillRect(rx - 1, ry, rw + 2, rowH - 1);
       ctx.fillStyle = "#8a1810";
-      ctx.fillRect(rx, ry - 4, rw, rowH - 3);
+      ctx.fillRect(rx, ry + 1, rw, rowH - 3);
     };
     const ts = Math.min(0.55, rowH / 13);
+    const mid = (ry: number, sc: number) => ry + (rowH - 1) / 2 - (7 * 10 * Math.max(0.64, sc)) / 14.5;
     hl(x + pad, cy, w - pad * 2, this.row === 0);
     const nl = names.length ? `< ${this.pick >= 0 ? names[this.pick] : "SAVED NAMES"} >` : "NO SAVED NAMES";
-    drawPlain(ctx, nl, x + w / 2 - textWidth(nl, ts * 0.9, true) / 2, cy + 1, this.row === 0 ? "#fff4c8" : "#c8b898", ts * 0.9, true);
+    drawPlain(ctx, nl, x + w / 2 - textWidth(nl, ts * 0.9, true) / 2, mid(cy, ts * 0.9), this.row === 0 ? "#fff4c8" : "#c8b898", ts * 0.9, true);
     cy += rowH + 1;
     const cw = (w - pad * 2) / COLS;
     for (let r = 0; r < KEY_ROWS; r++) {
@@ -132,7 +138,7 @@ export class NameEntry {
         const kx = x + pad + c * cw;
         const on = this.row === r + 1 && this.col === c;
         hl(kx + 0.5, cy, cw - 1, on);
-        drawPlain(ctx, k, kx + cw / 2 - textWidth(k, ts, true) / 2, cy + 1, on ? "#fff4c8" : "#e8dcc0", ts, true);
+        drawPlain(ctx, k, kx + cw / 2 - textWidth(k, ts, true) / 2, mid(cy, ts), on ? "#fff4c8" : "#e8dcc0", ts, true);
       }
       cy += rowH;
     }
@@ -142,7 +148,7 @@ export class NameEntry {
       const bx = x + pad + c * bw;
       const on = this.row === KEY_ROWS + 1 && this.col === c;
       hl(bx + 0.5, cy, bw - 1, on);
-      drawPlain(ctx, t, bx + bw / 2 - textWidth(t, ts, true) / 2, cy + 1, on ? "#fff4c8" : c === 2 ? "#a0e080" : "#e8dcc0", ts, true);
+      drawPlain(ctx, t, bx + bw / 2 - textWidth(t, ts, true) / 2, mid(cy, ts), on ? "#fff4c8" : c === 2 ? "#a0e080" : "#e8dcc0", ts, true);
     });
     cy += rowH + 1;
     if (cy + 6 < y + h) {

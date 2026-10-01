@@ -1008,6 +1008,12 @@ export class World {
     let m = 1;
     if (this.time < s.slowUntil) m *= s.slowMul;
     if (this.time < s.buffUntil) m *= s.buffSpeedMul;
+    for (const z of this.zones) {
+      if (z.haste && z.team === e.team && this.time < z.until && Math.hypot(e.transform.pos.x - z.x, e.transform.pos.z - z.z) <= z.radius) {
+        m *= z.haste;
+        break;
+      }
+    }
     const cx = Math.floor(e.transform.pos.x);
     const cz = Math.floor(e.transform.pos.z);
     const kind = this.terrain.kindAt(cx, cz);

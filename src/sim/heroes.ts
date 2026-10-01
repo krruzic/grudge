@@ -1081,6 +1081,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         sz = Math.floor(i / w.nav.w) + 0.5;
         perch = mine.find((m) => topCell(m, i)) ?? null;
       }
+      for (const old of w.entities) {
+        if (!old.alive || old.owner !== e.id || !old.structure?.siege) continue;
+        old.expiresAt = w.time;
+      }
       const s = w.addEntity(e.team, "structure", 0.7, sx, sz, def.hp ?? 180);
       const mul = perch ? def.perchMul ?? 1.25 : 1;
       s.structure = {
@@ -1090,7 +1094,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       };
       const core = w.core(1 - e.team);
       if (core) s.transform.facing = s.transform.prevFacing = Math.atan2(core.transform.pos.x - sx, core.transform.pos.z - sz);
-      s.expiresAt = perch ? perch.until : w.time + (def.seconds ?? 30);
+      s.expiresAt = Math.min(perch ? perch.until : Infinity, w.time + (def.seconds ?? 20));
       s.owner = e.id;
       w.nav.setBlocked(sx, sz, 0.7, true);
       w.emit({ type: "build", id: s.id, padIndex: -1, team: e.team, upgrade: false });
@@ -1270,7 +1274,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     case "zone": {
       w.zones.push({
         id: w.newId(), team: e.team, ownerId: e.id, x: a.placed ? a.toX! : t.pos.x, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6,
-        until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4, heal: def.fx?.grove?.heal,
+        until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4, heal: def.fx?.grove?.heal, haste: def.allySpeedMul,
       });
       w.emit({ type: "slam", x: a.placed ? a.toX! : t.pos.x, y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true, src: e.id });
       return;

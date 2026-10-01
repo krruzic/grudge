@@ -216,8 +216,10 @@ async function start(): Promise<void> {
     else slots[slot].tag = tag;
   };
   let namingAte = false;
+  const closedNow = new Set<number>();
   const runNaming = (padOf: (slot: number) => number, now: number) => {
     namingAte = screens.naming.size > 0;
+    closedNow.clear();
     for (const [slot, ne] of [...screens.naming]) {
       const k = padOf(slot);
       const p = k >= 0 ? pads.players[k] : undefined;
@@ -226,12 +228,19 @@ async function start(): Promise<void> {
         continue;
       }
       const r = ne.update(p, now);
-      if (r?.done) nameDone(slot, r, k);
+      if (r?.done) {
+        closedNow.add(k);
+        nameDone(slot, r, k);
+      }
       else if (Object.values(p.pressed).some(Boolean)) audio.ui("move");
     }
   };
   const naming = (k: number) => [...screens.naming.keys()].some((s) => (state === "lobby" ? mySlots.get(k) === s : s === k));
-  const cursorPads = (list: typeof pads.players) => list.map((p, k) => (naming(k) ? { ...p, connected: false } : p));
+  const cursorPads = <T,>(list: T[]): T[] => {
+    cursors.frozen.clear();
+    list.forEach((_, k) => (naming(k) || closedNow.has(k)) && cursors.frozen.add(k));
+    return list;
+  };
   function finishTag(r: { done: boolean; tag?: string | null }): void {
     if (!r.done) return;
     audio.ui("ok");
@@ -874,7 +883,10 @@ async function start(): Promise<void> {
     if (pads.players.some((p) => Object.values(p.pressed).some(Boolean))) audio.unlock();
 
     pads.typing = !!kbEditor();
-    if (state !== "select" && state !== "lobby") screens.naming.clear();
+    if (state !== "select" && state !== "lobby") {
+      screens.naming.clear();
+      cursors.frozen.clear();
+    }
     if (state !== "lobby") cursors.tagOf = null;
     if (state === "title") {
       if (anyPressed("start") || anyPressed("a") || cursors.takeClick()) {
@@ -1007,7 +1019,6 @@ async function start(): Promise<void> {
             audio.ui("move");
           } else if (id === "tag" && !slots[i].cpu && !commanderSlot(i) && act.by === i && !screens.naming.has(i)) {
             screens.naming.set(i, new NameEntry(slots[i].tag, () => save.tagNames(), MAX_TAG));
-            if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
             audio.ui("ok");
           } else if (id === "go" && selectReady()) {
             toMap();
@@ -1128,8 +1139,6 @@ async function start(): Promise<void> {
             const i = Number(arg);
             if (id === "tag" && mySlots.get(act.by) === i && !screens.naming.has(i)) {
               screens.naming.set(i, new NameEntry("", () => save.tagNames(), MAX_TAG));
-              cursors.cursors[act.by].holding = -1;
-              dropped.add(i);
               audio.ui("ok");
             } else if (id === "take" && mySlots.has(act.by)) {
               const from = mySlots.get(act.by)!;

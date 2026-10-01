@@ -48,6 +48,7 @@ export class MenuCursors {
   private mouse = { x: 0, y: 0, moved: false, down: false, right: false };
   mouseUsed = false;
   mouseSlot = -1;
+  frozen = new Set<number>();
   tagOf: ((i: number) => number) | null = null;
   private scale = { w: 427, h: 240 };
 
@@ -122,6 +123,14 @@ export class MenuCursors {
       const c = this.cursors[i];
       c.active = p.connected;
       if (!c.active) return;
+      if (this.frozen.has(i)) {
+        if (i === this.mouseSlot) this.mouse.moved = false;
+        if (c.holding >= 0) {
+          this.chips[c.holding].x = c.x + 3;
+          this.chips[c.holding].y = c.y - 4;
+        }
+        return;
+      }
       let a = p.pressed.a;
       let b = p.pressed.b;
       if (i === this.mouseSlot) {
@@ -171,7 +180,7 @@ export class MenuCursors {
       }
       if (b) out.push({ type: "back", by: i });
     });
-    if (this.mouseSlot < 0 && this.mouse.down) {
+    if (this.mouseSlot < 0 && this.mouse.down && !this.frozen.has(this.mouseSlot)) {
       const over = this.at(this.mouse.x, this.mouse.y);
       if (over && !over.id.startsWith("hero:")) out.push({ type: "button", id: over.id, by: -1 });
     }

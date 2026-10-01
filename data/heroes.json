@@ -142,7 +142,7 @@
       "botRange": 1.8
     },
     "engineer": {
-      "name": "Engineer",
+      "name": "Stig",
       "blurb": "Cheaper structures and upgrades. Repairs. Raises siege works and a ballista to perch on them.",
       "health": "sturdy",
       "speed": "mid",
@@ -219,7 +219,7 @@
           "damage": 80,
           "range": 11,
           "cooldown": 1.8,
-          "seconds": 30,
+          "seconds": 20,
           "perchMul": 1.25,
           "vs": {
             "grunt": 0.6,
@@ -237,7 +237,7 @@
       }
     },
     "raider": {
-      "name": "Raider",
+      "name": "Grim",
       "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills reset Leap.",
       "health": "low",
       "speed": "swift",
@@ -347,7 +347,7 @@
       }
     },
     "summoner": {
-      "name": "Summoner",
+      "name": "Remnil",
       "blurb": "Necromancer. Hex marks foes: minions hit them harder and the hexed dead rise to serve.",
       "health": "mid",
       "speed": "mid",
@@ -444,7 +444,7 @@
       }
     },
     "duelist": {
-      "name": "Duelist",
+      "name": "Francois",
       "blurb": "Fencer. A clean parry resets Dash and opens a critical strike. Flurry punishes the stunned.",
       "health": "mid",
       "speed": "mid",
@@ -540,7 +540,7 @@
       }
     },
     "warden": {
-      "name": "Warden",
+      "name": "Thorn",
       "blurb": "Keeper. Walls come with snares at each end; snares inside the Thorn zone re-arm.",
       "health": "high",
       "speed": "mid",
@@ -614,6 +614,7 @@
           "anim": "attack_a",
           "radius": 6,
           "dps": 35,
+          "allySpeedMul": 1.25,
           "slowMul": 0.4,
           "seconds": 6,
           "dur": 0.7,
@@ -621,7 +622,7 @@
           "bot": "fight",
           "botRange": 5,
           "rearmSeconds": 2,
-          "callout": "BRAMBLES \u00b7 SLOW AND HURT"
+          "callout": "BRAMBLES \u00b7 FOES SLOWED, ALLIES SPED"
         }
       }
     },
