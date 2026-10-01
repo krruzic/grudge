@@ -312,7 +312,7 @@ export class Menus {
       }
       if (ptr.click && this.hover) act = this.hover;
     }
-    if (nav.dy && n) {
+    if (nav.dy && n && this.page !== "network") {
       this.focus = (this.focus + nav.dy + n) % n;
       this.confirm = "";
       sound("move");
@@ -363,6 +363,13 @@ export class Menus {
       return null;
     }
     if (this.page === "network") {
+      if (dx && !this.netBusy) {
+        const f = Math.max(0, Math.min(1, this.focus + dx));
+        if (f !== this.focus) {
+          this.focus = f;
+          sound("move");
+        }
+      }
       if (act === "a" && !this.netBusy) {
         sound("ok");
         if (this.focus === 0) return "host";

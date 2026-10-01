@@ -144,6 +144,7 @@ async function start(): Promise<void> {
     view.camMode = o.split;
     screens.cameraMode = o.split;
     view.setHints(!!o.hints);
+    pads.kbmEnabled = o.kbm !== 0;
   };
   applyOptions();
   const navRep = Array.from({ length: MAX_PLAYERS }, () => ({ dir: "", t: 0 }));

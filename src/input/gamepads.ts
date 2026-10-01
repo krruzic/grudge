@@ -149,7 +149,19 @@ export class Gamepads {
   }
 
   claimKeyboard(): void {
-    if (!this.kbHold) this.keyTouched = true;
+    if (!this.kbHold && this.kbmEnabled) this.keyTouched = true;
+  }
+
+  private kbmOn = true;
+  get kbmEnabled(): boolean {
+    return this.kbmOn;
+  }
+  set kbmEnabled(on: boolean) {
+    this.kbmOn = on;
+    if (on) return;
+    const s = this.keyboardSlot();
+    if (s >= 0) this.release(s);
+    this.keyTouched = false;
   }
 
   private kbHold = false;
@@ -311,7 +323,7 @@ export class Gamepads {
       const free = this.slots.indexOf(null);
       if (free >= 0) this.slots[free] = PRO_BASE - i;
     });
-    if (this.keyTouched && !this.slots.includes(KEYBOARD)) {
+    if (this.keyTouched && this.kbmOn && !this.slots.includes(KEYBOARD)) {
       const free = this.slots.indexOf(null);
       if (free >= 0) this.slots[free] = KEYBOARD;
     }
