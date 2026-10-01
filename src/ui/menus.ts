@@ -1229,7 +1229,7 @@ export class Menus {
       this.hit("cpg:1", px + pw - 22, py + ph - 18, 22, 16);
     }
     const cx0 = px + pw + 14;
-    const cw = W - cx0 - 10;
+    const cw = W - cx0 - 19;
     const th = 13;
     const gap = 3;
     const ch = 10;
@@ -1251,9 +1251,11 @@ export class Menus {
     while (start > 0 && rows[start - 1].kind === "cat" && span(start - 1, focusRow) <= avail) start--;
     this.scrollTop = start;
     let y = 25;
+    let shown = 0;
     for (let i = start; i < rows.length; i++) {
       const r = rows[i];
       if (y + height(r) > 25 + avail) break;
+      shown = i - start + 1;
       if (r.kind === "cat") {
         shadowText(ctx, r.label, cx0 + 2, y + 1, "#f0c030", 0.5);
         y += ch;
@@ -1274,6 +1276,21 @@ export class Menus {
       } else waxSeal(ctx, x + 7, y + th / 2, 4.5, sel ? "#a8141a" : "#6a3a2a", e2.glyph);
       drawPlain(ctx, r.label, x + 16, y + 2.5, sel ? "#8a1810" : BROWN, 0.55, true);
       y += th + gap;
+    }
+    if (shown < rows.length) {
+      const total = span(0, rows.length - 1);
+      const sx = cx0 + cw + 5;
+      const sy = 25;
+      const sh = avail - 3;
+      ctx.fillStyle = INK;
+      ctx.fillRect(sx - 1, sy - 1, 6, sh + 2);
+      texturedRect(ctx, "wood", sx, sy, 4, sh, "#3a2414", 0, 1);
+      const before = start > 0 ? span(0, start - 1) : 0;
+      const tH = Math.max(10, (sh * span(start, start + shown - 1)) / total);
+      const tY = sy + Math.min(sh - tH, (sh * before) / total);
+      ctx.fillStyle = INK;
+      ctx.fillRect(sx - 1, tY - 1, 6, tH + 2);
+      texturedRect(ctx, "gold", sx, tY, 4, tH, null, 0, 1);
     }
     const p: [string, string][] = [["A", "TURN PAGE"], ["B", "BACK"]];
     const hint = "UP / DOWN: ENTRY · LEFT / RIGHT: PAGE";
