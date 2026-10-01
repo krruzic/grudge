@@ -492,7 +492,14 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, bots: () => bots, humanize: (i: number) => {
+  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, screens, pause: () => setPaused(true), endMatch: (winner = 0) => {
+    world.match.phase = "over";
+    world.match.winner = winner;
+    world.match.reason = "core destroyed";
+  }, setLobby: () => {
+    state = "lobby";
+    screens.set("lobby");
+  }, bots: () => bots, humanize: (i: number) => {
     mappers[i] = new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i));
     bots[i] = null;
     view.setHumans(mappers.map((m) => !!m));
@@ -543,8 +550,13 @@ async function start(): Promise<void> {
     }
   };
   const setPaused = (on: boolean) => {
+    if (on) {
+      menus.openPause();
+      menus.currentMap = maps[mapIndex]?.data.name ?? "";
+    }
     state = on ? "paused" : "match";
     screens.set(on ? "pause" : "none");
+    hud.show(!on);
     if (netMode === "host") net.toPeer("all", { t: "pause", on });
   };
   const pumpNet = (now: number) => {
@@ -863,10 +875,11 @@ async function start(): Promise<void> {
       view.setMenus(mappers.map((m) => !!m && m.ui.buildMenu !== "closed"));
       if (netMode === "peer" && mySlot >= 0 && mappers[mySlot]) net.toHost({ t: "cmd", c: packCommand(mappers[mySlot]!.take()) });
     } else if (state === "paused") {
-      if (anyPressed("start")) {
+      const r = menus.updatePause(readNav(now), cursors.takeMouse(), (k) => audio.ui(k));
+      if (anyPressed("start") || r === "resume") {
         if (netMode === "peer") net.toHost({ t: "pause" });
         else setPaused(false);
-      } else if (anyPressed("z")) toMenu();
+      } else if (r === "quit") toMenu();
     } else if (state === "results" && netMode === "peer") {
       if (anyPressed("a") || anyPressed("start")) {
         state = "lobby";
@@ -940,7 +953,8 @@ async function start(): Promise<void> {
     if (state === "match") audio.handle(world.events, (x, y, z) => view.worldToScreen(x, y, z));
     audio.setMusic(state !== "paused", state === "match" && world.match.phase === "sudden" ? 1 : state === "match" ? 0.3 : 0);
     audio.update();
-    if (state !== "select" && state !== "map" && !(state === "menu" && menus.page !== "main")) view.render(state === "paused" ? 0 : acc / world.dt, state === "paused" ? 0 : dt);
+    view.cinematic = state === "select" || state === "map" || state === "lobby" || (state === "menu" && menus.page !== "main");
+    view.render(state === "paused" ? 0 : acc / world.dt, state === "paused" ? 0 : dt);
     const ctx = pixel.begin();
     const uiList = mappers.map((m) => m?.ui ?? null);
     hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);
@@ -956,6 +970,7 @@ async function start(): Promise<void> {
     screens.adapterDebug = pads.gc.debug();
     screens.draw(ctx, pixel.w, pixel.h, now);
     if (state === "menu") menus.draw(ctx, pixel.w, pixel.h, now);
+    if (state === "paused") menus.drawPause(ctx, pixel.w, pixel.h, now, world);
     if (netMode === "host" && (state === "select" || state === "map")) {
       const joined = [...remotes.values()].filter((r) => r.slot >= 0).length;
       const where = hostPublic ? hostPublic : hostAddrs[0] ? `http://${hostAddrs[0]}` : location.host;

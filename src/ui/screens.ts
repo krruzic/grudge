@@ -4,7 +4,7 @@ import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from 
 import { drawNum, drawPlain, drawText, occlude, textWidth } from "./font";
 import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
-import { artTitle, band, drawLogo, banner, beam, goldArrow, nameImage, paintedText, parchment, pennant, pin, ribbon, rolledBanner, scroll, shadowText, shield, table, texturedRect, wall, waxSeal, woodFloor } from "./n64ui";
+import { artTitle, band, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor } from "./n64ui";
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
@@ -214,10 +214,8 @@ export class Screens {
       if (this.lobby) this.drawLobby(ctx, W, H, this.lobby, Math.floor(now * 2) % 2 === 0);
       return;
     }
-    if (this.which !== "select") {
-      ctx.fillStyle = this.which === "map" ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.4)";
-      ctx.fillRect(0, 0, W, H);
-    }
+    if (this.which === "title") fieldShade(ctx, W, H, 0.12);
+    else if (this.which === "pause" || this.which === "results") fieldShade(ctx, W, H, 0.45);
     const blink = Math.floor(now * 2) % 2 === 0;
     if (this.cursors && (this.which === "select" || this.which === "map")) this.cursors.hits = [];
     if (this.which === "title") {
@@ -227,9 +225,10 @@ export class Screens {
         const it: [string, string][] = [["S", "PRESS START"]];
         prompt(ctx, Math.round((W - promptWidth(it, 1.1)) / 2), 152, it, 1.1);
       }
-      center(ctx, W, "PRESS ANY BUTTON OR KEY TO JOIN  ·  CLICK ONCE FOR SOUND", 206, "#b8b0a0", 0.75);
-      if (this.adapterStatus) center(ctx, W, this.adapterStatus, 220, "#d8c890", 0.7);
-      if (this.adapterDebug) center(ctx, W, this.adapterDebug, 230, "#a8a090", 0.6);
+      woodFloor(ctx, H - 34, W, H);
+      center(ctx, W, "PRESS ANY BUTTON OR KEY TO JOIN  ·  CLICK ONCE FOR SOUND", H - 29, "#f0e4c8", 0.7);
+      if (this.adapterStatus) center(ctx, W, this.adapterStatus, H - 19, "#e8d090", 0.62);
+      if (this.adapterDebug) center(ctx, W, this.adapterDebug, H - 10, "#c8b898", 0.55);
     } else if (this.which === "select") this.drawSelect(ctx, W, H, now, blink);
     else if (this.which === "map") this.drawMap(ctx, W, H, blink);
     if (this.cursors && (this.which === "select" || this.which === "map")) {
@@ -246,33 +245,11 @@ export class Screens {
       }
       this.cursors.drawCursors(ctx, now);
     }
-    else if (this.which === "pause") {
-      paintedText(ctx, "PAUSE", W / 2, 30, "#f0c030", 1.6);
-      const rows: [string, string][] = [
-        ["STICK", "MOVE"], ["A", "ATTACK · HOLDING A BOMB: THROW"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
-        ["L", "BLOCK · L + A: SHOVE · L + X / L + SMASH: DODGE"], ["C", "ORDERS: UP ATTACK · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD"],
-        ["X", "HOLD + FLICK C: CALL 3 TROOPS · AT PAD: OUTPOSTS / UPGRADE"], ["Y", "AT PAD: TOWERS · AT KEEP: SHOP · ON LEVEL UP: LEARN (FLICK C LEFT/RIGHT)"], ["D-PAD", "LEFT/RIGHT: WHO OBEYS (ALL, GRUNTS, ARCHERS, BRUTES) · UP/DOWN: ZOOM"],
-      ];
-      const bw = 300;
-      const bx = Math.round((W - bw) / 2);
-      occlude(ctx, bx, 50, bw, rows.length * 13 + 14);
-      parchment(ctx, bx, 50, bw, rows.length * 13 + 14);
-      rows.forEach(([k, v], i) => {
-        const y = 59 + i * 13;
-        const col = k === "A" ? PAD.a : k === "B" ? PAD.b : k === "C" ? PAD.c : k === "Z" || k === "R" || k === "L" ? PAD.z : "";
-        if (col) padButton(ctx, bx + 20, y + 4.5, 5, col, k);
-        else drawPlain(ctx, k, bx + 20 - textWidth(k, 0.6, true) / 2, y + 1.5, "#6a4424", 0.6, true);
-        drawPlain(ctx, v, bx + 42, y + 0.5, "#3a2410", 0.72, true);
-      });
-      const kb = "KEYBOARD AND MOUSE: SEE CONTROLS IN THE MAIN MENU";
-      shadowText(ctx, kb, W / 2 - textWidth(kb, 0.7) / 2, 200, "#f0e4c8", 0.7);
-      const it: [string, string][] = [["S", "RESUME"], ["Z", "QUIT TO MENU"]];
-      prompt(ctx, Math.round((W - promptWidth(it)) / 2), 216, it);
-    } else if (this.which === "results" && this.results) this.drawResults(ctx, W, this.results, blink);
+    if (this.which === "results" && this.results) this.drawResults(ctx, W, this.results, blink);
   }
 
   private drawLobby(ctx: CanvasRenderingContext2D, W: number, H: number, lb: LobbyView, blink: boolean): void {
-    wall(ctx, W, H);
+    fieldShade(ctx, W, H, 0.4);
     woodFloor(ctx, H - 22, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_join", "JOIN A BATTLE", W / 2, 3, 14);
@@ -326,8 +303,8 @@ export class Screens {
   }
 
   private drawSelect(ctx: CanvasRenderingContext2D, W: number, H: number, _now: number, blink: boolean): void {
-    wall(ctx, W, H);
-    const floorY = H - 26;
+    fieldShade(ctx, W, H, 0.3);
+    const floorY = H - 20;
     woodFloor(ctx, floorY, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_champion", "CHOOSE YOUR CHAMPION", W / 2, 3, 14);
@@ -373,8 +350,6 @@ export class Screens {
         for (const [line, dy] of [["+ ADD", 17], ["CPU", 25]] as const) shadowText(ctx, line, bx + 20 - textWidth(line, 0.55) / 2, by + dy, hot ? "#fff4b0" : "#c8bca0", 0.55);
         this.hit(`add:${i}`, bx - 2, by - 2, 44, 38);
       }
-      const t = this.heroPartners ? "2 VS 2: FOUR CHAMPIONS" : "COMMANDERS: 2 VS 2";
-      shadowText(ctx, t, W / 2 - textWidth(t, 0.5) / 2, floorY - 11, "#b8b0a0", 0.5);
     }
 
     const it: [string, string][] = [["A", "TAKE / PLACE SEAL"], ["B", "BACK"], ["S", "START"]];
@@ -509,7 +484,8 @@ export class Screens {
   }
 
   private drawMap(ctx: CanvasRenderingContext2D, W: number, H: number, _blink: boolean): void {
-    table(ctx, W, H);
+    fieldShade(ctx, W, H, 0.3);
+    woodFloor(ctx, H - 20, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_field", "CHOOSE THE FIELD", W / 2, 3, 14);
 
@@ -586,54 +562,89 @@ export class Screens {
   }
 
   private drawResults(ctx: CanvasRenderingContext2D, W: number, w: World, blink: boolean): void {
+    const H = 240;
     const win = w.match.winner;
     const head = win < 0 ? "A DRAW" : `${win === 0 ? "BLUE" : "RED"} HOUSE WINS`;
-    const bw = 230;
-    banner(ctx, W / 2 - bw / 2, 12, bw, 40, win < 0 ? "#9a9080" : TEAM_CLOTH[win], 8);
-    paintedText(ctx, head, W / 2, 22, "#f0c030", 1.5);
-    const pw = 300;
-    const px = Math.round((W - pw) / 2);
-    const py = 60;
+    beam(ctx, 4, 2, W - 8, 17);
+    woodFloor(ctx, H - 20, W, H);
+    const bw = 220;
+    banner(ctx, W / 2 - bw / 2, 14, bw, 34, win < 0 ? "#9a9080" : TEAM_CLOTH[win], 8);
+    const im = nameImage(`!${head}`);
+    if (im) {
+      const hh = 15;
+      const ww = (im.width / im.height) * hh;
+      ctx.drawImage(im, W / 2 - ww / 2, 21, ww, hh);
+    } else paintedText(ctx, head, W / 2, 22, "#f0c030", 1.4);
+    const reason = w.match.reason.toUpperCase();
+    const mm = `${Math.floor(w.time / 60)}:${String(Math.floor(w.time % 60)).padStart(2, "0")}`;
+    const sub = `${reason}  ·  ${mm}`;
+    shadowText(ctx, sub, W / 2 - textWidth(sub, 0.55) / 2, 6, "#f0e4c8", 0.55);
+
+    const ps = this.resultPlayers.length ? this.resultPlayers : w.players.map((p) => ({ tag: null, hero: p.heroType, team: p.team, cpu: true }));
     const t = w.teams;
-    const rows: [string, (i: number) => string | number][] = [
+    const colW = Math.min(150, Math.floor((W - 150) / 2));
+    const top = 56;
+    const ph = H - 20 - top - 22;
+    [0, 1].forEach((team) => {
+      const x = team === 0 ? 14 : W - 14 - colW;
+      ctx.fillStyle = "#0b0806";
+      ctx.fillRect(x - 1, top - 1, colW + 2, ph + 2);
+      texturedRect(ctx, "cloth", x, top, colW, ph, TEAM_CLOTH[team], 0, 0.8);
+      band(ctx, x, top, colW, ph, "#000000", win === team ? 0.1 : 0.35);
+      const name = team === 0 ? "BLUE HOUSE" : "RED HOUSE";
+      drawText(ctx, name, x + colW / 2 - textWidth(name, 0.75) / 2, top + 4, "#fff0c8", 0.75);
+      if (win === team) waxSeal(ctx, x + colW - 11, top + 8, 7, "#c8a020", "combo");
+      ps.filter((p) => p.team === team).forEach((p, j) => {
+        const y = top + 18 + j * 30;
+        const icon = this.portraits?.icon(p.hero);
+        ctx.fillStyle = "#0b0806";
+        ctx.fillRect(x + 5, y - 1, 28, 28);
+        texturedRect(ctx, "stone", x + 6, y, 26, 26, "#b8a888", 0, 0.5);
+        if (icon) ctx.drawImage(icon, x + 4, y - 2, 30, 30);
+        const nm = p.cpu ? "CPU" : p.tag ?? `P${ps.indexOf(p) + 1}`;
+        drawText(ctx, nm, x + 38, y + 3, "#fff4c8", 0.75);
+        const hero = (this.heroes[p.hero]?.name ?? p.hero).toUpperCase();
+        drawText(ctx, hero, x + 38, y + 14, "#e0d0b0", 0.55);
+      });
+    });
+    const rows: [string, (i: number) => number][] = [
       ["CORE DAMAGE", (i) => Math.round(t[i].coreDamageDealt)],
       ["HERO KILLS", (i) => t[i].heroKills],
       ["SOLDIERS SLAIN", (i) => t[i].kills],
       ["BUILT", (i) => t[i].structuresBuilt],
       ["LOST", (i) => t[i].structuresLost],
     ];
-    const ps = this.resultPlayers;
-    const perTeam = Math.max(1, ...[0, 1].map((k) => ps.filter((p) => p.team === k).length));
-    const ph = 30 + perTeam * 12 + rows.length * 12 + 8;
-    parchment(ctx, px, py, pw, ph);
-    const reason = w.match.reason.toUpperCase();
-    drawPlain(ctx, reason, W / 2 - textWidth(reason, 0.55) / 2, py + 5, "#8a5a2a", 0.55);
-    const cx = [px + 196, px + 262];
-    ["BLUE", "RED"].forEach((n, k) => drawPlain(ctx, n, cx[k] - textWidth(n, 0.75, true) / 2, py + 15, TEAM_BOX[k], 0.75, true));
-    [0, 1].forEach((k) => {
-      ps.filter((p) => p.team === k).forEach((p, j) => {
-        const y = py + 28 + j * 12;
-        const icon = this.portraits?.icon(p.hero);
-        const x = cx[k] - 30;
-        if (icon) ctx.drawImage(icon, x - 2, y - 3, 12, 12);
-        const nm = p.cpu ? "CPU" : p.tag ?? `P${ps.indexOf(p) + 1}`;
-        drawPlain(ctx, nm, x + 11, y, "#3a2410", 0.55, true);
-        if (win === k) waxSeal(ctx, x + 58, y + 3.5, 3.5, "#a8141a", "combo");
-      });
-    });
-    const ry = py + 30 + perTeam * 12;
-    band(ctx, px + 8, ry - 3, pw - 16, 1, "#6a4424", 0.5);
+    const mx = 14 + colW + 8;
+    const mw = W - 2 * mx;
+    parchment(ctx, mx, top, mw, ph);
+    const rh = Math.min(26, (ph - 10) / rows.length);
     rows.forEach(([label, f], i) => {
-      const yy = ry + 2 + i * 12;
-      drawPlain(ctx, label, px + 14, yy, "#4a3018", 0.68, true);
-      for (const k of [0, 1]) {
-        const v = String(f(k));
-        drawPlain(ctx, v, cx[k] - textWidth(v, 0.75, true) / 2, yy, "#3a2410", 0.75, true);
+      const y = top + 6 + i * rh;
+      const a = f(0);
+      const b = f(1);
+      drawPlain(ctx, label, mx + mw / 2 - textWidth(label, 0.55, true) / 2, y, "#6a4424", 0.55, true);
+      const va = String(a);
+      const vb = String(b);
+      drawPlain(ctx, va, mx + 8, y + 7, a > b ? "#1c34a8" : "#4a3018", 0.85, true);
+      drawPlain(ctx, vb, mx + mw - 8 - textWidth(vb, 0.85, true), y + 7, b > a ? "#a81c1c" : "#4a3018", 0.85, true);
+      const tot = Math.max(1, a + b);
+      const barW = mw - 70;
+      const bx = mx + 35;
+      const by = y + 10;
+      ctx.fillStyle = "#3a2410";
+      ctx.fillRect(bx - 1, by - 1, barW + 2, 5);
+      ctx.fillStyle = "#3a58e0";
+      ctx.fillRect(bx, by, Math.round((barW * a) / tot), 3);
+      ctx.fillStyle = "#d83828";
+      ctx.fillRect(bx + Math.round((barW * a) / tot), by, barW - Math.round((barW * a) / tot), 3);
+      if (a + b === 0) {
+        ctx.fillStyle = "#8a7a60";
+        ctx.fillRect(bx, by, barW, 3);
       }
     });
     if (blink) {
       const it: [string, string][] = [["A", "CONTINUE"]];
-      prompt(ctx, Math.round((W - promptWidth(it)) / 2), py + ph + 10, it);
+      prompt(ctx, Math.round((W - promptWidth(it, 0.7)) / 2), H - 13, it, 0.7);
     }
   }
 }

@@ -1,9 +1,11 @@
 import { drawPlain, drawText, occlude, onHiLayer, textWidth } from "./font";
-import { artTitle, band, banner, beam, drawLogo, goldArrow, nameImage, paintedText, parchment, ribbon, scroll, shadowText, texturedRect, wall, waxSeal, woodFloor } from "./n64ui";
-import { padButton, PAD } from "./hud";
+import { artTitle, band, banner, beam, drawLogo, fieldShade, goldArrow, nameImage, paintedText, parchment, plank, ribbon, scroll, shadowText, texturedRect, waxSeal, woodFloor } from "./n64ui";
+import { padButton, PAD, talentIcon } from "./hud";
+import { learned } from "../sim/talents";
 import { prompt, promptWidth, wrap } from "./screens";
 import type { Hit, MenuCursors } from "./cursor";
 import type { Portraits } from "./portraits";
+import type { World } from "../sim/world";
 import { DEFAULT_OPTIONS, DEFAULT_RULES, MAX_TAG, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
 
 export type Page = "main" | "network" | "rules" | "options" | "records" | "controls";
@@ -77,7 +79,169 @@ function dateOf(ms: number): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+const PAUSE_ITEMS = ["RESUME", "CONTROLS", "QUIT MATCH"];
+const TEAM_CLOTH = ["#2a4ab8", "#b02a1c"];
+
 export class Menus {
+  pauseFocus = 0;
+  currentMap = "";
+  pauseView: "menu" | "controls" = "menu";
+  private pauseConfirm = false;
+
+  openPause(): void {
+    this.pauseFocus = 0;
+    this.pauseView = "menu";
+    this.pauseConfirm = false;
+  }
+
+  updatePause(nav: Nav, ptr: Pointer, sound: (k: "move" | "ok" | "back") => void): "resume" | "quit" | null {
+    let act = "";
+    if (ptr.moved || ptr.click) {
+      const h = this.at(ptr.x, ptr.y);
+      const m = h.match(/^prow:(\d+)$/);
+      if (m && Number(m[1]) !== this.pauseFocus && ptr.moved) {
+        this.pauseFocus = Number(m[1]);
+        this.pauseConfirm = false;
+        sound("move");
+      }
+      if (ptr.click && m) {
+        this.pauseFocus = Number(m[1]);
+        act = "a";
+      }
+    }
+    if (this.pauseView === "controls") {
+      if (nav.b || nav.a || ptr.right || act) {
+        this.pauseView = "menu";
+        sound("back");
+      }
+      return null;
+    }
+    if (nav.dy) {
+      this.pauseFocus = (this.pauseFocus + nav.dy + PAUSE_ITEMS.length) % PAUSE_ITEMS.length;
+      this.pauseConfirm = false;
+      sound("move");
+    }
+    if (nav.b || ptr.right) {
+      sound("back");
+      return "resume";
+    }
+    if (nav.a || act === "a") {
+      if (this.pauseFocus === 0) {
+        sound("ok");
+        return "resume";
+      }
+      if (this.pauseFocus === 1) {
+        sound("ok");
+        this.pauseView = "controls";
+        return null;
+      }
+      if (this.pauseConfirm) {
+        sound("back");
+        return "quit";
+      }
+      this.pauseConfirm = true;
+      sound("move");
+    }
+    return null;
+  }
+
+  drawPause(ctx: CanvasRenderingContext2D, W: number, H: number, now: number, w: World): void {
+    this.hits = [];
+    band(ctx, 0, 0, W, H, "#0a0602", 0.35);
+    beam(ctx, 4, 2, W - 8, 17);
+    artTitle(ctx, "!PAUSED", "PAUSED", W / 2, 3, 14);
+    woodFloor(ctx, H - 20, W, H);
+    if (this.pauseView === "controls") {
+      drawControlSheet(ctx, 12, 24, W - 24, H - 48);
+      const p: [string, string][] = [["B", "BACK"]];
+      prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
+      return;
+    }
+    const bw = 116;
+    const bx = 20;
+    const by = 24;
+    const bh = 132;
+    banner(ctx, bx, by, bw, bh, "#9a2a1c", 12);
+    const step = (bh - 30) / PAUSE_ITEMS.length;
+    PAUSE_ITEMS.forEach((label, k) => {
+      const sel = k === this.pauseFocus;
+      const h = sel ? 19 : 15;
+      const y = by + 12 + k * step + (step - h) / 2;
+      const cx = bx + bw / 2;
+      const text = k === 2 && sel && this.pauseConfirm ? "ARE YOU SURE?" : label;
+      const tw = artWord(ctx, `!${text}`, text, cx + (sel ? 3 : 0), y, h, sel ? 1 : 0.6);
+      if (sel) goldArrow(ctx, cx + 3 - tw / 2 - 8, y + h / 2, 1, 5);
+      this.hit(`prow:${k}`, bx, y - 3, bw, h + 6);
+    });
+    const blurb = this.pauseFocus === 0 ? "BACK TO THE FIGHT." : this.pauseFocus === 1 ? "EVERY BUTTON, FOR PADS AND FOR KEYBOARDS." : this.pauseConfirm ? "PRESS A AGAIN TO ABANDON THE MATCH." : "LEAVE THE MATCH AND RETURN TO THE MENU.";
+    wrap(blurb, bw - 10, 0.55).forEach((l, j) => shadowText(ctx, l, bx + bw / 2 - textWidth(l, 0.55) / 2, by + bh + 14 + j * 8, this.pauseConfirm && this.pauseFocus === 2 ? "#ffb090" : "#f0e4c8", 0.55));
+
+    const rx = bx + bw + 18;
+    const rw = W - rx - 18;
+    const ry = 26;
+    const rh = H - 56;
+    plank(ctx, rx, ry, rw, rh, "#6a4a30");
+    const m = w.data.match;
+    const left = Math.max(0, m.matchSeconds - w.time);
+    const sudden = w.match.phase === "sudden";
+    const clock = sudden ? "SUDDEN DEATH" : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")} LEFT`;
+    const mapName = this.currentMap.toUpperCase();
+    paintedText(ctx, clock, rx + rw / 2, ry + 6, sudden ? "#ff7050" : "#f0c030", 0.95);
+    if (mapName) drawText(ctx, mapName, rx + rw / 2 - textWidth(mapName, 0.5) / 2, ry + 19, "#d8c8a8", 0.5);
+    const colW = (rw - 18) / 2;
+    [0, 1].forEach((team) => {
+      const x = rx + 6 + team * (colW + 6);
+      const y = ry + 30;
+      const h = rh - 36;
+      ctx.fillStyle = "#0b0806";
+      ctx.fillRect(x - 1, y - 1, colW + 2, h + 2);
+      texturedRect(ctx, "cloth", x, y, colW, h, TEAM_CLOTH[team], 0, 0.8);
+      band(ctx, x, y, colW, h, "#000000", 0.25);
+      const name = team === 0 ? "BLUE HOUSE" : "RED HOUSE";
+      drawText(ctx, name, x + colW / 2 - textWidth(name, 0.68) / 2, y + 3, "#fff0c8", 0.68);
+      const ts = w.teams[team];
+      let yy = y + 15;
+      for (const p of w.players.filter((q) => q.team === team)) {
+        const e = w.getAny(p.heroId);
+        if (!e?.hero) continue;
+        const icon = this.portraits?.icon(p.heroType);
+        ctx.fillStyle = "#0b0806";
+        ctx.fillRect(x + 3, yy - 2, 26, 26);
+        texturedRect(ctx, "stone", x + 4, yy - 1, 24, 24, "#b8a888", 0, 0.5);
+        if (icon) ctx.drawImage(icon, x + 2, yy - 3, 28, 28);
+        const nm = `P${p.player + 1} ${(this.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
+        drawText(ctx, nm, x + 33, yy, "#f8e8c0", 0.6);
+        const lv = `LV ${e.hero.level ?? 1}`;
+        drawText(ctx, lv, x + colW - 4 - textWidth(lv, 0.5), yy, "#ffe070", 0.5);
+        const fr = e.alive ? Math.max(0, e.hp / e.maxHp) : 0;
+        const bwid = colW - 38;
+        ctx.fillStyle = "#0b0806";
+        ctx.fillRect(x + 33, yy + 10, bwid + 2, 5);
+        ctx.fillStyle = e.alive ? (fr > 0.35 ? "#58c040" : "#e04030") : "#5a5048";
+        ctx.fillRect(x + 34, yy + 11, Math.round(bwid * fr), 3);
+        drawText(ctx, e.alive ? `${Math.ceil(e.hp)} / ${Math.round(e.maxHp)}` : "FALLEN", x + 33, yy + 16, "#d8c8a8", 0.45);
+        const got = [...learned(w, e, "a"), ...learned(w, e, "b")];
+        got.forEach((tl, k) => talentIcon(ctx, tl.id, x + colW - 5 - (got.length - k) * 11, yy + 15, 10));
+        yy += 31;
+      }
+      const core = w.core(team);
+      const stats: [string, string][] = [
+        ["KEEP", core ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-"],
+        ["GOLD", String(Math.floor(ts.resource))],
+        ["SOLDIERS", String(ts.unitCount)],
+        ["HERO KILLS", String(ts.heroKills)],
+      ];
+      const sy = y + h - 8 - stats.length * 9;
+      band(ctx, x + 4, sy - 3, colW - 8, 1, "#000000", 0.4);
+      stats.forEach(([k, v], i) => {
+        drawText(ctx, k, x + 5, sy + i * 9, "#e8d8b8", 0.5);
+        drawText(ctx, v, x + colW - 5 - textWidth(v, 0.55), sy + i * 9, "#fff4c8", 0.55);
+      });
+    });
+    void now;
+    const p: [string, string][] = [["A", "CHOOSE"], ["B", "RESUME"]];
+    prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
+  }
   page: Page = "main";
   focus = 0;
   tab = 0;
@@ -245,8 +409,8 @@ export class Menus {
     this.hits = [];
     if (this.page === "main") this.drawMain(ctx, W, H, now);
     else {
-      wall(ctx, W, H);
-      woodFloor(ctx, H - 22, W, H);
+      fieldShade(ctx, W, H, 0.38);
+      woodFloor(ctx, H - 20, W, H);
       beam(ctx, 4, 2, W - 8, 17);
       if (this.page === "network") this.drawNetwork(ctx, W, H, now);
       else if (this.page === "rules") this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, ["RESTORE DEFAULTS"]);
@@ -257,7 +421,8 @@ export class Menus {
   }
 
   private drawMain(ctx: CanvasRenderingContext2D, W: number, H: number, _now: number): void {
-    band(ctx, 0, 0, W, H, "#000000", 0.25);
+    fieldShade(ctx, W, H, 0.12);
+    woodFloor(ctx, H - 20, W, H);
     const bw = 128;
     const bx = 26;
     const by = 12;
@@ -298,31 +463,41 @@ export class Menus {
 
   private drawNetwork(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
     artTitle(ctx, "m_network", "VERSUS ONLINE", W / 2, 3, 14);
-    const pw = Math.min(260, W - 40);
-    const px = Math.round((W - pw) / 2);
-    const py = 30;
-    const opts: [string, string, string][] = [
-      ["t_host", "HOST A BATTLE", "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS."],
-      ["t_join", "JOIN A BATTLE", "JOIN THE MACHINE THAT SERVED THIS PAGE. YOU WILL SEE ITS RULES BEFORE THE FIGHT."],
+    const opts: [string, string, string, string][] = [
+      ["t_host", "HOST A BATTLE", "castle", "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS."],
+      ["t_join", "JOIN A BATTLE", "banner", "JOIN THE MACHINE THAT SERVED THIS PAGE. YOU SEE ITS RULES BEFORE THE FIGHT."],
     ];
-    opts.forEach(([art, label, blurb], k) => {
-      const y = py + k * 46;
+    const cw = Math.min(170, Math.floor((W - 50) / 2));
+    const ch = 112;
+    const gap = 18;
+    const x0 = Math.round((W - cw * 2 - gap) / 2);
+    const cy = 34;
+    opts.forEach(([art, label, glyph, blurb], k) => {
+      const x = x0 + k * (cw + gap);
       const hot = k === this.focus;
-      band(ctx, px + 2, y + 2, pw, 40, INK, 0.4);
-      ctx.fillStyle = INK;
-      ctx.fillRect(px - 1, y - 1, pw + 2, 42);
-      texturedRect(ctx, "stone", px, y, pw, 40, hot ? "#e8c070" : "#9a9080", 0, 0.5);
-      artWord(ctx, art, label, W / 2 + (hot ? 3 : 0), y + 4, hot ? 17 : 15, hot ? 1 : 0.7);
-      if (hot) goldArrow(ctx, px + 12, y + 12, 1, 5);
-      wrap(blurb, pw - 24, 0.52).slice(0, 2).forEach((l, j) => drawText(ctx, l, W / 2 - textWidth(l, 0.52) / 2, y + 23 + j * 7, hot ? "#fff0c8" : "#d8ccb0", 0.52));
-      this.hit(`row:${k}`, px, y, pw, 40);
+      const y = cy - (hot ? 3 : 0);
+      plank(ctx, x, y, cw, ch, hot ? "#a07448" : "#6a4a30");
+      if (hot) {
+        ctx.strokeStyle = "#f0c030";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - 2.5, y - 2.5, cw + 5, ch + 5);
+      }
+      waxSeal(ctx, x + cw / 2, y + 30, 18, hot ? "#b81a1a" : "#7a1a14", glyph);
+      artWord(ctx, art, label, x + cw / 2, y + 54, hot ? 16 : 14, hot ? 1 : 0.75);
+      wrap(blurb, cw - 18, 0.52).slice(0, 3).forEach((l, j) => drawText(ctx, l, x + cw / 2 - textWidth(l, 0.52) / 2, y + 76 + j * 8, hot ? "#fff0c8" : "#d8ccb0", 0.52));
+      if (hot) {
+        goldArrow(ctx, x + cw / 2 - 30, y + ch + 8, 1, 5);
+        goldArrow(ctx, x + cw / 2 + 30, y + ch + 8, -1, 5);
+      }
+      this.hit(`row:${k}`, x, y, cw, ch);
     });
-    const sy = py + 96;
     const lines = [this.netStatus, ...this.netAddrs.map((a) => `FRIENDS OPEN  http://${a}`)].filter(Boolean);
     if (lines.length) {
-      const sh = 12 + lines.length * 9;
-      parchment(ctx, px, sy, pw, sh);
-      lines.forEach((l, j) => drawPlain(ctx, l, W / 2 - textWidth(l, 0.58) / 2, sy + 6 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
+      const pw = cw * 2 + gap;
+      const sy = cy + ch + 16;
+      const sh = 10 + lines.length * 9;
+      parchment(ctx, x0, sy, pw, sh);
+      lines.forEach((l, j) => drawPlain(ctx, l, W / 2 - textWidth(l, 0.58) / 2, sy + 5 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
     }
     const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "SELECT"], ["B", "BACK"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
@@ -496,36 +671,7 @@ export class Menus {
 
   private drawControls(ctx: CanvasRenderingContext2D, W: number, H: number): void {
     artTitle(ctx, "m_controls", "CONTROLS", W / 2, 3, 14);
-    const px = 14;
-    const py = 26;
-    const pw = W - 28;
-    const ph = H - 52;
-    parchment(ctx, px, py, pw, ph);
-    const pad: [string, string][] = [
-      ["STICK", "MOVE"], ["A", "ATTACK · HOLDING A BOMB: THROW"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER (FULL METER)"],
-      ["L", "BLOCK · L+A SHOVE · L+X DODGE"], ["C", "ORDERS: UP ATTACK · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD"],
-      ["X", "CALL 3 TROOPS · AT PAD: OUTPOSTS"], ["Y", "AT PAD: TOWERS · AT KEEP: SHOP · LEVEL UP: LEARN"], ["D-PAD", "LEFT/RIGHT: WHO OBEYS (ALL, GRUNTS, ARCHERS, BRUTES) · UP/DOWN: ZOOM"], ["START", "PAUSE"],
-    ];
-    const keys: [string, string][] = [
-      ["WASD", "MOVE"], ["E", "ATTACK"], ["Q", "SECONDARY"], ["X", "SPECIAL"], ["C", "SUPER"], ["Z", "BLOCK · Z + E: SHOVE"], ["SPACE", "DODGE"],
-      ["F / L-MOUSE", "CALL TROOPS · OUTPOSTS AT PAD"], ["R / R-MOUSE", "TOWERS AT PAD · SHOP AT KEEP"], ["ARROWS / R-DRAG", "ORDERS"], ["3 / 4", "WHO OBEYS"], ["1 / 2", "ZOOM"], ["ENTER", "PAUSE"],
-    ];
-    const colW = pw / 2;
-    drawPlain(ctx, "CONTROLLER", px + 12, py + 7, "#8a1810", 0.7, true);
-    drawPlain(ctx, "KEYBOARD AND MOUSE", px + colW + 8, py + 7, "#8a1810", 0.7, true);
-    band(ctx, px + colW, py + 8, 1, ph - 16, "#6a4424", 0.4);
-    pad.forEach(([k, v], i) => {
-      const y = py + 21 + i * 12.5;
-      const col = k === "A" ? PAD.a : k === "B" ? PAD.b : k === "C" || k === "X" || k === "Y" ? PAD.c : k === "Z" || k === "R" || k === "L" ? PAD.z : k === "START" ? PAD.start : "";
-      if (col) padButton(ctx, px + 22, y + 4, 4.6, col, k === "START" ? "S" : k);
-      else drawPlain(ctx, k, px + 22 - textWidth(k, 0.5, true) / 2, y + 1.5, "#6a4424", 0.5, true);
-      drawPlain(ctx, v, px + 36, y, BROWN, 0.6, true);
-    });
-    keys.forEach(([k, v], i) => {
-      const y = py + 21 + i * 11.5;
-      drawPlain(ctx, k, px + colW + 8, y, "#6a1c10", 0.55, true);
-      drawPlain(ctx, v, px + colW + 84, y, BROWN, 0.6, true);
-    });
+    drawControlSheet(ctx, 12, 24, W - 24, H - 48);
     const p: [string, string][] = [["B", "DONE"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
@@ -622,4 +768,51 @@ export class Menus {
     const t = "TYPE ON A KEYBOARD, OR PRESS A ON THE STONES  ·  B: BACK";
     drawPlain(ctx, t, px + pw / 2 - textWidth(t, 0.48) / 2, py + ph - 11, "#6a4424", 0.48);
   }
+}
+
+const PAD_ROWS: [string, string][] = [
+  ["STICK", "MOVE"], ["A", "ATTACK · HOLDING A BOMB: THROW"], ["B", "SECONDARY"], ["R", "SPECIAL"], ["Z", "SUPER WHEN THE METER IS FULL"],
+  ["L", "BLOCK · L+A SHOVE · L+X DODGE"], ["C", "ORDERS: UP ATTACK · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD · LEVEL UP: LEFT / RIGHT LEARNS"],
+  ["X", "HOLD + FLICK C: CALL TROOPS · AT A PAD: OUTPOSTS"], ["Y", "AT A PAD: TOWERS · AT THE KEEP: SHOP"], ["D-PAD", "LEFT / RIGHT: WHO OBEYS · UP / DOWN: ZOOM"], ["START", "PAUSE"],
+];
+const KEY_ROWS: [string, string][] = [
+  ["WASD", "MOVE"], ["E", "ATTACK"], ["Q", "SECONDARY"], ["X", "SPECIAL"], ["C", "SUPER"], ["Z", "BLOCK · Z + E: SHOVE"], ["SPACE", "DODGE"],
+  ["F / L-MOUSE", "CALL TROOPS · OUTPOSTS AT A PAD"], ["R / R-MOUSE", "TOWERS AT A PAD · SHOP AT THE KEEP"], ["ARROWS", "ORDERS · LEFT / RIGHT LEARNS ON LEVEL UP"], ["3 / 4", "WHO OBEYS"], ["1 / 2", "ZOOM"], ["ENTER", "PAUSE"],
+];
+
+export function drawControlSheet(ctx: CanvasRenderingContext2D, px: number, py: number, pw: number, ph: number): void {
+  parchment(ctx, px, py, pw, ph);
+  const colW = Math.floor(pw / 2);
+  const S = 0.55;
+  const LH = 7.5;
+  drawPlain(ctx, "CONTROLLER", px + 12, py + 7, "#8a1810", 0.7, true);
+  drawPlain(ctx, "KEYBOARD AND MOUSE", px + colW + 10, py + 7, "#8a1810", 0.7, true);
+  band(ctx, px + colW, py + 8, 1, ph - 16, "#6a4424", 0.4);
+  const fit = (rows: [string, string][], textX: number, maxW: number): { lines: string[]; h: number }[] => rows.map(([, v]) => {
+    const lines = wrap(v, maxW, S);
+    return { lines, h: Math.max(10, lines.length * LH + 3) };
+  });
+  const padText = px + 34;
+  const pl = fit(PAD_ROWS, padText, colW - 42);
+  const padTotal = pl.reduce((a, r) => a + r.h, 0);
+  let y = py + 19 + Math.max(0, (ph - 26 - padTotal) / (PAD_ROWS.length * 2));
+  const padGap = Math.max(0, (ph - 26 - padTotal) / PAD_ROWS.length);
+  PAD_ROWS.forEach(([k], i) => {
+    const col = k === "A" ? PAD.a : k === "B" ? PAD.b : k === "C" || k === "X" || k === "Y" ? PAD.c : k === "Z" || k === "R" || k === "L" ? PAD.z : k === "START" ? PAD.start : "";
+    if (col) padButton(ctx, px + 20, y + 3.5, 4.4, col, k === "START" ? "S" : k);
+    else drawPlain(ctx, k, px + 20 - textWidth(k, 0.48, true) / 2, y + 1, "#6a4424", 0.48, true);
+    pl[i].lines.forEach((l, j) => drawPlain(ctx, l, padText, y + j * LH, BROWN, S, true));
+    y += pl[i].h + padGap;
+  });
+  const keyX = px + colW + 10;
+  const keyW = 62;
+  const kl = fit(KEY_ROWS, keyX + keyW, colW - keyW - 18);
+  const keyTotal = kl.reduce((a, r) => a + r.h, 0);
+  const keyGap = Math.max(0, (ph - 26 - keyTotal) / KEY_ROWS.length);
+  y = py + 19 + keyGap / 2;
+  KEY_ROWS.forEach(([k], i) => {
+    drawPlain(ctx, k, keyX, y, "#6a1c10", 0.5, true);
+    kl[i].lines.forEach((l, j) => drawPlain(ctx, l, keyX + keyW, y + j * LH, BROWN, S, true));
+    y += kl[i].h + keyGap;
+  });
 }

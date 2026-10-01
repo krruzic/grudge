@@ -321,7 +321,22 @@ export class GameRenderer {
     this.camera.updateProjectionMatrix();
   }
 
+  cinematic = false;
+  private cineT = 0;
+
   private updateCamera(points: THREE.Vector3[], dt: number): void {
+    if (this.cinematic && !this.splitViews.length) {
+      this.cineT += dt;
+      const t = this.world.terrain;
+      const k = this.cineT * 0.045;
+      const f = new THREE.Vector3(t.width / 2 + Math.sin(k) * t.width * 0.28, 0, t.depth / 2 + Math.sin(k * 0.7 + 1) * t.depth * 0.12);
+      f.y = this.world.groundY(f.x, f.z);
+      this.camFocus.lerp(f, this.camInit ? Math.min(1, dt * 2) : 1);
+      this.camInit = true;
+      this.camWidth += (Math.min(t.width, 46) - this.camWidth) * Math.min(1, dt * 2);
+      this.placeCam(this.camera, this.camFocus, this.camWidth);
+      return;
+    }
     const st = { focus: this.camFocus, width: this.camWidth, init: this.camInit };
     this.aimCamera(this.camera, st, points, dt, this.cfg.minViewWidth);
     this.camWidth = st.width;

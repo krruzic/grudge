@@ -62,6 +62,7 @@ export function titleArt(text: string): HTMLCanvasElement | null {
 }
 
 export function nameImage(key: string): HTMLCanvasElement | null {
+  if (key.startsWith("!")) return titleArt(key.slice(1));
   return titleArt(KEY_TEXT[key] ?? key.replace(/^[tm]_/, "").replace(/_/g, " "));
 }
 import { drawPlain, onHiLayer, textWidth } from "./font";
@@ -223,6 +224,31 @@ export function wall(ctx: CanvasRenderingContext2D, W: number, H: number): void 
   ctx.fillStyle = "#6a6070";
   ctx.fillRect(0, 0, W, H);
   ctx.globalCompositeOperation = "source-over";
+}
+
+export function fieldShade(ctx: CanvasRenderingContext2D, W: number, H: number, dim = 0.32): void {
+  ctx.fillStyle = `rgba(12,8,4,${dim})`;
+  ctx.fillRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.25, W / 2, H * 0.55, W * 0.7);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(10,6,2,0.65)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+export function plank(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint = "#7a5636"): void {
+  band(ctx, x + 2, y + 2, w, h, INK, 0.45);
+  ctx.fillStyle = INK;
+  ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  texturedRect(ctx, "wood", x, y, w, h, tint, 0, 0.9);
+  band(ctx, x, y, w, 1, "#ffe8c0", 0.25);
+  band(ctx, x, y + h - 1, w, 1, INK, 0.5);
+  for (const nx of [x + 3, x + w - 5]) for (const ny of [y + 3, y + h - 5]) {
+    ctx.fillStyle = INK;
+    ctx.fillRect(nx, ny, 2, 2);
+    ctx.fillStyle = "#c8b080";
+    ctx.fillRect(nx, ny, 1, 1);
+  }
 }
 
 export function woodFloor(ctx: CanvasRenderingContext2D, y: number, W: number, H: number, tint = "#8a6448"): void {
