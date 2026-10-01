@@ -26,6 +26,7 @@
     "stepHeight": 0.75,
     "maxSlope": 1.6,
     "respawnSeconds": 6,
+    "recallSeconds": 6,
     "blockMoveMul": 0.4,
     "blockFrontalMul": 0.25,
     "dodgeSpeed": 13,

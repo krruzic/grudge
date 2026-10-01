@@ -182,6 +182,7 @@ export interface HeroData {
     stepHeight: number;
     maxSlope: number;
     respawnSeconds: number;
+    recallSeconds: number;
     blockMoveMul: number;
     blockFrontalMul: number;
     dodgeSpeed: number;
@@ -268,6 +269,7 @@ export interface StructureData {
   buildStartHpFrac: number;
   structureRadius: number;
   zoneRange: Record<string, number>;
+  laneTower: Record<string, { hp: number; damage: number; heroSlow?: number }>;
   core: { hp: number; radius: number; ward: number };
   upgradeSeconds: number;
   rubbleSeconds: number;

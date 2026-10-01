@@ -4,6 +4,10 @@
   "buildSeconds": 7,
   "buildStartHpFrac": 0.3,
   "structureRadius": 1.3,
+  "laneTower": {
+    "forward": { "hp": 1.7, "damage": 2.4, "heroSlow": 0.65 },
+    "neutral": { "hp": 1.6, "damage": 2.2, "heroSlow": 0.65 }
+  },
   "zoneRange": {
     "home": 11,
     "forward": 10,

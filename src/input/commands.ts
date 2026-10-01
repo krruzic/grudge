@@ -166,7 +166,7 @@ export class CommandMapper {
       this.tDown = true;
       this.tUsed = false;
       this.ui.buildMenu = atPad ? "tower" : "shop";
-    }
+    } else if (!this.xDown && (p.pressed.y || mrPressed)) c.recall = true;
     const f = this.flick(p);
     if (f) {
       if (this.xDown) {

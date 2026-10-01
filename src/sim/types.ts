@@ -33,6 +33,9 @@ export interface Status {
   rallyUntil: number;
   invulnUntil: number;
   lastAttackAt: number;
+  lastHitAt: number;
+  lastHitX: number;
+  lastHitZ: number;
   hidden: boolean;
   supportDamageMul: number;
   auraDamageMul: number;
@@ -102,6 +105,9 @@ export interface HeroState {
   chargeT?: number;
   dead: boolean;
   respawnAt: number;
+  recallUsed?: boolean;
+  recallAt?: number;
+  recallFrom?: number;
   lastTargetId: number;
   lastTargetAt: number;
   anim: string;
@@ -167,6 +173,7 @@ export interface StructureState {
   progress?: number;
   upgrading?: boolean;
   hasteUntil?: number;
+  heroSlow?: number;
   hasteMul?: number;
   siege?: { cooldown: number; vs: Partial<Record<string, number>>; modId: number };
   tesla?: boolean;
@@ -307,6 +314,7 @@ export interface Projectile {
   prevT: number;
   canMiss: boolean;
   splash?: { radius: number; damage: number; slowMul: number; slowSeconds: number };
+  slow?: { slowMul: number; slowSeconds: number };
   talent?: "bolt" | "orb";
 }
 
@@ -356,6 +364,7 @@ export interface Command {
   secondary?: boolean;
   block?: boolean;
   dodge?: boolean;
+  recall?: boolean;
   special?: boolean;
   super?: boolean;
   build?: StructureType | "default" | "upgrade";

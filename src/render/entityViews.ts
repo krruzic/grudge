@@ -897,6 +897,15 @@ export class EntityViews {
   private syncHero(e: Entity, v: View, facing: number, dt: number, time: number): void {
     const h = e.hero!;
     const w = this.world;
+    if (h.recallAt !== undefined && !h.dead) {
+      if (!v.work) {
+        v.work = makeBar(1.6 * this.heroScale, new THREE.Color(0x9fe0ff), 3.2 * this.heroScale);
+        v.root.add(v.work.group);
+      }
+      v.work.group.visible = true;
+      const total = w.data.heroes.baseline.recallSeconds;
+      setBar(v.work, 1 - (h.recallAt - w.time) / total);
+    } else if (v.work) v.work.group.visible = false;
     if (h.dead) {
       if (!v.wasDead) {
         v.wasDead = true;

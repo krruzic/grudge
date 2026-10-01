@@ -546,3 +546,7 @@
   - Troop bounties down: grunt 5→3, archer 6→4, brute 12→7.
   - Result: the early leader now wins 63%; games average 413 s (was 390) and fewer end with the keep destroyed (26 vs 59 of 144).
 - Brute spawn cost 25→32 (archer 16, grunt 12). At equal gold against a mixed army, an all-brute army now does worst of the three mono armies. Economy per team per minute: income +280, bounties +182, troops −186, building −227, losses −34.
+- Base attack and defence in 1v1:
+  - Tower aggro: damage towers shoot troops first. They switch to an enemy hero when that hero has no troops of its own inside the tower's range, or has hit one of the tower side's units or heroes near the tower in the last 2.5 s (`status.lastHitAt/X/Z`). Pushing with your army is safer; diving alone or picking fights under a tower gets you shot. Ballistas still go for heroes.
+  - Lane towers (forward and neutral pads) are formidable: ×1.7/×1.6 HP, ×2.4/×2.2 damage, and their bolts slow heroes to 65% for 1 s (`structures.laneTower`). A lone hero walking through one takes ~325 in 5 s. Home-pad towers are unchanged, so packing your base with towers doesn't make it a fortress.
+  - Recall: Y (R / right mouse) away from a pad or the keep starts a 6 s channel (progress bar over the hero) that teleports you to your keep. Moving, attacking, using an ability, dodging, carrying the Grudge, being stunned or getting hit breaks it. Once per life; using it again shows "RECALL USED". Bots recall when their base is threatened, they're 35 m+ from home and not in a fight.

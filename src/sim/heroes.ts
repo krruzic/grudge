@@ -163,9 +163,39 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       e.status.invulnUntil = w.time + 1.5;
       e.status.kvx = e.status.kvz = 0;
       e.status.stunUntil = 0;
+      h.recallUsed = false;
+      h.recallAt = undefined;
       w.emit({ type: "spawn", id: e.id });
     }
     return;
+  }
+  if (h.recallAt !== undefined) {
+    const busy = Math.hypot(cmd.moveX, cmd.moveZ) > 0.3 || cmd.attack || cmd.secondary || cmd.special || cmd.super || cmd.dodge || h.combatAt > (h.recallFrom ?? 0) || w.time < e.status.stunUntil || w.arena.carrying(e);
+    if (busy) {
+      h.recallAt = undefined;
+      w.emit({ type: "notice", team: e.team, text: "RECALL BROKEN" });
+    } else if (w.time >= h.recallAt) {
+      h.recallAt = undefined;
+      h.recallUsed = true;
+      const sp = w.spawnPoint(e.team);
+      w.teleport(e, sp.x, sp.z);
+      e.transform.y = w.groundY(sp.x, sp.z);
+      h.vel.x = h.vel.z = 0;
+      w.emit({ type: "spawn", id: e.id });
+      return;
+    } else {
+      h.vel.x = h.vel.z = 0;
+      return;
+    }
+  }
+  if (cmd.recall && !h.action && !h.aim) {
+    if (h.recallUsed) w.emit({ type: "notice", team: e.team, text: "RECALL USED · ONCE PER LIFE" });
+    else if (!w.arena.carrying(e)) {
+      h.recallAt = w.time + b.recallSeconds;
+      h.recallFrom = w.time;
+      h.blocking = false;
+      w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: `RECALLING · ${b.recallSeconds}S`, owner: e.id });
+    }
   }
 
   if (w.time < e.status.stunUntil) {

@@ -51,7 +51,7 @@ export interface PlayerSlot {
 
 function newStatus(): Status {
   return {
-    slowUntil: 0, slowMul: 1, stunUntil: 0, kvx: 0, kvz: 0, buffUntil: 0, buffDamageMul: 1, buffSpeedMul: 1, rallyUntil: 0,
+    slowUntil: 0, slowMul: 1, stunUntil: 0, kvx: 0, kvz: 0, buffUntil: 0, buffDamageMul: 1, buffSpeedMul: 1, rallyUntil: 0, lastHitAt: -99, lastHitX: 0, lastHitZ: 0,
     invulnUntil: 0, lastAttackAt: -99, hidden: false, supportDamageMul: 1, auraDamageMul: 1, stealthUntil: 0, ambushMul: 1, guardUntil: 0, guardMul: 1, cowedUntil: 0, hexUntil: 0, hexOwner: 0,
     bleedStacks: 0, bleedDps: 0, bleedUntil: 0, bleedOwner: 0, shield: 0, shieldUntil: 0, shieldBurst: 0, armorMul: 1, armorUntil: 0, ccImmuneUntil: 0,
     markUntil: 0, markTeam: -1, markOwner: 0, markMul: 1, markAll: false, markWeaken: 1,
@@ -752,6 +752,11 @@ export class World {
       return false;
     }
     if (src) src.status.lastAttackAt = this.time;
+    if (src?.hero && !target.structure && target.team !== src.team) {
+      src.status.lastHitAt = this.time;
+      src.status.lastHitX = tp.pos.x;
+      src.status.lastHitZ = tp.pos.z;
+    }
     if (target.hero) target.hero.combatAt = this.time;
     if (src?.hero && target.hero) src.hero.combatAt = this.time;
     if (opts.canMiss && src) {
@@ -1309,7 +1314,7 @@ export class World {
     }
   }
 
-  fireProjectile(src: Entity, target: Entity, damage: number, speed: number, ballistic: boolean, style: string, fromHeight: number, canMiss = true, splash?: Projectile["splash"]): void {
+  fireProjectile(src: Entity, target: Entity, damage: number, speed: number, ballistic: boolean, style: string, fromHeight: number, canMiss = true, splash?: Projectile["splash"], slow?: Projectile["slow"]): void {
     const sp = src.transform;
     const tp = target.transform;
     const d = this.dist(src, target);
@@ -1329,6 +1334,7 @@ export class World {
       style,
       canMiss,
       splash,
+      slow,
     });
   }
 
@@ -1358,7 +1364,7 @@ export class World {
         this.projectiles.splice(i, 1);
         const src = this.getAny(p.sourceId) ?? null;
         const who = src && src.alive ? src : null;
-        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss }) : false;
+        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss, slowMul: p.slow?.slowMul, slowSeconds: p.slow?.slowSeconds }) : false;
         if (landed && who && target && p.talent) afterShot(this, who, target, p.damage, p.talent === "orb");
         if (p.splash) {
           const sp = p.splash;

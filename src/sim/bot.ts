@@ -43,6 +43,7 @@ export class Bot {
   private wantBuy: { item: "bomb" | "ward" | "cannon"; at?: Vec2 } | null = null;
   private tend: Pad | null = null;
   private wantFace: Vec2 | null = null;
+  private wantRecall = false;
   mate: number | null = null;
   role: "solo" | "attack" | "support" = "solo";
   private homeScore = 0.3;
@@ -141,6 +142,8 @@ export class Bot {
     cmd.special = this.wantR;
     cmd.super = this.wantZ;
     cmd.dodge = this.wantDodge;
+    cmd.recall = this.wantRecall;
+    this.wantRecall = false;
     cmd.block = this.wantBlock;
     this.wantAttack = this.wantB = this.wantR = this.wantZ = this.wantDodge = false;
     if (this.wantBlock && this.rand() < 0.1) this.wantBlock = false;
@@ -313,6 +316,19 @@ export class Bot {
       else if (this.rand() < 0.5) this.wantBlock = true;
     }
 
+    if (h.recallAt !== undefined) {
+      this.goal = null;
+      return;
+    }
+    if (!h.recallUsed && w.time - h.combatAt > 3 && !w.enemiesNear(me, 9).length) {
+      const threat = this.baseThreat(w, me);
+      const core = w.core(me.team);
+      if (threat && core && w.dist(me, core) > 35 && w.dist(me, threat) > 30) {
+        this.wantRecall = true;
+        this.goal = null;
+        return;
+      }
+    }
     const nearby = w.enemiesNear(me, 7);
     const def = w.heroDef(h.type);
     const ab = def.abilities;

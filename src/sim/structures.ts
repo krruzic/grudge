@@ -77,13 +77,16 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
 export function createStructure(w: World, team: number, pad: Pad, type: StructureType): Entity {
   const sd = w.data.structures;
   const def = sd.types[type];
-  const e = w.addEntity(team, "structure", sd.structureRadius, pad.x, pad.z, def.hp);
-  e.hp = def.hp * sd.buildStartHpFrac;
+  const lane = def.class === "tower" ? sd.laneTower[pad.zone] : undefined;
+  const hp = def.hp * (lane?.hp ?? 1);
+  const e = w.addEntity(team, "structure", sd.structureRadius, pad.x, pad.z, hp);
+  e.hp = hp * sd.buildStartHpFrac;
   const core = w.core(1 - team);
   if (core) e.transform.facing = e.transform.prevFacing = Math.atan2(core.transform.pos.x - pad.x, core.transform.pos.z - pad.z);
   e.structure = {
     type, padIndex: pad.index, level: 1, builtAt: w.time, ready: false, nextAction: w.time + sd.buildSeconds, progress: 0,
-    range: (sd.zoneRange[pad.zone] ?? 10) * (def.rangeMul ?? 1), damage: def.damage ?? 0, lastFireAt: -99, shielded: false,
+    range: (sd.zoneRange[pad.zone] ?? 10) * (def.rangeMul ?? 1), damage: (def.damage ?? 0) * (lane?.damage ?? 1), lastFireAt: -99, shielded: false,
+    heroSlow: lane?.heroSlow,
   };
   if (type === "control") e.structure.range *= 1 + ((w.teamHooks(team).controlTowerMul ?? 1) - 1) * 0.5;
   pad.structureId = e.id;
@@ -156,6 +159,16 @@ export function spawnUnit(w: World, team: number, type: UnitType, x: number, z: 
   return e;
 }
 
+function exposed(w: World, tower: Entity, hero: Entity, range: number): boolean {
+  const h = hero.status;
+  if (w.time - h.lastHitAt < 2.5 && Math.hypot(h.lastHitX - tower.transform.pos.x, h.lastHitZ - tower.transform.pos.z) <= range + 2) return true;
+  for (const o of w.entities) {
+    if (!o.alive || !o.unit || o.team !== hero.team || o.neutral) continue;
+    if (w.dist(tower, o) - o.radius <= range) return false;
+  }
+  return true;
+}
+
 export function updateStructure(w: World, e: Entity): void {
   const st = e.structure!;
   if (st.type === "core") return;
@@ -200,7 +213,7 @@ export function updateStructure(w: World, e: Entity): void {
       if (o.structure && !siege && !o.structure.siege) continue;
       const d = w.dist(e, o) - o.radius;
       if (d > st.range * boost.range * w.rangeMul(e, o)) continue;
-      const score = d - (o.hero ? 100 : 0) - (o.structure?.siege ? 60 : 0) - (siege && o.structure ? 40 : 0);
+      const score = d + (o.hero ? (siege || exposed(w, e, o, st.range) ? -100 : 100) : 0) - (o.structure?.siege ? 60 : 0) - (siege && o.structure ? 40 : 0);
       if (score >= bestScore) continue;
       if (!w.los(e, o, def.projectile?.losTolerance ?? 0.3, 3.2)) continue;
       best = o;
@@ -223,7 +236,7 @@ export function updateStructure(w: World, e: Entity): void {
       st.nextAction = w.time + 1 / haste;
       return;
     }
-    w.fireProjectile(e, best, st.damage * boost.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2);
+    w.fireProjectile(e, best, st.damage * boost.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2, true, undefined, best.hero && st.heroSlow ? { slowMul: st.heroSlow, slowSeconds: 1 } : undefined);
     st.lastFireAt = w.time;
     st.nextAction = w.time + (siege ? siege.cooldown : def.cooldown ?? 1) / haste;
     return;
