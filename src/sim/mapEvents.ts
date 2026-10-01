@@ -111,7 +111,7 @@ export function avalancheLanes(w: World, def: AvalancheDef): Lane[] {
 
 export class MapEvents {
   private av?: AvalancheDef;
-  private lanes: Lane[] = [];
+  lanes: Lane[] = [];
   private nextAt = Infinity;
   private warned = false;
   private arm = 0;
@@ -180,6 +180,19 @@ export class MapEvents {
       this.lanes = avalancheLanes(w, this.av);
       this.nextAt = this.av.firstSeconds;
     }
+  }
+
+  get avalancheNow(): { lane: Lane; stage: "warn" | "slide"; k: number } | null {
+    const av = this.av;
+    if (!av) return null;
+    const t = this.w.time;
+    if (this.slide) return { lane: this.slide.lane, stage: "slide", k: Math.min(1, (t - this.slide.start) / av.sweepSeconds) };
+    if (this.warned) return { lane: this.lanes[this.arm], stage: "warn", k: 1 - (this.nextAt - t) / av.warnSeconds };
+    return null;
+  }
+
+  get gateList(): { slot: GateSlot; shut: boolean }[] {
+    return this.slots.map((g) => ({ slot: g.slot, shut: this.closed(g.slot.set) }));
   }
 
   get pendingArm(): { arm: number; at: number } | null {
@@ -253,7 +266,6 @@ export class MapEvents {
     if (!this.mistWarned && w.time >= this.mistAt - d.warnSeconds) {
       this.mistWarned = true;
       w.emit({ type: "mist", stage: "warn", seconds: d.warnSeconds });
-      w.emit({ type: "notice", team: -1, text: "MIST ON THE RIVER · ANYTHING IN IT IS HIDDEN" });
     }
     if (w.time >= this.mistAt) {
       this.mistStart = w.time;
@@ -284,7 +296,6 @@ export class MapEvents {
       }
       this.lantern = { state: "rise", x: pit.x, z: pit.z, fromX: pit.x, fromZ: pit.z, tx: spot.x, tz: spot.z, start: w.time, id: ++this.lanternSeq };
       w.emit({ type: "lantern", stage: "rise", x: pit.x, y: w.groundY(pit.x, pit.z), z: pit.z, id: this.lanternSeq, hero: 0 });
-      w.emit({ type: "notice", team: -1, text: "THE DEAD STIR · A BONE LANTERN RISES FROM THE PIT" });
       return;
     }
     const l = this.lantern;
@@ -322,7 +333,6 @@ export class MapEvents {
     if (!best) return;
     best.status.hauntUntil = w.time + d.hauntSeconds;
     w.emit({ type: "lantern", stage: "taken", x: l.x, y: w.groundY(l.x, l.z), z: l.z, id: l.id, hero: best.id });
-    w.emit({ type: "notice", team: -1, text: `${w.teamName(best.team)} TAKES THE BONE LANTERN · HAUNTED ${d.hauntSeconds}S` });
     this.lantern = null;
     this.lanternAt = w.time + d.everySeconds;
   }
@@ -374,7 +384,6 @@ export class MapEvents {
     if (!this.gateWarned && w.time >= this.gateAt - g.warnSeconds) {
       this.gateWarned = true;
       w.emit({ type: "gates", stage: "warn", pattern: 1 - this.pattern, seconds: g.warnSeconds });
-      w.emit({ type: "notice", team: -1, text: this.pattern === 0 ? "THE BELLS RING · THE COURT OPENS, THE OUTER GATES SEAL" : "THE BELLS RING · THE COURT SEALS, THE OUTER GATES OPEN" });
     }
     if (w.time < this.gateAt) return;
     this.pattern = 1 - this.pattern;
@@ -400,7 +409,6 @@ export class MapEvents {
     if (!this.warned && w.time >= this.nextAt - av.warnSeconds) {
       this.warned = true;
       w.emit({ type: "avalanche", stage: "warn", arm: this.arm, rect: lane.rect, dx: lane.dx, dz: lane.dz, seconds: av.warnSeconds });
-      w.emit({ type: "notice", team: -1, text: `RUMBLING ON THE ${["WEST", "NORTH", "EAST", "SOUTH"][this.arm]} ARM · AVALANCHE` });
     }
     if (!this.slide && w.time >= this.nextAt) {
       this.slide = { lane, arm: this.arm, start: w.time, hit: new Set() };

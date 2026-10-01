@@ -1051,7 +1051,7 @@ export class World {
     for (const i of this.terrain.tideCells) this.terrain.kinds[i] = high ? Kind.Ford : Kind.Ground;
     this.nav.recompute(this.terrain.tideCells);
     for (const e of this.entities) if (e.unit) e.unit.repathAt = 0;
-    this.emit({ type: "notice", team: -1, text: high ? "HIGH TIDE · THE FLATS FLOOD" : "LOW TIDE · THE FLATS DRAIN" });
+    this.emit({ type: "tide", high });
   }
 
   loseGold(team: number, amount: number, why: string): void {

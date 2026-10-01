@@ -225,6 +225,7 @@ export class Portraits {
   setMaps(list: { root: THREE.Object3D; width: number; depth: number }[]): void {
     this.maps = list.map((m) => ({ root: m.root.clone(true), w: m.width, d: m.depth }));
     this.thumbs.clear();
+    this.tops?.clear();
   }
 
   private shootMap(i: number, w: number, h: number, yaw: number, pitchDeg: number, zoom: number, out: HTMLCanvasElement): void {
@@ -253,6 +254,33 @@ export class Portraits {
     c = document.createElement("canvas");
     this.shootMap(i, w, h, 0, 60, 1.05, c);
     this.thumbs.set(key, c);
+    return c;
+  }
+
+  private tops = new Map<string, HTMLCanvasElement>();
+
+  mapTop(i: number, w: number, h: number): HTMLCanvasElement | null {
+    const m = this.maps[i];
+    if (!m) return null;
+    const key = `${i}:${w}x${h}`;
+    let c = this.tops.get(key);
+    if (c) return c;
+    const cam = new THREE.OrthographicCamera(0, m.w, 0, -m.d, 1, 400);
+    cam.position.set(0, 200, 0);
+    cam.up.set(0, 0, -1);
+    cam.lookAt(0, 0, 0);
+    cam.updateMatrixWorld();
+    this.scene.add(m.root);
+    this.renderer.setSize(w, h, false);
+    this.renderer.setClearColor("#2a3a24", 1);
+    this.renderer.render(this.scene, cam);
+    this.renderer.setClearColor(0x000000, 0);
+    this.scene.remove(m.root);
+    c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    c.getContext("2d")!.drawImage(this.renderer.domElement, 0, 0);
+    this.tops.set(key, c);
     return c;
   }
 

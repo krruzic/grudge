@@ -142,6 +142,9 @@ export class Audio {
           if (ev.stage === "warn") [0, 0.9, 1.8].forEach((at) => { this.tone("sine", 392, 390, 1.2, 0.16, 0, at); this.tone("sine", 988, 980, 0.8, 0.06, 0, at); });
           else { this.tone("square", 110, 70, 0.5, 0.12); this.hiss(700, 1.5, 0.6, 0.12, 0, "bandpass"); }
           break;
+        case "tide":
+          this.hiss(ev.high ? 500 : 900, 0.6, 2.4, 0.22, 0, "lowpass", 0, ev.high ? 200 : 1600);
+          break;
         case "mist":
           if (ev.stage === "warn") this.hiss(600, 0.5, 3, 0.12, 0, "lowpass", 0, 250);
           break;

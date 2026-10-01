@@ -2,7 +2,7 @@ import type { World } from "../sim/world";
 import { fontLoaded, setTextLayer, textLayer } from "./font";
 import { TEAM_NAMES, UNIT_TYPES, type Directive, type Entity, type UnitType } from "../sim/types";
 import type { Portraits } from "./portraits";
-import { parchment, texturedRect, uiImagesReady } from "./n64ui";
+import { parchment, texturedRect, uiImagesReady, waxSeal } from "./n64ui";
 import { onHiLayer } from "./font";
 import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
@@ -438,8 +438,44 @@ export class Hud {
     this.bannerUntil = now + seconds;
   }
 
+  mapIndex: (() => number) | null = null;
+  minimap = true;
+  private card: { title: string; sub: string; glyph: string; color: string; at: number; until: number; count: number } | null = null;
+  private overlays = new Map<string, HTMLCanvasElement | null>();
+
+  private showCard(title: string, sub: string, glyph: string, now: number, color = "#8a1810", count = 0, seconds = 4): void {
+    this.card = { title, sub, glyph, color, at: now, until: now + Math.max(seconds, count + 0.6), count };
+  }
+
+  private mapEvent(w: World, ev: World["events"][number], now: number): void {
+    const team = (t: number) => (t >= 0 ? this.teamColors[t] : "#8a1810");
+    if (ev.type === "avalanche") {
+      const arm = w.ffa ? ["WEST", "NORTH", "EAST", "SOUTH"][ev.arm] + " ARM" : "";
+      if (ev.stage === "warn") this.showCard("AVALANCHE!", `THE ${arm} RUMBLES · GET OUT OF THE LANE`, "peak", now, "#8a1810", ev.seconds);
+      else if (ev.stage === "slide") this.showCard("AVALANCHE!", `SNOW COMING DOWN THE ${arm}`, "peak", now, "#8a1810", 0, 2.5);
+    } else if (ev.type === "gates") {
+      const court = ev.pattern === 1;
+      if (ev.stage === "warn") this.showCard("THE BELLS RING", court ? "THE COURT OPENS · THE OUTER GATES SEAL" : "THE COURT SEALS · THE OUTER GATES OPEN", "bell", now, "#8a5a10", ev.seconds);
+    } else if (ev.type === "mist") {
+      if (ev.stage === "warn") this.showCard("MIST ON THE RIVER", "ANYTHING IN THE MIST IS HIDDEN", "river", now, "#4a5a6a", ev.seconds);
+      else if (ev.stage === "out") this.showCard("THE MIST LIFTS", "THE RIVERS ARE CLEAR AGAIN", "river", now, "#4a5a6a", 0, 3);
+    } else if (ev.type === "lantern") {
+      if (ev.stage === "rise") this.showCard("THE DEAD STIR", "A BONE LANTERN RISES FROM THE PIT", "hex", now, "#2a6a2a");
+      else if (ev.stage === "fade") this.showCard("THE LANTERN GOES OUT", "IT WILL RISE AGAIN", "hex", now, "#2a6a2a", 0, 3);
+      else if (ev.stage === "taken") {
+        const h = w.getAny(ev.hero);
+        const lt = w.mapEvents.lanternDef;
+        const name = h ? w.teamName(h.team) : "SOMEONE";
+        this.showCard(`${name} IS HAUNTED`, lt ? `+${Math.round((lt.damageMul - 1) * 100)}% DAMAGE · +${Math.round((lt.speedMul - 1) * 100)}% SPEED · ${lt.hauntSeconds}S` : "", "hex", now, team(h?.team ?? -1));
+      }
+    } else if (ev.type === "tide") {
+      this.showCard(ev.high ? "HIGH TIDE" : "LOW TIDE", ev.high ? "THE FLATS FLOOD · EVERYONE ON THEM IS SLOWED" : "THE FLATS DRAIN · PUSH NOW", "tide", now, "#2a4a8a");
+    }
+  }
+
   update(w: World, _ui: (MapperUi | null)[], now: number): void {
     for (const ev of w.events) {
+      this.mapEvent(w, ev, now);
       if (ev.type === "notice") {
         if (ev.team < 0) this.banner_(ev.text, now);
         else if (this.notices[ev.team]) this.notices[ev.team] = { text: ev.text, until: now + 2 };
@@ -467,6 +503,8 @@ export class Hud {
     if (!this.visible) return;
     this.drawClock(ctx, W, w, now);
     this.drawRelic(ctx, W, H, w, now);
+    if (this.minimap) this.drawMinimap(ctx, W, H, w, now);
+    if (this.card && now < this.card.until) this.drawCard(ctx, W, w, now);
     if (w.ffa) {
       this.drawFfa(ctx, W, H, w, ui, now);
       return;
@@ -704,18 +742,339 @@ export class Hud {
     const left = this.bannerUntil - now;
     const pop = age < 0.12 ? 1.4 - (age / 0.12) * 0.4 : 1;
     const big = this.bannerBig;
-    const base = big ? 3.6 : 1.35;
+    const base = big ? 3.6 : 0.85;
     const s = base * pop;
     const tw = textWidth(this.banner, s, true);
     ctx.save();
     ctx.globalAlpha = Math.min(1, left * 5);
-    const y = big ? 96 - (s - base) * 5 : MARGIN_Y + 29 - (s - base) * 4;
+    const y = big ? 96 - (s - base) * 5 : MARGIN_Y + 31 - (s - base) * 4;
     drawNum(ctx, this.banner, Math.round((W - tw) / 2), y, "#ffffff", s);
     ctx.restore();
   }
 
   split = 0;
   locate: ((x: number, y: number, z: number) => { x: number; y: number }) | null = null;
+
+  private drawCard(ctx: CanvasRenderingContext2D, W: number, w: World, now: number): void {
+    const c = this.card!;
+    const age = now - c.at;
+    const left = c.until - now;
+    const drop = age < 0.18 ? (1 - age / 0.18) * -8 : 0;
+    const left2 = c.count > 0 ? Math.ceil(c.count - age) : 0;
+    const title = left2 > 0 ? `${c.title} ${left2}` : c.title;
+    const ts = 0.95;
+    const ss = 0.55;
+    const bw = Math.round(Math.max(textWidth(title, ts), textWidth(c.sub, ss)) + 34);
+    const bh = c.sub ? 25 : 17;
+    const x = Math.round(W / 2 - bw / 2);
+    const y = Math.round(MARGIN_Y + (w.match.phase === "sudden" ? 52 : 46) + drop);
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, left * 4, age * 8);
+    ctx.fillStyle = INK;
+    ctx.fillRect(x - 1, y - 1, bw + 2, bh + 2);
+    parchment(ctx, x, y, bw, bh);
+    ctx.fillStyle = c.color;
+    ctx.fillRect(x, y, 3, bh);
+    ctx.fillRect(x + bw - 3, y, 3, bh);
+    waxSeal(ctx, x + 13, y + bh / 2, 7, c.color, c.glyph);
+    const flash = left2 > 0 && Math.floor(now * 4) % 2 === 0;
+    drawText(ctx, title, x + 24, y + 3, flash ? "#d02010" : c.color, ts);
+    if (c.sub) drawPlain(ctx, c.sub, x + 24, y + 15, "#3a2410", ss);
+    ctx.restore();
+  }
+
+  private overlay(key: string, w: World, make: (c: CanvasRenderingContext2D, W: number, D: number) => boolean): HTMLCanvasElement | null {
+    if (this.overlays.has(key)) return this.overlays.get(key)!;
+    const t = w.terrain;
+    const c = document.createElement("canvas");
+    c.width = t.width;
+    c.height = t.depth;
+    const ok = make(c.getContext("2d")!, t.width, t.depth);
+    this.overlays.set(key, ok ? c : null);
+    return ok ? c : null;
+  }
+
+  private drawMinimap(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number): void {
+    const t = w.terrain;
+    const idx = this.mapIndex?.() ?? -1;
+    const s = Math.min(68 / t.width, 50 / t.depth);
+    const mw = t.width * s;
+    const mh = t.depth * s;
+    const x0 = Math.round(W / 2 - mw / 2);
+    const y0 = Math.round(this.split >= 2 ? H / 2 - mh / 2 : H - mh - 12);
+    const img = idx >= 0 ? this.portraits?.mapTop(idx, Math.round(t.width * 6), Math.round(t.depth * 6)) : null;
+    const tc = (team: number) => this.teamColors[team] ?? this.teamColors[4] ?? "#9a9068";
+    const P = (x: number, z: number): [number, number] => [x0 + x * s, y0 + z * s];
+    const tide = this.overlay(`tide:${idx}`, w, (g) => {
+      if (!t.tideCells.length) return false;
+      g.fillStyle = "rgba(70,140,230,0.7)";
+      for (const i of t.tideCells) g.fillRect(i % t.width, Math.floor(i / t.width), 1, 1);
+      return true;
+    });
+    const mist = this.overlay(`mist:${idx}`, w, (g, Wd) => {
+      const m = w.mapEvents.mistMask;
+      if (!m) return false;
+      g.fillStyle = "rgba(225,232,240,0.55)";
+      for (let i = 0; i < m.length; i++) if (m[i]) g.fillRect(i % Wd, Math.floor(i / Wd), 1, 1);
+      return true;
+    });
+    onHiLayer(ctx, (g) => {
+      g.save();
+      g.globalAlpha *= 0.9;
+      g.fillStyle = INK;
+      g.fillRect(x0 - 3.5, y0 - 3.5, mw + 7, mh + 7);
+      texturedRect(g, "wood", x0 - 2.5, y0 - 2.5, mw + 5, mh + 5, "#7a5636", 0, 0.5);
+      g.fillStyle = INK;
+      g.fillRect(x0 - 0.8, y0 - 0.8, mw + 1.6, mh + 1.6);
+      if (img) {
+        g.imageSmoothingEnabled = true;
+        g.drawImage(img, x0, y0, mw, mh);
+      } else {
+        g.fillStyle = "#4a6a3a";
+        g.fillRect(x0, y0, mw, mh);
+      }
+      g.fillStyle = "rgba(10,8,6,0.06)";
+      g.fillRect(x0, y0, mw, mh);
+      g.save();
+      g.beginPath();
+      g.rect(x0, y0, mw, mh);
+      g.clip();
+      g.imageSmoothingEnabled = false;
+      if (tide && w.tideHigh) {
+        g.globalAlpha *= 0.75;
+        g.drawImage(tide, x0, y0, mw, mh);
+        g.globalAlpha /= 0.75;
+      }
+      if (mist) {
+        const [tail, front] = w.mapEvents.mistBand(w.time);
+        if (front > tail) {
+          const z0 = Math.max(0, tail);
+          const z1 = Math.min(t.depth, front);
+          if (z1 > z0) g.drawImage(mist, 0, z0, t.width, z1 - z0, x0, y0 + z0 * s, mw, (z1 - z0) * s);
+        }
+      }
+      const av = w.mapEvents.avalancheNow;
+      if (av) {
+        const r = av.lane.rect;
+        const [ax, ay] = P(r.x, r.z);
+        if (av.stage === "warn") {
+          g.strokeStyle = Math.floor(now * 5) % 2 ? "#ff4030" : "#ffffff";
+          g.lineWidth = 0.9;
+          g.strokeRect(ax, ay, r.w * s, r.h * s);
+        } else {
+          g.fillStyle = "rgba(240,248,255,0.85)";
+          const k = av.k;
+          const { dx, dz } = av.lane;
+          if (dx > 0) g.fillRect(ax, ay, r.w * s * k, r.h * s);
+          else if (dx < 0) g.fillRect(ax + r.w * s * (1 - k), ay, r.w * s * k, r.h * s);
+          else if (dz > 0) g.fillRect(ax, ay, r.w * s, r.h * s * k);
+          else g.fillRect(ax, ay + r.h * s * (1 - k), r.w * s, r.h * s * k);
+        }
+      }
+      for (const gt of w.mapEvents.gateList) {
+        if (!gt.shut) continue;
+        const [gx, gy] = P(gt.slot.x, gt.slot.z);
+        g.fillStyle = INK;
+        g.fillRect(gx - 0.4, gy - 0.4, gt.slot.w * s + 0.8, gt.slot.h * s + 0.8);
+        g.fillStyle = "#9aa0b0";
+        g.fillRect(gx, gy, gt.slot.w * s, gt.slot.h * s);
+      }
+      for (const sh of w.arena.shots) {
+        const [cx, cy] = P(sh.x, sh.z);
+        g.strokeStyle = Math.floor(now * 6) % 2 ? "#ff3020" : "#ffd040";
+        g.lineWidth = 0.7;
+        g.beginPath();
+        g.arc(cx, cy, Math.max(1.2, sh.radius * s), 0, Math.PI * 2);
+        g.stroke();
+      }
+      const dot = (cx: number, cy: number, r: number, fill: string, ring = INK, lw = 0.5) => {
+        g.beginPath();
+        g.arc(cx, cy, r, 0, Math.PI * 2);
+        g.fillStyle = fill;
+        g.fill();
+        g.lineWidth = lw;
+        g.strokeStyle = ring;
+        g.stroke();
+      };
+      for (const e of w.entities) {
+        if (!e.alive || !e.unit || e.neutral || e.status.hidden) continue;
+        const [ux, uy] = P(e.transform.pos.x, e.transform.pos.z);
+        g.fillStyle = tc(e.team);
+        g.fillRect(ux - 0.45, uy - 0.45, 0.9, 0.9);
+      }
+      for (const pad of w.pads) {
+        const [px, py] = P(pad.x, pad.z);
+        const st = pad.structureId ? w.get(pad.structureId) : undefined;
+        if (!st?.alive || !st.structure) {
+          const rubble = w.time < pad.rubbleUntil;
+          g.lineWidth = 0.6;
+          g.strokeStyle = INK;
+          g.beginPath();
+          g.arc(px, py, 1.5, 0, Math.PI * 2);
+          g.stroke();
+          g.lineWidth = 0.45;
+          g.strokeStyle = rubble ? "#7a7064" : pad.zone === "neutral" ? "#f4ecd8" : tc(pad.side);
+          g.beginPath();
+          g.arc(px, py, 1.5, 0, Math.PI * 2);
+          g.stroke();
+          continue;
+        }
+        if (st.structure.type === "core") continue;
+        const def = w.data.structures.types[st.structure.type];
+        const col = tc(st.team);
+        g.save();
+        if (!st.structure.ready) g.globalAlpha *= 0.55;
+        const gold = st.structure.level > 1;
+        if (def.class === "production") {
+          g.fillStyle = INK;
+          g.fillRect(px - 1.9, py - 1.9, 3.8, 3.8);
+          g.fillStyle = gold ? "#ffd040" : col;
+          g.fillRect(px - 1.45, py - 1.45, 2.9, 2.9);
+          if (gold) {
+            g.fillStyle = col;
+            g.fillRect(px - 0.95, py - 0.95, 1.9, 1.9);
+          }
+        } else {
+          g.fillStyle = INK;
+          g.beginPath();
+          g.moveTo(px, py - 2.4);
+          g.lineTo(px + 2.1, py + 1.5);
+          g.lineTo(px - 2.1, py + 1.5);
+          g.closePath();
+          g.fill();
+          g.fillStyle = gold ? "#ffd040" : col;
+          g.beginPath();
+          g.moveTo(px, py - 1.6);
+          g.lineTo(px + 1.45, py + 1.05);
+          g.lineTo(px - 1.45, py + 1.05);
+          g.closePath();
+          g.fill();
+          if (gold) dot(px, py, 0.55, col, col, 0.1);
+        }
+        g.restore();
+      }
+      for (let team = 0; team < w.teamCount; team++) {
+        const c = w.core(team);
+        const co = t.cores.find((k) => (k.team ?? 0) === team);
+        if (!co) continue;
+        const [kx, ky] = P(co.x, co.z);
+        const out = !c?.alive || w.teams[team].out;
+        g.fillStyle = INK;
+        g.fillRect(kx - 3, ky - 3, 6, 6);
+        g.fillStyle = out ? "#3a3430" : "#ffd040";
+        g.fillRect(kx - 2.5, ky - 2.5, 5, 5);
+        g.fillStyle = out ? "#5a524a" : tc(team);
+        g.fillRect(kx - 1.9, ky - 1.9, 3.8, 3.8);
+        if (out) {
+          g.strokeStyle = "#ff4030";
+          g.lineWidth = 0.8;
+          g.beginPath();
+          g.moveTo(kx - 2, ky - 2);
+          g.lineTo(kx + 2, ky + 2);
+          g.moveTo(kx + 2, ky - 2);
+          g.lineTo(kx - 2, ky + 2);
+          g.stroke();
+        } else if (c) {
+          const f = Math.max(0, c.hp / c.maxHp);
+          g.fillStyle = INK;
+          g.fillRect(kx - 3, ky + 3.4, 6, 1.4);
+          g.fillStyle = f > 0.5 ? "#6ae04a" : f > 0.25 ? "#ffd040" : "#ff4030";
+          g.fillRect(kx - 2.6, ky + 3.7, 5.2 * f, 0.8);
+        }
+      }
+      const lan = w.mapEvents.lantern;
+      if (lan) {
+        const [lx, ly] = P(lan.x, lan.z);
+        const pulse = 1.4 + Math.sin(now * 6) * 0.35;
+        dot(lx, ly, pulse + 0.9, "rgba(90,255,110,0.35)", "rgba(0,0,0,0)", 0);
+        dot(lx, ly, 1.3, "#7aff8a", INK, 0.5);
+      }
+      const og = w.arena.ogreId ? w.get(w.arena.ogreId) : undefined;
+      if (og?.alive) {
+        const [ox, oy] = P(og.transform.pos.x, og.transform.pos.z);
+        g.fillStyle = INK;
+        g.beginPath();
+        g.moveTo(ox - 2.4, oy - 2.6);
+        g.lineTo(ox - 1.2, oy - 1.4);
+        g.lineTo(ox + 1.2, oy - 1.4);
+        g.lineTo(ox + 2.4, oy - 2.6);
+        g.lineTo(ox + 2.1, oy + 0.4);
+        g.arc(ox, oy + 0.4, 2.1, 0, Math.PI);
+        g.closePath();
+        g.fill();
+        g.fillStyle = "#8a9a4a";
+        g.beginPath();
+        g.arc(ox, oy + 0.2, 1.6, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = "#f4ecd8";
+        g.fillRect(ox - 1.9, oy - 2.1, 0.7, 0.9);
+        g.fillRect(ox + 1.2, oy - 2.1, 0.7, 0.9);
+      }
+      const r = w.arena.relic;
+      if (r.state !== "waiting") {
+        const carrier = r.state === "carried" ? w.getAny(r.carrier) : undefined;
+        const [rx, ry] = carrier ? P(carrier.transform.pos.x, carrier.transform.pos.z) : P(r.x, r.z);
+        const ry2 = carrier ? ry - 3.2 : ry;
+        const k = 1.9 + (r.state === "carried" || r.state === "dropped" ? Math.sin(now * 8) * 0.35 : 0);
+        g.fillStyle = INK;
+        g.beginPath();
+        g.moveTo(rx, ry2 - k - 0.7);
+        g.lineTo(rx + k + 0.6, ry2);
+        g.lineTo(rx, ry2 + k + 0.7);
+        g.lineTo(rx - k - 0.6, ry2);
+        g.closePath();
+        g.fill();
+        g.fillStyle = r.state === "shrined" ? tc(r.team) : "#ffd040";
+        g.beginPath();
+        g.moveTo(rx, ry2 - k);
+        g.lineTo(rx + k, ry2);
+        g.lineTo(rx, ry2 + k);
+        g.lineTo(rx - k, ry2);
+        g.closePath();
+        g.fill();
+        g.fillStyle = "#fff4c8";
+        g.fillRect(rx - 0.35, ry2 - k * 0.55, 0.7, 0.7);
+      } else {
+        const [rx, ry] = P(w.arena.home.x, w.arena.home.z);
+        g.strokeStyle = "rgba(255,216,112,0.6)";
+        g.lineWidth = 0.6;
+        g.beginPath();
+        g.arc(rx, ry, 1.6, 0, Math.PI * 2);
+        g.stroke();
+      }
+      for (const e of w.entities) {
+        if (!e.alive || !e.hero || e.hero.dead || e.status.hidden) continue;
+        const [hx, hy] = P(e.transform.pos.x, e.transform.pos.z);
+        const a = e.transform.facing;
+        const fx = Math.sin(a);
+        const fz = Math.cos(a);
+        const R = 2.5;
+        if (w.time < (e.status.hauntUntil ?? 0)) dot(hx, hy, R + 0.9, "rgba(90,255,110,0.4)", "rgba(0,0,0,0)", 0);
+        const tri = (k: number) => {
+          g.beginPath();
+          g.moveTo(hx + fx * R * k, hy + fz * R * k);
+          g.lineTo(hx - fx * R * 0.7 * k - fz * R * 0.75 * k, hy - fz * R * 0.7 * k + fx * R * 0.75 * k);
+          g.lineTo(hx - fx * R * 0.3 * k, hy - fz * R * 0.3 * k);
+          g.lineTo(hx - fx * R * 0.7 * k + fz * R * 0.75 * k, hy - fz * R * 0.7 * k - fx * R * 0.75 * k);
+          g.closePath();
+        };
+        tri(1.35);
+        g.fillStyle = INK;
+        g.fill();
+        tri(1.05);
+        g.fillStyle = "#ffffff";
+        g.fill();
+        tri(0.72);
+        g.fillStyle = tc(e.team);
+        g.fill();
+      }
+      g.restore();
+      g.strokeStyle = "rgba(255,216,112,0.55)";
+      g.lineWidth = 0.4;
+      g.strokeRect(x0 + 0.2, y0 + 0.2, mw - 0.4, mh - 0.4);
+      g.restore();
+    });
+  }
 
   private drawRelic(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number): void {
     const r = w.arena.relic;

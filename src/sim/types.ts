@@ -387,6 +387,7 @@ export type SimEvent =
   | { type: "miss"; x: number; y: number; z: number }
   | { type: "death"; id: number; kind: Entity["kind"]; x: number; y: number; z: number; team: number; big: boolean }
   | { type: "eliminated"; team: number; by: number }
+  | { type: "tide"; high: boolean }
   | { type: "mist"; stage: "warn" | "in" | "out"; seconds: number }
   | { type: "lantern"; stage: "rise" | "taken" | "fade"; x: number; y: number; z: number; id: number; hero: number }
   | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number }

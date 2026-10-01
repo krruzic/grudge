@@ -137,6 +137,7 @@ async function start(): Promise<void> {
   screens.portraits = new Portraits(heroes, view.teamColorList);
   screens.portraits.units = unitModels;
   hud.portraits = screens.portraits;
+  hud.mapIndex = () => shownMap;
   screens.portraits.setMaps(mapViews.map((mv, i) => ({ root: mv.root, width: maps[i].data.width, depth: maps[i].data.depth })));
   const padsEl = document.getElementById("pads")!;
   const audio = new Audio();
