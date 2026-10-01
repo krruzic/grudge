@@ -801,6 +801,17 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         o.status.guardMul = def.guardMul ?? 0.7;
         w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: e.team, src: e.id });
       }
+      if (def.supplyCut) {
+        for (const o of w.entities) {
+          if (!o.alive || !o.hero || o === e || o.team !== e.team) continue;
+          for (const k of ["b", "r"] as const) {
+            const ready = o.hero.cooldowns[k] ?? 0;
+            if (ready > w.time) o.hero.cooldowns[k] = w.time + (ready - w.time) * (1 - def.supplyCut);
+          }
+          w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: e.team, src: e.id });
+        }
+        w.emit({ type: "notice", team: e.team, text: "RESUPPLIED · COOLDOWNS HALVED" });
+      }
       return;
     }
     case "warcry": {

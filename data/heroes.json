@@ -682,7 +682,7 @@
           "callout": "WAR HORN \u00b7 TROOPS FASTER"
         },
         "z": {
-          "kind": "rally",
+          "kind": "rally", "supplyCut": 0.5,
           "anim": "attack_a",
           "radius": 9,
           "healFrac": 0.4,

@@ -137,6 +137,7 @@ export interface AbilityDef {
   ambushMul?: number;
   dps?: number;
   healFrac?: number;
+  supplyCut?: number;
   resetB?: boolean;
   vsSlowedMul?: number;
   vsStunnedMul?: number;

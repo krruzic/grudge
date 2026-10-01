@@ -439,7 +439,8 @@ export class Arena {
 
   inShop(e: Entity): boolean {
     const core = this.w.core(e.team);
-    return !!core && this.w.dist(e, core) <= core.radius + this.w.data.match.arena.shop.radius;
+    if (core && this.w.dist(e, core) <= core.radius + this.w.data.match.arena.shop.radius) return true;
+    return this.w.inBanner(e);
   }
 
   buy(hero: Entity, item: ShopItem, aimAt?: Vec2): boolean {

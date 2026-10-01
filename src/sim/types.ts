@@ -341,6 +341,9 @@ export interface TeamDirectives {
   focus: Record<UnitType, number>;
 }
 
+export type Formation = "mass" | "column" | "line" | "wedge";
+export const FORMATIONS: Formation[] = ["mass", "column", "line", "wedge"];
+
 export const TEAM_NAMES = ["BLUE", "RED", "YELLOW", "GREEN"];
 
 export interface TeamState {
@@ -358,6 +361,7 @@ export interface TeamState {
   unitCount: number;
   commanderOrderAt: number;
   banner: { x: number; z: number; until: number } | null;
+  formation?: Formation;
   callReadyAt: number;
   wardReadyAt: number;
 }
@@ -384,6 +388,7 @@ export interface Command {
   charging?: "a" | "b";
   place?: { dx: number; dz: number };
   morph?: boolean;
+  formation?: boolean;
 }
 
 export type SimEvent =

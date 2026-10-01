@@ -9,6 +9,15 @@ export function padNear(w: World, e: Entity): Pad | null {
     const d = Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z);
     if (d <= bestD) { bestD = d; best = p; }
   }
+  if (best || !w.inBanner(e)) return best;
+  const b = w.teams[e.team].banner!;
+  const reach = w.bannerReach;
+  bestD = Infinity;
+  for (const p of w.pads) {
+    if (Math.hypot(p.x - b.x, p.z - b.z) > reach + 1.5) continue;
+    const d = Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z);
+    if (d < bestD) { bestD = d; best = p; }
+  }
   return best;
 }
 

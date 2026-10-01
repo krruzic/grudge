@@ -4,7 +4,7 @@ import type { GameData, HeroDef } from "./config.ts";
 import type {
   Boomerang, Command, Delayed, Missile, Directive, Entity, MatchState, Pad, PadZone, Projectile, SimEvent, Status, TargetClass, TeamState, TerrainMod, Trap, UnitType, Vec2, Zone,
 } from "./types.ts";
-import { TEAM_NAMES, UNIT_TYPES } from "./types.ts";
+import { FORMATIONS, TEAM_NAMES, UNIT_TYPES } from "./types.ts";
 import { updateBoomerangs, updateHero } from "./heroes.ts";
 import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
@@ -554,6 +554,13 @@ export class World {
       if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
       if (cmd.learn !== undefined && e.hero?.picks.length) learn(this, e, cmd.learn);
       if (cmd.morph && e.alive) this.startMorph(e);
+      if (cmd.formation && slot.commander) {
+        const ts = this.teams[slot.team];
+        const next = FORMATIONS[(FORMATIONS.indexOf(ts.formation ?? "mass") + 1) % FORMATIONS.length];
+        ts.formation = next;
+        for (const u of this.entities) if (u.unit && u.team === slot.team) u.unit.repathAt = 0;
+        this.emit({ type: "notice", team: slot.team, text: `FORMATION · ${{ mass: "LOOSE", column: "COLUMN", line: "LINE", wedge: "WEDGE" }[next]}` });
+      }
       if (cmd.say) this.emit({ type: "notice", team: slot.team, text: cmd.say.slice(0, 48) });
       if (e.alive) gainXp(this, e, this.data.talents?.xp.passive * dt);
       if (cmd.directive) {
@@ -648,6 +655,79 @@ export class World {
       if (!core?.structure) continue;
       core.structure.shielded = (core.structure.ward ?? 0) > 0;
     }
+  }
+
+  get bannerReach(): number {
+    return this.data.heroes.heroes.herald?.hooks.commandAuraRadius ?? 6;
+  }
+
+  inBanner(e: Entity): boolean {
+    const b = this.teams[e.team]?.banner;
+    return !!b && this.time < b.until && Math.hypot(e.transform.pos.x - b.x, e.transform.pos.z - b.z) <= this.bannerReach;
+  }
+
+  private forms = { tick: -1, of: new Map<number, [number, number]>() };
+
+  formationOffset(e: Entity, anchor: Vec2, group: string): { x: number; z: number; leash: number } | null {
+    const ts = this.teams[e.team];
+    const f = ts.formation ?? "mass";
+    if (f === "mass" || !e.unit) return null;
+    if (this.forms.tick !== this.tick) {
+      this.forms.tick = this.tick;
+      this.forms.of.clear();
+      const groups = new Map<string, Entity[]>();
+      const order: Record<string, number> = { heavy: 0, grunt: 1, ranged: 2 };
+      for (const o of this.entities) {
+        if (!o.alive || !o.unit || o.neutral) continue;
+        const dir = this.teams[o.team].directives[o.unit.type];
+        const hp = this.teams[o.team].directives.holdPoint[o.unit.type];
+        const key = `${o.team}|${dir}|${dir === "hold" && hp ? `${hp.x.toFixed(1)},${hp.z.toFixed(1)}` : ""}`;
+        let g = groups.get(key);
+        if (!g) groups.set(key, (g = []));
+        g.push(o);
+      }
+      for (const g of groups.values()) {
+        g.sort((a, b) => (order[a.unit!.type] ?? 3) - (order[b.unit!.type] ?? 3) || a.id - b.id);
+        g.forEach((o, i) => this.forms.of.set(o.id, [i, g.length]));
+      }
+    }
+    void group;
+    const slot = this.forms.of.get(e.id);
+    if (!slot) return null;
+    const [i, n] = slot;
+    const foe = this.foeCore(e.team, anchor.x, anchor.z);
+    let hx = 1;
+    let hz = 0;
+    if (foe) {
+      const dx = foe.transform.pos.x - anchor.x;
+      const dz = foe.transform.pos.z - anchor.z;
+      const d = Math.hypot(dx, dz) || 1;
+      hx = dx / d;
+      hz = dz / d;
+    }
+    let right = 0;
+    let fwd = 0;
+    let leash = 1;
+    if (f === "column") {
+      fwd = -(i + 1) * 1.15;
+      right = i % 2 ? 0.35 : -0.35;
+    } else if (f === "line") {
+      const per = Math.min(8, Math.max(3, Math.ceil(n / 2)));
+      const row = Math.floor(i / per);
+      const col = i % per;
+      const inRow = Math.min(per, n - row * per);
+      right = (col - (inRow - 1) / 2) * 1.3;
+      fwd = 1.6 - row * 1.4;
+      leash = 0.75;
+    } else {
+      let r = 0;
+      while (((r + 1) * (r + 2)) / 2 <= i) r++;
+      const col = i - (r * (r + 1)) / 2;
+      right = (col - r / 2) * 1.35;
+      fwd = 2.6 - r * 1.2;
+      leash = 1.3;
+    }
+    return { x: hx * fwd - hz * right, z: hz * fwd + hx * right, leash };
   }
 
   get morphCfg() {

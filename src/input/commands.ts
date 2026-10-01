@@ -77,7 +77,8 @@ export class CommandMapper {
     this.lastNow = now;
     c.moveX = p.stickX;
     c.moveZ = p.stickY;
-    c.block = p.held.block;
+    c.block = this.ui.commander ? false : p.held.block;
+    if (this.ui.commander && p.pressed.block) c.formation = true;
     c.charging = undefined;
     this.ui.charge = null;
     const bAims = !!aim?.b;

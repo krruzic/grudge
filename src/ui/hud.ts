@@ -343,6 +343,36 @@ function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
 
 const ORDER_COL: Record<Directive, string> = { push: "#d83a28", follow: "#3a78e0", defend: "#3aa04a", hold: "#d8a020", nearest: "#e07020", focus: "#8a4ad0" };
 
+function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: string): void {
+  const r = 7;
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x, y, r + 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#2a1c12";
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = "#c89a40";
+  ctx.beginPath();
+  ctx.arc(x, y, r - 0.6, 0, Math.PI * 2);
+  ctx.stroke();
+  const pts: [number, number][] =
+    f === "column" ? [[0, -3.6], [0, -1.2], [0, 1.2], [0, 3.6]]
+    : f === "line" ? [[-3.6, -1.1], [-1.2, -1.1], [1.2, -1.1], [3.6, -1.1], [-2.4, 1.6], [0, 1.6], [2.4, 1.6]]
+    : f === "wedge" ? [[0, -3], [-1.6, -0.6], [1.6, -0.6], [-3.2, 1.8], [0, 1.8], [3.2, 1.8]]
+    : [[-1.8, -1.6], [1.6, -2], [0, 0], [-2.2, 1.8], [2, 1.4], [0.2, 3]];
+  ctx.fillStyle = "#fff4d8";
+  for (const [px, py] of pts) {
+    ctx.beginPath();
+    ctx.arc(x + px, y + py, 0.95, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Directive, flip: boolean): void {
   const r = 4.4;
   ctx.save();
@@ -1528,9 +1558,12 @@ export class Hud {
     const x0 = F ? (right ? F.x + F.w - MARGIN_X - pw : F.x + MARGIN_X) : right ? W - MARGIN_X - pw : MARGIN_X;
     const y0 = (F ? F.y + F.h : H) - ph - 6;
     const flash = now < o.until - 1.2;
-    const key = [x0, y0, right, selected, flash, o.type, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
-    this.memo(ctx, `orders${t}`, key, x0 - 6, y0 - 6, pw + 12, ph + 12, (c) => {
+    const form = ts.formation ?? "mass";
+    const showForm = form !== "mass" || w.players.some((q) => q.team === t && q.commander);
+    const key = [x0, y0, right, selected, flash, o.type, showForm ? form : "", ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
+    this.memo(ctx, `orders${t}`, key, x0 - 24, y0 - 6, pw + 48, ph + 12, (c) => {
       this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash, right);
+      if (showForm) formationBadge(c, right ? x0 - 9 : x0 + pw + 9, y0 + 10.5, form);
       return 0;
     });
   }

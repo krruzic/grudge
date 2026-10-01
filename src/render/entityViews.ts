@@ -1511,7 +1511,7 @@ export class EntityViews {
       const mat = this.padMarkers[i];
       let near: Entity | undefined;
       for (const h of heroes) {
-        if (Math.hypot(h.transform.pos.x - p.x, h.transform.pos.z - p.z) <= w.data.structures.padRadius) near = h;
+        if (padNear(w, h) === p) near = h;
       }
       const st = p.structureId ? w.get(p.structureId) : undefined;
       const buildable = near && (!st ? p.zone === "neutral" || p.side === near.team : st.team === near.team && st.structure!.level < 2);
