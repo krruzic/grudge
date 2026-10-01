@@ -537,7 +537,7 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { dbg, hud, screens, levelUp: (player: number, picks: number[]) => {
+  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { Bot, dbg, hud, screens, levelUp: (player: number, picks: number[]) => {
     const e = world.heroForPlayer(player);
     if (!e?.hero) return [];
     gainXp(world, e, 99999);
@@ -1116,7 +1116,10 @@ async function start(): Promise<void> {
         world.step(f.c);
         const want = netHashes.get(world.tick);
         if (want !== undefined) {
-          if (want !== worldHash(world)) desync = true;
+          if (want !== worldHash(world)) {
+            if (!desync) hud.banner_("OUT OF SYNC WITH THE HOST · REJOIN", now, 4);
+            desync = true;
+          }
           netHashes.delete(world.tick);
         }
         acc = Math.max(0, acc - world.dt);

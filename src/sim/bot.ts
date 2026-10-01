@@ -40,6 +40,7 @@ export class Bot {
   private wantBuy: { item: "bomb" | "ward" | "cannon"; at?: Vec2 } | null = null;
   private tend: Pad | null = null;
   private callIndex = 0;
+  private wantFace: Vec2 | null = null;
   mate: number | null = null;
   role: "solo" | "attack" | "support" = "solo";
   private homeScore = 0.3;
@@ -139,6 +140,11 @@ export class Bot {
     if (this.sayText) {
       cmd.say = this.sayText;
       this.sayText = null;
+    }
+    if (this.wantFace) {
+      cmd.moveX = this.wantFace.x;
+      cmd.moveZ = this.wantFace.z;
+      this.wantFace = null;
     }
     cmd.attack = this.wantAttack;
     cmd.secondary = this.wantB;
@@ -487,7 +493,8 @@ export class Bot {
         if (w.dist(me, target) < w.data.match.arena.shop.bomb.throwRange - 1 && this.rand() < 0.3) {
           const dx = target.transform.pos.x - me.transform.pos.x;
           const dz = target.transform.pos.z - me.transform.pos.z;
-          me.transform.facing = Math.atan2(dx, dz);
+          const dl = Math.hypot(dx, dz) || 1;
+          this.wantFace = { x: dx / dl, z: dz / dl };
           this.wantAttack = true;
         }
         return true;

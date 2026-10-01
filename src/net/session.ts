@@ -53,6 +53,7 @@ export function worldHash(w: World): number {
     mix(Math.round(e.transform.pos.x * 64));
     mix(Math.round(e.transform.pos.z * 64));
     mix(Math.round(e.hp * 4));
+    mix(Math.round(e.transform.facing * 256));
     mix(e.alive ? 1 : 0);
   }
   for (const t of w.teams) {
