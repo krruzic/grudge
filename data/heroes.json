@@ -369,17 +369,19 @@
           "damage": 34,
           "range": 13,
           "speed": 24,
-          "dur": 0.3,
+          "dur": 0.42,
           "hitAt": 0.12,
           "cooldown": 0,
           "bot": "fight",
           "botRange": 11,
           "shots": [
             {
-              "damage": 58
+              "damage": 58,
+              "dur": 0.42
             },
             {
-              "damage": 58
+              "damage": 58,
+              "dur": 0.42
             },
             {
               "damage": 108,
@@ -387,12 +389,12 @@
               "splashDamage": 45,
               "slowMul": 0.6,
               "slowSeconds": 1.2,
-              "dur": 0.5,
+              "dur": 0.6,
               "hitAt": 0.26
             }
           ],
           "comboWindow": 0.6,
-          "comboCooldown": 0.3,
+          "comboCooldown": 0.9,
           "variance": 0.25
         },
         "b": {

@@ -390,7 +390,8 @@ class MapBuilder:
 
     def arch(self, x, z, rot, ruined=False):
         P = self.props
-        axis_x = abs(rot) < 45
+        r180 = rot % 180
+        axis_x = r180 < 45 or r180 > 135
         half_span, pillar_h, rad_o, rad_i, depth = 1.5, 1.8, 1.95, 1.35, 0.7
         bases = []
         for i, sgn in enumerate((-1, 1)):

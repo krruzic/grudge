@@ -34,6 +34,7 @@ export interface DamageOpts {
   canMiss?: boolean;
   big?: boolean;
   structureDamage?: number;
+  noFlinch?: boolean;
   vsSlowedMul?: number;
   vsStunnedMul?: number;
   executeBelow?: number;
@@ -907,7 +908,7 @@ export class World {
         target.status.slowMul = opts.slowMul;
         target.status.slowUntil = this.time + opts.slowSeconds;
       }
-      if (target.hero && !target.hero.blocking && amount >= 25 && !target.hero.action) {
+      if (target.hero && !target.hero.blocking && amount >= 25 && !target.hero.action && !opts.noFlinch) {
         target.hero.action = { name: "hit", kind: "hit", t: 0, dur: b.hitStunSeconds, hitAt: 99, fired: true, combo: 0, dirX: 0, dirZ: 0 };
       }
     }
@@ -1392,7 +1393,7 @@ export class World {
         this.projectiles.splice(i, 1);
         const src = this.getAny(p.sourceId) ?? null;
         const who = src && src.alive ? src : null;
-        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss, slowMul: p.slow?.slowMul, slowSeconds: p.slow?.slowSeconds }) : false;
+        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss, slowMul: p.slow?.slowMul, slowSeconds: p.slow?.slowSeconds, noFlinch: !p.splash && !!who?.hero }) : false;
         if (landed && who && target && p.talent) afterShot(this, who, target, p.damage, p.talent === "orb");
         if (p.splash) {
           const sp = p.splash;
