@@ -1065,7 +1065,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         const k = w.terrain.kinds[i];
         if (k !== Kind.Ground && k !== Kind.Ford) continue;
         if (w.pads.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) continue;
-        const occupied = w.entities.some((o) => o.alive && (o.kind === "structure" || o.hero) &&
+        const occupied = w.entities.some((o) => o.alive && (o.kind === "structure" || (o.hero && o.team === e.team)) &&
           Math.abs(o.transform.pos.x - (Math.floor(x) + 0.5)) < 0.5 + o.radius && Math.abs(o.transform.pos.z - (Math.floor(z) + 0.5)) < 0.5 + o.radius);
         if (occupied) continue;
         cells.push(i);
@@ -1086,12 +1086,25 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
       }
       w.emit({ type: "mod", id: m.id });
-      for (const o of w.entities) {
+      const near = (o: Entity) => cells.some((c) => Math.abs((c % w.terrain.width) + 0.5 - o.transform.pos.x) < 0.5 + o.radius && Math.abs(Math.floor(c / w.terrain.width) + 0.5 - o.transform.pos.z) < 0.5 + o.radius);
+      for (const o of w.entities.slice()) {
         if (!o.alive || o.kind === "structure") continue;
         const i = w.terrain.index(Math.floor(o.transform.pos.x), Math.floor(o.transform.pos.z));
-        if (!cells.includes(i)) continue;
-        const j = w.nav.nearestOpen(o.transform.pos.x, o.transform.pos.z, 4);
-        if (j >= 0) w.teleport(o, (j % w.nav.w) + 0.5, Math.floor(j / w.nav.w) + 0.5);
+        const inside = cells.includes(i);
+        if (!inside && !(o.team !== e.team && near(o))) continue;
+        const rx = o.transform.pos.x - cx;
+        const rz = o.transform.pos.z - cz;
+        const along = -rx * a.dirZ + rz * a.dirX;
+        const side = rx * a.dirX + rz * a.dirZ >= 0 ? 1 : -1;
+        const lx = cx - a.dirZ * along;
+        const lz = cz + a.dirX * along;
+        if (inside) {
+          const j = w.nav.nearestOpen(lx + a.dirX * side * 1.3, lz + a.dirZ * side * 1.3, 4);
+          if (j >= 0) w.teleport(o, (j % w.nav.w) + 0.5, Math.floor(j / w.nav.w) + 0.5);
+        }
+        if (o.team === e.team) continue;
+        w.damage(e, o, (def.damage ?? 70) * mul, { stun: def.stunSeconds ?? 0.9, knockback: def.knockback ?? 9, fromX: lx - a.dirX * side, fromZ: lz - a.dirZ * side, big: true });
+        w.emit({ type: "slam", x: lx, y: w.groundY(lx, lz), z: lz, radius: 1.6, team: e.team });
       }
       return;
     }
