@@ -128,5 +128,11 @@ data = {
     ],
     "spawns": [{"team": 0, "x": 7.5, "z": 31}],
 }
+import sys
+sys.path.insert(0, "tools")
+from map_grow import grow
+grow(data, [(12, 4)])
+for p, (x, z) in zip(data["pads"][:3], [(9.5, 22.5), (9.5, 33.5), (14, 28)]):
+    p["x"], p["z"] = x, z
 json.dump(data, open("data/maps/heights.json", "w"), indent=1)
 print("ok", len(ops), len(props))

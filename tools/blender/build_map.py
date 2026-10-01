@@ -486,11 +486,11 @@ class MapBuilder:
         h = y - base + 0.25
         bm = bmesh.new()
         bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=1.7, radius2=1.55, depth=h)
-        rim = (1, 1, 1) if zone == "neutral" else tuple(0.55 + c * 0.45 for c in TEAM[side])
+        rim = (1, 1, 1) if zone == "neutral" else tuple(0.25 + c * 0.75 for c in TEAM[side])
         P.add_bm(bm, "cobble", matrix=Matrix.Translation(G(x, base + h / 2, z)), col=rim)
         bm = bmesh.new()
         bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=1.25, radius2=1.2, depth=0.1)
-        inlay = (1, 1, 1) if zone == "neutral" else tuple(0.6 + c * 0.4 for c in TEAM[side])
+        inlay = (1, 1, 1) if zone == "neutral" else tuple(0.15 + c * 0.85 for c in TEAM[side])
         P.add_bm(bm, "gold", matrix=Matrix.Translation(G(x, y + 0.3, z)), col=inlay)
         self.fx.append(("pad_" + zone, (x, y + 0.35, z)))
 

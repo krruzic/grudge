@@ -1,387 +1,387 @@
 {
-  "name": "Grudgekeep Ruins",
-  "blurb": "A square keep torn in half. Corner to corner, tight halls, broken walls and bottomless pits. One neutral pad on the dais decides it.",
-  "emblem": "castle",
-  "width": 40,
-  "depth": 40,
-  "mirror": "diag",
-  "rimHeight": 4.5,
-  "waterLevel": -6,
-  "notes": "Square, mirrored across the diagonal x = z. Author the half where x < z (team 0 keeps the bottom-left corner). Rects mirror by swapping x/z and w/h; points swap x/z; prop rot becomes 90 - rot. Pits are impassable holes. Each base has two gates: the corner toward the centre and a back gate in the side wall onto the outer lane.",
-  "cores": [
-    {
-      "team": 0,
-      "x": 6,
-      "z": 34
-    }
-  ],
-  "pads": [
-    {
-      "zone": "home",
-      "x": 4.5,
-      "z": 29.5
-    },
-    {
-      "zone": "home",
-      "x": 10.5,
-      "z": 35.5
-    },
-    {
-      "zone": "forward",
-      "x": 15.5,
-      "z": 24.5
-    }
-  ],
-  "spawns": [
-    {
-      "team": 0,
-      "x": 9,
-      "z": 31
-    }
-  ],
-  "ops": [
-    {
-      "op": "noise",
-      "amp": 0.12,
-      "scale": 0.2,
-      "seed": 7
-    },
-    {
-      "op": "shape",
-      "shape": "rect",
-      "x": -10,
-      "z": -10,
-      "w": 60,
-      "h": 11,
-      "y": 4.5,
-      "edge": 1.5,
-      "mode": "max",
-      "wobble": 0.6
-    },
-    {
-      "op": "shape",
-      "shape": "rect",
-      "x": -10,
-      "z": 39,
-      "w": 60,
-      "h": 11,
-      "y": 4.5,
-      "edge": 1.5,
-      "mode": "max",
-      "wobble": 0.6
-    },
-    {
-      "op": "shape",
-      "shape": "rect",
-      "x": 1,
-      "z": 26,
-      "w": 13,
-      "h": 13,
-      "y": 0.5,
-      "edge": 1.5,
-      "mode": "set",
-      "wobble": 0.3
-    },
-    {
-      "op": "shape",
-      "shape": "circle",
-      "x": 20,
-      "z": 20,
-      "r": 2.5,
-      "y": 0.9,
-      "edge": 2.5,
-      "mode": "max",
-      "wobble": 0.4
-    },
-    {
-      "op": "shape",
-      "shape": "circle",
-      "x": 5,
-      "z": 5,
-      "r": 1.5,
-      "y": 0.8,
-      "edge": 2.5,
-      "mode": "max",
-      "wobble": 1.0
-    },
-    {
-      "op": "shape",
-      "shape": "circle",
-      "x": 35,
-      "z": 35,
-      "r": 1.5,
-      "y": 0.8,
-      "edge": 2.5,
-      "mode": "max",
-      "wobble": 1.0
-    },
-    {
-      "op": "wall",
-      "style": "rim",
-      "x": 0,
-      "z": 0,
-      "w": 40,
-      "h": 1
-    },
-    {
-      "op": "wall",
-      "style": "rim",
-      "x": 0,
-      "z": 39,
-      "w": 40,
-      "h": 1
-    },
-    {
-      "op": "paving",
-      "x": 1,
-      "z": 1,
-      "w": 38,
-      "h": 38
-    },
-    {
-      "op": "dirt",
-      "x": 2,
-      "z": 2,
-      "w": 7,
-      "h": 7
-    },
-    {
-      "op": "dirt",
-      "x": 31,
-      "z": 31,
-      "w": 7,
-      "h": 7
-    },
-    {
-      "op": "dirt",
-      "x": 17,
-      "z": 22,
-      "w": 4,
-      "h": 2
-    },
-    {
-      "op": "grass",
-      "x": 3,
-      "z": 3,
-      "w": 4,
-      "h": 4
-    },
-    {
-      "op": "grass",
-      "x": 33,
-      "z": 33,
-      "w": 4,
-      "h": 4
-    },
-    {
-      "op": "wall",
-      "style": "castle",
-      "x": 1,
-      "z": 25,
-      "w": 9,
-      "h": 1
-    },
-    {
-      "op": "wall",
-      "style": "castle",
-      "x": 14,
-      "z": 30,
-      "w": 1,
-      "h": 3
-    },
-    {
-      "op": "wall",
-      "style": "castle",
-      "x": 14,
-      "z": 36,
-      "w": 1,
-      "h": 3
-    },
-    {
-      "op": "wall",
-      "style": "castle",
-      "x": 1,
-      "z": 11,
-      "w": 1,
-      "h": 8
-    },
-    {
-      "op": "wall",
-      "style": "ruin",
-      "x": 1,
-      "z": 19,
-      "w": 1,
-      "h": 3
-    },
-    {
-      "op": "wall",
-      "style": "castle",
-      "x": 18,
-      "z": 38,
-      "w": 8,
-      "h": 1
-    },
-    {
-      "op": "wall",
-      "style": "ruin",
-      "x": 26,
-      "z": 38,
-      "w": 3,
-      "h": 1
-    },
-    {
-      "op": "wall",
-      "style": "ruin",
-      "x": 11,
-      "z": 19,
-      "w": 1,
-      "h": 3
-    },
-    {
-      "op": "wall",
-      "style": "ruin",
-      "x": 18,
-      "z": 28,
-      "w": 3,
-      "h": 1
-    },
-    {
-      "op": "wall",
-      "style": "ruin",
-      "x": 6,
-      "z": 15,
-      "w": 3,
-      "h": 1
-    },
-    {
-      "op": "wall",
-      "style": "ruin",
-      "x": 23,
-      "z": 32,
-      "w": 1,
-      "h": 3
-    },
-    {
-      "op": "pit",
-      "x": 12,
-      "z": 12,
-      "w": 2,
-      "h": 2
-    },
-    {
-      "op": "pit",
-      "x": 26,
-      "z": 26,
-      "w": 2,
-      "h": 2
-    },
-    {
-      "op": "pit",
-      "x": 4,
-      "z": 11,
-      "w": 3,
-      "h": 2
-    },
-    {
-      "op": "pit",
-      "x": 25,
-      "z": 34,
-      "w": 2,
-      "h": 3
-    },
-    {
-      "op": "wall",
-      "style": "castle",
-      "x": 38,
-      "z": 38,
-      "w": 1,
-      "h": 1
-    }
-  ],
-  "props": [
-    {
-      "type": "tower",
-      "x": 1.5,
-      "z": 25.5,
-      "solid": true
-    },
-    {
-      "type": "tower",
-      "x": 9.5,
-      "z": 25.5,
-      "solid": true
-    },
-    {
-      "type": "tower",
-      "x": 14.5,
-      "z": 38.5,
-      "solid": true
-    },
-    {
-      "type": "banner",
-      "x": 3.5,
-      "z": 26.5
-    },
-    {
-      "type": "torch",
-      "x": 11.5,
-      "z": 27.5
-    },
-    {
-      "type": "arch",
-      "x": 12,
-      "z": 28,
-      "rot": 45,
-      "ruined": true
-    },
-    {
-      "type": "statue",
-      "x": 17.5,
-      "z": 17.5,
-      "solid": true
-    },
-    {
-      "type": "statue",
-      "x": 22.5,
-      "z": 22.5,
-      "solid": true
-    },
-    {
-      "type": "tree",
-      "x": 3.5,
-      "z": 7.5,
-      "solid": true
-    },
-    {
-      "type": "pine",
-      "x": 2.5,
-      "z": 20.5,
-      "solid": true
-    },
-    {
-      "type": "tree",
-      "x": 32.5,
-      "z": 36.5,
-      "solid": true
-    },
-    {
-      "type": "crate",
-      "x": 2.5,
-      "z": 37.5,
-      "solid": true
-    },
-    {
-      "type": "rock",
-      "x": 17.5,
-      "z": 32.5,
-      "solid": true
-    },
-    {
-      "type": "rock",
-      "x": 8.5,
-      "z": 20.5,
-      "solid": true,
-      "scale": 1.2
-    }
-  ]
+ "name": "Grudgekeep Ruins",
+ "blurb": "A square keep torn in half. Corner to corner, tight halls, broken walls and bottomless pits. One neutral pad on the dais decides it.",
+ "emblem": "castle",
+ "width": 48,
+ "depth": 48,
+ "mirror": "diag",
+ "rimHeight": 4.5,
+ "waterLevel": -6,
+ "notes": "Square, mirrored across the diagonal x = z. Author the half where x < z (team 0 keeps the bottom-left corner). Rects mirror by swapping x/z and w/h; points swap x/z; prop rot becomes 90 - rot. Pits are impassable holes. Each base has two gates: the corner toward the centre and a back gate in the side wall onto the outer lane.",
+ "cores": [
+  {
+   "team": 0,
+   "x": 6,
+   "z": 42
+  }
+ ],
+ "pads": [
+  {
+   "zone": "home",
+   "x": 4.5,
+   "z": 34.5
+  },
+  {
+   "zone": "home",
+   "x": 13.5,
+   "z": 43.5
+  },
+  {
+   "zone": "forward",
+   "x": 19.5,
+   "z": 28.5
+  }
+ ],
+ "spawns": [
+  {
+   "team": 0,
+   "x": 13,
+   "z": 39
+  }
+ ],
+ "ops": [
+  {
+   "op": "noise",
+   "amp": 0.12,
+   "scale": 0.2,
+   "seed": 7
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": -10,
+   "z": -10,
+   "w": 68,
+   "h": 11,
+   "y": 4.5,
+   "edge": 1.5,
+   "mode": "max",
+   "wobble": 0.6
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": -10,
+   "z": 47,
+   "w": 68,
+   "h": 11,
+   "y": 4.5,
+   "edge": 1.5,
+   "mode": "max",
+   "wobble": 0.6
+  },
+  {
+   "op": "shape",
+   "shape": "rect",
+   "x": 1,
+   "z": 30,
+   "w": 17,
+   "h": 17,
+   "y": 0.5,
+   "edge": 1.5,
+   "mode": "set",
+   "wobble": 0.3
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 24,
+   "z": 24,
+   "r": 2.5,
+   "y": 0.9,
+   "edge": 2.5,
+   "mode": "max",
+   "wobble": 0.4
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 5,
+   "z": 5,
+   "r": 1.5,
+   "y": 0.8,
+   "edge": 2.5,
+   "mode": "max",
+   "wobble": 1.0
+  },
+  {
+   "op": "shape",
+   "shape": "circle",
+   "x": 43,
+   "z": 43,
+   "r": 1.5,
+   "y": 0.8,
+   "edge": 2.5,
+   "mode": "max",
+   "wobble": 1.0
+  },
+  {
+   "op": "wall",
+   "style": "rim",
+   "x": 0,
+   "z": 0,
+   "w": 48,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "rim",
+   "x": 0,
+   "z": 47,
+   "w": 48,
+   "h": 1
+  },
+  {
+   "op": "paving",
+   "x": 1,
+   "z": 1,
+   "w": 46,
+   "h": 46
+  },
+  {
+   "op": "dirt",
+   "x": 2,
+   "z": 2,
+   "w": 11,
+   "h": 11
+  },
+  {
+   "op": "dirt",
+   "x": 39,
+   "z": 39,
+   "w": 7,
+   "h": 7
+  },
+  {
+   "op": "dirt",
+   "x": 21,
+   "z": 26,
+   "w": 4,
+   "h": 2
+  },
+  {
+   "op": "grass",
+   "x": 3,
+   "z": 3,
+   "w": 4,
+   "h": 4
+  },
+  {
+   "op": "grass",
+   "x": 41,
+   "z": 41,
+   "w": 4,
+   "h": 4
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 1,
+   "z": 29,
+   "w": 13,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 18,
+   "z": 34,
+   "w": 1,
+   "h": 7
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 18,
+   "z": 44,
+   "w": 1,
+   "h": 3
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 1,
+   "z": 15,
+   "w": 1,
+   "h": 8
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 1,
+   "z": 23,
+   "w": 1,
+   "h": 3
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 22,
+   "z": 46,
+   "w": 8,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 30,
+   "z": 46,
+   "w": 3,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 15,
+   "z": 23,
+   "w": 1,
+   "h": 3
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 22,
+   "z": 32,
+   "w": 3,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 6,
+   "z": 19,
+   "w": 7,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "ruin",
+   "x": 27,
+   "z": 40,
+   "w": 1,
+   "h": 3
+  },
+  {
+   "op": "pit",
+   "x": 16,
+   "z": 16,
+   "w": 2,
+   "h": 2
+  },
+  {
+   "op": "pit",
+   "x": 30,
+   "z": 30,
+   "w": 2,
+   "h": 2
+  },
+  {
+   "op": "pit",
+   "x": 4,
+   "z": 15,
+   "w": 3,
+   "h": 2
+  },
+  {
+   "op": "pit",
+   "x": 29,
+   "z": 42,
+   "w": 2,
+   "h": 3
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 46,
+   "z": 46,
+   "w": 1,
+   "h": 1
+  }
+ ],
+ "props": [
+  {
+   "type": "tower",
+   "x": 1.5,
+   "z": 29.5,
+   "solid": true
+  },
+  {
+   "type": "tower",
+   "x": 13.5,
+   "z": 29.5,
+   "solid": true
+  },
+  {
+   "type": "tower",
+   "x": 18.5,
+   "z": 46.5,
+   "solid": true
+  },
+  {
+   "type": "banner",
+   "x": 3.5,
+   "z": 30.5
+  },
+  {
+   "type": "torch",
+   "x": 15.5,
+   "z": 31.5
+  },
+  {
+   "type": "arch",
+   "x": 16,
+   "z": 32,
+   "rot": 45,
+   "ruined": true
+  },
+  {
+   "type": "statue",
+   "x": 21.5,
+   "z": 21.5,
+   "solid": true
+  },
+  {
+   "type": "statue",
+   "x": 26.5,
+   "z": 26.5,
+   "solid": true
+  },
+  {
+   "type": "tree",
+   "x": 3.5,
+   "z": 7.5,
+   "solid": true
+  },
+  {
+   "type": "pine",
+   "x": 2.5,
+   "z": 24.5,
+   "solid": true
+  },
+  {
+   "type": "tree",
+   "x": 40.5,
+   "z": 44.5,
+   "solid": true
+  },
+  {
+   "type": "crate",
+   "x": 2.5,
+   "z": 45.5,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 21.5,
+   "z": 40.5,
+   "solid": true
+  },
+  {
+   "type": "rock",
+   "x": 12.5,
+   "z": 24.5,
+   "solid": true,
+   "scale": 1.2
+  }
+ ]
 }

@@ -804,7 +804,7 @@ async function start(): Promise<void> {
 
   const frame = (nowMs: number): void => {
     let now = nowMs / 1000;
-    let dt = Math.min(0.25, (nowMs - last) / 1000);
+    let dt = Math.max(0, Math.min(0.25, (nowMs - last) / 1000));
     last = nowMs;
     if (dbg.freeze) {
       dt = dbg.adv;

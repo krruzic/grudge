@@ -172,6 +172,7 @@ export class Particles {
   }
 
   update(dt: number): void {
+    dt = Math.max(0, dt);
     let total = 0;
     for (const b of this.batches.values()) {
       const out: Particle[] = [];

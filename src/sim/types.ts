@@ -127,6 +127,10 @@ export interface HeroState {
 }
 
 export interface UnitState {
+  prog?: { x: number; z: number; t: number };
+  detourUntil?: number;
+  detourX?: number;
+  detourZ?: number;
   type: UnitType;
   damage: number;
   speed: number;

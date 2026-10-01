@@ -1129,6 +1129,9 @@ export class EntityViews {
       } else if (!st && (p.zone === "neutral")) {
         mat.color.set(0xffd060);
         mat.opacity = 0.25;
+      } else if (!st) {
+        mat.color.copy(this.teamColors[p.side] ?? white);
+        mat.opacity = 0.35;
       } else {
         mat.opacity = 0;
       }
