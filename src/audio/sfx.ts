@@ -9,7 +9,7 @@ import suddenUrl from "../../assets/music/sudden.mp3?url";
 import resultsUrl from "../../assets/music/results.mp3?url";
 
 const MUSIC: Record<string, string> = { menu: menuUrl, select: selectUrl, battle: battleUrl, sudden: suddenUrl, results: resultsUrl };
-const LOOP_SECONDS: Record<string, number> = { menu: 49.951, select: 56.307, battle: 108, sudden: 123.428, results: 41.795 };
+const LOOP_SECONDS: Record<string, number> = { menu: 49.951, select: 56.307, battle: 127.0588, sudden: 123.428, results: 41.795 };
 
 export class Audio {
   private ctx: AudioContext | null = null;

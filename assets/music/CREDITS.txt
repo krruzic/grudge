@@ -2,7 +2,7 @@ All tracks are CC0 (public domain) from OpenGameArt.org. Credit is appreciated, 
 
 menu.mp3     "Medieval: The Old Tower Inn" (loop) by RandomMind        https://opengameart.org/content/medieval-the-old-tower-inn
 select.mp3   "Medieval: Minstrel Dance" (loop) by RandomMind           https://opengameart.org/content/medieval-minstrel-dance
-battle.mp3   "Determined Pursuit (epic orchestra loop)" by Emma_MA     https://opengameart.org/content/determined-pursuit-epic-orchestra-loop
+battle.mp3   "Determined Pursuit (epic orchestra loop)" by Emma_MA, slowed to 85% (pitch drops with it)    https://opengameart.org/content/determined-pursuit-epic-orchestra-loop
 sudden.mp3   "Epic Boss Battle [Seamlessly Looping]" by Juhani Junkala https://opengameart.org/content/boss-battle-music
 results.mp3  "Medieval: Rejoicing" (loop) by RandomMind               https://opengameart.org/content/medieval-rejoicing
 
