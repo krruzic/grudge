@@ -175,6 +175,23 @@ export class Arena {
     }
     const grow = 1 + wv.growPerMinute * (w.time / 60);
     const rc = w.data.match.arena.relic;
+    const down = new Set<number>();
+    for (const pl of w.players) {
+      const h = w.getAny(pl.heroId);
+      if (h?.hero && (!h.alive || h.hero.dead)) down.add(pl.team);
+    }
+    for (let t = 0; t < w.teamCount; t++) {
+      const ts = w.teams[t];
+      if (down.has(t)) {
+        if (!ts.spawnHalt) {
+          ts.spawnHalt = true;
+          w.emit({ type: "notice", team: t, text: "HERO DOWN · OUTPOSTS HALT" });
+        }
+      } else if (ts.spawnHalt) {
+        ts.spawnHalt = false;
+        for (const o of w.entities) if (o.alive && o.team === t && o.structure?.spawnAt !== undefined) o.structure.spawnAt = w.time + this.spawnInterval(o);
+      }
+    }
     const grainy = !!w.data.match.economy.grain;
     for (const o of w.entities) {
       const st = o.structure;
@@ -182,7 +199,7 @@ export class Arena {
       const def = w.data.structures.types[st.type];
       if (def.class !== "production" || !def.unit) continue;
       const ts = w.teams[o.team];
-      if (ts.out) continue;
+      if (ts.out || ts.spawnHalt) continue;
       if (st.spawnAt === undefined) {
         st.spawnAt = w.time + Math.min(wv.firstSeconds, this.spawnInterval(o));
         continue;

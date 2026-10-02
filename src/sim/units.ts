@@ -90,8 +90,11 @@ export function updateUnit(w: World, e: Entity): void {
   }
 
   }
+  const laneMarch = directive === "push" && !w.ffa && (team.lane ?? -1) >= 0 && u.lanePassed !== team.laneGen;
+  const laneReach = u.range + 1.5;
   let target = u.targetId ? w.get(u.targetId) : undefined;
   if (target && (!attackable(w, target) || !w.canSee(e, target))) target = undefined;
+  if (target && laneMarch && w.dist(e, target) - target.radius > laneReach + 1) target = undefined;
   const defending = directive === "defend";
   const intruder = (o: Entity) => defending && w.inBase(e.team, o.transform.pos.x, o.transform.pos.z);
   if (target && anchor && !intruder(target) && Math.hypot(target.transform.pos.x - anchor.x, target.transform.pos.z - anchor.z) > leash + 2) target = undefined;
@@ -108,7 +111,7 @@ export function updateUnit(w: World, e: Entity): void {
       for (const o of w.entities) {
         if (o.team === e.team || !attackable(w, o) || !w.canSee(e, o)) continue;
         const d = w.dist(e, o) - o.radius;
-        const vision = u.aggro * w.rangeMul(e, o);
+        const vision = laneMarch ? Math.min(laneReach, u.aggro * w.rangeMul(e, o)) : u.aggro * w.rangeMul(e, o);
         if (d > vision) continue;
         if (anchor && Math.hypot(o.transform.pos.x - anchor.x, o.transform.pos.z - anchor.z) > leash) continue;
         const vs = def.vs[w.classOf(o)] ?? 1;

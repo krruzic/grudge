@@ -366,6 +366,7 @@ export interface TeamState {
   grain: number;
   starvedAt?: number;
   idleAt?: number;
+  spawnHalt?: boolean;
   coreId: number;
   homeLost: boolean;
   directives: TeamDirectives;
