@@ -1391,18 +1391,27 @@ async function start(): Promise<void> {
       if (demo) {
         demo = null;
         view.demoCam = null;
-        if (shownMap !== demoMap) view.setMap(mapViews[shownMap], world.terrain);
+        view.setMap(mapViews[shownMap], world.terrain);
         view.setWorld(world);
       }
       return null;
     }
     if (spec.scene) {
       const key = `scene|${spec.scene}`;
+      const mapScene = spec.scene.startsWith("map:") ? Number(spec.scene.slice(4)) : -1;
+      const sceneMap = mapScene >= 0 && maps[mapScene] ? mapScene : demoMap;
       if (!demo || demo.key !== key) {
-        const w = new World(maps[demoMap].data, demoData, 11);
-        const me = w.spawnHero("warlord", 0, 0);
-        const foe = w.spawnHero("warden", 1, 1);
-        for (const h of [me, foe]) {
+        const w = new World(maps[sceneMap].data, mapScene >= 0 ? data : demoData, 11);
+        if (mapScene >= 0) {
+          const n = houses(sceneMap) === 4 ? 4 : 2;
+          for (let p = 0; p < n; p++) w.spawnHero(roster[p % roster.length], p, n === 4 ? p : p % 2);
+          for (const e of w.entities) if (e.hero) w.teleport(e, -50, -50);
+        }
+        const me = mapScene >= 0 ? w.heroForPlayer(0)! : w.spawnHero(spec.scene === "formation" ? "herald" : "warlord", 0, 0);
+        const foe = mapScene >= 0 ? w.heroForPlayer(1)! : w.spawnHero("warden", 1, 1);
+        const mate = spec.scene === "morph" ? w.spawnHero("raider", 2, 0) : null;
+        if (mate) w.teleport(mate, 6, 4);
+        for (const h of mapScene >= 0 ? [] : [me, foe]) {
           w.teleport(h, h === me ? 4 : 96, h === me ? 4 : 44);
           h.status.stunUntil = 1e9;
           h.status.invulnUntil = 1e9;
@@ -1413,6 +1422,20 @@ async function start(): Promise<void> {
           r.x = w.arena.home.x;
           r.z = w.arena.home.z;
           r.y = w.groundY(r.x, r.z);
+        }
+        if (spec.scene === "morph") {
+          w.teleport(me, DEMO_SPOT.x, DEMO_SPOT.z);
+          me.status.stunUntil = 0;
+        }
+        if (spec.scene === "formation") {
+          w.teleport(me, DEMO_SPOT.x - 3, DEMO_SPOT.z);
+          for (let k = 0; k < 9; k++) {
+            const u = spawnUnit(w, 0, (["heavy", "grunt", "ranged"] as const)[k % 3], DEMO_SPOT.x + (k % 3), DEMO_SPOT.z - 1 + Math.floor(k / 3), 1);
+            if (u?.unit) u.unit.damage = 0;
+          }
+          w.setDirective(0, "all", "hold", me);
+          const hp = { x: DEMO_SPOT.x + 1, z: DEMO_SPOT.z };
+          for (const t of ["grunt", "ranged", "heavy"] as const) w.teams[0].directives.holdPoint[t] = hp;
         }
         if (spec.scene === "troops") {
           const types = ["grunt", "ranged", "heavy"] as const;
@@ -1427,9 +1450,9 @@ async function start(): Promise<void> {
           ad.grunt = ad.ranged = ad.heavy = "hold";
           for (const t of types) ad.holdPoint[t] = { x: DEMO_SPOT.x, z: DEMO_SPOT.z };
         }
-        if (!demo || !demo.mapShown) view.setMap(mapViews[demoMap], w.terrain);
+        view.setMap(mapViews[sceneMap], w.terrain);
         view.setWorld(w);
-        demo = { key, w, t: 0, acc: 0, loop: 0, len: 1e9, presses: [], dist: 0, btn: "attack", mapShown: true, kind: spec.scene };
+        demo = { key, w, t: 0, acc: 0, loop: 0, len: 1e9, presses: [], dist: 0, btn: "attack", mapShown: sceneMap === demoMap, kind: spec.scene };
       }
       const d = demo;
       const w = d.w;
@@ -1437,26 +1460,45 @@ async function start(): Promise<void> {
       while (d.acc >= w.dt) {
         d.acc -= w.dt;
         d.t += w.dt;
-        w.step([{ moveX: 0, moveZ: 0 }, { moveX: 0, moveZ: 0 }]);
+        const cmds: Command[] = w.players.map(() => ({ moveX: 0, moveZ: 0 }));
+        if (spec.scene === "morph") {
+          const me = w.heroForPlayer(0)!;
+          const cyc = d.t % 4.5;
+          if (cyc > 0.4 && cyc < 1.0 && w.morphState(me)) cmds[0].morph = true;
+          if (me.hero?.morphed && cyc > 3.9) {
+            w.unmorph(me);
+            w.teleport(me, DEMO_SPOT.x, DEMO_SPOT.z);
+          }
+          me.transform.facing = me.transform.prevFacing = 0.15;
+        }
+        if (spec.scene === "formation" && Math.floor(d.t / 2.6) !== Math.floor((d.t - w.dt) / 2.6)) cmds[0].formation = true;
+        w.step(cmds);
         let k = 0;
         for (const u of w.entities) {
-          if (!u.unit) continue;
+          if (!u.unit || spec.scene !== "troops") continue;
           u.unit.moving = false;
           u.unit.path = [];
           if (spec.scene === "troops") w.teleport(u, DEMO_SPOT.x - 2.6 + k++ * 2.6, DEMO_SPOT.z);
           u.transform.facing = u.transform.prevFacing = 0.22 + Math.sin(d.t * 0.3) * 0.25;
         }
       }
+      if (mapScene >= 0) {
+        const t = w.terrain;
+        const size = Math.max(t.width, t.depth);
+        view.demoCam = { rect: menus.demoRect, target: { x: t.width / 2, y: 0, z: t.depth / 2 }, yaw: Math.sin(d.t * 0.12) * 0.4, pitch: 1.0, dist: size * 1.75 };
+        return d.acc / w.dt;
+      }
       const core = w.core(0)!;
       const tgt = spec.scene === "grudge" ? { x: w.arena.home.x, y: w.groundY(w.arena.home.x, w.arena.home.z) + 1.0, z: w.arena.home.z }
         : spec.scene === "keep" ? { x: core.transform.pos.x, y: core.transform.y + 1.6, z: core.transform.pos.z }
+        : spec.scene === "formation" ? { x: DEMO_SPOT.x + 1, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.5, z: DEMO_SPOT.z }
         : { x: DEMO_SPOT.x, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.9, z: DEMO_SPOT.z };
       view.demoCam = {
         rect: menus.demoRect,
         target: tgt,
-        yaw: spec.scene === "keep" ? 0.9 + Math.sin(d.t * 0.25) * 0.25 : 0.22 + Math.sin(d.t * 0.3) * 0.25,
-        pitch: spec.scene === "keep" ? 0.42 : 0.3,
-        dist: spec.scene === "keep" ? 15 : spec.scene === "grudge" ? 8 : 7,
+        yaw: spec.scene === "keep" ? 0.9 + Math.sin(d.t * 0.25) * 0.25 : spec.scene === "morph" ? 0.15 : 0.22 + Math.sin(d.t * 0.3) * 0.25,
+        pitch: spec.scene === "keep" ? 0.42 : spec.scene === "formation" ? 0.8 : spec.scene === "morph" ? 0.45 : 0.3,
+        dist: spec.scene === "keep" ? 15 : spec.scene === "grudge" ? 8 : spec.scene === "formation" ? 11 : spec.scene === "morph" ? 9 : 7,
       };
       return d.acc / w.dt;
     }

@@ -10,7 +10,7 @@ export type CodexArt =
   | { kind: "map"; index: number }
   | { kind: "seal"; glyph: string; color?: string }
   | { kind: "unit"; type: string }
-  | { kind: "scene"; scene: "grudge" | "keep" | "troops" };
+  | { kind: "scene"; scene: string };
 
 export interface CodexPick {
   id: string;
@@ -389,16 +389,6 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
     },
     {
       cat: "ARENA",
-      title: "THE HERALD",
-      glyph: "banner",
-      pages: [
-        { title: "THE COMMANDER", text: "IN 2V2 THE THIRD AND FOURTH SEATS CAN BE HERALDS: A SKINNY FELLOW WITH A BIG FLAG WHO RUNS THE ARMY. HE SEES THE WHOLE ARMY AT ONCE, D-PAD UP SENDS A GROUP TO SIEGE, D-PAD DOWN MAKES THEM HOLD, AND HIS ORDERS BEAT HIS PARTNER'S. B PLANTS A WAR BANNER TROOPS GATHER AT, R BLOWS A HORN THAT SPEEDS THEM UP, Z HEALS AND GUARDS EVERYONE NEARBY.", tip: "HE HAS NO TALENTS. HE HAS AN ARMY. THAT'S BETTER, PROBABLY.", art: { kind: "seal", glyph: "banner" } },
-        { title: "FORMATIONS AND SUPPLY", text: "THE HERALD DOESN'T BLOCK, SO L CHANGES THE ARMY'S FORMATION: LOOSE, COLUMN (SINGLE FILE, FOR BRIDGES AND FORDS), LINE (TWO RANKS FACING THE ENEMY, BRUTES IN FRONT, ARCHERS BEHIND, STAY PUT) OR WEDGE (A V THAT CHARGES FURTHER). IT SHAPES TROOPS THAT HOLD OR FOLLOW. HIS RALLY ALSO HALVES HIS PARTNER'S B AND R COOLDOWNS, WHEREVER THEY ARE, AND INSIDE HIS WAR BANNER HIS HOUSE CAN USE THE SHOP AND BUILD ON ANY PAD IN THE BANNER'S REACH.", tip: "PLANT THE BANNER NEXT TO A FAR PAD. NOW YOUR PARTNER CAN BUY BOMBS IN THE MIDDLE OF THE MAP. THIS IS WHY YOU BROUGHT A FLAG.", art: { kind: "seal", glyph: "rally" } },
-        { title: "TAKE UP THE BANNER", text: `IN A 2V2 WITH NO HERALDS, HOLD X AWAY FROM A PAD FOR ${M.arena.morph?.holdSeconds ?? 0.6} SECONDS AND YOUR CHAMPION BECOMES THE HERALD: PLAIN, NO LEVELS, NO TALENTS, BUT IN CHARGE OF THE ARMY. ONE HERALD PER HOUSE. YOU STAY THAT WAY UNTIL YOU DIE AND COME BACK AS YOURSELF, OR HOLD X AT YOUR KEEP TO TURN BACK FOR ${M.arena.morph?.revertCost ?? 50} GOLD.`, tip: "FOR WHEN THE ARMY NEEDS A BABYSITTER MORE THAN THE FIGHT NEEDS YOU.", art: { kind: "seal", glyph: "rally" } },
-      ],
-    },
-    {
-      cat: "ARENA",
       title: "FREE FOR ALL",
       glyph: "banner",
       pages: [
@@ -471,9 +461,30 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
   mapNames.forEach((name, index) => {
     const m = MAP_TEXT[name] ?? { glyph: "river", text: "A FIELD OF BATTLE. IT HAS GRASS ON IT.", tip: "WIN." };
     const pages: CodexEntry["pages"] = [{ title: name.toUpperCase(), text: m.text, tip: m.tip, art: { kind: "map", index } }];
-    if (m.mech) pages.push({ title: m.mech.title, text: m.mech.text, tip: m.mech.tip, art: { kind: "seal", glyph: m.glyph } });
+    pages[0].art = { kind: "scene", scene: `map:${index}` };
+    if (m.mech) pages.push({ title: m.mech.title, text: m.mech.text, tip: m.mech.tip, art: { kind: "scene", scene: `map:${index}` } });
     entries.push({ cat: "FIELDS", title: name.toUpperCase().replace(/^GRUDGE\w*\s*/, ""), glyph: m.glyph, pages });
   });
   const heroes = Object.keys(TEXT).filter((h) => HEROES[h]);
-  return [...heroes.map(heroEntry), ...entries];
+  const hh = HEROES.herald;
+  const hab = (slot: "a" | "b" | "r" | "z", label: string, text: string, tip: string): CodexPage => {
+    const call = hh?.abilities[slot].callout?.split("·")[0].trim();
+    const cd = hh?.abilities[slot].cooldown;
+    return { title: `${label}${call ? ` · ${call}` : ""}`, text: text + (cd && cd > 1 ? `  COOLDOWN ${cd}S.` : ""), tip, art: { kind: "shot", hero: "herald", slot } };
+  };
+  const herald: CodexEntry = {
+    cat: "HERALD",
+    title: "THE HERALD",
+    glyph: "banner",
+    pages: [
+      { title: "THE HERALD · THE COMMANDER", text: "A SKINNY KNIGHT WITH A VERY BIG FLAG. IN 2V2 HE CAN TAKE THE THIRD OR FOURTH SEAT, OR A CHAMPION CAN BECOME HIM MID-MATCH. HE SEES THE WHOLE ARMY, D-PAD UP SENDS A GROUP TO SIEGE, D-PAD DOWN MAKES THEM HOLD, AND HIS ORDERS BEAT HIS PARTNER'S. NO TALENTS, JUST AN ARMY.", tip: "HE'S NOT HERE TO WIN FIGHTS. HE'S HERE TO MAKE SURE YOUR SOLDIERS WIN THEM.", art: { kind: "portrait", hero: "herald" } },
+      hab("a", "A · ATTACK", "A QUICK, WEAK BOLT. ENOUGH TO FINISH A SOLDIER OR ANNOY A CHAMPION.", "IF YOU'RE SHOOTING A LOT, SOMETHING HAS GONE WRONG."),
+      hab("b", "B · WAR BANNER", "PLANTS THE HOUSE BANNER A FEW STEPS AHEAD. TROOPS ON FOLLOW GATHER AT IT, HOLD ORDERS HOLD THERE, AND TROOPS NEAR IT MOVE FASTER. INSIDE ITS REACH YOUR HOUSE CAN SHOP AND BUILD ON NEARBY PADS.", "PLANT IT NEXT TO A FAR PAD AND YOUR PARTNER CAN BUY BOMBS IN THE MIDDLE OF THE MAP."),
+      hab("r", "R · WAR HORN", "EVERYONE ON YOUR SIDE NEARBY HITS HARDER AND RUNS FASTER FOR A FEW SECONDS.", "BLOW IT RIGHT AS THE TWO ARMIES MEET."),
+      hab("z", "Z · RALLY", "HEALS EVERY FRIEND NEARBY, SHAKES OFF STUNS AND SLOWS, HARDENS THEM FOR A FEW SECONDS AND HALVES YOUR PARTNER'S B AND R COOLDOWNS WHEREVER THEY ARE.", "SAVE IT FOR THE MOMENT YOUR PARTNER IS ABOUT TO LOSE A FIGHT."),
+      { title: "L · FORMATIONS", text: "THE HERALD DOESN'T BLOCK, SO L CHANGES THE ARMY'S SHAPE: LOOSE, COLUMN FOR BRIDGES AND FORDS, LINE FOR HOLDING (BRUTES IN FRONT, ARCHERS BEHIND) OR WEDGE FOR CHARGING. IT SHAPES TROOPS THAT HOLD OR FOLLOW.", tip: "COLUMN OVER A BRIDGE, LINE ON THE FAR SIDE. NOW IT'S A BRIDGEHEAD.", art: { kind: "scene", scene: "formation" } },
+      { title: "X · TAKE UP THE BANNER", text: `IN A 2V2 WITH NO HERALDS, HOLD X AWAY FROM A PAD FOR ${M.arena.morph?.holdSeconds ?? 0.6} SECONDS AND YOUR CHAMPION BECOMES THE HERALD: NO LEVELS, NO TALENTS, IN CHARGE OF THE ARMY. ONE PER HOUSE. YOU STAY THAT WAY UNTIL YOU DIE, OR HOLD X AT YOUR KEEP TO CHANGE BACK FOR ${M.arena.morph?.revertCost ?? 50} GOLD.`, tip: "FOR WHEN THE ARMY NEEDS A BABYSITTER MORE THAN THE FIGHT NEEDS YOU.", art: { kind: "scene", scene: "morph" } },
+    ],
+  };
+  return [...heroes.map(heroEntry), herald, ...entries];
 }
