@@ -5,8 +5,16 @@
   "buildStartHpFrac": 0.3,
   "structureRadius": 1.3,
   "laneTower": {
-    "forward": { "hp": 1.7, "damage": 2.4, "heroSlow": 0.65 },
-    "neutral": { "hp": 1.6, "damage": 2.2, "heroSlow": 0.65 }
+    "forward": {
+      "hp": 1.7,
+      "damage": 2.4,
+      "heroSlow": 0.65
+    },
+    "neutral": {
+      "hp": 1.6,
+      "damage": 2.2,
+      "heroSlow": 0.65
+    }
   },
   "zoneRange": {
     "home": 11,
@@ -47,9 +55,42 @@
       },
       "specCost": 250,
       "specs": [
-        { "id": "ballista", "grainPerShot": 4, "name": "BALLISTA", "blurb": "HUGE PIERCING BOLTS THAT PUNCH THROUGH A WHOLE LINE. SLOW, LONG REACH.", "hp": 1.3, "damage": 2.6, "cooldown": 2.1, "range": 1.3, "pierce": 6, "pierceWidth": 1.1 },
-        { "id": "firepot", "grainPerShot": 3, "name": "FIREPOTS", "blurb": "LOBS BURNING POTS. THEY SPLASH AND LEAVE THE GROUND ON FIRE. EATS GRUNTS.", "hp": 1.3, "damage": 1.05, "cooldown": 1.7, "splash": 2.6, "burnSeconds": 3, "burnDps": 34, "burnRadius": 2.2 },
-        { "id": "volley", "grainPerShot": 2, "name": "VOLLEY", "blurb": "THREE ARROWS AT THREE TARGETS EVERY SHOT, AND IT SPOTS HIDDEN ENEMIES.", "hp": 1.3, "damage": 0.8, "cooldown": 0.85, "targets": 3, "reveal": true }
+        {
+          "id": "ballista",
+          "grainPerShot": 4,
+          "name": "BALLISTA",
+          "blurb": "HUGE PIERCING BOLTS THAT PUNCH THROUGH A WHOLE LINE. SLOW, LONG REACH.",
+          "hp": 1.3,
+          "damage": 2.6,
+          "cooldown": 2.1,
+          "range": 1.3,
+          "pierce": 6,
+          "pierceWidth": 1.1
+        },
+        {
+          "id": "firepot",
+          "grainPerShot": 3,
+          "name": "FIREPOTS",
+          "blurb": "LOBS BURNING POTS. THEY SPLASH AND LEAVE THE GROUND ON FIRE. EATS GRUNTS.",
+          "hp": 1.3,
+          "damage": 1.05,
+          "cooldown": 1.7,
+          "splash": 2.6,
+          "burnSeconds": 3,
+          "burnDps": 34,
+          "burnRadius": 2.2
+        },
+        {
+          "id": "volley",
+          "grainPerShot": 2,
+          "name": "VOLLEY",
+          "blurb": "THREE ARROWS AT THREE TARGETS EVERY SHOT, AND IT SPOTS HIDDEN ENEMIES.",
+          "hp": 1.3,
+          "damage": 0.8,
+          "cooldown": 0.85,
+          "targets": 3,
+          "reveal": true
+        }
       ]
     },
     "control": {
@@ -79,9 +120,41 @@
       },
       "specCost": 250,
       "specs": [
-        { "id": "frost", "grainPerShot": 3, "name": "FROST SPIRE", "blurb": "ITS PULSE FREEZES SOLDIERS SOLID AND CHILLS CHAMPIONS TO A CRAWL.", "hp": 1.4, "damage": 1.0, "range": 1.1, "freeze": 1.2, "heroSlow": 0.35, "heroSlowSeconds": 1.6 },
-        { "id": "storm", "grainPerShot": 4, "name": "STORM BELL", "blurb": "A THUNDERCLAP PULSE: BIG DAMAGE, A SHORT STUN ON EVERYONE AND A HARD SHOVE.", "hp": 1.4, "damage": 2.6, "cooldown": 2.8, "stun": 0.55, "knockback": 6 },
-        { "id": "well", "grainPerShot": 3, "name": "GRAVITY WELL", "blurb": "DRAGS ENEMIES IN TOWARD THE TOWER AND SLOWS THEM. PILES THEM UP FOR YOUR ARMY.", "hp": 1.4, "damage": 0.8, "range": 1.25, "pull": 13, "slow": 0.35, "cooldown": 1.8 }
+        {
+          "id": "frost",
+          "grainPerShot": 3,
+          "name": "FROST SPIRE",
+          "blurb": "ITS PULSE FREEZES SOLDIERS SOLID AND CHILLS CHAMPIONS TO A CRAWL.",
+          "hp": 1.4,
+          "damage": 1.0,
+          "range": 1.1,
+          "freeze": 1.2,
+          "heroSlow": 0.35,
+          "heroSlowSeconds": 1.6
+        },
+        {
+          "id": "storm",
+          "grainPerShot": 4,
+          "name": "STORM BELL",
+          "blurb": "A THUNDERCLAP PULSE: BIG DAMAGE, A SHORT STUN ON EVERYONE AND A HARD SHOVE.",
+          "hp": 1.4,
+          "damage": 2.6,
+          "cooldown": 2.8,
+          "stun": 0.55,
+          "knockback": 6
+        },
+        {
+          "id": "well",
+          "grainPerShot": 3,
+          "name": "GRAVITY WELL",
+          "blurb": "DRAGS ENEMIES IN TOWARD THE TOWER AND SLOWS THEM. PILES THEM UP FOR YOUR ARMY.",
+          "hp": 1.4,
+          "damage": 0.8,
+          "range": 1.25,
+          "pull": 13,
+          "slow": 0.35,
+          "cooldown": 1.8
+        }
       ]
     },
     "support": {
@@ -107,10 +180,10 @@
       "upgradeCost": 100,
       "hp": 880,
       "unit": "grunt",
-      "cadence": 8,
+      "cadence": 4.5,
       "upgrade": {
         "hp": 1.3,
-        "cadence": 0.7,
+        "cadence": 0.65,
         "unitStat": 1.2
       }
     },
@@ -121,10 +194,10 @@
       "upgradeCost": 100,
       "hp": 800,
       "unit": "ranged",
-      "cadence": 12,
+      "cadence": 5.5,
       "upgrade": {
         "hp": 1.3,
-        "cadence": 0.7,
+        "cadence": 0.65,
         "unitStat": 1.2
       }
     },
@@ -135,10 +208,10 @@
       "upgradeCost": 100,
       "hp": 1040,
       "unit": "heavy",
-      "cadence": 20,
+      "cadence": 9,
       "upgrade": {
         "hp": 1.3,
-        "cadence": 0.7,
+        "cadence": 0.65,
         "unitStat": 1.2
       }
     },
@@ -149,9 +222,17 @@
       "upgradeCost": 100,
       "hp": 920,
       "unit": "grunt",
-      "mix": { "grunt": 0.45, "ranged": 0.35, "heavy": 0.2 },
-      "cadence": 12,
-      "upgrade": { "hp": 1.3, "cadence": 0.7, "unitStat": 1.2 }
+      "mix": {
+        "grunt": 0.45,
+        "ranged": 0.35,
+        "heavy": 0.2
+      },
+      "cadence": 5.5,
+      "upgrade": {
+        "hp": 1.3,
+        "cadence": 0.65,
+        "unitStat": 1.2
+      }
     }
   },
   "upgradeSeconds": 10,

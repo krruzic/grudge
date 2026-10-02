@@ -232,7 +232,7 @@ export interface VeterancyDef {
 
 export interface UnitData {
   popCap: number;
-  waves: { firstSeconds: number; everySeconds: number; spawnCost: Record<UnitType, number>; growPerMinute: number };
+  waves: { firstSeconds: number; everySeconds: number; spawnCost: Record<UnitType, number>; growPerMinute: number; lossDelay?: number; lossDelayCap?: number; rateMul?: number };
   squads: { forwardStatMul: number };
   separationPush: number;
   repathSeconds: number;
@@ -315,8 +315,8 @@ export interface MatchData {
   matchSeconds: number;
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
-  ffa?: { speedMul?: number; waveSeconds: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
-  economy: { start: number; income: number; grain?: { start: number; base: number; perLevel: number[]; unitBountyMul?: number; surplus?: number; starvedMul?: number };
+  ffa?: { speedMul?: number; waveSeconds: number; spawnRateMul?: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
+  economy: { start: number; income: number; grain?: { start: number; base: number; perLevel: number[]; unitBountyMul?: number; surplus?: number; surplusMul?: number; starvedMul?: number };
     padIncome?: Record<string, number>; respawnCooldownPenalty?: number; respawnBigMul?: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number; bountyCut: number; respawnCut: number; fortify: number };
   terrain: {

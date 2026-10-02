@@ -141,58 +141,76 @@ export class Arena {
     }
   }
 
+  spawnInterval(o: Entity): number {
+    const w = this.w;
+    const st = o.structure!;
+    const def = w.data.structures.types[st.type as StructureType];
+    const wv = w.data.units.waves;
+    let t = (def.cadence ?? 10) * (st.level > 1 ? def.upgrade.cadence ?? 1 : 1);
+    t /= wv.rateMul ?? 1;
+    if (w.ffaCfg) t /= w.ffaCfg.spawnRateMul ?? 1;
+    if (this.relic.state === "shrined" && this.relic.shrineId === o.id) t /= 1 + w.data.match.arena.relic.outpostExtra;
+    if (w.isSudden()) t /= w.data.match.suddenDeath.productionMul;
+    const g = w.data.match.economy.grain;
+    if (g?.surplus !== undefined && w.teams[o.team].grain >= g.surplus) t *= g.surplusMul ?? 0.7;
+    return t;
+  }
+
+  unitLost(u: Entity): void {
+    const w = this.w;
+    const from = u.unit?.from ? w.get(u.unit.from) : undefined;
+    const st = from?.structure;
+    if (!from?.alive || !st || st.spawnAt === undefined) return;
+    const wv = w.data.units.waves;
+    const every = this.spawnInterval(from);
+    st.spawnAt = Math.min(Math.max(st.spawnAt, w.time) + (wv.lossDelay ?? 0), w.time + every * (wv.lossDelayCap ?? 2));
+  }
+
   private updateWaves(): void {
     const w = this.w;
     const wv = w.data.units.waves;
-    if (w.time < this.nextWave) return;
-    this.nextWave = w.time + (w.ffaCfg?.waveSeconds ?? wv.everySeconds);
-    this.updateGuards();
+    if (w.time >= this.nextWave) {
+      this.nextWave = w.time + (w.ffaCfg?.waveSeconds ?? wv.everySeconds);
+      this.updateGuards();
+    }
     const grow = 1 + wv.growPerMinute * (w.time / 60);
-    for (let team = 0; team < w.teamCount; team++) {
-      const ts = w.teams[team];
-      const core = w.core(team);
-      if (!core || ts.out) continue;
-      const list: { type: UnitType; from: Entity; stat: number; extra?: boolean }[] = [];
-      const cx = core.transform.pos.x;
-      const cz = core.transform.pos.z;
-      const outposts = w.entities
-        .filter((o) => o.alive && o.team === team && o.structure?.ready && o.structure.type !== "core")
-        .sort((a, b) => Math.hypot(b.transform.pos.x - cx, b.transform.pos.z - cz) - Math.hypot(a.transform.pos.x - cx, a.transform.pos.z - cz));
-      for (const o of outposts) {
-        if (!o.structure || o.structure.type === "core") continue;
-        const def = w.data.structures.types[o.structure.type];
-        if (def.class !== "production" || !def.unit) continue;
-        const up = o.structure.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
-        const blessed = this.relic.state === "shrined" && this.relic.shrineId === o.id;
-        const rc = w.data.match.arena.relic;
-        for (let k = 0; k < o.structure.level + (w.ffaCfg?.outpostBonus ?? 0) + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.mix ? this.pickMix(def.mix) : def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
+    const rc = w.data.match.arena.relic;
+    const grainy = !!w.data.match.economy.grain;
+    for (const o of w.entities) {
+      const st = o.structure;
+      if (!o.alive || !st?.ready || st.type === "core") continue;
+      const def = w.data.structures.types[st.type];
+      if (def.class !== "production" || !def.unit) continue;
+      const ts = w.teams[o.team];
+      if (ts.out) continue;
+      if (st.spawnAt === undefined) {
+        st.spawnAt = w.time + Math.min(wv.firstSeconds, this.spawnInterval(o));
+        continue;
       }
-      const surplus = w.data.match.economy.grain?.surplus;
-      if (surplus !== undefined) {
-        const seen = new Set<Entity>();
-        for (const it of [...list]) {
-          if (seen.has(it.from)) continue;
-          seen.add(it.from);
-          list.push({ ...it, type: (() => { const d = w.data.structures.types[it.from.structure!.type as StructureType]; return d.mix ? this.pickMix(d.mix) : d.unit!; })(), extra: true });
+      if (w.time < st.spawnAt) continue;
+      if (ts.unitCount >= w.popCap) {
+        st.spawnAt = w.time + 0.5;
+        continue;
+      }
+      const type = def.mix ? this.pickMix(def.mix) : def.unit;
+      const cost = Math.round((wv.spawnCost[type] ?? 0) * w.costMul() * (w.ffaCfg?.spawnCostMul ?? 1) * (1 - ts.catchUp * w.data.match.catchUp.productionBoost));
+      if ((grainy ? ts.grain : ts.resource) < cost) {
+        st.spawnAt = w.time + 0.5;
+        if (w.time - (ts.idleAt ?? -99) > 10) {
+          ts.idleAt = w.time;
+          w.emit({ type: "notice", team: o.team, text: grainy ? "NO GRAIN · OUTPOSTS IDLE" : "NO GOLD · OUTPOSTS IDLE" });
         }
+        continue;
       }
-      let n = 0;
-      let broke = false;
-      for (const item of list) {
-        if (item.extra && ts.grain < (surplus ?? 0)) continue;
-        if (ts.unitCount >= w.popCap) break;
-        const cost = Math.round((wv.spawnCost[item.type] ?? 0) * w.costMul() * (w.ffaCfg?.spawnCostMul ?? 1) * (1 - ts.catchUp * w.data.match.catchUp.productionBoost));
-        const grainy = !!w.data.match.economy.grain;
-        if ((grainy ? ts.grain : ts.resource) < cost) {
-          if (!item.extra) broke = true;
-          continue;
-        }
-        if (grainy) ts.grain -= cost;
-        else ts.resource -= cost;
-        const p = this.frontOf(item.from, team, n++);
-        spawnUnit(w, team, item.type, p.x, p.z, item.stat);
-      }
-      if (broke) w.emit({ type: "notice", team, text: w.data.match.economy.grain ? "NO GRAIN · OUTPOSTS IDLE" : "NO GOLD · OUTPOSTS IDLE" });
+      if (grainy) ts.grain -= cost;
+      else ts.resource -= cost;
+      const up = st.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
+      const blessed = this.relic.state === "shrined" && this.relic.shrineId === o.id;
+      st.spawnN = (st.spawnN ?? 0) + 1;
+      const p = this.frontOf(o, o.team, st.spawnN);
+      const u = spawnUnit(w, o.team, type, p.x, p.z, grow * up * (blessed ? rc.outpostStatMul : 1));
+      if (u?.unit) u.unit.from = o.id;
+      st.spawnAt = w.time + this.spawnInterval(o);
     }
   }
 

@@ -105,6 +105,8 @@
       "ranged": 16,
       "heavy": 32
     },
-    "growPerMinute": 0.06
+    "growPerMinute": 0.06,
+    "lossDelay": 0.8,
+    "lossDelayCap": 2
   }
 }

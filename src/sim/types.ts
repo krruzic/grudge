@@ -167,6 +167,7 @@ export interface UnitState {
   raised?: boolean;
   lost?: boolean;
   lanePassed?: number;
+  from?: number;
 }
 
 export interface StructureState {
@@ -191,6 +192,8 @@ export interface StructureState {
   spec?: string;
   specPending?: string;
   aim?: number;
+  spawnAt?: number;
+  spawnN?: number;
 }
 
 export interface Entity {
@@ -362,6 +365,7 @@ export interface TeamState {
   resource: number;
   grain: number;
   starvedAt?: number;
+  idleAt?: number;
   coreId: number;
   homeLost: boolean;
   directives: TeamDirectives;

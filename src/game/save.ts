@@ -240,6 +240,7 @@ export function applyRules(base: GameData, r: Rules): GameData {
   d.heroes.baseline.respawnSeconds = r.respawn;
   const troops = r.troops || 1;
   d.units.waves.everySeconds = base.units.waves.everySeconds / troops;
+  d.units.waves.rateMul = (base.units.waves.rateMul ?? 1) * troops;
   d.units.waves.firstSeconds = base.units.waves.firstSeconds / Math.min(troops, 2);
   if (!r.mercy) {
     d.match.catchUp.incomeBoost = 0;

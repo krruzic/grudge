@@ -8,11 +8,11 @@
     "costMul": 0.6,
     "unitDamageMul": 1.7
   },
-  "ffa": { "waveSeconds": 9, "speedMul": 1.2, "outpostBonus": 1, "popCapMul": 1.5, "spawnCostMul": 0.75, "productionCostMul": 0.75, "guard": { "count": 3, "respawnSeconds": 25, "hpMul": 1.3 } },
+  "ffa": { "waveSeconds": 9, "speedMul": 1.2, "spawnRateMul": 1.3, "popCapMul": 1.5, "spawnCostMul": 0.75, "productionCostMul": 0.75, "guard": { "count": 3, "respawnSeconds": 25, "hpMul": 1.3 } },
   "economy": {
     "start": 200,
     "income": 1.0,
-    "grain": { "start": 60, "base": 1.6, "perLevel": [0.7, 1.1, 1.5], "unitBountyMul": 1, "surplus": 150, "starvedMul": 2.5 },
+    "grain": { "start": 60, "base": 1.6, "perLevel": [0.7, 1.1, 1.5], "unitBountyMul": 1, "surplus": 150, "surplusMul": 0.7, "starvedMul": 2.5 },
     "respawnCooldownPenalty": 2,
     "respawnBigMul": 1.667,
     "padIncome": {

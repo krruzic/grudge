@@ -1444,6 +1444,7 @@ export class World {
         }
         return;
       }
+      if (!target.unit.guard && !target.unit.raised) this.arena.unitLost(target);
       killer.resource += (this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank) * cut * (this.data.match.economy.grain?.unitBountyMul ?? 1);
       killer.kills++;
       return;
