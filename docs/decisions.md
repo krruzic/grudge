@@ -719,3 +719,4 @@
 - Cannon aiming: the aim reticle is added to the camera's framing points (and its must-keep set), and the camera may widen past its usual max to fit hero and reticle, so the reticle stays on screen as it moves.
 - Prompt icons keep a constant on-screen size at every zoom (scale = camera distance / 16, measured ~60 px from closest to farthest zoom); the earlier floor/cap let them shrink when zoomed out far.
 - Minimap is 50% translucent everywhere and sits lower (4 px from the bottom) in single view.
+- Personal camera (any view following one hero) centres on that hero: focus is 85% the hero (and cannon reticle), 15% the rest of the framing points, with a tight keep-in-view box (±0.45 x, ±0.3 y), and no longer clamps to the map bounds (the surround is real land now). Max zoom-out for these views is capped at ~0.9 of the map so you don't look at empty land. Measured: hero settles at screen centre at every map corner, in auto and manual zoom.

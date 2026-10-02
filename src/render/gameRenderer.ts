@@ -365,11 +365,11 @@ export class GameRenderer {
     return dist;
   }
 
-  private keepInView(cam: THREE.PerspectiveCamera, focus: THREE.Vector3, width: number, keep: THREE.Vector3[]): void {
+  private keepInView(cam: THREE.PerspectiveCamera, focus: THREE.Vector3, width: number, keep: THREE.Vector3[], tight = false): void {
     if (!keep.length) return;
     const pitch = THREE.MathUtils.degToRad(this.cfg.pitchDeg);
     const depthToWidth = (cam.aspect / Math.sin(pitch)) * 1.25;
-    const X0 = -0.8, X1 = 0.8, Y0 = -0.66, Y1 = 0.5;
+    const [X0, X1, Y0, Y1] = tight ? [-0.45, 0.45, -0.3, 0.3] : [-0.8, 0.8, -0.66, 0.5];
     const v = new THREE.Vector3();
     for (let it = 0; it < 4; it++) {
       this.placeCam(cam, focus, width);
@@ -388,7 +388,7 @@ export class GameRenderer {
     }
   }
 
-  private aimCamera(cam: THREE.PerspectiveCamera, st: { focus: THREE.Vector3; width: number; init: boolean }, points: THREE.Vector3[], dt: number, minWidth: number, maxWidth = Infinity, margin = this.cfg.viewMargin, keep: THREE.Vector3[] = points): void {
+  private aimCamera(cam: THREE.PerspectiveCamera, st: { focus: THREE.Vector3; width: number; init: boolean }, points: THREE.Vector3[], dt: number, minWidth: number, maxWidth = Infinity, margin = this.cfg.viewMargin, keep: THREE.Vector3[] = points, center = false): void {
     const cfg = this.cfg;
     const t = this.world.terrain;
     const pitch = THREE.MathUtils.degToRad(cfg.pitchDeg);
@@ -406,7 +406,24 @@ export class GameRenderer {
     const need = Math.max(max.x - min.x, (max.z - min.z) * depthToWidth) + margin;
     const fullMap = Math.max(t.width, t.depth * depthToWidth) * 1.3 + 12;
     const lo = Math.min(minWidth, fullMap);
-    const width = THREE.MathUtils.clamp(need, lo, Math.max(lo, Math.min(maxWidth, fullMap)));
+    const cap = center ? Math.max(t.width, t.depth * depthToWidth) * 0.9 : fullMap;
+    const width = THREE.MathUtils.clamp(need, Math.min(lo, cap), Math.max(Math.min(lo, cap), Math.min(maxWidth, cap)));
+
+    if (center && keep.length) {
+      const c = new THREE.Vector3();
+      for (const p of keep) c.add(p);
+      c.multiplyScalar(1 / keep.length);
+      focus.lerp(c, 0.85);
+      this.keepInView(cam, focus, width, keep, true);
+      const k = st.init ? 1 - Math.exp(-dt * 6) : 1;
+      st.init = true;
+      st.focus.lerp(focus, k);
+      st.width += (width - st.width) * k;
+      const dist = this.placeCam(cam, st.focus, st.width);
+      cam.userData.fogNear = dist * cfg.fogNearFactor;
+      cam.userData.fogFar = dist * cfg.fogFarFactor;
+      return;
+    }
 
     const slack = 6 + width * 0.15;
     if (width < t.width + slack * 2) focus.x = THREE.MathUtils.clamp(focus.x, width / 2 - slack, t.width - width / 2 + slack);
@@ -715,7 +732,7 @@ export class GameRenderer {
           cam.updateProjectionMatrix();
           const f = this.frameView(sv);
           const own = f.pts.slice(0, Math.max(sv.heroIds.length, f.own ?? 0));
-          this.aimCamera(cam, sv.st, f.pts, dt, f.min, f.max, f.margin, own);
+          this.aimCamera(cam, sv.st, f.pts, dt, f.min, f.max, f.margin, own, sv.heroIds.length === 1);
         } else {
           cam = this.camera;
           cam.aspect = w / h;
