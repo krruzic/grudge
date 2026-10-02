@@ -159,6 +159,8 @@ interface View {
   fallY?: number;
   fallV?: number;
   wasDead?: boolean;
+  ward?: THREE.Mesh;
+  wardK?: number;
   stealthed?: boolean;
   baseVisible?: boolean;
   mark?: THREE.Sprite;
@@ -452,6 +454,32 @@ function rankTex(rank: number): THREE.CanvasTexture {
   return t;
 }
 const rankTexes = [1, 2, 3].map(rankTex);
+
+const wardGeo = new THREE.IcosahedronGeometry(1, 1);
+wardGeo.userData.model = true;
+function wardMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: { k: { value: 0 }, t: { value: 0 } },
+    vertexShader: `varying vec3 vM; varying vec3 vP;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vM = mv.xyz;
+        vP = position;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `uniform float k; uniform float t; varying vec3 vM; varying vec3 vP;
+      void main() {
+        vec3 n = normalize(cross(dFdx(vM), dFdy(vM)));
+        float rim = pow(1.0 - abs(dot(n, normalize(-vM))), 1.6);
+        float band = smoothstep(0.86, 1.0, sin(vP.y * 6.0 - t * 4.5) * 0.5 + 0.5);
+        float glint = step(0.985, fract(sin(dot(floor(vP * 3.0), vec3(12.9, 78.2, 37.7))) * 43758.5 + t * 0.5));
+        vec3 gold = vec3(1.0, 0.8, 0.32);
+        float a = (0.14 + rim * 1.1 + band * 0.45 + glint * 0.5) * k;
+        gl_FragColor = vec4(gold * (0.8 + rim * 0.5 + band * 0.5), a);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+}
 
 function makeBar(width: number, color: THREE.Color, y: number, drop = 0): Bar {
   const group = new THREE.Group();
@@ -1260,7 +1288,25 @@ export class EntityViews {
       this.play(v, "idle", 1, true);
       this.fx.spawnFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
     }
-    v.root.visible = w.time >= e.status.invulnUntil || h.action?.name === "dodge" || h.action?.name === "z" || Math.floor(time * 12) % 2 === 0;
+    v.root.visible = true;
+    const warded = w.time < e.status.invulnUntil && h.action?.name !== "dodge" && h.action?.name !== "z";
+    v.wardK = Math.max(0, Math.min(1, (v.wardK ?? 0) + (warded ? dt * 8 : -dt * 5)));
+    if (v.wardK > 0 && !v.ward) {
+      v.ward = new THREE.Mesh(wardGeo, wardMaterial());
+      v.ward.renderOrder = 5;
+      v.root.add(v.ward);
+    }
+    if (v.ward) {
+      v.ward.visible = v.wardK > 0;
+      const m = v.ward.material as THREE.ShaderMaterial;
+      m.uniforms.k.value = v.wardK;
+      m.uniforms.t.value = time;
+      const hs = this.heroScale;
+      const pulse = 1 + Math.sin(time * 6) * 0.025;
+      v.ward.scale.set(1.0 * hs * pulse, 1.3 * hs * pulse, 1.0 * hs * pulse);
+      v.ward.position.y = 1.05 * hs;
+      v.ward.rotation.y = time * 0.6;
+    }
     v.body.rotation.y = facing;
     const a = h.action;
     if (a && a !== v.lastAction) {
