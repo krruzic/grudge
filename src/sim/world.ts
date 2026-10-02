@@ -7,7 +7,7 @@ import type {
 import { FORMATIONS, TEAM_NAMES, UNIT_TYPES } from "./types.ts";
 import { updateBoomerangs, updateHero } from "./heroes.ts";
 import { updateUnit } from "./units.ts";
-import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
+import { spawnUnit, tryBuild, trySpec, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
 import { MapEvents } from "./mapEvents.ts";
 import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, learned as learnedOf, options, onKill, recompute, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
@@ -41,6 +41,7 @@ export interface DamageOpts {
   executeBelow?: number;
   executeMul?: number;
   tick?: boolean;
+  pull?: number;
 }
 
 export interface PlayerSlot {
@@ -558,6 +559,7 @@ export class World {
       if (!e) continue;
       const cmd = commands[slot.player] ?? { moveX: 0, moveZ: 0 };
       if (e.alive && cmd.build) tryBuild(this, e, cmd.build);
+      if (e.alive && cmd.spec !== undefined) trySpec(this, e, cmd.spec);
       if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
       if (cmd.learn !== undefined && e.hero?.picks.length) learn(this, e, cmd.learn);
       if (e.hero) this.autoPick(e);
@@ -960,7 +962,7 @@ export class World {
       for (const e of this.entities) {
         if (!e.alive || !e.structure || e.structure.type === "core" || e.team >= n) continue;
         const def = this.data.structures.types[e.structure.type];
-        worth[e.team] += def.cost + (e.structure.level > 1 ? def.upgradeCost : 0);
+        worth[e.team] += def.cost + (e.structure.level > 1 ? def.upgradeCost : 0) + (e.structure.level > 2 ? def.specCost ?? 0 : 0);
         count[e.team]++;
       }
       for (let t = 0; t < n; t++) {
@@ -1273,6 +1275,15 @@ export class World {
         const d = Math.hypot(dx, dz) || 1;
         target.status.kvx += (dx / d) * kb;
         target.status.kvz += (dz / d) * kb;
+      }
+      if (opts.pull) {
+        const dx = fx - tp.pos.x;
+        const dz = fz - tp.pos.z;
+        const d = Math.hypot(dx, dz) || 1;
+        const pr = opts.pull * (1 - (target.unit ? this.data.units.types[target.unit.type].knockbackResist ?? 0 : 0)) * (target.hero ? 0.5 : 1);
+        const k = Math.min(pr, d * 1.6);
+        target.status.kvx += (dx / d) * k;
+        target.status.kvz += (dz / d) * k;
       }
       if (opts.stun) target.status.stunUntil = Math.max(target.status.stunUntil, this.time + opts.stun);
       if (opts.slowMul !== undefined && opts.slowSeconds) {
@@ -1746,7 +1757,7 @@ export class World {
     });
   }
 
-  fireAtPoint(src: Entity, x: number, z: number, speed: number, style: string, fromHeight: number, splash?: Projectile["splash"]): void {
+  fireAtPoint(src: Entity, x: number, z: number, speed: number, style: string, fromHeight: number, splash?: Projectile["splash"], ballistic = false, burn?: Projectile["burn"]): void {
     const sp = src.transform;
     const d = Math.hypot(x - sp.pos.x, z - sp.pos.z);
     this.emit({ type: "shot", style, x: sp.pos.x, y: sp.y + fromHeight, z: sp.pos.z });
@@ -1754,7 +1765,7 @@ export class World {
       id: this.nextId++, team: src.team, sourceId: src.id, targetId: 0,
       from: { x: sp.pos.x, y: sp.y + fromHeight, z: sp.pos.z },
       to: { x, y: this.groundY(x, z) + 0.5, z },
-      t: 0, prevT: 0, dur: Math.max(0.15, d / speed), ballistic: false, damage: 0, style, canMiss: false, splash,
+      t: 0, prevT: 0, dur: Math.max(0.15, d / speed), ballistic, damage: 0, style, canMiss: false, splash, burn,
     });
   }
 
@@ -1774,9 +1785,10 @@ export class World {
         const who = src && src.alive ? src : null;
         const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss, slowMul: p.slow?.slowMul, slowSeconds: p.slow?.slowSeconds, noFlinch: !p.splash && !!who?.hero }) : false;
         if (landed && who && target && p.talent) afterShot(this, who, target, p.damage, p.talent === "orb");
+        if (p.burn) this.emit({ type: "pulse", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: p.burn.radius, team: p.team, style: "fireburst" });
         if (p.splash) {
           const sp = p.splash;
-          this.emit({ type: "telegraph", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: sp.radius, team: p.team, seconds: 0.05 });
+          if (!p.burn) this.emit({ type: "telegraph", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: sp.radius, team: p.team, seconds: 0.05 });
           for (const o of this.entities.slice()) {
             if (!o.alive || o.team === p.team || o === target || o.kind === "structure") continue;
             if (Math.hypot(o.transform.pos.x - p.to.x, o.transform.pos.z - p.to.z) - o.radius > sp.radius) continue;
@@ -1787,6 +1799,7 @@ export class World {
             target.status.slowUntil = this.time + sp.slowSeconds;
           }
         }
+        if (p.burn) this.zones.push({ id: this.newId(), team: p.team, ownerId: p.sourceId, x: p.to.x, z: p.to.z, radius: p.burn.radius, until: this.time + p.burn.seconds, dps: p.burn.dps, slowMul: 1, style: "lava" });
       }
     }
   }

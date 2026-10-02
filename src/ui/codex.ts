@@ -4,6 +4,15 @@ import unitJson from "../../data/units.json";
 import structJson from "../../data/structures.json";
 import matchJson from "../../data/match.json";
 
+const SPEC_TIPS: Record<string, string> = {
+  ballista: "PUT IT WHERE THEY COME AT YOU IN A LINE: A BRIDGE, A RAMP, A ROAD.",
+  firepot: "SOLDIERS STANDING IN THE FIRE KEEP BURNING. GREAT WHERE THEY BUNCH UP.",
+  volley: "THE ANSWER TO GRIM. HE CAN'T SNEAK PAST SOMETHING THAT SEES HIM.",
+  frost: "FROZEN SOLDIERS DON'T HIT BACK. YOUR TROOPS GET FREE SWINGS.",
+  storm: "THE STUN HITS CHAMPIONS TOO. FIGHT UNDER IT AND THEY CAN'T ESCAPE.",
+  well: "PAIR IT WITH A FIREPOT OR A BALLISTA NEARBY. EVERYTHING ENDS UP IN ONE PILE.",
+};
+
 export type CodexArt =
   | { kind: "shot"; hero: string; slot: "a" | "b" | "r" | "z" }
   | { kind: "portrait"; hero: string }
@@ -41,7 +50,7 @@ type Talent = { id: string; name: string; desc: string; combo?: string };
 const HEROES = (heroJson as unknown as { heroes: Record<string, Hero> }).heroes;
 const TALENTS = (talentJson as unknown as { heroes: Record<string, Record<"r" | "b" | "a" | "z", Talent[]>> }).heroes;
 const U = unitJson as unknown as { waves: { everySeconds: number; spawnCost: Record<string, number> }; types: Record<string, { hp: number; bounty: number }>; popCap: number };
-const S = structJson as unknown as { types: Record<string, { name: string; cost: number; upgradeCost: number; mix?: Record<string, number> }>; buildSeconds: number; rubbleSeconds: number };
+const S = structJson as unknown as { types: Record<string, { name: string; cost: number; upgradeCost: number; mix?: Record<string, number>; specCost?: number; specs?: { id: string; name: string; blurb: string }[] }>; buildSeconds: number; rubbleSeconds: number };
 const M = matchJson as unknown as {
   economy: { start: number; income: number; padIncome?: Record<string, number>; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   arena: {
@@ -339,6 +348,8 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
         { title: "THE THREE TOWERS", text: `BUILD WITH Y AT A PAD. DAMAGE TOWER: SHOOTS BOLTS. CONTROL TOWER: PULSES AROUND ITSELF, SLOWS AND SHOVES. SUPPORT TOWER: HEALS FRIENDS AND MAKES THEM HIT HARDER. EACH COSTS ${st.damage.cost}, UPGRADES ${st.damage.upgradeCost}.`, tip: "THERE'S NO LIMIT. IF YOU HAVE THE PADS AND THE GOLD, BUILD.", art: { kind: "seal", glyph: "turret" } },
         { title: "WHO TOWERS SHOOT", text: "TOWERS SHOOT YOUR TROOPS FIRST. THEY ONLY SWITCH TO YOU IF YOU WALK IN WITH NO TROOPS AROUND, OR IF YOU HIT SOMETHING OF THEIRS NEAR THE TOWER.", tip: "NEVER DIVE A TOWER ALONE. WALK IN BEHIND YOUR SOLDIERS AND LET THEM SOAK THE BOLTS.", art: { kind: "seal", glyph: "shoot" } },
         { title: "LANE TOWERS", text: "TOWERS ON FORWARD AND NEUTRAL PADS ARE MUCH TOUGHER, HIT MUCH HARDER AND SLOW HEROES THEY SHOOT. YOU CAN'T JUST JOG PAST THEM. TOWERS INSIDE YOUR BASE ARE NORMAL ONES.", tip: "TAKE THE LANE TOWER FIRST, THEN THE ROAD IS OPEN.", art: { kind: "seal", glyph: "wall" } },
+        { title: "LEVEL 3 TOWERS", text: `A LEVEL 2 DAMAGE OR CONTROL TOWER CAN GO ONE STEP FURTHER. HOLD Y AT IT AND PICK ONE OF THREE FOR ${st.damage.specCost ?? 250} GOLD. EACH ONE CHANGES HOW THE TOWER FIGHTS, NOT JUST HOW HARD, AND YOU CAN SEE WHICH ONE IT IS FROM ACROSS THE FIELD.`, tip: "LOOK AT WHAT THEY'RE SENDING. FIREPOTS EAT GRUNT SWARMS, A BALLISTA SKEWERS A LINE, A GRAVITY WELL HOLDS THEM FOR YOUR ARMY.", art: { kind: "seal", glyph: "turret", color: "#c8a020" } },
+        ...[...(st.damage.specs ?? []).map((sp) => ["DAMAGE", sp] as const), ...(st.control.specs ?? []).map((sp) => ["CONTROL", sp] as const)].map(([kind, sp]) => ({ title: `${kind} · ${sp.name}`, text: sp.blurb, tip: SPEC_TIPS[sp.id] ?? "", art: { kind: "scene" as const, scene: `tower:${sp.id}` } })),
         { title: "RUBBLE", text: `A DESTROYED BUILDING LEAVES RUBBLE FOR ${S.rubbleSeconds} SECONDS. THE OWNER CAN'T REBUILD THERE UNTIL IT CLEARS, BUT THE ENEMY CAN BUILD STRAIGHT ON IT.`, tip: "STEAL THEIR PAD THE MOMENT IT FALLS.", art: { kind: "seal", glyph: "quake", color: "#6a6058" } },
       ],
     },

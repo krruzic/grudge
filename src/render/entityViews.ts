@@ -2,9 +2,10 @@ import { teslaCoil } from "./hazardViews";
 import { FX } from "./fxKit";
 import { KITS } from "./kits";
 import * as THREE from "three";
-import { builderRate, padNear } from "../sim/structures";
+import { builderRate, canSpec, padNear } from "../sim/structures";
 import type { World } from "../sim/world";
 import type { Entity } from "../sim/types";
+import { towerIdle } from "./towerFx";
 import { buildHulls, hullMaterial, type HeroModels } from "./heroModels";
 import type { StructureModels } from "./structureModels";
 import { structurePlaceholder, unitPlaceholder } from "./kit";
@@ -146,6 +147,7 @@ interface View {
   weapon?: THREE.Object3D;
   spin?: THREE.Object3D;
   level2?: THREE.Object3D;
+  level3?: Map<string, THREE.Object3D>;
   mixer?: THREE.AnimationMixer;
   actions: Map<string, THREE.AnimationAction>;
   current?: string;
@@ -855,6 +857,7 @@ export class EntityViews {
         body.traverse((o) => {
           if (!view.spin && o.name.startsWith("spin")) view.spin = o;
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
+          if (o.name.startsWith("level3_") && o.parent && !o.parent.name.startsWith("level3_")) (view.level3 ??= new Map()).set(o.name.slice(7).replace(/[._]\d+$/, ""), o);
         });
         body.rotation.y = e.transform.facing;
         bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(1.9, team, 0, 0.5);
@@ -880,7 +883,7 @@ export class EntityViews {
     });
     const v: View = {
       kind: e.kind, root, body, mixer, actions, bar, seen: true,
-      weapon: view.weapon, spin: view.spin, level2: view.level2, shield: view.shield, blockFx: view.blockFx, work: view.work,
+      weapon: view.weapon, spin: view.spin, level2: view.level2, level3: view.level3, shield: view.shield, blockFx: view.blockFx, work: view.work,
       mats, flash: 0, joltX: 0, joltZ: 0, freeze: 0, stepDist: 0,
     };
     root.traverse((o) => {
@@ -1516,6 +1519,9 @@ export class EntityViews {
     const k = st.ready ? 1 : Math.min(1, st.progress ?? 0);
     v.body.scale.set(1, 0.25 + 0.75 * k, 1);
     if (v.level2) v.level2.visible = st.level > 1;
+    if (v.level3) for (const [id, o] of v.level3) o.visible = st.spec === id;
+    if (v.spin) v.spin.visible = st.spec !== "ballista" && st.spec !== "firepot";
+    if (st.spec && v.root.visible) towerIdle(this.fx, st.spec, e.transform.pos.x, e.transform.y, e.transform.pos.z, e.transform.facing, 1 / 60);
     const fired = w.time - st.lastFireAt;
     if (v.spin) {
       if (st.type === "damage") {
@@ -1559,7 +1565,7 @@ export class EntityViews {
         if (padNear(w, h) === p) near = h;
       }
       const st = p.structureId ? w.get(p.structureId) : undefined;
-      const buildable = near && (!st ? p.zone === "neutral" || p.side === near.team : st.team === near.team && st.structure!.level < 2);
+      const buildable = near && (!st ? p.zone === "neutral" || p.side === near.team : st.team === near.team && (st.structure!.level < 2 || canSpec(this.world, st)));
       if (buildable && near) {
         mat.color.copy(this.teamColors[near.team]).lerp(white, 0.4);
         mat.opacity = 0.55 + Math.sin(time * 8) * 0.3;

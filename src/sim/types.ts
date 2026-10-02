@@ -186,6 +186,8 @@ export interface StructureState {
   hasteMul?: number;
   siege?: { cooldown: number; vs: Partial<Record<string, number>>; modId: number };
   tesla?: boolean;
+  spec?: string;
+  specPending?: string;
 }
 
 export interface Entity {
@@ -324,6 +326,7 @@ export interface Projectile {
   canMiss: boolean;
   splash?: { radius: number; damage: number; slowMul: number; slowSeconds: number };
   slow?: { slowMul: number; slowSeconds: number };
+  burn?: { radius: number; dps: number; seconds: number };
   talent?: "bolt" | "orb";
 }
 
@@ -386,6 +389,7 @@ export interface Command {
   special?: boolean;
   super?: boolean;
   build?: StructureType | "default" | "upgrade";
+  spec?: number;
   learn?: number;
   buy?: ShopItem;
   aimAt?: Vec2;
@@ -416,7 +420,7 @@ export type SimEvent =
   | { type: "build"; id: number; padIndex: number; team: number; upgrade: boolean }
   | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean; trap?: boolean; src?: number }
   | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number; src?: number; style?: string }
-  | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number }
+  | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number; style?: string }
   | { type: "heal"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "banner"; team: number; x: number; y: number; z: number; until: number; src?: number }
   | { type: "rally"; x: number; y: number; z: number; radius: number; team: number; src?: number }

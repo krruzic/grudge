@@ -18,9 +18,9 @@ import { Bot } from "./sim/bot";
 import { placeRanges } from "./sim/heroes";
 import { allLearned, gainXp, learn } from "./sim/talents";
 import { forceAbility } from "./sim/heroes";
-import { padNear } from "./sim/structures";
+import { canSpec, padNear } from "./sim/structures";
 import type { GameData } from "./sim/config";
-import { spawnUnit } from "./sim/structures";
+import { applySpec, createStructure, spawnUnit, upgrade } from "./sim/structures";
 import type { Command } from "./sim/types";
 import { Terrain, type MapData } from "./sim/terrain";
 import { Gamepads, type InputConfig } from "./input/gamepads";
@@ -1257,6 +1257,9 @@ async function start(): Promise<void> {
         if (ws) m.ui.commander = ws.commander;
         m.morphable = h ? world.morphState(h) : null;
         m.morphHold = world.morphCfg?.holdSeconds ?? 0.6;
+        const hp = h?.alive ? padNear(world, h) : null;
+        const hs = hp?.structureId ? world.get(hp.structureId) : undefined;
+        m.specReady = !!hs && hs.team === h!.team && canSpec(world, hs);
         m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h), !!h?.hero?.picks.length, h?.alive && h.hero ? placeRanges(world, h) : null);
         if (view.camMode !== 0 && !m.ui.commander) {
           if (p.pressed.down) view.zoomStep(i, 1);
@@ -1469,6 +1472,20 @@ async function start(): Promise<void> {
           const hp = { x: DEMO_SPOT.x + 1, z: DEMO_SPOT.z };
           for (const t of ["grunt", "ranged", "heavy"] as const) w.teams[0].directives.holdPoint[t] = hp;
         }
+        if (spec.scene.startsWith("tower:")) {
+          const id = spec.scene.slice(6);
+          const kind = w.data.structures.types.damage.specs?.some((q) => q.id === id) ? "damage" : "control";
+          const pad = { index: -1, x: DEMO_SPOT.x - 3, z: DEMO_SPOT.z, zone: "forward", side: 0, structureId: 0, rubbleUntil: 0, rubbleTeam: -1 } as unknown as Parameters<typeof createStructure>[2];
+          const tw = createStructure(w, 0, pad, kind);
+          const st = tw.structure!;
+          st.ready = true;
+          st.progress = 1;
+          st.nextAction = 0;
+          tw.hp = tw.maxHp;
+          upgrade(w, tw);
+          applySpec(w, tw, id);
+          tw.transform.facing = tw.transform.prevFacing = Math.PI / 2;
+        }
         if (spec.scene === "troops") {
           const types = ["grunt", "ranged", "heavy"] as const;
           types.forEach((t, k) => {
@@ -1504,6 +1521,13 @@ async function start(): Promise<void> {
           me.transform.facing = me.transform.prevFacing = 0.15;
         }
         if (spec.scene === "formation" && Math.floor(d.t / 2.6) !== Math.floor((d.t - w.dt) / 2.6)) cmds[0].formation = true;
+        if (spec.scene.startsWith("tower:")) {
+          for (const o of w.entities) if (o.structure && o.team === 0 && o.structure.padIndex === -1) o.hp = o.maxHp;
+          const foes = w.entities.filter((o) => o.alive && o.unit && o.team === 1).length;
+          if (foes < 7 && Math.floor(d.t / 2.2) !== Math.floor((d.t - w.dt) / 2.2)) {
+            for (let k = 0; k < 4; k++) spawnUnit(w, 1, (["grunt", "grunt", "ranged", "heavy"] as const)[k], DEMO_SPOT.x + 6 + (k % 2) * 0.9, DEMO_SPOT.z - 1 + k * 0.7, 1);
+          }
+        }
         w.step(cmds);
         let k = 0;
         for (const u of w.entities) {
@@ -1524,13 +1548,14 @@ async function start(): Promise<void> {
       const tgt = spec.scene === "grudge" ? { x: w.arena.home.x, y: w.groundY(w.arena.home.x, w.arena.home.z) + 1.0, z: w.arena.home.z }
         : spec.scene === "keep" ? { x: core.transform.pos.x, y: core.transform.y + 1.6, z: core.transform.pos.z }
         : spec.scene === "formation" ? { x: DEMO_SPOT.x + 1, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.5, z: DEMO_SPOT.z }
+        : spec.scene.startsWith("tower:") ? { x: DEMO_SPOT.x + 1.5, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 1.4, z: DEMO_SPOT.z }
         : { x: DEMO_SPOT.x, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.9, z: DEMO_SPOT.z };
       view.demoCam = {
         rect: menus.demoRect,
         target: tgt,
         yaw: spec.scene === "keep" ? 0.9 + Math.sin(d.t * 0.25) * 0.25 : spec.scene === "morph" ? 0.15 : 0.22 + Math.sin(d.t * 0.3) * 0.25,
-        pitch: spec.scene === "keep" ? 0.42 : spec.scene === "formation" ? 0.8 : spec.scene === "morph" ? 0.45 : 0.3,
-        dist: spec.scene === "keep" ? 15 : spec.scene === "grudge" ? 8 : spec.scene === "formation" ? 11 : spec.scene === "morph" ? 9 : 7,
+        pitch: spec.scene === "keep" ? 0.42 : spec.scene === "formation" ? 0.8 : spec.scene === "morph" ? 0.45 : spec.scene.startsWith("tower:") ? 0.5 : 0.3,
+        dist: spec.scene === "keep" ? 15 : spec.scene === "grudge" ? 8 : spec.scene === "formation" ? 11 : spec.scene === "morph" ? 9 : spec.scene.startsWith("tower:") ? 14 : 7,
       };
       return d.acc / w.dt;
     }

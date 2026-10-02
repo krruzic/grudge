@@ -1,6 +1,6 @@
 import type { World } from "./world.ts";
 import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./types.ts";
-import { buildCost, canBuildOn } from "./structures.ts";
+import { buildCost, canBuildOn, canSpec, specCost } from "./structures.ts";
 
 interface PlanItem {
   zone: Pad["zone"] | "front";
@@ -33,6 +33,7 @@ export class Bot {
   private goal: Vec2 | null = null;
   private buildType: StructureType | null = null;
   private buildPad: Pad | null = null;
+  private buildSpec: number | null = null;
   private fightId = 0;
   private seed: number;
   private wantAttack = false;
@@ -141,7 +142,9 @@ export class Bot {
       }
     }
     if (this.buildPad && this.buildType && Math.hypot(this.buildPad.x - me.transform.pos.x, this.buildPad.z - me.transform.pos.z) < 2.2) {
-      cmd.build = this.buildType;
+      if (this.buildSpec !== null) cmd.spec = this.buildSpec;
+      else cmd.build = this.buildType;
+      this.buildSpec = null;
       this.tend = this.buildPad;
       this.buildPad = null;
       this.buildType = null;
@@ -595,6 +598,18 @@ export class Bot {
         this.buildType = item.type;
       }
       return;
+    }
+    this.buildSpec = null;
+    if (w.time > 150 && res >= 420) {
+      for (const pad of pads) {
+        const st = pad.structureId ? w.get(pad.structureId) : undefined;
+        if (st && st.team === me.team && canSpec(w, st) && st.structure!.ready && !st.structure!.upgrading && res >= specCost(w, st.structure!.type as StructureType, me.team) + 170) {
+          this.buildPad = pad;
+          this.buildType = st.structure!.type as StructureType;
+          this.buildSpec = Math.floor(this.rand() * 3);
+          return;
+        }
+      }
     }
     if (res >= 180) {
       for (const pad of pads) {

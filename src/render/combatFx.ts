@@ -8,6 +8,7 @@ import woodUrl from "../../assets/textures/wood.png?url";
 import { DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
 import { spikeGeo, spikeMat } from "./warlordFx";
 import { wardenSlap } from "./wardenFx";
+import { towerProjectile, towerProjectileTick, towerPulse } from "./towerFx";
 import { KITS, type HeroKit } from "./kits";
 import { Particles } from "./particles";
 import "./heroFx";
@@ -1109,6 +1110,7 @@ export class CombatFx implements FxHost {
         break;
       }
       case "pulse":
+        if (ev.style && towerPulse(this, ev, (pts) => this.lightning(pts))) break;
         this.decal(frostTex, ev.x, ev.y, ev.z, ev.radius, 0.6, 0.6, 0);
         this.burst(ev.x, ev.y + 0.4, ev.z, starTex, 0xbfe8ff, 8, 0.4, 0.5, ev.radius * 0.8, true, 0.6);
         break;
@@ -1785,6 +1787,14 @@ export class CombatFx implements FxHost {
     for (const p of world.projectiles) {
       seen.add(p.id);
       let s = this.projViews.get(p.id);
+      if (!s) {
+        const tp = towerProjectile(p.style);
+        if (tp) {
+          this.root.add(tp);
+          this.projViews.set(p.id, tp as unknown as THREE.Sprite);
+          s = tp as unknown as THREE.Sprite;
+        }
+      }
       const pk = !s ? KITS[world.getAny(p.sourceId)?.hero?.type ?? ""] : undefined;
       const custom = pk?.projectile?.(this, p.style) ?? null;
       if (!s && custom) {
@@ -1810,6 +1820,10 @@ export class CombatFx implements FxHost {
         const d = Math.hypot(p.to.x - p.from.x, p.to.z - p.from.z);
         y += d * 0.35 * 4 * t * (1 - t);
       }
+      if (s.userData.towerProj) {
+        towerProjectileTick(this, s, x, y, z, this.frameDt);
+        continue;
+      }
       const kitOf = s.userData.kit as HeroKit | undefined;
       if (kitOf) {
         s.position.set(x, y, z);
@@ -1825,7 +1839,7 @@ export class CombatFx implements FxHost {
     for (const [id, s] of this.projViews) {
       if (!seen.has(id)) {
         this.root.remove(s);
-        s.traverse((o) => {
+        if (!s.userData.towerProj) s.traverse((o) => {
           const m = (o as THREE.Sprite).material as THREE.Material | undefined;
           if (m) this.freeMat(m);
         });

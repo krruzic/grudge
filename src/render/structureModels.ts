@@ -74,7 +74,7 @@ function mergeStatic(gltf: GLTF): Baked | null {
   scene.updateMatrixWorld(true);
   const anchors = new Set<THREE.Object3D>([scene, ...scene.children]);
   scene.traverse((o) => {
-    if (/^(spin|level2)/.test(o.name) && gltf.parser.associations.get(o)?.nodes !== undefined) anchors.add(o);
+    if (/^(spin|level2|level3)/.test(o.name) && gltf.parser.associations.get(o)?.nodes !== undefined) anchors.add(o);
   });
   const mats: THREE.MeshStandardMaterial[] = [];
   const groups = new Map<THREE.Object3D, THREE.Mesh[]>();

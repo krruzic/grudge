@@ -263,6 +263,33 @@ export interface StructureDef {
   mix?: Partial<Record<UnitType, number>>;
   cadence?: number;
   upgrade: Record<string, number>;
+  specCost?: number;
+  specs?: TowerSpec[];
+}
+
+export interface TowerSpec {
+  id: string;
+  name: string;
+  blurb: string;
+  hp: number;
+  damage?: number;
+  cooldown?: number;
+  range?: number;
+  pierce?: number;
+  pierceWidth?: number;
+  splash?: number;
+  burnSeconds?: number;
+  burnDps?: number;
+  burnRadius?: number;
+  targets?: number;
+  reveal?: boolean;
+  freeze?: number;
+  heroSlow?: number;
+  heroSlowSeconds?: number;
+  stun?: number;
+  knockback?: number;
+  pull?: number;
+  slow?: number;
 }
 
 export interface StructureData {

@@ -1,6 +1,7 @@
 import { chainLightning } from "./talents.ts";
 import type { World } from "./world.ts";
-import type { Entity, Pad, StructureType, UnitType } from "./types.ts";
+import type { Entity, Pad, StructureState, StructureType, UnitType } from "./types.ts";
+import type { TowerSpec } from "./config.ts";
 
 export function padNear(w: World, e: Entity): Pad | null {
   let best: Pad | null = null;
@@ -33,6 +34,63 @@ export function buildCost(w: World, type: StructureType, upgrade: boolean, team 
   return Math.round((upgrade ? def.upgradeCost : def.cost) * w.costMul() * heroMul * ffa);
 }
 
+export function specOf(w: World, st: StructureState): TowerSpec | null {
+  if (!st.spec || st.type === "core") return null;
+  return w.data.structures.types[st.type].specs?.find((s) => s.id === st.spec) ?? null;
+}
+
+export function specCost(w: World, type: StructureType, team = -1): number {
+  const def = w.data.structures.types[type];
+  const hk = team >= 0 ? w.teamHooks(team) : {};
+  return Math.round((def.specCost ?? 250) * w.costMul() * (hk.upgradeCostMul ?? 1));
+}
+
+export function canSpec(w: World, e: Entity | undefined): boolean {
+  const st = e?.structure;
+  if (!st || st.type === "core" || st.siege || st.tesla) return false;
+  return !!w.data.structures.types[st.type].specs?.length && st.level === 2;
+}
+
+export function trySpec(w: World, hero: Entity, idx: number): boolean {
+  const team = hero.team;
+  const pad = padNear(w, hero);
+  const e = pad?.structureId ? w.get(pad.structureId) : undefined;
+  if (!e || e.team !== team || !canSpec(w, e)) return false;
+  const st = e.structure!;
+  if (!st.ready || st.upgrading) {
+    w.emit({ type: "notice", team, text: "BUILDING..." });
+    return false;
+  }
+  const spec = w.data.structures.types[st.type as StructureType].specs![idx];
+  if (!spec) return false;
+  const cost = specCost(w, st.type as StructureType, team);
+  const ts = w.teams[team];
+  if (ts.resource < cost) {
+    w.emit({ type: "notice", team, text: `NEED ${cost}` });
+    return false;
+  }
+  ts.resource -= cost;
+  st.upgrading = true;
+  st.progress = 0;
+  st.specPending = spec.id;
+  w.emit({ type: "build", id: e.id, padIndex: st.padIndex, team, upgrade: true });
+  return true;
+}
+
+export function applySpec(w: World, e: Entity, id: string): void {
+  const st = e.structure!;
+  if (st.type === "core") return;
+  const spec = w.data.structures.types[st.type].specs?.find((s) => s.id === id);
+  if (!spec) return;
+  st.level = 3;
+  st.spec = id;
+  const frac = e.hp / e.maxHp;
+  e.maxHp *= spec.hp;
+  e.hp = Math.min(e.maxHp, e.maxHp * frac + e.maxHp * 0.25);
+  st.damage *= spec.damage ?? 1;
+  st.range *= spec.range ?? 1;
+}
+
 export function tryBuild(w: World, hero: Entity, kind: StructureType | "default" | "upgrade"): boolean {
   const team = hero.team;
   const pad = padNear(w, hero);
@@ -49,7 +107,7 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
       return false;
     }
     if (st.level >= 2 || !st.ready || st.upgrading || st.type === "core") {
-      w.emit({ type: "notice", team, text: st.level >= 2 ? "MAX LEVEL" : "BUILDING..." });
+      w.emit({ type: "notice", team, text: st.upgrading || !st.ready ? "BUILDING..." : canSpec(w, existing) ? "PICK A LEVEL 3" : "MAX LEVEL" });
       return false;
     }
     const cost = buildCost(w, st.type, true, team);
@@ -124,7 +182,7 @@ export function builderRate(w: World, e: Entity): number {
   return Math.min(r.max, rate);
 }
 
-function upgrade(w: World, e: Entity): void {
+export function upgrade(w: World, e: Entity): void {
   const st = e.structure!;
   if (st.type === "core") return;
   const up = w.data.structures.types[st.type].upgrade;
@@ -201,7 +259,10 @@ export function updateStructure(w: World, e: Entity): void {
     }
     if (st.progress >= 1) {
       st.upgrading = false;
-      upgrade(w, e);
+      if (st.specPending) {
+        applySpec(w, e, st.specPending);
+        st.specPending = undefined;
+      } else upgrade(w, e);
       w.emit({ type: "build", id: e.id, padIndex: st.padIndex, team: e.team, upgrade: true });
     }
   }
@@ -215,16 +276,19 @@ export function updateStructure(w: World, e: Entity): void {
 
   const boost = w.arena.towerBoost(e);
   const haste = st.hasteUntil && w.time < st.hasteUntil ? st.hasteMul ?? 1 : 1;
+  const spec = specOf(w, st);
   if (st.type === "damage") {
     let best: Entity | null = null;
     let bestScore = Infinity;
     const siege = st.siege;
+    const cands: { o: Entity; score: number }[] = [];
     for (const o of w.entities) {
-      if (!o.alive || o.team === e.team || o.status.hidden) continue;
+      if (!o.alive || o.team === e.team || (o.status.hidden && !spec?.reveal)) continue;
       if (o.structure && !siege && !o.structure.siege) continue;
       const d = w.dist(e, o) - o.radius;
       if (d > st.range * boost.range * w.rangeMul(e, o)) continue;
       const score = d + (o.hero ? (siege || exposed(w, e, o, st.range) ? -100 : 100) : 0) - (o.structure?.siege ? 60 : 0) - (siege && o.structure ? 40 : 0);
+      if (spec?.targets) cands.push({ o, score });
       if (score >= bestScore) continue;
       if (!w.los(e, o, def.projectile?.losTolerance ?? 0.3, 3.2)) continue;
       best = o;
@@ -232,6 +296,12 @@ export function updateStructure(w: World, e: Entity): void {
     }
     if (!best) {
       st.nextAction = w.time + 0.2;
+      return;
+    }
+    if (spec && !siege && !st.tesla) {
+      towerSpecFire(w, e, best, spec, boost.damage, cands);
+      st.lastFireAt = w.time;
+      st.nextAction = w.time + (spec.cooldown ?? def.cooldown ?? 1) / haste;
       return;
     }
     if (siege) e.transform.facing = e.transform.prevFacing = Math.atan2(best.transform.pos.x - e.transform.pos.x, best.transform.pos.z - e.transform.pos.z);
@@ -260,14 +330,25 @@ export function updateStructure(w: World, e: Entity): void {
       st.nextAction = w.time + 0.2;
       return;
     }
-    w.emit({ type: "pulse", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, radius: st.range * boost.range, team: e.team });
+    w.emit({ type: "pulse", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, radius: st.range * boost.range, team: e.team, style: spec?.id });
+    const px = e.transform.pos.x;
+    const pz = e.transform.pos.z;
     for (const o of targets) {
       const vs = def.vs?.[w.classOf(o)] ?? 1;
-      const slow = 1 - Math.min(0.85, (1 - (def.slowMul ?? 0.5)) * Math.min(1, vs) * cm);
-      w.damage(e, o, st.damage * boost.damage * vs * cm, { knockback: (def.knockback ?? 3) * Math.min(1, vs), slowMul: slow, slowSeconds: def.slowSeconds });
+      const dmg = st.damage * boost.damage * vs * cm;
+      if (spec?.id === "frost") {
+        w.damage(e, o, dmg, o.hero ? { slowMul: spec.heroSlow ?? 0.35, slowSeconds: spec.heroSlowSeconds ?? 1.5 } : { stun: spec.freeze ?? 1, slowMul: 0.5, slowSeconds: (spec.freeze ?? 1) + 1 });
+      } else if (spec?.id === "storm") {
+        w.damage(e, o, dmg, { fromX: px, fromZ: pz, knockback: (spec.knockback ?? 5) * Math.min(1, vs), stun: spec.stun ?? 0.5, big: true });
+      } else if (spec?.id === "well") {
+        w.damage(e, o, dmg, { fromX: px, fromZ: pz, pull: spec.pull ?? 5, slowMul: spec.slow ?? 0.35, slowSeconds: (spec.cooldown ?? 2) + 0.4 });
+      } else {
+        const slow = 1 - Math.min(0.85, (1 - (def.slowMul ?? 0.5)) * Math.min(1, vs) * cm);
+        w.damage(e, o, dmg, { knockback: (def.knockback ?? 3) * Math.min(1, vs), slowMul: slow, slowSeconds: def.slowSeconds });
+      }
     }
     st.lastFireAt = w.time;
-    st.nextAction = w.time + (def.cooldown ?? 2) / haste;
+    st.nextAction = w.time + (spec?.cooldown ?? def.cooldown ?? 2) / haste;
     return;
   }
 
@@ -286,5 +367,51 @@ export function updateStructure(w: World, e: Entity): void {
       if (w.tick % 30 < 15) w.emit({ type: "heal", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team });
     }
     st.nextAction = w.time + cd;
+  }
+}
+
+function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost: number, cands: { o: Entity; score: number }[]): void {
+  const def = w.data.structures.types[e.structure!.type as StructureType];
+  const st = e.structure!;
+  const vsOf = (o: Entity) => def.vs?.[w.classOf(o)] ?? 1;
+  const slow = (o: Entity) => (o.hero && st.heroSlow ? { slowMul: st.heroSlow, slowSeconds: 1 } : undefined);
+  if (spec.id === "ballista") {
+    const vs = Math.max(0.8, vsOf(best));
+    w.fireProjectile(e, best, st.damage * boost * vs, 34, false, "spear", 3.4, false, undefined, slow(best));
+    const sx = e.transform.pos.x;
+    const sz = e.transform.pos.z;
+    const dx = best.transform.pos.x - sx;
+    const dz = best.transform.pos.z - sz;
+    const len = Math.hypot(dx, dz) || 1;
+    const ux = dx / len;
+    const uz = dz / len;
+    const reach = len + (spec.pierce ?? 5);
+    for (const o of w.entities) {
+      if (!o.alive || o === best || o.team === e.team || o.structure || o.status.hidden) continue;
+      const ox = o.transform.pos.x - sx;
+      const oz = o.transform.pos.z - sz;
+      const along = ox * ux + oz * uz;
+      if (along < 1 || along > reach) continue;
+      if (Math.abs(ox * uz - oz * ux) > (spec.pierceWidth ?? 1) + o.radius) continue;
+      w.damage(e, o, st.damage * boost * Math.max(0.8, vsOf(o)) * 0.75, { fromX: sx, fromZ: sz, knockback: 2 });
+    }
+    w.emit({ type: "pulse", x: sx + ux * reach, y: e.transform.y, z: sz + uz * reach, radius: 0, team: e.team, style: "pierce" });
+    return;
+  }
+  if (spec.id === "firepot") {
+    const r = spec.splash ?? 2.5;
+    w.fireAtPoint(e, best.transform.pos.x, best.transform.pos.z, 14, "firepot", 3.4, { radius: r, damage: st.damage * boost * 1.1, slowMul: 0.8, slowSeconds: 0.8 }, true, { radius: spec.burnRadius ?? r, dps: spec.burnDps ?? 30, seconds: spec.burnSeconds ?? 3 });
+    return;
+  }
+  if (spec.id === "volley") {
+    const list = cands.sort((a, b) => a.score - b.score).map((c) => c.o);
+    const picks: Entity[] = [best];
+    for (const o of list) {
+      if (picks.length >= (spec.targets ?? 3)) break;
+      if (picks.includes(o) || !w.los(e, o, def.projectile?.losTolerance ?? 0.3, 3.2)) continue;
+      picks.push(o);
+    }
+    while (picks.length < (spec.targets ?? 3)) picks.push(best);
+    for (const o of picks) w.fireProjectile(e, o, st.damage * boost * vsOf(o), 28, false, "arrow", 3.4, true, undefined, slow(o));
   }
 }

@@ -6,7 +6,7 @@ import { parchment, texturedRect, uiImagesReady, waxSeal } from "./n64ui";
 import { onHiLayer } from "./font";
 import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
-import { buildCost, padNear } from "../sim/structures";
+import { buildCost, canSpec, padNear, specCost } from "../sim/structures";
 import { drawNum, drawPlain, drawText, textWidth } from "./font";
 
 export const INK = "#0b0806";
@@ -1804,6 +1804,11 @@ export class Hud {
     if (!pad) return { title: "NO PAD HERE", items: [["", ""], ["", ""], ["", ""], ["", ""]], lit: -1, until: 0 };
     const c = (k: Parameters<typeof buildCost>[1]) => String(buildCost(w, k, false, team));
     const st = pad.structureId ? w.get(pad.structureId) : undefined;
+    if (mui.buildMenu === "spec" && st?.structure && st.team === team && canSpec(w, st)) {
+      const specs = w.data.structures.types[st.structure.type as Parameters<typeof buildCost>[1]].specs ?? [];
+      const cost = String(specCost(w, st.structure.type as Parameters<typeof buildCost>[1], team));
+      return { title: "LEVEL 3", items: [[specs[0]?.name ?? "", cost], [specs[1]?.name ?? "", cost], [specs[2]?.name ?? "", cost], ["CANCEL", ""]], lit: -1, until: 0 };
+    }
     if (st?.structure && st.team === team) {
       const up = st.structure.level < 2 ? String(buildCost(w, st.structure.type as Parameters<typeof buildCost>[1], true, team)) : "";
       return { title: st.structure.level < 2 ? "UPGRADE" : "MAX LEVEL", items: [[up ? "UPGRADE" : "", up], ["", ""], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 };

@@ -6,10 +6,11 @@ type Flick = "up" | "down" | "left" | "right";
 const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "hold", left: "follow", right: "defend" };
 const TOWER_BY_FLICK: Partial<Record<Flick, StructureType>> = { up: "damage", left: "control" };
 const PROD_BY_FLICK: Partial<Record<Flick, StructureType>> = { left: "barracks", up: "range", right: "foundry" };
+const SPEC_BY_FLICK: Partial<Record<Flick, number>> = { up: 0, left: 1, right: 2 };
 const SHOP_BY_FLICK: Partial<Record<Flick, ShopItem>> = { up: "bomb", left: "ward", right: "cannon" };
 
 export interface MapperUi {
-  buildMenu: "closed" | "prod" | "tower" | "shop" | "learn";
+  buildMenu: "closed" | "prod" | "tower" | "shop" | "learn" | "spec";
   commander: boolean;
   group: UnitType | "all";
   groupAt: number;
@@ -68,6 +69,7 @@ export class CommandMapper {
   private holdAt: Record<"a" | "b" | "r" | "z" | "bp", number> = { a: -1, b: -1, r: -1, z: -1, bp: -1 };
   private lastNow = 0;
   morphable: "to" | "back" | null = null;
+  specReady = false;
   morphHold = 0.6;
   private xHeldFor = -1;
 
@@ -192,7 +194,7 @@ export class CommandMapper {
     if ((atPad || atHome) && !this.xDown && (p.pressed.y || mrPressed)) {
       this.tDown = true;
       this.tUsed = false;
-      this.ui.buildMenu = atPad ? "tower" : "shop";
+      this.ui.buildMenu = atPad ? (this.specReady ? "spec" : "tower") : "shop";
     } else if (!this.xDown && (p.pressed.y || mrPressed)) c.recall = true;
     const f = this.flick(p);
     if (f) {
@@ -202,6 +204,10 @@ export class CommandMapper {
         this.ui.buildMenu = "closed";
       } else if (this.tDown && this.ui.buildMenu === "learn") {
         if (f === "left" || f === "right") c.learn = f === "left" ? 0 : 1;
+        this.tUsed = true;
+        this.ui.buildMenu = "closed";
+      } else if (this.tDown && this.ui.buildMenu === "spec") {
+        if (f !== "down") c.spec = SPEC_BY_FLICK[f];
         this.tUsed = true;
         this.ui.buildMenu = "closed";
       } else if (this.tDown && this.ui.buildMenu === "shop") {
@@ -226,9 +232,9 @@ export class CommandMapper {
       this.ui.buildMenu = "closed";
     }
     if (this.tDown && !p.held.y && !mr) {
-      if (!this.tUsed && atPad) c.build = "upgrade";
+      if (!this.tUsed && atPad && this.ui.buildMenu !== "spec") c.build = "upgrade";
       this.tDown = false;
-      if (this.ui.buildMenu === "tower" || this.ui.buildMenu === "shop" || this.ui.buildMenu === "learn") this.ui.buildMenu = "closed";
+      if (this.ui.buildMenu === "tower" || this.ui.buildMenu === "shop" || this.ui.buildMenu === "learn" || this.ui.buildMenu === "spec") this.ui.buildMenu = "closed";
     }
   }
 
