@@ -70,6 +70,7 @@ export class NavGrid {
   }
 
   recompute(cells: number[]): void {
+    this.region = null;
     this.cache.clear();
     this.clearMemo.clear();
     const done = new Set<number>();
@@ -106,6 +107,7 @@ export class NavGrid {
         if (i < 0) continue;
         if (Math.hypot(cx + 0.5 - x, cz + 0.5 - z) > r) continue;
         this.blocked[i] = on ? Math.min(255, this.blocked[i] + 1) : Math.max(0, this.blocked[i] - 1);
+        this.region = null;
         this.cache.clear();
         this.clearMemo.clear();
       }
@@ -228,9 +230,41 @@ export class NavGrid {
 
   lastFound = true;
 
+  private region: Int32Array | null = null;
+
+  private regions(): Int32Array {
+    if (this.region) return this.region;
+    const n = this.w * this.d;
+    const r = new Int32Array(n).fill(-1);
+    const stack: number[] = [];
+    let id = 0;
+    for (let s = 0; s < n; s++) {
+      if (r[s] >= 0 || !this.open(s)) continue;
+      r[s] = id;
+      stack.push(s);
+      while (stack.length) {
+        const c = stack.pop()!;
+        const cx = c % this.w;
+        const cz = (c / this.w) | 0;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const m = this.index(cx + dx, cz + dz);
+          if (m < 0 || r[m] >= 0 || !this.passable(c, m)) continue;
+          r[m] = id;
+          stack.push(m);
+        }
+      }
+      id++;
+    }
+    this.region = r;
+    return r;
+  }
+
   reachable(from: Vec2, to: Vec2): boolean {
-    const p = this.findPath(from, to);
-    return !!p && this.lastFound;
+    const a = this.nearestOpen(from.x, from.z, 3);
+    const b = this.nearestOpen(to.x, to.z, 3);
+    if (a < 0 || b < 0) return false;
+    const r = this.regions();
+    return r[a] === r[b];
   }
 
   wideClear(a: Vec2, b: Vec2, r: number): boolean {

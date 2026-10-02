@@ -95,19 +95,20 @@ export class Bot {
       }
     }
     const horn = w.mapEvents.horns.find((hn) => w.time >= hn.readyAt && Math.hypot(hn.x - me.transform.pos.x, hn.z - me.transform.pos.z) < 38 && (w.time * 7 + me.id * 13) % 60 < 25);
-    if (horn && me.hp > me.maxHp * 0.45 && !w.arena.carrying(me) && !w.entities.some((o) => o.alive && o.hero && o.team !== me.team && w.dist(me, o) < 6)) this.goal = { x: horn.x, z: horn.z };
+    if (horn && me.hp > me.maxHp * 0.45 && this.ok(w, me, horn) && !w.arena.carrying(me) && !w.entities.some((o) => o.alive && o.hero && o.team !== me.team && w.dist(me, o) < 6)) this.goal = { x: horn.x, z: horn.z };
     if (this.goal && w.jumpPads.length && !w.arena.carrying(me) && !me.hero?.bomb) {
       const p = me.transform.pos;
       const g = this.goal;
       const direct = Math.hypot(g.x - p.x, g.z - p.z);
+      const walled = !w.nav.reachable(p, g);
       let best: Vec2 | null = null;
-      let bestCost = direct - 12;
+      let bestCost = walled ? Infinity : direct - 12;
       for (const jp of w.jumpPads) {
         if (w.time < jp.readyAt - 1) continue;
         const toPad = Math.hypot(jp.x - p.x, jp.z - p.z);
-        if (toPad > 26) continue;
+        if (toPad > (walled ? 60 : 26)) continue;
         const cost = toPad + Math.hypot(g.x - jp.tx, g.z - jp.tz) + 4;
-        if (cost < bestCost && w.nav.reachable(p, { x: jp.x, z: jp.z }) && w.nav.reachable({ x: jp.tx, z: jp.tz }, g)) {
+        if (cost < bestCost && w.nav.reachable(p, { x: jp.x, z: jp.z }) && (!walled || w.nav.reachable({ x: jp.tx, z: jp.tz }, g))) {
           bestCost = cost;
           best = { x: jp.x, z: jp.z };
         }
@@ -278,6 +279,11 @@ export class Bot {
     return t;
   }
 
+  private ok(w: World, me: Entity, g: Vec2 | { transform: { pos: Vec2 } }): boolean {
+    const q = "transform" in g ? g.transform.pos : g;
+    return w.nav.reachable(me.transform.pos, q);
+  }
+
   private think(w: World, me: Entity): void {
     const p = me.transform.pos;
     const h = me.hero!;
@@ -286,6 +292,7 @@ export class Bot {
     if (!enemyHero) {
       let bd = Infinity;
       for (const e of this.enemyHeroes(w, me)) {
+        if (!this.ok(w, me, e)) continue;
         const d = w.dist(me, e);
         if (d < bd) { bd = d; enemyHero = e; }
       }
@@ -301,7 +308,7 @@ export class Bot {
       let best: Entity | undefined;
       let bd = Infinity;
       for (const o of w.entities) {
-        if (!o.alive || o.team !== me.team || !w.arena.isTowerOrKeep(o)) continue;
+        if (!o.alive || o.team !== me.team || !w.arena.isTowerOrKeep(o) || !this.ok(w, me, o)) continue;
         const d = w.dist(me, o);
         if (d < bd) { bd = d; best = o; }
       }
@@ -309,11 +316,11 @@ export class Bot {
       return;
     }
     const enemyShrine = relic.state === "shrined" && relic.team >= 0 && relic.team !== me.team ? w.arena.shrineOf(relic.team) : null;
-    if (enemyShrine && !lowHp && w.dist(me, enemyShrine) < 22 && !(ehAlive && dHero < 5)) {
+    if (enemyShrine && !lowHp && w.dist(me, enemyShrine) < 22 && !(ehAlive && dHero < 5) && this.ok(w, me, enemyShrine)) {
       this.goal = { x: enemyShrine.transform.pos.x, z: enemyShrine.transform.pos.z };
       return;
     }
-    if ((relic.state === "home" || relic.state === "dropped") && !lowHp) {
+    if ((relic.state === "home" || relic.state === "dropped") && !lowHp && this.ok(w, me, relic)) {
       const dr = Math.hypot(relic.x - p.x, relic.z - p.z);
       if (dr < 14 || (relic.state === "home" && !(ehAlive && dHero < 6))) {
         this.goal = { x: relic.x, z: relic.z };
@@ -328,7 +335,7 @@ export class Bot {
       }
       if (dHero > 2.5) return;
     }
-    if (assist && !lowHp && dHero > 9 + (w.heroDef(h.type).botRange ?? 1.8)) {
+    if (assist && !lowHp && dHero > 9 + (w.heroDef(h.type).botRange ?? 1.8) && this.ok(w, me, assist)) {
       this.goal = { x: assist.transform.pos.x, z: assist.transform.pos.z };
       const ab0 = w.heroDef(h.type).abilities;
       if (ab0.r.bot === "approach" && (h.cooldowns.r ?? 0) <= w.time && dHero < (ab0.r.botRange ?? 10)) this.wantR = true;
@@ -400,7 +407,7 @@ export class Bot {
     if (rdy("b") && (ab.b.bot === "repair" || ab.b.bot === "banner") && useHint("b", 0)) this.wantB = true;
 
     const lan = w.mapEvents.lantern;
-    if (lan && lan.state !== "rise" && !lowHp && Math.hypot(lan.x - p.x, lan.z - p.z) < 22 && !(ehAlive && dHero < 4)) {
+    if (lan && lan.state !== "rise" && !lowHp && Math.hypot(lan.x - p.x, lan.z - p.z) < 22 && !(ehAlive && dHero < 4) && this.ok(w, me, lan)) {
       this.goal = { x: lan.x, z: lan.z };
       return;
     }
@@ -408,7 +415,7 @@ export class Bot {
     if (ehAlive && dHero < 9 + prefer && !(enemyHero!.status.hidden && dHero > 2.5)) fight = enemyHero;
     else if (nearby.length) {
       nearby.sort((a, b) => w.dist(me, a) - w.dist(me, b));
-      fight = nearby.find((o) => o.kind !== "structure" || w.dist(me, o) < 5) ?? undefined;
+      fight = nearby.find((o) => (o.kind !== "structure" || w.dist(me, o) < 5) && this.ok(w, me, o)) ?? undefined;
     }
     if (fight) {
       const towerThreat = w.enemiesNear(me, 12, (o) => o.structure?.type === "damage" && o.structure.ready).length;
@@ -450,7 +457,7 @@ export class Bot {
     const mate = this.mateHero(w);
     if (this.role === "support") {
       const threat = this.baseThreat(w, me);
-      if (threat && !(mate && w.dist(mate, threat) < w.dist(me, threat))) {
+      if (threat && !(mate && w.dist(mate, threat) < w.dist(me, threat)) && this.ok(w, me, threat)) {
         this.goal = { x: threat.transform.pos.x, z: threat.transform.pos.z };
         return;
       }
@@ -471,7 +478,7 @@ export class Bot {
       const pad = this.buildPad;
       const st = pad.structureId ? w.get(pad.structureId) : undefined;
       const cost = this.buildType ? buildCost(w, this.buildType, !!st, me.team) : 0;
-      if ((st && st.team !== me.team) || w.teams[me.team].resource < cost) {
+      if ((st && st.team !== me.team) || w.teams[me.team].resource < cost || !this.ok(w, me, pad)) {
         this.buildPad = null;
       } else {
         this.goal = { x: pad.x, z: pad.z };
@@ -480,7 +487,7 @@ export class Bot {
     }
 
     if (this.role === "attack") {
-      const prey = this.enemyHeroes(w, me).find((e) => !e.status.hidden && w.dist(me, e) < 20 && e.hp < me.hp * 1.2);
+      const prey = this.enemyHeroes(w, me).find((e) => !e.status.hidden && w.dist(me, e) < 20 && e.hp < me.hp * 1.2 && this.ok(w, me, e));
       this.goal = prey ? { x: prey.transform.pos.x, z: prey.transform.pos.z } : this.frontTarget(w, me);
       return;
     }
@@ -521,6 +528,7 @@ export class Bot {
     for (const o of w.entities) {
       if (!o.alive || o.team === me.team || !o.structure) continue;
       if (o.structure.type === "core" && o.structure.shielded) continue;
+      if (!this.ok(w, me, o)) continue;
       const d = w.dist(me, o);
       if (d < bestD) { bestD = d; best = o; }
     }
@@ -585,7 +593,7 @@ export class Bot {
     const res = w.teams[me.team].resource;
     const myCore = w.core(me.team)!;
     const pads = w.pads
-      .filter((p) => canBuildOn(p, me.team) && (w.time >= p.rubbleUntil || p.rubbleTeam !== me.team))
+      .filter((p) => canBuildOn(p, me.team) && (w.time >= p.rubbleUntil || p.rubbleTeam !== me.team) && this.ok(w, me, p))
       .sort((a, b) => Math.hypot(a.x - myCore.transform.pos.x, a.z - myCore.transform.pos.z) - Math.hypot(b.x - myCore.transform.pos.x, b.z - myCore.transform.pos.z));
     const outposts = w.entities.filter((o) => o.alive && o.team === me.team && o.structure && w.data.structures.types[o.structure.type as StructureType]?.class === "production").length;
     const placed = new Map<string, number>();
