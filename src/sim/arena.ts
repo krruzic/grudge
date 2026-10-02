@@ -357,7 +357,7 @@ export class Arena {
     }
     if (s.structure!.type === "core" && !w.isSudden()) {
       const st = s.structure!;
-      st.ward = Math.min(w.data.structures.core.ward, (st.ward ?? 0) + cfg.keepWardRegen * w.dt);
+      st.ward = Math.min(w.wardMax, (st.ward ?? 0) + cfg.keepWardRegen * w.dt);
       st.shielded = (st.ward ?? 0) > 0;
     }
     let thief: Entity | null = null;
@@ -533,16 +533,16 @@ export class Arena {
         w.emit({ type: "notice", team, text: `SHIELD READY IN ${Math.ceil(ts.wardReadyAt - w.time)}` });
         return false;
       }
-      if ((st.ward ?? 0) >= w.data.structures.core.ward) {
+      if ((st.ward ?? 0) >= w.wardMax) {
         w.emit({ type: "notice", team, text: "SHIELD IS FULL" });
         return false;
       }
       if (!pay(sh.ward.cost)) return false;
-      st.ward = w.data.structures.core.ward;
+      st.ward = Math.min(w.wardMax, (st.ward ?? 0) + w.wardMax * (sh.ward.buyFraction ?? 1));
       st.shielded = true;
       ts.wardReadyAt = w.time + sh.ward.cooldown;
       w.emit({ type: "pulse", x: core.transform.pos.x, y: core.transform.y, z: core.transform.pos.z, radius: 4, team });
-      w.emit({ type: "notice", team, text: "SHIELD RESTORED" });
+      w.emit({ type: "notice", team, text: "SHIELD PATCHED" });
       return true;
     }
     const cost = Math.round(sh.cannon.cost * w.costMul());

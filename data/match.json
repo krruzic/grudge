@@ -151,6 +151,8 @@
         "structureSplash": 220
       },
       "ward": { "brokenLockout": 15,
+        "buyFraction": 0.25,
+        "soloScale": 0.5,
         "cost": 150,
         "cooldown": 45
       },

@@ -307,7 +307,7 @@ export interface MatchData {
     shop: {
       radius: number;
       bomb: { cooldown?: number; cost: number; fuse: number; coreDamage: number; plantReach: number; throwRange: number; throwSeconds: number; groundFuse: number; stickReach: number; splash: number; splashDamage: number; splashUnitMul?: number; structureSplash: number };
-      ward: { brokenLockout?: number; cost: number; cooldown: number };
+      ward: { brokenLockout?: number; buyFraction?: number; soloScale?: number; cost: number; cooldown: number };
       cannon: { cost: number; shots: number; radius: number; aimSpeed: number; aimSeconds: number; spread: number };
     };
     ogre: { firstSeconds: number; respawnSeconds: number; hp: number; damage: number; speed: number; radius: number; aggro: number; range: number; cooldown: number; knockback: number; bounty: number; leash: number; blessSeconds: number; blessDamage: number; blessSpeed: number; blessXp: number; patrolSpeedMul?: number; patrolPause?: number };

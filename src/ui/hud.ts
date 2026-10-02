@@ -1446,7 +1446,7 @@ export class Hud {
     const capped = ts.unitCount >= w.popCap;
     const out = !!ts.out;
     const hpFrac = core && !out ? core.hp / core.maxHp : 0;
-    const wardFrac = ward > 0 && !sudden ? ward / w.data.structures.core.ward : 0;
+    const wardFrac = ward > 0 && !sudden ? ward / w.wardMax : 0;
     const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
     const rate = `+${w.incomeOf(t).toFixed(1)}/S`;
     const [kx, ky] = this.shakeOf(this.keepHitAt[t], now, 4.5);

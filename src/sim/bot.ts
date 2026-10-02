@@ -547,7 +547,7 @@ export class Bot {
       }
     }
     const core = w.core(me.team)!;
-    const ward = (core.structure!.ward ?? 0) / w.data.structures.core.ward;
+    const ward = (core.structure!.ward ?? 0) / w.wardMax;
     const wardOk = w.time >= ts.wardReadyAt && !w.isSudden();
     const wantWard = wardOk && ward < (this.role === "attack" ? 0.15 : this.role === "support" ? 0.55 : 0.4) && gold >= sh.ward.cost;
     const myArmy = w.teams[me.team].unitCount;

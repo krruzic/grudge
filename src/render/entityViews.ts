@@ -1491,7 +1491,7 @@ export class EntityViews {
       }
       v.bar.group.visible = true;
       if (v.work) {
-        const ward = (st.ward ?? 0) / w.data.structures.core.ward;
+        const ward = (st.ward ?? 0) / w.wardMax;
         v.work.group.visible = ward > 0 && !w.isSudden();
         setBar(v.work, ward, 1 / 60, time);
       }

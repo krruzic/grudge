@@ -471,6 +471,12 @@ export class World {
     return this.teamCount > 2;
   }
 
+  get wardMax(): number {
+    const base = this.data.structures.core.ward;
+    const solo = this.ffa || this.players.length <= 2;
+    return solo ? base * (this.data.match.arena.shop.ward.soloScale ?? 1) : base;
+  }
+
   standing(team: number): boolean {
     const t = this.teams[team];
     return !!t && !t.out;
@@ -666,6 +672,7 @@ export class World {
     for (let team = 0; team < this.teamCount; team++) {
       const core = this.core(team);
       if (!core?.structure) continue;
+      if ((core.structure.ward ?? 0) > this.wardMax) core.structure.ward = this.wardMax;
       core.structure.shielded = (core.structure.ward ?? 0) > 0;
     }
   }
