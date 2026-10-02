@@ -747,3 +747,4 @@
 - Codex: TOWERS has a LEVEL 3 page and one live demo page per level-3 tower (the tower at the demo spot fighting waves of soldiers).
 - Barracks model fix: the two team-paint panels sticking out of the roof (mis-rotated trim since the first build) are gone; the roof now has proper triangular gable ends in house colour front and back, plus a wooden ridge cap.
 - X at a level-2 Damage/Control tower now opens the LEVEL 3 picker too (the pad hint says X to upgrade, but only Y opened it, so X fell through to MAX LEVEL / "PICK A LEVEL 3"). Releasing X or Y there without picking does nothing.
+- Ballista aims: the tower stores its aim angle (`StructureState.aim`), and when a new target is more than ~17° off it turns first and fires 0.3 s later. The crossbow on top (the `level3_ballista` node) swings smoothly to that angle on its own; the tower body stays put.

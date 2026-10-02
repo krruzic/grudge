@@ -299,7 +299,10 @@ export function updateStructure(w: World, e: Entity): void {
       return;
     }
     if (spec && !siege && !st.tesla) {
-      towerSpecFire(w, e, best, spec, boost.damage, cands);
+      if (!towerSpecFire(w, e, best, spec, boost.damage, cands)) {
+        st.nextAction = w.time + 0.3;
+        return;
+      }
       st.lastFireAt = w.time;
       st.nextAction = w.time + (spec.cooldown ?? def.cooldown ?? 1) / haste;
       return;
@@ -370,12 +373,17 @@ export function updateStructure(w: World, e: Entity): void {
   }
 }
 
-function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost: number, cands: { o: Entity; score: number }[]): void {
+function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost: number, cands: { o: Entity; score: number }[]): boolean {
   const def = w.data.structures.types[e.structure!.type as StructureType];
   const st = e.structure!;
   const vsOf = (o: Entity) => def.vs?.[w.classOf(o)] ?? 1;
   const slow = (o: Entity) => (o.hero && st.heroSlow ? { slowMul: st.heroSlow, slowSeconds: 1 } : undefined);
   if (spec.id === "ballista") {
+    const want = Math.atan2(best.transform.pos.x - e.transform.pos.x, best.transform.pos.z - e.transform.pos.z);
+    if (st.aim === undefined || Math.abs(Math.atan2(Math.sin(want - st.aim), Math.cos(want - st.aim))) > 0.3) {
+      st.aim = want;
+      return false;
+    }
     const vs = Math.max(0.8, vsOf(best));
     w.fireProjectile(e, best, st.damage * boost * vs, 34, false, "spear", 3.4, false, undefined, slow(best));
     const sx = e.transform.pos.x;
@@ -385,6 +393,7 @@ function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost
     const len = Math.hypot(dx, dz) || 1;
     const ux = dx / len;
     const uz = dz / len;
+    st.aim = Math.atan2(dx, dz);
     const reach = len + (spec.pierce ?? 5);
     for (const o of w.entities) {
       if (!o.alive || o === best || o.team === e.team || o.structure || o.status.hidden) continue;
@@ -396,12 +405,12 @@ function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost
       w.damage(e, o, st.damage * boost * Math.max(0.8, vsOf(o)) * 0.75, { fromX: sx, fromZ: sz, knockback: 2 });
     }
     w.emit({ type: "pulse", x: sx + ux * reach, y: e.transform.y, z: sz + uz * reach, radius: 0, team: e.team, style: "pierce" });
-    return;
+    return true;
   }
   if (spec.id === "firepot") {
     const r = spec.splash ?? 2.5;
     w.fireAtPoint(e, best.transform.pos.x, best.transform.pos.z, 14, "firepot", 3.4, { radius: r, damage: st.damage * boost * 1.1, slowMul: 0.8, slowSeconds: 0.8 }, true, { radius: spec.burnRadius ?? r, dps: spec.burnDps ?? 30, seconds: spec.burnSeconds ?? 3 });
-    return;
+    return true;
   }
   if (spec.id === "volley") {
     const list = cands.sort((a, b) => a.score - b.score).map((c) => c.o);
@@ -414,4 +423,5 @@ function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost
     while (picks.length < (spec.targets ?? 3)) picks.push(best);
     for (const o of picks) w.fireProjectile(e, o, st.damage * boost * vsOf(o), 28, false, "arrow", 3.4, true, undefined, slow(o));
   }
+  return true;
 }

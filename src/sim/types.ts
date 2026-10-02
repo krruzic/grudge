@@ -188,6 +188,7 @@ export interface StructureState {
   tesla?: boolean;
   spec?: string;
   specPending?: string;
+  aim?: number;
 }
 
 export interface Entity {

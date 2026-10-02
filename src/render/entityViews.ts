@@ -1520,6 +1520,13 @@ export class EntityViews {
     v.body.scale.set(1, 0.25 + 0.75 * k, 1);
     if (v.level2) v.level2.visible = st.level > 1;
     if (v.level3) for (const [id, o] of v.level3) o.visible = st.spec === id;
+    const bal = st.spec === "ballista" ? v.level3?.get("ballista") : undefined;
+    if (bal) {
+      let want = (st.aim ?? e.transform.facing) - e.transform.facing;
+      const cur = bal.rotation.y;
+      want = cur + Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
+      bal.rotation.y = cur + (want - cur) * Math.min(1, (1 / 60) * 12);
+    }
     if (v.spin) v.spin.visible = st.spec !== "ballista" && st.spec !== "firepot";
     if (st.spec && v.root.visible) towerIdle(this.fx, st.spec, e.transform.pos.x, e.transform.y, e.transform.pos.z, e.transform.facing, 1 / 60);
     const fired = w.time - st.lastFireAt;
