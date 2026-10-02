@@ -39,6 +39,7 @@ export class Bot {
   private wantZ = false;
   private wantDodge = false;
   private wantBlock = false;
+  private bombAt = 0;
   picks: number[] | null = null;
   private wantBuy: { item: "bomb" | "ward" | "cannon"; at?: Vec2 } | null = null;
   private tend: Pad | null = null;
@@ -69,7 +70,7 @@ export class Bot {
       const k = me.hero.path.a.length + me.hero.path.b.length + me.hero.path.r.length;
       cmd.learn = this.picks ? this.picks[k % this.picks.length] : this.rand() < 0.5 ? 0 : 1;
     }
-    if (!me || !me.alive) return cmd;
+    if (!me || !me.alive || w.teams[me.team]?.out || !w.core(me.team)) return cmd;
     if (w.time >= this.thinkAt) {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;
       this.think(w, me);
@@ -91,7 +92,7 @@ export class Bot {
     }
     const horn = w.mapEvents.horns.find((hn) => w.time >= hn.readyAt && Math.hypot(hn.x - me.transform.pos.x, hn.z - me.transform.pos.z) < 38 && (w.time * 7 + me.id * 13) % 60 < 25);
     if (horn && me.hp > me.maxHp * 0.45 && !w.arena.carrying(me) && !w.entities.some((o) => o.alive && o.hero && o.team !== me.team && w.dist(me, o) < 6)) this.goal = { x: horn.x, z: horn.z };
-    if (this.goal && w.jumpPads.length && !w.arena.carrying(me)) {
+    if (this.goal && w.jumpPads.length && !w.arena.carrying(me) && !me.hero?.bomb) {
       const p = me.transform.pos;
       const g = this.goal;
       const direct = Math.hypot(g.x - p.x, g.z - p.z);
@@ -547,7 +548,9 @@ export class Bot {
     const ward = (core.structure!.ward ?? 0) / w.data.structures.core.ward;
     const wardOk = w.time >= ts.wardReadyAt && !w.isSudden();
     const wantWard = wardOk && ward < (this.role === "attack" ? 0.15 : this.role === "support" ? 0.55 : 0.4) && gold >= sh.ward.cost;
-    const wantBomb = !h.bomb && gold >= sh.bomb.cost + 120 && w.entities.some((o) => o.alive && o.structure && o.team !== me.team && !o.neutral && o.structure.type !== "core");
+    const myArmy = w.teams[me.team].unitCount;
+    const wantBomb = !h.bomb && w.time >= (ts.bombReadyAt ?? 0) && w.time >= this.bombAt && gold >= sh.bomb.cost + 250 && myArmy >= 4 &&
+      w.entities.some((o) => o.alive && o.structure && o.team !== me.team && !o.neutral && o.structure.type !== "core" && w.entities.some((u) => u.alive && u.unit && u.team === me.team && w.dist(u, o) < 20));
     const mate = this.mateHero(w);
     const foes = this.enemyHeroes(w, me);
     const brawl = mate && this.role === "support" ? foes.find((e) => w.dist(mate, e) < 8) : undefined;
@@ -556,7 +559,10 @@ export class Bot {
     if (!(wantWard || wantBomb || wantCannon)) return false;
     if (w.arena.inShop(me)) {
       if (wantWard) this.wantBuy = { item: "ward" };
-      else if (wantBomb) this.wantBuy = { item: "bomb" };
+      else if (wantBomb) {
+        this.wantBuy = { item: "bomb" };
+        this.bombAt = w.time + 90;
+      }
       else if (enemy) this.wantBuy = { item: "cannon", at: { x: enemy.transform.pos.x, z: enemy.transform.pos.z } };
       return false;
     }

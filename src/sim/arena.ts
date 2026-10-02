@@ -482,7 +482,13 @@ export class Arena {
         w.emit({ type: "notice", team, text: "ALREADY CARRYING A BOMB" });
         return false;
       }
+      const ts = w.teams[team];
+      if (w.time < (ts.bombReadyAt ?? 0)) {
+        w.emit({ type: "notice", team, text: `NEXT BOMB IN ${Math.ceil((ts.bombReadyAt ?? 0) - w.time)}` });
+        return false;
+      }
       if (!pay(sh.bomb.cost)) return false;
+      ts.bombReadyAt = w.time + (sh.bomb.cooldown ?? 20);
       h.bomb = true;
       w.emit({ type: "notice", team, text: "BOMB! TOUCH AN ENEMY TOWER" });
       return true;

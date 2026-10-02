@@ -368,6 +368,7 @@ export interface TeamState {
   formation?: Formation;
   callReadyAt: number;
   wardReadyAt: number;
+  bombReadyAt?: number;
 }
 
 export type ShopItem = "bomb" | "ward" | "cannon";

@@ -209,7 +209,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     }
     return;
   }
-  if (!h.action && w.jumpPads.length && w.time >= (h.jumpReadyAt ?? 0) && !w.arena.carrying(e) && h.morphAt === undefined) {
+  if (!h.action && w.jumpPads.length && w.time >= (h.jumpReadyAt ?? 0) && !w.arena.carrying(e) && !h.bomb && h.morphAt === undefined) {
     const i = w.jumpPads.findIndex((p) => w.time >= p.readyAt && w.time - p.chargeAt > w.jumpCharge + 0.05 && Math.hypot(p.x - t.pos.x, p.z - t.pos.z) < 1.1);
     if (i >= 0) {
       const p = w.jumpPads[i];

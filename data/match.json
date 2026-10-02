@@ -135,6 +135,7 @@
     "shop": {
       "radius": 5,
       "bomb": {
+        "cooldown": 20,
         "cost": 180,
         "fuse": 3,
         "coreDamage": 350,
