@@ -666,7 +666,7 @@ async function start(): Promise<void> {
     mappers[i] = new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i));
     bots[i] = null;
     view.setHumans(mappers.map((m) => !!m));
-  }, pads, slots, cursors, menus, save, view, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot: [...mySlots.values()][0] ?? -1, mySlots: Object.fromEntries(mySlots), frames: netFrames.length, remotes: rseats.map((r) => [r.peer, r.k, r.slot]) }; } };
+  }, pads, slots, cursors, menus, save, view, audio, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot: [...mySlots.values()][0] ?? -1, mySlots: Object.fromEntries(mySlots), frames: netFrames.length, remotes: rseats.map((r) => [r.peer, r.k, r.slot]) }; } };
 
   let last = performance.now();
   let acc = 0;
@@ -1352,7 +1352,8 @@ async function start(): Promise<void> {
     if (state === "match" || state === "paused") hud.update(world, mappers.map((m) => m?.ui ?? null), now);
     if (state === "match") for (const ev of world.events) if (ev.type === "eliminated" && !fallen.includes(ev.team)) fallen.push(ev.team);
     if (state === "match") audio.handle(world.events, (x, y, z) => view.worldToScreen(x, y, z));
-    audio.setMusic(state !== "paused", state === "match" && world.match.phase === "sudden" ? 1 : state === "match" ? 0.3 : 0);
+    const fight = state === "match" || state === "paused";
+    audio.setMusic(fight ? (world.match.phase === "sudden" ? "sudden" : "battle") : state === "results" ? "results" : state === "select" || state === "map" || state === "lobby" ? "select" : "menu", state === "paused" ? 0.35 : 1);
     audio.update();
     view.cinematic = state === "select" || state === "map" || state === "lobby" || (state === "menu" && menus.page !== "main");
     const demoAlpha = runDemo(dt);

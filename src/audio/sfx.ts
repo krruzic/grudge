@@ -2,7 +2,14 @@ import type { SimEvent } from "../sim/types";
 
 type Screen = (x: number, y: number, z: number) => { x: number; y: number };
 
-const SCALE = [0, 2, 3, 5, 7, 9, 10];
+import menuUrl from "../../assets/music/menu.mp3?url";
+import selectUrl from "../../assets/music/select.mp3?url";
+import battleUrl from "../../assets/music/battle.mp3?url";
+import suddenUrl from "../../assets/music/sudden.mp3?url";
+import resultsUrl from "../../assets/music/results.mp3?url";
+
+const MUSIC: Record<string, string> = { menu: menuUrl, select: selectUrl, battle: battleUrl, sudden: suddenUrl, results: resultsUrl };
+const LOOP_SECONDS: Record<string, number> = { menu: 49.951, select: 56.307, battle: 108, sudden: 123.428, results: 41.795 };
 
 export class Audio {
   private ctx: AudioContext | null = null;
@@ -11,16 +18,12 @@ export class Audio {
   private musicBus!: GainNode;
   private noise!: AudioBuffer;
   private budget = new Map<string, number>();
-  private musicOn = false;
-  private nextNoteTime = 0;
-  private step = 0;
-  private intensity = 0;
 
-  private musicLevel = 0.32;
+  private musicLevel = 0.5;
   private sfxLevel = 1;
 
   setLevels(music: number, sound: number): void {
-    this.musicLevel = 0.32 * music;
+    this.musicLevel = 0.5 * music;
     this.sfxLevel = sound;
     if (this.musicBus) this.musicBus.gain.value = this.musicLevel;
     if (this.sfxBus) this.sfxBus.gain.value = this.sfxLevel;
@@ -280,43 +283,74 @@ export class Audio {
     }
   }
 
-  setMusic(on: boolean, intensity = 0): void {
-    this.musicOn = on;
-    this.intensity = intensity;
+  private tracks = new Map<string, { buf: AudioBuffer | null; loading: boolean }>();
+  private playing: { name: string; src: AudioBufferSourceNode; gain: GainNode } | null = null;
+  private want: string | null = null;
+  private duck = 1;
+  private playedDuck = 1;
+
+  setMusic(track: string | null, duck = 1): void {
+    this.want = track;
+    this.duck = duck;
+  }
+
+  private fetchTrack(name: string): AudioBuffer | null {
+    const t = this.tracks.get(name);
+    if (t) return t.buf;
+    const url = MUSIC[name];
+    if (!url || !this.ctx) return null;
+    const entry = { buf: null as AudioBuffer | null, loading: true };
+    this.tracks.set(name, entry);
+    const ctx = this.ctx;
+    fetch(url)
+      .then((r) => r.arrayBuffer())
+      .then((b) => ctx.decodeAudioData(b))
+      .then((buf) => {
+        entry.buf = buf;
+        entry.loading = false;
+      })
+      .catch(() => {
+        entry.loading = false;
+      });
+    return null;
   }
 
   update(): void {
-    if (!this.ready || !this.musicOn) return;
+    if (!this.ready) return;
     const c = this.ctx!;
-    const bpm = 112 + this.intensity * 28;
-    const stepDur = 60 / bpm / 4;
-    if (this.nextNoteTime < c.currentTime) this.nextNoteTime = c.currentTime + 0.05;
-    while (this.nextNoteTime < c.currentTime + 0.2) {
-      this.playStep(this.step, this.nextNoteTime - c.currentTime, stepDur);
-      this.step = (this.step + 1) % 128;
-      this.nextNoteTime += stepDur;
+    const now = c.currentTime;
+    if (this.playing && this.playing.name !== this.want) {
+      const old = this.playing;
+      old.gain.gain.cancelScheduledValues(now);
+      old.gain.gain.setValueAtTime(old.gain.gain.value, now);
+      old.gain.gain.linearRampToValueAtTime(0, now + 1.2);
+      old.src.stop(now + 1.3);
+      this.playing = null;
     }
-  }
-
-  private playStep(step: number, at: number, dur: number): void {
-    const bar = Math.floor(step / 16) % 8;
-    const s = step % 16;
-    const prog = [0, 0, 5, 3, 0, 0, 4, 6][bar];
-    const root = 110;
-    const note = (deg: number, oct = 0) => {
-      const o = Math.floor(deg / 7);
-      const d = ((deg % 7) + 7) % 7;
-      return root * Math.pow(2, (SCALE[d] + 12 * (o + oct)) / 12);
-    };
-    const bus = this.musicBus;
-    if (s % 4 === 0 || s === 14) this.tone("triangle", note(prog, -1), note(prog, -1) * 0.98, dur * 3.5, 0.5, 0, at, bus);
-    const arp = [0, 2, 4, 7, 4, 2, 0, 2];
-    if (s % 2 === 0) this.tone("square", note(prog + arp[(s / 2) % 8], 1), note(prog + arp[(s / 2) % 8], 1), dur * 1.6, 0.06, 0.3, at, bus);
-    const melody = [7, -1, 9, -1, 11, 9, 7, -1, 6, -1, 4, -1, 6, 7, -1, -1];
-    const m = melody[(s + bar * 3) % 16];
-    if (bar % 2 === 1 && m >= 0 && s % 2 === 0) this.tone("sawtooth", note(prog + m, 1), note(prog + m, 1), dur * 2.5, 0.04, -0.3, at, bus);
-    if (s % 8 === 0) { this.tone("sine", 120, 40, 0.18, 0.7, 0, at, bus); }
-    if (s % 8 === 4) this.hiss(1800, 0.7, 0.12, 0.35, 0, "bandpass", at, undefined, bus);
-    if (this.intensity > 0.5 || s % 2 === 1) this.hiss(7000, 1, 0.03, 0.1, 0.2, "highpass", at, undefined, bus);
+    if (!this.playing && this.want) {
+      const buf = this.fetchTrack(this.want);
+      if (buf) {
+        const src = c.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+        src.loopStart = 0;
+        src.loopEnd = Math.min(buf.duration, LOOP_SECONDS[this.want] ?? buf.duration);
+        const gain = c.createGain();
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(this.duck, now + 1.2);
+        src.connect(gain).connect(this.musicBus);
+        src.start(now + 0.05);
+        this.playing = { name: this.want, src, gain };
+        this.playedDuck = this.duck;
+      }
+    } else if (this.playing) {
+      const next = Object.keys(MUSIC).find((k) => !this.tracks.has(k));
+      if (next) this.fetchTrack(next);
+    }
+    if (this.playing && this.playedDuck !== this.duck) {
+      this.playedDuck = this.duck;
+      this.playing.gain.gain.cancelScheduledValues(now);
+      this.playing.gain.gain.setTargetAtTime(this.duck, now, 0.25);
+    }
   }
 }
