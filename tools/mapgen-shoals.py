@@ -41,7 +41,7 @@ cell("wall", style="rim", x=0, z=0, w=1, h=52)
 cell("water", x=29, z=1, w=3, h=15, deep=True)
 cell("water", x=19, z=33, w=12, h=3, deep=True)
 cell("water", x=43, z=10, w=3, h=3, deep=True)
-cell("bridge", style="stone", y=0.6, x=15, z=6, w=17, h=3)
+cell("bridge", style="stone", y=0.6, x=15, z=6, w=18, h=3)
 cell("bridge", style="wood", y=0.3, x=26, z=32, w=3, h=5)
 
 cell("tide", x=13, z=1, w=42, h=50)
