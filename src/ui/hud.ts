@@ -649,6 +649,7 @@ export class Hud {
   private banner = "";
   private bannerAt = 0;
   private bannerUntil = 0;
+  laneCount = 0;
   private shownGrain: number[] = [];
   private notices: { text: string; until: number }[] = Array.from({ length: 4 }, () => ({ text: "", until: 0 }));
   private orders: { type: UnitType | "all"; dir: Directive; until: number }[] = Array.from({ length: 4 }, () => ({ type: "all" as const, dir: "follow" as Directive, until: 0 }));
@@ -719,6 +720,7 @@ export class Hud {
   }
 
   update(w: World, _ui: (MapperUi | null)[], now: number): void {
+    this.laneCount = w.ffa ? 0 : w.terrain.lanes.length;
     for (const ev of w.events) {
       if (ev.type === "hit" && ev.id !== undefined) {
         const tg = w.getAny(ev.id);
@@ -1710,7 +1712,7 @@ export class Hud {
     const flash = now < o.until - 1.2;
     const form = ts.formation ?? "mass";
     const showForm = form !== "mass" || w.players.some((q) => q.team === t && q.commander);
-    const key = [x0, y0, right, selected, flash, o.type, showForm ? form : "", ts.attackTeam ?? -1, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
+    const key = [x0, y0, right, selected, flash, o.type, showForm ? form : "", ts.attackTeam ?? -1, ts.lane ?? -1, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
     this.memo(ctx, `orders${t}`, key, x0 - 24, y0 - 6, pw + 48, ph + 12, (c) => {
       this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash, right);
       if (showForm) formationBadge(c, right ? x0 - 9 : x0 + pw + 9, y0 + 10.5, form);
@@ -1753,6 +1755,17 @@ export class Hud {
       ctx.stroke();
       ctx.restore();
       orderBadge(ctx, x + r * 0.74, y - r * 0.74, ts.directives[k], t === 1 || right, ts.directives[k] === "push" && (ts.attackTeam ?? -1) >= 0 ? this.teamColors[ts.attackTeam!] : undefined);
+      if (ts.directives[k] === "push" && (ts.lane ?? -1) >= 0 && this.laneCount > 0) {
+        const lx = x + r * 0.74 + (right || t === 1 ? -7.5 : 7.5);
+        const n = this.laneCount;
+        const top = y - r * 0.74 - (n * 3.4) / 2;
+        ctx.fillStyle = INK;
+        ctx.fillRect(Math.round(lx - 2), Math.round(top - 1), 4, Math.round(n * 3.4 + 1.6));
+        for (let q = 0; q < n; q++) {
+          ctx.fillStyle = q === ts.lane ? "#ffd848" : "#5a4a3a";
+          ctx.fillRect(Math.round(lx - 1), Math.round(top + q * 3.4), 2, 2.4);
+        }
+      }
       const n = String(counts[k]);
       const nw = textWidth(n, 0.6, true);
       const pw2 = Math.max(7, nw + 4);

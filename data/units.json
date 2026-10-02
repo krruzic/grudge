@@ -99,7 +99,7 @@
   },
   "waves": {
     "firstSeconds": 8,
-    "everySeconds": 16,
+    "everySeconds": 12,
     "spawnCost": {
       "grunt": 12,
       "ranged": 16,

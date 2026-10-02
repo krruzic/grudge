@@ -166,6 +166,7 @@ export interface UnitState {
   moving: boolean;
   raised?: boolean;
   lost?: boolean;
+  lanePassed?: number;
 }
 
 export interface StructureState {
@@ -365,6 +366,8 @@ export interface TeamState {
   homeLost: boolean;
   directives: TeamDirectives;
   attackTeam?: number;
+  lane?: number;
+  laneGen?: number;
   coreDamageDealt: number;
   kills: number;
   structuresBuilt: number;

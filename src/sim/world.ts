@@ -622,6 +622,14 @@ export class World {
         ts.attackTeam = at + 1 < rivals.length ? rivals[at + 1] : -1;
       } else ts.attackTeam = -1;
       this.emit({ type: "notice", team, text: ts.attackTeam !== undefined && ts.attackTeam >= 0 ? `ATTACK · ${this.teamName(ts.attackTeam)} HOUSE` : "ATTACK · NEAREST KEEP" });
+    } else if (dir === "push" && hero.hero && this.terrain.lanes.length) {
+      const ts = this.teams[team];
+      const already = types.every((t) => d[t] === "push");
+      const n = this.terrain.lanes.length;
+      const cur = ts.lane ?? -1;
+      ts.lane = already ? (cur + 1 < n ? cur + 1 : -1) : -1;
+      ts.laneGen = (ts.laneGen ?? 0) + 1;
+      this.emit({ type: "notice", team, text: ts.lane >= 0 ? `ATTACK · ${this.terrain.lanes[ts.lane].name} LANE` : "ATTACK · ANY LANE" });
     }
     let focusId = 0;
     if (dir === "focus") {

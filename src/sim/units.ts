@@ -47,6 +47,14 @@ export function updateUnit(w: World, e: Entity): void {
     const pick = at >= 0 && w.standing(at) ? w.core(at) : undefined;
     const core = pick?.alive ? pick : w.foeCore(e.team, e.transform.pos.x, e.transform.pos.z);
     if (core) goal = { x: core.transform.pos.x, z: core.transform.pos.z };
+    const lane = !w.ffa && (team.lane ?? -1) >= 0 ? w.terrain.lanes[team.lane!] : undefined;
+    if (lane && core && u.lanePassed !== team.laneGen) {
+      const p = e.transform.pos;
+      const toWp = Math.hypot(lane.x - p.x, lane.z - p.z);
+      const past = Math.hypot(core.transform.pos.x - p.x, core.transform.pos.z - p.z) + 3 < Math.hypot(core.transform.pos.x - lane.x, core.transform.pos.z - lane.z);
+      if (toWp < 4 || past) u.lanePassed = team.laneGen;
+      else goal = { x: lane.x, z: lane.z };
+    }
   } else if (directive === "defend") {
     const { post, rank } = w.defendPost(e);
     const off = slotOffset(rank, 0.8);
@@ -150,7 +158,8 @@ export function updateUnit(w: World, e: Entity): void {
   }
   if (goal) {
     if (directive !== "follow" || heroAlive) u.pathGoal = goal;
-    moveToward(w, e, goal, directive === "push" ? 3 : 0.6);
+    const onLane = directive === "push" && !w.ffa && (team.lane ?? -1) >= 0 && u.lanePassed !== team.laneGen;
+    moveToward(w, e, goal, directive === "push" && !onLane ? 3 : 0.6);
   }
 }
 

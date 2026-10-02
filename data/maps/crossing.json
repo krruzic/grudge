@@ -1056,6 +1056,7 @@
    "ruined": true
   }
  ],
+ "lanes": [{"name": "TOP", "x": 52, "z": 6}, {"name": "MIDDLE", "x": 52, "z": 20}, {"name": "BOTTOM", "x": 52, "z": 41}],
  "cores": [
   {
    "team": 0,

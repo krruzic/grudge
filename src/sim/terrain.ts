@@ -77,6 +77,7 @@ export interface MapData {
   spawns: MapPoint[];
   dens?: MapPoint[];
   patrols?: { a: MapPoint; b: MapPoint }[];
+  lanes?: { name: string; x: number; z: number }[];
   jumppads?: { a: MapPoint; b: MapPoint }[];
   avalanche?: unknown;
   gates?: unknown;
@@ -140,6 +141,7 @@ export class Terrain {
   readonly spawns: MapPoint[] = [];
   readonly dens: MapPoint[] = [];
   readonly patrols: { a: MapPoint; b: MapPoint }[] = [];
+  readonly lanes: { name: string; x: number; z: number }[] = [];
   readonly jumppads: { a: MapPoint; b: MapPoint }[] = [];
   private mirror: "x" | "diag" | "rot" | "quad" | "none" = "none";
   readonly teams: number = 2;
@@ -200,6 +202,7 @@ export class Terrain {
     this.fountain = data.fountain;
     this.mist = data.mist;
     this.horns = data.horns;
+    this.lanes.push(...(data.lanes ?? []));
     this.outposts = !!data.outposts;
     this.lantern = data.lantern;
     const mode = this.mirror;
