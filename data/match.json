@@ -13,6 +13,7 @@
     "start": 200,
     "income": 3.5,
     "respawnCooldownPenalty": 2,
+    "respawnBigMul": 1.667,
     "padIncome": {
       "home": 0.35,
       "forward": 0.45,

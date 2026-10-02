@@ -99,7 +99,7 @@ export const RULE_ROWS: Row<Rules>[] = [
   { key: "startGold", label: "STARTING GOLD", values: [0, 100, 200, 400, 800], fmt: String, blurb: "GOLD IN THE COFFERS AT THE FIRST HORN." },
   { key: "goldRate", label: "GOLD RATE", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST THE COFFERS FILL." },
   { key: "troops", label: "TROOP OUTPUT", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW OFTEN OUTPOSTS SEND SOLDIERS." },
-  { key: "respawn", label: "HERO RETURNS", values: [3, 6, 10, 15], fmt: (v) => `${v} SEC`, blurb: "HOW LONG A FALLEN CHAMPION STAYS DOWN." },
+  { key: "respawn", label: "HERO RETURNS", values: [3, 6, 10, 15], fmt: (v) => `${v} SEC`, blurb: "HOW LONG A FALLEN CHAMPION STAYS DOWN IN 1 VS 1. 2 VS 2 AND FREE FOR ALL WAIT ABOUT TWO THIRDS LONGER (6 SEC BECOMES 10)." },
   { key: "partners", label: "2 VS 2 ALLIES", values: [1, 0], fmt: (v) => (v ? "CHAMPIONS" : "COMMANDERS"), blurb: "IN 2 VS 2, PLAYERS 3 AND 4 FIGHT AS CHAMPIONS OR LEAD AS COMMANDERS." },
   { key: "mercy", label: "MERCY", values: [1, 0], fmt: onOff, blurb: "THE LOSING HOUSE EARNS AND BUILDS FASTER." },
 ];
