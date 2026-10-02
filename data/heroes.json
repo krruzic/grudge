@@ -139,7 +139,15 @@
           "variance": 0.3
         }
       },
-      "botRange": 1.8
+      "botRange": 1.8,
+      "botPlan": {
+        "picks": [
+          1,
+          0,
+          1,
+          0
+        ]
+      }
     },
     "engineer": {
       "name": "Stig",
@@ -234,29 +242,40 @@
           "botRange": 8,
           "callout": "BALLISTA"
         }
+      },
+      "botPlan": {
+        "picks": [
+          0,
+          0,
+          1,
+          0
+        ]
       }
     },
     "raider": {
       "name": "Grim",
-      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills shorten Leap.",
+      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills reset Leap. Alone (no friendly champion within 14 m) he heals for 30% of the damage he deals to champions and takes 30% less from soldiers and towers.",
       "health": "low",
       "speed": "swift",
       "damage": "high",
       "defaultBuild": "barracks",
       "botRange": 1.6,
       "hooks": {
-        "flankMul": 1.3,
+        "flankMul": 1.5,
         "stepHeight": 1.4,
         "maxSlope": 3.5,
         "killResetsB": 1,
-        "speedMul": 1.07
+        "speedMul": 1.07,
+        "loneRadius": 14,
+        "loneLeech": 0.3,
+        "loneArmor": 0.3
       },
       "abilities": {
         "a": {
           "kind": "combo",
           "hits": [
             {
-              "damage": 21,
+              "damage": 24,
               "range": 2.4,
               "arcDeg": 60,
               "dur": 0.16,
@@ -265,7 +284,7 @@
               "knockback": 0.15
             },
             {
-              "damage": 21,
+              "damage": 24,
               "range": 2.4,
               "arcDeg": 60,
               "dur": 0.16,
@@ -274,7 +293,7 @@
               "knockback": 0.15
             },
             {
-              "damage": 21,
+              "damage": 24,
               "range": 2.4,
               "arcDeg": 60,
               "dur": 0.16,
@@ -283,7 +302,7 @@
               "knockback": 0.15
             },
             {
-              "damage": 36,
+              "damage": 40,
               "range": 2.6,
               "arcDeg": 90,
               "dur": 0.26,
@@ -303,11 +322,11 @@
           "kind": "leap",
           "anim": "attack_a",
           "range": 8,
-          "damage": 60,
+          "damage": 70,
           "radius": 2.2,
           "dur": 0.55,
           "hitAt": 0.5,
-          "cooldown": 6,
+          "cooldown": 5,
           "knockback": 4,
           "bot": "fight",
           "botRange": 7,
@@ -318,10 +337,10 @@
           "anim": "idle",
           "seconds": 4,
           "speedMul": 1.3,
-          "ambushMul": 1.6,
+          "ambushMul": 2.0,
           "dur": 0.3,
           "hitAt": 0.1,
-          "cooldown": 16,
+          "cooldown": 14,
           "bot": "approach",
           "botRange": 12,
           "callout": "SMOKE \u00b7 UNSEEN"
@@ -339,11 +358,27 @@
           "structureDamage": 120,
           "knockback": 6,
           "executeBelow": 0.4,
-          "executeMul": 1.25,
+          "executeMul": 1.4,
           "callout": "EXECUTE DASH",
           "crit": 0.3,
           "variance": 0.1
         }
+      },
+      "botPlan": {
+        "retreatHp": 0.45,
+        "crowd": 1,
+        "opener": "r",
+        "openerRange": 15,
+        "flank": true,
+        "escape": "b",
+        "gateB": "opening",
+        "hunt": 45,
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
       }
     },
     "summoner": {
@@ -442,6 +477,14 @@
           "hexRadius": 7,
           "callout": "RAISE AN ARMY"
         }
+      },
+      "botPlan": {
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
       }
     },
     "duelist": {
@@ -538,6 +581,14 @@
           "callout": "BLADE FLURRY",
           "crit": 0.12
         }
+      },
+      "botPlan": {
+        "picks": [
+          0,
+          0,
+          1,
+          0
+        ]
       }
     },
     "warden": {
@@ -626,6 +677,14 @@
           "rearmSeconds": 2,
           "callout": "BRAMBLES \u00b7 FOES SLOWED, ALLIES SPED"
         }
+      },
+      "botPlan": {
+        "picks": [
+          1,
+          1,
+          0,
+          0
+        ]
       }
     },
     "herald": {

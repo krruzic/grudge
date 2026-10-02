@@ -407,8 +407,7 @@ export class World {
   private onKillSynergy(target: Entity, src: Entity | null): void {
     const t = this.time;
     if (src?.hero && this.heroDef(src.hero.type).hooks.killResetsB) {
-      if (target.structure) src.hero.cooldowns.b = t;
-      else if (target.hero) src.hero.cooldowns.b = t + Math.max(0, (src.hero.cooldowns.b ?? t) - t) * 0.5;
+      if (target.hero || target.structure) src.hero.cooldowns.b = t;
     }
     if (target.kind !== "structure" && t < target.status.hexUntil) {
       const owner = this.get(target.status.hexOwner);
@@ -1190,7 +1189,7 @@ export class World {
         const dz = src.transform.pos.z - tp.pos.z;
         const dot = (Math.sin(tp.facing) * dx + Math.cos(tp.facing) * dz) / (Math.hypot(dx, dz) || 1);
         if (dot < -0.3 && !hk.flankMul) amount *= pos.backstabMul;
-        if (src.status.hidden && this.time >= src.status.stealthUntil) amount *= pos.ambushMul;
+        if (src.status.hidden) amount *= pos.ambushMul;
       }
     }
     amount *= this.synergyMul(src, target, opts);
@@ -1279,7 +1278,9 @@ export class World {
         return true;
       }
     }
+    if (target.hero && src && !src.hero && this.lone(target)) amount *= 1 - (this.heroDef(target.hero.type).hooks.loneArmor ?? 0);
     target.hp -= amount;
+    if (src?.hero && src.alive && target.hero && this.lone(src)) this.heal(src, amount * (this.heroDef(src.hero.type).hooks.loneLeech ?? 0));
     if (target.hero?.jump && amount > 0) this.cancelJump(target);
     xpForDamage(this, src, target, amount);
     if (src && src.alive && src.status.stealUntil && this.time < src.status.stealUntil) this.heal(src, amount * (src.status.stealMul ?? 0));
@@ -1329,6 +1330,17 @@ export class World {
   }
 
   training = false;
+
+  lone(e: Entity): boolean {
+    const r = e.hero ? this.heroDef(e.hero.type).hooks.loneRadius : undefined;
+    if (!r) return false;
+    for (const p of this.players) {
+      if (p.team !== e.team || p.heroId === e.id) continue;
+      const o = this.byId.get(p.heroId);
+      if (o?.alive && this.dist(o, e) < r) return false;
+    }
+    return true;
+  }
 
   makeTraining(): void {
     this.training = true;

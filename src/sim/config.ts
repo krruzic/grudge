@@ -160,6 +160,22 @@ export interface AbilityDef {
   structureMul?: number;
 }
 
+export interface BotPlan {
+  retreatHp?: number;
+  crowd?: number;
+  opener?: "b" | "r";
+  openerRange?: number;
+  flank?: boolean;
+  escape?: "b" | "r";
+  gateB?: "opening";
+  hitAndRun?: number;
+  hunt?: number;
+  huntRatio?: number;
+  picks?: number[];
+  zBelow?: number;
+  raid?: number;
+}
+
 export interface HeroDef {
   name: string;
   blurb: string;
@@ -168,6 +184,7 @@ export interface HeroDef {
   damage: string;
   defaultBuild: StructureType;
   botRange?: number;
+  botPlan?: BotPlan;
   role?: "hero" | "commander";
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
