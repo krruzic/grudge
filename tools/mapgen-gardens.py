@@ -60,6 +60,7 @@ rect(23, 5, 28, 7, "dirt")
 rect(40, 12, 6, 13, "dirt")
 rect(36, 25, 15, 7, "dirt")
 rect(23, 12, 3, 6, "dirt")
+rect(46, 32, 5, 8, "dirt")
 
 for z in range(40, 52):
     for x in range(40, 52):
@@ -73,7 +74,7 @@ rect(40, 47, 1, 4, "paving")
 beds = [
     [(x, z) for z in range(12, 25) for x in range(26, 40) if x - z >= 6],
     [(x, z) for z in range(12, 25) for x in range(46, 51)],
-    [(x, z) for z in range(32, 40) for x in range(39, 51) if x - z >= 6],
+    [(x, z) for z in range(32, 40) for x in range(39, 46) if x - z >= 6],
     [(x, z) for z in range(1, 5) for x in range(23, 51)],
 ]
 for bed in beds:
@@ -114,7 +115,7 @@ for bed in beds[:3]:
         col = palette[rng.randrange(len(palette))]
         prop("flowers", x + 0.5, z + 0.5, color=col)
         prop("flowers", z + 0.5, x + 0.5, color=col)
-for x, z in [(26.5, 12.5), (39.5, 12.5), (46.5, 12.5), (50.5, 12.5), (46.5, 24.5), (50.5, 24.5), (39.5, 33.5), (50.5, 33.5)]:
+for x, z in [(26.5, 12.5), (39.5, 12.5), (46.5, 12.5), (50.5, 12.5), (46.5, 24.5), (50.5, 24.5), (39.5, 33.5)]:
     prop("topiary", x, z)
     prop("topiary", z, x)
 for x, z in [(28.5, 28.5), (36.5, 36.5)]:

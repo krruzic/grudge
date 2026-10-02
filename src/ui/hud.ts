@@ -1546,6 +1546,7 @@ export class Hud {
     const menuHero = opener?.heroId;
     const firstLocal = w.players.find((p) => p.team === t && ui[p.player]);
     let [crossX, crossY] = crossOf(opener?.player ?? firstLocal?.player);
+    if (!firstLocal && ui.some(Boolean)) return;
     const nt = this.notices[t];
     if (now < nt.until) {
       const age = 2 - (nt.until - now);
