@@ -52,6 +52,7 @@ type HeroInfo = { name: string; blurb: string; abilities?: Record<string, { kind
 
 export interface LobbySlot {
   hero: string;
+  level?: number;
   ready: boolean;
   cpu: boolean;
   name: string | null;
@@ -408,40 +409,81 @@ export class Screens {
     const label = s.cpu ? "CPU" : !this.championSeat(i) ? "COMMANDER" : "PLAYER";
     const pw = Math.max(26, textWidth(label, 0.5, true) + 10);
     const camPl = !s.cpu && this.cameraMode !== 0 && this.championSeat(i);
-    if (s.cpu || camPl) cx -= 16;
+    const lvW = 21;
+    const camW = 11;
+    const extra = s.cpu ? lvW + 3 : camPl ? camW + 3 : 0;
+    const x0 = Math.round(cx - (pw + extra) / 2);
+    const px = x0 + pw / 2;
     const hovered = this.cursors?.cursors.some((c) => c.active && c.hover === `kind:${i}`);
     ctx.fillStyle = INK;
-    ctx.fillRect(cx - pw / 2 - 1, y - 1, pw + 2, 10);
-    texturedRect(ctx, "wood", cx - pw / 2, y, pw, 8, hovered ? "#e0b060" : "#a07040", 0, 1);
-    drawPlain(ctx, label, cx - textWidth(label, 0.5, true) / 2, y + 1.6, s.cpu ? "#d8d8e0" : "#f8e8b0", 0.5, true);
-    this.hit(`kind:${i}`, cx - pw / 2 - 2, y - 2, pw + 4, 12);
+    ctx.fillRect(px - pw / 2 - 1, y - 1, pw + 2, 10);
+    texturedRect(ctx, "wood", px - pw / 2, y, pw, 8, hovered ? "#e0b060" : "#a07040", 0, 1);
+    drawPlain(ctx, label, px - textWidth(label, 0.5, true) / 2, y + 1.6, s.cpu ? "#d8d8e0" : "#f8e8b0", 0.5, true);
+    this.hit(`kind:${i}`, px - pw / 2 - 2, y - 2, pw + 4, 12);
+    const tip = (t: string) => shadowText(ctx, t, cx - textWidth(t, 0.42) / 2, y - 24, "#f8e8c0", 0.42);
     if (s.cpu) {
-      const lv = `LV ${s.level}`;
-      const lw = textWidth(lv, 0.45, true) + 8;
-      const ly = y + 0.5;
-      cx += 16 + pw / 2 + lw / 2 - 6;
-      const hl = this.cursors?.cursors.some((c) => c.active && c.hover === `lvl:${i}`);
+      const lx = x0 + pw + 3;
+      const hl = !!this.cursors?.cursors.some((c) => c.active && c.hover === `lvl:${i}`);
       ctx.fillStyle = INK;
-      ctx.fillRect(cx - lw / 2 - 1, ly - 1, lw + 2, 9);
-      texturedRect(ctx, "parch", cx - lw / 2, ly, lw, 7, hl ? "#f0d890" : "#c8b088", 0, 1);
-      drawPlain(ctx, lv, cx - textWidth(lv, 0.45, true) / 2, ly + 1.2, "#3a2410", 0.45, true);
+      ctx.fillRect(lx - 1, y - 1, lvW + 2, 10);
+      texturedRect(ctx, "wood", lx, y, lvW, 8, hl ? "#e0b060" : "#6a4428", 0, 1);
       for (let k = 0; k < 3; k++) {
-        ctx.fillStyle = k < s.level ? "#c81818" : "rgba(0,0,0,0.3)";
-        ctx.fillRect(cx + lw / 2 + 3 + k * 4, ly + 4 - k, 3, 3 + k);
+        const gx = lx + 4 + k * 6.5;
+        const gy = y + 4;
+        const on = k < s.level;
+        const gem = (r: number, col: string) => {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.moveTo(gx, gy - r);
+          ctx.lineTo(gx + r * 0.8, gy);
+          ctx.lineTo(gx, gy + r);
+          ctx.lineTo(gx - r * 0.8, gy);
+          ctx.closePath();
+          ctx.fill();
+        };
+        gem(3.2, INK);
+        gem(2.3, on ? ["#e8c040", "#e07020", "#d81818"][s.level - 1] : "#2a1c12");
+        if (on) {
+          ctx.fillStyle = "rgba(255,255,230,0.75)";
+          ctx.fillRect(gx - 0.8, gy - 1.6, 1, 1);
+        }
       }
-      this.hit(`lvl:${i}`, cx - lw / 2 - 2, ly - 2, lw + 18, 11);
+      this.hit(`lvl:${i}`, lx - 2, y - 2, lvW + 4, 12);
+      if (hl) tip(`CPU ${["EASY", "NORMAL", "HARD"][s.level - 1]}`);
     }
     if (camPl) {
-      const zl = this.zoomModes[i] ? "D-PAD ZOOM" : "AUTO ZOOM";
-      const lw = textWidth(zl, 0.45, true) + 8;
-      const ly = y + 0.5;
-      const zx = cx + 16 + pw / 2 + lw / 2 - 6 + 4;
-      const hl = this.cursors?.cursors.some((c) => c.active && c.hover === `cam:${i}`);
+      const zx = x0 + pw + 3;
+      const manual = !!this.zoomModes[i];
+      const hl = !!this.cursors?.cursors.some((c) => c.active && c.hover === `cam:${i}`);
       ctx.fillStyle = INK;
-      ctx.fillRect(zx - lw / 2 - 1, ly - 1, lw + 2, 9);
-      texturedRect(ctx, "parch", zx - lw / 2, ly, lw, 7, hl ? "#f0d890" : "#c8b088", 0, 1);
-      drawPlain(ctx, zl, zx - textWidth(zl, 0.45, true) / 2, ly + 1.2, "#3a2410", 0.45, true);
-      this.hit(`cam:${i}`, zx - lw / 2 - 2, ly - 2, lw + 4, 11);
+      ctx.fillRect(zx - 1, y - 1, camW + 2, 10);
+      texturedRect(ctx, "parch", zx, y, camW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
+      const mx = zx + camW / 2;
+      const my = y + 4;
+      if (manual) {
+        ctx.fillStyle = "#3a2410";
+        ctx.fillRect(mx - 1, my - 3, 2, 6);
+        ctx.fillRect(mx - 3, my - 1, 6, 2);
+        ctx.fillStyle = "#c81818";
+        ctx.fillRect(mx - 0.5, my - 3, 1, 1.4);
+      } else {
+        ctx.fillStyle = "#3a2410";
+        ctx.beginPath();
+        ctx.moveTo(mx - 4, my);
+        ctx.quadraticCurveTo(mx, my - 4.2, mx + 4, my);
+        ctx.quadraticCurveTo(mx, my + 4.2, mx - 4, my);
+        ctx.fill();
+        ctx.fillStyle = "#f0e4c8";
+        ctx.beginPath();
+        ctx.arc(mx, my, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#2a5ac8";
+        ctx.beginPath();
+        ctx.arc(mx, my, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      this.hit(`cam:${i}`, zx - 2, y - 2, camW + 4, 12);
+      if (hl) tip(manual ? "CAMERA: D-PAD ZOOM" : "CAMERA: AUTO ZOOM");
     }
   }
 

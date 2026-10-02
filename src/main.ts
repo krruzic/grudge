@@ -694,7 +694,7 @@ async function start(): Promise<void> {
     mode,
     map: pickIndex >= fields().length ? "RANDOM FIELD" : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
     phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
-    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i) })),
+    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, level: s.level, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i) })),
   });
   const freeSeat = (r: RSeat, now: number) => {
     const i = r.slot;
@@ -742,6 +742,14 @@ async function start(): Promise<void> {
         slots[i].tagId = t ? id : undefined;
       }
       lobbySentAt = 0;
+      return;
+    }
+    if (m.t === "lvl" && (state === "select" || state === "map")) {
+      const to = Number(m.slot);
+      if (slots[to]?.cpu && !slots[to].open) {
+        slots[to].level = (slots[to].level % 3) + 1;
+        lobbySentAt = 0;
+      }
       return;
     }
     if (m.t === "seat" && state === "select") {
@@ -1072,6 +1080,7 @@ async function start(): Promise<void> {
             audio.ui("ok");
           } else if (id === "lvl") {
             slots[i].level = (slots[i].level % 3) + 1;
+            lobbySentAt = 0;
             audio.ui("move");
           } else if (id === "tag" && !slots[i].cpu && !commanderSlot(i) && act.by === i && !screens.naming.has(i)) {
             screens.naming.set(i, tagEditor(i, slots[i].tag));
@@ -1198,6 +1207,9 @@ async function start(): Promise<void> {
             if (id === "tag" && mySlots.get(act.by) === i && !screens.naming.has(i)) {
               screens.naming.set(i, tagEditor(i, lb.slots[i]?.name));
               audio.ui("ok");
+            } else if (id === "lvl" && lb.slots[i]?.cpu) {
+              net.toHost({ t: "lvl", k: [...mySlots.keys()][0] ?? 0, slot: i });
+              audio.ui("move");
             } else if (id === "take" && mySlots.has(act.by)) {
               const from = mySlots.get(act.by)!;
               cursors.cursors[act.by].holding = -1;
@@ -1225,7 +1237,7 @@ async function start(): Promise<void> {
           menus.open("network");
         } else {
           const ss: SelectSlot[] = lb.slots.map((sl, i) => ({
-            joined: !sl.cpu && !sl.open, ready: sl.ready, hero: sl.hero, cpu: sl.cpu, level: 2, open: sl.open, tag: sl.name, local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i,
+            joined: !sl.cpu && !sl.open, ready: sl.ready, hero: sl.hero, cpu: sl.cpu, level: sl.level ?? 2, open: sl.open, tag: sl.name, local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i,
           }));
           screens.updateSelect(ss, data.heroes.heroes, roster, lb.mode, lb.rules.partners === 1);
           screens.hosting = false;

@@ -46,6 +46,19 @@ outlineMat.onBeforeCompile = (shader) => {
     .replace("#include <begin_vertex>", "#include <begin_vertex>\ntransformed += outlineNormal * 0.035;");
 };
 
+export function hullMaterial(color: number, additive: boolean): { mat: THREE.MeshBasicMaterial; thick: { value: number } } {
+  const thick = { value: 0.035 };
+  const mat = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, transparent: additive, depthWrite: !additive, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.hullThick = thick;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec3 outlineNormal;\nuniform float hullThick;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\ntransformed += outlineNormal * hullThick;");
+  };
+  mat.customProgramCacheKey = () => `hull${additive ? 1 : 0}`;
+  return { mat, thick };
+}
+
 const smoothed = new WeakMap<THREE.BufferGeometry, THREE.BufferGeometry>();
 
 function withOutlineNormals(geo: THREE.BufferGeometry): THREE.BufferGeometry {
@@ -130,6 +143,27 @@ export function addOutline(root: THREE.Object3D): void {
     hull.frustumCulled = false;
     m.parent!.add(hull);
   }
+}
+
+export function buildHulls(root: THREE.Object3D, mat: THREE.Material, order: number): THREE.Mesh[] {
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh && !o.userData.outline && !o.userData.noSil && o.geometry.getAttribute("normal")) meshes.push(o);
+  });
+  return meshes.map((m) => {
+    const geo = withOutlineNormals(m.geometry);
+    const hull = m instanceof THREE.SkinnedMesh ? new THREE.SkinnedMesh(geo, mat) : new THREE.Mesh(geo, mat);
+    if (hull instanceof THREE.SkinnedMesh && m instanceof THREE.SkinnedMesh) hull.bind(m.skeleton, m.bindMatrix);
+    hull.userData.outline = true;
+    hull.userData.noSil = true;
+    hull.position.copy(m.position);
+    hull.quaternion.copy(m.quaternion);
+    hull.scale.copy(m.scale);
+    hull.frustumCulled = false;
+    hull.renderOrder = order;
+    m.parent!.add(hull);
+    return hull;
+  });
 }
 
 export class HeroModels {
