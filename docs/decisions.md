@@ -756,3 +756,8 @@
 - Mercy's faster respawn (catchUp.respawnCut) now only applies in FFA; 1v1 and 2v2 respawn at the full time even when behind. Mercy's other boosts (income, production, fortify, bounty cut) are unchanged in every mode. Codex dying tip updated.
 - Removed two dead hero hooks that nothing read: Grim's awayProductionMul/awayRadius and Remnil's productionMul.
 - Single-view minimap: 62% of its old size fully zoomed in, shrinking smoothly to 45% fully zoomed out (log scale over the zoom range), drawn at 36% opacity instead of 50%. Split-screen centre minimap unchanged.
+- Pathing fixes for hedges and gates (measured with a stuck counter: something told to move that went nowhere for a second, 4 CPUs × 300 s × 2 seeds):
+  - The pathfinder now reports whether the goal was actually reached (`nav.lastFound`, `nav.reachable`). When a goal can't be reached (e.g. the Grudge in Bellwick's sealed court), CPU heroes and soldiers walk to the end of the partial route and wait there instead of pushing straight at the goal into the bars. CPU heroes only take a jump pad if they can reach it and reach their goal from where it lands.
+  - CPU hero routes are smoothed with their body width (`nav.wideClear`), so they stop clipping hedge corners.
+  - Every soldier (not just big ones) now sidesteps briefly when it hasn't made progress for 1.2 s; two soldiers meeting head-on in a one-cell lane along a hedge used to push each other back forever.
+  - Result: Bellwick hero stuck-seconds 27 → 4, soldier 356-630 → 43; Crossing hero 6 → 2, soldier 184-235 → 28. Warlord v Warden Crossing sim 20/80 → 35/65 (Brutes stop getting pinned).

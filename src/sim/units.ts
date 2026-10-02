@@ -164,9 +164,9 @@ export function moveToward(w: World, e: Entity, goal: Vec2, stopDist: number): v
   }
   let wp: Vec2 = goal;
   const wide = e.radius > 0.8;
-  if (wide) {
-    if (!u.prog || Math.hypot(p.x - u.prog.x, p.z - u.prog.z) > 0.6) u.prog = { x: p.x, z: p.z, t: w.time };
-    else if (w.time - u.prog.t > 0.8 && !(u.detourUntil && w.time < u.detourUntil)) {
+  {
+    if (!u.prog || Math.hypot(p.x - u.prog.x, p.z - u.prog.z) > (wide ? 0.6 : 0.35)) u.prog = { x: p.x, z: p.z, t: w.time };
+    else if (w.time - u.prog.t > (wide ? 0.8 : 1.2) && !(u.detourUntil && w.time < u.detourUntil)) {
       const gx = goal.x - p.x;
       const gz = goal.z - p.z;
       const gl = Math.hypot(gx, gz) || 1;
@@ -186,25 +186,21 @@ export function moveToward(w: World, e: Entity, goal: Vec2, stopDist: number): v
       return;
     }
   }
-  const clear = (a: Vec2, b: Vec2) => {
-    if (!w.nav.lineClear(a, b)) return false;
-    if (!wide) return true;
-    const dx = b.x - a.x;
-    const dz = b.z - a.z;
-    const l = Math.hypot(dx, dz) || 1;
-    const ox = (-dz / l) * e.radius;
-    const oz = (dx / l) * e.radius;
-    return w.nav.lineClear({ x: a.x + ox, z: a.z + oz }, { x: b.x + ox, z: b.z + oz }) && w.nav.lineClear({ x: a.x - ox, z: a.z - oz }, { x: b.x - ox, z: b.z - oz });
-  };
+  const clear = (a: Vec2, b: Vec2) => (wide ? w.nav.wideClear(a, b, e.radius) : w.nav.lineClear(a, b));
   const direct = dist < 10 && clear(p, goal);
   if (!direct) {
     const stale = !u.pathGoal || Math.hypot(u.pathGoal.x - goal.x, u.pathGoal.z - goal.z) > 2 || u.path.length === 0;
     if (w.time >= u.repathAt || (stale && w.time >= u.repathAt - w.data.units.repathSeconds * 0.7)) {
       u.path = w.nav.findPath(p, goal, e.transform.y) ?? [];
+      u.lost = !w.nav.lastFound;
       u.repathAt = w.time + w.data.units.repathSeconds + (e.id % 7) * 0.05;
     }
     while (u.path.length > 1 && (Math.hypot(u.path[0].x - p.x, u.path[0].z - p.z) < (wide ? 0.6 : 0.25) || (Math.hypot(u.path[0].x - p.x, u.path[0].z - p.z) < 0.8 && clear(p, u.path[1])))) u.path.shift();
     if (u.path.length) wp = u.path[0];
+    if (u.lost && u.path.length <= 1 && Math.hypot(wp.x - p.x, wp.z - p.z) < 0.4) {
+      u.moving = false;
+      return;
+    }
   }
   const dx = wp.x - p.x;
   const dz = wp.z - p.z;
@@ -213,8 +209,8 @@ export function moveToward(w: World, e: Entity, goal: Vec2, stopDist: number): v
   const step = Math.min(sp, d);
   const moved = w.moveBy(e, (dx / d) * step, (dz / d) * step);
   if (!moved) {
-    const side = e.id % 2 ? 1 : -1;
-    w.moveBy(e, (-dz / d) * step * side, (dx / d) * step * side);
+    const side = (e.id + Math.floor(w.time / 1.5)) % 2 ? 1 : -1;
+    if (!w.moveBy(e, (-dz / d) * step * side, (dx / d) * step * side)) w.moveBy(e, (dz / d) * step * side, (-dx / d) * step * side);
     u.repathAt = Math.min(u.repathAt, w.time + 0.3);
   }
   u.moving = true;

@@ -165,6 +165,7 @@ export interface UnitState {
   kills: number;
   moving: boolean;
   raised?: boolean;
+  lost?: boolean;
 }
 
 export interface StructureState {

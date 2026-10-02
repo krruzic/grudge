@@ -226,7 +226,25 @@ export class NavGrid {
     return top;
   }
 
-  findPath(from: Vec2, to: Vec2, fromY?: number): Vec2[] | null {
+  lastFound = true;
+
+  reachable(from: Vec2, to: Vec2): boolean {
+    const p = this.findPath(from, to);
+    return !!p && this.lastFound;
+  }
+
+  wideClear(a: Vec2, b: Vec2, r: number): boolean {
+    if (!this.lineClear(a, b)) return false;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const l = Math.hypot(dx, dz) || 1;
+    const ox = (-dz / l) * r;
+    const oz = (dx / l) * r;
+    return this.lineClear({ x: a.x + ox, z: a.z + oz }, { x: b.x + ox, z: b.z + oz }) && this.lineClear({ x: a.x - ox, z: a.z - oz }, { x: b.x - ox, z: b.z - oz });
+  }
+
+  findPath(from: Vec2, to: Vec2, fromY?: number, radius = 0): Vec2[] | null {
+    this.lastFound = false;
     let start = this.index(Math.floor(from.x), Math.floor(from.z));
     if (!this.open(start) || (fromY !== undefined && Math.abs(this.h[start] - fromY) > this.maxStep * 1.2)) {
       start = this.nearestOpen(from.x, from.z, 3, fromY);
@@ -235,6 +253,7 @@ export class NavGrid {
     let goal = this.index(Math.floor(to.x), Math.floor(to.z));
     if (!this.open(goal)) goal = this.nearestOpen(to.x, to.z, 6);
     if (start < 0 || goal < 0) return null;
+    this.lastFound = true;
     if (start === goal) return [{ x: to.x, z: to.z }];
     const key = start * this.w * this.d + goal;
     let hit = this.cache.get(key);
@@ -243,8 +262,12 @@ export class NavGrid {
       if (this.cache.size > 4000) this.cache.clear();
       this.cache.set(key, hit);
     }
-    if (!hit) return null;
+    if (!hit) {
+      this.lastFound = false;
+      return null;
+    }
     const { found, cells } = hit;
+    this.lastFound = found;
     const W = this.w;
     const pts: Vec2[] = Array.from(cells, (c) => ({ x: (c % W) + 0.5, z: ((c / W) | 0) + 0.5 }));
     if (found) pts[pts.length - 1] = this.open(this.index(Math.floor(to.x), Math.floor(to.z))) ? { x: to.x, z: to.z } : pts[pts.length - 1];
@@ -253,7 +276,7 @@ export class NavGrid {
     let k = 0;
     while (k < pts.length) {
       let j = Math.min(pts.length - 1, k + 12);
-      while (j > k && !this.lineClear(anchor, pts[j])) j--;
+      while (j > k && !(radius > 0 ? this.wideClear(anchor, pts[j], radius) : this.lineClear(anchor, pts[j]))) j--;
       out.push(pts[j]);
       anchor = pts[j];
       k = j + 1;

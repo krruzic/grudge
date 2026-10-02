@@ -34,6 +34,7 @@ export class Bot {
   private buildType: StructureType | null = null;
   private buildPad: Pad | null = null;
   private buildSpec: number | null = null;
+  private lost = false;
   private fightId = 0;
   private seed: number;
   private wantAttack = false;
@@ -106,7 +107,7 @@ export class Bot {
         const toPad = Math.hypot(jp.x - p.x, jp.z - p.z);
         if (toPad > 26) continue;
         const cost = toPad + Math.hypot(g.x - jp.tx, g.z - jp.tz) + 4;
-        if (cost < bestCost) {
+        if (cost < bestCost && w.nav.reachable(p, { x: jp.x, z: jp.z }) && w.nav.reachable({ x: jp.tx, z: jp.tz }, g)) {
           bestCost = cost;
           best = { x: jp.x, z: jp.z };
         }
@@ -118,14 +119,15 @@ export class Bot {
       const dist = Math.hypot(this.goal.x - p.x, this.goal.z - p.z);
       if (dist > 0.6) {
         let wp = this.goal;
-        if (!(dist < 8 && w.nav.lineClear(p, this.goal))) {
+        if (!(dist < 8 && w.nav.wideClear(p, this.goal, me.radius * 0.8))) {
           if (w.time >= this.repathAt || !this.pathGoal || Math.hypot(this.pathGoal.x - this.goal.x, this.pathGoal.z - this.goal.z) > 2) {
-            this.path = w.nav.findPath(p, this.goal, me.transform.y) ?? [];
+            this.path = w.nav.findPath(p, this.goal, me.transform.y, me.radius * 0.8) ?? [];
+            this.lost = !w.nav.lastFound;
             this.pathGoal = { ...this.goal };
             this.repathAt = w.time + 1;
           }
           const sameCell = (q: Vec2) => Math.floor(q.x) === Math.floor(p.x) && Math.floor(q.z) === Math.floor(p.z);
-          while (this.path.length > 1 && (sameCell(this.path[0]) || Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.25 || (Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.9 && w.nav.lineClear(p, this.path[1])))) this.path.shift();
+          while (this.path.length > 1 && (sameCell(this.path[0]) || Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.25 || (Math.hypot(this.path[0].x - p.x, this.path[0].z - p.z) < 0.9 && w.nav.wideClear(p, this.path[1], me.radius * 0.8)))) this.path.shift();
           if (Math.hypot(p.x - this.progress.x, p.z - this.progress.z) > 0.5) this.progress = { x: p.x, z: p.z, t: w.time };
           else if (w.time - this.progress.t > 1 && !me.hero?.action) {
             if (this.path.length > 1) this.path.shift();
@@ -133,12 +135,15 @@ export class Bot {
             this.progress = { x: p.x, z: p.z, t: w.time };
           }
           if (this.path.length) wp = this.path[0];
+          if (this.lost && (this.path.length === 0 || (this.path.length === 1 && Math.hypot(wp.x - p.x, wp.z - p.z) < 0.5))) wp = p;
         }
         const dx = wp.x - p.x;
         const dz = wp.z - p.z;
-        const d = Math.hypot(dx, dz) || 1;
-        cmd.moveX = dx / d;
-        cmd.moveZ = dz / d;
+        const d = Math.hypot(dx, dz);
+        if (d > 0.01) {
+          cmd.moveX = dx / d;
+          cmd.moveZ = dz / d;
+        }
       }
     }
     if (this.buildPad && this.buildType && Math.hypot(this.buildPad.x - me.transform.pos.x, this.buildPad.z - me.transform.pos.z) < 2.2) {
