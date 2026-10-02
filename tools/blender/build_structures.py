@@ -103,9 +103,10 @@ def barracks(images):
     b = charkit.Char("barracks", images)
     plinth(b)
     b.box((2.3, 1.8, 1.4), (0, 0.1, 1.0), "brick", "root", meters=1.0)
-    for sx in (-1, 1):
-        b.box((0.08, 2.0, 1.4), (1.1 * sx, 0.1, 2.35), T, "root", rot=(0, 0.6 * sx, 0))
     b.box((2.4, 2.0, 0.1), (0, 0.1, 1.72), "wood", "root")
+    for y in (-0.86, 1.06):
+        b.tbox((2.2, 0.1), (0.02, 0.1), 1.0, (0, y, 1.76), T, "root")
+    b.box((0.16, 2.2, 0.12), (0, 0.1, 2.8), "wood", "root")
     b.box((1.62, 2.1, 0.1), (-0.58, 0.1, 2.25), "roof", "root", rot=(0, -0.72, 0), meters=1.0)
     b.box((1.62, 2.1, 0.1), (0.58, 0.1, 2.25), "roof", "root", rot=(0, 0.72, 0), meters=1.0)
     b.box((0.7, 0.08, 1.0), (0, -0.82, 0.8), "wood", "root")
