@@ -238,14 +238,14 @@
     },
     "raider": {
       "name": "Grim",
-      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills reset Leap.",
+      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills shorten Leap.",
       "health": "low",
       "speed": "swift",
       "damage": "high",
       "defaultBuild": "barracks",
       "botRange": 1.6,
       "hooks": {
-        "flankMul": 1.5,
+        "flankMul": 1.3,
         "stepHeight": 1.4,
         "maxSlope": 3.5,
         "killResetsB": 1,
@@ -256,7 +256,7 @@
           "kind": "combo",
           "hits": [
             {
-              "damage": 24,
+              "damage": 21,
               "range": 2.4,
               "arcDeg": 60,
               "dur": 0.16,
@@ -265,7 +265,7 @@
               "knockback": 0.15
             },
             {
-              "damage": 24,
+              "damage": 21,
               "range": 2.4,
               "arcDeg": 60,
               "dur": 0.16,
@@ -274,7 +274,7 @@
               "knockback": 0.15
             },
             {
-              "damage": 24,
+              "damage": 21,
               "range": 2.4,
               "arcDeg": 60,
               "dur": 0.16,
@@ -283,7 +283,7 @@
               "knockback": 0.15
             },
             {
-              "damage": 40,
+              "damage": 36,
               "range": 2.6,
               "arcDeg": 90,
               "dur": 0.26,
@@ -303,11 +303,11 @@
           "kind": "leap",
           "anim": "attack_a",
           "range": 8,
-          "damage": 70,
+          "damage": 60,
           "radius": 2.2,
           "dur": 0.55,
           "hitAt": 0.5,
-          "cooldown": 5,
+          "cooldown": 6,
           "knockback": 4,
           "bot": "fight",
           "botRange": 7,
@@ -318,10 +318,10 @@
           "anim": "idle",
           "seconds": 4,
           "speedMul": 1.3,
-          "ambushMul": 2.0,
+          "ambushMul": 1.6,
           "dur": 0.3,
           "hitAt": 0.1,
-          "cooldown": 14,
+          "cooldown": 16,
           "bot": "approach",
           "botRange": 12,
           "callout": "SMOKE \u00b7 UNSEEN"
@@ -339,7 +339,7 @@
           "structureDamage": 120,
           "knockback": 6,
           "executeBelow": 0.4,
-          "executeMul": 1.4,
+          "executeMul": 1.25,
           "callout": "EXECUTE DASH",
           "crit": 0.3,
           "variance": 0.1
@@ -679,7 +679,8 @@
           "callout": "WAR HORN \u00b7 TROOPS FASTER"
         },
         "z": {
-          "kind": "rally", "supplyCut": 0.5,
+          "kind": "rally",
+          "supplyCut": 0.5,
           "anim": "attack_a",
           "radius": 9,
           "healFrac": 0.4,

@@ -407,7 +407,8 @@ export class World {
   private onKillSynergy(target: Entity, src: Entity | null): void {
     const t = this.time;
     if (src?.hero && this.heroDef(src.hero.type).hooks.killResetsB) {
-      if (target.hero || target.structure) src.hero.cooldowns.b = t;
+      if (target.structure) src.hero.cooldowns.b = t;
+      else if (target.hero) src.hero.cooldowns.b = t + Math.max(0, (src.hero.cooldowns.b ?? t) - t) * 0.5;
     }
     if (target.kind !== "structure" && t < target.status.hexUntil) {
       const owner = this.get(target.status.hexOwner);
@@ -1188,7 +1189,7 @@ export class World {
         const dz = src.transform.pos.z - tp.pos.z;
         const dot = (Math.sin(tp.facing) * dx + Math.cos(tp.facing) * dz) / (Math.hypot(dx, dz) || 1);
         if (dot < -0.3 && !hk.flankMul) amount *= pos.backstabMul;
-        if (src.status.hidden) amount *= pos.ambushMul;
+        if (src.status.hidden && this.time >= src.status.stealthUntil) amount *= pos.ambushMul;
       }
     }
     amount *= this.synergyMul(src, target, opts);
