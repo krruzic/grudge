@@ -4,15 +4,61 @@
  "emblem": "castle",
  "width": 48,
  "depth": 48,
- "patrols": [{"a": {"x": 6.5, "z": 6.5}, "b": {"x": 41.5, "z": 41.5}}],
+ "patrols": [
+  {
+   "a": {
+    "x": 6.5,
+    "z": 6.5
+   },
+   "b": {
+    "x": 41.5,
+    "z": 41.5
+   }
+  }
+ ],
  "mirror": "diag",
  "surround": "crag",
  "outposts": true,
- "lantern": {"firstSeconds": 55, "everySeconds": 60, "riseSeconds": 3, "speed": 1.4, "restSeconds": 25, "spots": [{"x": 6.5, "z": 6.5}, {"x": 41.5, "z": 41.5}], "hauntSeconds": 20, "damageMul": 1.3, "speedMul": 1.15},
-  "rimHeight": 4.5,
+ "lantern": {
+  "firstSeconds": 55,
+  "everySeconds": 60,
+  "riseSeconds": 3,
+  "speed": 1.4,
+  "restSeconds": 25,
+  "spots": [
+   {
+    "x": 6.5,
+    "z": 6.5
+   },
+   {
+    "x": 41.5,
+    "z": 41.5
+   }
+  ],
+  "hauntSeconds": 20,
+  "damageMul": 1.3,
+  "speedMul": 1.15
+ },
+ "rimHeight": 4.5,
  "waterLevel": -6,
  "notes": "Square, mirrored across the diagonal x = z. Author the half where x < z (team 0 keeps the bottom-left corner). Rects mirror by swapping x/z and w/h; points swap x/z; prop rot becomes 90 - rot. Pits are impassable holes. Each base has two gates: the corner toward the centre and a back gate in the side wall onto the outer lane.",
- "lanes": [{"name": "MIDDLE", "x": 22, "z": 22}, {"name": "BOTTOM", "x": 38, "z": 38}],
+ "lanes": [
+  {
+   "name": "TOP",
+   "x": 4.5,
+   "z": 4.5
+  },
+  {
+   "name": "MIDDLE",
+   "x": 22,
+   "z": 22
+  },
+  {
+   "name": "BOTTOM",
+   "x": 38,
+   "z": 38
+  }
+ ],
  "cores": [
   {
    "team": 0,
@@ -35,6 +81,16 @@
    "zone": "forward",
    "x": 19.5,
    "z": 28.5
+  },
+  {
+   "zone": "neutral",
+   "x": 8.5,
+   "z": 8.5
+  },
+  {
+   "zone": "neutral",
+   "x": 39.5,
+   "z": 39.5
   }
  ],
  "spawns": [
@@ -183,7 +239,15 @@
    "style": "castle",
    "x": 1,
    "z": 29,
-   "w": 13,
+   "w": 4,
+   "h": 1
+  },
+  {
+   "op": "wall",
+   "style": "castle",
+   "x": 8,
+   "z": 29,
+   "w": 6,
    "h": 1
   },
   {
@@ -304,16 +368,66 @@
   }
  ],
  "props": [
-  {"type": "grave", "x": 5.5, "z": 9.5, "rot": 10},
-  {"type": "grave", "x": 7.5, "z": 11, "rot": -15},
-  {"type": "grave", "x": 3, "z": 11.5, "rot": 30},
-  {"type": "column", "x": 8.5, "z": 9.5, "rot": 0},
-  {"type": "deadtree", "x": 2.5, "z": 13, "rot": 0},
-  {"type": "grave", "x": 40.5, "z": 43.5, "rot": 190},
-  {"type": "grave", "x": 38.5, "z": 44.5, "rot": 170},
-  {"type": "grave", "x": 42.5, "z": 46, "rot": 200},
-  {"type": "column", "x": 38.5, "z": 42.5, "rot": 0},
-  {"type": "deadtree", "x": 35, "z": 45.5, "rot": 0},
+  {
+   "type": "grave",
+   "x": 5.5,
+   "z": 9.5,
+   "rot": 10
+  },
+  {
+   "type": "grave",
+   "x": 7.5,
+   "z": 11,
+   "rot": -15
+  },
+  {
+   "type": "grave",
+   "x": 3,
+   "z": 11.5,
+   "rot": 30
+  },
+  {
+   "type": "column",
+   "x": 8.5,
+   "z": 9.5,
+   "rot": 0
+  },
+  {
+   "type": "deadtree",
+   "x": 2.5,
+   "z": 13,
+   "rot": 0
+  },
+  {
+   "type": "grave",
+   "x": 40.5,
+   "z": 43.5,
+   "rot": 190
+  },
+  {
+   "type": "grave",
+   "x": 38.5,
+   "z": 44.5,
+   "rot": 170
+  },
+  {
+   "type": "grave",
+   "x": 42.5,
+   "z": 46,
+   "rot": 200
+  },
+  {
+   "type": "column",
+   "x": 38.5,
+   "z": 42.5,
+   "rot": 0
+  },
+  {
+   "type": "deadtree",
+   "x": 35,
+   "z": 45.5,
+   "rot": 0
+  },
   {
    "type": "tower",
    "x": 1.5,
