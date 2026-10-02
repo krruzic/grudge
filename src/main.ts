@@ -1443,9 +1443,11 @@ async function start(): Promise<void> {
         if (spec.scene === "morph") {
           w.teleport(me, DEMO_SPOT.x, DEMO_SPOT.z);
           me.status.stunUntil = 0;
+          me.status.invulnUntil = 0;
         }
         if (spec.scene === "formation") {
           w.teleport(me, DEMO_SPOT.x - 3, DEMO_SPOT.z);
+          me.status.invulnUntil = 0;
           for (let k = 0; k < 9; k++) {
             const u = spawnUnit(w, 0, (["heavy", "grunt", "ranged"] as const)[k % 3], DEMO_SPOT.x + (k % 3), DEMO_SPOT.z - 1 + Math.floor(k / 3), 1);
             if (u?.unit) u.unit.damage = 0;

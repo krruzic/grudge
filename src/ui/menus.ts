@@ -1256,8 +1256,8 @@ export class Menus {
       ctx.fillRect(x - 1, y - 1, cw + 2, th + 2);
       texturedRect(ctx, "parch", x, y, cw, th, sel ? "#f0d8a0" : null, 0, 1);
       if (sel) goldArrow(ctx, x - 6, y + th / 2, -1, 4.5);
-      if (e2.cat === "CHAMPIONS" && this.portraits) {
-        const id = this.roster.find((h) => (this.heroNames[h] ?? h).toUpperCase() === e2.title);
+      if ((e2.cat === "CHAMPIONS" || e2.cat === "HERALD") && this.portraits) {
+        const id = e2.cat === "HERALD" ? "herald" : this.roster.find((h) => (this.heroNames[h] ?? h).toUpperCase() === e2.title);
         const im = id ? this.portraits.icon(id) : null;
         if (im) hiImage(ctx, im, x + 1, y, th, th);
       } else waxSeal(ctx, x + 7, y + th / 2, 4.5, sel ? "#a8141a" : "#6a3a2a", e2.glyph);
