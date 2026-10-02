@@ -22,7 +22,7 @@ export function updateUnit(w: World, e: Entity): void {
   const def = w.data.units.types[u.type];
   const dirs = w.data.match.directives;
   const team = w.teams[e.team];
-  const directive = team.directives[u.type];
+  const directive = u.guard ? "hold" : team.directives[u.type];
   const hero = w.heroOf(e.team);
   const heroAlive = !!hero && hero.alive;
   u.moving = false;
@@ -33,6 +33,11 @@ export function updateUnit(w: World, e: Entity): void {
   let anchor: Vec2 | null = null;
   let leash = Infinity;
   let goal: Vec2 | null = null;
+  if (u.guard) {
+    anchor = u.guard;
+    leash = u.range + 1.5;
+    goal = u.guard;
+  } else {
   const focus = directive === "focus" ? w.get(team.directives.focus[u.type]) : undefined;
   if (focus) {
     goal = { x: focus.transform.pos.x, z: focus.transform.pos.z };
@@ -74,6 +79,7 @@ export function updateUnit(w: World, e: Entity): void {
     }
   }
 
+  }
   let target = u.targetId ? w.get(u.targetId) : undefined;
   if (target && (!attackable(w, target) || !w.canSee(e, target))) target = undefined;
   const defending = directive === "defend";

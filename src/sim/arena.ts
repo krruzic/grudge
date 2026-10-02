@@ -113,11 +113,40 @@ export class Arena {
     return keys[keys.length - 1];
   }
 
+  private guardAt: number[] = [];
+
+  private updateGuards(): void {
+    const w = this.w;
+    const g = w.ffaCfg?.guard;
+    if (!g) return;
+    for (let team = 0; team < w.teamCount; team++) {
+      const core = w.core(team);
+      if (!core?.alive || w.teams[team].out) continue;
+      const have = w.entities.filter((e) => e.alive && e.unit?.guard && e.team === team).length;
+      if (have >= g.count || w.time < (this.guardAt[team] ?? 0)) continue;
+      this.guardAt[team] = w.time + (have === 0 && w.time < 20 ? 0 : g.respawnSeconds);
+      const cx = core.transform.pos.x;
+      const cz = core.transform.pos.z;
+      const dx = w.terrain.width / 2 - cx;
+      const dz = w.terrain.depth / 2 - cz;
+      const dl = Math.hypot(dx, dz) || 1;
+      const ux = dx / dl;
+      const uz = dz / dl;
+      const k = have;
+      const side = (k - 1) * 3.2;
+      const px = cx + ux * 4 - uz * side;
+      const pz = cz + uz * 4 + ux * side;
+      const u = spawnUnit(w, team, "ranged", px, pz, g.hpMul);
+      if (u?.unit) u.unit.guard = { x: u.transform.pos.x, z: u.transform.pos.z };
+    }
+  }
+
   private updateWaves(): void {
     const w = this.w;
     const wv = w.data.units.waves;
     if (w.time < this.nextWave) return;
-    this.nextWave = w.time + wv.everySeconds;
+    this.nextWave = w.time + (w.ffaCfg?.waveSeconds ?? wv.everySeconds);
+    this.updateGuards();
     const grow = 1 + wv.growPerMinute * (w.time / 60);
     for (let team = 0; team < w.teamCount; team++) {
       const ts = w.teams[team];
@@ -136,8 +165,8 @@ export class Arena {
       let n = 0;
       let broke = false;
       for (const item of list) {
-        if (ts.unitCount >= w.data.units.popCap) break;
-        const cost = Math.round((wv.spawnCost[item.type] ?? 0) * w.costMul() * (1 - ts.catchUp * w.data.match.catchUp.productionBoost));
+        if (ts.unitCount >= w.popCap) break;
+        const cost = Math.round((wv.spawnCost[item.type] ?? 0) * w.costMul() * (w.ffaCfg?.spawnCostMul ?? 1) * (1 - ts.catchUp * w.data.match.catchUp.productionBoost));
         if (ts.resource < cost) {
           broke = true;
           continue;

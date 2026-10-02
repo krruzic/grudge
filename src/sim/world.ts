@@ -781,6 +781,15 @@ export class World {
     learn(this, e, syn >= 0 ? syn : Math.floor(this.rng() * opt.list.length) % opt.list.length);
   }
 
+  get popCap(): number {
+    const f = this.ffa ? this.data.match.ffa : undefined;
+    return Math.round(this.data.units.popCap * (f?.popCapMul ?? 1));
+  }
+
+  get ffaCfg() {
+    return this.ffa ? this.data.match.ffa : undefined;
+  }
+
   get morphCfg() {
     return this.data.match.arena.morph;
   }
@@ -946,7 +955,7 @@ export class World {
         this.teams[t].catchUp = Math.max(0, Math.min(1, deficit));
       }
       const units = new Array(n).fill(0);
-      for (const e of this.entities) if (e.alive && e.unit && e.team < n) units[e.team]++;
+      for (const e of this.entities) if (e.alive && e.unit && !e.unit.guard && e.team < n) units[e.team]++;
       for (let t = 0; t < n; t++) this.teams[t].unitCount = units[t];
     }
     this.teams.forEach((t, team) => {

@@ -1397,8 +1397,8 @@ export class Hud {
     const sudden = w.isSudden();
     this.shownCoin[t] += (ts.resource - this.shownCoin[t]) * Math.min(1, 0.25);
     const coin = String(Math.round(this.shownCoin[t]));
-    const army = `${ts.unitCount}/${w.data.units.popCap}`;
-    const capped = ts.unitCount >= w.data.units.popCap;
+    const army = `${ts.unitCount}/${w.popCap}`;
+    const capped = ts.unitCount >= w.popCap;
     const out = !!ts.out;
     const hpFrac = core && !out ? core.hp / core.maxHp : 0;
     const wardFrac = ward > 0 && !sudden ? ward / w.data.structures.core.ward : 0;

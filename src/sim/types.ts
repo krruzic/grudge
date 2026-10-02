@@ -159,6 +159,7 @@ export interface UnitState {
   pathGoal: Vec2 | null;
   repathAt: number;
   slot: number;
+  guard?: { x: number; z: number };
   attackAnimAt: number;
   rank: number;
   kills: number;

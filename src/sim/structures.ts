@@ -29,7 +29,8 @@ export function buildCost(w: World, type: StructureType, upgrade: boolean, team 
   const def = w.data.structures.types[type];
   const hk = team >= 0 ? w.teamHooks(team) : {};
   const heroMul = upgrade ? hk.upgradeCostMul ?? 1 : hk.costMul ?? 1;
-  return Math.round((upgrade ? def.upgradeCost : def.cost) * w.costMul() * heroMul);
+  const ffa = def.class === "production" ? w.ffaCfg?.productionCostMul ?? 1 : 1;
+  return Math.round((upgrade ? def.upgradeCost : def.cost) * w.costMul() * heroMul * ffa);
 }
 
 export function tryBuild(w: World, hero: Entity, kind: StructureType | "default" | "upgrade"): boolean {
