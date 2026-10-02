@@ -797,3 +797,4 @@
   - Herald BANNER VAULT: dodge toward his own planted banner (3-13 m away, within ~50°) jumps to it.
   - New general `world.startJump` for non-pad jumps (pad index -1).
 - Stig's siege ramp reworked: 3×3 platform (was 2×2), 2.6 high (was 1.5), 2 cells wide approach (was 0.5), so it's easy to walk up and stay on, and high enough to jump walls from. Tesla Tower no longer replaces the ramp: the ramp is still built and a tesla coil (400 HP, 45 chain lightning, 8 m) stands on its top for as long as the ramp lasts.
+- Thorn nerf: Brambles (Z) 35 → 30 damage per second, 6 → 5 s. CPU 1v1 round-robin, 300 games: 68% → 61% (25 dps gave 60%). Health, wall cooldown, slap, speed and the earlier slap/passive nerfs were all within noise.
