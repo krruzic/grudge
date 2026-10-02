@@ -188,7 +188,7 @@ export class CommandMapper {
       this.xDown = true;
       this.xUsed = false;
       this.tDown = false;
-      this.ui.buildMenu = "prod";
+      this.ui.buildMenu = this.specReady ? "spec" : "prod";
     }
     this.ui.learnReady = canLearn;
     if ((atPad || atHome) && !this.xDown && (p.pressed.y || mrPressed)) {
@@ -199,7 +199,10 @@ export class CommandMapper {
     const f = this.flick(p);
     if (f) {
       if (this.xDown) {
-        if (f !== "down") c.build = PROD_BY_FLICK[f];
+        if (f !== "down") {
+          if (this.ui.buildMenu === "spec") c.spec = SPEC_BY_FLICK[f];
+          else c.build = PROD_BY_FLICK[f];
+        }
         this.xUsed = true;
         this.ui.buildMenu = "closed";
       } else if (this.tDown && this.ui.buildMenu === "learn") {
@@ -227,7 +230,7 @@ export class CommandMapper {
     }
 
     if (this.xDown && !p.held.x) {
-      if (!this.xUsed) c.build = "default";
+      if (!this.xUsed && this.ui.buildMenu !== "spec") c.build = "default";
       this.xDown = false;
       this.ui.buildMenu = "closed";
     }
