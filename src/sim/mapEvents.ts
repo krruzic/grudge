@@ -30,6 +30,8 @@ interface Slide {
 
 export interface GateSlot extends Rect {
   set: "a" | "b";
+  cells?: [number, number][];
+  line?: [number, number, number, number];
 }
 
 export interface GatesDef {
@@ -53,7 +55,11 @@ export function gateSlots(w: World, def: GatesDef): GateSlot[] {
     let r: GateSlot = { ...s };
     for (let k = 0; k < 4; k++) {
       out.push({ ...r });
-      r = { ...r, x: D - r.z - r.h, z: r.x, w: r.h, h: r.w };
+      r = {
+        ...r, x: D - r.z - r.h, z: r.x, w: r.h, h: r.w,
+        cells: r.cells?.map(([x, z]) => [D - 1 - z, x] as [number, number]),
+        line: r.line ? [D - r.line[1], r.line[0], D - r.line[3], r.line[2]] : undefined,
+      };
     }
   }
   return out;
@@ -169,7 +175,12 @@ export class MapEvents {
       const t = w.terrain;
       for (const slot of gateSlots(w, this.gates)) {
         const cells: number[] = [];
-        for (let z = slot.z; z < slot.z + slot.h; z++) for (let x = slot.x; x < slot.x + slot.w; x++) {
+        if (slot.cells) {
+          for (const [x, z] of slot.cells) {
+            const i = t.index(x, z);
+            if (i >= 0) cells.push(i);
+          }
+        } else for (let z = slot.z; z < slot.z + slot.h; z++) for (let x = slot.x; x < slot.x + slot.w; x++) {
           const i = t.index(x, z);
           if (i >= 0) cells.push(i);
         }

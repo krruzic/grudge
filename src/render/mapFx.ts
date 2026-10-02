@@ -437,19 +437,23 @@ export class MapFx {
     const postGeos: THREE.BufferGeometry[] = [];
     for (const slot of slots) {
       const alongX = slot.w >= slot.h;
-      const len = alongX ? slot.w : slot.h;
-      const cx = slot.x + slot.w / 2;
-      const cz = slot.z + slot.h / 2;
-      const thick = alongX ? slot.h : slot.w;
+      const thick = slot.line ? 0.5 : alongX ? slot.h : slot.w;
+      const [x0, z0, x1, z1] = slot.line ?? (alongX
+        ? [slot.x - 0.05, slot.z + slot.h / 2, slot.x + slot.w + 0.05, slot.z + slot.h / 2]
+        : [slot.x + slot.w / 2, slot.z - 0.05, slot.x + slot.w / 2, slot.z + slot.h + 0.05]);
+      const cx = (x0 + x1) / 2;
+      const cz = (z0 + z1) / 2;
+      const len = Math.hypot(x1 - x0, z1 - z0) - 0.1;
+      const ang = -Math.atan2(z1 - z0, x1 - x0);
       const y0 = w.groundY(cx, cz);
       const posts: [number, number, number][] = [];
-      for (const sg of [-1, 1]) {
-        const px = alongX ? cx + sg * (len / 2 + 0.05) : cx;
-        const pz = alongX ? cz : cz + sg * (len / 2 + 0.05);
-        const g = new THREE.BoxGeometry(alongX ? 0.7 : thick + 0.3, 3.4, alongX ? thick + 0.3 : 0.7);
+      for (const [px, pz] of [[x0, z0], [x1, z1]]) {
+        const g = new THREE.BoxGeometry(0.7, 3.4, thick + 0.3);
+        g.rotateY(ang);
         g.translate(px, y0 + 1.5, pz);
         postGeos.push(g);
-        const cap = new THREE.BoxGeometry(alongX ? 0.9 : thick + 0.5, 0.3, alongX ? thick + 0.5 : 0.9);
+        const cap = new THREE.BoxGeometry(0.9, 0.3, thick + 0.5);
+        cap.rotateY(ang);
         cap.translate(px, y0 + 3.3, pz);
         postGeos.push(cap);
         posts.push([px, y0 + 3.6, pz]);
@@ -459,14 +463,14 @@ export class MapFx {
       for (let i = 0; i < n; i++) {
         const u = -len / 2 + (i + 0.5) * (len / n);
         const b = new THREE.BoxGeometry(0.1, BAR_H, 0.1);
-        b.translate(alongX ? u : 0, BAR_H / 2, alongX ? 0 : u);
+        b.translate(u, BAR_H / 2, 0);
         bg.push(b);
         const tip = new THREE.ConeGeometry(0.1, 0.25, 4);
-        tip.translate(alongX ? u : 0, BAR_H + 0.12, alongX ? 0 : u);
+        tip.translate(u, BAR_H + 0.12, 0);
         bg.push(tip);
       }
       for (const y of [0.35, 1.4, 2.4]) {
-        const r = new THREE.BoxGeometry(alongX ? len : 0.14, 0.12, alongX ? 0.14 : len);
+        const r = new THREE.BoxGeometry(len, 0.12, 0.14);
         r.translate(0, y, 0);
         bg.push(r);
       }
@@ -474,6 +478,7 @@ export class MapFx {
       bg.forEach((g) => g.dispose());
       const bars = new THREE.Mesh(merged, IRON);
       bars.position.set(cx, y0, cz);
+      bars.rotation.y = ang;
       const shut = this.world.mapEvents.closed(slot.set);
       const y = shut ? 0 : -BAR_H - 0.3;
       bars.position.y = y0 + y;
@@ -494,10 +499,12 @@ export class MapFx {
       if (g.y === target) continue;
       const sp = target > g.y ? 9 : 3.2;
       g.y = target > g.y ? Math.min(target, g.y + sp * dt) : Math.max(target, g.y - sp * dt);
-      const cx = g.slot.x + g.slot.w / 2;
-      const cz = g.slot.z + g.slot.h / 2;
+      const cx = g.bars.position.x;
+      const cz = g.bars.position.z;
       g.bars.position.y = w.groundY(cx, cz) + g.y;
-      if (this.fx && Math.random() < dt * 12) emit(this.fx, { tex: FX.dust, n: 1, x: cx + (Math.random() - 0.5) * g.slot.w, y: w.groundY(cx, cz) + 0.2, z: cz + (Math.random() - 0.5) * g.slot.h, size: [0.8, 1.3], grow: 1.5, life: [0.5, 0.9], speed: [0.4, 1.0], up: [0.5, 1.2], opacity: 0.6 });
+      const u = Math.random() - 0.5;
+      const [dx, dz] = g.slot.line ? [g.slot.line[2] - g.slot.line[0], g.slot.line[3] - g.slot.line[1]] : g.slot.w >= g.slot.h ? [g.slot.w, 0] : [0, g.slot.h];
+      if (this.fx && Math.random() < dt * 12) emit(this.fx, { tex: FX.dust, n: 1, x: cx + u * dx, y: w.groundY(cx, cz) + 0.2, z: cz + u * dz, size: [0.8, 1.3], grow: 1.5, life: [0.5, 0.9], speed: [0.4, 1.0], up: [0.5, 1.2], opacity: 0.6 });
     }
   }
 
