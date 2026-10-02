@@ -159,7 +159,7 @@ export function createStructure(w: World, team: number, pad: Pad, type: Structur
   };
   if (type === "control") e.structure.range *= 1 + ((w.teamHooks(team).controlTowerMul ?? 1) - 1) * 0.5;
   pad.structureId = e.id;
-  w.nav.setBlocked(pad.x, pad.z, sd.structureRadius, true);
+  w.nav.setBlocked(pad.x, pad.z, sd.structureRadius + 0.45, true);
   for (const u of w.entities) {
     if (u.unit) u.unit.repathAt = 0;
   }

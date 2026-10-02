@@ -4,10 +4,21 @@
  "emblem": "tide",
  "width": 68,
  "depth": 52,
- "patrols": [{"a": {"x": 31, "z": 13}, "b": {"x": 37, "z": 39}}],
+ "patrols": [
+  {
+   "a": {
+    "x": 31,
+    "z": 13
+   },
+   "b": {
+    "x": 37,
+    "z": 39
+   }
+  }
+ ],
  "mirror": "rot",
  "surround": "sea",
-  "rimHeight": 4.5,
+ "rimHeight": 4.5,
  "waterLevel": -0.5,
  "tide": {
   "lowSeconds": 40,
@@ -650,7 +661,7 @@
   },
   {
    "zone": "forward",
-   "x": 34.5,
+   "x": 38.5,
    "z": 8.5
   },
   {

@@ -932,7 +932,7 @@ export class World {
       if (e.structure?.padIndex !== undefined && e.structure.padIndex >= 0) {
         const pad = this.pads[e.structure.padIndex];
         pad.structureId = 0;
-        this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius, false);
+        this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius + 0.45, false);
         pad.rubbleUntil = this.time + this.data.structures.rubbleSeconds;
       } else if (e.structure) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.radius, false);
       e.hp = 0;
@@ -1440,7 +1440,7 @@ export class World {
     }
     const pad = this.pads[st.padIndex];
     pad.structureId = 0;
-    this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius, false);
+    this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius + 0.45, false);
     killer.resource += bounty.structure * cut;
     this.teams[target.team].structuresLost++;
     if (this.data.structures.types[st.type as "damage"]?.class === "tower") {
