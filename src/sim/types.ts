@@ -359,6 +359,8 @@ export const TEAM_NAMES = ["BLUE", "RED", "YELLOW", "GREEN"];
 export interface TeamState {
   out?: boolean;
   resource: number;
+  grain: number;
+  starvedAt?: number;
   coreId: number;
   homeLost: boolean;
   directives: TeamDirectives;

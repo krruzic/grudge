@@ -257,6 +257,34 @@ function coinIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
   ctx.restore();
 }
 
+function grainIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.save();
+  const sack = (k: number) => {
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.45 - k, y - r * 0.35);
+    ctx.quadraticCurveTo(x - r * 1.05 - k, y + r * 0.2, x - r * 0.8 - k, y + r * 0.95 + k);
+    ctx.lineTo(x + r * 0.8 + k, y + r * 0.95 + k);
+    ctx.quadraticCurveTo(x + r * 1.05 + k, y + r * 0.2, x + r * 0.45 + k, y - r * 0.35);
+    ctx.closePath();
+  };
+  ctx.fillStyle = INK;
+  sack(0.9);
+  ctx.fill();
+  ctx.fillRect(x - r * 0.6 - 0.9, y - r * 1.05 - 0.9, r * 1.2 + 1.8, r * 0.75 + 1.8);
+  ctx.fillStyle = "#c89858";
+  sack(0);
+  ctx.fill();
+  ctx.fillStyle = "#e8cc70";
+  ctx.beginPath();
+  ctx.ellipse(x, y - r * 0.7, r * 0.6, r * 0.38, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#6a4020";
+  ctx.fillRect(x - r * 0.5, y - r * 0.42, r, r * 0.2);
+  ctx.fillStyle = "rgba(255,240,200,0.4)";
+  ctx.fillRect(x - r * 0.5, y, r * 0.3, r * 0.6);
+  ctx.restore();
+}
+
 function armyIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string): void {
   ctx.save();
   ctx.fillStyle = INK;
@@ -621,6 +649,7 @@ export class Hud {
   private banner = "";
   private bannerAt = 0;
   private bannerUntil = 0;
+  private shownGrain: number[] = [];
   private notices: { text: string; until: number }[] = Array.from({ length: 4 }, () => ({ text: "", until: 0 }));
   private orders: { type: UnitType | "all"; dir: Directive; until: number }[] = Array.from({ length: 4 }, () => ({ type: "all" as const, dir: "follow" as Directive, until: 0 }));
   private shownCoin = [0, 0, 0, 0];
@@ -1451,7 +1480,10 @@ export class Hud {
     const hpFrac = core && !out ? core.hp / core.maxHp : 0;
     const wardFrac = ward > 0 && !sudden ? ward / w.wardMax : 0;
     const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
-    const rate = `+${w.incomeOf(t).toFixed(1)}/S`;
+    this.shownGrain[t] = (this.shownGrain[t] ?? ts.grain) + (ts.grain - (this.shownGrain[t] ?? ts.grain)) * Math.min(1, 0.25);
+    const grain = String(Math.round(this.shownGrain[t]));
+    const grainy = !!w.data.match.economy.grain;
+    const rate = grainy ? `+${w.grainOf(t).toFixed(1)}/S` : `+${w.incomeOf(t).toFixed(1)}/S`;
     const [kx, ky] = this.shakeOf(this.keepHitAt[t], now, 4.5);
     const [px2, py2] = this.shakeOf(this.padHitAt[t], now, 3);
     let pads = 0;
@@ -1460,8 +1492,8 @@ export class Hud {
       if (s2?.alive && s2.team === t) pads++;
     }
     const padHot = now - (this.padHitAt[t] ?? -99) < 0.7;
-    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, army, capped, out, rate, kx, ky, px2, py2, pads, padHot].join("|");
-    let y = this.memo(ctx, `head${t}`, headKey, x0 - 8, y00 - 6, blockW + 16, 40, (c) => {
+    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, grain, army, capped, out, rate, kx, ky, px2, py2, pads, padHot].join("|");
+    let y = this.memo(ctx, `head${t}`, headKey, x0 - 48, y00 - 6, blockW + 96, 40, (c) => {
       const y = y00;
       const gx = ax(8);
       keepGem(c, gx + kx, y + 10 + ky, 7.2, col, hpFrac, wardFrac, now);
@@ -1471,15 +1503,25 @@ export class Hud {
         drawText(c, lab, right ? ax(20, textWidth(lab, 0.62)) : ax(20), y + 6, "#ffb8a0", 0.62);
         return y + 24;
       }
-      const cw = 8 + textWidth("×", 0.9) + 1.5 + textWidth(coin, 1.15, true);
+      const tx = textWidth("×", 0.9) + 1.5;
+      const cw = 8 + tx + textWidth(coin, 1.15, true);
+      const gw = grainy ? 6 + 9 + tx + textWidth(grain, 1.15, true) + 3 + textWidth(rate, 0.6) : 4 + textWidth(rate, 0.6);
       const aw = 9 + textWidth("×", 0.9) + 1.5 + textWidth(army, 1.15, true);
-      let cx = right ? ax(20, cw) : ax(20);
+      let cx = right ? ax(20, cw + gw) : ax(20);
       coinIcon(c, cx + 3, y + 5, 3.8);
       cx += 8;
       cx += times(c, cx, y + 1);
       drawNum(c, coin, cx, y, "#ffd848", 1.15);
-      const rx = right ? cx - textWidth(coin, 1.15, true) - 8 - textWidth("×", 0.9) - 4 - textWidth(rate, 0.6) : cx + textWidth(coin, 1.15, true) + 4;
-      drawText(c, rate, Math.round(rx), y + 3, "#c8b070", 0.6);
+      cx += textWidth(coin, 1.15, true);
+      if (grainy) {
+        cx += 6;
+        grainIcon(c, cx + 4, y + 5, 3.6);
+        cx += 9;
+        cx += times(c, cx, y + 1);
+        drawNum(c, grain, cx, y, "#f0d8a0", 1.15);
+        cx += textWidth(grain, 1.15, true) + 3;
+      } else cx += 4;
+      drawText(c, rate, Math.round(cx), y + 3, "#c8b070", 0.6);
       let bx = right ? ax(20, aw) : ax(20);
       armyIcon(c, bx + 3.5, y + 15, 3.6, col);
       bx += 9;

@@ -1,5 +1,5 @@
 import type { World } from "./world.ts";
-import type { Entity, ShopItem, UnitType, Vec2 } from "./types.ts";
+import type { Entity, ShopItem, StructureType, UnitType, Vec2 } from "./types.ts";
 import { spawnUnit } from "./structures.ts";
 import { moveToward } from "./units.ts";
 
@@ -152,7 +152,7 @@ export class Arena {
       const ts = w.teams[team];
       const core = w.core(team);
       if (!core || ts.out) continue;
-      const list: { type: UnitType; from: Entity; stat: number }[] = [];
+      const list: { type: UnitType; from: Entity; stat: number; extra?: boolean }[] = [];
       const cx = core.transform.pos.x;
       const cz = core.transform.pos.z;
       const outposts = w.entities
@@ -167,20 +167,32 @@ export class Arena {
         const rc = w.data.match.arena.relic;
         for (let k = 0; k < o.structure.level + (w.ffaCfg?.outpostBonus ?? 0) + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.mix ? this.pickMix(def.mix) : def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
       }
+      const surplus = w.data.match.economy.grain?.surplus;
+      if (surplus !== undefined) {
+        const seen = new Set<Entity>();
+        for (const it of [...list]) {
+          if (seen.has(it.from)) continue;
+          seen.add(it.from);
+          list.push({ ...it, type: (() => { const d = w.data.structures.types[it.from.structure!.type as StructureType]; return d.mix ? this.pickMix(d.mix) : d.unit!; })(), extra: true });
+        }
+      }
       let n = 0;
       let broke = false;
       for (const item of list) {
+        if (item.extra && ts.grain < (surplus ?? 0)) continue;
         if (ts.unitCount >= w.popCap) break;
         const cost = Math.round((wv.spawnCost[item.type] ?? 0) * w.costMul() * (w.ffaCfg?.spawnCostMul ?? 1) * (1 - ts.catchUp * w.data.match.catchUp.productionBoost));
-        if (ts.resource < cost) {
-          broke = true;
+        const grainy = !!w.data.match.economy.grain;
+        if ((grainy ? ts.grain : ts.resource) < cost) {
+          if (!item.extra) broke = true;
           continue;
         }
-        ts.resource -= cost;
+        if (grainy) ts.grain -= cost;
+        else ts.resource -= cost;
         const p = this.frontOf(item.from, team, n++);
         spawnUnit(w, team, item.type, p.x, p.z, item.stat);
       }
-      if (broke) w.emit({ type: "notice", team, text: "NO GOLD · OUTPOSTS IDLE" });
+      if (broke) w.emit({ type: "notice", team, text: w.data.match.economy.grain ? "NO GRAIN · OUTPOSTS IDLE" : "NO GOLD · OUTPOSTS IDLE" });
     }
   }
 

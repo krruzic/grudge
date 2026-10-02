@@ -11,13 +11,14 @@
   "ffa": { "waveSeconds": 12, "speedMul": 1.2, "outpostBonus": 1, "popCapMul": 1.5, "spawnCostMul": 0.75, "productionCostMul": 0.75, "guard": { "count": 3, "respawnSeconds": 25, "hpMul": 1.3 } },
   "economy": {
     "start": 200,
-    "income": 3.5,
+    "income": 1.0,
+    "grain": { "start": 60, "base": 1.4, "perLevel": [0.6, 1.0, 1.4], "unitBountyMul": 1, "surplus": 150, "starvedMul": 2.5 },
     "respawnCooldownPenalty": 2,
     "respawnBigMul": 1.667,
     "padIncome": {
-      "home": 0.35,
-      "forward": 0.45,
-      "neutral": 0.45
+      "home": 0,
+      "forward": 0,
+      "neutral": 0
     },
     "loss": {
       "heroDeath": 50,
@@ -29,8 +30,8 @@
       "speedMul": 1.15
     },
     "bounty": {
-      "hero": 60,
-      "structure": 50,
+      "hero": 80,
+      "structure": 60,
       "coreDamagePer100": 0
     },
     "refundOnUpgradeLoss": 0

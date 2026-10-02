@@ -265,10 +265,12 @@ export interface StructureDef {
   upgrade: Record<string, number>;
   specCost?: number;
   specs?: TowerSpec[];
+  grainPerShot?: number;
 }
 
 export interface TowerSpec {
   id: string;
+  grainPerShot?: number;
   name: string;
   blurb: string;
   hp: number;
@@ -314,7 +316,7 @@ export interface MatchData {
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
   ffa?: { speedMul?: number; waveSeconds: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
-  economy: { start: number; income: number;
+  economy: { start: number; income: number; grain?: { start: number; base: number; perLevel: number[]; unitBountyMul?: number; surplus?: number; starvedMul?: number };
     padIncome?: Record<string, number>; respawnCooldownPenalty?: number; respawnBigMul?: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number; bountyCut: number; respawnCut: number; fortify: number };
   terrain: {

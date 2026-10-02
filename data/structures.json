@@ -28,6 +28,7 @@
       "rangeMul": 1.0,
       "damage": 34,
       "cooldown": 1.1,
+      "grainPerShot": 1,
       "projectile": {
         "speed": 24,
         "ballistic": false,
@@ -46,9 +47,9 @@
       },
       "specCost": 250,
       "specs": [
-        { "id": "ballista", "name": "BALLISTA", "blurb": "HUGE PIERCING BOLTS THAT PUNCH THROUGH A WHOLE LINE. SLOW, LONG REACH.", "hp": 1.3, "damage": 2.6, "cooldown": 2.1, "range": 1.3, "pierce": 6, "pierceWidth": 1.1 },
-        { "id": "firepot", "name": "FIREPOTS", "blurb": "LOBS BURNING POTS. THEY SPLASH AND LEAVE THE GROUND ON FIRE. EATS GRUNTS.", "hp": 1.3, "damage": 1.05, "cooldown": 1.7, "splash": 2.6, "burnSeconds": 3, "burnDps": 34, "burnRadius": 2.2 },
-        { "id": "volley", "name": "VOLLEY", "blurb": "THREE ARROWS AT THREE TARGETS EVERY SHOT, AND IT SPOTS HIDDEN ENEMIES.", "hp": 1.3, "damage": 0.8, "cooldown": 0.85, "targets": 3, "reveal": true }
+        { "id": "ballista", "grainPerShot": 4, "name": "BALLISTA", "blurb": "HUGE PIERCING BOLTS THAT PUNCH THROUGH A WHOLE LINE. SLOW, LONG REACH.", "hp": 1.3, "damage": 2.6, "cooldown": 2.1, "range": 1.3, "pierce": 6, "pierceWidth": 1.1 },
+        { "id": "firepot", "grainPerShot": 3, "name": "FIREPOTS", "blurb": "LOBS BURNING POTS. THEY SPLASH AND LEAVE THE GROUND ON FIRE. EATS GRUNTS.", "hp": 1.3, "damage": 1.05, "cooldown": 1.7, "splash": 2.6, "burnSeconds": 3, "burnDps": 34, "burnRadius": 2.2 },
+        { "id": "volley", "grainPerShot": 2, "name": "VOLLEY", "blurb": "THREE ARROWS AT THREE TARGETS EVERY SHOT, AND IT SPOTS HIDDEN ENEMIES.", "hp": 1.3, "damage": 0.8, "cooldown": 0.85, "targets": 3, "reveal": true }
       ]
     },
     "control": {
@@ -60,6 +61,7 @@
       "rangeMul": 0.72,
       "damage": 14,
       "cooldown": 2.4,
+      "grainPerShot": 2,
       "slowMul": 0.5,
       "slowSeconds": 2.0,
       "knockback": 3.5,
@@ -77,9 +79,9 @@
       },
       "specCost": 250,
       "specs": [
-        { "id": "frost", "name": "FROST SPIRE", "blurb": "ITS PULSE FREEZES SOLDIERS SOLID AND CHILLS CHAMPIONS TO A CRAWL.", "hp": 1.4, "damage": 1.0, "range": 1.1, "freeze": 1.2, "heroSlow": 0.35, "heroSlowSeconds": 1.6 },
-        { "id": "storm", "name": "STORM BELL", "blurb": "A THUNDERCLAP PULSE: BIG DAMAGE, A SHORT STUN ON EVERYONE AND A HARD SHOVE.", "hp": 1.4, "damage": 2.6, "cooldown": 2.8, "stun": 0.55, "knockback": 6 },
-        { "id": "well", "name": "GRAVITY WELL", "blurb": "DRAGS ENEMIES IN TOWARD THE TOWER AND SLOWS THEM. PILES THEM UP FOR YOUR ARMY.", "hp": 1.4, "damage": 0.8, "range": 1.25, "pull": 13, "slow": 0.35, "cooldown": 1.8 }
+        { "id": "frost", "grainPerShot": 3, "name": "FROST SPIRE", "blurb": "ITS PULSE FREEZES SOLDIERS SOLID AND CHILLS CHAMPIONS TO A CRAWL.", "hp": 1.4, "damage": 1.0, "range": 1.1, "freeze": 1.2, "heroSlow": 0.35, "heroSlowSeconds": 1.6 },
+        { "id": "storm", "grainPerShot": 4, "name": "STORM BELL", "blurb": "A THUNDERCLAP PULSE: BIG DAMAGE, A SHORT STUN ON EVERYONE AND A HARD SHOVE.", "hp": 1.4, "damage": 2.6, "cooldown": 2.8, "stun": 0.55, "knockback": 6 },
+        { "id": "well", "grainPerShot": 3, "name": "GRAVITY WELL", "blurb": "DRAGS ENEMIES IN TOWARD THE TOWER AND SLOWS THEM. PILES THEM UP FOR YOUR ARMY.", "hp": 1.4, "damage": 0.8, "range": 1.25, "pull": 13, "slow": 0.35, "cooldown": 1.8 }
       ]
     },
     "support": {

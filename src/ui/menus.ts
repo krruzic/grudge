@@ -217,7 +217,7 @@ export class Menus {
         }
         const ts = w.teams[team];
         const core = w.core(team);
-        const stats: [string, string][] = [["KEEP", core ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-"], ["GOLD", String(Math.floor(ts.resource))], ["SOLDIERS", String(ts.unitCount)], ["HERO KILLS", String(ts.heroKills)]];
+        const stats: [string, string][] = [["KEEP", core ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-"], ["GOLD", String(Math.floor(ts.resource))], ["GRAIN", String(Math.floor(ts.grain))], ["SOLDIERS", String(ts.unitCount)], ["HERO KILLS", String(ts.heroKills)]];
         const sy = ph - 10 - stats.length * 8;
         band(ctx, x, sy - 3, colW, 1, "#6a4424", 0.5);
         stats.forEach(([k, v], q) => {
@@ -283,7 +283,7 @@ export class Menus {
       }
       const core = w.core(team);
       const keep = core?.alive && !out ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-";
-      const line = `KEEP ${keep} · GOLD ${Math.floor(ts.resource)} · ${ts.unitCount} MEN · ${ts.heroKills} KO`;
+      const line = `KEEP ${keep} · GOLD ${Math.floor(ts.resource)} · GRAIN ${Math.floor(ts.grain)} · ${ts.unitCount} MEN · ${ts.heroKills} KO`;
       band(ctx, x, y - 1, colW, 1, "#6a4424", 0.5);
       drawPlain(ctx, line, x, y + 2, "#6a4424", Math.min(0.48, colW / Math.max(1, textWidth(line, 1, true))), true);
     });

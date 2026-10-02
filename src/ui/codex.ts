@@ -52,7 +52,7 @@ const TALENTS = (talentJson as unknown as { heroes: Record<string, Record<"r" | 
 const U = unitJson as unknown as { waves: { everySeconds: number; spawnCost: Record<string, number> }; types: Record<string, { hp: number; bounty: number }>; popCap: number };
 const S = structJson as unknown as { types: Record<string, { name: string; cost: number; upgradeCost: number; mix?: Record<string, number>; specCost?: number; specs?: { id: string; name: string; blurb: string }[] }>; buildSeconds: number; rubbleSeconds: number };
 const M = matchJson as unknown as {
-  economy: { start: number; income: number; padIncome?: Record<string, number>; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
+  economy: { start: number; income: number; grain?: { base: number; perLevel: number[]; surplus?: number }; padIncome?: Record<string, number>; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   arena: {
     shop: { bomb: { cost: number; coreDamage: number }; ward: { cost: number; cooldown: number }; cannon: { cost: number; shots: number } };
     relic: { firstSeconds: number; enshrineSeconds: number; stealSeconds: number; incomeMul: number };
@@ -308,7 +308,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       title: "YOUR TROOPS",
       glyph: "banner",
       pages: [
-        { title: "THREE KINDS OF SOLDIER", text: `GRUNTS (${sc.grunt} GOLD): CHEAP, QUICK, GOOD AT HACKING BRUTES APART. ARCHERS (${sc.ranged} GOLD): SHOOT FROM RANGE, SHRED GRUNTS. BRUTES (${sc.heavy} GOLD): BIG, SLOW, SMASH ARCHERS AND BUILDINGS.`, tip: "GRUNTS BEAT BRUTES. ARCHERS BEAT GRUNTS. BRUTES BEAT ARCHERS. A MIXED ARMY BEATS ANY SINGLE KIND.", art: { kind: "scene", scene: "troops" } },
+        { title: "THREE KINDS OF SOLDIER", text: `GRUNTS (${sc.grunt} GRAIN): CHEAP, QUICK, GOOD AT HACKING BRUTES APART. ARCHERS (${sc.ranged} GRAIN): SHOOT FROM RANGE, SHRED GRUNTS. BRUTES (${sc.heavy} GRAIN): BIG, SLOW, SMASH ARCHERS AND BUILDINGS.`, tip: "GRUNTS BEAT BRUTES. ARCHERS BEAT GRUNTS. BRUTES BEAT ARCHERS. A MIXED ARMY BEATS ANY SINGLE KIND.", art: { kind: "scene", scene: "troops" } },
         { title: "VETERANS", text: "TROOPS THAT GET KILLS RANK UP: VETERAN, ELITE, THEN HEROIC. EACH RANK HITS HARDER, HAS MORE HEALTH AND HEALS A BIT. HEROIC TROOPS SLOWLY REGENERATE.", tip: `KEEPING TROOPS ALIVE MATTERS. THE ARMY CAP IS ${U.popCap}, SO DON'T THROW THEM AWAY.`, art: { kind: "seal", glyph: "rank", color: "#c8a020" } },
       ],
     },
@@ -326,17 +326,19 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
       title: "OUTPOSTS",
       glyph: "castle",
       pages: [
-        { title: "WHERE TROOPS COME FROM", text: `TROOPS ONLY COME FROM OUTPOSTS. BUILD THEM ON PADS WITH X: A BARRACKS MAKES GRUNTS, A RANGE MAKES ARCHERS, A FOUNDRY MAKES BRUTES. EACH COSTS ${st.barracks.cost} GOLD. EVERY ${U.waves.everySeconds} SECONDS EACH OUTPOST SENDS ITS SOLDIER, AND YOU PAY FOR EACH ONE AS IT COMES OUT.`, tip: "NO GOLD, NO TROOPS. IF YOUR OUTPOSTS GO QUIET, CHECK YOUR PURSE.", art: { kind: "seal", glyph: "castle" } },
+        { title: "WHERE TROOPS COME FROM", text: `TROOPS ONLY COME FROM OUTPOSTS. BUILD THEM ON PADS WITH X: A BARRACKS MAKES GRUNTS, A RANGE MAKES ARCHERS, A FOUNDRY MAKES BRUTES. EACH COSTS ${st.barracks.cost} GOLD. EVERY ${U.waves.everySeconds} SECONDS EACH OUTPOST SENDS ITS SOLDIER, AND YOU PAY GRAIN FOR EACH ONE AS IT COMES OUT. YOUR FARTHEST OUTPOSTS GET FED FIRST.`, tip: "NO GRAIN, NO TROOPS. IF YOUR OUTPOSTS GO QUIET, CHECK YOUR SACK.", art: { kind: "seal", glyph: "castle" } },
         { title: "MIXED OUTPOSTS", text: `SOME FIELDS ARE TOO CRAMPED FOR SPECIALISTS. THERE YOU CAN ONLY BUILD A PLAIN OUTPOST, ${st.outpost.cost} GOLD, AND EVERY SOLDIER IT SENDS IS PICKED AT RANDOM: ABOUT ${Math.round((st.outpost.mix?.grunt ?? 0) * 100)}% GRUNTS, ${Math.round((st.outpost.mix?.ranged ?? 0) * 100)}% ARCHERS AND ${Math.round((st.outpost.mix?.heavy ?? 0) * 100)}% BRUTES. RIGHT NOW THAT'S THE RUINS.`, tip: "YOU DON'T GET TO CHOOSE. NEITHER DO THEY. IT'S VERY DEMOCRATIC.", art: { kind: "seal", glyph: "castle" } },
         { title: "UPGRADES AND FORWARD OUTPOSTS", text: `UPGRADE AN OUTPOST (Y AT ITS PAD, ${st.barracks.upgradeCost} GOLD) TO SEND TWO SOLDIERS AT A TIME, WITH BETTER STATS. OUTPOSTS ON FORWARD OR NEUTRAL PADS MAKE TOUGHER SOLDIERS, AND STANDING NEAR ONE HEALS YOU LIKE YOUR OWN TURF.`, tip: "A FORWARD OUTPOST IS A SECOND HOME. LOSE IT AND YOU'LL FEEL IT.", art: { kind: "seal", glyph: "banner" } },
       ],
     },
     {
       cat: "ARMY",
-      title: "GOLD",
+      title: "GOLD AND GRAIN",
       glyph: "repair",
       pages: [
-        { title: "MAKING IT", text: `YOUR KEEP EARNS ${e.income} GOLD A SECOND. EVERY FINISHED BUILDING ON A PAD ADDS MORE: ${e.padIncome?.home ?? 0} FOR A HOME PAD, ${e.padIncome?.forward ?? 0} FOR A FORWARD OR NEUTRAL ONE. YOUR RATE IS NEXT TO YOUR GOLD. KILLS PAY BOUNTIES: ${e.bounty.hero} FOR A HERO, ${e.bounty.structure} FOR A BUILDING, A FEW COINS PER SOLDIER.`, tip: "LOSE A FORWARD TOWER AND YOU LOSE ITS GOLD. LET THEM BUILD ON IT AND THEY GET IT. HOLD YOUR PADS.", art: { kind: "seal", glyph: "repair" } },
+        { title: "TWO PURSES", text: `GOLD PAYS FOR BUILDINGS, UPGRADES AND THE KEEP SHOP. GRAIN FEEDS YOUR ARMY: EVERY SOLDIER YOUR OUTPOSTS SEND COSTS GRAIN, AND SO DOES EVERY TOWER SHOT AND PULSE. BOTH ARE NEXT TO YOUR KEEP GEM; THE NUMBER AFTER THE SACK IS YOUR GRAIN PER SECOND.`, tip: "BUILDINGS FEED YOU, KILLS PAY YOU. A HOUSE THAT ONLY BUILDS STARVES FOR GOLD, A HOUSE THAT ONLY FIGHTS STARVES FOR GRAIN.", art: { kind: "seal", glyph: "repair" } },
+        { title: "MAKING GOLD", text: `GOLD COMES FROM KILLING. EVERY ENEMY SOLDIER PAYS A FEW COINS, A HERO ${e.bounty.hero}, A BUILDING ${e.bounty.structure}. YOUR KEEP ADDS A TRICKLE OF ${e.income} A SECOND SO A QUIET START ISN'T FROZEN.`, tip: "YOUR ARMY IS YOUR INCOME. A WAVE THAT DIES FOR NOTHING IS GOLD YOU NEVER SEE.", art: { kind: "seal", glyph: "quake" } },
+        { title: "MAKING GRAIN", text: `GRAIN COMES FROM YOUR BUILDINGS. YOUR KEEP GROWS ${e.grain?.base ?? 0} A SECOND, AND EVERY FINISHED TOWER OR OUTPOST ADDS ${(e.grain?.perLevel ?? []).join(", ")} AT LEVEL ${(e.grain?.perLevel ?? []).map((_, k) => k + 1).join(", ")}. GRAIN YOU DON'T NEED IS NOT WASTED: ABOVE ${e.grain?.surplus ?? 0} IN THE SACK, EACH OUTPOST TRAINS ONE EXTRA SOLDIER A WAVE. RUN OUT AND YOUR OUTPOSTS GO QUIET AND YOUR TOWERS FIRE AT A CRAWL.`, tip: "UPGRADING ISN'T JUST A STRONGER BUILDING. IT'S MORE BREAD.", art: { kind: "seal", glyph: "castle" } },
         { title: "LOSING IT", text: `EVERY TIME YOUR HERO DIES YOUR TEAM LOSES ${e.loss.heroDeath} GOLD. EVERY TOWER YOU LOSE COSTS ${e.loss.tower}. AND WHEN THE ENEMY FELLS ONE OF YOUR TOWERS, THEIR WHOLE ARMY RALLIES: +${pct(e.rally.damageMul)} DAMAGE AND +${pct(e.rally.speedMul)} SPEED FOR ${e.rally.seconds} SECONDS.`, tip: "THE SAME GOES FOR YOU. KNOCK A TOWER DOWN AND CHARGE WHILE THE RALLY LASTS.", art: { kind: "seal", glyph: "quake" } },
       ],
     },

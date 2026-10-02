@@ -235,6 +235,8 @@ export function applyRules(base: GameData, r: Rules): GameData {
   d.units.popCap = r.popCap;
   d.match.economy.start = r.startGold;
   d.match.economy.income = base.match.economy.income * r.goldRate;
+  const gr = base.match.economy.grain;
+  if (gr) d.match.economy.grain = { ...gr, base: gr.base * r.goldRate, perLevel: gr.perLevel.map((v) => v * r.goldRate) };
   d.heroes.baseline.respawnSeconds = r.respawn;
   const troops = r.troops || 1;
   d.units.waves.everySeconds = base.units.waves.everySeconds / troops;

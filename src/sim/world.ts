@@ -116,6 +116,7 @@ export class World {
       const hold = this.defaultHold(team);
       this.teams.push({
         resource: data.match.economy.start,
+        grain: data.match.economy.grain?.start ?? 0,
         coreId: 0,
         homeLost: false,
         directives: {
@@ -920,6 +921,7 @@ export class World {
     if (!ts || ts.out) return;
     ts.out = true;
     ts.resource = 0;
+    ts.grain = 0;
     for (const e of this.entities) {
       if (!e.alive || e.team !== team || e === this.core(team)) continue;
       if (e.hero) {
@@ -969,7 +971,7 @@ export class World {
         let deficit = 0;
         for (let o = 0; o < n; o++) {
           if (o === t || !this.standing(o)) continue;
-          const d = (this.teams[o].resource + worth[o] - this.teams[t].resource - worth[t]) / cu.resourceScale + (count[o] - count[t]) * cu.structureWeight;
+          const d = (this.teams[o].resource + this.teams[o].grain + worth[o] - this.teams[t].resource - this.teams[t].grain - worth[t]) / cu.resourceScale + (count[o] - count[t]) * cu.structureWeight;
           deficit = Math.max(deficit, d);
         }
         this.teams[t].catchUp = Math.max(0, Math.min(1, deficit));
@@ -982,7 +984,21 @@ export class World {
       if (t.out) return;
       const tithe = this.arena.heldBy(team) ? this.data.match.arena.relic.incomeMul : 1;
       t.resource += this.incomeOf(team) * (1 + t.catchUp * cu.incomeBoost) * tithe * dt;
+      t.grain += this.grainOf(team) * (1 + t.catchUp * cu.incomeBoost) * dt;
     });
+  }
+
+  grainOf(team: number): number {
+    const g = this.data.match.economy.grain;
+    if (!g) return 0;
+    let inc = g.base;
+    for (const p of this.pads) {
+      if (!p.structureId) continue;
+      const s = this.get(p.structureId);
+      if (!s?.alive || s.team !== team || !s.structure?.ready || s.structure.type === "core") continue;
+      inc += g.perLevel[Math.min(g.perLevel.length, s.structure.level) - 1] ?? 0;
+    }
+    return inc;
   }
 
   incomeOf(team: number): number {
@@ -1420,7 +1436,7 @@ export class World {
         }
         return;
       }
-      killer.resource += (this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank) * cut;
+      killer.resource += (this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank) * cut * (this.data.match.economy.grain?.unitBountyMul ?? 1);
       killer.kills++;
       return;
     }

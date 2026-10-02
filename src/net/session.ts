@@ -71,6 +71,7 @@ export function worldHash(w: World): number {
   }
   for (const t of w.teams) {
     mix(Math.round(t.resource * 4));
+    mix(Math.round(t.grain * 4));
     mix(t.unitCount);
   }
   mix(w.projectiles.length);

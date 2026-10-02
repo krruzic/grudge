@@ -275,8 +275,21 @@ export function updateStructure(w: World, e: Entity): void {
   }
 
   const boost = w.arena.towerBoost(e);
-  const haste = st.hasteUntil && w.time < st.hasteUntil ? st.hasteMul ?? 1 : 1;
+  let haste = st.hasteUntil && w.time < st.hasteUntil ? st.hasteMul ?? 1 : 1;
   const spec = specOf(w, st);
+  const shotCost = st.siege || st.tesla || st.padIndex < 0 ? 0 : spec?.grainPerShot ?? def.grainPerShot ?? 0;
+  const grainCfg = w.data.match.economy.grain;
+  const feed = () => {
+    if (!shotCost || !grainCfg) return;
+    if (ts.grain >= shotCost) ts.grain -= shotCost;
+    else {
+      haste /= grainCfg.starvedMul ?? 2.5;
+      if (w.time - (ts.starvedAt ?? -99) > 8) {
+        ts.starvedAt = w.time;
+        w.emit({ type: "notice", team: e.team, text: "NO GRAIN · TOWERS SLOW" });
+      }
+    }
+  };
   if (st.type === "damage") {
     let best: Entity | null = null;
     let bestScore = Infinity;
@@ -303,6 +316,7 @@ export function updateStructure(w: World, e: Entity): void {
         st.nextAction = w.time + 0.3;
         return;
       }
+      feed();
       st.lastFireAt = w.time;
       st.nextAction = w.time + (spec.cooldown ?? def.cooldown ?? 1) / haste;
       return;
@@ -322,6 +336,7 @@ export function updateStructure(w: World, e: Entity): void {
     }
     w.fireProjectile(e, best, st.damage * boost.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2, true, undefined, best.hero && st.heroSlow ? { slowMul: st.heroSlow, slowSeconds: 1 } : undefined);
     st.lastFireAt = w.time;
+    feed();
     st.nextAction = w.time + (siege ? siege.cooldown : def.cooldown ?? 1) / haste;
     return;
   }
@@ -351,6 +366,7 @@ export function updateStructure(w: World, e: Entity): void {
       }
     }
     st.lastFireAt = w.time;
+    feed();
     st.nextAction = w.time + (spec?.cooldown ?? def.cooldown ?? 2) / haste;
     return;
   }
