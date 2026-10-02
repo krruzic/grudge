@@ -13,6 +13,7 @@ export interface MatchSpec {
   names: (string | null)[];
   tagIds?: (string | null)[];
   mode?: MatchMode;
+  training?: boolean;
 }
 
 export interface Frame {

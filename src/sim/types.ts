@@ -198,6 +198,8 @@ export interface StructureState {
 
 export interface Entity {
   id: number;
+  dummy?: boolean;
+  dummyHitAt?: number;
   team: number;
   kind: "hero" | "unit" | "structure";
   radius: number;

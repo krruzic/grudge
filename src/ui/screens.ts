@@ -199,6 +199,7 @@ export class Screens {
     return i < 2 || this.mode === "ffa" || (this.mode === "2v2" && this.heroPartners);
   }
   cameraMode = 1;
+  training = false;
   zoomModes: number[] = [0, 0, 0, 0];
   private results: World | null = null;
 
@@ -302,7 +303,7 @@ export class Screens {
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_champion", "CHOOSE YOUR CHAMPION", W / 2, 3, 14);
     const mw = this.mode === "ffa" ? 70 : 46;
-    ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, MODE_NAME[this.mode], 0.55, undefined, nameImage(`t_${this.mode}`));
+    ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, this.training ? "TRAINING" : MODE_NAME[this.mode], 0.55, undefined, this.training ? null : nameImage(`t_${this.mode}`));
     this.hit("mode", W - 15 - mw / 2 - mw / 2 - 5, 1, mw + 10, 17);
     const cam = CAMERA_NAMES[this.cameraMode] ?? CAMERA_NAMES[1];
     const cw = Math.max(64, textWidth(cam, 0.5) + 18);
@@ -406,12 +407,13 @@ export class Screens {
 
   private kindPlaque(ctx: CanvasRenderingContext2D, i: number, cx: number, y: number, s: SelectSlot): void {
     cx = Math.round(cx);
-    const label = s.cpu ? "CPU" : !this.championSeat(i) ? "COMMANDER" : "PLAYER";
+    const dummy = this.training && s.cpu;
+    const label = dummy ? "DUMMY" : s.cpu ? "CPU" : !this.championSeat(i) ? "COMMANDER" : "PLAYER";
     const pw = Math.max(26, textWidth(label, 0.5, true) + 10);
     const camPl = !s.cpu && this.cameraMode !== 0 && this.championSeat(i);
     const lvW = 21;
     const camW = 11;
-    const extra = s.cpu ? lvW + 3 : camPl ? camW + 3 : 0;
+    const extra = s.cpu && !dummy ? lvW + 3 : camPl ? camW + 3 : 0;
     const x0 = Math.round(cx - (pw + extra) / 2);
     const px = x0 + pw / 2;
     const hovered = this.cursors?.cursors.some((c) => c.active && c.hover === `kind:${i}`);
@@ -421,7 +423,7 @@ export class Screens {
     drawPlain(ctx, label, px - textWidth(label, 0.5, true) / 2, y + 1.6, s.cpu ? "#d8d8e0" : "#f8e8b0", 0.5, true);
     this.hit(`kind:${i}`, px - pw / 2 - 2, y - 2, pw + 4, 12);
     const tip = (t: string) => shadowText(ctx, t, cx - textWidth(t, 0.42) / 2, y - 24, "#f8e8c0", 0.42);
-    if (s.cpu) {
+    if (s.cpu && !dummy) {
       const lx = x0 + pw + 3;
       const hl = !!this.cursors?.cursors.some((c) => c.active && c.hover === `lvl:${i}`);
       ctx.fillStyle = INK;

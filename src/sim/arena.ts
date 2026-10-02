@@ -95,9 +95,11 @@ export class Arena {
   }
 
   update(): void {
-    this.updateRelic();
-    this.updateCannon();
-    this.updateOgreSpawn();
+    if (!this.w.training) {
+      this.updateRelic();
+      this.updateCannon();
+      this.updateOgreSpawn();
+    }
     this.updateWaves();
     this.updateBombs();
   }

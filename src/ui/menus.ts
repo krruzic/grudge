@@ -9,7 +9,7 @@ import type { Portraits } from "./portraits";
 import type { World } from "../sim/world";
 import { DEFAULT_OPTIONS, DEFAULT_RULES, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
 
-export type Page = "main" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls" | "codex";
+export type Page = "main" | "training" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls" | "codex";
 export interface RoomInfo {
   id: number;
   name: string;
@@ -34,7 +34,7 @@ export interface Pointer {
   click: boolean;
   right: boolean;
 }
-export type MenuResult = "fight" | "title" | "options" | "host" | "join" | "browse" | "leave" | null;
+export type MenuResult = "fight" | "training" | "title" | "options" | "host" | "join" | "browse" | "leave" | null;
 
 const INK = "#0b0806";
 const BROWN = "#3a2410";
@@ -43,6 +43,7 @@ const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#1a6a24", "#8a6000"];
 const HOUSE = ["BLUE", "RED", "YELLOW", "GREEN"];
 const ITEMS = [
   { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, TWO AGAINST TWO, OR FOUR HOUSES IN A FREE FOR ALL." },
+  { art: "!TRAINING", label: "TRAINING", blurb: "PICK A CHAMPION AND BEAT ON A DUMMY THAT CAN'T DIE. A DPS METER COUNTS EVERY HIT. FREE GOLD, NO CLOCK." },
   { art: "!PLAYERS", label: "PLAYERS", blurb: "WHO IS PLAYING ON THIS MACHINE: CONTROLLERS, KEYBOARD AND MOUSE. FREE A SEAT OR TURN THE KEYBOARD OFF." },
   { art: "m_network", label: "VERSUS ONLINE", blurb: "PLAY OVER THE HOUSE NETWORK. ONE MACHINE HOSTS, FRIENDS OPEN ITS PAGE AND JOIN." },
   { art: "!CODEX", label: "CODEX", blurb: "EVERY CHAMPION, EVERY EVOLUTION, EVERY TRICK FOR YOUR ARMY AND BASE. ALSO SOME LIES ABOUT A TREE." },
@@ -60,8 +61,8 @@ function upArrow(ctx: CanvasRenderingContext2D, x: number, y: number): void {
 }
 
 const ROMAN_N = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
-const MAIN_GLYPHS = ["combo", "rally", "banner", "hex", "works", "castle", "repair", "pad"];
-const PAGES: Page[] = ["main", "players", "network", "codex", "rules", "records", "options", "controls"];
+const MAIN_GLYPHS = ["combo", "rank", "rally", "banner", "hex", "works", "castle", "repair", "pad"];
+const PAGES: Page[] = ["main", "training", "players", "network", "codex", "rules", "records", "options", "controls"];
 const TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
 
 function artWord(ctx: CanvasRenderingContext2D, key: string, fallback: string, cx: number, y: number, h: number, alpha = 1): number {
@@ -92,10 +93,14 @@ function dateOf(ms: number): string {
 }
 
 const PAUSE_ITEMS = ["RESUME", "CONTROLS", "QUIT MATCH"];
+const TRAIN_ITEMS = ["RESUME", "LEVEL UP", "RESET COOLDOWNS", "RESET METER", "CHANGE CHAMPION", "QUIT TRAINING"];
+const TRAIN_BLURB = ["BACK TO THE DUMMY.", "GAIN A LEVEL. PICK THE EVOLUTION ON THE ORDERS STICK AS USUAL.", "EVERY COOLDOWN READY AND THE SUPER METER FULL.", "ZERO THE DPS METER.", "BACK TO CHAMPION SELECT TO SWAP HEROES.", "LEAVE TRAINING AND RETURN TO THE MENU."];
+const TRAIN_GLYPHS = ["dash", "rank", "repair", "size", "combo", "quake"];
 const TEAM_CLOTH = ["#2a4ab8", "#b02a1c", "#2a8a3a", "#c89a14"];
 
 export class Menus {
   pauseFocus = 0;
+  training = false;
   currentMap = "";
   pauseView: "menu" | "controls" = "menu";
   private pauseConfirm = false;
@@ -106,7 +111,11 @@ export class Menus {
     this.pauseConfirm = false;
   }
 
-  updatePause(nav: Nav, ptr: Pointer, sound: (k: "move" | "ok" | "back") => void): "resume" | "quit" | null {
+  private get pauseItems(): string[] {
+    return this.training ? TRAIN_ITEMS : PAUSE_ITEMS;
+  }
+
+  updatePause(nav: Nav, ptr: Pointer, sound: (k: "move" | "ok" | "back") => void): "resume" | "quit" | "level" | "cooldowns" | "meter" | "champion" | null {
     let act = "";
     if (ptr.moved || ptr.click) {
       const h = this.at(ptr.x, ptr.y);
@@ -129,13 +138,18 @@ export class Menus {
       return null;
     }
     if (nav.dy) {
-      this.pauseFocus = (this.pauseFocus + nav.dy + PAUSE_ITEMS.length) % PAUSE_ITEMS.length;
+      this.pauseFocus = (this.pauseFocus + nav.dy + this.pauseItems.length) % this.pauseItems.length;
       this.pauseConfirm = false;
       sound("move");
     }
     if (nav.b || ptr.right) {
       sound("back");
       return "resume";
+    }
+    if ((nav.a || act === "a") && this.training) {
+      const id = (["resume", "level", "cooldowns", "meter", "champion", "quit"] as const)[this.pauseFocus];
+      sound(id === "quit" ? "back" : "ok");
+      return id;
     }
     if (nav.a || act === "a") {
       if (this.pauseFocus === 0) {
@@ -228,21 +242,22 @@ export class Menus {
     });
     const cx0 = px + pw + 18;
     const cw = W - cx0 - 14;
-    const n = PAUSE_ITEMS.length;
-    const chh = 34;
-    const gap = 10;
-    const glyphs = ["dash", "pad", "quake"];
-    PAUSE_ITEMS.forEach((label, k) => {
+    const items = this.pauseItems;
+    const n = items.length;
+    const chh = n > 3 ? 22 : 34;
+    const gap = n > 3 ? 5 : 10;
+    const glyphs = this.training ? TRAIN_GLYPHS : ["dash", "pad", "quake"];
+    items.forEach((label, k) => {
       const sel = k === this.pauseFocus;
       const cy = 30 + k * (chh + gap);
       this.hit(`prow:${k}`, cx0 - 8, cy - 2, cw + 8, chh + 4);
-      const text = k === 2 && sel && this.pauseConfirm ? "SURE?" : label;
+      const text = !this.training && k === 2 && sel && this.pauseConfirm ? "SURE?" : label;
       tag(ctx, cx0, cy, cw, chh, sel, k, () => {
-        waxSeal(ctx, 13, chh / 2 + 1, 9, sel ? "#a8141a" : "#6a3a2a", glyphs[k]);
+        waxSeal(ctx, 13, chh / 2 + 1, Math.min(9, chh / 2 - 2), sel ? "#a8141a" : "#6a3a2a", glyphs[k]);
         drawPlain(ctx, text, 27, chh / 2 - 3, sel ? "#8a1810" : BROWN, 0.72, true);
       });
     });
-    const blurb = this.pauseFocus === 0 ? "BACK TO THE FIGHT." : this.pauseFocus === 1 ? "EVERY BUTTON, FOR PADS AND FOR KEYBOARDS." : this.pauseConfirm ? "PRESS A AGAIN TO ABANDON THE MATCH." : "LEAVE THE MATCH AND RETURN TO THE MENU.";
+    const blurb = this.training ? TRAIN_BLURB[this.pauseFocus] : this.pauseFocus === 0 ? "BACK TO THE FIGHT." : this.pauseFocus === 1 ? "EVERY BUTTON, FOR PADS AND FOR KEYBOARDS." : this.pauseConfirm ? "PRESS A AGAIN TO ABANDON THE MATCH." : "LEAVE THE MATCH AND RETURN TO THE MENU.";
     wrap(blurb, cw, 0.55).forEach((l, j) => shadowText(ctx, l, cx0 + cw / 2 - textWidth(l, 0.55) / 2, 30 + n * (chh + gap) + 4 + j * 8, this.pauseConfirm && this.pauseFocus === 2 ? "#ffb090" : "#f0e4c8", 0.55));
     void now;
     const p: [string, string][] = [["A", "CHOOSE"], ["B", "RESUME"]];
@@ -393,6 +408,7 @@ export class Menus {
       if (act === "a") {
         sound("ok");
         if (this.focus === 0) return "fight";
+        if (this.focus === 1) return "training";
         this.page = PAGES[this.focus];
         this.focus = 0;
         this.tab = 0;

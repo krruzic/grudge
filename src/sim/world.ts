@@ -542,6 +542,7 @@ export class World {
       this.tick++;
       return;
     }
+    if (this.training) this.trainingStep();
     const dt = this.dt;
     for (const e of this.entities) {
       const t = e.transform;
@@ -660,11 +661,11 @@ export class World {
 
   private updateMatch(): void {
     const m = this.data.match;
-    if (this.match.phase === "play" && this.time >= m.matchSeconds) {
+    if (!this.training && this.match.phase === "play" && this.time >= m.matchSeconds) {
       this.match.phase = "sudden";
       this.emit({ type: "notice", team: -1, text: "SUDDEN DEATH" });
     }
-    if (this.match.phase === "sudden" && this.time >= m.matchSeconds + m.suddenDeathSeconds) {
+    if (!this.training && this.match.phase === "sudden" && this.time >= m.matchSeconds + m.suddenDeathSeconds) {
       const keys: [(t: TeamState) => number, string][] = [
         [(t) => Math.round(t.coreDamageDealt), "core damage"],
         [(t) => -t.structuresLost, "structures destroyed"],
@@ -1319,8 +1320,38 @@ export class World {
         target.hero.action = { name: "hit", kind: "hit", t: 0, dur: b.hitStunSeconds, hitAt: 99, fired: true, combo: 0, dirX: 0, dirZ: 0 };
       }
     }
+    if (target.dummy) {
+      target.dummyHitAt = this.time;
+      if (target.hp < 1) target.hp = 1;
+    }
     if (target.hp <= 0) this.kill(target, src);
     return true;
+  }
+
+  training = false;
+
+  makeTraining(): void {
+    this.training = true;
+    this.match.time = 0;
+    for (const p of this.players) if (p.team !== 0) {
+      const d = this.byId.get(p.heroId);
+      if (d) d.dummy = true;
+    }
+    for (let t = 1; t < this.teamCount; t++) {
+      const c = this.core(t);
+      if (c) c.dummy = true;
+    }
+  }
+
+  private trainingStep(): void {
+    for (const t of [0]) {
+      this.teams[t].resource = Math.max(this.teams[t].resource, 9999);
+      this.teams[t].grain = Math.max(this.teams[t].grain, 9999);
+    }
+    for (const e of this.entities) {
+      if (!e.dummy || !e.alive) continue;
+      if (this.time - (e.dummyHitAt ?? -99) > 3 && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * this.dt * 0.6);
+    }
   }
 
   heal(target: Entity, amount: number): void {

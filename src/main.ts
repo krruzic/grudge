@@ -80,6 +80,7 @@ async function start(): Promise<void> {
   let mapIndex = Math.max(0, maps.findIndex((m) => m.id === params.get("map")));
   const forceJoin = Number(params.get("join") ?? 0);
   let mode: MatchMode = params.get("mode") === "2v2" ? "2v2" : params.get("mode") === "ffa" ? "ffa" : "1v1";
+  let training = params.has("training");
   const houses = (i: number) => maps[i]?.data.teams ?? 2;
   const fieldsFor = (m: MatchMode) => maps.map((_, i) => i).filter((i) => (houses(i) === 4) === (m === "ffa"));
   const fields = () => fieldsFor(mode);
@@ -429,12 +430,16 @@ async function start(): Promise<void> {
     const w = new World(maps[mapIndex].data, applyRules(data, spec.rules), spec.seed);
     const ffa = spec.mode === "ffa";
     for (let p = 0; p < spec.players; p++) w.spawnHero(ffa || p < 2 || spec.rules.partners === 1 ? spec.heroes[p] ?? roster[0] : commanderType, p, ffa ? p : p % 2);
+    if (spec.training) w.makeTraining();
     return w;
   };
   const startNetMatch = (spec: MatchSpec, local: boolean[], remote: boolean[]) => {
     players = spec.players;
     mode = spec.mode ?? (spec.players === 4 ? "2v2" : "1v1");
     setupControl(local, spec.levels, remote, netMode !== "peer");
+    if (spec.training) bots = bots.map(() => null);
+    hud.resetTrainer();
+    menus.training = !!spec.training;
     show(buildWorld(spec));
     matchPlayers = spec.heroes.slice(0, spec.players).map((hero, i) => ({ tag: spec.names[i] ?? null, tagId: spec.tagIds?.[i] ?? null, hero, team: mode === "ffa" ? i : i % 2, cpu: !spec.humans[i] }));
     recorded = false;
@@ -466,6 +471,7 @@ async function start(): Promise<void> {
     screens.lobby = null;
   };
   const toMenu = (why?: string) => {
+    menus.training = false;
     if (netMode !== "off") leaveNet(why ?? "");
     if (state === "match" || state === "paused" || state === "results" || state === "lobby") beginAttract();
     state = "menu";
@@ -499,7 +505,7 @@ async function start(): Promise<void> {
     const remote = slots.slice(0, players).map((_, i) => remoteAt(i) >= 0);
     const spec: MatchSpec = {
       map: maps[mapIndex].id, seed: seed++, rules: { ...save.data.rules }, heroes: slots.slice(0, players).map((s) => s.hero), players,
-      levels: slots.slice(0, players).map((s) => s.level), humans, names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)), tagIds: slots.slice(0, players).map((s) => (s.cpu ? null : s.tagId ?? null)), mode,
+      levels: slots.slice(0, players).map((s) => s.level), humans, training: training && netMode === "off", names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)), tagIds: slots.slice(0, players).map((s) => (s.cpu ? null : s.tagId ?? null)), mode,
     };
     for (const r of rseats) {
       r.queue = [];
@@ -989,7 +995,10 @@ async function start(): Promise<void> {
           })
           .finally(() => { roomFetch = false; });
       }
-      if (r === "fight") {
+      if (r === "fight" || r === "training") {
+        training = r === "training";
+        if (training) setMode("1v1");
+        screens.training = training;
         state = "select";
         enterSelect();
         screens.set("select");
@@ -1021,7 +1030,7 @@ async function start(): Promise<void> {
           if (id === "unplug") {
             pads.release(i);
             audio.ui("back");
-          } else if (id === "mode") {
+          } else if (id === "mode" && !training) {
             setMode(mode === "1v1" ? "2v2" : mode === "2v2" ? "ffa" : "1v1");
             audio.ui("ok");
           } else if (id === "add") {
@@ -1279,6 +1288,34 @@ async function start(): Promise<void> {
         if (netMode === "peer") net.toHost({ t: "pause" });
         else setPaused(false);
       } else if (r === "quit") toMenu();
+      else if (r === "meter") {
+        hud.resetTrainer();
+        setPaused(false);
+      } else if (r === "cooldowns") {
+        for (const pl of world.players) {
+          const e = world.heroForPlayer(pl.player);
+          if (!e?.hero || e.dummy) continue;
+          for (const k of Object.keys(e.hero.cooldowns)) e.hero.cooldowns[k] = 0;
+          e.hero.meter = world.data.heroes.baseline.superMax;
+        }
+        setPaused(false);
+      } else if (r === "level") {
+        for (const pl of world.players) {
+          const e = world.heroForPlayer(pl.player);
+          if (!e?.hero || e.dummy || !people[pl.player]) continue;
+          const lv = world.data.talents?.xp.levels ?? [];
+          if (e.hero.level < lv.length) gainXp(world, e, Math.max(1, lv[e.hero.level] - e.hero.xp));
+        }
+        setPaused(false);
+      } else if (r === "champion") {
+        menus.training = false;
+        world.match.phase = "over";
+        state = "select";
+        enterSelect();
+        screens.set("select");
+        hud.show(false);
+        beginAttractWorldOnly();
+      }
     } else if (state === "results" && netMode === "peer") {
       if (anyPressed("a") || anyPressed("start")) {
         state = "lobby";
@@ -1341,7 +1378,7 @@ async function start(): Promise<void> {
         hud.banner_(world.match.winner < 0 ? "DRAW" : `${world.teamName(world.match.winner)} WINS`, now, 3, true);
       } else if (now - overAt > 3) {
         state = "results";
-        if (!recorded && matchPlayers.some((p) => !p.cpu)) {
+        if (!recorded && !world.training && matchPlayers.some((p) => !p.cpu)) {
           recorded = true;
           save.record({ at: Date.now(), mode, map: maps[mapIndex].id, winner: world.match.winner, secs: world.time, players: matchPlayers }, world.teams.map((t) => t.heroKills));
           if (netMode === "host") net.report({ mode, map: maps[mapIndex].id, winner: world.match.winner, secs: Math.round(world.time), players: matchPlayers.map((p) => ({ id: p.tagId ?? null, name: p.tag, hero: p.hero, team: p.team, cpu: p.cpu, kills: world.teams[p.team]?.heroKills ?? 0 })) });

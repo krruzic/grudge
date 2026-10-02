@@ -721,6 +721,28 @@ export class Hud {
 
   update(w: World, _ui: (MapperUi | null)[], now: number): void {
     this.laneCount = w.ffa ? 0 : w.terrain.lanes.length;
+    if (w.training) {
+      for (const ev of w.events) {
+        if (ev.type !== "hit" || ev.id === undefined || !ev.amount) continue;
+        const tg = w.getAny(ev.id);
+        if (!tg?.dummy || tg.structure) continue;
+        const from = ev.src !== undefined ? w.getAny(ev.src) : undefined;
+        if (!from || from.team !== 0) continue;
+        const T = this.trainer;
+        if (w.time - T.lastAt > 2.5) {
+          T.burst = 0;
+          T.burstStart = w.time;
+        }
+        T.lastAt = w.time;
+        T.burst += ev.amount;
+        T.total += ev.amount;
+        T.hits++;
+        T.max = Math.max(T.max, ev.amount);
+        T.log.push([w.time, ev.amount]);
+      }
+      const cut = w.time - 5;
+      while (this.trainer.log.length && this.trainer.log[0][0] < cut) this.trainer.log.shift();
+    }
     for (const ev of w.events) {
       if (ev.type === "hit" && ev.id !== undefined) {
         const tg = w.getAny(ev.id);
@@ -758,7 +780,8 @@ export class Hud {
     this.bannerLineY = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
     if (bannerOn && (this.bannerBig || !this.visible)) this.drawBanner(ctx, W, now);
     if (!this.visible) return;
-    this.drawClock(ctx, W, w, now);
+    if (w.training) this.drawTraining(ctx, W, w);
+    else this.drawClock(ctx, W, w, now);
     this.drawRelic(ctx, W, H, w, now, bannerOn && !this.bannerBig);
     if (bannerOn && !this.bannerBig) this.drawBanner(ctx, W, now);
     this.mini = null;
@@ -1410,7 +1433,7 @@ export class Hud {
     }
     const y = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
     const flash = r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0) ? Math.floor(now * 3) % 2 === 0 : false;
-    if (!hideLine) drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
+    if (!hideLine && !w.training) drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
     if (r.state === "waiting" || !this.locate) return;
     const lift = r.state === "carried" ? 4.5 : r.state === "shrined" ? 6 : 1.5;
     const sp = this.locate(r.x, r.y + lift, r.z);
@@ -1444,6 +1467,40 @@ export class Hud {
     ctx.fillStyle = col;
     ctx.fill();
     ctx.restore();
+  }
+
+  trainer = { log: [] as [number, number][], burst: 0, burstStart: 0, lastAt: -99, total: 0, max: 0, hits: 0 };
+
+  resetTrainer(): void {
+    this.trainer = { log: [], burst: 0, burstStart: 0, lastAt: -99, total: 0, max: 0, hits: 0 };
+  }
+
+  private drawTraining(ctx: CanvasRenderingContext2D, W: number, w: World): void {
+    const T = this.trainer;
+    const span = Math.max(1, Math.min(5, w.time - (T.log[0]?.[0] ?? w.time) + 0.5));
+    const dps = T.log.reduce((s, [, a]) => s + a, 0) / (T.log.length ? span : 1);
+    const live = w.time - T.lastAt < 2.5;
+    const dur = Math.max(0.1, T.lastAt - T.burstStart);
+    const rows: [string, string][] = [
+      ["DPS", T.log.length ? String(Math.round(dps)) : "-"],
+      ["COMBO", T.burst ? `${Math.round(T.burst)} IN ${dur.toFixed(1)}S` : "-"],
+      ["BIGGEST HIT", T.max ? String(Math.round(T.max)) : "-"],
+      ["TOTAL", `${Math.round(T.total)} · ${T.hits} HITS`],
+    ];
+    const pw = 132;
+    const x = Math.round(W / 2 - pw / 2);
+    const y = MARGIN_Y - 3;
+    const ph = 12 + rows.length * 9 + 3;
+    ctx.fillStyle = INK;
+    ctx.fillRect(x - 1, y - 1, pw + 2, ph + 2);
+    texturedRect(ctx, "parch", x, y, pw, ph, "#d8c098", 0, 1);
+    const title = "TRAINING GROUND";
+    drawPlain(ctx, title, x + pw / 2 - textWidth(title, 0.62, true) / 2, y + 2, "#8a1810", 0.62, true);
+    rows.forEach(([k, v], i) => {
+      const ry = y + 12 + i * 9;
+      drawPlain(ctx, k, x + 6, ry, "#5a3a1c", 0.55, true);
+      drawPlain(ctx, v, x + pw - 6 - textWidth(v, 0.6, true), ry, i === 0 && live ? "#a81810" : "#3a2410", 0.6, true);
+    });
   }
 
   private drawClock(ctx: CanvasRenderingContext2D, W: number, w: World, now: number): void {
