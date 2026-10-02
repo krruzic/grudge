@@ -714,3 +714,8 @@
 - FFA targeted attack: ordering ATTACK while that group is already attacking cycles the target house: nearest keep, then each standing rival in turn, then nearest again (`TeamState.attackTeam`). Troops on attack march on that house's keep; a notice names the target and the attack badge on the army roster takes the target house's colour.
 - Select/stage cursor art regenerated with fal (`tools/gen-cursor-art.mjs`, sliced by `tools/cursor-slice.py`): player chips are lumpy wax seals stamped 1P-4P/CP in house colours, the hands are a brown leather gauntlet with riveted iron knuckle plates and an iron cuff seen from the back (point, grab, open), and the player tags are small swallowtail cloth pennants. Sprites are 2x resolution and drawn at half scale; hotspots retuned.
 - Champion portrait cards (select screen, HUD, codex list) frame every hero on the head bone at Stig's tightness (head-and-shoulders) instead of the model's top, which had pushed horns, plumes and antlers into the shot and shrunk the face; Stig keeps the original framing.
+- Keep shield: if the ward is broken by damage, the shop won't sell a new one for 15 s (`shop.ward.brokenLockout`).
+- FFA: everything moves 20% faster (heroes and troops; `ffa.speedMul`).
+- Cannon aiming: the aim reticle is added to the camera's framing points (and its must-keep set), and the camera may widen past its usual max to fit hero and reticle, so the reticle stays on screen as it moves.
+- Prompt icons keep a constant on-screen size at every zoom (scale = camera distance / 16, measured ~60 px from closest to farthest zoom); the earlier floor/cap let them shrink when zoomed out far.
+- Minimap is 50% translucent everywhere and sits lower (4 px from the bottom) in single view.

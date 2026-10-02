@@ -483,7 +483,7 @@ export class GameRenderer {
 
   private watching = new Map<number, number>();
 
-  private frameView(sv: { heroIds: number[]; player: number }): { pts: THREE.Vector3[]; min: number; max: number; margin: number } {
+  private frameView(sv: { heroIds: number[]; player: number }): { pts: THREE.Vector3[]; min: number; max: number; margin: number; own?: number } {
     const w = this.world;
     const pts: THREE.Vector3[] = [];
     const heroes = sv.heroIds.map((id) => w.getAny(id)).filter((e) => !!e);
@@ -491,6 +491,11 @@ export class GameRenderer {
       const p = this.entityViews.heroPoint(id);
       if (p) pts.push(p);
     }
+    for (const h of heroes) {
+      const a = h.alive ? h.hero?.aim : null;
+      if (a) pts.push(new THREE.Vector3(a.x, w.groundY(a.x, a.z), a.z));
+    }
+    const ownN = pts.length;
     if (heroes.length && heroes.every((h) => w.teams[h.team]?.out)) {
       let id = this.watching.get(sv.player) ?? 0;
       const ok = (e: { alive: boolean; team: number } | undefined) => !!e?.alive && w.standing(e.team);
@@ -521,7 +526,7 @@ export class GameRenderer {
     }
     if (this.camMode === 2) {
       const z = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2];
-      return { pts, min: z, max: z, margin: 4 };
+      return { pts, min: z, max: z, margin: 4, own: ownN };
     }
     const alive = heroes.filter((h) => h.alive);
     let fight = false;
@@ -542,7 +547,9 @@ export class GameRenderer {
     }
     const zf = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2] / this.zoomSteps[2];
     const min = (fight ? 18 : towers ? 24 : 21) * zf;
-    return { pts, min, max: Math.max(min, 34 * Math.max(1, zf)), margin: (fight ? 6 : 8) * zf };
+    let reach = 0;
+    for (let i = sv.heroIds.length; i < ownN; i++) for (let j = 0; j < sv.heroIds.length; j++) if (pts[j]) reach = Math.max(reach, pts[i].distanceTo(pts[j]));
+    return { pts, min, max: Math.max(min, 34 * Math.max(1, zf), reach * 1.25 + 18), margin: (fight ? 6 : 8) * zf, own: ownN };
   }
 
   private splitRects(w: number, h: number): [number, number, number, number][] {
@@ -707,7 +714,7 @@ export class GameRenderer {
           cam.aspect = w / h;
           cam.updateProjectionMatrix();
           const f = this.frameView(sv);
-          const own = f.pts.slice(0, sv.heroIds.length);
+          const own = f.pts.slice(0, Math.max(sv.heroIds.length, f.own ?? 0));
           this.aimCamera(cam, sv.st, f.pts, dt, f.min, f.max, f.margin, own);
         } else {
           cam = this.camera;

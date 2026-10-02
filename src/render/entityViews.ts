@@ -711,7 +711,7 @@ export class EntityViews {
     for (const hint of [...this.padHints, ...this.shopHints]) {
       const base = hint.userData.base as [number, number] | undefined;
       if (!hint.visible || !base) continue;
-      const f = Math.min(6.5, Math.max(1, camera.position.distanceTo(hint.position) / 17));
+      const f = Math.min(40, camera.position.distanceTo(hint.position) / 16);
       hint.scale.set(base[0] * f, base[1] * f, 1);
       hint.updateMatrixWorld();
     }
@@ -769,6 +769,10 @@ export class EntityViews {
   heroPoints(): THREE.Vector3[] {
     const out: THREE.Vector3[] = [];
     for (const v of this.views.values()) if (v.kind === "hero" && v.framed !== false && v.seen) out.push(v.root.position.clone());
+    for (const e of this.world.entities) {
+      const a = e.alive ? e.hero?.aim : null;
+      if (a) out.push(new THREE.Vector3(a.x, this.world.groundY(a.x, a.z), a.z));
+    }
     return out;
   }
 

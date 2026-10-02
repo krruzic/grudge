@@ -1212,6 +1212,8 @@ export class World {
       amount -= soak;
       if (ts.ward! <= 0) {
         ts.ward = 0;
+        const tst = this.teams[target.team];
+        if (tst) tst.wardReadyAt = Math.max(tst.wardReadyAt, this.time + (this.data.match.arena.shop.ward.brokenLockout ?? 15));
         this.emit({ type: "notice", team: target.team, text: "CORE SHIELD DOWN" });
       }
       if (amount <= 0) {
@@ -1436,7 +1438,7 @@ export class World {
 
   speedMul(e: Entity): number {
     const s = e.status;
-    let m = 1;
+    let m = this.ffa ? this.data.match.ffa?.speedMul ?? 1 : 1;
     if (this.time < s.slowUntil) m *= s.slowMul;
     if (this.time < s.buffUntil) m *= s.buffSpeedMul;
     if (this.time < s.rallyUntil) m *= this.data.match.economy.rally.speedMul;

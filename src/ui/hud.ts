@@ -989,7 +989,7 @@ export class Hud {
     const mw = t.width * s;
     const mh = t.depth * s;
     const x0 = Math.round(W / 2 - mw / 2);
-    const y0 = Math.round(this.split >= 2 ? H / 2 - mh / 2 : H - mh - 12);
+    const y0 = Math.round(this.split >= 2 ? H / 2 - mh / 2 : H - mh - 4);
     this.mini = { x: x0 - 4, y: y0 - 4, w: mw + 8, h: mh + 8 };
     const img = idx >= 0 ? this.portraits?.mapTop(idx, Math.round(t.width * 6), Math.round(t.depth * 6)) : null;
     const tc = (team: number) => this.teamColors[team] ?? this.teamColors[4] ?? "#9a9068";
@@ -1009,7 +1009,7 @@ export class Hud {
     });
     onHiLayer(ctx, (g) => {
       g.save();
-      g.globalAlpha *= 0.9;
+      g.globalAlpha *= 0.5;
       g.fillStyle = INK;
       g.fillRect(x0 - 3.5, y0 - 3.5, mw + 7, mh + 7);
       texturedRect(g, "wood", x0 - 2.5, y0 - 2.5, mw + 5, mh + 5, "#7a5636", 0, 0.5);

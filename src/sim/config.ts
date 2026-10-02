@@ -286,7 +286,7 @@ export interface MatchData {
   matchSeconds: number;
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
-  ffa?: { waveSeconds: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
+  ffa?: { speedMul?: number; waveSeconds: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
   economy: { start: number; income: number;
     padIncome?: Record<string, number>; respawnCooldownPenalty?: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number; bountyCut: number; respawnCut: number; fortify: number };
@@ -307,7 +307,7 @@ export interface MatchData {
     shop: {
       radius: number;
       bomb: { cooldown?: number; cost: number; fuse: number; coreDamage: number; plantReach: number; throwRange: number; throwSeconds: number; groundFuse: number; stickReach: number; splash: number; splashDamage: number; splashUnitMul?: number; structureSplash: number };
-      ward: { cost: number; cooldown: number };
+      ward: { brokenLockout?: number; cost: number; cooldown: number };
       cannon: { cost: number; shots: number; radius: number; aimSpeed: number; aimSeconds: number; spread: number };
     };
     ogre: { firstSeconds: number; respawnSeconds: number; hp: number; damage: number; speed: number; radius: number; aggro: number; range: number; cooldown: number; knockback: number; bounty: number; leash: number; blessSeconds: number; blessDamage: number; blessSpeed: number; blessXp: number; patrolSpeedMul?: number; patrolPause?: number };
