@@ -1389,7 +1389,7 @@ export class World {
       target.hero.bomb = false;
       target.hero.aim = null;
       const big = this.ffa || this.players.length > 2 ? this.data.match.economy.respawnBigMul ?? 1 : 1;
-      target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds * big * (1 - (victim?.catchUp ?? 0) * this.data.match.catchUp.respawnCut);
+      target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds * big * (1 - (this.ffa ? victim?.catchUp ?? 0 : 0) * this.data.match.catchUp.respawnCut);
       const hh = target.hero;
       hh.frozenCd = Object.fromEntries(Object.entries(hh.cooldowns).map(([k, v]) => [k, Math.max(0, (v ?? 0) - this.time)]));
       if (hh.meter < this.data.heroes.baseline.superMax) hh.meter = 0;
