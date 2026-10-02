@@ -434,7 +434,8 @@ export class Bot {
           return allies >= 3 && (!bp || Math.hypot(bp.x - p.x, bp.z - p.z) > 10);
         }
         case "works": return !w.mods.some((m) => m.kind === "works" && m.owner === me.id) && w.entities.some((o) => o.alive && o.structure && o.team !== me.team && !o.structure.siege && w.dist(me, o) < (a.botRange ?? 12));
-        case "repair": return w.entities.some((o) => o.alive && o.structure && o.team === me.team && o.hp < o.maxHp * 0.7 && w.dist(me, o) < (a.radius ?? 6));
+        case "repair": return w.entities.some((o) => o.alive && o.structure && o.team === me.team && o.hp < o.maxHp * 0.7 && w.dist(me, o) < (a.radius ?? 6))
+          || (!!w.heroDef(me.hero!.type).hooks.overhaulHeal && nearby.length >= 1 && w.entities.filter((o) => o.alive && o.unit && o.team === me.team && w.dist(me, o) < (a.radius ?? 6)).length >= 3);
         default: return false;
       }
     };

@@ -1294,6 +1294,14 @@ export class World {
       }
     }
     if (target.hero && src && !src.hero && this.lone(target)) amount *= 1 - (this.heroDef(target.hero.type).hooks.loneArmor ?? 0);
+    if (target.hero && src?.hero) {
+      const ua = this.heroDef(target.hero.type).hooks.outnumberedArmor;
+      if (ua && this.outnumbered(target)) amount *= 1 - ua;
+    }
+    if (src?.hero && target.hero) {
+      const ud = this.heroDef(src.hero.type).hooks.outnumberedDamage;
+      if (ud && this.outnumbered(src)) amount *= ud;
+    }
     target.hp -= amount;
     if (src?.hero && src.alive && target.hero && this.lone(src)) this.heal(src, amount * (this.heroDef(src.hero.type).hooks.loneLeech ?? 0));
     if (target.hero?.jump && amount > 0) this.cancelJump(target);
@@ -1345,6 +1353,16 @@ export class World {
   }
 
   training = false;
+
+  outnumbered(e: Entity): boolean {
+    let n = 0;
+    for (const p of this.players) {
+      if (p.team === e.team) continue;
+      const o = this.byId.get(p.heroId);
+      if (o?.alive && this.dist(o, e) < 8) n++;
+    }
+    return n >= 2;
+  }
 
   lone(e: Entity): boolean {
     const r = e.hero ? this.heroDef(e.hero.type).hooks.loneRadius : undefined;
@@ -1558,6 +1576,10 @@ export class World {
     if (kind === Kind.Ford) m *= this.data.match.terrain.fordSpeedMul;
     else if (kind === Kind.Water) m *= this.data.match.terrain.fordSpeedMul * 0.8;
     if (e.hero) m *= this.pacingMul(e);
+    if (e.hero) {
+      const hk = this.heroDef(e.hero.type).hooks;
+      if (hk.marchSpeed && this.time - e.hero.combatAt > (hk.marchAfter ?? 2.5) && this.time - e.status.lastHitAt > (hk.marchAfter ?? 2.5)) m *= hk.marchSpeed;
+    }
     if (e.unit) {
       const def = this.data.units.types[e.unit.type];
       if (def.slopeSpeedMul < 1 && this.slopeAt(e.transform.pos.x, e.transform.pos.z) > this.data.match.terrain.slopeThreshold) {

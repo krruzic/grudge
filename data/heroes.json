@@ -61,7 +61,12 @@
       "hooks": {
         "auraRadius": 7,
         "auraDamageMul": 1.05,
-        "heavyStatMul": 1.1
+        "heavyStatMul": 1.1,
+        "marchSpeed": 1.35,
+        "marchAfter": 2.5,
+        "outnumberedArmor": 0.4,
+        "heroDamageMul": 1.15,
+        "outnumberedDamage": 1.3
       },
       "abilities": {
         "a": {
@@ -154,7 +159,7 @@
       "blurb": "Cheaper structures and upgrades. Repairs. Raises siege works and a ballista to perch on them.",
       "health": "sturdy",
       "speed": "mid",
-      "damage": "mid",
+      "damage": "high",
       "defaultBuild": "damage",
       "botRange": 1.8,
       "hooks": {
@@ -162,7 +167,10 @@
         "upgradeCostMul": 0.6,
         "wrenchDamage": 95,
         "wrenchRange": 10,
-        "wrenchCooldown": 1.1
+        "wrenchCooldown": 1.1,
+        "overhaulHeal": 120,
+        "overhaulDamage": 1.25,
+        "overhaulSeconds": 6
       },
       "abilities": {
         "a": {
@@ -496,7 +504,8 @@
       "defaultBuild": "damage",
       "botRange": 1.8,
       "hooks": {
-        "heroDamageMul": 1.05
+        "heroDamageMul": 1.05,
+        "maxHits": 2
       },
       "abilities": {
         "a": {
@@ -554,7 +563,7 @@
           "kind": "parry",
           "anim": "idle",
           "window": 0.6,
-          "counter": 110,
+          "counter": 85,
           "stunSeconds": 0.8,
           "dur": 0.6,
           "hitAt": 0.0,

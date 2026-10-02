@@ -612,6 +612,7 @@ function flurryHit(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   const range = def.range ?? 3;
   const cosArc = Math.cos((((def.arcDeg ?? 150) / 2) * Math.PI) / 180);
   const seen = (a.pinned ??= {});
+  let hits = 0;
   for (const o of w.entities.slice()) {
     if (!o.alive || o.team === e.team) continue;
     const dx = o.transform.pos.x - t.pos.x;
@@ -622,6 +623,8 @@ function flurryHit(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
     if (Math.abs(o.transform.y - t.y) > 2.5) continue;
     const prev = seen[o.id];
     if (prev && Math.hypot(o.transform.pos.x - prev[0], o.transform.pos.z - prev[1]) > 0.6) continue;
+    if (hits >= maxHits(w, e) && !o.hero) continue;
+    hits++;
     const mul = prev ? 1 : 2.5;
     const side = dx * a.dirZ - dz * a.dirX >= 0 ? 1 : -1;
     const kx = a.dirZ * side * 0.8 + a.dirX * 0.35;
@@ -675,6 +678,7 @@ function unstick(w: World, e: Entity, ux: number, uz: number): void {
 
 function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, arcDeg: number, damage: number, knockback: number, big: boolean, vsStunnedMul?: number): Entity[] {
   const out: Entity[] = [];
+  const cands: [Entity, number][] = [];
   const t = e.transform;
   const cosArc = Math.cos(((arcDeg / 2) * Math.PI) / 180);
   for (const o of w.entities.slice()) {
@@ -685,9 +689,15 @@ function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, 
     if (d - o.radius > range) continue;
     if (d > 0.3 && (dx * dirX + dz * dirZ) / d < cosArc) continue;
     if (Math.abs(o.transform.y - t.y) > 2.5) continue;
-    if (w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul })) out.push(o);
+    cands.push([o, d]);
   }
+  cands.sort((a, b) => (b[0].hero ? 1 : 0) - (a[0].hero ? 1 : 0) || a[1] - b[1]);
+  for (const [o] of cands.slice(0, maxHits(w, e))) if (w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul })) out.push(o);
   return out;
+}
+
+function maxHits(w: World, e: Entity): number {
+  return e.hero ? w.heroDef(e.hero.type).hooks.maxHits ?? Infinity : Infinity;
 }
 
 function shoveHit(w: World, e: Entity, a: HeroAction): void {
@@ -716,6 +726,7 @@ function dashHits(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   for (const o of w.entities.slice()) {
     if (!o.alive || o.team === e.team || ids.includes(o.id)) continue;
     if (w.dist(e, o) - o.radius > (def.width ?? 1.2)) continue;
+    if (ids.length >= maxHits(w, e) && !o.hero) continue;
     ids.push(o.id);
     const hit = w.damage(e, o, (def.damage ?? 60) * w.damageMulOf(e), {
       knockback: def.knockback ?? 3, structureDamage: def.structureDamage !== undefined ? def.structureDamage * w.damageMulOf(e) : undefined, big: true,
@@ -1113,6 +1124,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       return;
     }
     case "repair": {
+      const hk = w.heroDef(e.hero!.type).hooks;
       const fixed: { x: number; y: number; z: number; amount: number; h: number }[] = [];
       const fx = def.fx;
       const r = def.radius ?? 6;
@@ -1130,6 +1142,14 @@ function fire(w: World, e: Entity, a: HeroAction): void {
           }
         } else if (o.team === e.team && fx?.allyShield) {
           addShield(o, fx.allyShield, fx.allyShield, 6, w.time);
+        }
+        if (o.team === e.team && o !== e && !o.structure && hk.overhaulHeal) {
+          w.heal(o, o.hero ? hk.overhaulHeal * 0.5 : hk.overhaulHeal);
+          if (o.unit) {
+            o.status.buffUntil = w.time + (hk.overhaulSeconds ?? 6);
+            o.status.buffDamageMul = Math.max(o.status.buffUntil > w.time ? o.status.buffDamageMul : 1, hk.overhaulDamage ?? 1.25);
+            o.status.buffSpeedMul = Math.max(1, o.status.buffSpeedMul || 1);
+          }
         } else if (o.team !== e.team && o.kind !== "structure") {
           w.damage(e, o, (def.damage ?? 30) * mul, { knockback: fx?.pull ? 0.5 : 3, stun: def.stunSeconds, big: !!def.stunSeconds });
         }
