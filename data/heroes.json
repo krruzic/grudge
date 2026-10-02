@@ -207,10 +207,10 @@
         "r": {
           "kind": "works",
           "anim": "attack_a",
-          "size": 2,
-          "height": 1.5,
+          "size": 3,
+          "height": 2.6,
           "length": 5,
-          "width": 0.5,
+          "width": 2,
           "range": 5,
           "seconds": 25,
           "dur": 0.7,

@@ -193,7 +193,7 @@ const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "s
 const KIND_ANIM: Record<string, string> = {
   slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", hex: "cast", repair: "cast",
   turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
-  banner: "cast", rally: "cast", works: "cast", ballista: "cast",
+  banner: "cast", rally: "cast", works: "cast", ballista: "cast", whirl: "attack_c",
   shove: "attack_a", throw: "attack_b", wrench: "attack_b", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
 };
 

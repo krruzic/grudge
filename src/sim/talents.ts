@@ -350,6 +350,7 @@ export function afterMelee(w: World, e: Entity, targets: Entity[], dealt: number
   const t = e.transform;
   if (fx && finisher && !jab) {
     if (fx.wave) {
+      if (fx.wave.style === "rock") e.hero!.crack = { at: w.time, dirX, dirZ };
       fireMissile(w, e, {
         x: t.pos.x + dirX * 0.8, z: t.pos.z + dirZ * 0.8, y: fx.wave.style === "rock" ? t.y : t.y + 1.2, dirX, dirZ, speed: fx.wave.style === "rock" ? 14 : 20,
         range: fx.wave.length, width: fx.wave.width, damage: fx.wave.damage * w.damageMulOf(e), pierce: true, style: fx.wave.style, stun: fx.wave.stun,

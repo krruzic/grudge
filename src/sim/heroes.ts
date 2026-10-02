@@ -206,6 +206,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       h.jumpReadyAt = w.time + 1.2;
       e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.3);
       w.emit({ type: "jumppad", stage: "land", pad: j.pad, id: e.id, x: j.tx, y: t.y, z: j.tz, windup: 0, dur: 0 });
+      if (j.pad < 0) h.jumpReadyAt = w.time;
     }
     return;
   }
@@ -299,6 +300,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     h.charging = undefined;
     h.chargeT = 0;
   }
+  if (combo(w, e, cmd)) return;
   const act = h.action;
   const canChainCombo = act?.name === "a" && act.kind === "combo" && act.fired && w.time < h.comboUntil;
   if (!act || canChainCombo) {
@@ -389,8 +391,9 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? ab.a.fx?.finisherBonus?.lunge ?? 1 : 1;
       w.moveBy(e, a.dirX * hit.lunge * fin * dt, a.dirZ * hit.lunge * fin * dt);
     } else if (a.kind === "charge" && a.t < a.hitAt) {
-      const ch = ab.b.fx!.charge!;
-      w.moveBy(e, a.dirX * (ch.range / a.hitAt) * dt, a.dirZ * (ch.range / a.hitAt) * dt);
+      const ch = ab.b.fx?.charge ?? { range: 5, damage: 45, knockback: 5, stun: 0.6 };
+      const range = a.chargeRange ?? ch.range;
+      w.moveBy(e, a.dirX * (range / a.hitAt) * dt, a.dirZ * (range / a.hitAt) * dt);
       const ids = a.hitIds ?? (a.hitIds = []);
       for (const o of w.entities.slice()) {
         if (!o.alive || o.team === e.team || o.structure || ids.includes(o.id)) continue;
@@ -459,6 +462,97 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   else h.stuckFor = 0;
   if (h.stuckFor > 0.35) unstick(w, e, cmd.moveX / mag, cmd.moveZ / mag);
   if (!h.blocking && Math.hypot(cmd.moveX, cmd.moveZ) > 0.01) w.faceToward(e, cmd.moveX, cmd.moveZ, b.turnRate);
+}
+
+const callout = (w: World, e: Entity, text: string) => w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text, owner: e.id });
+
+function combo(w: World, e: Entity, cmd: Command): boolean {
+  const h = e.hero!;
+  const t = e.transform;
+  const act = h.action;
+  const mag = Math.hypot(cmd.moveX, cmd.moveZ);
+  const mx = mag > 0.2 ? cmd.moveX / mag : Math.sin(t.facing);
+  const mz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);
+  const ab = abilities(w, e);
+  const cr = h.crack;
+  if (cr && cmd.secondary && w.time - cr.at < 0.9 && ready(e, "b", w.time) && (!act || act.name === "a")) {
+    h.crack = undefined;
+    const a = begin(e, "b", "charge", 0.8, 0.6, cr.dirX, cr.dirZ);
+    a.chargeRange = 11;
+    a.hitIds = [];
+    h.cooldowns.b = bCooldown(w, e);
+    w.emit({ type: "charge", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, src: e.id });
+    callout(w, e, "CRACK CHARGE");
+    return true;
+  }
+  if (act?.kind === "reach" && act.fired && act.toX !== undefined && act.t <= act.dur + 0.1 && cmd.attack && cmd.block && ready(e, "shove", w.time)) {
+    const len = Math.hypot(act.toX - t.pos.x, act.toZ! - t.pos.z) + 0.6;
+    for (const o of w.entities.slice()) {
+      if (!o.alive || o.team === e.team || o.structure || o.neutral) continue;
+      const dx = o.transform.pos.x - t.pos.x;
+      const dz = o.transform.pos.z - t.pos.z;
+      const along = dx * act.dirX + dz * act.dirZ;
+      if (along < 0 || along - o.radius > len || Math.abs(dx * act.dirZ - dz * act.dirX) > 1.6 + o.radius) continue;
+      w.damage(e, o, 35 * w.damageMulOf(e), { fromX: t.pos.x, fromZ: t.pos.z, knockback: 45, stun: 0.5, big: true });
+    }
+    h.cooldowns.shove = w.time + w.data.heroes.baseline.shove.cooldown;
+    w.emit({ type: "slam", x: act.toX, y: t.y, z: act.toZ!, radius: 1.6, team: e.team, src: e.id });
+    h.action = null;
+    callout(w, e, "ARM SHOVE");
+    return true;
+  }
+  if (cmd.dodge && ready(e, "dodge", w.time) && !act) {
+    const dodgeCd = () => (h.cooldowns.dodge = w.time + w.data.heroes.baseline.dodgeSeconds + w.data.heroes.baseline.dodgeCooldown);
+    if (ab.r.kind === "works" && onWorks(w, e)) {
+      for (let d = 11; d >= 5; d -= 1) {
+        if (w.startJump(e, t.pos.x + mx * d, t.pos.z + mz * d, 0.9, 4)) {
+          dodgeCd();
+          callout(w, e, "RAMP JUMP");
+          return true;
+        }
+      }
+    }
+    if (ab.b.kind === "hex") {
+      let best: Entity | null = null;
+      let bd = 10;
+      for (const o of w.entities) {
+        if (!o.alive || o.structure || o.team === e.team || o.status.hexOwner !== e.id || w.time >= o.status.hexUntil) continue;
+        const d = w.dist(e, o) - (o.hero ? 3 : 0);
+        if (d < bd) { bd = d; best = o; }
+      }
+      if (best) {
+        const ax = t.pos.x;
+        const az = t.pos.z;
+        w.emit({ type: "blink", x: ax, y: t.y, z: az, team: e.team, src: e.id });
+        w.emit({ type: "blink", x: best.transform.pos.x, y: best.transform.y, z: best.transform.pos.z, team: e.team, src: e.id });
+        w.teleport(e, best.transform.pos.x, best.transform.pos.z);
+        w.teleport(best, ax, az);
+        best.status.stunUntil = Math.max(best.status.stunUntil, w.time + 0.4);
+        e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.3);
+        dodgeCd();
+        callout(w, e, "HEX SWAP");
+        return true;
+      }
+    }
+    const bn = w.teams[e.team].banner;
+    if (ab.b.kind === "banner" && bn && w.time < bn.until) {
+      const dx = bn.x - t.pos.x;
+      const dz = bn.z - t.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 3 && d < 13 && (dx * mx + dz * mz) / d > 0.6 && w.startJump(e, bn.x + 1, bn.z, 0.7, 2.5)) {
+        dodgeCd();
+        callout(w, e, "BANNER VAULT");
+        return true;
+      }
+    }
+  }
+  if (cmd.attack && h.riposteUntil !== undefined && w.time < h.riposteUntil && (!act || act.kind === "parry")) {
+    h.riposteUntil = undefined;
+    begin(e, "a", "whirl", 0.45, 0.18, Math.sin(t.facing), Math.cos(t.facing));
+    callout(w, e, "RIPOSTE WHIRL");
+    return true;
+  }
+  return false;
 }
 
 export function onWorks(w: World, e: Entity): boolean {
@@ -751,6 +845,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     const pw = a.power ?? 1;
     const targets = arcHit(w, e, a.dirX, a.dirZ, hit.range * (1 + (pw - 1) * 0.3), arc, dmg, hit.knockback * (a.jab ? 0.5 : 1) * m.knockMul * pw, fin || m.extra > 0 || pw > 1.3);
     afterMelee(w, e, targets, dmg * targets.length, fin, a.dirX, a.dirZ, hit.range, !!a.jab);
+    return;
+  }
+  if (a.kind === "whirl") {
+    arcHit(w, e, a.dirX, a.dirZ, 3.4, 360, 65 * mul, 6, true);
     return;
   }
   if (a.kind === "charge") {
@@ -1156,6 +1254,17 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       }
       w.emit({ type: "mod", id: m.id });
       w.emit({ type: "slam", x: cx, y: top, z: cz, radius: 2, team: e.team, src: e.id });
+      if (def.fx?.tesla) {
+        const s = w.addEntity(e.team, "structure", 0.8, cx, cz, def.hp ?? 400);
+        s.structure = {
+          type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 0.3,
+          range: 8, damage: def.damage ?? 45, lastFireAt: -99, shielded: false, tesla: true,
+        };
+        s.expiresAt = m.until;
+        s.owner = e.id;
+        w.nav.setBlocked(cx, cz, 0.8, true);
+        w.emit({ type: "build", id: s.id, padIndex: -1, team: e.team, upgrade: false });
+      }
       return;
     }
     case "ballista": {
@@ -1343,6 +1452,8 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const tx = t.pos.x + a.dirX * len;
       const tz = t.pos.z + a.dirZ * len;
       w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx, tz, team: e.team, hit: victims.length > 0, style: fx?.pull ? "vine" : undefined, src: e.id });
+      a.toX = tx;
+      a.toZ = tz;
       for (const o of victims) {
         const hit = w.damage(e, o, (def.damage ?? 70) * mul * (o.structure ? def.structureMul ?? 1.5 : 1), {
           knockback: fx?.pull ? 0 : def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, slowMul: def.slowMul, slowSeconds: def.slowSeconds, big: true, vsStunnedMul: def.vsStunnedMul,

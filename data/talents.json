@@ -164,17 +164,11 @@
     {
      "id": "teslatower",
      "name": "TESLA TOWER",
-     "desc": "SIEGE WORKS BECOME A TESLA COIL: 400 HP, CHAINS LIGHTNING THROUGH 3 FOES EVERY SECOND FOR 25S.",
+     "desc": "YOUR SIEGE RAMP GETS A TESLA COIL ON TOP: 400 HP, CHAINS LIGHTNING THROUGH 3 FOES EVERY SECOND WHILE THE RAMP STANDS.",
      "set": {
-      "kind": "turret",
       "hp": 400,
-      "range": 8,
       "damage": 45,
-      "seconds": 25,
-      "cooldown": 18,
-      "callout": "TESLA TOWER",
-      "bot": "fight",
-      "botRange": 8
+      "callout": "TESLA RAMP"
      },
      "fx": {
       "tesla": true

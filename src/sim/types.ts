@@ -88,6 +88,7 @@ export interface HeroAction {
   fromX2?: number;
   fromZ2?: number;
   pinned?: Record<number, [number, number]>;
+  chargeRange?: number;
 }
 
 export interface HeroState {
@@ -138,6 +139,8 @@ export interface HeroState {
   empowerMul: number;
   empowerUntil: number;
   onWorks?: boolean;
+  crack?: { at: number; dirX: number; dirZ: number };
+  riposteUntil?: number;
   aim: { x: number; z: number; until: number } | null;
 }
 

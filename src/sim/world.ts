@@ -766,9 +766,23 @@ export class World {
   readonly jumpCharge = 1.0;
   readonly jumpCooldown = 5;
 
+  startJump(e: Entity, tx: number, tz: number, dur: number, peak: number): boolean {
+    if (!e.hero) return false;
+    const i = this.nav.nearestOpen(tx, tz, 2);
+    if (i < 0) return false;
+    const x = (i % this.nav.w) + 0.5;
+    const z = Math.floor(i / this.nav.w) + 0.5;
+    const p = e.transform.pos;
+    e.hero.action = null;
+    e.hero.jump = { fx: p.x, fz: p.z, tx: x, tz: z, start: this.time, dur, peak, pad: -1, launched: true };
+    e.transform.facing = e.transform.prevFacing = Math.atan2(x - p.x, z - p.z);
+    this.emit({ type: "jumppad", stage: "launch", pad: -1, id: e.id, x: p.x, y: e.transform.y, z: p.z, windup: 0, dur });
+    return true;
+  }
+
   cancelJump(e: Entity): void {
     const j = e.hero?.jump;
-    if (!j || this.time >= j.start) return;
+    if (!j || this.time >= j.start || j.pad < 0) return;
     e.hero!.jump = undefined;
     const p = this.jumpPads[j.pad];
     if (p) {
@@ -1135,6 +1149,7 @@ export class World {
       const pfx = allFx(this, target);
       this.emit({ type: "parry", ...ev, team: target.team, src: target.id });
       target.hero.action.t = target.hero.action.dur;
+      target.hero.riposteUntil = this.time + 0.7;
       if (src && src.kind !== "structure" && this.dist(src, target) < 5) {
         const pc = pfx.parryCounter;
         this.damage(target, src, (r.counter ?? 80) * (pc?.mul ?? 1) * this.damageMulOf(target), { stun: (r.stunSeconds ?? 0) + (pc?.stun ?? 0), knockback: 4, big: true });
