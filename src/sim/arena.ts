@@ -153,8 +153,13 @@ export class Arena {
       const core = w.core(team);
       if (!core || ts.out) continue;
       const list: { type: UnitType; from: Entity; stat: number }[] = [];
-      for (const o of w.entities) {
-        if (!o.alive || o.team !== team || !o.structure?.ready || o.structure.type === "core") continue;
+      const cx = core.transform.pos.x;
+      const cz = core.transform.pos.z;
+      const outposts = w.entities
+        .filter((o) => o.alive && o.team === team && o.structure?.ready && o.structure.type !== "core")
+        .sort((a, b) => Math.hypot(b.transform.pos.x - cx, b.transform.pos.z - cz) - Math.hypot(a.transform.pos.x - cx, a.transform.pos.z - cz));
+      for (const o of outposts) {
+        if (!o.structure || o.structure.type === "core") continue;
         const def = w.data.structures.types[o.structure.type];
         if (def.class !== "production" || !def.unit) continue;
         const up = o.structure.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
@@ -391,21 +396,46 @@ export class Arena {
     const cfg = w.data.match.arena.cannon;
     if (w.time >= this.nextCannon) {
       this.nextCannon = w.time + cfg.everySeconds;
-      const targets = w.entities.filter((e) => e.alive && (e.hero || e.unit) && !e.neutral);
+      const based = (x: number, z: number) => {
+        for (let t = 0; t < w.teamCount; t++) {
+          for (const [ox, oz] of [[0, 0], [cfg.radius, 0], [-cfg.radius, 0], [0, cfg.radius], [0, -cfg.radius]]) if (w.inBase(t, x + ox, z + oz)) return true;
+        }
+        return false;
+      };
+      const pools = new Map<number, Entity[]>();
+      for (const e of w.entities) {
+        if (!e.alive || !(e.hero || e.unit) || e.neutral || e.unit?.guard) continue;
+        if (based(e.transform.pos.x, e.transform.pos.z)) continue;
+        const list = pools.get(e.team) ?? [];
+        list.push(e);
+        pools.set(e.team, list);
+      }
+      const hit = new Set<number>();
       const used: Vec2[] = [];
       for (let i = 0; i < cfg.volleys; i++) {
-        let x: number;
-        let z: number;
-        if (targets.length && i < cfg.volleys - 1) {
-          const t = targets[Math.floor(w.rng() * targets.length)];
-          x = t.transform.pos.x + (w.rng() - 0.5) * cfg.spread;
-          z = t.transform.pos.z + (w.rng() - 0.5) * cfg.spread;
-        } else {
-          x = this.home.x + (w.rng() - 0.5) * w.terrain.width * 0.5;
-          z = this.home.z + (w.rng() - 0.5) * w.terrain.depth * 0.5;
+        let p: Vec2 | null = null;
+        for (let tries = 0; tries < 10 && !p; tries++) {
+          let x: number;
+          let z: number;
+          const teams = [...pools.keys()];
+          const fresh = teams.filter((t) => !hit.has(t));
+          const choice = fresh.length ? fresh : teams;
+          if (choice.length && i < cfg.volleys - 1) {
+            const team = choice[Math.floor(w.rng() * choice.length)];
+            const list = pools.get(team)!;
+            const t = list[Math.floor(w.rng() * list.length)];
+            hit.add(team);
+            x = t.transform.pos.x + (w.rng() - 0.5) * cfg.spread;
+            z = t.transform.pos.z + (w.rng() - 0.5) * cfg.spread;
+          } else {
+            x = this.home.x + (w.rng() - 0.5) * w.terrain.width * 0.5;
+            z = this.home.z + (w.rng() - 0.5) * w.terrain.depth * 0.5;
+          }
+          const q = this.snap(Math.max(2, Math.min(w.terrain.width - 2, x)), Math.max(2, Math.min(w.terrain.depth - 2, z)));
+          if (based(q.x, q.z) || used.some((u) => Math.hypot(u.x - q.x, u.z - q.z) < cfg.radius * 1.4)) continue;
+          p = q;
         }
-        const p = this.snap(Math.max(2, Math.min(w.terrain.width - 2, x)), Math.max(2, Math.min(w.terrain.depth - 2, z)));
-        if (used.some((u) => Math.hypot(u.x - p.x, u.z - p.z) < cfg.radius * 1.4)) continue;
+        if (!p) continue;
         used.push(p);
         const at = w.time + cfg.warnSeconds + i * cfg.spacing;
         const shot = { x: p.x, z: p.z, y: w.groundY(p.x, p.z), at, warnAt: w.time, radius: cfg.radius, team: -1 };
