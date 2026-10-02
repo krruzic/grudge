@@ -146,10 +146,20 @@ export class Portraits {
     p.root.rotation.y = 0.35;
     p.root.updateMatrixWorld(true);
     const top = p.top;
-    const headY = top - p.height * 0.2;
-    const dist = p.height * 1.25;
-    this.camera.position.set(p.center.x + dist * 0.12, headY + p.height * 0.02, p.center.z + dist);
-    this.camera.lookAt(p.center.x, headY - p.height * 0.03, p.center.z);
+    let headY = top - p.height * 0.2;
+    let dist = p.height * 1.25;
+    let cx = p.center.x;
+    let cz = p.center.z;
+    const head = type === "engineer" ? null : p.body.getObjectByName("head");
+    if (head) {
+      const hp = head.getWorldPosition(new THREE.Vector3());
+      headY = hp.y + 0.2;
+      dist = hp.y * 1.38;
+      cx = hp.x;
+      cz = hp.z;
+    }
+    this.camera.position.set(cx + dist * 0.12, headY + p.height * 0.02, cz + dist);
+    this.camera.lookAt(cx, headY - p.height * 0.03, cz);
     this.camera.fov = 30;
     this.shoot(p.root, ICON, ICON, c);
     this.icons.set(type, c);
