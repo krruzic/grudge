@@ -270,8 +270,8 @@ function tint(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
   return c;
 }
 
-const CHIP_K = 0.62;
-const GLOVE_K = 0.72;
+const CHIP_K = 0.31;
+const GLOVE_K = 0.37;
 
 function chip(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number, cpu: boolean, lifted: boolean): void {
   const im = cpu ? IMG.chip_cp : IMG[`chip_${slot + 1}`];
@@ -287,8 +287,8 @@ function chip(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number,
 }
 
 const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030"];
-const MID: Record<string, [number, number]> = { glove_point: [0.48, 0.66], glove_grab: [0.5, 0.64], glove_open: [0.5, 0.62] };
-const HOT: Record<string, [number, number]> = { glove_point: [0.7, 0.04], glove_grab: [0.5, 0.22], glove_open: [0.72, 0.06] };
+const MID: Record<string, [number, number]> = { glove_point: [0.6, 0.6], glove_grab: [0.52, 0.55], glove_open: [0.58, 0.58] };
+const HOT: Record<string, [number, number]> = { glove_point: [0.3, 0.03], glove_grab: [0.5, 0.15], glove_open: [0.5, 0.05] };
 
 function glove(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number, pose: "glove_point" | "glove_grab" | "glove_open", press: boolean): void {
   const im = IMG[pose];
@@ -300,7 +300,7 @@ function glove(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number
   const tag = tint(IMG[`tag_${slot + 1}`], TAG_COLORS[slot]);
   if (tag) {
     const [cx, cy] = MID[pose];
-    const tk = k * 1.05;
+    const tk = k * 0.85;
     const smooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(tag, gx + im.naturalWidth * k * cx - (tag.width * tk) / 2, gy + im.naturalHeight * k * cy - (tag.height * tk) / 2, tag.width * tk, tag.height * tk);
