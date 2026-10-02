@@ -151,8 +151,14 @@ async function start(): Promise<void> {
     const o = save.data.options;
     audio.setLevels(o.music / 10, o.sound / 10);
     view.shakeMul = o.shake;
+    if (o.split === 2) {
+      o.split = 1;
+      o.zoom = [1, 1, 1, 1];
+    }
     view.camMode = o.split;
+    view.manualZoom = [0, 1, 2, 3].map((k) => !!o.zoom?.[k]);
     screens.cameraMode = o.split;
+    screens.zoomModes = [0, 1, 2, 3].map((k) => o.zoom?.[k] ?? 0);
     view.setHints(!!o.hints);
     pads.kbmEnabled = o.kbm !== 0;
   };
@@ -1040,8 +1046,15 @@ async function start(): Promise<void> {
           } else if (id === "seatopen") {
             makeOpen(i);
             audio.ui("back");
+          } else if (id === "cam") {
+            const z = save.data.options.zoom ?? [0, 0, 0, 0];
+            z[i] = z[i] ? 0 : 1;
+            save.data.options.zoom = z;
+            save.write();
+            applyOptions();
+            audio.ui("ok");
           } else if (id === "camera") {
-            const order = [1, 2, 0];
+            const order = [1, 0];
             save.data.options.split = order[(order.indexOf(save.data.options.split) + 1) % order.length];
             save.write();
             applyOptions();

@@ -18,6 +18,7 @@ export interface Options {
   shake: number;
   hints: number;
   split: number;
+  zoom?: number[];
   kbm: number;
   fps: number;
 }
@@ -62,7 +63,7 @@ export type Row<T> = { key: keyof T; label: string; values: number[]; fmt: (v: n
 
 const onOff = (v: number) => (v ? "ON" : "OFF");
 
-export const CAMERA_NAMES = ["SHARED VIEW", "SPLIT · AUTO ZOOM", "SPLIT · D-PAD ZOOM"];
+export const CAMERA_NAMES = ["SHARED VIEW", "SPLIT VIEW", "SPLIT VIEW"];
 
 export const RULE_ROWS: Row<Rules>[] = [
   { key: "minutes", label: "MATCH LENGTH", values: [3, 4, 6, 8, 10, 15], fmt: (v) => `${v} MIN`, blurb: "TIME BEFORE THE BELL TOLLS." },
@@ -80,7 +81,7 @@ export const OPTION_ROWS: Row<Options>[] = [
   { key: "music", label: "MUSIC", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF THE MINSTRELS." },
   { key: "sound", label: "SOUND", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF STEEL AND SPELLS." },
   { key: "shake", label: "SCREEN SHAKE", values: [1, 0], fmt: onOff, blurb: "THE GROUND TREMBLES WHEN BLOWS LAND." },
-  { key: "split", label: "CAMERA", values: [1, 2, 0], fmt: (v) => CAMERA_NAMES[v], blurb: "SPLIT: EACH PLAYER GETS A VIEW. AUTO ZOOM FOLLOWS THE FIGHT, D-PAD ZOOM IS FIXED. D-PAD UP/DOWN ZOOMS IN BOTH." },
+  { key: "split", label: "CAMERA", values: [1, 0], fmt: (v) => CAMERA_NAMES[v], blurb: "SPLIT: EACH PLAYER GETS A VIEW. EACH PLAYER PICKS AUTO OR D-PAD ZOOM ON THEIR CARD AT CHAMPION SELECT." },
   { key: "kbm", label: "KEYBOARD + MOUSE", values: [1, 0], fmt: onOff, blurb: "OFF: KEYS AND MOUSE NEVER TAKE A SEAT. CLICK HERE TO TURN BACK ON." },
   { key: "fps", label: "FPS COUNTER", values: [1, 0], fmt: onOff, blurb: "FRAMES PER SECOND IN THE BOTTOM-RIGHT CORNER." },
   { key: "hints", label: "BUTTON HINTS", values: [1, 0], fmt: onOff, blurb: "SHOW BUILD HINTS ABOVE PADS." },

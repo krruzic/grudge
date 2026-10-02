@@ -282,6 +282,33 @@ function armyIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
   ctx.restore();
 }
 
+function padIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hot: boolean): void {
+  const hex = (k: number) => {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+      const px = x + Math.cos(a) * (r + k);
+      const py = y + Math.sin(a) * (r + k) * 0.75;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  };
+  ctx.save();
+  ctx.fillStyle = INK;
+  hex(1.1);
+  ctx.fill();
+  ctx.fillStyle = hot ? "#ff5040" : team;
+  hex(0);
+  ctx.fill();
+  ctx.fillStyle = "#d8b048";
+  hex(-1.4);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillRect(x - r * 0.4, y - r * 0.45, r * 0.5, r * 0.25);
+  ctx.restore();
+}
+
 function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hp: number, ward: number, now: number): void {
   const gem = (k: number) => {
     ctx.beginPath();
@@ -651,8 +678,26 @@ export class Hud {
     }
   }
 
+  private keepHitAt: number[] = [];
+  private padHitAt: number[] = [];
+
+  private shakeOf(at: number | undefined, now: number, amp: number): [number, number] {
+    const age = now - (at ?? -99);
+    if (age > 0.7) return [0, 0];
+    const k = amp * (1 - age / 0.7);
+    return [Math.round(Math.sin(now * 71) * k * 2) / 2, Math.round(Math.cos(now * 53) * k * 2) / 2];
+  }
+
   update(w: World, _ui: (MapperUi | null)[], now: number): void {
     for (const ev of w.events) {
+      if (ev.type === "hit" && ev.id !== undefined) {
+        const tg = w.getAny(ev.id);
+        const st = tg?.structure;
+        if (st && tg) {
+          if (st.type === "core") this.keepHitAt[tg.team] = now;
+          else if (st.padIndex >= 0) this.padHitAt[tg.team] = now;
+        }
+      }
       this.mapEvent(w, ev, now);
       if (ev.type === "notice") {
         if (ev.team < 0) this.banner_(ev.text, now);
@@ -1404,11 +1449,19 @@ export class Hud {
     const wardFrac = ward > 0 && !sudden ? ward / w.data.structures.core.ward : 0;
     const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
     const rate = `+${w.incomeOf(t).toFixed(1)}/S`;
-    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, army, capped, out, rate].join("|");
+    const [kx, ky] = this.shakeOf(this.keepHitAt[t], now, 4.5);
+    const [px2, py2] = this.shakeOf(this.padHitAt[t], now, 3);
+    let pads = 0;
+    for (const pd of w.pads) {
+      const s2 = pd.structureId ? w.get(pd.structureId) : undefined;
+      if (s2?.alive && s2.team === t) pads++;
+    }
+    const padHot = now - (this.padHitAt[t] ?? -99) < 0.7;
+    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, army, capped, out, rate, kx, ky, px2, py2, pads, padHot].join("|");
     let y = this.memo(ctx, `head${t}`, headKey, x0 - 8, y00 - 6, blockW + 16, 40, (c) => {
       const y = y00;
       const gx = ax(8);
-      keepGem(c, gx, y + 10, 7.2, col, hpFrac, wardFrac, now);
+      keepGem(c, gx + kx, y + 10 + ky, 7.2, col, hpFrac, wardFrac, now);
       if (out) {
         fallenMark(c, gx, y + 10, 7);
         const lab = `${TEAM_NAMES[t] ?? ""} HOUSE FELL`;
@@ -1429,6 +1482,13 @@ export class Hud {
       bx += 9;
       bx += times(c, bx, y + 11);
       drawNum(c, army, bx, y + 10, capped ? "#ff8a6a" : "#ffffff", 1.15);
+      const ps = String(pads);
+      const pw2 = 10 + textWidth("×", 0.9) + 1.5 + textWidth(ps, 1.15, true);
+      let qx = (right ? bx - 9 - textWidth("×", 0.9) - 1.5 - 8 - pw2 : bx + textWidth(army, 1.15, true) + 8) + px2;
+      padIcon(c, qx + 4, y + 15 + py2, 4, col, padHot && Math.floor(now * 10) % 2 === 0);
+      qx += 10;
+      qx += times(c, qx, y + 11 + py2);
+      drawNum(c, ps, qx, y + 10 + py2, padHot ? "#ff9070" : "#f0e4c8", 1.15);
       return y + 24;
     });
 

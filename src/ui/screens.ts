@@ -197,6 +197,7 @@ export class Screens {
     return i < 2 || this.mode === "ffa" || (this.mode === "2v2" && this.heroPartners);
   }
   cameraMode = 1;
+  zoomModes: number[] = [0, 0, 0, 0];
   private results: World | null = null;
 
   constructor(private teamColors: string[]) {}
@@ -405,7 +406,8 @@ export class Screens {
     cx = Math.round(cx);
     const label = s.cpu ? "CPU" : !this.championSeat(i) ? "COMMANDER" : "PLAYER";
     const pw = Math.max(26, textWidth(label, 0.5, true) + 10);
-    if (s.cpu) cx -= 16;
+    const camPl = !s.cpu && this.cameraMode !== 0 && this.championSeat(i);
+    if (s.cpu || camPl) cx -= 16;
     const hovered = this.cursors?.cursors.some((c) => c.active && c.hover === `kind:${i}`);
     ctx.fillStyle = INK;
     ctx.fillRect(cx - pw / 2 - 1, y - 1, pw + 2, 10);
@@ -427,6 +429,18 @@ export class Screens {
         ctx.fillRect(cx + lw / 2 + 3 + k * 4, ly + 4 - k, 3, 3 + k);
       }
       this.hit(`lvl:${i}`, cx - lw / 2 - 2, ly - 2, lw + 18, 11);
+    }
+    if (camPl) {
+      const zl = this.zoomModes[i] ? "D-PAD ZOOM" : "AUTO ZOOM";
+      const lw = textWidth(zl, 0.45, true) + 8;
+      const ly = y + 0.5;
+      const zx = cx + 16 + pw / 2 + lw / 2 - 6 + 4;
+      const hl = this.cursors?.cursors.some((c) => c.active && c.hover === `cam:${i}`);
+      ctx.fillStyle = INK;
+      ctx.fillRect(zx - lw / 2 - 1, ly - 1, lw + 2, 9);
+      texturedRect(ctx, "parch", zx - lw / 2, ly, lw, 7, hl ? "#f0d890" : "#c8b088", 0, 1);
+      drawPlain(ctx, zl, zx - textWidth(zl, 0.45, true) / 2, ly + 1.2, "#3a2410", 0.45, true);
+      this.hit(`cam:${i}`, zx - lw / 2 - 2, ly - 2, lw + 4, 11);
     }
   }
 

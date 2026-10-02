@@ -447,6 +447,7 @@ export class GameRenderer {
   }
 
   camMode = 1;
+  manualZoom: boolean[] = [];
   private merged = false;
   private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90, 120, 150];
   private zoomIndex = new Map<number, number>();
@@ -541,7 +542,7 @@ export class GameRenderer {
       const cw = this.cfg.commanderViewWidth;
       return { pts, min: cw, max: cw, margin: 0 };
     }
-    if (this.camMode === 2) {
+    if (this.camMode !== 0 && this.manualZoom[sv.player]) {
       const z = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2];
       return { pts, min: z, max: z, margin: 4, own: ownN };
     }
