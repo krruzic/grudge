@@ -711,14 +711,20 @@ export class EntityViews {
     this.statics.fill(this.extras.parent ?? this.root);
     this.batches.view();
     this.structBatch.fillView();
-    this.sprites.fill(camera);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
     for (const hint of [...this.padHints, ...this.shopHints]) {
       const base = hint.userData.base as [number, number] | undefined;
-      if (!hint.visible || !base) continue;
-      const f = Math.min(40, camera.position.distanceTo(hint.position) / 16);
+      const anchor = hint.userData.anchor as THREE.Vector3 | undefined;
+      const c0 = hint.userData.center as [number, number] | undefined;
+      if (!hint.visible || !base || !anchor || !c0) continue;
+      const f = Math.min(40, camera.position.distanceTo(anchor) / 16);
       hint.scale.set(base[0] * f, base[1] * f, 1);
+      hint.center.set(0.5, 0.5);
+      hint.position.copy(anchor).addScaledVector(right, -(c0[0] - 0.5) * base[0]).addScaledVector(up, -(c0[1] - 0.5) * base[1]);
       hint.updateMatrixWorld();
     }
+    this.sprites.fill(camera);
     let n = 0;
     const bl = this.blobs;
     for (const v of this.views.values()) n = this.addBlobs(v, n);
@@ -1599,6 +1605,8 @@ export class EntityViews {
         hint.position.set(p.x, w.groundY(p.x, p.z) + (up ? 0 : 0.5), p.z);
         if (up) hint.center.set(1 + 1.1 / 1.15, 0.5 + 0.5 / 1.15);
         else hint.center.set(0.5, 0.5);
+        hint.userData.anchor = hint.position.clone();
+        hint.userData.center = [hint.center.x, hint.center.y];
       }
     });
     this.shopHints.forEach((hint, team) => {
@@ -1611,6 +1619,8 @@ export class EntityViews {
       hint.center.set(1 + 1.45 / 1.25, 0.5 + 0.88 / 1.25);
       hint.scale.set(1.25 * s, 1.25 * s, 1);
       hint.userData.base = [1.25 * s, 1.25 * s];
+      hint.userData.anchor = hint.position.clone();
+      hint.userData.center = [hint.center.x, hint.center.y];
     });
   }
 }
