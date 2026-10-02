@@ -643,6 +643,7 @@ export class Hud {
 
   mapIndex: (() => number) | null = null;
   minimap = true;
+  zoomOut = 0;
   private card: { title: string; sub: string; glyph: string; color: string; at: number; until: number; count: number } | null = null;
   private overlays = new Map<string, HTMLCanvasElement | null>();
 
@@ -1030,7 +1031,9 @@ export class Hud {
   private drawMinimap(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number): void {
     const t = w.terrain;
     const idx = this.mapIndex?.() ?? -1;
-    const s = Math.min(68 / t.width, 50 / t.depth);
+    const solo = this.split < 2;
+    const k = solo ? 0.62 - 0.17 * this.zoomOut : 1;
+    const s = Math.min(68 / t.width, 50 / t.depth) * k;
     const mw = t.width * s;
     const mh = t.depth * s;
     const x0 = Math.round(W / 2 - mw / 2);
@@ -1054,7 +1057,7 @@ export class Hud {
     });
     onHiLayer(ctx, (g) => {
       g.save();
-      g.globalAlpha *= 0.5;
+      g.globalAlpha *= solo ? 0.36 : 0.5;
       g.fillStyle = INK;
       g.fillRect(x0 - 3.5, y0 - 3.5, mw + 7, mh + 7);
       texturedRect(g, "wood", x0 - 2.5, y0 - 2.5, mw + 5, mh + 5, "#7a5636", 0, 0.5);

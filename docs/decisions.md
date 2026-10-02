@@ -755,3 +755,4 @@
 - Respawn time scales with mode: the HERO RETURNS rule is the 1v1 time; 2v2 and FFA multiply it by `economy.respawnBigMul` (1.667), so 3/6/10/15 s become 5/10/16.7/25 s. Catch-up's respawn cut still applies on top. The rule blurb says so.
 - Mercy's faster respawn (catchUp.respawnCut) now only applies in FFA; 1v1 and 2v2 respawn at the full time even when behind. Mercy's other boosts (income, production, fortify, bounty cut) are unchanged in every mode. Codex dying tip updated.
 - Removed two dead hero hooks that nothing read: Grim's awayProductionMul/awayRadius and Remnil's productionMul.
+- Single-view minimap: 62% of its old size fully zoomed in, shrinking smoothly to 45% fully zoomed out (log scale over the zoom range), drawn at 36% opacity instead of 50%. Split-screen centre minimap unchanged.

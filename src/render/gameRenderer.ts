@@ -467,6 +467,12 @@ export class GameRenderer {
     return this.splitViews.length > 1 ? this.splitViews.length : 0;
   }
 
+  zoomOut(): number {
+    const sv = this.splitViews?.[0];
+    if (!sv || this.splitViews.length !== 1) return 0;
+    return THREE.MathUtils.clamp((Math.log(sv.st.width) - Math.log(14)) / (Math.log(150) - Math.log(14)), 0, 1);
+  }
+
   zoomStep(player: number, dir: number): void {
     const i = this.zoomIndex.get(player) ?? 2;
     this.zoomIndex.set(player, Math.max(0, Math.min(this.zoomSteps.length - 1, i + dir)));

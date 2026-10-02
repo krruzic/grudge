@@ -1367,6 +1367,7 @@ async function start(): Promise<void> {
     const uiList = mappers.map((m) => m?.ui ?? null);
     hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);
     hud.split = view.splitCount;
+    hud.zoomOut = view.zoomOut();
     hud.rectOf = (pl) => view.viewRectOf(pl);
     hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
     screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : Math.max(0, fields().indexOf(mapIndex)), fields(), mode);
