@@ -81,7 +81,10 @@ export class StatsStore {
   private data: StatsFile = { tags: {}, matches: [] };
   private timer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private file = process.env.STATS_FILE ?? join(process.cwd(), ".grudge-stats.json")) {
+  private file: string;
+
+  constructor(file = process.env.STATS_FILE ?? join(process.cwd(), ".grudge-stats.json")) {
+    this.file = file;
     try {
       if (existsSync(file)) this.data = { tags: {}, matches: [], ...JSON.parse(readFileSync(file, "utf8")) };
     } catch {
