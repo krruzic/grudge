@@ -3,22 +3,24 @@ import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./typ
 import { buildCost, canBuildOn } from "./structures.ts";
 
 interface PlanItem {
-  zone: Pad["zone"];
+  zone: Pad["zone"] | "front";
   type: StructureType;
 }
 
 const PLAN: PlanItem[] = [
   { zone: "home", type: "barracks" },
-  { zone: "home", type: "damage" },
-  { zone: "forward", type: "range" },
-  { zone: "home", type: "foundry" },
-  { zone: "forward", type: "barracks" },
-  { zone: "forward", type: "damage" },
-  { zone: "neutral", type: "barracks" },
   { zone: "home", type: "range" },
-  { zone: "neutral", type: "control" },
-  { zone: "forward", type: "foundry" },
+  { zone: "home", type: "damage" },
+  { zone: "front", type: "foundry" },
+  { zone: "front", type: "barracks" },
+  { zone: "front", type: "damage" },
+  { zone: "front", type: "control" },
+  { zone: "home", type: "support" },
+  { zone: "front", type: "damage" },
+  { zone: "front", type: "control" },
+  { zone: "front", type: "damage" },
 ];
+const MAX_OUTPOSTS = 4;
 
 export class Bot {
   private path: Vec2[] = [];
@@ -577,8 +579,16 @@ export class Bot {
     const pads = w.pads
       .filter((p) => canBuildOn(p, me.team) && (w.time >= p.rubbleUntil || p.rubbleTeam !== me.team))
       .sort((a, b) => Math.hypot(a.x - myCore.transform.pos.x, a.z - myCore.transform.pos.z) - Math.hypot(b.x - myCore.transform.pos.x, b.z - myCore.transform.pos.z));
+    const outposts = w.entities.filter((o) => o.alive && o.team === me.team && o.structure && w.data.structures.types[o.structure.type as StructureType]?.class === "production").length;
+    const placed = new Map<string, number>();
     for (const item of PLAN) {
-      const pad = pads.find((p) => p.zone === item.zone && !p.structureId);
+      const key = `${item.zone}|${item.type}`;
+      const nth = placed.get(key) ?? 0;
+      placed.set(key, nth + 1);
+      const have = w.entities.filter((o) => o.alive && o.team === me.team && o.structure?.type === item.type && o.structure.padIndex >= 0 && (item.zone === "front" ? w.pads[o.structure.padIndex].zone !== "home" : w.pads[o.structure.padIndex].zone === item.zone)).length;
+      if (have > nth) continue;
+      if (w.data.structures.types[item.type].class === "production" && outposts >= MAX_OUTPOSTS) continue;
+      const pad = pads.find((p) => (item.zone === "front" ? p.zone !== "home" : p.zone === item.zone) && !p.structureId);
       if (!pad) continue;
       if (res >= buildCost(w, item.type, false, me.team)) {
         this.buildPad = pad;

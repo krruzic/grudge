@@ -160,7 +160,7 @@ export class Arena {
         const up = o.structure.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
         const blessed = this.relic.state === "shrined" && this.relic.shrineId === o.id;
         const rc = w.data.match.arena.relic;
-        for (let k = 0; k < o.structure.level + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.mix ? this.pickMix(def.mix) : def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
+        for (let k = 0; k < o.structure.level + (w.ffaCfg?.outpostBonus ?? 0) + (blessed ? rc.outpostExtra : 0); k++) list.push({ type: def.mix ? this.pickMix(def.mix) : def.unit, from: o, stat: grow * up * (blessed ? rc.outpostStatMul : 1) });
       }
       let n = 0;
       let broke = false;

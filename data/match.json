@@ -8,7 +8,7 @@
     "costMul": 0.6,
     "unitDamageMul": 1.7
   },
-  "ffa": { "waveSeconds": 12, "popCapMul": 1.5, "spawnCostMul": 0.75, "productionCostMul": 0.75, "guard": { "count": 3, "respawnSeconds": 25, "hpMul": 1.3 } },
+  "ffa": { "waveSeconds": 12, "outpostBonus": 1, "popCapMul": 1.5, "spawnCostMul": 0.75, "productionCostMul": 0.75, "guard": { "count": 3, "respawnSeconds": 25, "hpMul": 1.3 } },
   "economy": {
     "start": 200,
     "income": 3.5,

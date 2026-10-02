@@ -357,6 +357,7 @@ export interface TeamState {
   coreId: number;
   homeLost: boolean;
   directives: TeamDirectives;
+  attackTeam?: number;
   coreDamageDealt: number;
   kills: number;
   structuresBuilt: number;

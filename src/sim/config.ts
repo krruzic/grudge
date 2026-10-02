@@ -286,7 +286,7 @@ export interface MatchData {
   matchSeconds: number;
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
-  ffa?: { waveSeconds: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
+  ffa?: { waveSeconds: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
   economy: { start: number; income: number;
     padIncome?: Record<string, number>; respawnCooldownPenalty?: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number; bountyCut: number; respawnCut: number; fortify: number };

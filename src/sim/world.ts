@@ -603,6 +603,17 @@ export class World {
   setDirective(team: number, type: UnitType | "all", dir: Directive, hero: Entity): void {
     const d = this.teams[team].directives;
     const types = type === "all" ? UNIT_TYPES : [type];
+    if (this.ffa && dir === "push" && hero.hero) {
+      const ts = this.teams[team];
+      const already = types.every((t) => d[t] === "push");
+      const rivals = this.teams.map((_, i) => i).filter((i) => i !== team && this.standing(i));
+      if (already) {
+        const cur = ts.attackTeam ?? -1;
+        const at = cur < 0 ? -1 : rivals.indexOf(cur);
+        ts.attackTeam = at + 1 < rivals.length ? rivals[at + 1] : -1;
+      } else ts.attackTeam = -1;
+      this.emit({ type: "notice", team, text: ts.attackTeam !== undefined && ts.attackTeam >= 0 ? `ATTACK · ${this.teamName(ts.attackTeam)} HOUSE` : "ATTACK · NEAREST KEEP" });
+    }
     let focusId = 0;
     if (dir === "focus") {
       let best = Infinity;

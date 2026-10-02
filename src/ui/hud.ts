@@ -373,14 +373,14 @@ function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: 
   ctx.restore();
 }
 
-function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Directive, flip: boolean): void {
+function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Directive, flip: boolean, tint?: string): void {
   const r = 4.4;
   ctx.save();
   ctx.fillStyle = INK;
   ctx.beginPath();
   ctx.arc(x, y, r + 0.9, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = ORDER_COL[d] ?? "#888";
+  ctx.fillStyle = tint ?? ORDER_COL[d] ?? "#888";
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
@@ -1604,7 +1604,7 @@ export class Hud {
     const flash = now < o.until - 1.2;
     const form = ts.formation ?? "mass";
     const showForm = form !== "mass" || w.players.some((q) => q.team === t && q.commander);
-    const key = [x0, y0, right, selected, flash, o.type, showForm ? form : "", ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
+    const key = [x0, y0, right, selected, flash, o.type, showForm ? form : "", ts.attackTeam ?? -1, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
     this.memo(ctx, `orders${t}`, key, x0 - 24, y0 - 6, pw + 48, ph + 12, (c) => {
       this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash, right);
       if (showForm) formationBadge(c, right ? x0 - 9 : x0 + pw + 9, y0 + 10.5, form);
@@ -1646,7 +1646,7 @@ export class Hud {
       ctx.arc(x, y, r - 0.6, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
-      orderBadge(ctx, x + r * 0.74, y - r * 0.74, ts.directives[k], t === 1 || right);
+      orderBadge(ctx, x + r * 0.74, y - r * 0.74, ts.directives[k], t === 1 || right, ts.directives[k] === "push" && (ts.attackTeam ?? -1) >= 0 ? this.teamColors[ts.attackTeam!] : undefined);
       const n = String(counts[k]);
       const nw = textWidth(n, 0.6, true);
       const pw2 = Math.max(7, nw + 4);
