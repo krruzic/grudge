@@ -135,6 +135,9 @@ export class MapEvents {
   private lanternAt = Infinity;
   private lanternSeq = 0;
   private pits: { x: number; z: number }[] = [];
+  horns: { x: number; z: number; arms: number[]; team: number; progress: number; readyAt: number }[] = [];
+  readonly hornCapture = 3;
+  readonly hornCooldown = 75;
 
   constructor(private w: World) {
     this.mist = w.terrain.mist as MistDef | undefined;
@@ -176,6 +179,18 @@ export class MapEvents {
       this.gateAt = this.gates.firstSeconds;
     }
     this.av = w.terrain.avalanche as AvalancheDef | undefined;
+    const hd = w.terrain.horns as { x: number; z: number; arms: number[] }[] | undefined;
+    if (hd && this.av) {
+      const D = w.terrain.depth;
+      for (const h of hd) {
+        let x = h.x;
+        let z = h.z;
+        for (let k = 0; k < 4; k++) {
+          this.horns.push({ x, z, arms: h.arms.map((a) => (a + k) % 4), team: -1, progress: 0, readyAt: 30 });
+          [x, z] = [D - z, x];
+        }
+      }
+    }
     if (this.av) {
       this.lanes = avalancheLanes(w, this.av);
       this.nextAt = this.av.firstSeconds;
@@ -337,7 +352,55 @@ export class MapEvents {
     this.lanternAt = w.time + d.everySeconds;
   }
 
+  private updateHorns(av: AvalancheDef): void {
+    const w = this.w;
+    const dt = w.dt;
+    this.horns.forEach((h, i) => {
+      if (w.time < h.readyAt) {
+        h.progress = 0;
+        return;
+      }
+      const near = new Set<number>();
+      for (const e of w.entities) {
+        if (!e.alive || !e.hero || e.hero.dead) continue;
+        if (Math.hypot(e.transform.pos.x - h.x, e.transform.pos.z - h.z) <= 2.6) near.add(e.team);
+      }
+      if (near.size !== 1) {
+        h.progress = Math.max(0, h.progress - dt);
+        return;
+      }
+      const team = [...near][0];
+      if (team !== h.team) {
+        h.team = team;
+        h.progress = 0;
+      }
+      h.progress += dt;
+      if (h.progress < this.hornCapture) return;
+      h.progress = 0;
+      if (this.slide || this.warned) return;
+      const rivals = h.arms.filter((a) => a !== team);
+      let arm = rivals[0];
+      if (rivals.length > 1) {
+        let best = -1;
+        for (const a of rivals) {
+          const r = this.lanes[a].rect;
+          const n = w.entities.filter((e) => e.alive && e.unit && !e.neutral && e.team !== team && e.transform.pos.x >= r.x && e.transform.pos.x <= r.x + r.w && e.transform.pos.z >= r.z && e.transform.pos.z <= r.z + r.h).length;
+          if (n > best) {
+            best = n;
+            arm = a;
+          }
+        }
+      }
+      h.readyAt = w.time + this.hornCooldown;
+      this.arm = arm;
+      this.nextAt = w.time + av.warnSeconds;
+      this.warned = false;
+      w.emit({ type: "horn", stage: "blow", horn: i, team, arm, x: h.x, y: w.groundY(h.x, h.z), z: h.z });
+    });
+  }
+
   update(): void {
+    if (this.av && this.horns.length) this.updateHorns(this.av);
     if (this.mist) this.updateMist(this.mist);
     if (this.lanternDef) this.updateLantern(this.lanternDef);
     if (this.av) this.updateAvalanche(this.av);

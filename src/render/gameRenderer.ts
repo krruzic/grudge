@@ -597,7 +597,7 @@ export class GameRenderer {
     this.scene.matrixWorldAutoUpdate = false;
     this.time += dt;
     for (const ev of this.world.events) {
-      if (ev.type === "mod" || ev.type === "modEnd" || ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph" || ev.type === "jumppad") this.hazards.handle(ev);
+      if (ev.type === "mod" || ev.type === "modEnd" || ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph" || ev.type === "jumppad" || ev.type === "horn") this.hazards.handle(ev);
       if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {
         this.entityViews.onHit(ev.id);
         this.entityViews.onImpact(ev.id, ev.src, ev.fx, ev.fz, ev.big);
@@ -666,7 +666,17 @@ export class GameRenderer {
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
       }
-      this.updateCamera(this.entityViews.heroPoints(), dt);
+      if (this.world.ffa && !this.cinematic) {
+        const pts = this.entityViews.heroPoints();
+        if (pts.length) {
+          const pick = pts[Math.floor(this.time / 12) % pts.length];
+          const near = pts.filter((q) => q.distanceTo(pick) < 18);
+          const st = { focus: this.camFocus, width: this.camWidth, init: this.camInit };
+          this.aimCamera(this.camera, st, near, dt, this.cfg.minViewWidth, 34);
+          this.camWidth = st.width;
+          this.camInit = st.init;
+        }
+      } else this.updateCamera(this.entityViews.heroPoints(), dt);
       shake(this.camera);
       this.renderer.setViewport(x, y, w, h);
       this.renderer.setScissor(x, y, w, h);

@@ -83,6 +83,7 @@ export interface MapData {
   fountain?: unknown;
   mist?: unknown;
   lantern?: unknown;
+  horns?: unknown;
   outposts?: boolean;
 }
 
@@ -149,6 +150,7 @@ export class Terrain {
   readonly gates?: unknown;
   readonly fountain?: unknown;
   readonly mist?: unknown;
+  readonly horns?: unknown;
   readonly outposts: boolean;
   readonly lantern?: unknown;
 
@@ -197,6 +199,7 @@ export class Terrain {
     this.gates = data.gates;
     this.fountain = data.fountain;
     this.mist = data.mist;
+    this.horns = data.horns;
     this.outposts = !!data.outposts;
     this.lantern = data.lantern;
     const mode = this.mirror;

@@ -10,7 +10,7 @@ import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
 import { MapEvents } from "./mapEvents.ts";
-import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, onKill, recompute, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
+import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, learned as learnedOf, options, onKill, recompute, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
 
 export type { Vec2, Entity, Command } from "./types.ts";
 
@@ -554,6 +554,7 @@ export class World {
       if (e.alive && cmd.build) tryBuild(this, e, cmd.build);
       if (e.alive && cmd.buy) this.arena.buy(e, cmd.buy, cmd.aimAt);
       if (cmd.learn !== undefined && e.hero?.picks.length) learn(this, e, cmd.learn);
+      if (e.hero) this.autoPick(e);
       if (cmd.morph && e.alive) this.startMorph(e);
       if (cmd.formation && slot.commander) {
         const ts = this.teams[slot.team];
@@ -757,6 +758,27 @@ export class World {
       const tz = i >= 0 ? Math.floor(i / this.nav.w) + 0.5 : j.b.z;
       return { x: j.a.x, z: j.a.z, tx, tz, launchAt: -99, chargeAt: -99, readyAt: 0, failAt: -99 };
     });
+  }
+
+  readonly autoPickSeconds = 10;
+
+  private autoPick(e: Entity): void {
+    const h = e.hero!;
+    if (!h.picks.length) {
+      h.pickSince = undefined;
+      return;
+    }
+    if (h.pickSince === undefined) {
+      h.pickSince = this.time;
+      return;
+    }
+    if (this.time - h.pickSince < this.autoPickSeconds) return;
+    const opt = options(this, e);
+    h.pickSince = this.time;
+    if (!opt) return;
+    const owned = new Set((["r", "b", "a", "z"] as const).flatMap((sl) => learnedOf(this, e, sl).map((t) => t.id)));
+    const syn = opt.list.findIndex((o) => (o.with ?? []).some((q) => owned.has(q.id)));
+    learn(this, e, syn >= 0 ? syn : Math.floor(this.rng() * opt.list.length) % opt.list.length);
   }
 
   get morphCfg() {

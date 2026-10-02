@@ -89,6 +89,8 @@ export class Bot {
         this.lastDirective = d;
       }
     }
+    const horn = w.mapEvents.horns.find((hn) => w.time >= hn.readyAt && Math.hypot(hn.x - me.transform.pos.x, hn.z - me.transform.pos.z) < 38 && (w.time * 7 + me.id * 13) % 60 < 25);
+    if (horn && me.hp > me.maxHp * 0.45 && !w.arena.carrying(me) && !w.entities.some((o) => o.alive && o.hero && o.team !== me.team && w.dist(me, o) < 6)) this.goal = { x: horn.x, z: horn.z };
     if (this.goal && w.jumpPads.length && !w.arena.carrying(me)) {
       const p = me.transform.pos;
       const g = this.goal;

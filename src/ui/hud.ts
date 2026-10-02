@@ -644,6 +644,8 @@ export class Hud {
         const name = h ? w.teamName(h.team) : "SOMEONE";
         this.showCard(`${name} IS HAUNTED`, lt ? `+${Math.round((lt.damageMul - 1) * 100)}% DAMAGE · +${Math.round((lt.speedMul - 1) * 100)}% SPEED · ${lt.hauntSeconds}S` : "", "hex", now, team(h?.team ?? -1));
       }
+    } else if (ev.type === "horn") {
+      this.showCard(`${w.teamName(ev.team)} BLOWS THE HORN`, `THE ${["WEST", "NORTH", "EAST", "SOUTH"][ev.arm]} ARM IS GETTING BURIED`, "peak", now, team(ev.team));
     } else if (ev.type === "tide") {
       this.showCard(ev.high ? "HIGH TIDE" : "LOW TIDE", ev.high ? "THE FLATS FLOOD · EVERYONE ON THEM IS SLOWED" : "THE FLATS DRAIN · PUSH NOW", "tide", now, "#2a4a8a");
     }
@@ -1057,6 +1059,24 @@ export class Hud {
           else if (dz > 0) g.fillRect(ax, ay, r.w * s, r.h * s * k);
           else g.fillRect(ax, ay + r.h * s * (1 - k), r.w * s, r.h * s * k);
         }
+      }
+      for (const hn of w.mapEvents.horns) {
+        const [hx, hy] = P(hn.x, hn.z);
+        const ready = w.time >= hn.readyAt;
+        g.fillStyle = INK;
+        g.beginPath();
+        g.moveTo(hx, hy - 2.6);
+        g.lineTo(hx + 2.3, hy + 1.6);
+        g.lineTo(hx - 2.3, hy + 1.6);
+        g.closePath();
+        g.fill();
+        g.fillStyle = ready ? (Math.floor(now * 2) % 2 ? "#f4f8ff" : "#c8d8ff") : "#6a7080";
+        g.beginPath();
+        g.moveTo(hx, hy - 1.7);
+        g.lineTo(hx + 1.5, hy + 1.0);
+        g.lineTo(hx - 1.5, hy + 1.0);
+        g.closePath();
+        g.fill();
       }
       for (const jp of w.jumpPads) {
         const [ax, ay] = P(jp.x, jp.z);
@@ -1698,6 +1718,11 @@ export class Hud {
         c.fill();
       });
     });
+    if (hero.hero.pickSince !== undefined) {
+      const left = Math.max(0, Math.ceil(w.autoPickSeconds - (w.time - hero.hero.pickSince)));
+      const tx = String(left);
+      drawNum(ctx, tx, Math.round(x0 + tw / 2 - textWidth(tx, 0.7, true) / 2), Math.round(yc - 3), left <= 3 ? "#ff9070" : "#f0e4c8", 0.7);
+    }
   }
 
   private buildCross(w: World, team: number, heroId: number, mui: MapperUi): Cross | null {

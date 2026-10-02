@@ -142,6 +142,9 @@ export class Audio {
           if (ev.stage === "warn") [0, 0.9, 1.8].forEach((at) => { this.tone("sine", 392, 390, 1.2, 0.16, 0, at); this.tone("sine", 988, 980, 0.8, 0.06, 0, at); });
           else { this.tone("square", 110, 70, 0.5, 0.12); this.hiss(700, 1.5, 0.6, 0.12, 0, "bandpass"); }
           break;
+        case "horn":
+          this.tone("sawtooth", 98, 92, 1.6, 0.22); this.tone("sawtooth", 147, 140, 1.6, 0.12); this.tone("sine", 196, 180, 1.4, 0.1, 0, 0.1);
+          break;
         case "jumppad":
           if (ev.stage === "charge") this.tone("square", 110, 70, 0.9, 0.06, pan);
           else if (ev.stage === "launch") { this.tone("sine", 220, 720, 0.35, 0.16, pan); this.hiss(1800, 0.8, 0.3, 0.08, pan, "bandpass", 0, 400); }
