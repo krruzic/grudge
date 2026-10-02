@@ -1148,7 +1148,7 @@ export class World {
       const r = this.heroDef(target.hero.type).abilities.r;
       const pfx = allFx(this, target);
       this.emit({ type: "parry", ...ev, team: target.team, src: target.id });
-      target.hero.action.t = target.hero.action.dur;
+      target.hero.action.t = Math.max(target.hero.action.dur, (r.window ?? 0.5) + 0.01);
       target.hero.riposteUntil = this.time + 0.7;
       if (src && src.kind !== "structure" && this.dist(src, target) < 5) {
         const pc = pfx.parryCounter;
