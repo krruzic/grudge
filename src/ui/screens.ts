@@ -43,6 +43,7 @@ export interface SelectSlot {
   level: number;
   autoCpu?: boolean;
   tag?: string | null;
+  tagId?: string | null;
   local?: boolean;
   open?: boolean;
 }
@@ -491,6 +492,7 @@ export class Screens {
       inset(ctx, 5, iy, w - 10, ih, "#2a2018");
       texturedRect(ctx, "cloth", 5, iy, w - 10, ih, TEAM_CLOTH[team], 0, 0.7);
       band(ctx, 5, iy + ih - 10, w - 10, 10, "#000000", 0.25);
+      if (naming) return;
       const name = (def?.name ?? s.hero).toUpperCase();
       const ns = Math.min(0.8, (w - 10) / Math.max(1, textWidth(name, 1, true)));
       drawPlain(ctx, name, w / 2 - textWidth(name, ns, true) / 2, iy + ih + 5, BROWN_S, ns, true);

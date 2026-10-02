@@ -79,8 +79,7 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
 
 const relay = new NetRelay();
 const server = createServer((req, res) => {
-  if (req.url?.startsWith("/net/info")) relay.info(req, res);
-  else serveStatic(req, res);
+  if (!relay.route(req, res)) serveStatic(req, res);
 });
 relay.attach(server);
 server.on("upgrade", (req, socket) => {

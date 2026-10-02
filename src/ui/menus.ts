@@ -1,13 +1,13 @@
-import { drawPlain, drawText, occlude, onHiLayer, textWidth } from "./font";
-import { artTitle, hiImage, boardBg, band, banner, beam, boardTitle, card, drawLogo, fieldShade, goldArrow, inset, nameImage, paintedText, parchment, pin, plank, ribbon, scroll, shadowText, tag, texturedRect, waxSeal, windowCut, woodDisc, woodFloor } from "./n64ui";
+import { drawPlain, drawText, onHiLayer, textWidth } from "./font";
+import { artTitle, hiImage, boardBg, band, banner, beam, boardTitle, card, drawLogo, fieldShade, goldArrow, inset, nameImage, paintedText, pin, plank, shadowText, tag, texturedRect, waxSeal, windowCut, woodDisc, woodFloor } from "./n64ui";
 import { padButton, PAD, talentIcon } from "./hud";
 import { learned } from "../sim/talents";
 import { buildCodex, type CodexArt, type CodexEntry } from "./codex";
 import { prompt, promptWidth, wrap } from "./screens";
-import type { Hit, MenuCursors } from "./cursor";
+import type { Hit } from "./cursor";
 import type { Portraits } from "./portraits";
 import type { World } from "../sim/world";
-import { DEFAULT_OPTIONS, DEFAULT_RULES, MAX_TAG, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
+import { DEFAULT_OPTIONS, DEFAULT_RULES, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
 
 export type Page = "main" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls" | "codex";
 export interface RoomInfo {
@@ -63,7 +63,6 @@ const ROMAN_N = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "X
 const MAIN_GLYPHS = ["combo", "rally", "banner", "hex", "works", "castle", "repair", "pad"];
 const PAGES: Page[] = ["main", "players", "network", "codex", "rules", "records", "options", "controls"];
 const TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
-const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".split("");
 
 function artWord(ctx: CanvasRenderingContext2D, key: string, fallback: string, cx: number, y: number, h: number, alpha = 1): number {
   const im = nameImage(key);
@@ -80,17 +79,6 @@ function artWord(ctx: CanvasRenderingContext2D, key: string, fallback: string, c
   });
   ctx.globalAlpha = 1;
   return w;
-}
-
-function stoneTile(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, label: string, hot: boolean): void {
-  band(ctx, x + 1.5, y + 2, w, h, INK, 0.4);
-  ctx.fillStyle = INK;
-  ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
-  texturedRect(ctx, "stone", x, y, w, h, hot ? "#e8c070" : null, 0, 0.5);
-  band(ctx, x, y, w, 1, "#ffffff", 0.25);
-  band(ctx, x, y + h - 1, w, 1, INK, 0.5);
-  const s = label.length > 1 ? 0.7 : 0.95;
-  drawText(ctx, label, x + w / 2 - textWidth(label, s, true) / 2, y + h / 2 - 5 * s, hot ? "#ffe070" : "#e8dcc0", s, true);
 }
 
 function num(ctx: CanvasRenderingContext2D, s: string | number, rx: number, y: number, color = BROWN, scale = 0.7): void {
@@ -312,9 +300,6 @@ export class Menus {
   heroNames: Record<string, string> = {};
   roster: string[] = [];
   mapNames: Record<string, string> = {};
-  tagSlot = -1;
-  tagMode: "list" | "type" = "list";
-  tagText = "";
 
   constructor(private save: Save) {}
 
@@ -532,7 +517,7 @@ export class Menus {
         sound("move");
       }
       if (this.tab === 1 && nav.y) {
-        const name = this.save.tagNames()[this.focus];
+        const name = this.save.tagIds()[this.focus];
         if (name && this.confirm === `strike:${name}`) {
           this.save.removeTag(name);
           this.confirm = "";
@@ -1022,7 +1007,8 @@ export class Menus {
         stat("WIN RATE", winRate(s0), y + 2, "#8a1810");
       }
     } else if (this.tab === 1) {
-      const names = this.save.tagNames();
+      const ids = this.save.tagIds();
+      const names = ids.map((id) => this.save.data.tags[id].name);
       pageHead(lx, "SIGNED NAMES");
       if (!names.length) {
         const a = "NO NAMES SIGNED YET.";
@@ -1032,11 +1018,11 @@ export class Menus {
       names.forEach((name, k) => rowAt(k, (y, sel) => {
         waxSeal(ctx, lx + 20, y + 3.5, 5, "#a8141a", "combo");
         drawPlain(ctx, name, lx + 30, y, sel ? "#8a1810" : BROWN, 0.72, true);
-        num(ctx, winRate(this.save.data.tags[name]), lx + pgw - 10, y, "#8a1810", 0.7);
+        num(ctx, winRate(this.save.data.tags[ids[k]]), lx + pgw - 10, y, "#8a1810", 0.7);
       }));
       const name = names[this.focus];
       if (name) {
-        const t = this.save.data.tags[name];
+        const t = this.save.data.tags[ids[this.focus]];
         pageHead(rx, "THE SIGNATORY");
         const ns = Math.min(1.6, RW / Math.max(1, textWidth(name, 1, true)));
         drawPlain(ctx, name, R + RW / 2 - textWidth(name, ns, true) / 2, pgy + 22, "#3a2410", ns, true);
@@ -1054,7 +1040,7 @@ export class Menus {
           icon(fav[0], R + RW - 27, y - 5, 26);
           drawPlain(ctx, (this.heroNames[fav[0]] ?? fav[0]).toUpperCase(), R, y + 10, BROWN, 0.72, true);
         }
-        if (this.confirm === `strike:${name}`) {
+        if (this.confirm === `strike:${ids[this.focus]}`) {
           const c = "PRESS Y AGAIN TO STRIKE";
           drawPlain(ctx, c, R + RW / 2 - textWidth(c, 0.55) / 2, pgy + pgh - 12, "#a01810", 0.55);
         }
@@ -1311,99 +1297,6 @@ export class Menus {
     drawControlSheet(ctx, 12, 24, W - 24, H - 48);
     const p: [string, string][] = [["B", "DONE"]];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
-  }
-
-  openTag(slot: number): void {
-    this.tagSlot = slot;
-    this.tagMode = "list";
-    this.tagText = "";
-  }
-
-  tagAction(id: string): { done: boolean; tag?: string | null } {
-    if (id === "tg:new") {
-      this.tagMode = "type";
-      this.tagText = "";
-    } else if (id === "tg:none") return this.closeTag(null);
-    else if (id.startsWith("tg:pick:")) return this.closeTag(this.save.addTag(id.slice(8)));
-    else if (id.startsWith("tg:key:")) this.typeKey(id.slice(7));
-    else if (id === "tg:del") this.tagText = this.tagText.slice(0, -1);
-    else if (id === "tg:ok") return this.tagText.trim() ? this.closeTag(this.save.addTag(this.tagText)) : this.tagBack();
-    return { done: false };
-  }
-
-  typeKey(k: string): void {
-    if (this.tagText.length < MAX_TAG) this.tagText += k;
-  }
-
-  tagBack(): { done: boolean; tag?: string | null } {
-    if (this.tagMode === "type") {
-      this.tagMode = "list";
-      return { done: false };
-    }
-    this.tagSlot = -1;
-    return { done: true };
-  }
-
-  private closeTag(tag: string | null): { done: boolean; tag?: string | null } {
-    this.tagSlot = -1;
-    this.tagMode = "list";
-    return { done: true, tag };
-  }
-
-  drawTag(ctx: CanvasRenderingContext2D, W: number, H: number, cursors: MenuCursors, now: number): void {
-    if (this.tagSlot < 0) return;
-    cursors.hits = [];
-    const hot = (id: string) => cursors.cursors.some((c) => c.active && c.hover === id);
-    band(ctx, 0, 0, W, H, "#000000", 0.5);
-    const pw = 270;
-    const ph = 176;
-    const px = Math.round((W - pw) / 2);
-    const py = 30;
-    occlude(ctx, px, py, pw, ph, 0.5);
-    parchment(ctx, px, py, pw, ph);
-    ribbon(ctx, W / 2, py + 6, 150, 15, "SIGN YOUR NAME", 0.9, BROWN, nameImage("t_tag"));
-    waxSeal(ctx, px + 18, py + 14, 10, ["#2a4ad0", "#c82818", "#3a90e0", "#e07020"][this.tagSlot] ?? "#a8141a", "combo");
-    drawPlain(ctx, `P${this.tagSlot + 1}`, px + 18 - textWidth(`P${this.tagSlot + 1}`, 0.55, true) / 2, py + 11, "#f8f0dc", 0.55, true);
-    const push = (id: string, x: number, y: number, w: number, h: number) => cursors.hits.push({ id, x, y, w, h });
-    if (this.tagMode === "list") {
-      const names = this.save.tagNames().slice(0, 10);
-      const all = [...names.map((n) => [`tg:pick:${n}`, n]), ["tg:new", "NEW NAME"], ["tg:none", "NO NAME"]];
-      all.forEach(([id, label], k) => {
-        const col = k % 2;
-        const row = Math.floor(k / 2);
-        const cx = px + pw / 2 + (col ? 62 : -62);
-        const y = py + 34 + row * 22;
-        const special = id === "tg:new" || id === "tg:none";
-        ribbon(ctx, cx, y, 104, 14, label, 0.85, hot(id) ? "#a01810" : special ? "#6a4a2a" : BROWN);
-        push(id, cx - 58, y - 2, 116, 19);
-      });
-      const t = "B: BACK";
-      drawPlain(ctx, t, px + pw / 2 - textWidth(t, 0.55) / 2, py + ph - 12, "#6a4424", 0.55);
-      return;
-    }
-    const sw = 150;
-    scroll(ctx, W / 2, py + 27, sw, 20);
-    const shown = this.tagText + (this.tagText.length < MAX_TAG && Math.floor(now * 2.5) % 2 ? "_" : "");
-    drawPlain(ctx, shown, W / 2 - textWidth(this.tagText + "_", 1.1, true) / 2, py + 31, BROWN, 1.1, true);
-    const cols = 10;
-    const tw = 19;
-    const th = 17;
-    const gx = W / 2 - (cols * (tw + 4) - 4) / 2;
-    const gy = py + 56;
-    KEYS.forEach((k, i) => {
-      const x = gx + (i % cols) * (tw + 4);
-      const y = gy + Math.floor(i / cols) * (th + 4);
-      stoneTile(ctx, x, y, tw, th, k, hot(`tg:key:${k}`));
-      push(`tg:key:${k}`, x - 1, y - 1, tw + 2, th + 2);
-    });
-    const ly = gy + 3 * (th + 4);
-    const lx = gx + 7 * (tw + 4);
-    stoneTile(ctx, lx, ly, tw * 1.5, th, "DEL", hot("tg:del"));
-    push("tg:del", lx, ly, tw * 1.5, th);
-    stoneTile(ctx, lx + tw * 1.5 + 4, ly, tw * 1.5, th, "END", hot("tg:ok"));
-    push("tg:ok", lx + tw * 1.5 + 4, ly, tw * 1.5, th);
-    const t = "TYPE ON A KEYBOARD, OR PRESS A ON THE STONES  ·  B: BACK";
-    drawPlain(ctx, t, px + pw / 2 - textWidth(t, 0.48) / 2, py + ph - 11, "#6a4424", 0.48);
   }
 }
 

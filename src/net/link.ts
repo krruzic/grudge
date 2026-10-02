@@ -72,6 +72,10 @@ export class NetLink {
     if (this.open && this.role === "host") this.ws!.send(JSON.stringify({ t: "send", to, msg }));
   }
 
+  report(res: Record<string, unknown>): void {
+    if (this.open && this.role === "host") this.ws!.send(JSON.stringify({ t: "result", res }));
+  }
+
   meta(meta: Record<string, unknown>): void {
     if (this.open && this.role === "host") this.ws!.send(JSON.stringify({ t: "meta", meta }));
   }

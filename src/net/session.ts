@@ -11,6 +11,7 @@ export interface MatchSpec {
   levels: number[];
   humans: boolean[];
   names: (string | null)[];
+  tagIds?: (string | null)[];
   mode?: MatchMode;
 }
 

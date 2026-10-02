@@ -37,8 +37,8 @@ import { MenuCursors } from "./ui/cursor";
 import { Portraits } from "./ui/portraits";
 import { Audio } from "./audio/sfx";
 import { Menus, type Nav, type RoomInfo } from "./ui/menus";
-import { MAX_TAG, Save, applyRules, type MatchMode } from "./game/save";
-import { NameEntry } from "./ui/nameEntry";
+import { MAX_TAG, Save, applyRules, cleanTag, type MatchMode, type MatchPlayer, type TagRef } from "./game/save";
+import { NameEntry, type TagResult, type TagRow } from "./ui/nameEntry";
 import { NetLink, type NetMsg } from "./net/link";
 import { mathPrint, mergeCommands, packCommand, worldHash, type Frame, type MatchSpec } from "./net/session";
 import { drawText, textWidth } from "./ui/font";
@@ -207,29 +207,47 @@ async function start(): Promise<void> {
   window.addEventListener("keydown", (e) => {
     const ed = kbEditor();
     if (!ed) return;
-    const ne = ed[1];
-    if (/^Key[A-Z]$/.test(e.code)) ne.type(e.code.slice(3));
-    else if (/^Digit[0-9]$/.test(e.code)) ne.type(e.code.slice(5));
-    else if (e.code === "Minus") ne.type("-");
-    else if (e.code === "Backspace") ne.back();
-    else if (e.code === "Enter" || e.code === "Escape") {
-      nameDone(ed[0], e.code === "Enter" ? { done: true, tag: ne.text.trim() || null } : { done: true }, pads.keyboardSlot());
-    } else return;
+    const r = ed[1].key(e.code, performance.now() / 1000);
+    if (r === false) return;
+    if (r) nameDone(ed[0], r, pads.keyboardSlot());
     e.preventDefault();
     e.stopImmediatePropagation();
     audio.ui("move");
   }, true);
-  const nameDone = (slot: number, r: { done: boolean; tag?: string | null }, k = slot) => {
+  const nameDone = (slot: number, r: TagResult, k = slot) => {
     screens.naming.delete(slot);
     if (r.tag === undefined) {
       audio.ui("back");
       return;
     }
     audio.ui("ok");
-    const tag = r.tag ? save.addTag(r.tag) : null;
-    if (state === "lobby") net.toHost({ t: "tag", k, tag });
-    else slots[slot].tag = tag;
+    if (r.tag) save.useTag(r.tag.id);
+    if (state === "lobby") net.toHost({ t: "tag", k, tag: r.tag?.name ?? null, id: r.tag?.id ?? null });
+    else {
+      slots[slot].tag = r.tag?.name ?? null;
+      slots[slot].tagId = r.tag?.id ?? null;
+    }
   };
+  const otherNames = (slot: number): string[] => {
+    const list = state === "lobby" ? (screens.lobby?.slots ?? []).map((s) => (s.cpu || s.open ? null : s.name)) : slots.map((s) => (s.cpu || s.open ? null : s.tag ?? null));
+    return list.filter((n, j): n is string => j !== slot && !!n);
+  };
+  const tagEditor = (slot: number, current: string | null | undefined) => {
+    const rows = (): TagRow[] => {
+      const taken = otherNames(slot);
+      const ids = state === "lobby" ? [] : slots.map((s, j) => (j === slot ? null : s.tagId ?? null));
+      return save.tagIds().map((id) => {
+        const t = save.data.tags[id];
+        return { id, name: t.name, rec: `${t.w}-${t.l}`, taken: taken.includes(t.name) || ids.includes(id) };
+      });
+    };
+    const create = (name: string): TagRef | null => {
+      const n = cleanTag(name);
+      return n && !otherNames(slot).includes(n) ? save.addTag(n) : null;
+    };
+    return new NameEntry(current, rows, create, MAX_TAG);
+  };
+  const freeLabel = (slot: number, name: string): string | undefined => (slots.some((s, j) => j !== slot && !s.cpu && !s.open && s.tag === name) ? undefined : name);
   let namingAte = false;
   const closedNow = new Set<number>();
   const runNaming = (padOf: (slot: number) => number, now: number) => {
@@ -256,12 +274,6 @@ async function start(): Promise<void> {
     list.forEach((_, k) => (naming(k) || closedNow.has(k)) && cursors.frozen.add(k));
     return list;
   };
-  function finishTag(r: { done: boolean; tag?: string | null }): void {
-    if (!r.done) return;
-    audio.ui("ok");
-    if (r.tag !== undefined && tagFor >= 0) slots[tagFor].tag = r.tag;
-  }
-  let tagFor = -1;
   let showPads = false;
 
   let mappers: (CommandMapper | null)[] = [];
@@ -328,6 +340,7 @@ async function start(): Promise<void> {
     sl.ready = true;
     sl.autoCpu = true;
     sl.tag = undefined;
+    sl.tagId = undefined;
     if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
     cursors.placeChip(i, null);
   };
@@ -423,7 +436,7 @@ async function start(): Promise<void> {
     mode = spec.mode ?? (spec.players === 4 ? "2v2" : "1v1");
     setupControl(local, spec.levels, remote, netMode !== "peer");
     show(buildWorld(spec));
-    matchPlayers = spec.heroes.slice(0, spec.players).map((hero, i) => ({ tag: spec.names[i] ?? null, hero, team: mode === "ffa" ? i : i % 2, cpu: !spec.humans[i] }));
+    matchPlayers = spec.heroes.slice(0, spec.players).map((hero, i) => ({ tag: spec.names[i] ?? null, tagId: spec.tagIds?.[i] ?? null, hero, team: mode === "ffa" ? i : i % 2, cpu: !spec.humans[i] }));
     recorded = false;
     fallen = [];
     state = "match";
@@ -459,7 +472,6 @@ async function start(): Promise<void> {
     menus.open("main");
     screens.set("none");
     hud.show(false);
-    menus.tagSlot = -1;
   };
 
   const beginAttract = () => {
@@ -487,7 +499,7 @@ async function start(): Promise<void> {
     const remote = slots.slice(0, players).map((_, i) => remoteAt(i) >= 0);
     const spec: MatchSpec = {
       map: maps[mapIndex].id, seed: seed++, rules: { ...save.data.rules }, heroes: slots.slice(0, players).map((s) => s.hero), players,
-      levels: slots.slice(0, players).map((s) => s.level), humans, names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)), mode,
+      levels: slots.slice(0, players).map((s) => s.level), humans, names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)), tagIds: slots.slice(0, players).map((s) => (s.cpu ? null : s.tagId ?? null)), mode,
     };
     for (const r of rseats) {
       r.queue = [];
@@ -497,7 +509,7 @@ async function start(): Promise<void> {
     startNetMatch(spec, humans.map((h, i) => h && !remote[i]), remote);
   };
 
-  let matchPlayers: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [];
+  let matchPlayers: MatchPlayer[] = [];
   let recorded = true;
   let fallen: number[] = [];
   const mapHover = ["*", "*", "*", "*"];
@@ -671,7 +683,8 @@ async function start(): Promise<void> {
     if ([0, 1, 2, 3].filter(present).length >= 3 && mode === "1v1") setMode("2v2");
     slots[i].autoCpu = false;
     makeHuman(i);
-    slots[i].tag = r.name;
+    slots[i].tag = freeLabel(i, r.name);
+    slots[i].tagId = undefined;
     if (i >= 2 && mode === "1v1") setMode("2v2");
   };
   const lobbyView = () => ({
@@ -688,6 +701,7 @@ async function start(): Promise<void> {
     r.slot = -1;
     if (i < 0) return;
     slots[i].tag = undefined;
+    slots[i].tagId = undefined;
     if (state === "select" || state === "map") makeOpen(i);
     else if (i < players) {
       bots[i] = new Bot(i, 0.75, seed + i);
@@ -720,9 +734,13 @@ async function start(): Promise<void> {
     }
     const i = r.slot;
     if (m.t === "tag" && i >= 0) {
-      const t = m.tag === null ? null : String(m.tag ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 6);
-      slots[i].tag = t || undefined;
-      if (!t) slots[i].tag = r.name;
+      const t = m.tag === null ? "" : cleanTag(String(m.tag ?? ""));
+      const id = typeof m.id === "string" && /^[0-9a-f-]{36}$/.test(m.id) ? m.id : null;
+      const clash = !!t && slots.some((s, j) => j !== i && !s.cpu && !s.open && (s.tag === t || (!!id && s.tagId === id)));
+      if (!clash) {
+        slots[i].tag = t || freeLabel(i, r.name);
+        slots[i].tagId = t ? id : undefined;
+      }
       lobbySentAt = 0;
       return;
     }
@@ -731,15 +749,14 @@ async function start(): Promise<void> {
       const tgt = slots[to];
       if (!tgt || !slotActive(to) || commanderSlot(to) || to === i || seatAt(to) || pads.players[to]?.connected || !(tgt.open || tgt.autoCpu)) return;
       const hero = i >= 0 ? slots[i].hero : roster[0];
-      if (i >= 0) {
-        slots[i].tag = undefined;
-        makeOpen(i);
-      }
+      const keep = i >= 0 ? [slots[i].tag, slots[i].tagId] as const : null;
+      if (i >= 0) makeOpen(i);
       r.slot = to;
       slots[to].autoCpu = false;
       makeHuman(to);
       slots[to].hero = hero;
-      slots[to].tag = r.name;
+      slots[to].tag = keep ? keep[0] : freeLabel(to, r.name);
+      slots[to].tagId = keep ? keep[1] : undefined;
       lobbySentAt = 0;
       audio.ui("move");
       return;
@@ -969,19 +986,6 @@ async function start(): Promise<void> {
         enterSelect();
         screens.set("select");
       } else if (r === "title") beginAttract();
-    } else if (state === "select" && menus.tagSlot >= 0) {
-      cursors.setScale(pixel.w, pixel.h);
-      for (const act of cursors.update(padsForCursors(), dt, now, () => false)) {
-        if (act.type === "button" && act.id.startsWith("tg:")) {
-          audio.ui("move");
-          finishTag(menus.tagAction(act.id));
-        } else if (act.type === "back") {
-          audio.ui("back");
-          menus.tagBack();
-        }
-      }
-      screens.updateSelect(slots, data.heroes.heroes, roster, mode, save.data.rules.partners === 1);
-      screens.hosting = netMode === "host";
     } else if (state === "select") {
       cursors.setScale(pixel.w, pixel.h);
       if (mode === "1v1" && [0, 1, 2, 3].filter(present).length >= 3) setMode("2v2");
@@ -1021,12 +1025,14 @@ async function start(): Promise<void> {
             if (ok && pads.move(from, i)) {
               const hero = slots[from].hero;
               const tag = slots[from].tag;
+              const tagId = slots[from].tagId;
               const cf = cursors.cursors[from];
               const ct = cursors.cursors[i];
               ct.x = cf.x;
               ct.y = cf.y;
               cf.holding = -1;
               slots[from].tag = undefined;
+              slots[from].tagId = undefined;
               if (netMode === "host") makeOpen(from);
               else {
                 makeCpu(from);
@@ -1036,6 +1042,7 @@ async function start(): Promise<void> {
               makeHuman(i);
               if (roster.includes(hero)) slots[i].hero = hero;
               slots[i].tag = tag;
+              slots[i].tagId = tagId;
               lobbySentAt = 0;
               audio.ui("ok");
             } else audio.ui("back");
@@ -1067,7 +1074,7 @@ async function start(): Promise<void> {
             slots[i].level = (slots[i].level % 3) + 1;
             audio.ui("move");
           } else if (id === "tag" && !slots[i].cpu && !commanderSlot(i) && act.by === i && !screens.naming.has(i)) {
-            screens.naming.set(i, new NameEntry(slots[i].tag, () => save.tagNames(), MAX_TAG));
+            screens.naming.set(i, tagEditor(i, slots[i].tag));
             audio.ui("ok");
           } else if (id === "go" && selectReady()) {
             toMap();
@@ -1189,7 +1196,7 @@ async function start(): Promise<void> {
             const [id, arg] = act.id.split(":");
             const i = Number(arg);
             if (id === "tag" && mySlots.get(act.by) === i && !screens.naming.has(i)) {
-              screens.naming.set(i, new NameEntry("", () => save.tagNames(), MAX_TAG));
+              screens.naming.set(i, tagEditor(i, lb.slots[i]?.name));
               audio.ui("ok");
             } else if (id === "take" && mySlots.has(act.by)) {
               const from = mySlots.get(act.by)!;
@@ -1322,6 +1329,7 @@ async function start(): Promise<void> {
         if (!recorded && matchPlayers.some((p) => !p.cpu)) {
           recorded = true;
           save.record({ at: Date.now(), mode, map: maps[mapIndex].id, winner: world.match.winner, secs: world.time, players: matchPlayers }, world.teams.map((t) => t.heroKills));
+          if (netMode === "host") net.report({ mode, map: maps[mapIndex].id, winner: world.match.winner, secs: Math.round(world.time), players: matchPlayers.map((p) => ({ id: p.tagId ?? null, name: p.tag, hero: p.hero, team: p.team, cpu: p.cpu, kills: world.teams[p.team]?.heroKills ?? 0 })) });
         }
         screens.showResults(world, matchPlayers, menus.heroNames, fallen);
         screens.set("results");
@@ -1365,10 +1373,6 @@ async function start(): Promise<void> {
     if (netMode !== "off" && (state === "match" || state === "paused")) {
       const t = desync ? "OUT OF SYNC" : netMode === "host" ? "HOSTING" : "ONLINE";
       drawText(ctx, t, 4, pixel.h - 9, desync ? "#ff6040" : "#c8c0a8", 0.55);
-    }
-    if (state === "select") {
-      menus.drawTag(ctx, pixel.w, pixel.h, cursors, now);
-      if (menus.tagSlot >= 0) cursors.drawCursors(ctx, now);
     }
     fpsFrames++;
     if (nowMs - fpsAt >= 500) {

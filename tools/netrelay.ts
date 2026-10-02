@@ -1,5 +1,5 @@
 import { networkInterfaces } from "node:os";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const URL_FILE = join(process.cwd(), ".online-url");
@@ -49,6 +49,102 @@ interface Room {
   peers: Map<number, Peer>;
   meta: RoomMeta;
   created: number;
+  reported: number;
+}
+
+type Rec = { w: number; l: number; d: number };
+interface TagRecord extends Rec {
+  name: string;
+  kills: number;
+  heroes: Record<string, Rec>;
+  first: number;
+  last: number;
+}
+interface MatchRecord {
+  at: number;
+  mode: string;
+  map: string;
+  winner: number;
+  secs: number;
+  players: { id: string | null; name: string; hero: string; team: number }[];
+}
+interface StatsFile {
+  tags: Record<string, TagRecord>;
+  matches: MatchRecord[];
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const word = (v: unknown, n: number) => String(v ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, n);
+const int = (v: unknown, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
+
+export class StatsStore {
+  private data: StatsFile = { tags: {}, matches: [] };
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private file = process.env.STATS_FILE ?? join(process.cwd(), ".grudge-stats.json")) {
+    try {
+      if (existsSync(file)) this.data = { tags: {}, matches: [], ...JSON.parse(readFileSync(file, "utf8")) };
+    } catch {
+      this.data = { tags: {}, matches: [] };
+    }
+  }
+
+  record(raw: unknown): boolean {
+    const r = (raw ?? {}) as Record<string, unknown>;
+    const list = Array.isArray(r.players) ? r.players.slice(0, 8) : [];
+    const winner = int(r.winner, -1, 7);
+    const players = list.map((q) => {
+      const p = (q ?? {}) as Record<string, unknown>;
+      const id = typeof p.id === "string" && UUID.test(p.id) ? p.id : null;
+      return { id, name: word(p.name, 6), hero: String(p.hero ?? "").replace(/[^a-z0-9_-]/gi, "").slice(0, 24), team: int(p.team, 0, 7), cpu: !!p.cpu, kills: int(p.kills, 0, 999) };
+    });
+    const humans = players.filter((p) => !p.cpu);
+    if (new Set(humans.map((p) => p.team)).size < 2) return false;
+    if (winner >= 0 && !humans.some((p) => p.team === winner)) return false;
+    if (new Set(humans.filter((p) => p.id).map((p) => p.id)).size !== humans.filter((p) => p.id).length) return false;
+    const at = Date.now();
+    const res = (t: number): keyof Rec => (winner < 0 ? "d" : winner === t ? "w" : "l");
+    for (const p of humans) {
+      if (!p.id || !p.name) continue;
+      const t = (this.data.tags[p.id] ??= { name: p.name, w: 0, l: 0, d: 0, kills: 0, heroes: {}, first: at, last: at });
+      t.name = p.name;
+      t.last = at;
+      t[res(p.team)]++;
+      t.kills += p.kills;
+      if (p.hero) (t.heroes[p.hero] ??= { w: 0, l: 0, d: 0 })[res(p.team)]++;
+    }
+    this.data.matches.unshift({ at, mode: word(r.mode, 4), map: String(r.map ?? "").replace(/[^a-z0-9_-]/gi, "").slice(0, 24), winner, secs: int(r.secs, 0, 7200), players: players.map((p) => ({ id: p.cpu ? null : p.id, name: p.cpu ? "CPU" : p.name, hero: p.hero, team: p.team })) });
+    this.data.matches.length = Math.min(this.data.matches.length, 500);
+    this.save();
+    return true;
+  }
+
+  private save(): void {
+    if (this.timer) return;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      try {
+        writeFileSync(this.file + ".tmp", JSON.stringify(this.data));
+        renameSync(this.file + ".tmp", this.file);
+      } catch {
+        return;
+      }
+    }, 1000);
+  }
+
+  serve(req: IncomingMessage, res: ServerResponse): void {
+    const id = new URL(req.url ?? "/", "http://x").searchParams.get("id");
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "no-store");
+    if (id) {
+      const t = this.data.tags[id];
+      res.statusCode = t ? 200 : 404;
+      res.end(JSON.stringify(t ? { id, ...t } : { error: "unknown" }));
+      return;
+    }
+    const top = Object.values(this.data.tags).sort((a, b) => b.w - a.w || a.l - b.l).slice(0, 50).map((t) => ({ name: t.name, w: t.w, l: t.l, d: t.d, kills: t.kills }));
+    res.end(JSON.stringify({ top, matches: this.data.matches.slice(0, 20).map((m) => ({ ...m, players: m.players.map((p) => ({ name: p.name, hero: p.hero, team: p.team })) })) }));
+  }
 }
 
 const MAX_ROOMS = 32;
@@ -59,6 +155,7 @@ export class NetRelay {
   private nextId = 1;
   private nextRoom = 1;
   port = 0;
+  stats = new StatsStore();
 
   constructor() {
     this.wss.on("connection", (ws, req: IncomingMessage) => this.accept(ws, Number((req.headers.host ?? "").split(":")[1] ?? 0) || this.port));
@@ -74,6 +171,13 @@ export class NetRelay {
       if (!req.url?.startsWith("/net/ws")) return;
       this.wss.handleUpgrade(req, socket, head, (ws) => this.wss.emit("connection", ws, req));
     });
+  }
+
+  route(req: IncomingMessage, res: ServerResponse): boolean {
+    if (req.url?.startsWith("/net/info")) this.info(req, res);
+    else if (req.url?.startsWith("/net/stats") && req.method === "GET") this.stats.serve(req, res);
+    else return false;
+    return true;
   }
 
   info(req: IncomingMessage, res: ServerResponse): void {
@@ -107,7 +211,7 @@ export class NetRelay {
         if (this.rooms.size >= MAX_ROOMS) return this.send(ws, { t: "error", msg: "THE SERVER IS FULL OF BATTLES · TRY LATER" });
         role = "host";
         me = { ws, id: 0, name: String(m.name ?? "HOST").slice(0, 12) };
-        room = { id: this.nextRoom++, host: me, peers: new Map(), created: Date.now(), meta: { name: `${me.name.toUpperCase()}'S BATTLE`, mode: "1 VS 1", map: "", humans: 1, seats: 4, phase: "lobby" } };
+        room = { id: this.nextRoom++, host: me, peers: new Map(), created: Date.now(), reported: 0, meta: { name: `${me.name.toUpperCase()}'S BATTLE`, mode: "1 VS 1", map: "", humans: 1, seats: 4, phase: "lobby" } };
         this.rooms.set(room.id, room);
         return this.send(ws, { t: "hosting", room: room.id, addrs: lanAddresses(port), public: publicUrl() });
       }
@@ -144,6 +248,11 @@ export class NetRelay {
         }
         return;
       }
+      if (role === "host" && m.t === "result") {
+        if (room.peers.size === 0 || Date.now() - room.reported < 60000) return;
+        if (this.stats.record(m.res)) room.reported = Date.now();
+        return;
+      }
       if (role === "host" && m.t === "kick") {
         room.peers.get(Number(m.id))?.ws.close();
         return;
@@ -172,8 +281,7 @@ export class NetRelay {
 export function netRelayPlugin() {
   const relay = new NetRelay();
   const route = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
-    if (req.url?.startsWith("/net/info")) relay.info(req, res);
-    else next();
+    if (!relay.route(req, res)) next();
   };
   return {
     name: "grudge-net-relay",

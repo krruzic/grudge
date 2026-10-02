@@ -30,6 +30,7 @@ export interface Record3 {
 }
 
 export interface TagStats extends Record3 {
+  name: string;
   kills: number;
   heroes: Record<string, Record3>;
   last: number;
@@ -47,7 +48,33 @@ export interface MatchLog {
   map: string;
   winner: number;
   secs: number;
-  players: { tag: string | null; hero: string; team: number; cpu: boolean }[];
+  players: MatchPlayer[];
+}
+
+export interface MatchPlayer {
+  tag: string | null;
+  tagId?: string | null;
+  hero: string;
+  team: number;
+  cpu: boolean;
+}
+
+export interface TagRef {
+  id: string;
+  name: string;
+}
+
+export function newId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+export function cleanTag(name: string): string {
+  return name.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, MAX_TAG);
 }
 
 export interface SaveData {
@@ -109,6 +136,12 @@ export class Save {
         const p = JSON.parse(raw) as Partial<SaveData>;
         d = { ...d, ...p, rules: { ...DEFAULT_RULES, ...p.rules }, options: { ...DEFAULT_OPTIONS, ...p.options } };
         for (const row of RULE_ROWS) if (!row.values.includes(d.rules[row.key])) d.rules[row.key] = DEFAULT_RULES[row.key];
+        const tags: Record<string, TagStats> = {};
+        for (const [k, t] of Object.entries(d.tags ?? {})) {
+          if (t.name) tags[k] = t;
+          else tags[newId()] = { ...t, name: k };
+        }
+        d.tags = tags;
       }
     } catch {
       d = fresh();
@@ -124,21 +157,38 @@ export class Save {
     }
   }
 
-  tagNames(): string[] {
+  tagIds(): string[] {
     return Object.entries(this.data.tags).sort((a, b) => b[1].last - a[1].last).map(([k]) => k);
   }
 
-  addTag(name: string): string {
-    const n = name.trim().toUpperCase().slice(0, MAX_TAG);
-    if (!n) return n;
-    if (!this.data.tags[n]) this.data.tags[n] = { w: 0, l: 0, d: 0, kills: 0, heroes: {}, last: Date.now() };
-    this.data.tags[n].last = Date.now();
-    this.write();
-    return n;
+  tagNames(): string[] {
+    return this.tagIds().map((k) => this.data.tags[k].name);
   }
 
-  removeTag(name: string): void {
-    delete this.data.tags[name];
+  findTag(name: string): TagRef | null {
+    const n = cleanTag(name);
+    const e = Object.entries(this.data.tags).find(([, t]) => t.name === n);
+    return e ? { id: e[0], name: n } : null;
+  }
+
+  addTag(name: string): TagRef | null {
+    const n = cleanTag(name);
+    if (!n) return null;
+    const ref = this.findTag(n) ?? { id: newId(), name: n };
+    this.data.tags[ref.id] ??= { name: n, w: 0, l: 0, d: 0, kills: 0, heroes: {}, last: 0 };
+    this.useTag(ref.id);
+    return ref;
+  }
+
+  useTag(id: string): void {
+    const t = this.data.tags[id];
+    if (!t) return;
+    t.last = Date.now();
+    this.write();
+  }
+
+  removeTag(id: string): void {
+    delete this.data.tags[id];
     this.write();
   }
 
@@ -149,8 +199,8 @@ export class Save {
       const h = (this.data.heroes[p.hero] ??= { picks: 0, w: 0, l: 0, d: 0 });
       h.picks++;
       h[res(p.team)]++;
-      if (!p.tag) continue;
-      const t = (this.data.tags[p.tag] ??= { w: 0, l: 0, d: 0, kills: 0, heroes: {}, last: 0 });
+      const t = p.tagId ? this.data.tags[p.tagId] : undefined;
+      if (!t) continue;
       t[res(p.team)]++;
       t.kills += heroKills[p.team] ?? 0;
       t.last = m.at;
