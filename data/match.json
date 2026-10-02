@@ -150,7 +150,7 @@
         "splashUnitMul": 1.8,
         "structureSplash": 220
       },
-      "ward": { "brokenLockout": 15,
+      "ward": { "brokenLockout": 45,
         "buyFraction": 0.25,
         "soloScale": 0.5,
         "cost": 150,
