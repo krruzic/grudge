@@ -192,6 +192,14 @@ const LEAF_A = new THREE.MeshBasicMaterial({ map: WARDEN.leaf, transparent: true
 const LEAF_B = new THREE.MeshBasicMaterial({ map: WARDEN.leafAutumn, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
 const easeBack = (t: number) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
 
+function deckBox(x: number, z: number, h: number): THREE.BoxGeometry {
+  const g = worldBox(1, h, 1);
+  const uv = g.getAttribute("uv") as THREE.BufferAttribute;
+  const pos = g.getAttribute("position") as THREE.BufferAttribute;
+  for (let i = 8; i < 16; i++) uv.setXY(i, pos.getX(i) + x, pos.getZ(i) + z);
+  return g;
+}
+
 function worldBox(w: number, h: number, d: number): THREE.BoxGeometry {
   const g = new THREE.BoxGeometry(w, h, d);
   const uv = g.getAttribute("uv") as THREE.BufferAttribute;
@@ -764,7 +772,7 @@ export class HazardViews {
       const z = Math.floor(c / W) + 0.5;
       if (m.kind !== "wall") {
         const works = m.kind === "works";
-        const plank = new THREE.Mesh(worldBox(1.02, works ? 0.22 : 0.14, 1.02), WOOD);
+        const plank = new THREE.Mesh(deckBox(x, z, works ? 0.22 : 0.14), WOOD);
         plank.position.set(x, m.deck[k] - (works ? 0.11 : 0.07), z);
         g.add(plank);
         const ground = this.world.terrain.groundHeight(x, z);
@@ -783,7 +791,7 @@ export class HazardViews {
         }
         if (h > 0.3 && (works || k % 3 === 0)) {
           const post = new THREE.Mesh(worldBox(0.16, h, 0.16), WOOD_DARK);
-          post.position.set(x, m.deck[k] - h / 2, z);
+          post.position.set(x, m.deck[k] - (works ? 0.12 : 0.08) - h / 2, z);
           g.add(post);
         }
       } else {
