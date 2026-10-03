@@ -39,6 +39,24 @@ export type CursorAction =
   | { type: "button"; id: string; by: number }
   | { type: "back"; by: number };
 
+export type HandWire = [string, number, number, number, number, number, number];
+
+export interface Ghost {
+  slot: number;
+  wire: HandWire;
+  x: number;
+  y: number;
+  fresh: boolean;
+}
+
+const POSES = ["glove_point", "glove_open", "glove_grab"] as const;
+
+export function cleanHand(v: unknown): HandWire | null {
+  if (!Array.isArray(v) || v.length !== 7) return null;
+  const n = (k: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(Number(v[k]) || 0)));
+  return [String(v[0] ?? "").replace(/[^a-z0-9:_-]/gi, "").slice(0, 24), n(1, 0, 63), n(2, 0, 63), n(3, -999, 999), n(4, -50, 300), n(5, -1, 3), n(6, 0, 2)];
+}
+
 const CHIP_COLORS = ["#6a8cff", "#ff5a4a", "#ffd040", "#50d050"];
 
 export class MenuCursors {
@@ -50,7 +68,41 @@ export class MenuCursors {
   mouseSlot = -1;
   frozen = new Set<number>();
   tagOf: ((i: number) => number) | null = null;
+  ghosts: Ghost[] = [];
+  private ghostAt = 0;
   private scale = { w: 427, h: 240 };
+
+  wire(i: number): HandWire | null {
+    const c = this.cursors[i];
+    if (!c?.active) return null;
+    const h = this.at(c.x, c.y);
+    const fx = h ? Math.round(((c.x - h.x) / Math.max(1, h.w)) * 63) : 0;
+    const fy = h ? Math.round(((c.y - h.y) / Math.max(1, h.h)) * 63) : 0;
+    return [h?.id ?? "", Math.max(0, Math.min(63, fx)), Math.max(0, Math.min(63, fy)), Math.round(c.x - this.scale.w / 2), Math.round(c.y), c.holding, c.holding >= 0 ? 2 : c.grabbable ? 1 : 0];
+  }
+
+  setGhosts(list: [number, HandWire][]): void {
+    const old = new Map(this.ghosts.map((g) => [g.slot, g]));
+    this.ghosts = list.map(([slot, wire]) => {
+      const g = old.get(slot);
+      return g ? { ...g, wire } : { slot, wire, x: 0, y: 0, fresh: true };
+    });
+  }
+
+  private placeGhosts(now: number): void {
+    const dt = Math.max(0, Math.min(0.1, now - this.ghostAt));
+    this.ghostAt = now;
+    for (const g of this.ghosts) {
+      const [id, fx, fy, dx, y] = g.wire;
+      const h = id ? this.hits.find((q) => q.id === id) : undefined;
+      const tx = h ? h.x + (fx / 63) * h.w : this.scale.w / 2 + dx;
+      const ty = h ? h.y + (fy / 63) * h.h : y;
+      const k = g.fresh ? 1 : Math.min(1, dt * 18);
+      g.x += (tx - g.x) * k;
+      g.y += (ty - g.y) * k;
+      g.fresh = false;
+    }
+  }
 
   constructor(n: number) {
     this.cursors = Array.from({ length: n }, (_, i) => ({ x: 60 + i * 90, y: 150, active: false, holding: -1, hover: "", pressedAt: -1 }));
@@ -210,7 +262,7 @@ export class MenuCursors {
     this.chipCpu = labels.map((l, s) => l === "CPU" || colors[s] === "#8a8a90");
     this.chips.forEach((c, s) => {
       if (!labels[s]) return;
-      const held = this.cursors.some((k) => k.active && k.holding === s);
+      const held = this.cursors.some((k) => k.active && k.holding === s) || this.ghosts.some((g) => g.wire[5] === s);
       if (held) return;
       if (!c.hero) return;
       chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held);
@@ -225,6 +277,12 @@ export class MenuCursors {
   }
 
   private drawCursorsOn(ctx: CanvasRenderingContext2D, now: number): void {
+    this.placeGhosts(now);
+    for (const g of this.ghosts) {
+      const hold = g.wire[5];
+      if (hold >= 0 && this.chipLabels[hold]) chip(ctx, g.x + 3, g.y - 4, hold, this.chipCpu[hold], false);
+      glove(ctx, g.x, g.y, g.slot, POSES[g.wire[6]] ?? "glove_point", false);
+    }
     this.cursors.forEach((c, i) => {
       if (!c.active) return;
       const press = now - c.pressedAt < 0.12;

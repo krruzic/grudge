@@ -8,7 +8,7 @@ import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, ban
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
-import type { NameEntry } from "./nameEntry";
+import { drawSigning, type NameEntry } from "./nameEntry";
 import type { MatchMode } from "../game/save";
 import heroJson from "../../data/heroes.json";
 import talentData from "../../data/talents.json";
@@ -565,6 +565,12 @@ export class Screens {
       this.naming.get(i)!.draw(ctx, x + 3, y + 18, w - 6, h - 20, performance.now() / 1000);
       return;
     }
+    const sg = !s.cpu && !commander ? this.signing.get(i) : undefined;
+    if (sg) {
+      this.portraits?.drop(i);
+      drawSigning(ctx, x + 3, y + 18, w - 6, h - 20, sg[0] === 1, sg[1], performance.now() / 1000);
+      return;
+    }
     this.kindPlaque(ctx, i, x + w / 2, y + 17, s);
     const fx = x + 5;
     const fy = y + iy;
@@ -608,6 +614,9 @@ export class Screens {
   }
 
   naming = new Map<number, NameEntry>();
+  signing = new Map<number, [number, string]>();
+  fieldWatch = false;
+  fieldNote = "";
 
   private drawMap(ctx: CanvasRenderingContext2D, W: number, H: number, _blink: boolean): void {
     boardBg(ctx, W, H);
@@ -686,8 +695,9 @@ export class Screens {
       ctx.restore();
       if (sel) goldArrow(ctx, cx - 6, cy + chh / 2, -1, 6);
     }
-    const it: [string, string][] = [["A", "TO BATTLE"], ["B", "BACK"], ["S", "START"]];
+    const it: [string, string][] = this.fieldWatch ? [["B", "LEAVE"]] : [["A", "TO BATTLE"], ["B", "BACK"], ["S", "START"]];
     prompt(ctx, Math.round((W - promptWidth(it, 0.7)) / 2), H - 13, it, 0.7);
+    if (this.fieldNote) shadowText(ctx, this.fieldNote, Math.round(px + pw / 2 - textWidth(this.fieldNote, 0.55) / 2), H - 28, this.fieldWatch ? "#fff0c0" : "#f8e8a0", 0.55);
   }
 
   private drawFfaRows(ctx: CanvasRenderingContext2D, pw: number, ry: number, rh: number, rows: [string, (i: number) => number][], w: World): void {

@@ -15,6 +15,32 @@ const COLS = 6;
 const KEY_ROWS = KEYS.length / COLS;
 const INK = "#0b0806";
 
+export function drawSigning(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, typing: boolean, text: string, now: number): void {
+  band(ctx, x, y, w, h, INK, 0.82);
+  const head = "SIGNING NAME";
+  const hs = Math.min(0.5, (w - 8) / Math.max(1, textWidth(head, 1, true)));
+  drawPlain(ctx, head, x + w / 2 - textWidth(head, hs, true) / 2, y + 4, "#e8c870", hs, true);
+  const fy = y + 14;
+  ctx.fillStyle = INK;
+  ctx.fillRect(x + 2, fy - 1, w - 4, 13);
+  texturedRect(ctx, "parch", x + 3, fy, w - 6, 11, null, 0, 1);
+  const fs = Math.min(0.75, (w - 12) / Math.max(1, textWidth("WWWWWW", 1, true)));
+  const shown = typing ? text : "";
+  const tw = textWidth(shown, fs, true);
+  const cw = textWidth("W", fs, true) * 0.8;
+  const tx = x + w / 2 - (tw + cw + 1) / 2;
+  drawPlain(ctx, shown, tx, fy + 2, "#3a2410", fs, true);
+  if (Math.floor(now * 2.5) % 2) {
+    ctx.fillStyle = "#3a2410";
+    ctx.fillRect(tx + tw + 1, fy + 8, cw, 1.5);
+  }
+  const sub = typing ? "WRITING A NEW NAME" : "PICKING A SAVED NAME";
+  const ss = Math.min(0.42, (w - 6) / Math.max(1, textWidth(sub, 1)));
+  drawPlain(ctx, sub, x + w / 2 - textWidth(sub, ss) / 2, fy + 16, "#c8b898", ss);
+  const dots = ".".repeat(1 + (Math.floor(now * 3) % 3));
+  drawPlain(ctx, dots, x + w / 2 - textWidth("...", 0.6) / 2, fy + 26, "#e8c870", 0.6);
+}
+
 export class NameEntry {
   mode: "list" | "type" = "list";
   text = "";
@@ -111,6 +137,10 @@ export class NameEntry {
       return dir;
     }
     return "";
+  }
+
+  wire(): [number, string] {
+    return this.mode === "type" ? [1, this.text] : [0, ""];
   }
 
   type(ch: string): void {

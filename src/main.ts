@@ -36,7 +36,7 @@ import { UnitModels } from "./render/unitModels";
 import { Hud, UiCanvas } from "./ui/hud";
 import { loadFont } from "./ui/font";
 import { Screens, type SelectSlot } from "./ui/screens";
-import { MenuCursors } from "./ui/cursor";
+import { MenuCursors, cleanHand, type HandWire } from "./ui/cursor";
 import { Portraits } from "./ui/portraits";
 import { Audio } from "./audio/sfx";
 import { Menus, type Nav, type RoomInfo } from "./ui/menus";
@@ -312,6 +312,15 @@ async function start(): Promise<void> {
   let outFrames: Frame[] = [];
   let outHashes: [number, number][] = [];
   let lobbySentAt = 0;
+  const remoteHands = new Map<string, HandWire>();
+  const remoteSigning = new Map<string, [number, string]>();
+  let presSent = "";
+  let presAt = 0;
+  const handSent = ["null", "null", "null", "null"];
+  const handAt = [0, 0, 0, 0];
+  const nmSent = ["null", "null", "null", "null"];
+  let guestField: [number, number] | null = null;
+  const PRES_DT = 1 / 12;
   let desync = false;
   let hostAddrs: string[] = [];
   let hostPublic = "";
@@ -481,6 +490,16 @@ async function start(): Promise<void> {
     menus.netStatus = why;
     menus.netAddrs = [];
     screens.lobby = null;
+    remoteHands.clear();
+    remoteSigning.clear();
+    presSent = "";
+    handSent.fill("null");
+    nmSent.fill("null");
+    guestField = null;
+    cursors.setGhosts([]);
+    screens.signing.clear();
+    screens.fieldWatch = false;
+    screens.fieldNote = "";
   };
   const toMenu = (why?: string) => {
     menus.training = false;
@@ -750,6 +769,19 @@ async function start(): Promise<void> {
       if (m.t === "pause" && (state === "match" || state === "paused") && rseats.some((q) => q.peer === id)) setPaused(state === "match");
       return;
     }
+    const key = `${id}:${r.k}`;
+    if (m.t === "hand") {
+      const h = cleanHand(m.h);
+      if (h) remoteHands.set(key, h);
+      else remoteHands.delete(key);
+      return;
+    }
+    if (m.t === "nm") {
+      const v = m.v;
+      if (Array.isArray(v)) remoteSigning.set(key, [v[0] === 1 ? 1 : 0, String(v[1] ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, MAX_TAG)]);
+      else remoteSigning.delete(key);
+      return;
+    }
     const i = r.slot;
     if (m.t === "tag" && i >= 0) {
       const t = m.tag === null ? "" : cleanTag(String(m.tag ?? ""));
@@ -860,6 +892,11 @@ async function start(): Promise<void> {
         } else if (m.t === "left") {
           const id = Number(m.id);
           peerNames.delete(id);
+          for (const k of [...remoteHands.keys(), ...remoteSigning.keys()]) {
+            if (!k.startsWith(`${id}:`)) continue;
+            remoteHands.delete(k);
+            remoteSigning.delete(k);
+          }
           for (const r of rseats.filter((q) => q.peer === id)) {
             freeSeat(r, now);
             rseats.splice(rseats.indexOf(r), 1);
@@ -903,6 +940,21 @@ async function start(): Promise<void> {
           const mine = new Set(mySlots.values());
           const local = Array.from({ length: spec.players }, (_, i) => mine.has(i));
           startNetMatch(spec, local, local.map(() => false));
+        } else if (m.t === "pres") {
+          const mine = new Set(mySlots.values());
+          const okSlot = (s: number) => Number.isInteger(s) && s >= 0 && s < MAX_PLAYERS && !mine.has(s);
+          const hs = (Array.isArray(m.h) ? m.h : []) as unknown[][];
+          cursors.setGhosts(hs.flatMap((e): [number, HandWire][] => {
+            const w = cleanHand(e?.[1]);
+            return w && okSlot(Number(e?.[0])) ? [[Number(e[0]), w]] : [];
+          }));
+          screens.signing = new Map(((Array.isArray(m.n) ? m.n : []) as unknown[][]).filter((e) => okSlot(Number(e?.[0]))).map((e): [number, [number, string]] => [Number(e[0]), [e[1] === 1 ? 1 : 0, String(e[2] ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, MAX_TAG)]]));
+          const f = Array.isArray(m.f) ? (m.f as number[]).map(Number) : null;
+          guestField = f && maps[f[1]] ? [f[0], f[1]] : null;
+          if (guestField && state === "lobby" && guestField[1] !== mapIndex) {
+            mapIndex = guestField[1];
+            beginAttractWorldOnly();
+          }
         } else if (m.t === "fs") {
           for (const f of m.f as Frame[]) netFrames.push(f);
           for (const [k, v] of (m.h as [number, number][]) ?? []) netHashes.set(k, v);
@@ -920,6 +972,62 @@ async function start(): Promise<void> {
         wantSent = ks;
         wantAt = now;
         net.toHost({ t: "want", ks: JSON.parse(ks) });
+      }
+      for (let k = 0; k < handSent.length; k++) {
+        const seated = state === "lobby" && mySlots.has(k);
+        const h = seated ? cursors.wire(k) : null;
+        const hs = JSON.stringify(h);
+        if (hs !== handSent[k] && now - handAt[k] >= PRES_DT) {
+          handSent[k] = hs;
+          handAt[k] = now;
+          net.toHost({ t: "hand", k, h });
+        }
+        const ne = seated ? screens.naming.get(mySlots.get(k)!) : undefined;
+        const v = ne ? ne.wire() : null;
+        const vs = JSON.stringify(v);
+        if (vs !== nmSent[k]) {
+          nmSent[k] = vs;
+          net.toHost({ t: "nm", k, v });
+        }
+      }
+    }
+    if (netMode === "host") {
+      const live = state === "select" || state === "map";
+      const h: [number, HandWire][] = [];
+      const n: [number, number, string][] = [];
+      const ghosts: [number, HandWire][] = [];
+      const signing = new Map<number, [number, string]>();
+      const slotOf = (key: string) => {
+        const [p, k] = key.split(":").map(Number);
+        return rseats.find((q) => q.peer === p && q.k === k)?.slot ?? -1;
+      };
+      if (live) {
+        cursors.cursors.forEach((_, i) => {
+          const w = cursors.wire(i);
+          if (w) h.push([i, w]);
+        });
+        for (const [slot, ne] of screens.naming) n.push([slot, ...ne.wire()]);
+        for (const [key, w] of remoteHands) {
+          const s = slotOf(key);
+          if (s < 0) continue;
+          h.push([s, w]);
+          ghosts.push([s, w]);
+        }
+        for (const [key, v] of remoteSigning) {
+          const s = slotOf(key);
+          if (s < 0) continue;
+          n.push([s, ...v]);
+          signing.set(s, v);
+        }
+      }
+      cursors.setGhosts(ghosts);
+      screens.signing = signing;
+      const f = state === "map" ? [pickIndex, mapIndex] : null;
+      const s = JSON.stringify([h, n, f]);
+      if (peerNames.size && ((s !== presSent && now - presAt >= PRES_DT) || now - presAt > 1)) {
+        presSent = s;
+        presAt = now;
+        net.toPeer("all", { t: "pres", h, n, f });
       }
     }
     if (netMode === "host" && now - lobbySentAt > 0.25) {
@@ -1181,6 +1289,8 @@ async function start(): Promise<void> {
       const lb = screens.lobby;
       cursors.setScale(pixel.w, pixel.h);
       cursors.tagOf = (k) => mySlots.get(k) ?? -1;
+      screens.set(guestField && lb ? "map" : "lobby");
+      if (guestField) for (const c of cursors.cursors) c.holding = -1;
       if (lb) {
         const held = (i: number) => cursors.cursors.some((c) => c.active && c.holding === i);
         lb.slots.forEach((sl, i) => {
@@ -1188,13 +1298,13 @@ async function start(): Promise<void> {
         });
         for (const [k, i] of mySlots) {
           const sl = lb.slots[i];
-          if (lb.phase === "lobby" && !sl.ready && !sl.commander && !held(i) && !dropped.has(i)) cursors.cursors[k].holding = i;
+          if (lb.phase === "lobby" && !guestField && !sl.ready && !sl.commander && !held(i) && !dropped.has(i)) cursors.cursors[k].holding = i;
           if (sl.ready) dropped.delete(i);
         }
         for (const c of cursors.cursors) if (c.holding >= 0 && ![...mySlots.values()].includes(c.holding)) c.holding = -1;
         const kOf = (i: number) => [...mySlots].find(([, v]) => v === i)?.[0] ?? -1;
         runNaming((slot) => [...mySlots].find(([, v]) => v === slot)?.[0] ?? -1, now);
-        const acts = cursors.update(cursorPads(pads.players), dt, now, (slot, by) => lb.phase === "lobby" && mySlots.get(by) === slot && !lb.slots[slot].commander);
+        const acts = cursors.update(cursorPads(pads.players), dt, now, (slot, by) => lb.phase === "lobby" && !guestField && mySlots.get(by) === slot && !lb.slots[slot].commander);
         let leave = false;
         for (const act of acts) {
           if (act.type === "hover") {
@@ -1419,7 +1529,12 @@ async function start(): Promise<void> {
     hud.zoomOut = view.zoomOut();
     hud.rectOf = (pl) => view.viewRectOf(pl);
     hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
-    screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : Math.max(0, fields().indexOf(mapIndex)), fields(), mode);
+    const watchLb = state === "lobby" && guestField ? screens.lobby : null;
+    if (watchLb && guestField) screens.updateMaps(maps.map((m) => m.data), guestField[0], fieldsFor(watchLb.mode), watchLb.mode);
+    else screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : Math.max(0, fields().indexOf(mapIndex)), fields(), mode);
+    screens.fieldWatch = !!watchLb;
+    const hostTag = watchLb?.slots.find((s) => s.remote === 0 && !s.cpu && !s.open && s.name)?.name;
+    screens.fieldNote = watchLb ? `${hostTag ? `${hostTag} · THE HOST` : "THE HOST"} PICKS THE FIELD` : netMode === "host" && state === "map" && peerNames.size ? "YOU PICK THE FIELD FOR EVERYONE" : "";
     if (state === "select" || state === "lobby") screens.portraits?.renderStages();
     const viaDriver = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
     const nativeGc = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
