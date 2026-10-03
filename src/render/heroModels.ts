@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergedMaterial, mergeParts } from "./mergedModel";
-import { costumeTexture } from "./costumes";
+import { costumeModel, costumeTexture } from "./costumes";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { blobShadow, footRing, markModel, playerTag, warlordPlaceholder } from "./placeholders";
@@ -190,7 +190,7 @@ export class HeroModels {
 
   create(type: string, team: THREE.Color, label: string, mark: THREE.Color = team, dye: THREE.Color = team, costume?: string): HeroInstance {
     const root = new THREE.Group();
-    const gltf = this.gltfs.get(type);
+    const gltf = this.gltfs.get(costumeModel(type, costume)) ?? this.gltfs.get(type);
     let body: THREE.Object3D;
     let mixer: THREE.AnimationMixer | undefined;
     const actions = new Map<string, THREE.AnimationAction>();

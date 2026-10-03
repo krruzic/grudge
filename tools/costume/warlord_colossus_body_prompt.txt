@@ -1,0 +1,16 @@
+The FIRST image is the in-game model of the WARLORD, a hulking green ogre hero from a stylised late-1990s console fantasy action game, seen from four sides. The SECOND image is the finished turnaround of another hero from the same game, showing the EXACT art style to match (painted textures, chunky readable shapes, level of detail).
+
+Redesign the Warlord as an alternate costume called "IRON COLOSSUS": the same hulking brute rebuilt as a STEAM WAR-AUTOMATON, a walking iron furnace golem. It must keep EXACTLY the Warlord's silhouette, bulk, proportions, height, stance and pose from the first image (huge shoulders, big arms, thick legs, short neck, broad hunched torso), so it clearly reads as the same hero in a different costume, but every part is now machine:
+
+- Body of riveted dark gunmetal iron with visible rivet rows, panel seams and bolts, chunky and heavy.
+- Armour plates of glossy deep MAGENTA / fuchsia enamel (rich pink-purple paint on iron) on the chest, shoulders, forearms, shins and belly, edged with polished BRASS trim and brass rivets.
+- In the middle of the chest a round iron FURNACE GRATE with horizontal bars glowing hot orange-yellow from the fire inside.
+- His big spiked shoulder pauldrons: the spikes become SHORT BRASS-RIMMED IRON SMOKESTACKS (two or three small chimney pipes per shoulder, pointing up and outward), open tops dark, no smoke.
+- Head: a heavy rounded iron HELMET-HEAD (no ogre skin), riveted, with a brass-ringed crest where the horns were (two short curved iron horns are fine), two GLOWING ORANGE FURNACE EYES behind a slotted visor, and a jaw with a small grated STEAM VENT. Two steel PISTON TUSKS rise from the lower jaw like the ogre's tusks (polished steel rods in brass sleeves).
+- Arms of segmented iron with exposed brass hydraulic pistons at the elbows; huge heavy riveted iron FISTS with thick iron fingers, open and relaxed, EMPTY.
+- Legs: iron thighs and shins with magenta enamel shin plates, knee bolts, and heavy CLAWED IRON FEET with three thick iron toe claws each.
+- Belt: a thick riveted iron band with a big brass boiler-valve wheel as the buckle, small pressure gauge on the hip.
+- TEAM COLOUR (must stay BLUE): a BLUE enamel diagonal sash plate across the chest from shoulder to hip (like his blue sash), and a BLUE enamel hanging tabard plate below the belt at the front (like his blue loincloth banner). These two are the only blue parts. No blue anywhere else.
+- No green ogre skin anywhere, no fur, no skulls, no leather.
+
+Output: a clean character turnaround sheet in exactly four full-body views left to right: front, left side, back, right side. Neutral relaxed A-pose with the arms held clearly away from the body, the SAME pose as the Warlord in the first image. Hands EMPTY. All four views the same size, standing on the same baseline, evenly spaced, not overlapping. Plain flat light grey background, soft even lighting, no cast shadows, no smoke, no steam, no sparks, no glow halos (the eyes and furnace grate are just painted bright), no text, no labels, no frames.

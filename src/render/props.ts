@@ -42,7 +42,7 @@ export async function loadProps(): Promise<void> {
 const dyed = new Map<string, THREE.Material>();
 
 export function prop(name: string, team?: THREE.Color, owner?: { hero: string; costume?: string }): THREE.Object3D | null {
-  const s = scenes.get(name);
+  const s = (owner?.costume && scenes.get(`${name}@${owner.costume}`)) || scenes.get(name);
   if (!s) return null;
   const o = s.clone(true);
   if (owner?.costume) {

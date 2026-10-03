@@ -8,14 +8,22 @@ for (const [path, url] of Object.entries(urls)) {
   if (!files.has(key)) files.set(key, new Map());
   files.get(key)!.set(file.replace(".jpg", ""), url);
 }
+const modelUrls = import.meta.glob("../../assets/heroes/*@*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const models = Object.keys(modelUrls).map((p) => p.split("/").pop()!.replace(".glb", ""));
 const loaded = new Map<string, THREE.Texture>();
 const loader = new THREE.TextureLoader();
 
 export function costumesOf(hero: string): string[] {
-  return ["", ...[...files.keys()].filter((k) => k.startsWith(`${hero}/`)).map((k) => k.slice(hero.length + 1)).sort()];
+  const tex = [...files.keys()].filter((k) => k.startsWith(`${hero}/`)).map((k) => k.slice(hero.length + 1)).sort();
+  const mod = models.filter((m) => m.startsWith(`${hero}@`)).map((m) => m.slice(hero.length + 1)).filter((c) => !tex.includes(c)).sort();
+  return ["", ...tex, ...mod];
 }
 
-export const COSTUME_NAMES: Record<string, string> = { "": "CLASSIC", frost: "FROSTFORGE", ember: "SOOT & EMBER", bloodmoon: "BLOODMOON", nightshade: "NIGHTSHADE", lich: "LICH KING", blackrose: "BLACK ROSE", winterbark: "WINTERBARK", blackknight: "BLACK KNIGHT", clock: "CLOCKWORK GOLD", gilded: "GILDED TYRANT", swamp: "SWAMP BRUTE", jackal: "DESERT JACKAL", blood: "BLOOD GOBLIN", plague: "PLAGUE DOCTOR", crimson: "CRIMSON CULT", bleu: "MUSKETEER BLEU", carnival: "CARNIVAL", autumn: "AUTUMN ELDER", blossom: "BLOSSOM", paladin: "PALADIN OF THE SUN", revenant: "RUSTED REVENANT", abbot: "ABBOT", hopmaster: "HOPMASTER", grog: "GROG PIRATE", winter: "WINTER HUNT", raven: "RAVEN", sunfire: "SUNFIRE" };
+export function costumeModel(hero: string, costume: string | undefined): string {
+  return costume && models.includes(`${hero}@${costume}`) ? `${hero}@${costume}` : hero;
+}
+
+export const COSTUME_NAMES: Record<string, string> = { "": "CLASSIC", frost: "FROSTFORGE", ember: "SOOT & EMBER", bloodmoon: "BLOODMOON", nightshade: "NIGHTSHADE", lich: "LICH KING", blackrose: "BLACK ROSE", winterbark: "WINTERBARK", blackknight: "BLACK KNIGHT", clock: "CLOCKWORK GOLD", gilded: "GILDED TYRANT", swamp: "SWAMP BRUTE", jackal: "DESERT JACKAL", blood: "BLOOD GOBLIN", plague: "PLAGUE DOCTOR", crimson: "CRIMSON CULT", bleu: "MUSKETEER BLEU", carnival: "CARNIVAL", autumn: "AUTUMN ELDER", blossom: "BLOSSOM", paladin: "PALADIN OF THE SUN", revenant: "RUSTED REVENANT", abbot: "ABBOT", hopmaster: "HOPMASTER", grog: "GROG PIRATE", winter: "WINTER HUNT", raven: "RAVEN", sunfire: "SUNFIRE", colossus: "IRON COLOSSUS" };
 
 export function costumeTexture(hero: string, costume: string | undefined, matName: string): THREE.Texture | null {
   if (!costume) return null;

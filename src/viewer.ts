@@ -13,6 +13,7 @@ const clipTime = params.get("t");
 const yaw = Number(params.get("yaw") ?? 20) * (Math.PI / 180);
 const only = params.get("only")?.split(",");
 const set = params.get("set") ?? "heroes";
+const costume = params.get("costume") ?? undefined;
 
 const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setPixelRatio(1);
@@ -40,7 +41,7 @@ async function main(): Promise<void> {
     const urls = Object.fromEntries(Object.entries(heroUrls).map(([p, u]) => [base(p), u]));
     await hm.load(urls);
     for (const n of only ?? Object.keys(urls).sort()) {
-      const inst = hm.create(n, team, n.toUpperCase());
+      const inst = hm.create(n, team, n.toUpperCase(), team, team, costume);
       inst.root.children.slice(2).forEach((c) => (c.visible = false));
       inst.root.scale.setScalar(1.5);
       names.push(n);

@@ -1,0 +1,8 @@
+The FIRST image is a character turnaround (front, left side, back, right side) of the IRON COLOSSUS, a steam war-automaton costume of the Warlord hero. The SECOND image is the original Warlord model it must match in silhouette. Edit the FIRST image, keeping its art style, materials, colours layout and all four views, with these changes applied consistently to all four views:
+
+1. The enamel plates must be a more vivid, saturated MAGENTA / fuchsia (hot pink-purple enamel), not maroon or crimson. Brass trim stays brass, iron stays dark gunmetal, the sash and front tabard stay BLUE.
+2. Pose: a clear A-pose like the Warlord in the second image: the arms angled further out from the body, so there is a wide clean gap of empty background between each arm and the torso/hips all the way down, the fists hanging out to the side away from the hips. Fists relaxed and empty.
+3. Head: make the helmet-head bigger and sit higher on the shoulders (head top clearly above the smokestacks), with two short curved iron horns on the sides of the helmet like the Warlord's horned helmet; keep the glowing orange visor eyes and the grated jaw vent; two polished steel piston tusks pointing UP from the lower jaw at the corners of the mouth.
+4. Back view: no furnace grate on the back; instead a riveted magenta back plate with a small round brass boiler hatch.
+
+Same size and baseline for all four views, evenly spaced, not overlapping. Plain flat light grey background, no shadows, no smoke, no glow halos, no text, no labels, no frames.

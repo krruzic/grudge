@@ -50,7 +50,7 @@ def clear_scene():
 
 
 def import_source(name, cfg):
-    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", f"{name}_tripo.glb"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", cfg.get("src", f"{name}_tripo.glb")))
     src = [o for o in bpy.context.scene.objects if o.type == "MESH"][0]
     for o in list(bpy.context.scene.objects):
         if o is not src:
@@ -217,10 +217,42 @@ def fill_unweighted(src, arm):
         src.vertex_groups[best].add([v.index], 1.0, "REPLACE")
 
 
+def mesh_islands(me):
+    par = list(range(len(me.vertices)))
+
+    def find(x):
+        while par[x] != x:
+            par[x] = par[par[x]]
+            x = par[x]
+        return x
+    for e in me.edges:
+        par[find(e.vertices[0])] = find(e.vertices[1])
+    at = {}
+    for v in me.vertices:
+        k = tuple(round(c, 4) for c in v.co)
+        if k in at:
+            par[find(v.index)] = find(at[k])
+        else:
+            at[k] = v.index
+    out = {}
+    for v in me.vertices:
+        out.setdefault(find(v.index), []).append(v.index)
+    return list(out.values())
+
+
 def rigid_parts(src, cfg, cols):
     me = src.data
+    isl = None
     for r in cfg.get("rigid", []):
         (x0, y0, z0), (x1, y1, z1) = r["box"]
+        if r.get("whole"):
+            isl = isl or mesh_islands(me)
+            inb = lambda c: x0 <= c.x <= x1 and y0 <= c.y <= y1 and z0 <= c.z <= z1
+            idx = [i for part in isl if all(inb(me.vertices[i].co) for i in part) for i in part]
+            for g in src.vertex_groups:
+                g.remove(idx)
+            src.vertex_groups[r["bone"]].add(idx, 1.0, "REPLACE")
+            continue
         seed = set()
         for p, c in zip(me.polygons, cols):
             ctr = p.center
@@ -540,8 +572,9 @@ def preview_clip(src, arm, path, clip, frames, extra=(), angles=(0, 45, 90)):
     return files
 
 
-def build(name, preview=None):
-    cfg = HEROES[name]
+def build(key, preview=None):
+    cfg = HEROES[key]
+    name = cfg.get("name", key)
     clear_scene()
     src = import_source(name, cfg)
     img, px = tex_lookup(src)
@@ -603,7 +636,7 @@ def build(name, preview=None):
         for t in arm.animation_data.nla_tracks:
             t.mute = False
         bpy.context.scene.frame_set(0)
-    size = charkit.export(objs, os.path.join(ROOT, "assets", "heroes", name + ".glb"))
+    size = charkit.export(objs, os.path.join(ROOT, "assets", "heroes", cfg.get("out", name) + ".glb"))
     tris = sum(len(p.vertices) - 2 for o in objs if o.type == "MESH" for p in o.data.polygons)
     return {"tris": tris, "bytes": size, "empty_groups": empty}
 
