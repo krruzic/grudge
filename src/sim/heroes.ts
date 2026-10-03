@@ -668,8 +668,8 @@ function combo(w: World, e: Entity, cmd: Command): boolean {
       let best: Entity | null = null;
       let bd = 10;
       for (const o of w.entities) {
-        if (!o.alive || o.structure || o.team === e.team || o.status.hexOwner !== e.id || w.time >= o.status.hexUntil || w.mapEvents.sealed(t.pos.x, t.pos.z, o.transform.pos.x, o.transform.pos.z)) continue;
-        const d = w.dist(e, o) - (o.hero ? 3 : 0);
+        if (!o.alive || !o.hero || o.team === e.team || o.status.hexOwner !== e.id || w.time >= o.status.hexUntil || w.mapEvents.sealed(t.pos.x, t.pos.z, o.transform.pos.x, o.transform.pos.z)) continue;
+        const d = w.dist(e, o);
         if (d < bd) { bd = d; best = o; }
       }
       if (best) {

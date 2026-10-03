@@ -9,7 +9,6 @@ export interface ReticleReq {
   dx: number;
   dz: number;
   range: number;
-  cur?: { dx: number; dz: number };
 }
 
 function ringTex(): THREE.CanvasTexture {
@@ -126,26 +125,43 @@ export class Reticles {
       const dots = p.wall.children as THREE.Mesh[];
       if (def0.kind === "gravewalk") {
         const spots = graveSpots(world, e);
+        const RING = 5;
+        const hy = world.groundY(hx, hz);
+        p.range.visible = true;
+        p.range.position.set(hx, hy + 0.1, hz);
+        p.range.scale.setScalar(RING + 0.6);
+        p.range.rotation.z = time * 0.3;
         p.pads.visible = true;
+        let selX = hx;
+        let selZ = hz;
+        const order = spots.map((sp, k) => [Math.hypot(sp.x - hx, sp.z - hz), k]).sort((a, b) => a[0] - b[0]).map(([, k]) => k);
+        const rank = new Array<number>(spots.length);
+        order.forEach((k, i) => (rank[k] = i));
         (p.pads.children as THREE.Mesh[]).forEach((b, k) => {
           const sp = spots[k];
           b.visible = !!sp;
           if (!sp) return;
+          const dx = sp.x - hx;
+          const dz = sp.z - hz;
+          const d = Math.hypot(dx, dz) || 1;
+          const r = 1.8 + (RING - 2.4) * (spots.length > 1 ? rank[k] / (spots.length - 1) : 1);
+          const x = hx + (dx / d) * r;
+          const z = hz + (dz / d) * r;
           const sel = Math.hypot(sp.x - tx, sp.z - tz) < 0.5;
-          const size = (sel ? 3.4 : 2.6) * (sel ? 1 + Math.sin(time * 8) * 0.06 : 1);
-          b.position.set(sp.x, world.groundY(sp.x, sp.z) + 0.2, sp.z);
+          if (sel) { selX = x; selZ = z; }
+          const size = (sp.keep ? 0.9 : 0.7) * (sel ? 1.35 + Math.sin(time * 8) * 0.08 : 1);
+          b.position.set(x, hy + 0.22, z);
           b.scale.set(size, 1, size);
-          b.rotation.y = sel ? time * 0.8 : 0;
+          b.rotation.y = sel ? time * 1.5 : Math.atan2(dx, dz);
           const m = b.material as THREE.MeshBasicMaterial;
-          m.color.setHex(sel ? 0xd8a0ff : 0xffe070);
-          m.opacity = sel ? 0.75 : 0.5;
+          m.color.setHex(sel ? 0xd8a0ff : sp.keep ? 0xfff0b0 : 0xffe070);
+          m.opacity = sel ? 0.9 : 0.6;
         });
-        if (q.cur) {
-          const cx = hx + q.cur.dx;
-          const cz = hz + q.cur.dz;
+        if (selX !== hx || selZ !== hz) {
           p.cursor.visible = true;
-          p.cursor.position.set(cx, world.groundY(cx, cz) + 0.9 + Math.sin(time * 5) * 0.15, cz);
+          p.cursor.position.set(selX, hy + 0.9 + Math.sin(time * 5) * 0.12, selZ);
           p.cursor.rotation.y = time * 2;
+          (p.cursor.material as THREE.MeshBasicMaterial).color.setHex(0xd8a0ff);
         }
         if (Math.hypot(q.dx, q.dz) < 0.5) return;
         p.area.visible = true;

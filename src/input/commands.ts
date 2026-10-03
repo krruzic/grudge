@@ -19,7 +19,7 @@ export interface MapperUi {
   charge: { slot: "a" | "b"; k: number } | null;
   morph: number;
   morphBack: boolean;
-  reticle: { slot: "b" | "r" | "z"; dx: number; dz: number; range: number; at?: { x: number; z: number }; spots?: number; cur?: { dx: number; dz: number } } | null;
+  reticle: { slot: "b" | "r" | "z"; dx: number; dz: number; range: number; at?: { x: number; z: number }; spots?: number } | null;
 }
 
 export interface AimInfo {
@@ -40,7 +40,7 @@ const GROUPS: (UnitType | "all")[] = ["all", "grunt", "ranged", "heavy"];
 
 export class CommandMapper {
   private place = { dx: 0, dz: 0 };
-  private cursor = { dx: 0, dz: 0 };
+  private spotSel: { x: number; z: number } | null = null;
   private pending: Command = { moveX: 0, moveZ: 0 };
   private armed = true;
   private xDown = false;
@@ -124,7 +124,7 @@ export class CommandMapper {
         }
         this.holdAt[slot] = now;
         this.place = { dx: Math.sin(aim!.facing) * Math.min(range, 4), dz: Math.cos(aim!.facing) * Math.min(range, 4) };
-        if (spots) this.cursor = { dx: 0, dz: 0 };
+        if (spots) this.spotSel = spots[0] ?? null;
       }
       if (this.holdAt[slot] < 0) continue;
       const held = now - this.holdAt[slot];
@@ -136,19 +136,22 @@ export class CommandMapper {
         if (held > TAP && range && spots) {
           const hx = aim!.hx ?? 0;
           const hz = aim!.hz ?? 0;
-          this.cursor.dx += p.stickX * 34 * dt;
-          this.cursor.dz += p.stickY * 34 * dt;
-          const cd = Math.hypot(this.cursor.dx, this.cursor.dz);
-          if (cd > 90) {
-            this.cursor.dx *= 90 / cd;
-            this.cursor.dz *= 90 / cd;
+          const mag = Math.hypot(p.stickX, p.stickY);
+          if (mag > 0.45 && spots.length) {
+            const sa = Math.atan2(p.stickX, p.stickY);
+            let bd = Infinity;
+            for (const q of spots) {
+              let d = Math.abs(Math.atan2(q.x - hx, q.z - hz) - sa);
+              if (d > Math.PI) d = Math.PI * 2 - d;
+              if (d < bd) { bd = d; this.spotSel = q; }
+            }
           }
-          const cx = hx + this.cursor.dx;
-          const cz = hz + this.cursor.dz;
-          const s = spots.length ? spots.reduce((b, q) => (Math.hypot(q.x - cx, q.z - cz) < Math.hypot(b.x - cx, b.z - cz) ? q : b)) : null;
+          const sel = this.spotSel;
+          const s = sel && spots.length ? spots.reduce((b, q) => (Math.hypot(q.x - sel.x, q.z - sel.z) < Math.hypot(b.x - sel.x, b.z - sel.z) ? q : b)) : spots[0] ?? null;
+          this.spotSel = s;
           c.moveX = c.moveZ = 0;
           this.place = s ? { dx: s.x - hx, dz: s.z - hz } : { dx: 0, dz: 0 };
-          this.ui.reticle = { slot: k, dx: this.place.dx, dz: this.place.dz, range: 0, at: s ? { x: s.x, z: s.z } : undefined, spots: spots.length, cur: { ...this.cursor } };
+          this.ui.reticle = { slot: k, dx: this.place.dx, dz: this.place.dz, range: 0, at: s ? { x: s.x, z: s.z } : undefined, spots: spots.length };
         } else if (held > TAP && range) {
           this.place.dx += p.stickX * 12 * dt;
           this.place.dz += p.stickY * 12 * dt;
