@@ -499,6 +499,12 @@ export class Bot {
     const prefer = def.botRange ?? 1.8;
     const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
     const allies = w.entities.filter((o) => o.alive && o.unit && o.team === me.team && w.dist(me, o) < 9).length;
+    if (ab.b.kind === "pip") {
+      const hb = me.status.hurtBy !== undefined ? w.get(me.status.hurtBy) : undefined;
+      const diver = hb?.hero && hb.alive && w.time - (me.status.hurtAt ?? -99) < 0.8 && w.dist(me, hb) < 5 ? hb : null;
+      if (diver && rdy("b") && !h.action && !h.pip) this.wantB = true;
+      if (diver && h.pip?.phase === "on" && h.pip.target === diver.id && rdy("dodge") && this.rand() < 0.6 * this.skill) this.wantDodge = true;
+    }
     const enemyAttacking = ehAlive && !!enemyHero!.hero!.action && enemyHero!.hero!.action.name !== "dodge" && dHero < 3.5;
     const useHint = (k: "b" | "r" | "z", d: number): boolean => {
       const a = ab[k];

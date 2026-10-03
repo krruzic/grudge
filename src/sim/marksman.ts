@@ -131,8 +131,9 @@ export function sendPip(w: World, e: Entity, a: HeroAction, def: AbilityDef): vo
   if (!target) {
     let best = Infinity;
     for (const o of w.entities) {
-      if (!o.alive || o.team === e.team || !o.hero || !w.canSee(e, o)) continue;
+      if (!o.alive || o.team === e.team || !o.hero) continue;
       const d = w.dist(e, o);
+      if (!w.canSee(e, o) && d > 7) continue;
       if (d > range) continue;
       const dx = o.transform.pos.x - e.transform.pos.x;
       const dz = o.transform.pos.z - e.transform.pos.z;

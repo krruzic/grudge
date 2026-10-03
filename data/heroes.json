@@ -1,7 +1,7 @@
 {
   "tiers": {
     "health": {
-      "frail": 480,
+      "frail": 520,
       "low": 600,
       "mid": 800,
       "high": 1000,
@@ -709,7 +709,7 @@
       "defaultBuild": "range",
       "botRange": 9,
       "hooks": {
-        "vantageMul": 1.25,
+        "vantageMul": 1.2,
         "vantageRange": 1.2,
         "vantageHeight": 1.0,
         "vantageStill": 1.0
@@ -718,8 +718,8 @@
         "a": {
           "kind": "shoot",
           "anim": "shoot",
-          "damage": 56,
-          "range": 11,
+          "damage": 48,
+          "range": 10,
           "speed": 32,
           "pierceRange": 14,
           "dur": 0.5,
@@ -736,7 +736,7 @@
           "range": 14,
           "seconds": 5,
           "markMul": 1.15,
-          "peck": 20,
+          "peck": 14,
           "rake": 70,
           "blindSeconds": 2.5,
           "blindMiss": 0.5,
@@ -754,8 +754,8 @@
           "anim": "volley",
           "range": 9,
           "radius": 3.5,
-          "damage": 36,
-          "unitMul": 1.5,
+          "damage": 33,
+          "unitMul": 1.35,
           "waves": 5,
           "interval": 0.4,
           "delay": 0.35,
@@ -763,7 +763,7 @@
           "slowSeconds": 0.6,
           "dur": 0.6,
           "hitAt": 0.35,
-          "cooldown": 12,
+          "cooldown": 13,
           "bot": "fight",
           "botRange": 9.5,
           "callout": "VOLLEY \u00b7 ARROW RAIN"
@@ -773,8 +773,8 @@
           "anim": "heartseeker",
           "range": 28,
           "width": 1.0,
-          "heroDamage": 300,
-          "damage": 140,
+          "heroDamage": 260,
+          "damage": 120,
           "structureDamage": 120,
           "knockback": 12,
           "dur": 1.25,
