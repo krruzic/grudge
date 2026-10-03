@@ -301,6 +301,7 @@ async function start(): Promise<void> {
   const rseats: RSeat[] = [];
   const seatAt = (i: number) => rseats.find((r) => r.slot === i);
   const remoteAt = (i: number) => seatAt(i)?.peer ?? -1;
+  const remoteCam = [0, 0, 0, 0];
   const mySlots = new Map<number, number>();
   const myHero: string[] = ["", "", "", ""];
   const myReady = [false, false, false, false];
@@ -731,7 +732,7 @@ async function start(): Promise<void> {
     mode,
     map: pickIndex >= fields().length ? "RANDOM FIELD" : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
     phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
-    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, level: s.level, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i) })),
+    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, level: s.level, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i), cam: remoteAt(i) >= 0 ? remoteCam[i] : save.data.options.zoom?.[i] ?? 0 })),
   });
   const freeSeat = (r: RSeat, now: number) => {
     const i = r.slot;
@@ -783,6 +784,11 @@ async function start(): Promise<void> {
       return;
     }
     const i = r.slot;
+    if (m.t === "cam" && i >= 0) {
+      remoteCam[i] = m.on ? 1 : 0;
+      lobbySentAt = 0;
+      return;
+    }
     if (m.t === "tag" && i >= 0) {
       const t = m.tag === null ? "" : cleanTag(String(m.tag ?? ""));
       const id = typeof m.id === "string" && /^[0-9a-f-]{36}$/.test(m.id) ? m.id : null;
@@ -1190,6 +1196,8 @@ async function start(): Promise<void> {
           } else if (id === "seatopen") {
             makeOpen(i);
             audio.ui("back");
+          } else if (id === "cam" && remoteAt(i) >= 0) {
+            audio.ui("back");
           } else if (id === "cam") {
             const z = save.data.options.zoom ?? [0, 0, 0, 0];
             z[i] = z[i] ? 0 : 1;
@@ -1237,6 +1245,7 @@ async function start(): Promise<void> {
         }
       }
       screens.updateSelect(slots, data.heroes.heroes, roster, mode, save.data.rules.partners === 1);
+      for (let i = 0; i < 4; i++) screens.zoomModes[i] = remoteAt(i) >= 0 ? remoteCam[i] : save.data.options.zoom?.[i] ?? 0;
       screens.hosting = netMode === "host";
       const allReady = selectReady();
       if (allReady && readySince < 0) readySince = now;
@@ -1295,6 +1304,7 @@ async function start(): Promise<void> {
         const held = (i: number) => cursors.cursors.some((c) => c.active && c.holding === i);
         lb.slots.forEach((sl, i) => {
           if (!held(i)) cursors.placeChip(i, sl.ready && !sl.open && sl.active && !sl.commander ? sl.hero : null);
+          screens.zoomModes[i] = [...mySlots.values()].includes(i) ? save.data.options.zoom?.[i] ?? 0 : sl.cam ?? 0;
         });
         for (const [k, i] of mySlots) {
           const sl = lb.slots[i];
@@ -1335,7 +1345,18 @@ async function start(): Promise<void> {
           } else if (act.type === "button") {
             const [id, arg] = act.id.split(":");
             const i = Number(arg);
-            if (id === "tag" && mySlots.get(act.by) === i && !screens.naming.has(i)) {
+            if (id === "cam" && [...mySlots.values()].includes(i)) {
+              const z = save.data.options.zoom ?? [0, 0, 0, 0];
+              z[i] = z[i] ? 0 : 1;
+              save.data.options.zoom = z;
+              save.write();
+              applyOptions();
+              lb.slots[i].cam = z[i];
+              net.toHost({ t: "cam", k: [...mySlots].find(([, v]) => v === i)?.[0] ?? 0, on: !!z[i] });
+              audio.ui("ok");
+            } else if (id === "cam") {
+              audio.ui("back");
+            } else if (id === "tag" && mySlots.get(act.by) === i && !screens.naming.has(i)) {
               screens.naming.set(i, tagEditor(i, lb.slots[i]?.name));
               audio.ui("ok");
             } else if (id === "lvl" && lb.slots[i]?.cpu) {

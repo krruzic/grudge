@@ -61,6 +61,7 @@ export interface LobbySlot {
   open?: boolean;
   active: boolean;
   commander: boolean;
+  cam?: number;
 }
 
 export interface LobbyView {
