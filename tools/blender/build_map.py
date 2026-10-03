@@ -39,10 +39,16 @@ FLAG_DIRT, FLAG_PAVING, FLAG_GRASS = 1, 2, 4
 TEAM = [texgen.hexc("#3a6cff"), texgen.hexc("#ff3a2a"), texgen.hexc("#ffcf1a"), texgen.hexc("#2fc84a")]
 
 MATS = ["grass", "dirt", "cobble", "cliff", "brick", "wood", "leaves", "pine",
-        "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch", "planks", "ruinstone", "hedge"]
+        "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch", "planks", "ruinstone", "hedge",
+        "hedge_b", "hedge_c", "ruin_a", "ruin_b", "ruin_c", "ruin_d", "ruintop", "rubble", "ivy"]
 TEX_METERS = {"grass": 7, "dirt": 6, "cobble": 4, "cliff": 5, "brick": 3.5, "wood": 2.5,
               "leaves": 3, "pine": 3, "bark": 2, "tallgrass": 1, "cloth": 1.5, "gold": 2, "iron": 1.5,
-              "roof": 2.5, "thatch": 2.0, "planks": 1.25, "ruinstone": 3.0, "hedge": 2.2}
+              "roof": 2.5, "thatch": 2.0, "planks": 1.25, "ruinstone": 3.0, "hedge": 2.6, "hedge_b": 2.6, "hedge_c": 2.6,
+              "ruin_a": 2.6, "ruin_b": 2.6, "ruin_c": 2.6, "ruin_d": 2.6, "ruintop": 2.2, "rubble": 1.6, "ivy": 1.5,
+              "flowerbed": 1.1}
+HEDGES = ("hedge", "hedge_b", "hedge_c")
+RUIN_WALLS = ("ruin_a", "ruin_c", "ruin_d")
+FLOWER_COLS = ("#e8e0f0", "#ff8a3a", "#9a5ad8", "#d8384a", "#f2c84a")
 
 TRIPO_TEX = 128
 TRIPO = {
@@ -55,6 +61,9 @@ TRIPO = {
     "pine_snow": {"size": (2.5, 2.5, 3.9), "trunk": True, "faces": 900},
     "deadtree": {"size": (2.8, 2.8, 3.4), "trunk": True, "faces": 700},
     "pad": {"size": (3.4, 2.95, 0.42), "rot": 90, "faces": 520, "mat": "padstone", "inlay": "padteam"},
+    "topi_spiral": {"size": (1.05, 1.05, 3.5), "faces": 440, "lo": 160, "gain": 1.3, "maps": ("gardens",)},
+    "topi_ball": {"size": (1.1, 1.1, 3.2), "faces": 600, "lo": 300, "gain": 1.3, "maps": ("gardens",)},
+    "flowerbush": {"size": (1.3, 1.3, 0.5), "faces": 120, "lo": 60, "maps": ("gardens",), "planar": "flowerbed"},
 }
 ROCKS = ("rock_a", "rock_b", "rock_c")
 
@@ -122,8 +131,11 @@ class Builder:
     def __init__(self, name):
         self.name = name
         self.verts, self.faces, self.uvs, self.cols, self.fmat = [], [], [], [], []
+        self.remap = None
 
     def face(self, pts, mat, col=(1, 1, 1), uvs=None, cols=None):
+        if self.remap and mat in self.remap:
+            mat = self.remap[mat](pts)
         dedup = []
         for p in pts:
             if not dedup or (p - dedup[-1]).length > 1e-5:
@@ -191,13 +203,19 @@ def make_materials(images):
         nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
 
 
-def tripo_image(src, name):
+def tripo_image(src, name, gain=1.0):
     mat = src.data.materials[0]
     bsdf = next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     img = bsdf.inputs["Base Color"].links[0].from_node.image
     tex = img.copy()
     tex.name = name
     tex.scale(TRIPO_TEX, TRIPO_TEX)
+    if gain != 1.0:
+        px = list(tex.pixels)
+        for i in range(0, len(px), 4):
+            for k in range(3):
+                px[i + k] = min(1.0, px[i + k] * gain)
+        tex.pixels.foreach_set(px)
     path = os.path.join(bpy.app.tempdir or "/tmp", name + ".png")
     tex.filepath_raw = path
     tex.file_format = "PNG"
@@ -362,7 +380,7 @@ def load_tripo(name, cfg):
     sx, sy, sz = (cfg["size"][k] / dims[k] for k in range(3))
     me.transform(Matrix.Diagonal((sx, sy, sz, 1.0)) @ Matrix.Translation((-cx, -cy, -lo.z)))
     mname = cfg.get("mat", "mp_" + name)
-    img = tripo_image(src, mname)
+    img = tripo_image(src, mname, cfg.get("gain", 1.0))
     tpl = {"mat": mname, "hi": tripo_tris(src)}
     if cfg.get("inlay"):
         tpl["inlay"] = cfg["inlay"]
@@ -387,6 +405,35 @@ def load_tripo(name, cfg):
     return tpl
 
 
+def flower_materials():
+    import numpy as np
+    src = texgen.load_photo("flowerbed", os.path.join(ROOT, "assets", "textures"))
+    w, h = src.size
+    px = np.array(src.pixels[:], np.float32).reshape(-1, 4)
+    mx, mn = px[:, :3].max(1), px[:, :3].min(1)
+    petal = np.clip((mn - 0.45) / 0.25, 0, 1) * np.clip(1 - (mx - mn) / 0.35, 0, 1)
+    for i, hexs in enumerate(FLOWER_COLS):
+        c = np.array(texgen.hexc(hexs)[:3], np.float32)
+        out = px.copy()
+        lum = px[:, :3].mean(1, keepdims=True)
+        out[:, :3] = px[:, :3] * (1 - petal[:, None]) + np.clip(c[None] * (0.35 + lum * 0.9), 0, 1) * petal[:, None]
+        name = "flowerbed_%d" % i
+        img = bpy.data.images.new(name + "_tmp", w, h, alpha=True)
+        img.pixels.foreach_set(out.ravel())
+        path = os.path.join(bpy.app.tempdir or "/tmp", name + ".png")
+        img.filepath_raw = path
+        img.file_format = "PNG"
+        img.save()
+        bpy.data.images.remove(img)
+        res = bpy.data.images.load(path, check_existing=False)
+        res.name = name
+        res.pack()
+        image_material(name, res)
+        if name not in MATS:
+            MATS.append(name)
+        TEX_METERS[name] = TEX_METERS["flowerbed"]
+
+
 def solid(B, v8, mat, col=(1, 1, 1), cols=None):
     bm = bmesh.new()
     vs = [bm.verts.new(v) for v in v8]
@@ -408,7 +455,11 @@ class MapBuilder:
         self.fx = []
         self.sur = g.get("surround")
         self.alpine = bool(self.sur) and self.sur.get("style") == "alpine"
+        self.ruined = MAP_NAME == "ruins"
         self.tpl = None
+        if self.ruined:
+            sect = lambda pts: self.ruin_sect(sum(p.x for p in pts) / len(pts), -sum(p.y for p in pts) / len(pts))
+            self.props.remap = {"brick": sect, "ruinstone": sect}
 
     def idx(self, x, z):
         return z * self.W + x if 0 <= x < self.W and 0 <= z < self.D else -1
@@ -483,6 +534,9 @@ class MapBuilder:
                     continue
                 c = self.corners(x, z)
                 base = min(c) - 0.4
+                if self.ruined and st in ("castle", "ruin"):
+                    self.ruin_cell(x, z, c, st)
+                    continue
                 if st == "hedge":
                     self.hedge(x, z, c)
                     continue
@@ -504,6 +558,168 @@ class MapBuilder:
                         self.box(P, x + 0.5, top, z + 0.5, 0.55, 0.5, 0.55, "brick")
                 elif hsh(x, z, 4) < 0.5:
                     self.rock(x + 0.5 + (hsh(x, z, 6) - 0.5), z + 1.3, 0.3, seed=x * 7 + z)
+
+    def is_ruinwall(self, x, z):
+        return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) in ("castle", "ruin")
+
+    def ruin_sect(self, px, pz):
+        n = vnoise3(px * 0.21 + 1.3, 4.2, pz * 0.21 + 2.9)
+        return RUIN_WALLS[0 if n < 0.43 else 1 if n < 0.57 else 2]
+
+    def ruin_tint(self, px, pz):
+        n = vnoise3(px * 0.17 + 9.1, 2.2, pz * 0.17 - 4.0)
+        cool, warm, green = (0.9, 0.95, 1.0), (1.0, 0.95, 0.84), (0.88, 0.97, 0.84)
+        if n < 0.5:
+            t = n * 2
+            return tuple(a + (b - a) * t for a, b in zip(cool, green))
+        t = (n - 0.5) * 2
+        return tuple(a + (b - a) * t for a, b in zip(green, warm))
+
+    def ruin_collapse(self, px, pz):
+        n = vnoise3(px * 0.33 + 17, 0.5, pz * 0.33 + 5)
+        return min(1.0, max(0.0, (n - 0.6) / 0.22))
+
+    def ruin_h(self, gx, gz, st):
+        px, pz = gx / 3, gz / 3
+        g = self.ground_h(px, pz)
+        if st == "castle":
+            h = 2.1 - self.ruin_collapse(px, pz) * 1.0 - (hsh(gx, gz, 13) ** 2) * 0.45
+        else:
+            h = 1.15 + vnoise3(px * 0.7, 1.0, pz * 0.7) * 0.75 - self.ruin_collapse(px, pz) * 0.25 - hsh(gx, gz, 14) * 0.35
+        return g + max(1.0, h)
+
+    def ruin_moss(self, gx, gz, top):
+        px, pz = gx / 3, gz / 3
+        g = self.ground_h(px, pz)
+        m = g + 0.25 + vnoise3(px * 1.1, 2.0, pz * 1.1) * 0.75 + hsh(gx, gz, 15) * 0.2
+        return min(m, top - 0.18)
+
+    def ruin_cell(self, x, z, c, st):
+        P = self.props
+        base = min(c) - 0.4
+        lat = {}
+
+        def L(i, j):
+            if (i, j) not in lat:
+                lat[(i, j)] = self.ruin_h(x * 3 + i, z * 3 + j, st)
+            return lat[(i, j)]
+
+        def V(i, j, h):
+            return G(x + i / 3, h, z + j / 3)
+
+        def shade(p, gy, top, streak):
+            t = min(1.0, max(0.0, (p.z - base) / max(0.1, top - base)))
+            tint = self.ruin_tint(p.x, -p.y)
+            k = 0.68 + 0.32 * t
+            if streak:
+                k *= 1.0 - streak * min(1.0, max(0.0, (p.z - gy) / max(0.1, top - gy))) * 0.45
+            return tuple(min(1.0, a * k) for a in tint)
+
+        for i in range(3):
+            for j in range(3):
+                q = [V(i, j, L(i, j)), V(i, j + 1, L(i, j + 1)), V(i + 1, j + 1, L(i + 1, j + 1)), V(i + 1, j, L(i + 1, j))]
+                if newell(q).z < 0:
+                    q.reverse()
+                P.face(q, "ruintop", cols=[tuple(min(1.0, a * 0.95) for a in self.ruin_tint(p.x, -p.y)) for p in q])
+        sides = (((0, -1), lambda k: (k, 0)), ((1, 0), lambda k: (3, k)), ((0, 1), lambda k: (3 - k, 3)), ((-1, 0), lambda k: (0, 3 - k)))
+        for (dx, dz), at in sides:
+            if self.is_ruinwall(x + dx, z + dz):
+                continue
+            nk = self.kind(x + dx, z + dz)
+            walk = nk in (GROUND, PROP) and 0 <= x + dx < self.W and 0 <= z + dz < self.D
+            ivy = walk and hsh(x * 2 + dx, z * 2 + dz, 71) < 0.2
+            outv = G(dx, 0, dz) * 0.035
+            for k in range(3):
+                a, b = at(k), at(k + 1)
+                ga, gb = (x * 3 + a[0], z * 3 + a[1]), (x * 3 + b[0], z * 3 + b[1])
+                ta, tb = L(*a), L(*b)
+                ma, mb = self.ruin_moss(*ga, ta), self.ruin_moss(*gb, tb)
+                gya = self.ground_h(ga[0] / 3, ga[1] / 3)
+                gyb = self.ground_h(gb[0] / 3, gb[1] / 3)
+                mat = self.ruin_sect(x + (a[0] + b[0]) / 6, z + (a[1] + b[1]) / 6)
+                streak = 1.0 if hsh(*ga, 31 + dx * 2 + dz) < 0.28 else 0.0
+                pa, pb = V(*a, 0), V(*b, 0)
+                lower = [Vector((pa.x, pa.y, base)), Vector((pb.x, pb.y, base)), Vector((pb.x, pb.y, mb)), Vector((pa.x, pa.y, ma))]
+                upper = [Vector((pa.x, pa.y, ma)), Vector((pb.x, pb.y, mb)), Vector((pb.x, pb.y, tb)), Vector((pa.x, pa.y, ta))]
+                nrm = G(dx, 0, dz)
+                along = (pb - pa).normalized()
+                m = TEX_METERS["ruin_b"]
+                for q, mt in ((lower, "ruin_b"), (upper, mat)):
+                    cols = [shade(p, gya if p.xy == pa.xy else gyb, ta if p.xy == pa.xy else tb, streak) for p in q]
+                    if mt == "ruin_b":
+                        uvs = [(p.dot(along) / m, (p.z - (gya + gyb) / 2 + 0.05) / m) for p in q]
+                        cols = [tuple(cc * gg for cc, gg in zip(cl, (0.95, 1.0, 0.9))) for cl in cols]
+                    else:
+                        uvs = [(p.dot(along) / m, p.z / m) for p in q]
+                    if newell(q).dot(nrm) < 0:
+                        q, uvs, cols = list(reversed(q)), list(reversed(uvs)), list(reversed(cols))
+                    P.face(q, mt, uvs=uvs, cols=cols)
+                if ivy:
+                    la = ta - (0.5 + hsh(*ga, 72) * 1.1)
+                    lb = tb - (0.5 + hsh(*gb, 72) * 1.1)
+                    q = [Vector((pa.x, pa.y, max(la, ma - 0.2))) + outv, Vector((pb.x, pb.y, max(lb, mb - 0.2))) + outv,
+                         Vector((pb.x, pb.y, tb + 0.03)) + outv, Vector((pa.x, pa.y, ta + 0.03)) + outv]
+                    cols = [(0.55, 0.6, 0.55), (0.55, 0.6, 0.55), (0.85, 0.88, 0.82), (0.85, 0.88, 0.82)]
+                    uvs = [(p.dot(along) / TEX_METERS["ivy"], p.z / TEX_METERS["ivy"]) for p in q]
+                    if newell(q).dot(nrm) < 0:
+                        q, uvs, cols = list(reversed(q)), list(reversed(uvs)), list(reversed(cols))
+                    P.face(q, "ivy", uvs=uvs, cols=cols)
+                    inn = G(-dx, 0, -dz) * 0.28
+                    lip = [Vector((pa.x, pa.y, ta + 0.03)) + outv, Vector((pb.x, pb.y, tb + 0.03)) + outv,
+                           Vector((pb.x, pb.y, tb + 0.03)) + inn, Vector((pa.x, pa.y, ta + 0.03)) + inn]
+                    for p in lip[2:]:
+                        p.z = max(p.z, self.ruin_top_at(p.x, -p.y, st) + 0.03)
+                    if newell(lip).z < 0:
+                        lip.reverse()
+                    P.face(lip, "ivy", cols=[(0.85, 0.88, 0.82)] * 4)
+            if walk:
+                self.ruin_rubble(x, z, dx, dz, st)
+        if st == "castle" and (x + z) % 2 == 0 and hsh(x, z, 61) > 0.3 and self.ruin_collapse(x + 0.5, z + 0.5) < 0.4:
+            r = random.Random(x * 917 + z)
+            h = min(L(1, 1), L(2, 1), L(1, 2), L(2, 2)) - 0.05
+            hh = r.uniform(0.25, 0.55)
+            self.box(P, x + 0.5 + r.uniform(-0.1, 0.1), h, z + 0.5 + r.uniform(-0.1, 0.1), 0.55 * r.uniform(0.75, 1.0), hh,
+                     0.55 * r.uniform(0.75, 1.0), self.ruin_sect(x, z), col=self.ruin_tint(x, z), rot=r.uniform(-0.2, 0.2))
+
+    def ruin_top_at(self, px, pz, st):
+        return self.ruin_h(round(px * 3), round(pz * 3), st)
+
+    def ruin_rubble(self, x, z, dx, dz, st):
+        r = random.Random(x * 7919 + z * 31 + dx * 3 + dz)
+        col = self.ruin_collapse(x + 0.5, z + 0.5)
+        if r.random() > 0.3 + col * 0.6:
+            return
+        t = r.uniform(0.25, 0.75)
+        if dx:
+            ex, ez = (x + 1 if dx > 0 else x), z + t
+        else:
+            ex, ez = x + t, (z + 1 if dz > 0 else z)
+        cx, cz = ex + dx * 0.22, ez + dz * 0.22
+        y = self.ground_h(cx, cz)
+        big = 1.0 + col * 0.8
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=1.0)
+        for v in bm.verts:
+            v.co *= 1.0 + r.uniform(-0.25, 0.25)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(v.co.z < -0.15 for v in f.verts)], context="FACES")
+        sx = (0.32 if dx else 0.6) * big
+        sz = (0.6 if dx else 0.32) * big
+        m = Matrix.Translation(G(cx, y - 0.06, cz)) @ Matrix.Diagonal((sx, sz, 0.26 * big, 1))
+        tint = self.ruin_tint(cx, cz)
+        self.props.add_bm(bm, "rubble", matrix=m, col_fn=lambda p: tuple(a * (0.62 + 0.38 * min(1.0, max(0.0, (p.z - y) / (0.26 * big)))) for a in tint))
+        for k in range(1 + int(col * 2 + r.random() * 1.4)):
+            px = cx + r.uniform(-0.35, 0.35) * (0.5 if dx else 1.0) + dx * r.uniform(0.05, 0.35)
+            pz = cz + r.uniform(-0.35, 0.35) * (1.0 if dx else 0.5) + dz * r.uniform(0.05, 0.35)
+            s = r.uniform(0.14, 0.26) * (1 + col * 0.5)
+            name = ROCKS[r.randrange(2)]
+            self.place_tripo(name, px, self.ground_h(px, pz) - TRIPO[name]["size"][2] * s * 0.2, pz, s, r, lo=True)
+        if st == "castle" and r.random() < 0.35:
+            px, pz = cx + dx * 0.55 + r.uniform(-0.2, 0.2), cz + dz * 0.55 + r.uniform(-0.2, 0.2)
+            bm = bmesh.new()
+            bmesh.ops.create_cube(bm, size=1.0)
+            m = (Matrix.Translation(G(px, self.ground_h(px, pz) + 0.12, pz)) @ Matrix.Rotation(r.uniform(0, 3.1), 4, "Z")
+                 @ Matrix.Rotation(r.uniform(-0.35, 0.35), 4, "X") @ Matrix.Diagonal((0.5, 0.4, 0.34, 1)))
+            self.props.add_bm(bm, self.ruin_sect(px, pz), matrix=m, col_fn=lambda p: tuple(a * 0.85 for a in tint))
 
     def is_hedge(self, x, z):
         return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) == "hedge"
@@ -540,12 +756,35 @@ class MapBuilder:
         push = (lump - 0.07) * k
         return Vector((px + out.x * push, -(pz + out.y * push), y + (lump * 0.8 if py >= top - drop - 1e-6 else 0.0)))
 
+    def hedge_mat(self, x, z):
+        n = vnoise3(x * 0.16 + 3.7, 1.3, z * 0.16 + 8.1) * 0.8 + hsh(x // 3, z // 3, 41) * 0.2
+        return HEDGES[0 if n < 0.44 else 1 if n < 0.56 else 2]
+
+    def hedge_col(self, p, base, top):
+        t = min(1.0, max(0.0, (p.z - base) / (top - base)))
+        n1 = vnoise3(p.x * 0.22, 3.1, p.y * 0.22)
+        n2 = vnoise3(p.x * 0.9 + 5, 1.7, p.y * 0.9 - 2)
+        k = (0.8 + 0.16 * n1 + 0.08 * n2) * (0.62 + 0.38 * t)
+        warm = vnoise3(p.x * 0.13 + 11, 7.0, p.y * 0.13) - 0.5
+        return (min(1.0, k * (1.0 + warm * 0.35)), min(1.0, k * (1.0 + warm * 0.06)), min(1.0, k * (0.92 - warm * 0.3)))
+
+    def hedge_uv(self, pts, top):
+        m = TEX_METERS["hedge"]
+        if top:
+            ca, sa = math.cos(0.65), math.sin(0.65)
+            return [((p.x * ca - p.y * sa) / m, (p.x * sa + p.y * ca) / m) for p in pts]
+        n = newell(pts)
+        if abs(n.x) >= abs(n.y):
+            return [((p.y * (1 if n.x > 0 else -1) + p.x * 0.37) / m, p.z / m) for p in pts]
+        return [((p.x * (-1 if n.y > 0 else 1) + p.y * 0.37) / m, p.z / m) for p in pts]
+
     def hedge(self, x, z, c):
         P = self.props
         base = min(c) - 0.3
         top = max(c) + 1.75
         steps = (0.0, 0.25, 0.75, 1.0)
         tops = {}
+        mat = self.hedge_mat(x, z)
 
         def tp(u, v):
             key = (u, v)
@@ -554,10 +793,7 @@ class MapBuilder:
             return tops[key]
 
         def col(p):
-            t = min(1.0, max(0.0, (p.z - base) / (top - base)))
-            g = 0.9 + 0.12 * vnoise3(p.x * 0.5, 3.1, p.y * 0.5)
-            k = g * (0.66 + 0.34 * t)
-            return (min(1.0, k * 1.02), min(1.0, k * 1.04), k * 0.92)
+            return self.hedge_col(p, base, top)
 
         n = len(steps) - 1
         for i in range(n):
@@ -565,7 +801,7 @@ class MapBuilder:
                 q = [tp(steps[i], steps[j]), tp(steps[i], steps[j + 1]), tp(steps[i + 1], steps[j + 1]), tp(steps[i + 1], steps[j])]
                 if newell(q).z < 0:
                     q.reverse()
-                P.face(q, "hedge", uvs=[(p.x / TEX_METERS["hedge"], p.y / TEX_METERS["hedge"]) for p in q], cols=[col(p) for p in q])
+                P.face(q, mat, uvs=self.hedge_uv(q, True), cols=[col(p) for p in q])
         sides = (((0, -1), lambda t: (t, 0.0)), ((1, 0), lambda t: (1.0, t)), ((0, 1), lambda t: (1 - t, 1.0)), ((-1, 0), lambda t: (0.0, 1 - t)))
         hs = (0.0, 0.6)
         for (dx, dz), at in sides:
@@ -580,7 +816,7 @@ class MapBuilder:
                     q = [col_a[k], col_b[k], col_b[k + 1], col_a[k + 1]]
                     if newell(q).dot(Vector((dx, -dz, 0))) < 0:
                         q.reverse()
-                    P.face(q, "hedge", cols=[col(p) for p in q])
+                    P.face(q, mat, uvs=self.hedge_uv(q, False), cols=[col(p) for p in q])
 
     def is_pit(self, x, z):
         return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) == "pit"
@@ -724,12 +960,17 @@ class MapBuilder:
     def inside(self, x, z):
         return self.tpl is not None and 0 <= x <= self.W and 0 <= z <= self.D
 
-    def place_tripo(self, name, x, y, z, s, r, lo=False):
+    def place_tripo(self, name, x, y, z, s, r, lo=False, clip=None, below=None):
         tpl = self.tpl[name]
         tint = r.uniform(0.9, 1.04)
         m = Matrix.Translation(G(x, y, z)) @ Matrix.Rotation(r.uniform(0, math.tau), 4, "Z") @ Matrix.Scale(s, 4)
         for pts, uvs in tpl["lo" if lo and "lo" in tpl else "hi"]:
-            self.props.face([m @ p for p in pts], tpl["mat"], col=(tint, tint, tint), uvs=uvs)
+            if below is not None and max(p.z for p in pts) > below:
+                continue
+            q = [m @ p for p in pts]
+            if clip is not None and all(p.z < clip for p in q):
+                continue
+            self.props.face(q, tpl["mat"], col=(tint, tint, tint), uvs=uvs)
 
     def tripo_rock(self, x, z, s, seed, y=None):
         r = random.Random(seed * 7 + 3)
@@ -992,6 +1233,9 @@ class MapBuilder:
                 self.crate(x, z)
             elif t == "statue":
                 self.statue(x, z)
+            elif t in ("topiary", "flowers", "urn") and self.tpl and "flowerbush" in self.tpl:
+                f = {"x": x, "y": self.ground_h(x, z) - 0.05, "z": z, "s": p.get("scale", 1.0), "seed": seed, "color": p.get("color")}
+                (self.topiary if t == "topiary" else self.flowerbed if t == "flowers" else self.urn_flowers)(f)
             else:
                 import surround_kit
                 fn = surround_kit.BUILDERS.get(t)
@@ -1003,6 +1247,76 @@ class MapBuilder:
             self.pad(p["x"], p["z"], p.get("zone", "home"), p.get("side", 0))
         for c in self.g["cores"]:
             self.fx.append(("core_%d" % c.get("team", 0), (c["x"], self.ground_h(c["x"], c["z"]), c["z"])))
+
+    def topiary(self, f, lo=False):
+        r = random.Random(f["seed"])
+        name = "topi_spiral" if hsh(f["x"], f["z"], 83) < 0.5 else "topi_ball"
+        s = f.get("s", 1.0) * r.uniform(0.92, 1.06)
+        clip = None
+        if self.is_hedge(int(math.floor(f["x"])), int(math.floor(f["z"]))):
+            clip = max(self.corners(int(math.floor(f["x"])), int(math.floor(f["z"])))) + 1.2
+        if name == "topi_spiral":
+            self.place_tripo(name, f["x"], f["y"] - 0.06, f["z"], s, r, lo=lo, clip=clip)
+            return
+        H = TRIPO[name]["size"][2]
+        if clip is None:
+            self.place_tripo(name, f["x"], f["y"] - 0.06, f["z"], s, r, lo=True, below=H * 0.3)
+        y0 = f["y"] - 0.06
+        mat = self.hedge_mat(int(f["x"]) + 7, int(f["z"]) + 3)
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=False, segments=5, radius1=0.07 * s, radius2=0.05 * s, depth=H * 0.7 * s)
+        self.props.add_bm(bm, "bark", matrix=Matrix.Translation(G(f["x"], y0 + H * 0.55 * s, f["z"])))
+        for cy, rad in ((0.64, 0.5), (0.93, 0.32)):
+            self.topi_ball(f["x"], y0 + H * cy * s, f["z"], rad * s, mat, clip, r)
+
+    def topi_ball(self, x, y, z, rad, mat, clip, r):
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=2, radius=1.0)
+        ox, oz = r.uniform(0, 50), r.uniform(0, 50)
+        for v in bm.verts:
+            v.co *= 1.0 + (vnoise3(v.co.x * 2.2 + ox, v.co.y * 2.2, v.co.z * 2.2 + oz) - 0.5) * 0.16
+        m = Matrix.Translation(G(x, y, z)) @ Matrix.Diagonal((rad, rad, rad * 0.95, 1))
+        bm.transform(m)
+        top = y + rad
+        for f in bm.faces:
+            q = [l.vert.co.copy() for l in f.loops]
+            if clip is not None and all(p.z < clip for p in q):
+                continue
+            cols = []
+            for p in q:
+                t = min(1.0, max(0.0, (p.z - (y - rad)) / (2 * rad)))
+                k = 0.55 + 0.45 * t
+                cols.append((min(1.0, k * 1.04), min(1.0, k * 1.04), k * 0.9))
+            uvs = [(u * 2.0 + ox, v * 2.0 + oz) for u, v in box_uv(q, TEX_METERS["hedge"])]
+            self.props.face(q, mat, uvs=uvs, cols=cols)
+        bm.free()
+
+    def flowerbed(self, f, lo=False):
+        r = random.Random(f["seed"] + 5)
+        c = f.get("color")
+        idx = FLOWER_COLS.index(c) if c in FLOWER_COLS else f["seed"] % len(FLOWER_COLS)
+        tpl = self.tpl["flowerbush"]
+        s = f.get("s", 1.0) * r.uniform(0.85, 1.1)
+        m = (Matrix.Translation(G(f["x"], f["y"] - 0.07, f["z"])) @ Matrix.Rotation(r.uniform(0, math.tau), 4, "Z")
+             @ Matrix.Diagonal((s * r.uniform(0.9, 1.15), s * r.uniform(0.9, 1.15), s * r.uniform(0.85, 1.2), 1)))
+        tint = r.uniform(0.92, 1.04)
+        mt = "flowerbed_%d" % idx
+        ox, oy = r.random(), r.random()
+        hgt = TRIPO["flowerbush"]["size"][2] * s
+        for pts, _ in tpl["lo" if lo and "lo" in tpl else "hi"]:
+            q = [m @ p for p in pts]
+            uvs = [(u + ox, v + oy) for u, v in box_uv(q, TEX_METERS["flowerbed"])]
+            cols = [(lambda k: (k, k, k))(min(1.0, tint * (0.78 + 0.3 * min(1.0, max(0.0, (p.z - f["y"]) / hgt))))) for p in q]
+            self.props.face(q, mt, uvs=uvs, cols=cols)
+
+    def urn_flowers(self, f):
+        import surround_kit as sk
+        M = sk.place(f)
+        sk.cube(self.props, M, 0, -0.2, 0, 0.8, 0.7, 0.8, "brick", sk.STONE)
+        sk.cyl(self.props, M, 0, 0.5, 0, 0.18, 0.42, 0.55, "brick", sk.STONE, seg=8)
+        sk.cyl(self.props, M, 0, 1.05, 0, 0.42, 0.48, 0.15, "brick", sk.STONE, seg=8)
+        cols = ("#d8384a", "#f2c84a", "#9a5ad8")
+        self.flowerbed({"x": f["x"], "y": f["y"] + 1.18, "z": f["z"], "s": 0.62, "seed": f["seed"], "color": FLOWER_COLS[(3, 4, 2)[f["seed"] % 3]]})
 
     def ao_ground(self, coll):
         m = 88 if self.sur else 20
@@ -1029,7 +1343,7 @@ class MapBuilder:
 
 def smooth_corners(mesh, c):
     mp = {i for i, m in enumerate(mesh.materials) if m.name.startswith("mp_")}
-    flat = {i for i, m in enumerate(mesh.materials) if m.name in ("planks", "hedge")}
+    flat = {i for i, m in enumerate(mesh.materials) if m.name in ("planks",) + HEDGES}
     if not mp and not flat:
         return
     sums, cnt, loops = {}, {}, []
@@ -1114,7 +1428,9 @@ def main():
     make_materials(images)
 
     mb = MapBuilder(grid)
-    mb.tpl = {n: load_tripo(n, c) for n, c in TRIPO.items()}
+    mb.tpl = {n: load_tripo(n, c) for n, c in TRIPO.items() if MAP_NAME in c.get("maps", (MAP_NAME,))}
+    if "flowerbush" in mb.tpl:
+        flower_materials()
     mb.walls()
     mb.bridges()
     mb.place_props()
@@ -1122,6 +1438,10 @@ def main():
     if mb.sur:
         import surround_kit
         importlib.reload(surround_kit)
+        if "flowerbush" in mb.tpl:
+            surround_kit.BUILDERS["topiary"] = lambda m, f: m.topiary(f, lo=True)
+            surround_kit.BUILDERS["flowers"] = lambda m, f: m.flowerbed(f, lo=True)
+            surround_kit.BUILDERS["urn"] = lambda m, f: m.urn_flowers(f)
         missing = surround_kit.build(mb, mb.sur["features"])
         if missing:
             print("surround: no builder for", missing)

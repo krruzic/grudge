@@ -157,9 +157,20 @@ PAINTED = {
     "brick": {"cell": (1, 3)},
     "wallblock": {"cell": (2, 0), "flat": False},
     "ruinstone": {"cell": (2, 1)},
-    "hedge": {"cell": (2, 2)},
     "planks": {"cell": (2, 3), "search": True, "fade": True},
+    "ruin_a": {"cell": (0, 0), "src": 2, "wrap": 0.3},
+    "ruin_b": {"cell": (0, 1), "src": 2, "wrap": 0.3},
+    "ruin_c": {"cell": (0, 2), "src": 2, "wrap": 0.3},
+    "ruintop": {"cell": (0, 3), "src": 2, "wrap": 0.3},
+    "hedge": {"cell": (1, 0), "src": 2, "wrap": 0.3, "match": ((0.33, 0.46, 0.22), 0.11)},
+    "hedge_b": {"cell": (1, 1), "src": 2, "wrap": 0.3, "match": ((0.33, 0.46, 0.22), 0.11)},
+    "hedge_c": {"cell": (1, 2), "src": 2, "wrap": 0.3, "match": ((0.33, 0.46, 0.22), 0.11)},
+    "ivy": {"cell": (1, 3), "src": 2, "wrap": 0.3},
+    "rubble": {"cell": (2, 0), "src": 2, "wrap": 0.3},
+    "ruin_d": {"cell": (2, 1), "src": 2, "wrap": 0.3},
+    "flowerbed": {"cell": (2, 2), "src": 2, "wrap": 0.3},
 }
+PAINT_SRC2 = os.path.join(ROOT, "assets", "source", "map_textures2_ai.png")
 
 
 def grid_cells(a: np.ndarray) -> list:
@@ -252,17 +263,47 @@ def make_seamless(a: np.ndarray, search: bool = True, flat: bool = True, fade: b
     return heal_x(a.transpose(1, 0, 2), search).transpose(1, 0, 2)
 
 
+def wrap_x(a: np.ndarray, k: int) -> np.ndarray:
+    t, ext = a[:, k:], a[:, :k]
+    s = t.shape[1]
+    diff = ((t[:, s - k:] - ext) ** 2).sum(-1)
+    path = cut_paths(diff[:, 2:-2])[0] + 2
+    xs = np.arange(k)[None, :]
+    soft = (xs >= path[:, None]).astype(np.float32)
+    for _ in range(2):
+        soft = (np.roll(soft, 1, 1) + soft + np.roll(soft, -1, 1)) / 3
+        soft[:, 0], soft[:, -1] = 0, 1
+    out = t.copy()
+    out[:, s - k:] = t[:, s - k:] * (1 - soft[..., None]) + ext * soft[..., None]
+    return out
+
+
+def wrap_tile(a: np.ndarray, k: int) -> np.ndarray:
+    return wrap_x(wrap_x(a, k).transpose(1, 0, 2), k).transpose(1, 0, 2)
+
+
 def painted(name: str, spec: dict, sheet: np.ndarray, spans: list) -> str:
     (y0, y1), (x0, x1) = spans[0][spec["cell"][0]], spans[1][spec["cell"][1]]
     inset = 8
     s = min(y1 - y0, x1 - x0) - 2 * inset
     a = sheet[y0 + inset:y0 + inset + s, x0 + inset:x0 + inset + s]
     w = 256
-    a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).resize((w, w), Image.LANCZOS), np.float32) / 255
-    a = make_seamless(a, spec.get("search", False), spec.get("flat", True), spec.get("fade", False))
+    if "wrap" in spec:
+        k = int(w * spec["wrap"])
+        a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).resize((w + k, w + k), Image.LANCZOS), np.float32) / 255
+        if spec.get("flat", True):
+            a = flatten(a, a.shape[0] // 4)
+        a = wrap_tile(a, k)
+    else:
+        a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).resize((w, w), Image.LANCZOS), np.float32) / 255
+        a = make_seamless(a, spec.get("search", False), spec.get("flat", True), spec.get("fade", False))
     if "contrast" in spec:
         m = a.reshape(-1, 3).mean(0)
         a = m + (a - m) * spec["contrast"]
+    if "match" in spec:
+        mean, sd = spec["match"]
+        m = a.reshape(-1, 3).mean(0)
+        a = np.array(mean, np.float32) + (a - m) * (sd / a.mean(2).std())
     size = spec.get("size", 128)
     rep = spec.get("repeat", 1)
     img = Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8)).resize((size // rep, size // rep), Image.LANCZOS)
@@ -341,16 +382,18 @@ def main_painted(names: list) -> None:
         prev.update({n: "painted:" + os.path.basename(CARD_SRC) for n in names})
         json.dump(prev, open(manifest, "w"), indent=1, sort_keys=True)
         return
-    sheet = np.asarray(Image.open(PAINT_SRC).convert("RGB"), np.float32)
-    spans = grid_cells(sheet)
-    sheet /= 255
-    done = []
+    sheets = {}
+    done = {}
     for n in names or list(PAINTED):
-        print(n, "->", os.path.relpath(painted(n, PAINTED[n], sheet, spans), ROOT))
-        done.append(n)
+        src = PAINT_SRC2 if PAINTED[n].get("src") == 2 else PAINT_SRC
+        if src not in sheets:
+            sheet = np.asarray(Image.open(src).convert("RGB"), np.float32)
+            sheets[src] = (sheet / 255, grid_cells(sheet))
+        print(n, "->", os.path.relpath(painted(n, PAINTED[n], *sheets[src]), ROOT))
+        done[n] = src
     manifest = os.path.join(OUT, "photo.json")
     prev = json.load(open(manifest)) if os.path.exists(manifest) else {}
-    prev.update({n: "painted:" + os.path.basename(PAINT_SRC) for n in done})
+    prev.update({n: "painted:" + os.path.basename(src) for n, src in done.items()})
     json.dump(prev, open(manifest, "w"), indent=1, sort_keys=True)
 
 
