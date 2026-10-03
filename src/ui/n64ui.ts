@@ -10,53 +10,94 @@ import parchUrl from "../../assets/textures/ui_parchment.png?url";
 import bannerUrl from "../../assets/textures/banner.png?url";
 import { engravedIcon } from "./icons";
 
-import titleFontUrl from "../../assets/ui/titlefont.png?url";
-import titleFontMeta from "../../assets/ui/titlefont.json";
+import cinzelUrl from "../../assets/fonts/Cinzel.ttf?url";
 
 const KEY_TEXT: Record<string, string> = {
   t_champion: "CHOOSE YOUR CHAMPION", t_field: "CHOOSE THE FIELD", t_rules: "RULES OF COMBAT", t_records: "HALL OF GRUDGES",
   t_tag: "SIGN YOUR NAME", t_1v1: "1 VS 1", t_2v2: "2 VS 2", t_ffa: "FREE FOR ALL", t_host: "HOST A BATTLE", t_join: "JOIN A BATTLE",
   m_fight: "FIGHT", m_network: "VERSUS ONLINE", m_rules: "RULES", m_records: "RECORDS", m_options: "OPTIONS", m_controls: "CONTROLS", m_loading: "NOW LOADING",
 };
-type TGlyph = { x: number; w: number; h: number; top: number };
-const TF = titleFontMeta as { cap: number; glyphs: Record<string, TGlyph> };
-const titleFont = new Image();
-titleFont.src = titleFontUrl;
 const titleCache = new Map<string, HTMLCanvasElement>();
+let titleReady = false;
+const cinzel = new FontFace("GrudgeTitle", `url(${cinzelUrl})`, { weight: "400 900" });
+cinzel.load().then((f) => {
+  document.fonts.add(f);
+  titleReady = true;
+  titleCache.clear();
+}).catch(() => {});
+
+const goldLeaf = new Image();
+goldLeaf.src = goldUrl;
 
 export function titleArt(text: string): HTMLCanvasElement | null {
-  if (!titleFont.complete || !titleFont.naturalWidth) return null;
+  if (!titleReady) return null;
   const s = text.toUpperCase();
   const hit = titleCache.get(s);
   if (hit) return hit;
-  const cap = TF.cap;
-  const space = cap * 0.3;
-  const track = cap * 0.02;
+  const cap = 96;
+  const font = `700 ${Math.round(cap / 0.7)}px GrudgeTitle`;
+  const track = cap * 0.07;
+  const m = document.createElement("canvas").getContext("2d")!;
+  m.font = font;
   let w = 0;
-  for (const ch of s) w += ch === " " ? space : (TF.glyphs[ch]?.w ?? space) + track;
-  const pad = 4;
+  for (const ch of s) w += m.measureText(ch).width + track;
+  w -= track;
+  const pad = Math.round(cap * 0.16);
   const c = document.createElement("canvas");
-  c.width = Math.ceil(w - track + pad * 2);
-  c.height = Math.ceil(cap * 1.25 + pad * 2);
+  c.width = Math.ceil(w + pad * 2);
+  c.height = Math.ceil(cap * 1.32 + pad * 2);
   const g = c.getContext("2d")!;
-  let x = pad;
-  let n = 0;
-  for (const ch of s) {
-    if (ch === " ") {
-      x += space;
-      continue;
+  const base = Math.round(c.height / 2 + cap / 2);
+  const glyphs = (ctx: CanvasRenderingContext2D, dx = 0, dy = 0) => {
+    let x = pad + dx;
+    for (const ch of s) {
+      ctx.fillText(ch, x, base + dy);
+      x += ctx.measureText(ch).width + track;
     }
-    const gl = TF.glyphs[ch];
-    if (!gl) {
-      x += space;
-      continue;
+  };
+  const ink = document.createElement("canvas");
+  ink.width = c.width;
+  ink.height = c.height;
+  const k = ink.getContext("2d")!;
+  k.font = font;
+  k.textBaseline = "alphabetic";
+  const grad = k.createLinearGradient(0, base - cap, 0, base);
+  grad.addColorStop(0, "#f6dc8a");
+  grad.addColorStop(0.45, "#e2b452");
+  grad.addColorStop(0.55, "#d29e3c");
+  grad.addColorStop(1, "#b88430");
+  k.fillStyle = grad;
+  glyphs(k);
+  if (goldLeaf.complete && goldLeaf.naturalWidth) {
+    k.globalCompositeOperation = "source-atop";
+    k.globalAlpha = 0.35;
+    const pat = k.createPattern(goldLeaf, "repeat");
+    if (pat) {
+      pat.setTransform(new DOMMatrix().scale(2.5));
+      k.fillStyle = pat;
+      k.fillRect(0, 0, ink.width, ink.height);
     }
-    const wob = 0;
-    n++;
-    g.drawImage(titleFont, gl.x, 0, gl.w, gl.h, x, pad + gl.top + wob, gl.w, gl.h);
-    x += gl.w + track;
+    k.globalAlpha = 1;
+    k.globalCompositeOperation = "source-over";
   }
-  c.addEventListener("contextlost", () => titleCache.clear());
+  g.font = font;
+  g.textBaseline = "alphabetic";
+  g.save();
+  g.shadowColor = "rgba(20, 10, 2, 0.75)";
+  g.shadowBlur = cap * 0.06;
+  g.shadowOffsetY = cap * 0.05;
+  g.fillStyle = "#5a3a10";
+  glyphs(g);
+  g.restore();
+  g.lineJoin = "round";
+  g.lineWidth = cap * 0.035;
+  g.strokeStyle = "rgba(60, 36, 8, 0.85)";
+  let x = pad;
+  for (const ch of s) {
+    g.strokeText(ch, x, base);
+    x += g.measureText(ch).width + track;
+  }
+  g.drawImage(ink, 0, 0);
   titleCache.set(s, c);
   return c;
 }

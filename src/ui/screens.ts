@@ -99,6 +99,14 @@ export function promptWidth(items: [string, string][], scale = 0.85): number {
 
 const TEAM_BOX = ["#1c34a8", "#a81c1c", "#1c7a2a", "#9a7410"];
 const TEAM_BRIGHT = ["#4a74ff", "#ff4a3a", "#3ac85a", "#ffcf2a"];
+const stageUrls = import.meta.glob("../../assets/ui/stages/*.jpg", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const stageArt = new Map<string, HTMLImageElement>();
+for (const [path, url] of Object.entries(stageUrls)) {
+  const im = new Image();
+  im.src = url;
+  stageArt.set(path.split("/").pop()!.replace(".jpg", ""), im);
+}
+
 const TEAM_CLOTH = ["#3a58e0", "#d83828", "#d8a818", "#2a9a40"];
 const TEAM_TEXT_R = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24"];
 const BROWN_S = "#3a2410";
@@ -581,12 +589,30 @@ export class Screens {
       const k = Math.min(fw / cv.width, (ih + 4) / cv.height);
       const dw = cv.width * k;
       const dh = cv.height * k;
+      const bg = stageArt.get(s.hero);
       onHiLayer(ctx, (t) => {
         t.save();
         t.beginPath();
         t.rect(fx, fy, fw, ih);
         t.clip();
         t.imageSmoothingEnabled = true;
+        t.imageSmoothingQuality = "high";
+        if (bg?.complete && bg.naturalWidth) {
+          const bk = Math.max(fw / bg.naturalWidth, ih / bg.naturalHeight);
+          const bw = bg.naturalWidth * bk;
+          const bh = bg.naturalHeight * bk;
+          t.drawImage(bg, fx + (fw - bw) / 2, fy + (ih - bh) / 2, bw, bh);
+          const tc = TEAM_CLOTH[team] ?? "#444444";
+          const gr = t.createLinearGradient(0, fy + ih, 0, fy + ih * 0.45);
+          gr.addColorStop(0, tc + "a0");
+          gr.addColorStop(0.35, tc + "55");
+          gr.addColorStop(1, tc + "00");
+          t.fillStyle = gr;
+          t.fillRect(fx, fy, fw, ih);
+          t.strokeStyle = tc;
+          t.lineWidth = 2;
+          t.strokeRect(fx + 1, fy + 1, fw - 2, ih - 2);
+        }
         t.drawImage(cv, fx + (fw - dw) / 2, fy + ih - dh + 3, dw, dh);
         t.restore();
       });
