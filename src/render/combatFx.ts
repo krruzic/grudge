@@ -114,6 +114,8 @@ const SLOT_PAD = 4;
 const ATLAS_H = 4096;
 const SLOT_N = Math.floor(ATLAS_H / SLOT_H);
 
+const numText = (n: number): string => String(Math.max(1, Math.round(n)));
+
 class TextAtlas {
   readonly tex: THREE.DataTexture;
   private keys: (string | null)[] = new Array(SLOT_N).fill(null);
@@ -761,14 +763,14 @@ export class CombatFx implements FxHost {
       prev.mul = Math.max(prev.mul, mul);
       prev.last = this.clock;
       textAtlas.release(prev.f.slot);
-      prev.f.slot = textAtlas.acquire(String(prev.amount), prev.color, 2.6, 2);
+      prev.f.slot = textAtlas.acquire(numText(prev.amount), prev.color, 2.6, 2);
       prev.f.dur = prev.big ? 0.9 : 0.7;
       prev.f.t = Math.min(prev.f.t, prev.f.dur * 0.15 * 0.55);
       return;
     }
     const vx = (Math.random() - 0.5) * 1.2;
     const f: Floater = {
-      slot: textAtlas.acquire(String(amount), color, 2.6, 2),
+      slot: textAtlas.acquire(numText(amount), color, 2.6, 2),
       x, y: y + 1.6, z, sx: 0, sy: 0, a: 1, t: 0, dur: big ? 0.9 : 0.7, layer: 1,
       step: (k, dt) => {
         const base = (n.big ? 1.5 : 1.0) * n.mul;

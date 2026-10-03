@@ -1533,7 +1533,7 @@ export class World {
     const lost = Math.min(ts.resource, Math.round(amount * (1 - ts.catchUp)));
     if (lost <= 0) return;
     ts.resource -= lost;
-    this.emit({ type: "notice", team, text: `${why} · -${lost} GOLD` });
+    this.emit({ type: "notice", team, text: `${why} · -${Math.round(lost)} GOLD` });
   }
 
   rally(team: number): void {

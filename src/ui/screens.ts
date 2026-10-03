@@ -98,10 +98,10 @@ export function promptWidth(items: [string, string][], scale = 0.85): number {
 
 const TEAM_BOX = ["#1c34a8", "#a81c1c", "#1c7a2a", "#9a7410"];
 const TEAM_BRIGHT = ["#4a74ff", "#ff4a3a", "#3ac85a", "#ffcf2a"];
-const TEAM_CLOTH = ["#3a58e0", "#d83828", "#2a9a40", "#d8a818"];
-const TEAM_TEXT_R = ["#1c3aa8", "#a81c1c", "#1a6a24", "#8a6000"];
+const TEAM_CLOTH = ["#3a58e0", "#d83828", "#d8a818", "#2a9a40"];
+const TEAM_TEXT_R = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24"];
 const BROWN_S = "#3a2410";
-const TEAM_FIELD = ["#4a64d8", "#c83a2a", "#2a9a40", "#c8a020"];
+const TEAM_FIELD = ["#4a64d8", "#c83a2a", "#c8a020", "#2a9a40"];
 const PLACE = ["1ST", "2ND", "3RD", "4TH"];
 const MODE_NAME: Record<MatchMode, string> = { "1v1": "1 VS 1", "2v2": "2 VS 2", ffa: "FREE FOR ALL" };
 const INK = "#0b0806";

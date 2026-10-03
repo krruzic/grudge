@@ -39,7 +39,7 @@ export type MenuResult = "fight" | "training" | "title" | "options" | "host" | "
 const INK = "#0b0806";
 const BROWN = "#3a2410";
 const LIGHT = "#f8e8c0";
-const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#1a6a24", "#8a6000"];
+const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24"];
 const HOUSE = ["BLUE", "RED", "YELLOW", "GREEN"];
 const ITEMS = [
   { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, TWO AGAINST TWO, OR FOUR HOUSES IN A FREE FOR ALL." },
@@ -96,7 +96,7 @@ const PAUSE_ITEMS = ["RESUME", "CONTROLS", "QUIT MATCH"];
 const TRAIN_ITEMS = ["RESUME", "LEVEL UP", "RESET COOLDOWNS", "RESET METER", "CHANGE CHAMPION", "QUIT TRAINING"];
 const TRAIN_BLURB = ["BACK TO THE DUMMY.", "GAIN A LEVEL. PICK THE EVOLUTION ON THE ORDERS STICK AS USUAL.", "EVERY COOLDOWN READY AND THE SUPER METER FULL.", "ZERO THE DPS METER.", "BACK TO CHAMPION SELECT TO SWAP HEROES.", "LEAVE TRAINING AND RETURN TO THE MENU."];
 const TRAIN_GLYPHS = ["dash", "rank", "repair", "size", "combo", "quake"];
-const TEAM_CLOTH = ["#2a4ab8", "#b02a1c", "#2a8a3a", "#c89a14"];
+const TEAM_CLOTH = ["#2a4ab8", "#b02a1c", "#c89a14", "#2a8a3a"];
 
 export class Menus {
   pauseFocus = 0;
@@ -298,9 +298,15 @@ export class Menus {
       }
       const core = w.core(team);
       const keep = core?.alive && !out ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-";
-      const line = `KEEP ${keep} · GOLD ${Math.floor(ts.resource)} · GRAIN ${Math.floor(ts.grain)} · ${ts.unitCount} MEN · ${ts.heroKills} KO`;
+      const stats: [string, string][] = [["KEEP", keep], ["GOLD", String(Math.floor(ts.resource))], ["GRAIN", String(Math.floor(ts.grain))], ["ARMY", String(ts.unitCount)], ["KILLS", String(ts.heroKills)]];
       band(ctx, x, y - 1, colW, 1, "#6a4424", 0.5);
-      drawPlain(ctx, line, x, y + 2, "#6a4424", Math.min(0.48, colW / Math.max(1, textWidth(line, 1, true))), true);
+      const half = Math.floor((colW - 8) / 2);
+      stats.forEach(([k, v], q) => {
+        const sx = x + (q % 2) * (half + 8);
+        const sy = y + 2 + Math.floor(q / 2) * 8;
+        drawPlain(ctx, k, sx, sy, "#6a4424", 0.5, true);
+        drawPlain(ctx, v, sx + half - textWidth(v, 0.55, true), sy, BROWN, 0.55, true);
+      });
     });
   }
 
