@@ -42,7 +42,7 @@ export class UiCanvas {
   begin(): CanvasRenderingContext2D {
     const h = 240;
     const w = Math.round((h * window.innerWidth) / window.innerHeight);
-    const scale = 2;
+    const scale = Math.min(4, Math.max(2, (window.innerHeight * (window.devicePixelRatio || 1)) / h));
     const pw = Math.round(w * scale);
     const ph = Math.round(h * scale);
     if (w !== this.w || this.canvas.width !== pw || this.canvas.height !== ph) {

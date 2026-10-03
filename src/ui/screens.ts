@@ -385,18 +385,77 @@ export class Screens {
       });
     }
     if (this.readyBanner) {
-      const sw2 = Math.min(280, W - 60);
-      this.hit("go", W / 2 - sw2 / 2, 124, sw2, 36);
+      const sw2 = Math.min(250, W - 70);
+      const bx = W / 2 - sw2 / 2;
+      const by = 118;
+      const bh = 46;
+      this.hit("go", bx, by, sw2, bh);
       onHiLayer(ctx, (t) => {
-        card(t, W / 2 - sw2 / 2, 124, sw2, 36, -0.012, "#c81818", () => {
-          const tt = "THE GRUDGE IS SWORN!";
-          drawPlain(t, tt, sw2 / 2 - textWidth(tt, 1.35, true) / 2, 5, "#3a2410", 1.35, true);
-          if (blink) {
-            const p = "PRESS START";
-            drawPlain(t, p, sw2 / 2 - textWidth(p, 0.7, true) / 2, 23, "#8a1810", 0.7, true);
-          }
-          waxSeal(t, sw2 - 16, 18, 10, "#a8141a", "combo");
-        });
+        t.save();
+        t.fillStyle = "rgba(10, 6, 2, 0.32)";
+        t.fillRect(0, 0, W, H);
+        const cloth = () => {
+          t.beginPath();
+          t.moveTo(bx, by);
+          t.lineTo(bx + sw2, by);
+          t.lineTo(bx + sw2, by + bh);
+          t.lineTo(bx + sw2 * 0.75, by + bh - 7);
+          t.lineTo(bx + sw2 / 2, by + bh + 2);
+          t.lineTo(bx + sw2 * 0.25, by + bh - 7);
+          t.lineTo(bx, by + bh);
+          t.closePath();
+        };
+        t.shadowColor = "rgba(0, 0, 0, 0.6)";
+        t.shadowBlur = 8;
+        t.shadowOffsetY = 4;
+        cloth();
+        t.fillStyle = "#5a0e0c";
+        t.fill();
+        t.shadowColor = "transparent";
+        t.save();
+        cloth();
+        t.clip();
+        texturedRect(t, "banner", bx, by, sw2, bh + 4, "#8a1a16", 0, 0.6);
+        const gr = t.createLinearGradient(0, by, 0, by + bh);
+        gr.addColorStop(0, "rgba(255, 220, 160, 0.12)");
+        gr.addColorStop(1, "rgba(0, 0, 0, 0.35)");
+        t.fillStyle = gr;
+        t.fillRect(bx, by, sw2, bh + 4);
+        t.restore();
+        t.save();
+        t.translate(0, 0);
+        t.beginPath();
+        t.moveTo(bx + 3, by + 4);
+        t.lineTo(bx + sw2 - 3, by + 4);
+        t.lineTo(bx + sw2 - 3, by + bh - 4);
+        t.lineTo(bx + sw2 * 0.75, by + bh - 10);
+        t.lineTo(bx + sw2 / 2, by + bh - 1.5);
+        t.lineTo(bx + sw2 * 0.25, by + bh - 10);
+        t.lineTo(bx + 3, by + bh - 4);
+        t.closePath();
+        t.strokeStyle = "#d8a840";
+        t.lineWidth = 1.2;
+        t.stroke();
+        t.restore();
+        t.fillStyle = "#3a2410";
+        t.fillRect(bx - 8, by - 4, sw2 + 16, 5);
+        t.fillStyle = "#7a5430";
+        t.fillRect(bx - 8, by - 4, sw2 + 16, 2);
+        for (const fx of [bx - 10, bx + sw2 + 10]) {
+          t.beginPath();
+          t.arc(fx, by - 1.5, 3.2, 0, Math.PI * 2);
+          t.fillStyle = "#e0b850";
+          t.fill();
+          t.strokeStyle = "#5a3a10";
+          t.lineWidth = 0.8;
+          t.stroke();
+        }
+        t.restore();
+        artTitle(t, "!THE GRUDGE IS SWORN!", "THE GRUDGE IS SWORN!", W / 2, by + 5, 17);
+        if (blink) {
+          const p = "PRESS START";
+          drawPlain(t, p, W / 2 - textWidth(p, 0.7, true) / 2, by + 27, "#f4e2b0", 0.7, true);
+        }
       });
     }
   }
