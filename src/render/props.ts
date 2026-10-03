@@ -61,3 +61,23 @@ export function prop(name: string, team?: THREE.Color): THREE.Object3D | null {
   }
   return o;
 }
+
+const parts = new Map<string, { geo: THREE.BufferGeometry; mat: THREE.Material } | null>();
+
+export function propParts(name: string): { geo: THREE.BufferGeometry; mat: THREE.Material } | null {
+  if (parts.has(name)) return parts.get(name)!;
+  const s = scenes.get(name);
+  if (!s) return null;
+  let found: { geo: THREE.BufferGeometry; mat: THREE.Material } | null = null;
+  s.updateMatrixWorld(true);
+  s.traverse((o) => {
+    if (found || !(o instanceof THREE.Mesh) || Array.isArray(o.material)) return;
+    const geo = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    geo.deleteAttribute("color");
+    geo.computeBoundingSphere();
+    geo.userData.model = true;
+    found = { geo, mat: o.material };
+  });
+  parts.set(name, found);
+  return found;
+}

@@ -5,6 +5,7 @@ const RAIDER_DROP = RAIDER.drop;
 import { chunks, decal, emit, shockwave, type FxHost } from "./fxParts";
 import { FxBatch, fxBatch } from "./fxInstances";
 import { KITS } from "./kits";
+import { propParts } from "./props";
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);
@@ -47,6 +48,13 @@ function slabs(h: FxHost, x: number, z: number, r: number, n: number, up: number
   }
 }
 
+export function spikeBatch(root: THREE.Object3D): FxBatch {
+  return fxBatch(root, "spike", () => {
+    const p = propParts("spike");
+    return p ? new FxBatch(p.geo, p.mat.clone()) : new FxBatch(spikeGeo, spikeMat.clone());
+  });
+}
+
 function spikes(h: FxHost, x: number, z: number, r: number, n: number, life: number): void {
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
@@ -54,7 +62,7 @@ function spikes(h: FxHost, x: number, z: number, r: number, n: number, life: num
     const sx = x + Math.cos(a) * d;
     const sz = z + Math.sin(a) * d;
     const gy = ground(h, sx, sz, 0);
-    const m = fxBatch(h.root, "spike", () => new FxBatch(spikeGeo, spikeMat.clone())).spawn();
+    const m = spikeBatch(h.root).spawn();
     const s = 0.7 + Math.random() * 0.8;
     const sy = s * (0.9 + Math.random() * 0.6);
     m.scale.set(0, 0, 0);

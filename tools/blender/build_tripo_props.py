@@ -4,6 +4,7 @@ Run headless: blender -b --python tools/blender/build_tripo_props.py -- [ballist
 Sources live in assets/source/<name>_tripo.glb. The ballista is split at its turntable into a fixed base and a
 "yaw" > "tilt" turret with tip_L / tip_R / nut empties the game strings at runtime.
 """
+import math
 import os
 import sys
 
@@ -19,6 +20,11 @@ PROPS = {
     "ballista": {"scale": 2.75, "split": 0.0, "tex": 512, "team_hue": (195, 250)},
     "tesla": {"scale": 2.5, "tex": 512},
     "wrench": {},
+    "spike": {"static": True, "size": (1.05, 1.05, 1.6), "center": True, "tex": 256},
+    "hexidol": {"static": True, "height": 2.1, "tex": 256},
+    "wallstone": {"static": True, "size": (1.0, 0.95, 2.5), "tex": 256},
+    "palisade": {"static": True, "size": (1.05, 0.5, 2.5), "tex": 256},
+    "tomb": {"static": True, "height": 1.05, "tex": 256},
 }
 
 
@@ -118,6 +124,36 @@ def build_wrench(name, cfg):
     return [w]
 
 
+def build_static(name, cfg):
+    th.clear_scene()
+    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", f"{name}_tripo.glb"))
+    src = [o for o in bpy.context.scene.objects if o.type == "MESH"][0]
+    for o in list(bpy.context.scene.objects):
+        if o is not src:
+            bpy.data.objects.remove(o, do_unlink=True)
+    src.parent = None
+    me = src.data
+    me.transform(src.matrix_world)
+    src.matrix_world = Matrix.Identity(4)
+    me.transform(Matrix.Rotation(math.radians(-90), 4, "Z"))
+    co = np.array([v.co[:] for v in me.vertices])
+    lo, hi = co.min(0), co.max(0)
+    dims = hi - lo
+    if "size" in cfg:
+        sc = [cfg["size"][k] / dims[k] for k in range(3)]
+    else:
+        sc = [cfg["height"] / dims[2]] * 3
+    ctr = (lo + hi) / 2
+    me.transform(Matrix.Translation((-ctr[0], -ctr[1], -lo[2])))
+    me.transform(Matrix.Diagonal((sc[0], sc[1], sc[2], 1.0)))
+    if cfg.get("center"):
+        me.transform(Matrix.Translation((0, 0, -cfg["size"][2] / 2)))
+    src.name = name
+    me.name = name
+    material(name, src, cfg)
+    return [src]
+
+
 def export(objs, path):
     for o in bpy.context.scene.objects:
         o.select_set(o in objs)
@@ -129,7 +165,7 @@ if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     out = {}
     for n in argv or list(PROPS):
-        objs = globals()["build_" + n](n, PROPS[n])
+        objs = (build_static if PROPS[n].get("static") else globals()["build_" + n])(n, PROPS[n])
         os.makedirs(os.path.join(ROOT, "assets", "props"), exist_ok=True)
         tris = sum(len(p.vertices) - 2 for o in objs if o.type == "MESH" for p in o.data.polygons)
         out[n] = {"tris": tris, "bytes": export(objs, os.path.join(ROOT, "assets", "props", n + ".glb"))}

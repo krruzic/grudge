@@ -2,7 +2,7 @@ import woodUrl from "../../assets/textures/wood.png?url";
 import blockUrl from "../../assets/textures/wallblock.png?url";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
 import * as THREE from "three";
-import { prop } from "./props";
+import { prop, propParts } from "./props";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
 import { composite, ENGINEER, FX, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
@@ -391,7 +391,7 @@ function mergeWall(g: THREE.Group, cells: THREE.Object3D[]): void {
     cell.updateMatrixWorld(true);
     for (const mesh of meshesOf(cell)) {
       const geo = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
-      if (!KEEP_GEO.has(mesh.geometry)) mesh.geometry.dispose();
+      if (!KEEP_GEO.has(mesh.geometry) && !mesh.geometry.userData.model) mesh.geometry.dispose();
       const n = geo.getAttribute("position").count;
       const o = new Float32Array(n * 4);
       for (let i = 0; i < n; i++) {
@@ -674,6 +674,17 @@ export class HazardViews {
           sp.name = "rise";
         });
         sprite(SUMMONER.skull, 0.9, 0, 0, 0.1);
+        const tomb = propParts("tomb");
+        if (tomb) {
+          ring(Math.max(2, Math.round(r * 0.9)), [0.35, 0.85], (x, z) => {
+            const t = new THREE.Mesh(tomb.geo, tomb.mat);
+            t.position.set(x, gy(x, z) - 0.05, z);
+            t.rotation.set((Math.random() - 0.5) * 0.25, Math.atan2(x, z) + (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.25);
+            t.scale.setScalar(0.8 + Math.random() * 0.3);
+            grows.push({ o: t, d: Math.random() * 0.3 });
+            g.add(t);
+          });
+        }
         ring(3, [0.2, 0.7], (x, z) => sprite(SUMMONER.ghost, 0.8, x, z, 0.6, true, "wisp"));
       } else if (style === "tesla") {
         const coil = teslaCoil(0.8);
@@ -743,6 +754,9 @@ export class HazardViews {
     const g = new THREE.Group();
     const W = this.world.terrain.width;
     const cells: THREE.Object3D[] = [];
+    const c0 = m.cells[0];
+    const c1 = m.cells[m.cells.length - 1];
+    const wallYaw = -Math.atan2(Math.floor(c1 / W) - Math.floor(c0 / W), (c1 % W) - (c0 % W));
     m.cells.forEach((c, k) => {
       const x = (c % W) + 0.5;
       const z = Math.floor(c / W) + 0.5;
@@ -774,6 +788,20 @@ export class HazardViews {
         const y = this.world.terrain.groundHeight(x, z);
         const cell = new THREE.Group();
         cell.position.set(x, y, z);
+        const pal = m.style === "wood" ? propParts("palisade") : null;
+        const stone = m.style === "wood" ? null : propParts("wallstone");
+        const art = pal ?? stone;
+        if (art) {
+          const piece = new THREE.Mesh(art.geo, art.mat);
+          piece.rotation.y = (pal ? wallYaw : Math.floor(Math.random() * 4) * Math.PI / 2) + (Math.random() - 0.5) * 0.2;
+          piece.scale.y = 0.92 + Math.random() * 0.16;
+          piece.position.y = -0.1;
+          cell.add(piece);
+          cell.userData.baseY = y;
+          cell.userData.delay = Math.abs(k - (m.cells.length - 1) / 2) * 0.05;
+          cells.push(cell);
+          return;
+        }
         if (m.style === "wood") {
           for (let q = 0; q < 3; q++) {
             const st = new THREE.Mesh(stakeGeo, STAKE);

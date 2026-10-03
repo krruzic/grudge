@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER } from "./fxKit";
+import { prop } from "./props";
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
 import { KITS, type HitEvent } from "./kits";
 
@@ -208,7 +209,23 @@ KITS.summoner = {
             });
           }
           emit(h, { tex: SUMMONER.bones, n: 4, x: ev.x, y: ev.y + 0.4, z: ev.z, size: [0.4, 0.6], life: [0.6, 0.9], speed: [2, 4], up: [3, 5], gravity: 14, spin: 8, floor: ev.y + 0.05 });
-        } else emit(h, { tex: SUMMONER.skull, n: 1, x: ev.x, y: ev.y + 1.5, z: ev.z, size: [1, 1], grow: 1.3, life: [0.7, 0.7], speed: [0, 0], up: [1, 1], fadeIn: 0.1 });
+        } else {
+          emit(h, { tex: SUMMONER.skull, n: 1, x: ev.x, y: ev.y + 1.5, z: ev.z, size: [1, 1], grow: 1.3, life: [0.7, 0.7], speed: [0, 0], up: [1, 1], fadeIn: 0.1 });
+          const idol = prop("hexidol");
+          if (idol) {
+            const gy = ground(h, ev.x, ev.z, ev.y);
+            const yaw = Math.random() * Math.PI * 2;
+            const s = Math.min(1.9, 1.1 + r * 0.2);
+            idol.scale.setScalar(s);
+            h.add(idol, 1.7, (k) => {
+              const rise = k < 0.08 ? k / 0.08 : 1;
+              const sink = k > 0.78 ? (k - 0.78) / 0.22 : 0;
+              const over = k < 0.08 ? 0 : Math.max(0, 0.18 - (k - 0.08) * 1.2) * Math.sin((k - 0.08) * 40);
+              idol.position.set(ev.x, gy - 2.2 * s * (1 - rise) - 2.4 * s * sink * sink, ev.z);
+              idol.rotation.set(over * 0.6, yaw + (1 - rise) * 1.2, over * 0.4);
+            });
+          }
+        }
       });
       return true;
     }

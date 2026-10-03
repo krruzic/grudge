@@ -6,7 +6,7 @@ import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
 import { DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
-import { spikeGeo, spikeMat } from "./warlordFx";
+import { spikeBatch } from "./warlordFx";
 import { wardenSlap } from "./wardenFx";
 import { towerProjectile, towerProjectileTick, towerPulse } from "./towerFx";
 import { KITS, type HeroKit } from "./kits";
@@ -631,14 +631,11 @@ const ringGeo = new THREE.RingGeometry(0.85, 1, 32);
 const quadGeo = new THREE.PlaneGeometry(2, 2);
 const shadowGeo = new THREE.CircleGeometry(0.55, 12);
 const pillarGeo = new THREE.CylinderGeometry(0.9, 1.3, 7, 10, 1, true);
-const slamRockGeo = new THREE.ConeGeometry(1, 1, 5);
-const slamRockMat = new THREE.MeshLambertMaterial({ color: 0x8a7a66, flatShading: true, transparent: true });
 const slashGeos = new Map<string, THREE.BufferGeometry>();
 const hitTint = new THREE.Color(1, 0.9, 0.6);
 const WHITE = new THREE.Color(1, 1, 1);
 const tmpColor = new THREE.Color();
-for (const g of [ringGeo, quadGeo, shadowGeo, pillarGeo, slamRockGeo]) SHARED_GEO.add(g);
-SHARED_MAT.add(slamRockMat);
+for (const g of [ringGeo, quadGeo, shadowGeo, pillarGeo]) SHARED_GEO.add(g);
 
 interface Fx {
   obj: THREE.Object3D;
@@ -1382,18 +1379,14 @@ export class CombatFx implements FxHost {
         const sx = x + Math.cos(a) * d;
         const sz = z + Math.sin(a) * d;
         const h = 0.8 + Math.random() * 1.1;
-        const rock = new THREE.Mesh(slamRockGeo, slamRockMat);
+        const rock = spikeBatch(this.root).spawn();
         const rr = 0.35 + Math.random() * 0.2;
-        rock.scale.set(rr, h, rr);
+        rock.scale.set(rr * 1.6, h / 1.6, rr * 1.6);
         rock.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * 3, (Math.random() - 0.5) * 0.5);
         const gy = this.world ? this.world.groundY(sx, sz) : y;
-        this.root.add(rock);
-        this.items.push({
-          obj: rock, t: 0, dur: 1.6,
-          tick: (k2) => {
-            const up = k2 < 0.12 ? k2 / 0.12 : k2 > 0.75 ? 1 - (k2 - 0.75) / 0.25 : 1;
-            rock.position.set(sx, gy - h / 2 + h * up, sz);
-          },
+        this.add(rock, 1.6, (k2) => {
+          const up = k2 < 0.12 ? k2 / 0.12 : k2 > 0.75 ? 1 - (k2 - 0.75) / 0.25 : 1;
+          rock.position.set(sx, gy - h / 2 + h * up, sz);
         });
       }
     }
@@ -1602,7 +1595,7 @@ export class CombatFx implements FxHost {
         const gx = m.x + (Math.random() - 0.5) * 0.6;
         const gz = m.z + (Math.random() - 0.5) * 0.6;
         const gy = world.groundY(gx, gz);
-        const rock = fxBatch(this.root, "spike", () => new FxBatch(spikeGeo, spikeMat.clone())).spawn();
+        const rock = spikeBatch(this.root).spawn();
         const sc = 0.55 + Math.random() * 0.35;
         rock.scale.set(sc, sc * (0.9 + Math.random() * 0.5), sc);
         rock.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * 3, (Math.random() - 0.5) * 0.5);
