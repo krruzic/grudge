@@ -61,6 +61,8 @@ export class Bot {
   private humanOrderAt = -99;
   private sayText: string | null = null;
   private helpSaidAt = -99;
+  private lurkUntil = -1;
+  private lurkAgain = -99;
 
   constructor(readonly player: number, private skill = 0.8, seed = 7) {
     this.seed = seed * 9973 + player * 131;
@@ -277,7 +279,7 @@ export class Bot {
     if (!mate || this.role === "solo") return undefined;
     const reach = this.role === "support" ? 45 : 22;
     if (w.dist(me, mate) > reach) return undefined;
-    const foes = this.enemyHeroes(w, me).filter((e) => w.dist(mate, e) < 9 && !(e.status.hidden && w.dist(me, e) > 2.5));
+    const foes = this.enemyHeroes(w, me).filter((e) => w.dist(mate, e) < 9 && w.canSee(me, e));
     if (!foes.length) return undefined;
     const friends = w.players.filter((k) => k.team === me.team && k.player !== this.player).map((k) => w.get(k.heroId)).filter((e) => e && e.alive && w.dist(mate, e) < 9).length;
     const weak = foes.find((e) => e.hp < e.maxHp * 0.4);
@@ -290,6 +292,38 @@ export class Bot {
       this.say(w, me, weak ? "MOVING IN TO FINISH THEM" : "HOLD ON, I'M COMING");
     }
     return t;
+  }
+
+  private grassCover(w: World, me: Entity, foe: Entity, dFoe: number): Vec2 | null {
+    if (dFoe > 10 || dFoe < 3) return null;
+    const p = me.transform.pos;
+    if (me.status.hidden && !w.canSee(foe, me) && w.grassPatchAt(p.x, p.z) > 0) {
+      if (this.lurkUntil < 0) this.lurkUntil = w.time + 3;
+      if (w.time < this.lurkUntil) return { x: p.x, z: p.z };
+      return null;
+    }
+    if (this.lurkUntil >= 0) {
+      this.lurkUntil = -1;
+      this.lurkAgain = w.time + 6;
+    }
+    if (w.time < this.lurkAgain) return null;
+    const fp = foe.transform.pos;
+    const foePatch = w.grassPatchAt(fp.x, fp.z);
+    const cx = Math.floor(p.x);
+    const cz = Math.floor(p.z);
+    let best: Vec2 | null = null;
+    let bd = 26;
+    for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) {
+      const d2 = dx * dx + dz * dz;
+      if (d2 >= bd) continue;
+      const x = cx + dx + 0.5;
+      const z = cz + dz + 0.5;
+      const patch = w.grassPatchAt(x, z);
+      if (!patch || patch === foePatch || Math.hypot(x - fp.x, z - fp.z) < dFoe) continue;
+      bd = d2;
+      best = { x, z };
+    }
+    return best && this.ok(w, me, best) ? best : null;
   }
 
   private ok(w: World, me: Entity, g: Vec2 | { transform: { pos: Vec2 } }): boolean {
@@ -392,6 +426,8 @@ export class Bot {
         if (esc === "b") this.wantB = true;
         else this.wantR = true;
       }
+      const cover = ehAlive ? this.grassCover(w, me, enemyHero!, dHero) : null;
+      if (cover) this.goal = cover;
       this.wantBlock = dHero < 3 && this.rand() < 0.5;
       if (dHero < 2.6) this.wantAttack = true;
       return;
@@ -481,7 +517,7 @@ export class Bot {
       if (prey && w.dist(me, prey) < 2.4) this.wantAttack = true;
       return;
     }
-    if (ehAlive && dHero < 9 + prefer && !(enemyHero!.status.hidden && dHero > 2.5) && !crowded) fight = enemyHero;
+    if (ehAlive && dHero < 9 + prefer && w.canSee(me, enemyHero!) && !crowded) fight = enemyHero;
     else if (crowded && dHero < 12) {
       const close = nearby.find((o) => w.dist(me, o) < 2.6 && !o.structure);
       if (!close) {
@@ -496,7 +532,7 @@ export class Bot {
     }
     else if (nearby.length) {
       nearby.sort((a, b) => w.dist(me, a) - w.dist(me, b));
-      fight = nearby.find((o) => (o.kind !== "structure" || w.dist(me, o) < 5) && this.ok(w, me, o)) ?? undefined;
+      fight = nearby.find((o) => (o.kind !== "structure" || w.dist(me, o) < 5) && w.canSee(me, o) && this.ok(w, me, o)) ?? undefined;
     }
     if (fight) {
       const towerThreat = w.enemiesNear(me, 12, (o) => o.structure?.type === "damage" && o.structure.ready).length;
@@ -559,7 +595,7 @@ export class Bot {
       }
     }
 
-    if (plan.hunt && ehAlive && !crowded && dHero < plan.hunt && me.hp > me.maxHp * 0.7 && enemyHero!.hp <= me.hp * (plan.huntRatio ?? 99) && (!plan.opener || rdy(plan.opener)) && this.ok(w, me, enemyHero!) && !enemyHero!.status.hidden) {
+    if (plan.hunt && ehAlive && !crowded && dHero < plan.hunt && me.hp > me.maxHp * 0.7 && enemyHero!.hp <= me.hp * (plan.huntRatio ?? 99) && (!plan.opener || rdy(plan.opener)) && this.ok(w, me, enemyHero!) && w.canSee(me, enemyHero!)) {
       const f = enemyHero!.transform.facing;
       this.goal = dHero > 16 ? { x: enemyHero!.transform.pos.x, z: enemyHero!.transform.pos.z } : { x: enemyHero!.transform.pos.x - Math.sin(f) * 3, z: enemyHero!.transform.pos.z - Math.cos(f) * 3 };
       return;
@@ -598,7 +634,7 @@ export class Bot {
     }
 
     if (this.role === "attack") {
-      const prey = this.enemyHeroes(w, me).find((e) => !e.status.hidden && w.dist(me, e) < 20 && e.hp < me.hp * 1.2 && this.ok(w, me, e));
+      const prey = this.enemyHeroes(w, me).find((e) => w.canSee(me, e) && w.dist(me, e) < 20 && e.hp < me.hp * 1.2 && this.ok(w, me, e));
       this.goal = prey ? { x: prey.transform.pos.x, z: prey.transform.pos.z } : this.frontTarget(w, me);
       return;
     }

@@ -17,7 +17,7 @@ export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Ent
   let best: Entity | null = null;
   let bestScore = Infinity;
   for (const o of w.entities) {
-    if (!o.alive || o.team === e.team) continue;
+    if (!o.alive || o.team === e.team || !w.canSee(e, o)) continue;
     const d = w.dist(e, o) - o.radius;
     if (d > reach) continue;
     const dx = o.transform.pos.x - t.pos.x;
@@ -422,6 +422,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     }
     if (!a.fired && a.t >= a.hitAt) {
       a.fired = true;
+      if (a.name !== "dodge" && a.name !== "hit") e.status.lastAttackAt = w.time;
       fire(w, e, a);
     }
     if (a.t >= a.dur) {

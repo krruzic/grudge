@@ -10,6 +10,7 @@ import { buildHulls, hullMaterial, type HeroModels } from "./heroModels";
 import type { StructureModels } from "./structureModels";
 import { structurePlaceholder, unitPlaceholder } from "./kit";
 import { blobBatch, blobShadow, footRingBatch } from "./placeholders";
+import { WATER_TIDE_RISE, clipBelowWater, foamBatch, ripple, splash, waterClip } from "./wadeFx";
 import type { CombatFx } from "./combatFx";
 import type { UnitModels } from "./unitModels";
 import { UnitBatches } from "./unitBatch";
@@ -185,6 +186,10 @@ interface View {
   chargeAura?: THREE.Group;
   hands?: { hand: THREE.Object3D; arm: THREE.Object3D; last: THREE.Vector3 }[];
   framed?: boolean;
+  wade?: number;
+  wadeY?: number;
+  wadeT?: number;
+  wadeR?: number;
 }
 
 const red = new THREE.Color(1, 0.15, 0.1);
@@ -480,7 +485,7 @@ function silMat(team: number, skinned: boolean): THREE.MeshBasicMaterial {
   const key = `${team}|${skinned}`;
   let m = silMats.get(key);
   if (!m) {
-    m = new THREE.MeshBasicMaterial({
+    m = clipBelowWater(new THREE.MeshBasicMaterial({
       color: (silColors[team] ?? new THREE.Color(1, 1, 1)).clone().multiplyScalar(0.8),
       transparent: true,
       opacity: 0.5,
@@ -493,7 +498,7 @@ function silMat(team: number, skinned: boolean): THREE.MeshBasicMaterial {
       stencilZFail: THREE.KeepStencilOp,
       stencilZPass: THREE.ReplaceStencilOp,
       fog: false,
-    });
+    }));
     silMats.set(key, m);
     SHARED_VIEW_MATS.add(m);
   }
@@ -629,12 +634,33 @@ export class EntityViews {
     }
   }
 
+  private viewHidden: View[] = [];
+  private viewers = new Set<number | null>();
+  private lastViewers = new Set<number | null>();
+
+  private unhideViewed(): void {
+    for (const v of this.viewHidden) v.root.visible = true;
+    this.viewHidden.length = 0;
+  }
+
   setViewer(team: number | null): void {
+    this.viewers.add(team);
+    this.unhideViewed();
+    const w = this.world;
     for (const [id, v] of this.views) {
-      if (v.kind !== "hero" || v.baseVisible === undefined) continue;
-      const e = this.world.getAny(id);
-      v.root.visible = v.baseVisible && (!v.stealthed || team === null || e?.team === team);
+      const e = w.getAny(id);
+      if (v.kind === "hero") {
+        if (v.baseVisible === undefined) continue;
+        v.root.visible = v.baseVisible && (!e || team === null || w.visibleTo(team, e));
+      } else if (v.kind === "unit" && e && team !== null && v.root.visible && !w.visibleTo(team, e)) {
+        v.root.visible = false;
+        this.viewHidden.push(v);
+      }
     }
+  }
+
+  private ownTeamOnly(team: number): boolean {
+    return this.lastViewers.size === 1 && this.lastViewers.has(team);
   }
 
   dispose(): void {
@@ -652,6 +678,8 @@ export class EntityViews {
     this.blobs.dispose();
     this.footRings.dispose();
     (this.footRings.material as THREE.Material).dispose();
+    this.foam.dispose();
+    (this.foam.material as THREE.Material).dispose();
     this.views.clear();
     this.corpses = [];
   }
@@ -667,15 +695,26 @@ export class EntityViews {
   private structBatch: StructureBatch;
   private blobs = blobBatch(1024);
   private footRings = footRingBatch(16);
+  private foam = foamBatch(128);
+  private foamM = new THREE.Matrix4();
+  private foamQ = new THREE.Quaternion();
+  private foamP = new THREE.Vector3();
+  private foamS = new THREE.Vector3();
+  private foamUp = new THREE.Vector3(0, 1, 0);
   readonly extras = new THREE.Group();
 
   fillUnits(): void {
     if (!this.batches.root.parent) {
       this.padBatch.mesh.renderOrder = 3;
-      this.extras.add(this.batches.root, this.statics.root, this.structBatch.root, this.bars.mesh, this.blobs, this.sprites.root, this.padBatch.mesh, this.footRings);
+      this.footRings.renderOrder = 3;
+      this.extras.add(this.batches.root, this.statics.root, this.structBatch.root, this.bars.mesh, this.blobs, this.sprites.root, this.padBatch.mesh, this.footRings, this.foam);
       silScene.add(this.batches.silRoot);
     }
+    const held = this.viewHidden.slice();
+    this.unhideViewed();
     this.batches.fill(this.extras.parent ?? this.root);
+    for (const v of held) v.root.visible = false;
+    this.viewHidden.push(...held);
     this.structBatch.fillFrame(this.extras.parent ?? this.root);
     this.padBatch.flush();
     if (this.spriteScan++ % 10 === 0) {
@@ -744,6 +783,23 @@ export class EntityViews {
         fr.setColorAt(rn, (m.material as THREE.MeshBasicMaterial).color);
         rn++;
       }
+    }
+    let wn = 0;
+    const fm = this.foam;
+    for (const v of this.views.values()) {
+      if (v.wadeY === undefined || !v.root.visible || !v.root.parent || wn >= 128) continue;
+      const t = performance.now() / 1000;
+      this.foamQ.setFromAxisAngle(this.foamUp, t * 0.7 + v.root.id);
+      this.foamP.set(v.root.position.x, v.wadeY + 0.03, v.root.position.z);
+      this.foamS.setScalar((v.wadeR ?? 0.6) * (1 + Math.sin(t * 3.1 + v.root.id) * 0.06));
+      fm.setMatrixAt(wn++, this.foamM.compose(this.foamP, this.foamQ, this.foamS));
+    }
+    fm.count = wn;
+    fm.visible = wn > 0;
+    if (wn) {
+      fm.instanceMatrix.clearUpdateRanges();
+      fm.instanceMatrix.addUpdateRange(0, wn * 16);
+      fm.instanceMatrix.needsUpdate = true;
     }
     fr.count = rn;
     fr.visible = rn > 0;
@@ -929,7 +985,7 @@ export class EntityViews {
     if (view.batched) {
       const sm = view.batched;
       const tm = e.team;
-      this.batches.add(sm, v.body, `${sm.geometry.uuid}|${tm}`, () => ({ material: batchMaterial(sm, tm), sil: silMat(tm, true).clone() }), () => v.flash > 0);
+      this.batches.add(sm, v.body, `${sm.geometry.uuid}|${tm}`, () => ({ material: batchMaterial(sm, tm), sil: clipBelowWater(silMat(tm, true).clone()) }), () => v.flash > 0);
     }
     if (e.unit) this.fx.spawnFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
     return v;
@@ -990,6 +1046,36 @@ export class EntityViews {
     v.hitUntil = performance.now() / 1000 + 0.25;
   }
 
+  private wading(e: Entity, v: View, surf: number, dt: number): void {
+    const p = v.root.position;
+    const depth = surf - p.y;
+    const h = e.hero;
+    const air = !!h?.jump;
+    if (v.rings) for (const m of v.rings) m.position.y = 0.04 + (air ? 0 : Math.max(0, depth) / (m.parent?.scale.y || 1));
+    if (air || depth <= 0) {
+      v.wade = 0;
+      v.wadeY = undefined;
+      return;
+    }
+    const want = h ? 0.6 : e.neutral ? 0.6 : e.unit?.type === "heavy" ? 0.42 : 0.34;
+    const sink = Math.max(0, want * Math.min(1, depth / 0.15) - depth);
+    v.wade = (v.wade ?? 0) + (sink - (v.wade ?? 0)) * Math.min(1, dt * 10);
+    v.wadeY = depth > 0.03 ? surf : undefined;
+    v.wadeR = h ? 0.62 * this.heroScale : e.radius * (e.neutral ? 2.4 : 1.6);
+    if (v.wadeY === undefined || v.stealthed || !e.alive) return;
+    v.wadeT = (v.wadeT ?? Math.random()) - dt;
+    if (v.wadeT > 0) return;
+    const moving = h ? Math.hypot(h.vel.x, h.vel.z) > 0.8 : !!e.unit?.moving;
+    const r = v.wadeR;
+    if (moving) {
+      v.wadeT = h ? 0.2 : 0.45;
+      ripple(this.fx, p.x, surf + 0.04, p.z, r * 0.8, r * 2.4, 0.9, h ? 0.55 : 0.4);
+    } else {
+      v.wadeT = h ? 1.1 : 2.2;
+      ripple(this.fx, p.x, surf + 0.04, p.z, r * 0.9, r * 1.9, 1.5, 0.32);
+    }
+  }
+
   private footsteps(e: Entity, v: View): void {
     const x = e.transform.pos.x;
     const z = e.transform.pos.z;
@@ -1004,9 +1090,15 @@ export class EntityViews {
     if (v.stepDist < stride) return;
     v.stepDist = 0;
     if (!hero && Math.random() < 0.5) return;
+    if (e.status.hidden) {
+      if (hero && this.ownTeamOnly(e.team)) this.fx.dust(x, e.transform.y + 0.3, z, 0.5, 2, 0.6, 0x7fb04a);
+      return;
+    }
     const big = hero ? this.heroScale * (e.radius > 0.8 ? 0.9 : 0.6) : e.unit?.type === "heavy" ? 0.7 : 0.45;
-    const water = this.world.groundY(x, z) < e.transform.y - 0.5;
-    if (water) return;
+    if (v.wadeY !== undefined) {
+      splash(this.fx, x, v.wadeY, z, big, hero ? 3 : 1);
+      return;
+    }
     this.fx.dust(x, e.transform.y, z, big, hero ? 2 : 1, 0.7);
   }
 
@@ -1070,7 +1162,14 @@ export class EntityViews {
 
   sync(alpha: number, dt: number, time: number): void {
     const w = this.world;
+    this.unhideViewed();
+    if (this.viewers.size) {
+      this.lastViewers = this.viewers;
+      this.viewers = new Set();
+    }
     for (const v of this.views.values()) v.seen = false;
+    const surf = w.terrain.waterLevel + w.tideLevel() * WATER_TIDE_RISE;
+    waterClip.value = surf;
     for (const e of w.entities) {
       if (!e.alive && !e.hero) continue;
       let v = this.views.get(e.id);
@@ -1127,6 +1226,7 @@ export class EntityViews {
       const frozen = v.freeze > 0;
       const adt = frozen ? 0 : dt;
       v.freeze = Math.max(0, v.freeze - dt);
+      if (e.kind !== "structure") this.wading(e, v, surf, dt);
       if (e.hero) {
         this.syncHero(e, v, facing, adt, time);
         if (v.held) {
@@ -1364,8 +1464,8 @@ export class EntityViews {
       if (k >= 0 && k < 0.15) this.play(v, "dodge", 0.8);
       else if (k < 0) this.play(v, "block");
     } else if (w.jumpPads.some((p) => Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z) < 0.95)) lift = Math.max(lift, 0.5);
-    v.body.position.y = lift;
-    const stealth = w.time < e.status.stealthUntil;
+    v.body.position.y = lift - (v.wade ?? 0) / (v.body.parent?.scale.y || 1);
+    const stealth = w.time < e.status.stealthUntil || (e.status.hidden && e.status.seenBy === 0);
     if (stealth !== v.stealthed) {
       v.stealthed = stealth;
       v.body.traverse((o) => {
@@ -1537,11 +1637,12 @@ export class EntityViews {
       }
       v.body.rotation.x = w.time < e.status.stunUntil ? 0.25 : 0;
       v.root.scale.setScalar(w.time < e.status.buffUntil || w.time < e.status.rallyUntil ? 1.08 : 1);
+      v.body.position.y = -(v.wade ?? 0) / (v.body.parent?.scale.y || 1);
       v.mixer.update(dt);
       return;
     }
     const phase = time * (u.type === "heavy" ? 7 : 11) + e.id;
-    v.body.position.y = u.moving ? Math.abs(Math.sin(phase)) * 0.09 : 0;
+    v.body.position.y = (u.moving ? Math.abs(Math.sin(phase)) * 0.09 : 0) - (v.wade ?? 0) / (v.body.parent?.scale.y || 1);
     v.body.rotation.z = u.moving ? Math.sin(phase) * 0.07 : 0;
     if (v.weapon) {
       const k = (w.time - u.attackAnimAt) / 0.3;

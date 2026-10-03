@@ -55,7 +55,7 @@ export interface PlayerSlot {
 function newStatus(): Status {
   return {
     slowUntil: 0, slowMul: 1, stunUntil: 0, kvx: 0, kvz: 0, buffUntil: 0, buffDamageMul: 1, buffSpeedMul: 1, rallyUntil: 0, lastHitAt: -99, lastHitX: 0, lastHitZ: 0,
-    invulnUntil: 0, lastAttackAt: -99, hidden: false, supportDamageMul: 1, auraDamageMul: 1, stealthUntil: 0, ambushMul: 1, guardUntil: 0, guardMul: 1, cowedUntil: 0, hexUntil: 0, hexOwner: 0,
+    invulnUntil: 0, lastAttackAt: -99, hidden: false, seenBy: 0, supportDamageMul: 1, auraDamageMul: 1, stealthUntil: 0, ambushMul: 1, guardUntil: 0, guardMul: 1, cowedUntil: 0, hexUntil: 0, hexOwner: 0,
     bleedStacks: 0, bleedDps: 0, bleedUntil: 0, bleedOwner: 0, shield: 0, shieldUntil: 0, shieldBurst: 0, armorMul: 1, armorUntil: 0, ccImmuneUntil: 0,
     markUntil: 0, markTeam: -1, markOwner: 0, markMul: 1, markAll: false, markWeaken: 1,
   };
@@ -1042,6 +1042,7 @@ export class World {
     const heroes = this.entities.filter((e) => e.hero && e.alive);
     const supports = this.entities.filter((e) => e.alive && e.structure?.type === "support" && e.structure.ready);
     const revealT = this.data.units.hiddenRevealSeconds;
+    const covered: Entity[] = [];
     for (const e of this.entities) {
       if (!e.alive) continue;
       const s = e.status;
@@ -1071,9 +1072,70 @@ export class World {
       if (e.kind !== "structure") {
         const inGrass = this.terrain.hasFlag(Math.floor(e.transform.pos.x), Math.floor(e.transform.pos.z), FLAG_GRASS);
         const cover = inGrass || this.mapEvents.misted(e.transform.pos.x, e.transform.pos.z);
-        s.hidden = (cover && this.time - s.lastAttackAt > revealT) || this.time < s.stealthUntil;
+        const smoked = this.time < s.stealthUntil;
+        s.hidden = (cover && this.time - s.lastAttackAt > revealT) || smoked;
+        s.seenBy = 0;
+        if (s.hidden && !smoked) covered.push(e);
       }
     }
+    const adj = this.data.units.hiddenAdjacent;
+    for (const e of covered) {
+      const s = e.status;
+      if (this.time < s.markUntil) {
+        const mt = s.markAll ? s.markTeam : this.getAny(s.markOwner)?.team ?? -1;
+        if (mt >= 0 && mt !== e.team) s.seenBy |= 1 << mt;
+      }
+      for (const o of this.entities) {
+        if (!o.alive || o.kind === "structure" || o.team === e.team || o.team < 0 || (s.seenBy & (1 << o.team))) continue;
+        if (this.dist(o, e) <= adj + e.radius || this.sharesPatch(o, e)) s.seenBy |= 1 << o.team;
+      }
+    }
+  }
+
+  private grassPatches: Int32Array | null = null;
+
+  grassPatchAt(x: number, z: number): number {
+    const t = this.terrain;
+    if (!this.grassPatches) {
+      const p = new Int32Array(t.width * t.depth);
+      let next = 0;
+      const stack: number[] = [];
+      for (let i = 0; i < p.length; i++) {
+        if (p[i] || !(t.flags[i] & FLAG_GRASS)) continue;
+        p[i] = ++next;
+        stack.push(i);
+        while (stack.length) {
+          const c = stack.pop()!;
+          const cx = c % t.width;
+          const cz = (c - cx) / t.width;
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+            const n = t.index(cx + dx, cz + dz);
+            if (n < 0 || p[n] || !(t.flags[n] & FLAG_GRASS)) continue;
+            p[n] = next;
+            stack.push(n);
+          }
+        }
+      }
+      this.grassPatches = p;
+    }
+    const i = t.index(Math.floor(x), Math.floor(z));
+    return i < 0 ? 0 : this.grassPatches[i];
+  }
+
+  sharesPatch(a: Entity, b: Entity): boolean {
+    const p = this.grassPatchAt(a.transform.pos.x, a.transform.pos.z);
+    return p > 0 && p === this.grassPatchAt(b.transform.pos.x, b.transform.pos.z);
+  }
+
+  visibleTo(team: number, target: Entity): boolean {
+    const s = target.status;
+    return !s.hidden || team === target.team || (team >= 0 && (s.seenBy & (1 << team)) !== 0);
+  }
+
+  spottedByAll(target: Entity): boolean {
+    if (!target.status.hidden) return true;
+    for (let t = 0; t < this.teamCount; t++) if (t !== target.team && !this.visibleTo(t, target)) return false;
+    return true;
   }
 
   dist(a: Entity, b: Entity): number {
@@ -1085,7 +1147,7 @@ export class World {
   }
 
   canSee(viewer: Entity, target: Entity): boolean {
-    if (!target.status.hidden) return true;
+    if (this.visibleTo(viewer.team, target)) return true;
     return this.dist(viewer, target) <= this.data.units.hiddenAdjacent + target.radius;
   }
 
@@ -1204,7 +1266,7 @@ export class World {
         const dz = src.transform.pos.z - tp.pos.z;
         const dot = (Math.sin(tp.facing) * dx + Math.cos(tp.facing) * dz) / (Math.hypot(dx, dz) || 1);
         if (dot < -0.3 && !hk.flankMul) amount *= pos.backstabMul;
-        if (src.status.hidden) amount *= pos.ambushMul;
+        if (src.status.hidden && !this.sharesPatch(src, target)) amount *= pos.ambushMul;
       }
     }
     amount *= this.synergyMul(src, target, opts);

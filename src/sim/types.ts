@@ -38,6 +38,7 @@ export interface Status {
   lastHitX: number;
   lastHitZ: number;
   hidden: boolean;
+  seenBy: number;
   supportDamageMul: number;
   auraDamageMul: number;
   stealthUntil: number;

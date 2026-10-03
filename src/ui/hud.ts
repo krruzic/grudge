@@ -1227,7 +1227,7 @@ export class Hud {
         g.stroke();
       };
       for (const e of w.entities) {
-        if (!e.alive || !e.unit || e.neutral || e.status.hidden) continue;
+        if (!e.alive || !e.unit || e.neutral || !w.spottedByAll(e)) continue;
         const [ux, uy] = P(e.transform.pos.x, e.transform.pos.z);
         g.fillStyle = tc(e.team);
         g.fillRect(ux - 0.45, uy - 0.45, 0.9, 0.9);
@@ -1373,7 +1373,7 @@ export class Hud {
         g.stroke();
       }
       for (const e of w.entities) {
-        if (!e.alive || !e.hero || e.hero.dead || e.status.hidden) continue;
+        if (!e.alive || !e.hero || e.hero.dead || !w.spottedByAll(e)) continue;
         const [hx, hy] = P(e.transform.pos.x, e.transform.pos.z);
         const a = e.transform.facing;
         const fx = Math.sin(a);

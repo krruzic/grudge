@@ -489,7 +489,7 @@ export class GameRenderer {
     else if (spread < this.cfg.splitNear - 3 && pts.every(Boolean)) this.merged = true;
     const w = this.world;
     const teamsInView = new Set(humans.map((p) => p.team));
-    if (teamsInView.size > 1 && w.players.some((p) => { const e = w.getAny(p.heroId); return !!e && w.time < e.status.stealthUntil; })) this.merged = false;
+    if (teamsInView.size > 1 && w.players.some((p) => { const e = w.getAny(p.heroId); return !!e && e.alive && [...teamsInView].some((t) => !w.visibleTo(t, e)); })) this.merged = false;
     const groups: { ids: number[]; player: number }[] = !ids.length ? [] : ids.length === 1 || this.merged ? [{ ids, player: humans[0].player }] : humans.map((p) => ({ ids: [p.heroId], player: p.player }));
     const same = groups.length === this.splitViews.length && groups.every((g, i) => g.ids.join() === this.splitViews[i].heroIds.join());
     if (same) return;

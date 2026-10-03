@@ -296,7 +296,7 @@ export function updateStructure(w: World, e: Entity): void {
     const siege = st.siege;
     const cands: { o: Entity; score: number }[] = [];
     for (const o of w.entities) {
-      if (!o.alive || o.team === e.team || (o.status.hidden && !spec?.reveal)) continue;
+      if (!o.alive || o.team === e.team || (!w.visibleTo(e.team, o) && !spec?.reveal)) continue;
       if (o.structure && !siege && !o.structure.siege) continue;
       const d = w.dist(e, o) - o.radius;
       if (d > st.range * boost.range * w.rangeMul(e, o)) continue;
@@ -412,7 +412,7 @@ function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost
     st.aim = Math.atan2(dx, dz);
     const reach = len + (spec.pierce ?? 5);
     for (const o of w.entities) {
-      if (!o.alive || o === best || o.team === e.team || o.structure || o.status.hidden) continue;
+      if (!o.alive || o === best || o.team === e.team || o.structure || !w.visibleTo(e.team, o)) continue;
       const ox = o.transform.pos.x - sx;
       const oz = o.transform.pos.z - sz;
       const along = ox * ux + oz * uz;

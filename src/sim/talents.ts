@@ -169,7 +169,7 @@ export function chainLightning(w: World, src: Entity, from: Entity, count: numbe
     let best: Entity | null = null;
     let bd = 5.5;
     for (const o of w.entities) {
-      if (!o.alive || o.team === src.team || done.has(o.id) || o.structure) continue;
+      if (!o.alive || o.team === src.team || done.has(o.id) || o.structure || !w.canSee(cur, o)) continue;
       const d = w.dist(cur, o);
       if (d < bd) { bd = d; best = o; }
     }
