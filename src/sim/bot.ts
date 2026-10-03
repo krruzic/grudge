@@ -607,6 +607,8 @@ export class Bot {
       if (d < aReach && this.rand() < this.skill) this.wantAttack = true;
       const bOk = plan.gateB !== "opening" || smoked || fight.hp < fight.maxHp * 0.5 || crowdAt(fight) <= 0;
       if (rdy("b") && ab.b.bot === "fight" && useHint("b", d) && bOk && this.rand() < 0.35) this.wantB = true;
+      const pp = me.hero?.pip;
+      if (pp?.phase === "on" && pp.target === fight.id && (pp.until - w.time < 1 || fight.hp < fight.maxHp * 0.3 || (fight.hero?.action && d < 4)) && this.rand() < 0.3 * this.skill) this.wantB = true;
       if (rdy("r") && ab.r.bot === "fight" && useHint("r", d) && this.rand() < 0.35) this.wantR = true;
       if (fight.hero?.action?.name === "a" && d < 2.8 && this.rand() < 0.25 * this.skill) this.wantBlock = true;
       if (prefer > 3) {

@@ -203,7 +203,7 @@ const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "s
 const ANIM_FALLBACK: Record<string, string> = { throw: "attack_b", volley: "shoot", heartseeker: "shoot", shoot: "cast" };
 
 const KIND_ANIM: Record<string, string> = {
-  pip: "cast", volley: "volley", heartseeker: "heartseeker", keg: "throw", powderkeg: "throw", brewfest: "slam", kegrocket: "block",
+  pip: "cast", rake: "cast", volley: "volley", heartseeker: "heartseeker", keg: "throw", powderkeg: "throw", brewfest: "slam", kegrocket: "block",
   slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", gravewalk: "cast", hex: "cast", repair: "cast",
   turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
   banner: "cast", rally: "cast", works: "cast", ballista: "cast", whirl: "attack_c",

@@ -4,7 +4,7 @@ import type { Command, Entity, HeroAction, TerrainMod, UnitType } from "./types.
 import { Kind } from "./terrain.ts";
 import { spawnUnit } from "./structures.ts";
 import { abilities, addShield, afterMelee, bCooldown, fireMissile, frenzySpeed, markTargets, meleeMods, onBUse, pullTo, zoneAt } from "./talents.ts";
-import { heartseeker, isMarksman, marksmanShot, sendPip, skyshot, trackStill, updatePip, volley } from "./marksman.ts";
+import { canRake, heartseeker, isMarksman, marksmanShot, rake, sendPip, wrenTarget, skyshot, trackStill, updatePip, volley } from "./marksman.ts";
 import { brewfest, kegRocketTick, plentyTick, startKegRocket, throwKeg } from "./friar.ts";
 
 type Slot = "a" | "b" | "r" | "z";
@@ -235,7 +235,22 @@ function reachOf(def: AbilityDef): number {
 function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   const h = e.hero!;
   const def = abilities(w, e)[slot];
-  const [dx, dz] = aim(w, e, cmd, reachOf(def) + (def.fx?.charge?.range ?? 0) + 1);
+  let [dx, dz] = aim(w, e, cmd, reachOf(def) + (def.fx?.charge?.range ?? 0) + 1);
+  const mag = Math.hypot(cmd.moveX, cmd.moveZ);
+  const wren = slot === "a" && def.kind === "shoot" && isMarksman(w, e);
+  if (wren) {
+    const sx = mag > 0.3 ? cmd.moveX / mag : Math.sin(e.transform.facing);
+    const sz = mag > 0.3 ? cmd.moveZ / mag : Math.cos(e.transform.facing);
+    const tg = wrenTarget(w, e, sx, sz, mag > 0.3, (def.range ?? 11) * (w.heroDef(e.hero!.type).hooks.vantageRange ?? 1.2));
+    if (tg) {
+      const l = Math.hypot(tg.transform.pos.x - e.transform.pos.x, tg.transform.pos.z - e.transform.pos.z) || 1;
+      dx = (tg.transform.pos.x - e.transform.pos.x) / l;
+      dz = (tg.transform.pos.z - e.transform.pos.z) / l;
+    } else {
+      dx = sx;
+      dz = sz;
+    }
+  }
   if (slot === "b" && def.fx?.charge) {
     const c = begin(e, slot, "charge", 0.62, 0.42, dx, dz);
     c.hitIds = [];
@@ -244,6 +259,7 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
     return;
   }
   const a = begin(e, slot, def.kind, def.dur ?? 0.5, def.hitAt ?? 0.25, dx, dz);
+  if (wren) a.stick = mag > 0.3;
   a.fromX2 = e.transform.pos.x;
   a.fromZ2 = e.transform.pos.z;
   if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
@@ -483,6 +499,8 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
         h.cooldowns.b = w.time;
         h.recastUntil = 0;
       }
+    } else if (cmd.secondary && !act && canRake(e)) {
+      begin(e, "b", "rake", 0.34, 0.12, Math.sin(t.facing), Math.cos(t.facing));
     } else if (cmd.secondary && ready(e, "b", w.time) && !act) {
       startAbility(w, e, "b", cmd);
       onBUse(w, e);
@@ -1168,6 +1186,9 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     }
     case "pip":
       sendPip(w, e, a, def);
+      return;
+    case "rake":
+      rake(w, e);
       return;
     case "volley":
       volley(w, e, a, def, mul);

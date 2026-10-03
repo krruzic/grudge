@@ -7,6 +7,8 @@ import raiderUrl from "../../assets/fx/raider.png?url";
 import summonerUrl from "../../assets/fx/summoner.png?url";
 import duelistUrl from "../../assets/fx/duelist.png?url";
 import heraldUrl from "../../assets/fx/herald.png?url";
+import wrenUrl from "../../assets/fx/wren.png?url";
+import friarUrl from "../../assets/fx/friar.png?url";
 
 const CELL = 128;
 const COLS = 4;
@@ -46,6 +48,8 @@ const RA = sheet(raiderUrl, 16);
 const SU = sheet(summonerUrl, 16);
 const DU = sheet(duelistUrl, 16);
 const HE = sheet(heraldUrl, 16);
+const WR = sheet(wrenUrl, 16);
+const FR = sheet(friarUrl, 16);
 
 export const fxReady = Promise.all(waits).then(() => undefined);
 
@@ -131,4 +135,14 @@ export const DUELIST = {
 export const HERALD = {
   beams: HE[0], fleur: HE[1], horn: HE[2], flag: HE[3], halo: HE[4], coin: HE[5], rays: HE[6], heal: HE[7],
   shield: HE[8], laurel: HE[9], blast: HE[10], arrow: HE[11], plume: HE[12], star: HE[13], dust: HE[14], crown: HE[15],
+};
+
+export const WREN = {
+  feather: WR[0], feathers: WR[1], claws: WR[2], arrow: WR[3], streak: WR[4], splinters: WR[5], leaf: WR[6], leaves: WR[7],
+  markRing: WR[8], arrowRing: WR[9], heart: WR[10], glint: WR[11], dizzy: WR[12], gust: WR[13], flame: WR[14], spiral: WR[15],
+};
+
+export const FRIAR = {
+  foam: FR[0], bubble: FR[1], drop: FR[2], splash: FR[3], puddle: FR[4], hop: FR[5], barley: FR[6], stave: FR[7],
+  hoop: FR[8], bung: FR[9], heal: FR[10], cheers: FR[11], smoke: FR[12], spark: FR[13], blast: FR[14], hopRing: FR[15],
 };

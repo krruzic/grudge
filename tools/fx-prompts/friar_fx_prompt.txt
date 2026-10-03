@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for BROTHER MADDOCK, a jolly red-bearded brewer friar who throws ale kegs that heal friends and powder kegs that explode, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a fluffy cream-white blob of beer foam
+2. a single translucent golden ale bubble with a white highlight
+3. a single amber ale droplet
+4. a splash crown of amber ale with white foam tips, side view
+5. a puddle of golden ale seen from directly above, round with a foamy cream rim and bubbles
+6. a green hop cone
+7. a golden barley sprig
+8. a single curved oak keg stave plank
+9. an iron barrel hoop ring seen at an angle
+10. a wooden keg bung / cork
+11. a chunky amber-gold heal plus symbol with a foam cap
+12. a golden clink sparkle star, like two tankards toasting
+13. a dark grey black-powder smoke puff, lumpy
+14. a bright yellow-white fuse spark with tiny sparks flying out
+15. an orange and yellow powder-keg explosion burst
+16. a ring of green hop vines with golden hop cones seen from directly above, forming a circle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

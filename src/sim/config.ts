@@ -175,6 +175,9 @@ export interface AbilityDef {
   towerHaste?: number;
   markMul?: number;
   peck?: number;
+  rake?: number;
+  blindSeconds?: number;
+  blindMiss?: number;
   waves?: number;
   unitMul?: number;
   fuse?: number;

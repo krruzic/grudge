@@ -1266,6 +1266,10 @@ export class World {
     }
     if (target.hero) target.hero.combatAt = this.time;
     if (src?.hero && target.hero) src.hero.combatAt = this.time;
+    if (src && !opts.tick && src.status.blindUntil !== undefined && this.time < src.status.blindUntil && this.rng() < (src.status.blindMiss ?? 0.5)) {
+      this.emit({ type: "miss", ...ev });
+      return false;
+    }
     if (opts.canMiss && src) {
       const tr = this.data.match.terrain;
       if (tp.y - src.transform.y >= tr.highGroundDelta && this.rng() < tr.uphillMissChance) {

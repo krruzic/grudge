@@ -250,6 +250,7 @@ export class Audio {
           break;
         case "heroFx":
           if (ev.name === "pipLaunch" || ev.name === "pipLatch") [1800, 2400, 2100].forEach((f, i) => this.tone("sine", f, f * 1.25, 0.06, 0.05, pan, i * 0.07));
+          else if (ev.name === "pipRake") { [2600, 3100].forEach((f, i) => this.tone("sawtooth", f, f * 0.6, 0.12, 0.08, pan, i * 0.05)); this.hiss(4000, 2, 0.18, 0.3, pan, "bandpass"); }
           else if (ev.name === "pipPeck" && this.allow("peck", 2)) this.tone("square", 2600, 1800, 0.03, 0.04, pan);
           else if (ev.name === "heartseeker") { this.tone("sawtooth", 160, 50, 0.5, 0.18, pan); this.hiss(2200, 2, 0.4, 0.3, pan, "bandpass", 0, 500); }
           else if (ev.name === "volley") this.hiss(3000, 2, 0.6, 0.12, pan, "bandpass", 0.1, 1200);

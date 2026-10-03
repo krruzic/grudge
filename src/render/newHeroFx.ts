@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { World } from "../sim/world";
 import type { Entity, Keg } from "../sim/types";
-import { composite, DUELIST, ENGINEER, FX, HERALD, WARDEN, WARLORD } from "./fxKit";
+import { composite, FRIAR, FX, WREN } from "./fxKit";
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
 import { KITS, type HitEvent } from "./kits";
 import { prop } from "./props";
@@ -19,96 +19,15 @@ const model = <T extends THREE.BufferGeometry>(g: T): T => {
   return g;
 };
 
-export const BUBBLE = composite(64, (g) => {
-  g.strokeStyle = "rgba(255,250,230,0.95)";
-  g.lineWidth = 4;
-  g.beginPath();
-  g.arc(32, 32, 22, 0, Math.PI * 2);
-  g.stroke();
-  g.fillStyle = "rgba(255,240,200,0.25)";
-  g.fill();
-  g.fillStyle = "rgba(255,255,255,0.95)";
-  g.beginPath();
-  g.arc(24, 23, 6, 0, Math.PI * 2);
-  g.fill();
-});
+export const BUBBLE = FRIAR.bubble;
 
-export const FOAM = composite(64, (g) => {
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2;
-    const r = i % 2 ? 13 : 8;
-    const gr = g.createRadialGradient(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 1, 32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 14);
-    gr.addColorStop(0, "rgba(255,252,240,1)");
-    gr.addColorStop(0.7, "rgba(250,240,215,0.85)");
-    gr.addColorStop(1, "rgba(240,225,190,0)");
-    g.fillStyle = gr;
-    g.beginPath();
-    g.arc(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 14, 0, Math.PI * 2);
-    g.fill();
-  }
-});
+export const FOAM = FRIAR.foam;
 
-export const ALE_DROP = composite(64, (g) => {
-  const gr = g.createRadialGradient(28, 36, 2, 32, 34, 20);
-  gr.addColorStop(0, "rgba(255,236,150,1)");
-  gr.addColorStop(0.6, "rgba(232,160,30,0.95)");
-  gr.addColorStop(1, "rgba(170,90,10,0)");
-  g.fillStyle = gr;
-  g.beginPath();
-  g.moveTo(32, 8);
-  g.quadraticCurveTo(52, 34, 32, 54);
-  g.quadraticCurveTo(12, 34, 32, 8);
-  g.fill();
-  g.fillStyle = "rgba(255,255,240,0.9)";
-  g.beginPath();
-  g.arc(27, 34, 4, 0, Math.PI * 2);
-  g.fill();
-});
+export const ALE_DROP = FRIAR.drop;
 
-export const ALE_SPLASH = composite(128, (g) => {
-  g.translate(64, 64);
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2 + (i % 2) * 0.1;
-    const len = i % 2 ? 46 : 58;
-    g.save();
-    g.rotate(a);
-    const gr = g.createLinearGradient(0, 0, len, 0);
-    gr.addColorStop(0, "rgba(255,226,120,0.95)");
-    gr.addColorStop(0.7, "rgba(240,170,40,0.85)");
-    gr.addColorStop(1, "rgba(255,250,230,0)");
-    g.fillStyle = gr;
-    g.beginPath();
-    g.moveTo(8, -6);
-    g.quadraticCurveTo(len * 0.6, -9, len, 0);
-    g.quadraticCurveTo(len * 0.6, 9, 8, 6);
-    g.fill();
-    g.fillStyle = "rgba(255,250,235,0.95)";
-    g.beginPath();
-    g.arc(len - 4, 0, 5, 0, Math.PI * 2);
-    g.fill();
-    g.restore();
-  }
-  const c = g.createRadialGradient(0, 0, 2, 0, 0, 22);
-  c.addColorStop(0, "rgba(255,250,230,1)");
-  c.addColorStop(1, "rgba(250,200,90,0)");
-  g.fillStyle = c;
-  g.beginPath();
-  g.arc(0, 0, 22, 0, Math.PI * 2);
-  g.fill();
-});
+export const ALE_SPLASH = FRIAR.splash;
 
-export const HEART = composite(64, (g) => {
-  const gr = g.createRadialGradient(32, 30, 2, 32, 32, 30);
-  gr.addColorStop(0, "rgba(255,250,220,1)");
-  gr.addColorStop(0.45, "rgba(255,120,80,0.95)");
-  gr.addColorStop(1, "rgba(200,20,20,0)");
-  g.fillStyle = gr;
-  g.beginPath();
-  g.moveTo(32, 54);
-  g.bezierCurveTo(4, 34, 8, 8, 32, 20);
-  g.bezierCurveTo(56, 8, 60, 34, 32, 54);
-  g.fill();
-});
+export const HEART = WREN.heart;
 
 export const BEAM = composite(128, (g) => {
   const gr = g.createLinearGradient(0, 0, 0, 128);
@@ -121,82 +40,11 @@ export const BEAM = composite(128, (g) => {
   g.fillRect(0, 0, 128, 128);
 });
 
-export const MARK_RING = composite(128, (g) => {
-  g.strokeStyle = "rgba(255,70,50,0.95)";
-  g.lineWidth = 7;
-  g.beginPath();
-  g.arc(64, 64, 50, 0, Math.PI * 2);
-  g.stroke();
-  for (let k = 0; k < 4; k++) {
-    g.save();
-    g.translate(64, 64);
-    g.rotate((k * Math.PI) / 2);
-    g.fillStyle = "rgba(255,90,60,0.95)";
-    g.beginPath();
-    g.moveTo(-8, -62);
-    g.lineTo(8, -62);
-    g.lineTo(0, -40);
-    g.fill();
-    g.restore();
-  }
-});
+export const MARK_RING = WREN.markRing;
 
-export const VOLLEY_RING = composite(256, (g) => {
-  g.translate(128, 128);
-  g.strokeStyle = "rgba(255,226,150,0.95)";
-  g.lineWidth = 6;
-  g.beginPath();
-  g.arc(0, 0, 118, 0, Math.PI * 2);
-  g.stroke();
-  g.lineWidth = 3;
-  g.setLineDash([12, 10]);
-  g.beginPath();
-  g.arc(0, 0, 92, 0, Math.PI * 2);
-  g.stroke();
-  g.setLineDash([]);
-  for (let k = 0; k < 8; k++) {
-    g.save();
-    g.rotate((k / 8) * Math.PI * 2);
-    g.fillStyle = "rgba(255,200,110,0.95)";
-    g.beginPath();
-    g.moveTo(0, -112);
-    g.lineTo(11, -96);
-    g.lineTo(3, -98);
-    g.lineTo(3, -78);
-    g.lineTo(-3, -78);
-    g.lineTo(-3, -98);
-    g.lineTo(-11, -96);
-    g.closePath();
-    g.fill();
-    g.restore();
-  }
-});
+export const VOLLEY_RING = WREN.arrowRing;
 
-export const HEART_RING = composite(256, (g) => {
-  g.translate(128, 128);
-  g.strokeStyle = "rgba(255,150,110,0.95)";
-  g.lineWidth = 5;
-  g.beginPath();
-  g.arc(0, 0, 116, 0, Math.PI * 2);
-  g.stroke();
-  g.strokeStyle = "rgba(255,220,170,0.8)";
-  g.lineWidth = 2;
-  g.beginPath();
-  g.arc(0, 0, 100, 0, Math.PI * 2);
-  g.stroke();
-  for (let k = 0; k < 6; k++) {
-    g.save();
-    g.rotate((k / 6) * Math.PI * 2);
-    g.translate(0, -108);
-    g.fillStyle = "rgba(255,110,80,0.95)";
-    g.beginPath();
-    g.moveTo(0, 9);
-    g.bezierCurveTo(-11, 1, -8, -10, 0, -4);
-    g.bezierCurveTo(8, -10, 11, 1, 0, 9);
-    g.fill();
-    g.restore();
-  }
-});
+export const HEART_RING = WREN.spiral;
 
 function disc(draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   return composite(256, (g) => {
@@ -275,6 +123,16 @@ export const ZONE_DECALS: Record<string, THREE.Texture> = {
     speckle(g, 30, 10, 110, "rgba(120,90,60,0.45)", [3, 7], 5);
   }),
 };
+ZONE_DECALS.ale = FRIAR.puddle;
+ZONE_DECALS.brewfest = composite(256, (g, img) => {
+  const gr = g.createRadialGradient(128, 128, 20, 128, 128, 120);
+  gr.addColorStop(0, "rgba(250,200,90,0.28)");
+  gr.addColorStop(0.85, "rgba(240,180,60,0.18)");
+  gr.addColorStop(1, "rgba(240,180,60,0)");
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 256, 256);
+  g.drawImage(img(FRIAR.hopRing), 0, 0, 256, 256);
+});
 ZONE_DECALS.aletrail = ZONE_DECALS.ale;
 
 const WOOD = keep(new THREE.MeshLambertMaterial({ color: 0x9a6232, flatShading: true }));
@@ -572,7 +430,7 @@ export class HeroPropViews {
         yaw = peck > 0.05 ? Math.atan2(tp.x - pos.x, tp.z - pos.z) : Math.atan2(-Math.sin(a), Math.cos(a));
         pitch = peck * 0.9;
         flap = 14;
-        if (peck > 0.9 && this.fx && Math.random() < 0.5) emit(this.fx, { tex: DUELIST.feather, n: 1, x: tp.x, y: tp.y + head, z: tp.z, color: 0xff5a40, size: [0.16, 0.24], life: [0.6, 0.9], speed: [0.5, 1.2], up: [0.2, 0.8], gravity: 1.5, drag: 1, spin: 5 });
+        if (peck > 0.9 && this.fx && Math.random() < 0.5) emit(this.fx, { tex: WREN.feather, n: 1, x: tp.x, y: tp.y + head, z: tp.z, size: [0.16, 0.24], life: [0.6, 0.9], speed: [0.5, 1.2], up: [0.2, 0.8], gravity: 1.5, drag: 1, spin: 5 });
       }
     } else {
       v.latchT = 0;
@@ -691,7 +549,7 @@ export class HeroPropViews {
         }
         if (this.fx && puff) {
           emit(this.fx, { tex: FX.twinkle, n: 2, x: k.toX, y: k.toY + 1.25, z: k.toZ, color: 0xffa030, size: [0.15, 0.28], life: [0.2, 0.35], speed: [1, 2.5], up: [1, 2], gravity: 6, additive: true });
-          emit(this.fx, { tex: FX.smoke, n: 1, x: k.toX, y: k.toY + 1.3, z: k.toZ, color: 0x5a5048, size: [0.3, 0.5], grow: 2, life: [0.5, 0.8], speed: [0, 0.2], up: [0.6, 1], opacity: 0.6 });
+          emit(this.fx, { tex: FRIAR.spark, n: 1, x: k.toX, y: k.toY + 1.3, z: k.toZ, additive: true, color: 0xffffff, size: [0.25, 0.4], grow: 0.6, life: [0.2, 0.35], speed: [0.5, 1.5], up: [0.6, 1.2], opacity: 0.9 });
         }
       }
     }
@@ -779,9 +637,9 @@ KITS.marksman = {
     const pz = ev.z - n.z * 0.3;
     const py = ev.y + 0.3;
     emit(h, { tex: FX.burst2, n: 1, x: px, y: py, z: pz, color: 0xfff0c0, size: ev.big ? [1.5, 1.5] : [0.8, 0.8], grow: 1.5, life: [0.1, 0.1], speed: [0, 0], additive: true, order: 6 });
-    emit(h, { tex: WARDEN.splinters, n: ev.big ? 4 : 2, x: px, y: py, z: pz, size: [0.25, 0.4], life: [0.35, 0.55], speed: [3, 6], dir: { x: n.x, y: 0.5, z: n.z }, cone: 0.9, gravity: 14, spin: 10 });
+    emit(h, { tex: WREN.splinters, n: ev.big ? 4 : 2, x: px, y: py, z: pz, size: [0.25, 0.4], life: [0.35, 0.55], speed: [3, 6], dir: { x: n.x, y: 0.5, z: n.z }, cone: 0.9, gravity: 14, spin: 10 });
     emit(h, { tex: FX.twinkle, n: ev.big ? 6 : 3, x: px, y: py, z: pz, color: 0xe8ffb0, size: [0.2, 0.35], life: [0.15, 0.3], speed: [4, 8], dir: { x: n.x, y: 0.3, z: n.z }, cone: 1, gravity: 10, additive: true });
-    tumblers(h, [DUELIST.feather], ev.big ? 3 : 1, px, py + 0.2, pz, { speed: [0.5, 1.5], up: [0.5, 1.5], size: [0.22, 0.32], life: [0.8, 1.2] });
+    tumblers(h, [WREN.feather], ev.big ? 3 : 1, px, py + 0.2, pz, { speed: [0.5, 1.5], up: [0.5, 1.5], size: [0.22, 0.32], life: [0.8, 1.2] });
     if (ev.big) {
       shockwave(h, FX.shock, px, py, pz, n, 0.25, 1.6, 0.25, 0xd8ffb0, 0.85);
       h.shake = Math.max(h.shake, 0.2);
@@ -808,26 +666,41 @@ KITS.marksman = {
     const gy = ground(h, ev.x, ev.z, ev.y);
     switch (ev.name) {
       case "pipLaunch":
-        tumblers(h, [DUELIST.feather], 3, ev.x, ev.y, ev.z, { speed: [0.5, 1.5], up: [0.3, 1], size: [0.18, 0.26], life: [0.8, 1.1] });
+        tumblers(h, [WREN.feather], 3, ev.x, ev.y, ev.z, { speed: [0.5, 1.5], up: [0.3, 1], size: [0.18, 0.26], life: [0.8, 1.1] });
         emit(h, { tex: FX.twinkle, n: 4, x: ev.x, y: ev.y, z: ev.z, color: 0xff7050, size: [0.2, 0.3], life: [0.25, 0.4], speed: [1, 2], additive: true });
         return true;
       case "pipLatch":
-        decal(h, MARK_RING, ev.x, gy, ev.z, 1.1, 0.7, { grow: 0.15, spin: 2, additive: true, color: 0xff6040 });
-        emit(h, { tex: DUELIST.feather, n: 6, x: ev.x, y: ev.y + 2.6, z: ev.z, color: 0xff5a40, size: [0.18, 0.28], life: [0.8, 1.2], speed: [1, 2.5], up: [0.5, 1.5], gravity: 2, drag: 1, spin: 6 });
+        decal(h, MARK_RING, ev.x, gy, ev.z, 1.1, 0.7, { grow: 0.15, spin: 2 });
+        emit(h, { tex: WREN.feather, n: 6, x: ev.x, y: ev.y + 2.6, z: ev.z, size: [0.18, 0.28], life: [0.8, 1.2], speed: [1, 2.5], up: [0.5, 1.5], gravity: 2, drag: 1, spin: 6 });
         emit(h, { tex: FX.burst2, n: 1, x: ev.x, y: ev.y + 2.5, z: ev.z, color: 0xff8060, size: [1.2, 1.2], grow: 1.4, life: [0.15, 0.15], speed: [0, 0], additive: true });
         return true;
       case "pipPeck":
         emit(h, { tex: FX.twinkle, n: 3, x: ev.x, y: ev.y + 2.3, z: ev.z, color: 0xff6a50, size: [0.2, 0.32], life: [0.2, 0.3], speed: [1.5, 3], gravity: 6, additive: true });
-        emit(h, { tex: DUELIST.feather, n: 1, x: ev.x, y: ev.y + 2.4, z: ev.z, color: 0xff5a40, size: [0.16, 0.22], life: [0.6, 0.9], speed: [0.5, 1.2], up: [0.3, 0.8], gravity: 1.5, spin: 6 });
+        emit(h, { tex: WREN.feather, n: 1, x: ev.x, y: ev.y + 2.4, z: ev.z, size: [0.16, 0.22], life: [0.6, 0.9], speed: [0.5, 1.2], up: [0.3, 0.8], gravity: 1.5, spin: 6 });
         emit(h, { tex: FX.burst2, n: 1, x: ev.x, y: ev.y + 2.1, z: ev.z, color: 0xffb0a0, size: [0.6, 0.6], grow: 1.3, life: [0.08, 0.08], speed: [0, 0], additive: true });
         return true;
+      case "pipRake": {
+        const y = ev.y + 1.6;
+        emit(h, { tex: WREN.claws, n: 1, x: ev.x, y: y + 0.4, z: ev.z, size: [1.5, 1.5], grow: 1.25, life: [0.3, 0.3], speed: [0, 0], order: 5 });
+        emit(h, { tex: WREN.feathers, n: 1, x: ev.x, y: y + 0.7, z: ev.z, size: [1.1, 1.1], grow: 1.6, life: [0.45, 0.45], speed: [0, 0.3] });
+        emit(h, { tex: WREN.feather, n: 8, x: ev.x, y: y + 0.6, z: ev.z, size: [0.2, 0.32], life: [0.8, 1.3], speed: [2, 4], up: [0.5, 2], gravity: 2, drag: 1, spin: 8 });
+        const secs = ev.seconds ?? 2.5;
+        for (let k = 0; k * 0.35 < secs; k++) {
+          h.after(0.1 + k * 0.35, () => {
+            const o = ev.id !== undefined ? h.world?.get(ev.id) : undefined;
+            if (ev.id !== undefined && !o?.alive) return;
+            emit(h, { tex: WREN.dizzy, n: 1, x: o ? o.transform.pos.x : ev.x, y: (o ? o.transform.y : ev.y) + 2.3, z: o ? o.transform.pos.z : ev.z, size: [0.85, 0.85], life: [0.45, 0.45], speed: [0, 0], spin: 4 });
+          });
+        }
+        return true;
+      }
       case "pipHome":
-        tumblers(h, [DUELIST.feather], 2, ev.x, ev.y, ev.z, { speed: [0.3, 0.8], up: [0.2, 0.6], size: [0.16, 0.22], life: [0.7, 1] });
+        tumblers(h, [WREN.feather], 2, ev.x, ev.y, ev.z, { speed: [0.3, 0.8], up: [0.2, 0.6], size: [0.16, 0.22], life: [0.7, 1] });
         return true;
       case "volley": {
         const r = ev.radius ?? 3.5;
         const secs = ev.seconds ?? 2.35;
-        decal(h, VOLLEY_RING, ev.x, gy, ev.z, r * 1.05, secs + 0.3, { grow: 0.2, spin: 0.4, additive: true, color: 0xffe0a0, opacity: 0.8 });
+        decal(h, VOLLEY_RING, ev.x, gy, ev.z, r * 1.05, secs + 0.3, { grow: 0.2, spin: 0.4, opacity: 0.9 });
         decal(h, FX.shock, ev.x, gy, ev.z, r, secs + 0.3, { grow: 0.25, additive: true, color: 0xff9a50, opacity: 0.45 });
         const lean = Math.random() - 0.5;
         const total = Math.round(r * r * 3.2);
@@ -845,7 +718,7 @@ KITS.marksman = {
       case "volleyWave": {
         const r = ev.radius ?? 3.5;
         shockwave(h, FX.shock, ev.x, gy + 0.15, ev.z, UP, r * 0.3, r, 0.3, 0xffe0b0, 0.5);
-        emit(h, { tex: WARDEN.splinters, n: 4, x: ev.x, y: gy + 0.4, z: ev.z, size: [0.2, 0.35], life: [0.3, 0.5], speed: [2, 4], up: [2, 4], gravity: 14, spin: 10, jitter: r * 1.2 });
+        emit(h, { tex: WREN.splinters, n: 4, x: ev.x, y: gy + 0.4, z: ev.z, size: [0.2, 0.35], life: [0.3, 0.5], speed: [2, 4], up: [2, 4], gravity: 14, spin: 10, jitter: r * 1.2 });
         h.shake = Math.max(h.shake, 0.1);
         return true;
       }
@@ -893,7 +766,7 @@ KITS.marksman = {
         return true;
       }
       case "skyshot":
-        tumblers(h, [DUELIST.feather, WARDEN.leaf], 4, ev.x, gy + 0.6, ev.z, { speed: [0.8, 2], up: [1, 2], size: [0.25, 0.35], life: [0.9, 1.3] });
+        tumblers(h, [WREN.feather, WREN.leaves], 4, ev.x, gy + 0.6, ev.z, { speed: [0.8, 2], up: [1, 2], size: [0.25, 0.35], life: [0.9, 1.3] });
         emit(h, { tex: FX.dust, n: 4, x: ev.x, y: gy + 0.3, z: ev.z, size: [0.8, 1.1], grow: 1.7, life: [0.4, 0.6], speed: [1, 2.5], flatSpread: true, drag: 3, opacity: 0.85 });
         return true;
     }
@@ -902,7 +775,7 @@ KITS.marksman = {
   act(h, ev) {
     const gy = ground(h, ev.x, ev.z, ev.y);
     if (ev.phase === "start" && ev.kind === "heartseeker") {
-      decal(h, HEART_RING, ev.x, gy, ev.z, 1.7, 1.2, { grow: 0.3, spin: 2.5, additive: true, color: 0xffb090, opacity: 0.9 });
+      decal(h, HEART_RING, ev.x, gy, ev.z, 1.7, 1.2, { grow: 0.3, spin: 2.5, opacity: 0.85 });
       for (let k = 0; k < 9; k++) {
         h.after(k * 0.09, () => {
           const a = Math.random() * Math.PI * 2;
@@ -931,15 +804,15 @@ function aleSplash(h: FxHost, x: number, gy: number, z: number, r: number, big: 
   emit(h, { tex: ALE_DROP, n: big ? 16 : 6, x, y: gy + 0.6, z, size: [0.18, 0.3], life: [0.5, 0.8], speed: [2, r * 1.6], up: [2.5, 5], gravity: 14, floor: gy + 0.05 });
   emit(h, { tex: FOAM, n: big ? 6 : 2, x, y: gy + 0.4, z, size: [0.5, 0.8], grow: 1.5, life: [0.5, 0.8], speed: [1, 2.5], flatSpread: true, drag: 3 });
   emit(h, { tex: BUBBLE, n: big ? 10 : 4, x, y: gy + 0.3, z, size: [0.18, 0.32], life: [0.6, 1.1], speed: [0.2, 0.6], up: [0.6, 1.4], jitter: r * 1.2 });
-  emit(h, { tex: HERALD.heal, n: big ? 6 : 2, x, y: gy + 0.8, z, size: [0.4, 0.55], life: [0.9, 1.2], speed: [0.2, 0.6], up: [1.2, 2], jitter: r });
+  emit(h, { tex: FRIAR.heal, n: big ? 6 : 2, x, y: gy + 0.8, z, size: [0.4, 0.55], life: [0.9, 1.2], speed: [0.2, 0.6], up: [1.2, 2], jitter: r });
 }
 
 function kegBoom(h: FxHost, x: number, gy: number, z: number, r: number, big: boolean): void {
-  emit(h, { tex: FX.burst, n: 1, x, y: gy + 1, z, color: 0xffd080, size: [r * 1.4, r * 1.4], grow: 1.4, life: [0.15, 0.15], speed: [0, 0], additive: true, order: 6 });
+  emit(h, { tex: FRIAR.blast, n: 1, x, y: gy + 1, z, size: [r * 1.3, r * 1.3], grow: 1.4, life: [0.2, 0.2], speed: [0, 0], order: 6 });
   emit(h, { tex: FX.fire, n: big ? 10 : 4, x, y: gy + 0.8, z, size: [0.9, 1.5], grow: 1.6, life: [0.3, 0.55], speed: [1.5, r * 1.6], up: [1, 2.5], additive: true });
-  emit(h, { tex: FX.smoke, n: big ? 10 : 4, x, y: gy + 1, z, color: 0x4a4038, size: [1.2, 1.9], grow: 1.8, life: [0.9, 1.5], speed: [1, 2.5], up: [0.8, 1.6], drag: 1.5, opacity: 0.85 });
-  emit(h, { tex: WARLORD.ember, n: big ? 12 : 5, x, y: gy + 0.8, z, size: [0.15, 0.25], life: [0.6, 1], speed: [3, 7], up: [2, 5], gravity: 9, additive: true });
-  emit(h, { tex: ENGINEER.plank, n: big ? 6 : 2, x, y: gy + 0.6, z, size: [0.45, 0.7], life: [0.7, 1], speed: [3, 6], up: [4, 7], gravity: 16, spin: 10, floor: gy + 0.1 });
+  emit(h, { tex: FRIAR.smoke, n: big ? 10 : 4, x, y: gy + 1, z, size: [1.2, 1.9], grow: 1.8, life: [0.9, 1.5], speed: [1, 2.5], up: [0.8, 1.6], drag: 1.5, opacity: 0.85 });
+  emit(h, { tex: FRIAR.spark, n: big ? 12 : 5, x, y: gy + 0.8, z, size: [0.15, 0.25], life: [0.6, 1], speed: [3, 7], up: [2, 5], gravity: 9, additive: true });
+  emit(h, { tex: FRIAR.stave, n: big ? 6 : 2, x, y: gy + 0.6, z, size: [0.45, 0.7], life: [0.7, 1], speed: [3, 6], up: [4, 7], gravity: 16, spin: 10, floor: gy + 0.1 });
   shockwave(h, FX.shock, x, gy + 0.3, z, UP, 0.4, r * 1.15, 0.35, 0xffb060, 0.95);
   if (big) {
     decal(h, FX.crack, x, gy, z, r * 0.75, 2.2, { grow: 0.06, opacity: 0.85 });
@@ -997,10 +870,10 @@ KITS.friar = {
         const r = ev.radius ?? 7;
         emit(h, { tex: FX.dust, n: 12, x: ev.x, y: gy + 0.4, z: ev.z, size: [1, 1.5], grow: 1.8, life: [0.5, 0.9], speed: [2, 4.5], flatSpread: true, drag: 3, opacity: 0.85 });
         shockwave(h, FX.shock, ev.x, gy + 0.2, ev.z, UP, 0.5, r, 0.6, 0xffd070, 0.85);
-        decal(h, HERALD.halo, ev.x, gy + 0.02, ev.z, r, 1.0, { grow: 0.5, spin: 0.5, additive: true, color: 0xffd060, opacity: 0.4 });
+        decal(h, FRIAR.hopRing, ev.x, gy + 0.02, ev.z, r, 1.0, { grow: 0.5, spin: 0.5, opacity: 0.8 });
         emit(h, { tex: FOAM, n: 10, x: ev.x, y: gy + 2.4, z: ev.z, size: [0.5, 0.9], grow: 1.4, life: [0.7, 1.1], speed: [1.5, 3.5], up: [3, 5], gravity: 9 });
         emit(h, { tex: ALE_DROP, n: 18, x: ev.x, y: gy + 2.4, z: ev.z, size: [0.2, 0.32], life: [0.7, 1.1], speed: [2, 4], up: [3, 6], gravity: 12, floor: gy + 0.05 });
-        emit(h, { tex: HERALD.star, n: 8, x: ev.x, y: gy + 3, z: ev.z, color: 0xffe090, size: [0.3, 0.45], life: [0.6, 0.9], speed: [1.5, 3], up: [1, 2.5], gravity: 4, additive: true });
+        emit(h, { tex: FRIAR.cheers, n: 8, x: ev.x, y: gy + 3, z: ev.z, color: 0xffe090, size: [0.3, 0.45], life: [0.6, 0.9], speed: [1.5, 3], up: [1, 2.5], gravity: 4, additive: true });
         h.shake = Math.max(h.shake, 0.35);
         return true;
       }
@@ -1010,8 +883,8 @@ KITS.friar = {
         shockwave(h, FX.shock, ev.x, gy + 0.3, ev.z, UP, 0.5, r, 0.5, 0xffd070, 1);
         emit(h, { tex: FOAM, n: 14, x: ev.x, y: gy + 1, z: ev.z, size: [0.6, 1.1], grow: 1.5, life: [0.8, 1.2], speed: [2, 5], up: [4, 8], gravity: 10 });
         emit(h, { tex: ALE_DROP, n: 30, x: ev.x, y: gy + 1, z: ev.z, size: [0.2, 0.34], life: [0.8, 1.2], speed: [3, 6], up: [4, 9], gravity: 12, floor: gy + 0.05 });
-        emit(h, { tex: HERALD.heal, n: 10, x: ev.x, y: gy + 0.8, z: ev.z, size: [0.45, 0.6], life: [1, 1.4], speed: [0.3, 1], up: [1.5, 2.5], jitter: r });
-        emit(h, { tex: ENGINEER.plank, n: 8, x: ev.x, y: gy + 1, z: ev.z, size: [0.5, 0.8], life: [0.8, 1.1], speed: [3, 6], up: [4, 8], gravity: 16, spin: 10, floor: gy + 0.1 });
+        emit(h, { tex: FRIAR.heal, n: 10, x: ev.x, y: gy + 0.8, z: ev.z, size: [0.45, 0.6], life: [1, 1.4], speed: [0.3, 1], up: [1.5, 2.5], jitter: r });
+        emit(h, { tex: FRIAR.stave, n: 8, x: ev.x, y: gy + 1, z: ev.z, size: [0.5, 0.8], life: [0.8, 1.1], speed: [3, 6], up: [4, 8], gravity: 16, spin: 10, floor: gy + 0.1 });
         h.shake = Math.max(h.shake, 0.5);
         return true;
       }
@@ -1027,7 +900,7 @@ KITS.friar = {
           if (!o.alive || o.team !== ev.team || o.structure || o.hp >= o.maxHp) continue;
           if (Math.hypot(o.transform.pos.x - ev.x, o.transform.pos.z - ev.z) > r) continue;
           emit(h, { tex: BUBBLE, n: 1, x: o.transform.pos.x, y: o.transform.y + 0.8, z: o.transform.pos.z, size: [0.16, 0.26], life: [0.7, 1], speed: [0.1, 0.3], up: [0.8, 1.2], jitter: 0.8 });
-          if (o.hero) emit(h, { tex: HERALD.heal, n: 1, x: o.transform.pos.x, y: o.transform.y + 1.6, z: o.transform.pos.z, color: 0xffe8a0, size: [0.3, 0.4], life: [0.8, 1], speed: [0.1, 0.3], up: [0.8, 1.2], jitter: 0.5, opacity: 0.85 });
+          if (o.hero) emit(h, { tex: FRIAR.heal, n: 1, x: o.transform.pos.x, y: o.transform.y + 1.6, z: o.transform.pos.z, color: 0xffe8a0, size: [0.3, 0.4], life: [0.8, 1], speed: [0.1, 0.3], up: [0.8, 1.2], jitter: 0.5, opacity: 0.85 });
         }
         return true;
       }
@@ -1037,7 +910,7 @@ KITS.friar = {
   act(h, ev) {
     const gy = ground(h, ev.x, ev.z, ev.y);
     if (ev.phase === "start" && ev.kind === "brewfest") {
-      emit(h, { tex: HERALD.star, n: 6, x: ev.x, y: gy + 2.6, z: ev.z, color: 0xffe090, size: [0.25, 0.4], life: [0.4, 0.6], speed: [0.5, 1.5], up: [0.5, 1.2], additive: true, jitter: 0.8 });
+      emit(h, { tex: FRIAR.cheers, n: 6, x: ev.x, y: gy + 2.6, z: ev.z, color: 0xffe090, size: [0.25, 0.4], life: [0.4, 0.6], speed: [0.5, 1.5], up: [0.5, 1.2], additive: true, jitter: 0.8 });
     }
   },
 };

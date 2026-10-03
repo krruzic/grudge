@@ -857,7 +857,7 @@
      "id": "longwatch",
      "name": "LONG WATCH",
      "desc": "PIP HOLDS ON FOR 8S INSTEAD OF 5 AND ITS MARK MAKES THE TARGET TAKE 25% MORE FROM YOU.",
-     "combo": "WITH DOUBLE VOLLEY: PIP'S PREY IS ALSO SLOWED 30% WHILE PIP HANGS ON.",
+     "combo": "WITH DOUBLE VOLLEY: PIP'S PREY IS SLOWED 30% INSTEAD OF 25%.",
      "add": {
       "seconds": 3
      },
@@ -876,10 +876,10 @@
     {
      "id": "talons",
      "name": "RAKING TALONS",
-     "desc": "PIP PECKS ON ITS OWN EVERY SECOND, AND EVERY PECK OPENS A BLEED THAT STACKS 3 TIMES.",
+     "desc": "PIP PECKS TWICE AS OFTEN ON ITS OWN, AND EVERY PECK (AND THE RAKE) OPENS A BLEED THAT STACKS 3 TIMES.",
      "combo": "WITH FIRE ARROWS: PECKS HIT 8 HARDER.",
      "fx": {
-      "pipAutoPeck": 1,
+      "pipAutoPeck": 0.75,
       "bleed": {
        "dps": 10,
        "seconds": 3,

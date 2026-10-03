@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for WREN, a red-haired longbow huntress in moss green with a bright red hawk named Pip, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single bright red-and-cream hawk feather, slightly curved
+2. a small burst cluster of five red hawk feathers flying apart
+3. three parallel curved crimson talon claw slash marks
+4. a longbow arrow, diagonal, ash shaft, steel bodkin tip, red and white fletching
+5. a pale gold-white motion streak of a speeding arrow, tapering to a point, horizontal
+6. a few broken pale wooden arrow shaft splinters
+7. one autumn oak leaf, orange and russet
+8. a small cluster of three autumn leaves, gold, orange and red
+9. a hunter's target mark seen from directly above: a thin crimson ring with four inward notches like a crosshair
+10. a top-down ring of short arrow shafts stuck in the ground, evenly spaced around a circle, fletching up
+11. a glowing crimson heart with a soft pale core
+12. a four-point golden eye-glint sparkle with a soft warm centre
+13. a small circling swirl of dark violet smoke with three tiny gold stars (dizzy / blinded)
+14. a pale green-white wind gust swirl
+15. a bright flame like a fire-arrow head flame, orange and yellow
+16. a crimson spiral shock burst seen face-on, brushy painted edges
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

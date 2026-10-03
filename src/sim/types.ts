@@ -70,6 +70,8 @@ export interface Status {
   markWeaken: number;
   pipUntil?: number;
   pipOwner?: number;
+  blindUntil?: number;
+  blindMiss?: number;
   brewUntil?: number;
   brewMul?: number;
 }
@@ -130,6 +132,7 @@ export interface HeroAction {
   pinned?: Record<number, [number, number]>;
   chargeRange?: number;
   targetId?: number;
+  stick?: boolean;
 }
 
 export interface HeroState {

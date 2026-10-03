@@ -210,12 +210,12 @@ export function updatePip(w: World, e: Entity): void {
       p.y = o.transform.y + 2.3;
       p.z = o.transform.pos.z;
       o.status.pipUntil = p.until;
-      const slow = def.fx?.pipSlow;
+      const slow = def.fx?.pipSlow ?? def.slowMul;
       if (slow && !o.structure) {
         o.status.slowMul = Math.min(o.status.slowUntil > w.time ? o.status.slowMul : 1, slow);
         o.status.slowUntil = Math.max(o.status.slowUntil, w.time + 0.2);
       }
-      const auto = def.fx?.pipAutoPeck;
+      const auto = def.fx?.pipAutoPeck ?? 1.5;
       if (auto && w.time >= p.peckAt) {
         p.peckAt = w.time + auto;
         peck(w, e, o);
@@ -235,10 +235,57 @@ export function updatePip(w: World, e: Entity): void {
   }
 }
 
+export function canRake(e: Entity): boolean {
+  return e.hero?.pip?.phase === "on";
+}
+
+export function rake(w: World, e: Entity): void {
+  const h = e.hero!;
+  const p = h.pip;
+  if (!p || p.phase !== "on") return;
+  const o = w.get(p.target);
+  const def = abilities(w, e).b;
+  if (o && o.alive) {
+    const ox = o.transform.pos.x;
+    const oz = o.transform.pos.z;
+    w.damage(e, o, (def.rake ?? 80) * w.damageMulOf(e), { fromX: ox, fromZ: oz, knockback: 0.5, big: true });
+    if (def.fx?.bleed) applyBleed(w, e, o, def.fx.bleed);
+    if (o.hero || o.unit) {
+      o.status.blindUntil = w.time + (def.blindSeconds ?? 2.5);
+      o.status.blindMiss = def.blindMiss ?? 0.5;
+    }
+    interruptChannels(w, o);
+    fx(w, "pipRake", e, ox, o.transform.y, oz, { id: o.id, seconds: def.blindSeconds ?? 2.5 });
+    w.emit({ type: "callout", x: ox, y: o.transform.y, z: oz, team: e.team, text: "BLINDED!", owner: o.id });
+    if (o.status.pipOwner === e.id) o.status.pipUntil = 0;
+  }
+  p.phase = "back";
+}
+
 export function pipTarget(w: World, e: Entity): Entity | null {
   const p = e.hero?.pip;
   if (!p || p.phase !== "on") return null;
   return w.get(p.target) ?? null;
+}
+
+export function wrenTarget(w: World, e: Entity, dirX: number, dirZ: number, stick: boolean, reach: number): Entity | null {
+  const t = e.transform;
+  let best: Entity | null = null;
+  let bs = Infinity;
+  for (const o of w.entities) {
+    if (!o.alive || o.team === e.team || !w.canSee(e, o)) continue;
+    const d = w.dist(e, o) - o.radius;
+    if (d > reach) continue;
+    const dx = o.transform.pos.x - t.pos.x;
+    const dz = o.transform.pos.z - t.pos.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const along = (dx * dirX + dz * dirZ) / len;
+    if (stick && along < 0.2) continue;
+    const pip = o.status.pipOwner === e.id && w.time < (o.status.pipUntil ?? 0);
+    const sc = d * 0.5 + (o.hero ? -6 : 0) + (pip ? -4 : 0) + (o.structure ? 5 : 0) - along * (stick ? 6 : 2);
+    if (sc < bs) { bs = sc; best = o; }
+  }
+  return best;
 }
 
 export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
@@ -246,9 +293,9 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
   const hk = w.heroDef(e.hero!.type).hooks;
   const base = def.range ?? 11;
   const far = base * (hk.vantageRange ?? 1.2);
-  const cmd: Command = { moveX: a.dirX, moveZ: a.dirZ };
-  let target = aimTarget(w, e, cmd, far);
-  if (target && w.dist(e, target) - target.radius > base && !vantage(w, e, target)) target = aimTarget(w, e, cmd, base);
+  const stick = !!a.stick;
+  let target = wrenTarget(w, e, a.dirX, a.dirZ, stick, far);
+  if (target && w.dist(e, target) - target.radius > base && !vantage(w, e, target)) target = wrenTarget(w, e, a.dirX, a.dirZ, stick, base);
   let dx = a.dirX;
   let dz = a.dirZ;
   if (target) {
@@ -257,13 +304,14 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
     const dl = Math.hypot(ddx, ddz) || 1;
     dx = ddx / dl;
     dz = ddz / dl;
+    t.facing = Math.atan2(dx, dz);
   }
   const pw = a.power ?? 1;
   if (pw >= 1.4) {
     const range = (def.pierceRange ?? 14) * (vantage(w, e, target) ? hk.vantageRange ?? 1.2 : 1);
     fireMissile(w, e, {
       x: t.pos.x + dx * 0.6, z: t.pos.z + dz * 0.6, y: t.y + 1.4, dirX: dx, dirZ: dz, speed: 42, range, width: 0.8,
-      damage: (def.damage ?? 40) * mul * 1.15, pierce: true, style: "powershot", arrow: true, knockback: 7,
+      damage: (def.damage ?? 40) * mul * (0.9 + pw * 0.7), pierce: true, style: "powershot", arrow: true, knockback: 7,
     });
     fx(w, "powershot", e, t.pos.x, t.y, t.pos.z, { tx: t.pos.x + dx * range, tz: t.pos.z + dz * range });
     return;
@@ -272,9 +320,11 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
   const splash = def.splash ? { radius: def.splash, damage: (def.splashDamage ?? 15) * mul, slowMul: 1, slowSeconds: 0 } : undefined;
   const speed = def.speed ?? 32;
   if (target) {
-    w.fireProjectile(e, target, dmg, speed, false, "longarrow", 1.5, true, splash);
+    w.fireProjectile(e, target, dmg, speed, false, "longarrow", 1.5, false, splash);
     w.projectiles[w.projectiles.length - 1].arrow = true;
-  } else w.fireAtPoint(e, t.pos.x + dx * base, t.pos.z + dz * base, speed, "longarrow", 1.5, splash);
+  } else {
+    fireMissile(w, e, { x: t.pos.x + dx * 0.6, z: t.pos.z + dz * 0.6, y: t.y + 1.4, dirX: dx, dirZ: dz, speed: speed * 1.2, range: base, width: 0.7, damage: dmg, pierce: false, style: "longarrow", arrow: true, knockback: 0.8 });
+  }
 }
 
 export function volley(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
