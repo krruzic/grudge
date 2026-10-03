@@ -62,7 +62,7 @@ function bakeGeometry(src: THREE.BufferGeometry, part: number, matrix: THREE.Mat
 function plainMap(map: THREE.Texture, size: number): boolean {
   const img = map.image as { width?: number; height?: number } | undefined;
   return (
-    !!img?.width && img.width === img.height && img.width === size &&
+    !!img?.width && img.width === img.height && img.width <= size &&
     map.magFilter === THREE.LinearFilter && map.minFilter === THREE.LinearMipmapLinearFilter &&
     map.wrapS === THREE.RepeatWrapping && map.wrapT === THREE.RepeatWrapping &&
     map.offset.x === 0 && map.offset.y === 0 && map.repeat.x === 1 && map.repeat.y === 1 && map.rotation === 0
@@ -80,13 +80,15 @@ function mergeStatic(gltf: GLTF): Baked | null {
   const groups = new Map<THREE.Object3D, THREE.Mesh[]>();
   let size = 0;
   scene.traverse((o) => {
+    const w = o instanceof THREE.Mesh && !Array.isArray(o.material) ? ((o.material as THREE.MeshStandardMaterial).map?.image as { width?: number } | undefined)?.width ?? 0 : 0;
+    if (w >= 8 && w <= 256) size = Math.max(size, w);
+  });
+  scene.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || o instanceof THREE.SkinnedMesh || Array.isArray(o.material) || o.children.length) return;
     const g = o.geometry as THREE.BufferGeometry;
     if (!g.index || !ATTRS.every((n) => g.getAttribute(n)) || Object.keys(g.morphAttributes).length) return;
     const m = o.material as THREE.MeshStandardMaterial;
     if (m.map) {
-      const w = (m.map.image as { width?: number } | undefined)?.width ?? 0;
-      if (!size && w >= 8 && w <= 256) size = w;
       if (!plainMap(m.map, size)) return;
     }
     if (!mats.includes(m)) {

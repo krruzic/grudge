@@ -4,8 +4,8 @@ Run headless: blender -b --python tools/blender/build_tripo_structures.py -- [da
 Sources live in assets/source/tower_<type>_tripo.glb. Each export keeps the node contract of build_structures.py:
   <type>          Tripo body (materials tower_<type>_skin and team_tower_<type>, blue texels greyed for dyeing)
   spin_<type>     procedural part the game spins / bobs (from build_structures)
-  level2_<type>   procedural upgrade trim fitted to the new body
-  level3_<spec>   procedural spec tops fitted to the new body; level3_ballista carries the Tripo ballista turret
+  level2_<type>   group of Tripo upgrade props (assets/source/addon_<name>_tripo.glb) placed on the body
+  level3_<spec>   group of Tripo spec props; level3_ballista is the Tripo ballista turntable + turret
 """
 import math
 import os
@@ -35,6 +35,8 @@ TOWERS = {
 }
 BALLISTA_SPAN = 2.5
 TURRET_TRIS = 2500
+PLATE_DEPTH = 0.24
+PLATE_R = 0.66
 C = bs.C
 X = bs.X
 
@@ -106,7 +108,7 @@ def ballista_turret():
     split = (cfg["split"] - z0) * cfg["scale"]
     me.transform(Matrix.Scale(cfg["scale"], 4) @ Matrix.Translation((0, 0, -z0)))
     top = tp.split_mesh(w, split)
-    bpy.data.objects.remove(w, do_unlink=True)
+    plate = turntable(w, split)
     co = np.array([v.co[:] for v in top.data.vertices])
     s = BALLISTA_SPAN / (co[:, 0].max() - co[:, 0].min())
     top.data.transform(Matrix.Scale(s, 4) @ Matrix.Translation((0, 0, -split)))
@@ -121,181 +123,139 @@ def ballista_turret():
     bpy.ops.object.modifier_apply(modifier=dec.name)
     top.name = "tower_ballista"
     top.data.name = "tower_ballista"
-    return top, tips, nut
+    return top, tips, nut, plate
 
 
-def ring(c, ri, ro, h, z, mat, segs=16, **kw):
+def turntable(base, split):
     bm = bmesh.new()
-    prof = [(ri, h / 2), (ro, h / 2), (ro, -h / 2), (ri, -h / 2)]
-    rings = [[bm.verts.new((math.cos(i / segs * math.tau) * r, math.sin(i / segs * math.tau) * r, pz)) for i in range(segs)] for r, pz in prof]
-    for k in range(4):
-        a, b = rings[k], rings[(k + 1) % 4]
-        for i in range(segs):
-            j = (i + 1) % segs
-            bm.faces.new((a[i], a[j], b[j], b[i]))
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    kw.setdefault("uv_mode", "cyl")
-    c.add_bm(bm, mat, "root", c.xform((0, 0, z)), **kw)
+    bm.from_mesh(base.data)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_center_median().z < split - PLATE_DEPTH], context="FACES")
+    bm.to_mesh(base.data)
+    bm.free()
+    me = base.data
+    co = np.array([v.co[:] for v in me.vertices])
+    r = np.hypot(co[:, 0], co[:, 1]).max()
+    me.transform(Matrix.Scale(PLATE_R / r, 4) @ Matrix.Translation((0, 0, -co[:, 2].min())))
+    base.name = "tower_ballista_plate"
+    me.name = "tower_ballista_plate"
+    return base
 
 
-def band(c, b, z, mat="iron", h=0.1, out=0.03, segs=14, **kw):
-    r = b.R(z) + out
-    c.cone(r, r, h, (0, 0, z), mat, "root", segs=segs, **kw)
+ADDONS = {
+    "banner": {"height": 1.25, "tris": 1500, "team": True},
+    "pylon": {"height": 1.45, "tris": 1100, "team": True},
+    "spire": {"height": 1.6, "tris": 1800, "team": True},
+    "brazier": {"height": 0.9, "tris": 2200},
+    "bartizan": {"height": 1.5, "tris": 1000},
+    "frost": {"height": 1.7, "tris": 900},
+    "rod": {"height": 2.35, "tris": 2000},
+    "orb": {"height": 1.05, "tris": 2400},
+}
+FLOOR = 3.23
+IMAGES = [None]
 
 
-def wall_banner(c, b, ang, z, h, w=0.42):
-    r = max(b.R(z + h * k / 4, ang) for k in range(5)) + 0.05
-    x, y = math.cos(ang) * r, math.sin(ang) * r
-    c.box((w, 0.04, h), (x, y, z + h * 0.5), C, "root", rot=(0, 0, ang + math.pi / 2))
-    c.limb((math.cos(ang) * (r - 0.05), math.sin(ang) * (r - 0.05), z + h + 0.05), (math.cos(ang) * (r + 0.04), math.sin(ang) * (r + 0.04), z + h + 0.05), 0.03, 0.03, "wood", "root", segs=4)
-    c.limb((x - math.sin(ang) * (w * 0.6), y + math.cos(ang) * (w * 0.6), z + h + 0.02), (x + math.sin(ang) * (w * 0.6), y - math.cos(ang) * (w * 0.6), z + h + 0.02), 0.025, 0.025, "wood", "root", segs=4)
-    c.cone(0.05, 0.0, 0.16, (x, y, z - 0.06), "gold", "root", segs=4, rot=(math.pi, 0, 0))
+def addon(key, cfg=None):
+    cfg = cfg or ADDONS[key]
+    w = th.import_prop("addon_" + key, os.path.join(ROOT, "assets", "source", f"addon_{key}_tripo.glb"), tex=256, team_hue=TEAM_HUE if cfg.get("team") else None)
+    me = w.data
+    me.transform(Matrix.Rotation(math.radians(-90 + cfg.get("yaw", 0)), 4, "Z"))
+    co = np.array([v.co[:] for v in me.vertices])
+    lo, hi = co.min(0), co.max(0)
+    me.transform(Matrix.Scale(cfg["height"] / (hi[2] - lo[2]), 4) @ Matrix.Translation((-(lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2, -lo[2])))
+    tris = sum(len(p.vertices) - 2 for p in me.polygons)
+    if tris > cfg["tris"]:
+        dec = w.modifiers.new("dec", "DECIMATE")
+        dec.ratio = cfg["tris"] / tris
+        bpy.context.view_layer.objects.active = w
+        bpy.ops.object.modifier_apply(modifier=dec.name)
+    w.name = "addon_" + key
+    me.name = "addon_" + key
+    return w
 
 
-def l2_damage(c, b):
-    for z in (1.25, 2.35):
-        band(c, b, z)
-    for a in b.peaks(0.86, b.top - 0.12):
-        c.cone(0.09, 0.0, 0.32, (math.cos(a) * 0.86, math.sin(a) * 0.86, b.top + 0.14), "gold", "root", segs=4)
-    for a in (math.radians(205), math.radians(335)):
-        wall_banner(c, b, a, 1.5, 1.0)
+def group(name):
+    e = bpy.data.objects.new(name, None)
+    bpy.context.scene.collection.objects.link(e)
+    return e
 
 
-def l2_control(c, b):
+def place(src, parent, loc, yaw=0.0, scale=1.0, tag=""):
+    if src.get("placed"):
+        o = bpy.data.objects.new(src.name + tag, src.data)
+        bpy.context.scene.collection.objects.link(o)
+    else:
+        o = src
+        o["placed"] = 1
+    o.parent = parent
+    o.location = loc
+    o.rotation_euler = (0, 0, yaw)
+    o.scale = (scale, scale, scale)
+    return o
+
+
+def on_wall(b, src, parent, ang, z, tag):
+    h = src.dimensions.z
+    d = src.dimensions.y
+    r = max(b.R(z + h * k / 4, ang) for k in range(5)) + d * 0.35
+    return place(src, parent, (math.cos(ang) * r, math.sin(ang) * r, z), ang + math.pi / 2, tag=tag)
+
+
+def l2_damage(g, b):
+    ban = addon("banner")
+    for k, a in enumerate((math.radians(226), math.radians(350))):
+        on_wall(b, ban, g, a, 1.35, f"_{k}")
+
+
+def l2_control(g, b):
+    py = addon("pylon")
     for i in range(4):
         a = i / 4 * math.tau + math.pi / 4
-        x, y = math.cos(a), math.sin(a)
-        c.limb((x * 1.3, y * 1.3, 0.4), (x * 1.25, y * 1.25, 2.2), 0.09, 0.07, "iron", "root", segs=5)
-        c.ico(0.2, (x * 1.25, y * 1.25, 2.3), X, "root", sub=0)
-        c.limb((x * 1.25, y * 1.25, 2.2), (x * 0.5, y * 0.5, 2.92), 0.05, 0.04, "iron", "root", segs=4)
-    top = b.top
-    ring(c, 0.45, 0.62, 0.12, top + 0.02, "gold")
-    for i in range(5):
-        a = i / 5 * math.tau
-        c.cone(0.08, 0.0, 0.42, (math.cos(a) * 0.5, math.sin(a) * 0.5, top + 0.26), "gold", "root", segs=4)
-    ring(c, 1.1, 1.22, 0.1, 1.47, "gold")
-    for sx in (-1, 1):
-        bs.banner(c, 1.05 * sx, -1.05, 0.45, 1.5)
+        place(py, g, (math.cos(a) * 1.42, math.sin(a) * 1.42, 0.3), a + math.pi / 2, tag=f"_{i}")
 
 
-def l2_support(c, b):
-    c.cone(0.34, 0.0, 0.62, (0, 0, 3.33), "gold", "root", segs=4, rot=(0, 0, math.pi / 4))
-    for i in range(4):
-        a = i / 4 * math.tau
-        x, y = math.cos(a) * 0.88, math.sin(a) * 0.88
-        c.limb((x, y, 2.15), (x, y, 1.9), 0.02, 0.02, "iron", "root", segs=3)
-        c.cone(0.12, 0.09, 0.22, (x, y, 1.8), "gold", "root", segs=6)
-        c.ico(0.07, (x, y, 1.66), X, "root", sub=0)
-    for i in range(4):
-        a = i / 4 * math.tau + math.pi / 4
-        lo, hi = b.span(1.15, a)
-        m = (lo + hi) / 2
-        w = (hi - lo) / 2 / math.sqrt(2) + 0.05
-        c.box((w * 2, w * 2, 0.1), (math.cos(a) * m, math.sin(a) * m, 1.15), "gold", "root")
+def l2_support(g, b):
+    sp = addon("spire")
+    place(sp, g, (0, 0, 2.7), math.pi / 4)
 
 
-def l3_ballista(c, b, turret):
-    floor = 3.2
-    c.cone(0.6, 0.66, 0.34, (0, 0, floor + 0.17), "wood", "root", segs=10)
-    c.cone(0.66, 0.66, 0.08, (0, 0, floor + 0.36), "iron", "root", segs=10)
-    obj, tips, nut = turret
-    lift = floor + 0.4
+def l3_ballista(g, b, turret):
+    obj, tips, nut, plate = turret
+    place(plate, g, (0, 0, FLOOR - 0.02))
+    lift = FLOOR - 0.02 + plate.dimensions.z
+    c = charkit.Char("level3_ballista_strings", IMAGES[0])
     for t in tips:
         c.limb((t[0], t[1], t[2] + lift), (nut[0], nut[1], nut[2] + lift), 0.018, 0.018, "leather", "root", segs=3)
+    so, _ = c.build(None, bpy.context.scene.collection)
+    so.parent = g
     return lift
 
 
-def l3_firepot(c, b):
-    c.cone(0.62, 0.38, 0.45, (0, 0, 3.78), "iron", "root", segs=10)
-    for i in range(3):
-        a = i / 3 * math.tau + math.pi / 2
-        c.limb((math.cos(a) * 0.62, math.sin(a) * 0.62, 3.2), (math.cos(a) * 0.4, math.sin(a) * 0.4, 3.62), 0.05, 0.04, "iron", "root", segs=4)
-    c.cone(0.66, 0.66, 0.08, (0, 0, 4.0), "gold", "root", segs=10)
-    for i in range(5):
-        a = i / 5 * math.tau
-        c.ico(0.17, (math.cos(a) * 0.3, math.sin(a) * 0.3, 4.05), "brick", "root", sub=1, shade=(1.0, 0.55, 0.2))
-    c.ico(0.2, (0, 0, 4.1), "brick", "root", sub=1, shade=(1.0, 0.75, 0.3))
-    c.limb((-0.75, 0.45, 3.6), (0.25, -0.75, 4.55), 0.05, 0.045, "wood", "root", segs=5)
-    c.cone(0.17, 0.2, 0.14, (0.25, -0.75, 4.6), "iron", "root", segs=6)
-    c.ico(0.14, (0.25, -0.75, 4.75), "brick", "root", sub=1, shade=(0.75, 0.38, 0.2))
-    for i in range(4):
-        a = i / 4 * math.tau + 0.4
-        x, y = math.cos(a) * 1.25, math.sin(a) * 1.25
-        c.ico(0.16, (x, y, 0.6), "brick", "root", sub=1, scale=(1, 1, 0.9), shade=(0.7, 0.36, 0.2))
-        c.cone(0.06, 0.08, 0.1, (x, y, 0.78), "brick", "root", segs=6, shade=(0.7, 0.36, 0.2))
-    for z in (1.9, 2.6):
-        band(c, b, z, h=0.07, shade=(0.35, 0.3, 0.28))
+def l3_firepot(g, b):
+    place(addon("brazier"), g, (0, 0, FLOOR - 0.04))
 
 
-def l3_volley(c, b):
+def l3_volley(g, b):
+    bt = addon("bartizan")
     for i in range(4):
         a = i / 4 * math.tau + math.pi / 4
-        x, y = math.cos(a) * 1.12, math.sin(a) * 1.12
-        c.cone(0.12, 0.3, 0.4, (x, y, 2.7), "brick", "root", segs=6)
-        c.cone(0.3, 0.32, 0.6, (x, y, 3.2), "brick", "root", segs=6, meters=1.0)
-        c.cone(0.42, 0.0, 0.55, (x, y, 3.77), "roof", "root", segs=6)
-        c.cone(0.04, 0.0, 0.25, (x, y, 4.15), "gold", "root", segs=4)
-        c.box((0.1, 0.04, 0.24), (x * 1.26, y * 1.26, 3.2), "iron", "root", rot=(0, 0, a + math.pi / 2))
-    for sx in (-1, 1):
-        c.box((0.24, 0.24, 0.45), (0.42 * sx, 0.3, 3.45), "leather", "root")
-        for k in range(4):
-            c.limb((0.36 * sx + k * 0.04, 0.3, 3.6), (0.37 * sx + k * 0.04, 0.32, 4.0), 0.012, 0.012, "wood", "root", segs=3)
-            c.box((0.06, 0.01, 0.08), (0.37 * sx + k * 0.04, 0.32, 4.0), "feather", "root")
+        place(bt, g, (math.cos(a) * 1.13, math.sin(a) * 1.13, 2.62), a + math.pi / 2, tag=f"_{i}")
 
 
-def l3_frost(c, b):
-    top = b.top
-    for i in range(7):
-        a = i / 7 * math.tau
-        r = 0.42 + 0.08 * (i % 2)
-        h = 0.9 + 0.4 * ((i * 3) % 3) / 2
-        c.cone(0.22, 0.0, h * 1.5, (math.cos(a) * r * 1.3, math.sin(a) * r * 1.3, top - 0.1 + h * 0.75), "plain", "root", segs=5, rot=(math.sin(a) * 0.45, -math.cos(a) * 0.45, 0), shade=(0.55, 0.8, 1.0))
-    c.cone(0.3, 0.0, 2.3, (0, 0, top + 1.0), "plain", "root", segs=5, shade=(0.7, 0.9, 1.0))
-    for i in range(9):
-        a = i / 9 * math.tau + 0.2
-        r = 1.35 + 0.1 * (i % 3)
-        h = 0.45 + 0.25 * (i % 3)
-        c.cone(0.18, 0.0, h * 1.6, (math.cos(a) * r, math.sin(a) * r, 0.4 + h * 0.8), "plain", "root", segs=5, rot=(math.sin(a) * 0.3, -math.cos(a) * 0.3, 0), shade=(0.55, 0.8, 1.0))
-    c.cone(1.24, 1.1, 0.12, (0, 0, 1.52), "plain", "root", segs=12, shade=(0.82, 0.94, 1.0))
-    for i in range(10):
-        a = i / 10 * math.tau
-        c.cone(0.06, 0.0, 0.3, (math.cos(a) * 1.15, math.sin(a) * 1.15, 1.33), "plain", "root", segs=4, rot=(math.pi, 0, 0), shade=(0.8, 0.94, 1.0))
-
-
-def l3_storm(c, b):
-    top = b.top
-    for sx in (-1, 1):
-        c.limb((0.48 * sx, 0.0, top - 0.05), (0.4 * sx, 0.0, 4.0), 0.06, 0.05, "iron", "root", segs=5)
-    c.limb((-0.45, 0, 3.95), (0.45, 0, 3.95), 0.06, 0.06, "iron", "root", segs=5)
-    c.lathe([(0.02, 0.0), (0.22, -0.05), (0.32, -0.3), (0.42, -0.65), (0.5, -0.78), (0.0, -0.78)], (0, 0, 3.92), "gold", "root", segs=10)
-    c.ico(0.08, (0, 0, 3.08), "iron", "root", sub=0)
-    c.limb((0, 0, 4.0), (0, 0, 5.0), 0.035, 0.015, "iron", "root", segs=4)
-    for k in range(5):
-        c.cone(0.08, 0.08, 0.04, (0, 0, 4.15 + k * 0.15), "gold", "root", segs=6, shade=(1.0, 0.6, 0.35))
-    c.ico(0.09, (0, 0, 5.05), X, "root", sub=0)
+def l3_frost(g, b):
+    fr = addon("frost")
+    place(fr, g, (0, 0, 2.62))
     for i in range(4):
-        a = i / 4 * math.tau + math.pi / 4
-        x, y = math.cos(a) * 1.3, math.sin(a) * 1.3
-        c.limb((x, y, 0.4), (x, y, 2.3), 0.05, 0.03, "iron", "root", segs=4)
-        c.cone(0.07, 0.0, 0.3, (x, y, 2.45), "gold", "root", segs=4)
-        c.limb((x, y, 2.2), (0.42 * x / 1.3, 0.42 * y / 1.3, top - 0.1), 0.012, 0.012, "gold", "root", segs=3, shade=(1.0, 0.6, 0.35))
+        a = i / 4 * math.tau
+        place(fr, g, (math.cos(a) * 1.45, math.sin(a) * 1.45, 0.25), a * 1.7 + 0.5, 0.42, tag=f"_{i}")
 
 
-def l3_well(c, b):
-    c.ico(0.62, (0, 0, 3.7), "iron", "root", sub=1, shade=(0.22, 0.12, 0.32))
-    c.cone(1.05, 1.05, 0.07, (0, 0, 3.7), X, "root", segs=14, rot=(0.35, 0, 0))
-    c.cone(0.85, 0.85, 0.06, (0, 0, 3.7), X, "root", segs=14, rot=(-0.3, 0.4, 0))
-    for i in range(7):
-        a = i / 7 * math.tau
-        r = 1.1 + 0.15 * (i % 2)
-        z = 2.4 + 0.6 * ((i * 2) % 3) / 2
-        c.ico(0.3 + 0.07 * (i % 3), (math.cos(a) * r * 1.15, math.sin(a) * r * 1.15, z + 0.3), "cliff", "root", sub=0, rot=(i, i * 2, 0), shade=(0.45, 0.35, 0.55))
-    for i in range(6):
-        a = i / 6 * math.tau + 0.3
-        x, y = math.cos(a) * 1.35, math.sin(a) * 1.35
-        c.box((0.3, 0.22, 0.5), (x, y, 0.55), "cliff", "root", rot=(0.2, 0.1, a), shade=(0.4, 0.32, 0.5))
-        c.ico(0.06, (x, y, 0.87), X, "root", sub=0)
-    c.cone(1.24, 1.12, 0.08, (0, 0, 1.52), "iron", "root", segs=12, shade=(0.3, 0.2, 0.4))
+def l3_storm(g, b):
+    place(addon("rod"), g, (0, 0, 2.68))
+
+
+def l3_well(g, b):
+    place(addon("orb"), g, (0, 0, 2.6))
 
 
 LEVEL2 = {"damage": l2_damage, "control": l2_control, "support": l2_support}
@@ -316,35 +276,34 @@ def textures():
 def build_one(name):
     th.clear_scene()
     images = textures()
+    IMAGES[0] = images
     cfg = TOWERS[name]
     coll = bpy.context.scene.collection
     turret = ballista_turret() if "ballista" in LEVEL3.get(name, {}) else None
     body = load_body(name, cfg)
     b = Body(body)
     _, (spin, _) = bs.BUILDERS[name](images)
-    trim = charkit.Char("level2_" + name, images)
-    LEVEL2[name](trim, b)
-    tops = []
-    lift = 0.0
-    for spec, fn in LEVEL3.get(name, {}).items():
-        t3 = charkit.Char("level3_" + spec, images)
-        if spec == "ballista":
-            lift = fn(t3, b, turret)
-        else:
-            fn(t3, b)
-        tops.append(t3)
     so, _ = spin.build(None, coll)
     so.location = cfg["pivot"]
-    to, _ = trim.build(None, coll)
-    t3o = [t.build(None, coll)[0] for t in tops]
-    charkit.bake_ao([to, *t3o], samples=32)
-    objs = [body, so, to, *t3o]
-    if turret:
-        tobj = turret[0]
-        tobj.parent = next(o for o in t3o if o.name == "level3_ballista")
-        tobj.location = (0, 0, lift)
-        objs.append(tobj)
-    tris = sum(len(p.vertices) - 2 for o in objs for p in o.data.polygons)
+    g2 = group("level2_" + name)
+    LEVEL2[name](g2, b)
+    groups = [g2]
+    for spec, fn in LEVEL3.get(name, {}).items():
+        g3 = group("level3_" + spec)
+        if spec == "ballista":
+            lift = fn(g3, b, turret)
+            turret[0].parent = g3
+            turret[0].location = (0, 0, lift)
+        else:
+            fn(g3, b)
+        groups.append(g3)
+    parts = [o for g in groups for o in g.children_recursive]
+    strings = [o for o in parts if o.name.endswith("_strings")]
+    if strings:
+        charkit.bake_ao(strings, samples=16)
+    objs = [body, so, *groups, *parts]
+    meshes = [o for o in objs if o.type == "MESH"]
+    tris = sum(len(p.vertices) - 2 for o in meshes for p in o.data.polygons)
     size = charkit.export(objs, os.path.join(ROOT, "assets", "structures", name + ".glb"))
     return {"tris": tris, "body_tris": sum(len(p.vertices) - 2 for p in body.data.polygons), "bytes": size}
 

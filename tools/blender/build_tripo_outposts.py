@@ -5,7 +5,7 @@ Sources live in assets/source/outpost_<type>_tripo.glb and keep_core_tripo.glb. 
   <type>           Tripo body (materials <type>_skin and team_<type>, blue texels greyed for dyeing)
   <type>_mast      procedural flag pole (barracks / range / outpost)
   spin_<type>      procedural flag or gear the game swings / spins (from build_structures)
-  level2_<type>    procedural upgrade parts fitted to the new body
+  level2_<type>    group of Tripo upgrade props (assets/source/addon_<name>_tripo.glb) placed around the body
   core: core       Tripo altar, crystal = Tripo crystal split off, pivot at its centre (game spins it)
 """
 import math
@@ -26,8 +26,6 @@ import build_tripo_structures as ts  # noqa: E402
 import charkit  # noqa: E402
 
 TEAM_HUE = (195, 250)
-C = bs.C
-T = bs.T
 X = bs.X
 OUTPOSTS = {
     "barracks": {"yaw": -90, "xy": 3.1, "z": 3.5, "mast": (1.12, -0.98, 2.45), "flag": 2.2},
@@ -157,95 +155,42 @@ def floor_disc(c, z, r=1.47):
     c.cone(r, r, 0.04, (0, 0, z - 0.02), "cobble", "root", segs=24, meters=0.7, shade=(0.5, 0.47, 0.44))
 
 
-def banner_on(c, g, x, y, z, h, nx, ny, w=0.4):
-    hit = g.wall(x, y, z + h * 0.5, -nx, -ny)
-    px, py = (hit.x, hit.y) if hit is not None else (x, y)
-    ang = math.atan2(ny, nx)
-    bx, by = px + nx * 0.03, py + ny * 0.03
-    c.box((w, 0.035, h), (bx, by, z + h * 0.5), C, "root", rot=(0, 0, ang + math.pi / 2))
-    c.limb((bx - ny * w * 0.62, by + nx * w * 0.62, z + h + 0.02), (bx + ny * w * 0.62, by - nx * w * 0.62, z + h + 0.02), 0.025, 0.025, "wood", "root", segs=4)
-    c.cone(0.05, 0.0, 0.14, (bx, by, z - 0.05), "gold", "root", segs=4, rot=(math.pi, 0, 0))
+ADDONS = {
+    "banner": {"height": 0.9, "tris": 1500, "team": True},
+    "dummy": {"height": 1.25, "tris": 1600, "team": True},
+    "cart": {"height": 0.72, "tris": 2200, "team": True},
+    "crane": {"height": 1.95, "tris": 2000},
+    "watch": {"height": 2.45, "tris": 2400, "team": True},
+}
 
 
-def weapon_rack(c, x, y, rot, n=4):
-    ca, sa = math.cos(rot), math.sin(rot)
-    c.box((0.66, 0.1, 0.1), (x, y, 0.62), "wood", "root", rot=(0, 0, rot))
-    c.box((0.66, 0.1, 0.08), (x, y, 0.32), "wood", "root", rot=(0, 0, rot))
-    for k in range(n):
-        t = (k - (n - 1) / 2) * 0.15
-        px, py = x + ca * t, y + sa * t
-        c.limb((px, py, 0.2), (px, py, 1.08), 0.018, 0.018, "wood", "root", segs=3)
-        c.cone(0.045, 0.0, 0.16, (px, py, 1.15), "iron", "root", segs=4)
+def stand(g, src, parent, x, y, yaw, tag=""):
+    return ts.place(src, parent, (x, y, g.h(x, y) - 0.02), yaw, tag=tag)
 
 
-def l2_barracks(c, g):
-    for sx in (-1, 1):
-        banner_on(c, g, 0.62 * sx, -1.2, 0.75, 0.85, 0, -1, w=0.32)
-    ridge = [(0.0, y) for y in (-1.02, 1.18)]
-    for x, y in ridge:
-        z = g.h(x, y)
-        c.cone(0.09, 0.0, 0.36, (x, y, z + 0.16), "gold", "root", segs=4)
-        c.ico(0.06, (x, y, z + 0.02), "gold", "root", sub=0)
-    weapon_rack(c, -1.2, -0.05, math.pi / 2)
-    ex = g.wall(-0.9, -0.2, 1.62, 1, 0)
-    x0 = ex.x - 0.02 if ex is not None else -1.0
-    c.box((0.07, 2.2, 0.08), (x0, 0.07, 1.6), "gold", "root")
-    ex = g.wall(0.9, -0.2, 1.62, -1, 0)
-    x1 = ex.x + 0.02 if ex is not None else 0.95
-    c.box((0.07, 2.2, 0.08), (x1, 0.07, 1.6), "gold", "root")
+def front_banner(g, src, parent, x, z, tag=""):
+    hit = g.wall(x, -1.0, z + src.dimensions.z * 0.5, 0, 1)
+    y = (hit.y if hit is not None else -1.0) - src.dimensions.y * 0.35
+    return ts.place(src, parent, (x, y, z), 0.0, tag=tag)
 
 
-def l2_range(c, g):
-    fx, fy = -0.15, -1.18
-    for sx in (-1, 1):
-        c.limb((fx + 0.55 * sx, fy, 0.18), (fx + 0.55 * sx, fy, 1.45), 0.04, 0.04, "wood", "root", segs=4)
-    c.box((1.35, 0.7, 0.05), (fx, fy + 0.3, 1.48), T, "root", rot=(-0.35, 0, 0))
-    c.box((1.4, 0.06, 0.06), (fx, fy - 0.02, 1.38), "gold", "root")
-    apex = max(((x, y) for x in np.linspace(-0.4, 0.2, 7) for y in np.linspace(-0.2, 0.4, 7)), key=lambda p: g.h(*p))
-    z = g.h(*apex)
-    c.cone(0.07, 0.07, 0.12, (apex[0], apex[1], z + 0.02), "gold", "root", segs=6)
-    c.cone(0.1, 0.0, 0.4, (apex[0], apex[1], z + 0.28), "gold", "root", segs=4)
-    c.box((0.26, 0.26, 0.5), (1.15, -0.55, 0.43), "leather", "root", rot=(0, 0, 0.3))
-    for k in range(4):
-        c.limb((1.09 + k * 0.04, -0.57, 0.6), (1.1 + k * 0.04, -0.55, 0.98), 0.012, 0.012, "wood", "root", segs=3)
-        c.box((0.06, 0.01, 0.08), (1.1 + k * 0.04, -0.55, 0.98), "feather", "root")
+def l2_barracks(g, grp):
+    d = ts.addon("dummy", ADDONS["dummy"])
+    stand(g, d, grp, -0.95, -1.02, -0.35, "_0")
+    stand(g, d, grp, -1.22, -0.15, -1.1, "_1")
+    front_banner(g, ts.addon("banner", ADDONS["banner"]), grp, 0.52, 0.75)
 
 
-def l2_foundry(c, g):
-    cx, cy = -0.02, 1.0
-    z = g.h(cx, cy)
-    c.cone(0.24, 0.2, 1.1, (cx, cy, z + 0.5), "brick", "root", segs=6, meters=1.0)
-    c.cone(0.29, 0.29, 0.14, (cx, cy, z + 1.07), "iron", "root", segs=6)
-    for k in range(3):
-        c.ico(0.07, (cx + 0.29 * math.cos(k * 2.1), cy + 0.29 * math.sin(k * 2.1), z + 1.07), "gold", "root", sub=0)
-    px, py = -0.35, 1.25
-    c.limb((px, py, 0.15), (px, py, 2.4), 0.06, 0.06, "wood", "root", segs=4)
-    c.limb((px, py, 2.35), (-0.95, 0.35, 2.5), 0.05, 0.05, "wood", "root", segs=4)
-    c.limb((-0.95, 0.35, 2.5), (-0.95, 0.35, 1.45), 0.012, 0.012, "iron", "root", segs=3)
-    c.box((0.24, 0.24, 0.2), (-0.95, 0.35, 1.35), "iron", "root")
-    c.box((0.42, 0.3, 0.28), (0.95, -1.05, 0.32), "iron", "root", rot=(0, 0, 0.2))
-    c.box((0.3, 0.26, 0.06), (0.95, -1.05, 0.49), "gold", "root", rot=(0, 0, 0.2))
+def l2_range(g, grp):
+    stand(g, ts.addon("cart", ADDONS["cart"]), grp, 0.2, -1.0, math.pi / 2 + 0.15)
 
 
-def l2_outpost(c, g):
-    for i in range(9):
-        t = i / 8
-        x = -1.15 + t * 2.3
-        y = 1.3 - 0.15 * abs(t - 0.5) * 2
-        c.limb((x, y, 0.15), (x, y, 0.85 + 0.12 * (i % 2)), 0.055, 0.04, "wood", "root", segs=4)
-        c.cone(0.055, 0.0, 0.16, (x, y, 0.93 + 0.12 * (i % 2)), "wood", "root", segs=4)
-    c.box((2.3, 0.05, 0.1), (0, 1.22, 0.6), "wood", "root")
-    tx, ty = 1.0, -0.85
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            c.limb((tx + 0.24 * sx, ty + 0.24 * sy, 0.15), (tx + 0.2 * sx, ty + 0.2 * sy, 2.55), 0.035, 0.035, "wood", "root", segs=4)
-    c.box((0.62, 0.62, 0.08), (tx, ty, 2.2), "wood", "root")
-    for sx in (-1, 1):
-        c.box((0.62, 0.04, 0.24), (tx, ty + 0.3 * sx, 2.36), "wood", "root")
-        c.box((0.04, 0.62, 0.24), (tx + 0.3 * sx, ty, 2.36), "wood", "root")
-    c.cone(0.5, 0.0, 0.42, (tx, ty, 2.76), "roof", "root", segs=4, rot=(0, 0, math.pi / 4))
-    c.box((0.3, 0.035, 0.42), (tx, ty - 0.32, 1.95), C, "root")
-    banner_on(c, g, 0.42, -1.2, 0.95, 0.75, 0, -1, w=0.3)
+def l2_foundry(g, grp):
+    stand(g, ts.addon("crane", ADDONS["crane"]), grp, -1.05, 0.95, math.pi / 2)
+
+
+def l2_outpost(g, grp):
+    stand(g, ts.addon("watch", ADDONS["watch"]), grp, 0.92, -0.84, 0.35)
 
 
 LEVEL2 = {"barracks": l2_barracks, "range": l2_range, "foundry": l2_foundry, "outpost": l2_outpost}
@@ -283,15 +228,15 @@ def build_outpost(name):
         gx, gz = cfg["gear"]
         hit = g.wall(gx, -1.0, gz, 0, 1)
         pivot = (gx, (hit.y if hit is not None else -0.6) - 0.1, gz)
-    trim = charkit.Char("level2_" + name, images)
-    LEVEL2[name](trim, g)
+    grp = ts.group("level2_" + name)
+    LEVEL2[name](g, grp)
     objs = [p.build(None, coll)[0] for p in parts]
     so, _ = spin.build(None, coll)
     so.location = pivot
-    to, _ = trim.build(None, coll)
-    charkit.bake_ao([*objs, to], samples=32)
-    out = [body, *objs, so, to]
-    tris = sum(len(p.vertices) - 2 for o in out for p in o.data.polygons)
+    if objs:
+        charkit.bake_ao(objs, samples=32)
+    out = [body, *objs, so, grp, *grp.children_recursive]
+    tris = sum(len(p.vertices) - 2 for o in out if o.type == "MESH" for p in o.data.polygons)
     size = charkit.export(out, os.path.join(ROOT, "assets", "structures", name + ".glb"))
     return {"tris": tris, "body_tris": sum(len(p.vertices) - 2 for p in body.data.polygons), "bytes": size}
 

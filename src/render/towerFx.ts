@@ -46,7 +46,7 @@ function frost(h: FxHost, x: number, y: number, z: number, r: number): void {
 
 function storm(h: FxHost, x: number, y: number, z: number, r: number, bolt: (pts: number[]) => void): void {
   const gy = ground(h, x, z, y);
-  bolt([x, gy + 4.2, z, x, gy + 11, z]);
+  bolt([x, gy + 5.0, z, x, gy + 11, z]);
   for (let i = 0; i < 4; i++) {
     const a = Math.random() * Math.PI * 2;
     const d = r * (0.35 + Math.random() * 0.6);
@@ -54,7 +54,7 @@ function storm(h: FxHost, x: number, y: number, z: number, r: number, bolt: (pts
     const bz = z + Math.sin(a) * d;
     const by = ground(h, bx, bz, gy);
     h.after(i * 0.05, () => {
-      bolt([x, gy + 4.2, z, (x + bx) / 2 + (Math.random() - 0.5) * 1.5, gy + 3.2, (z + bz) / 2 + (Math.random() - 0.5) * 1.5, bx, by + 0.2, bz]);
+      bolt([x, gy + 5.0, z, (x + bx) / 2 + (Math.random() - 0.5) * 1.5, gy + 3.2, (z + bz) / 2 + (Math.random() - 0.5) * 1.5, bx, by + 0.2, bz]);
       emit(h, { tex: FX.zap, n: 1, x: bx, y: by + 0.4, z: bz, size: [1.2, 1.6], grow: 1.3, life: [0.15, 0.2], speed: [0, 0], additive: true });
       chunks(h, 2, bx, by + 0.3, bz, { size: [0.08, 0.16], speed: [1, 3], up: [3, 5] });
     });
@@ -62,7 +62,7 @@ function storm(h: FxHost, x: number, y: number, z: number, r: number, bolt: (pts
   shockwave(h, FX.shock, x, gy + 0.3, z, UP, 0.5, r * 1.05, 0.4, 0xfff4a0, 1);
   shockwave(h, FX.shock, x, gy + 0.15, z, UP, 0.3, r * 0.75, 0.3, 0xffffff, 0.8);
   emit(h, { tex: WARLORD.dust, n: 14, x, y: gy + 0.4, z, size: [1, 1.5], grow: 1.8, life: [0.5, 0.8], speed: [r * 1.2, r * 1.8], flatSpread: true, drag: 3, opacity: 0.8 });
-  emit(h, { tex: FX.burst2, n: 1, x, y: gy + 4.2, z, size: [2.4, 2.4], grow: 1.4, life: [0.15, 0.15], speed: [0, 0], additive: true, color: 0xfff6c0 });
+  emit(h, { tex: FX.burst2, n: 1, x, y: gy + 5.0, z, size: [2.4, 2.4], grow: 1.4, life: [0.15, 0.15], speed: [0, 0], additive: true, color: 0xfff6c0 });
   h.shake = Math.max(h.shake, 0.18);
 }
 
@@ -78,7 +78,7 @@ function well(h: FxHost, x: number, y: number, z: number, r: number): void {
     emit(h, { tex: SUMMONER.smoke, n: 1, x: px, y: gy + 0.5, z: pz, color: 0x6a3aa0, size: [0.8, 1.1], grow: 0.4, life: [0.55, 0.6], speed: [r * 1.6, r * 1.8], dir: { x: -Math.cos(a + 0.5), y: 0, z: -Math.sin(a + 0.5) }, cone: 0.05, drag: 1, opacity: 0.8 });
     emit(h, { tex: SUMMONER.sparkle, n: 1, x: px, y: gy + 0.8, z: pz, size: [0.25, 0.35], life: [0.5, 0.55], speed: [r * 1.7, r * 1.9], dir: { x: -Math.cos(a), y: 0, z: -Math.sin(a) }, cone: 0.05, additive: true });
   }
-  emit(h, { tex: SUMMONER.orb, n: 1, x, y: gy + 2.6, z, color: 0xb070ff, size: [1.2, 1.2], grow: 0.4, life: [0.5, 0.5], speed: [0, 0], additive: true });
+  emit(h, { tex: SUMMONER.orb, n: 1, x, y: gy + 3.15, z, color: 0xb070ff, size: [1.2, 1.2], grow: 0.4, life: [0.5, 0.5], speed: [0, 0], additive: true });
 }
 
 function pierce(h: FxHost, x: number, y: number, z: number): void {
