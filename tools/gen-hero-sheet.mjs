@@ -43,7 +43,7 @@ if (step === "sheet") {
   writeFileSync(out, Buffer.from(await (await fetch(r.images[0].url)).arrayBuffer()));
   console.log("sheet", out, r.description ?? "");
 } else if (step === "mesh") {
-  const r = await falRun("tripo3d/p1/image-to-3d", { image_url: dataUri(input, "image/png"), texture: true, face_limit: 15000 });
+  const r = await falRun("tripo3d/p1/image-to-3d", { image_url: dataUri(input, "image/png"), texture: true, face_limit: Number(process.env.FACES ?? 15000) });
   writeFileSync(out, Buffer.from(await (await fetch(r.model_mesh.url)).arrayBuffer()));
   if (r.rendered_image?.url) writeFileSync(out.replace(/\.glb$/, "_preview.png"), Buffer.from(await (await fetch(r.rendered_image.url)).arrayBuffer()));
   console.log("mesh", out, r.task_id ?? "");

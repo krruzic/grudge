@@ -4,6 +4,7 @@ import ironUrl from "../../assets/textures/iron.png?url";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { dyeColor } from "./heroModels";
 import { layerTexture } from "./mergedModel";
+import { prop } from "./props";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -99,7 +100,26 @@ function mergeStatic(parent: THREE.Object3D): void {
 
 const templates = new Map<number, THREE.Group>();
 
+function propBallista(team: THREE.Color): THREE.Group | null {
+  const o = prop("ballista", team);
+  if (!o) return null;
+  const tilt = o.getObjectByName("tilt");
+  const nut = o.getObjectByName("nut");
+  const tips = ["tip_L", "tip_R"].map((n) => o.getObjectByName(n));
+  if (tilt && nut && tips[0] && tips[1]) {
+    const string = new THREE.Group();
+    string.name = "string";
+    for (const t of tips) string.add(beam(t!.position, nut.position, 0.016, ROPE, 3));
+    tilt.add(string);
+  }
+  const g = new THREE.Group();
+  g.add(o);
+  return g;
+}
+
 export function ballistaMesh(team: THREE.Color): THREE.Group {
+  const fromProp = propBallista(team);
+  if (fromProp) return fromProp;
   const key = team.getHex();
   let t = templates.get(key);
   if (!t) {

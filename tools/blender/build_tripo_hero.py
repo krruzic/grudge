@@ -74,7 +74,7 @@ HEROES = {
         "rigid": [{"bone": "chest", "box": ((-0.36, 0.2, 0.75), (0.36, 0.7, 1.8))}],
         "team_hue": (195, 250),
         "team_box": ((-0.6, -0.6, 0.9), (0.6, 0.6, 1.42)),
-        "extras": "engineer_extras",
+        "attach": [("attach_wrench", "wrench_tripo.glb")],
     },
 }
 
@@ -444,29 +444,73 @@ def marksman_extras(name, arm, images):
     return c
 
 
-def engineer_extras(name, arm, images):
-    c = charkit.Char(name + "_gear", images)
-    import build_heroes as bh
-    LTH_D = (0.36, 0.24, 0.16)
-    h0, h1, _ = (tuple(arm.data.bones["hand_R"].head_local), tuple(arm.data.bones["hand_R"].tail_local), None)
-    g = Vector(h0) + (Vector(h1) - Vector(h0)) * 0.55
-    hx, hy, hz = g.x, g.y, g.z
-    lo = (hx, hy + 0.02, hz - 0.14)
-    hi = (hx + 0.08, hy + 0.22, hz + 0.95)
-    c.lathe_ab([(0.045, 0.0), (0.045, 1.0)], lo, hi, "gold", "hand_R", segs=10)
-    for k in range(5):
-        t = 0.05 + k * 0.05
-        p = Vector(lo) + (Vector(hi) - Vector(lo)) * t
-        bh.ring(c, 0.05, 0.012, tuple(p), "leather", "hand_R", segs=10, rot=(0.23, 0.08, 0), shade=LTH_D)
-    c.ico(0.055, lo, "gold", "hand_R", sub=1)
-    c.box((0.3, 0.1, 0.12), (hi[0], hi[1], hi[2] + 0.04), "gold", "hand_R")
-    for sx in (-1, 1):
-        c.box((0.08, 0.1, 0.23), (hi[0] + 0.11 * sx, hi[1], hi[2] + 0.17), "gold", "hand_R")
-        c.box((0.045, 0.105, 0.055), (hi[0] + 0.085 * sx, hi[1], hi[2] + 0.26), "gold", "hand_R")
-    c.lathe_ab([(0.036, 0.0), (0.036, 1.0)], (hi[0] - 0.11, hi[1], hi[2] - 0.04), (hi[0] + 0.11, hi[1], hi[2] - 0.04), "iron", "hand_R", segs=10)
-    for k in range(5):
-        bh.ring(c, 0.038, 0.007, (hi[0] - 0.09 + k * 0.045, hi[1], hi[2] - 0.04), "iron", "hand_R", segs=8, rot=(0, math.pi / 2, 0))
-    return c
+def bridge(obj, a, b, r, px, uv_pick):
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    uvl = bm.loops.layers.uv.active
+    a, b = Vector(a), Vector(b)
+    d = (b - a).normalized()
+    side = d.cross(Vector((0, 0, 1)))
+    if side.length < 1e-3:
+        side = d.cross(Vector((0, 1, 0)))
+    side.normalize()
+    up = side.cross(d)
+    segs = 10
+    rings = []
+    for e in (a, b):
+        rings.append([bm.verts.new(e + (side * np.cos(k / segs * 2 * np.pi) + up * np.sin(k / segs * 2 * np.pi)) * r) for k in range(segs)])
+    faces = []
+    for k in range(segs):
+        faces.append(bm.faces.new((rings[0][k], rings[0][(k + 1) % segs], rings[1][(k + 1) % segs], rings[1][k])))
+    faces.append(bm.faces.new(list(reversed(rings[0]))))
+    faces.append(bm.faces.new(rings[1]))
+    for f in faces:
+        f.smooth = True
+        for i, l in enumerate(f.loops):
+            l[uvl].uv = (uv_pick[0] + 0.002 * (i % 2), uv_pick[1] + 0.002 * (i // 2 % 2))
+    bm.normal_update()
+    bm.to_mesh(me)
+    bm.free()
+
+
+def attach_wrench(name, arm, src_path):
+    bpy.ops.import_scene.gltf(filepath=src_path)
+    w = [o for o in bpy.context.selected_objects if o.type == "MESH"][0]
+    for o in list(bpy.context.selected_objects):
+        if o is not w:
+            bpy.data.objects.remove(o, do_unlink=True)
+    w.parent = None
+    w.data.transform(w.matrix_world)
+    w.matrix_world = Matrix.Identity(4)
+    img, px = tex_lookup(w)
+    cols = face_colors(w, px)
+    uv = w.data.uv_layers.active.data
+    pick = None
+    for p, c in zip(w.data.polygons, cols):
+        if p.center.x > 0.44 and hue_in(c, (30, 60), 0.35):
+            pick = (sum(uv[i].uv.x for i in p.loop_indices) / p.loop_total, sum(uv[i].uv.y for i in p.loop_indices) / p.loop_total)
+            break
+    bridge(w, (-0.06, 0.055, 0.01), (0.17, 0.058, 0.01), 0.036, px, pick)
+    bake_material(name + "_wrench", w, {"tex": 512}, img, px, face_colors(w, px))
+    hb = arm.data.bones["hand_R"]
+    g = hb.head_local + (hb.tail_local - hb.head_local) * 0.55
+    lo = g + Vector((0.0, 0.0, -0.2))
+    hi = g + Vector((-0.1, 0.08, 1.05))
+    d = (hi - lo).normalized()
+    sx = Vector((1, 0, 0))
+    sx = (sx - d * sx.dot(d)).normalized()
+    R = Matrix((-d, -sx, (-d).cross(-sx))).transposed().to_4x4()
+    sc = (hi - lo).length / 1.0
+    grip = Vector((0.32, 0.06, 0.01))
+    w.data.transform(Matrix.Translation(g) @ R @ Matrix.Scale(sc, 4) @ Matrix.Translation(-grip))
+    w.name = name + "_wrench"
+    vg = w.vertex_groups.new(name="hand_R")
+    vg.add(list(range(len(w.data.vertices))), 1.0, "REPLACE")
+    w.parent = arm
+    m = w.modifiers.new("Armature", "ARMATURE")
+    m.object = arm
+    return w
 
 
 def build(name, preview=None):
@@ -506,6 +550,8 @@ def build(name, preview=None):
         m.object = arm
         charkit.bake_ao([gobj], samples=16)
         objs.append(gobj)
+    for fn, srcf in cfg.get("attach", []):
+        objs.append(globals()[fn](name, arm, os.path.join(ROOT, "assets", "source", srcf)))
     charkit.animate(arm, anims.hero_clips(cfg.get("weight", 1.0)))
     if preview:
         for t in arm.animation_data.nla_tracks:

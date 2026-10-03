@@ -29,6 +29,7 @@ import { GameRenderer, type RenderConfig } from "./render/gameRenderer";
 import { loadMap } from "./render/mapView";
 import { HeroModels } from "./render/heroModels";
 import { StructureModels } from "./render/structureModels";
+import { loadProps } from "./render/props";
 import { UnitModels } from "./render/unitModels";
 import { Hud, UiCanvas } from "./ui/hud";
 import { loadFont } from "./ui/font";
@@ -113,6 +114,7 @@ async function start(): Promise<void> {
       return h;
     })(),
     structures.load(sUrls),
+    loadProps(),
     unitModels.load(Object.fromEntries(Object.entries(unitUrls).map(([p, u]) => [p.split("/").pop()!.replace(".glb", ""), u]))),
     loadFont(),
   ]);

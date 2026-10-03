@@ -2,6 +2,7 @@ import woodUrl from "../../assets/textures/wood.png?url";
 import blockUrl from "../../assets/textures/wallblock.png?url";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
 import * as THREE from "three";
+import { prop } from "./props";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
 import { composite, ENGINEER, FX, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
@@ -147,6 +148,18 @@ const ROPE = new THREE.MeshLambertMaterial({ color: 0x8a6a40, flatShading: true 
 
 export function teslaCoil(scale = 1): THREE.Group {
   const g = new THREE.Group();
+  const model = prop("tesla");
+  if (model) {
+    g.add(model);
+    const at = model.getObjectByName("glow");
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: ENGINEER.arc, color: 0x9ad0ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    glow.position.y = at ? at.position.y : 2.2;
+    glow.scale.setScalar(1.2);
+    glow.name = "coilglow";
+    g.add(glow);
+    g.scale.setScalar(scale);
+    return g;
+  }
   const iron = IRON;
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.65, 0.4, 8), STONE_CHUNK);
   base.position.y = 0.2;
