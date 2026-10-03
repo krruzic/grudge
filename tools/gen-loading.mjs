@@ -23,8 +23,7 @@ const jobs = {
     model: "fal-ai/nano-banana-pro/edit",
     input: {
       prompt:
-        "This image is a reference board of the seven champions as they look in the game (top row front view, bottom row three-quarter view of the " +
-        "same seven, left to right): a hulking green ogre warlord in a riveted iron helmet with curved horns, spiked iron pauldrons, an orange fur tunic, a " +
+        "This image is a reference board of the nine champions as they look in the game (one row, left to right): a hulking green ogre warlord in a riveted iron helmet with curved horns, spiked iron pauldrons, an orange fur tunic, a " +
         "skull on a blue sash and a spiked wooden club; a stout white-bearded dwarf engineer in a leather aviator cap with brass goggles, a brown leather " +
         "tool apron over mustard clothes, blue riveted pauldrons, fur boots and a giant blue-steel and brass pipe wrench; a skinny green goblin assassin " +
         "with long pointed ears in a deep dark hood, blue scarf, leather jerkin with knife bandoliers and a short knife in each hand; a necromancer in a " +
@@ -33,12 +32,15 @@ const jobs = {
         "plume, white lace-collared doublet with blue shoulders and a blue sash, a rapier, and a long baguette strapped across his back; a huge walking " +
         "treant warden of brown bark with a craggy wooden face, little leafy trees growing from his head, mossy leaf shoulders with orange autumn leaves, a " +
         "blue sash and a round wooden shield; and a knight in full grey plate armour with a closed great helm and plume, a blue tabard, a sword, and a tall " +
-        "blue banner with a gold shield emblem on a pole strapped to his back. Keep each character exactly like the reference: same outfits, colours, " +
+        "blue banner with a gold shield emblem on a pole strapped to his back; a young red-haired huntress in a moss-green hood and cloak with a feathered " +
+        "mantle, a tall longbow and a quiver, with a bright red hawk perched on her shoulder; and a big round jolly friar with a bald crown ringed by bright " +
+        "red hair, a bushy red beard, a deep teal habit with gold hop-vine embroidery, a blue stole, a wine-red rope belt, sandals, a huge wooden tankard and " +
+        "an ale keg on his back. Keep each character exactly like the reference: same outfits, colours, " +
         "props, faces and proportions, but give them confident heroic stances. Paint brand-new 16:9 box-art key art for a 1998 Nintendo 64 medieval " +
-        "tournament brawler with all seven champions: they stand in a loose heroic row, low camera at chest height, " +
+        "tournament brawler with all nine champions: they stand in a loose heroic group (two staggered rows are fine, nobody hidden), low camera at chest height, " +
         "across the lower middle of the frame on a trampled jousting field at dusk, all full figures from boots to helmets, torn blue and red " +
         "tournament banners on poles behind them, a wooden palisade and a distant stone keep, warm low sun. Keep the chunky low-poly N64 character " +
-        "look with hand-painted textures, like a pre-rendered promotional render from that era. Leave the upper third as empty sky for a title and keep " +
+        "look with hand-painted textures, like a pre-rendered promotional render from that era. Paint ONE single coherent scene (never repeat or duplicate any character, no ghosted copies, no collage). Leave the upper third as empty open dusk sky for a title and keep " +
         "the bottom-right corner free of characters. No text, no logo, no UI, no border, no glow effects.",
       image_urls: refUris,
       aspect_ratio: "16:9",
