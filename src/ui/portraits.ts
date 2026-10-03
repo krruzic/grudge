@@ -143,6 +143,9 @@ export class Portraits {
     if (c) return c;
     c = document.createElement("canvas");
     const p = this.pose(type, NEUTRAL);
+    p.body.traverse((o) => {
+      if (o.name.startsWith(`${type}_wrench`)) o.visible = false;
+    });
     p.root.rotation.y = 0.35;
     p.root.updateMatrixWorld(true);
     const top = p.top;
@@ -150,7 +153,7 @@ export class Portraits {
     let dist = p.height * 1.25;
     let cx = p.center.x;
     let cz = p.center.z;
-    const head = type === "engineer" ? null : p.body.getObjectByName("head");
+    const head = p.body.getObjectByName("head");
     if (head) {
       const hp = head.getWorldPosition(new THREE.Vector3());
       headY = hp.y + 0.2;

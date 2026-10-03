@@ -1,4 +1,4 @@
-"""Francois (duelist): Tripo body, Tripo rapier (blade stretched to rapier proportions) in hand_R, Tripo baguette in hand_L."""
+"""Francois (duelist): Tripo body, Tripo rapier (blade stretched to rapier proportions) in hand_R, Tripo baguette strapped diagonally across his back."""
 import colorsys
 
 CFG = {
@@ -166,6 +166,9 @@ def attach_rapier(name, arm, src_path):
 def attach_baguette(name, arm, src_path):
     w = th.import_prop(name + "_baguette", src_path, tex=256, team_hue=(195, 250))
     duelist_decimate(w, 0.3)
-    th.place_on_bone(w, arm, "hand_L", (0.33, 0.0, 0.0), (0.0, 0.3, -0.95), 0.62, at=0.45, side=(1, 0, 0))
+    co = [v.co.copy() for v in w.data.vertices]
+    mid = Vector([(min(c[k] for c in co) + max(c[k] for c in co)) / 2 for k in range(3)])
+    th.place_on_bone(w, arm, "chest", tuple(mid), (-0.55, 0.0, 1.0), 0.62, at=0.0, side=(0, -1, 0))
+    w.data.transform(Matrix.Translation((0.0, 0.34, -0.02)))
     w.name = name + "_baguette"
     return w

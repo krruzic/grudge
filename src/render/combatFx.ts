@@ -749,6 +749,7 @@ export class CombatFx implements FxHost {
   }
 
   quiet = false;
+  slapArm?: (src: number, tx: number, ty: number, tz: number) => boolean;
 
   private number(x: number, y: number, z: number, amount: number, color: string, big: boolean, mul = 1, key?: number): void {
     if (this.quiet) return;
@@ -1174,7 +1175,11 @@ export class CombatFx implements FxHost {
       }
       case "reach":
         if (ev.style === "afterimage") this.afterimage(ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.team);
-        else wardenSlap(this, ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.hit);
+        else {
+          const ty = (this.world ? this.world.groundY(ev.tx, ev.tz) : ev.y) + 1.15;
+          const real = ev.src !== undefined && !!this.slapArm?.(ev.src, ev.tx, ty, ev.tz);
+          wardenSlap(this, ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.hit, real);
+        }
         break;
       case "levelup": {
         const col = ev.level >= 5 ? "#ffd040" : "#fff0b0";

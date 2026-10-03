@@ -322,6 +322,16 @@ def bake_material(name, src, cfg, img, px, cols):
     flags = team_faces(src, cfg, cols)
     h, w = px.shape[:2]
     out = px.copy()
+    if cfg.get("warm"):
+        tint = np.array(cfg["warm"]["tint"], dtype=np.float32)
+        rgb = out[:, :, :3]
+        mx = rgb.max(axis=2)
+        mn = rgb.min(axis=2)
+        sat = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
+        lum = 0.3 * rgb[:, :, 0] + 0.59 * rgb[:, :, 1] + 0.11 * rgb[:, :, 2]
+        wgt = np.clip((cfg["warm"].get("below", 0.3) - sat) / cfg["warm"].get("below", 0.3), 0, 1) * cfg["warm"]["amount"]
+        for k in range(3):
+            out[:, :, k] = np.clip(rgb[:, :, k] * (1 - wgt) + lum * tint[k] * wgt, 0, 1)
     if team_hue:
         rgb = out[:, :, :3]
         mx = rgb.max(axis=2)

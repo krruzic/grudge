@@ -601,6 +601,7 @@ export class EntityViews {
     private playerColors: THREE.Color[] = [],
   ) {
     this.structBatch = new StructureBatch(structures, (t) => teamColors[t] ?? teamColors[0]);
+    fx.slapArm = (src, tx, ty, tz) => this.slap(src, tx, ty, tz);
     if (silColors !== teamColors) {
       silColors = teamColors;
       silMats.clear();
@@ -1414,7 +1415,61 @@ export class EntityViews {
     if (w.time < e.status.stunUntil) v.body.rotation.z = Math.sin(time * 20) * 0.08;
     else v.body.rotation.z = 0;
     v.mixer?.update(dt);
+    this.applySlap(e, v, dt);
     if (a && a.kind === "combo" && a.t > a.hitAt * 0.45 && a.t < a.hitAt + 0.07) this.swingTrail(e, v);
+  }
+
+  private slaps = new Map<number, { t: number; target: THREE.Vector3 }>();
+
+  slap(src: number, tx: number, ty: number, tz: number): boolean {
+    const v = this.views.get(src);
+    if (!v || !v.body.getObjectByName("forearm_R") || !v.body.getObjectByName("hand_R")) return false;
+    this.slaps.set(src, { t: 0, target: new THREE.Vector3(tx, ty, tz) });
+    return true;
+  }
+
+  private applySlap(e: Entity, v: View, dt: number): void {
+    const s = this.slaps.get(e.id);
+    if (!s) return;
+    const arm = v.body.getObjectByName("arm_R")!;
+    const fore = v.body.getObjectByName("forearm_R")!;
+    const hand = v.body.getObjectByName("hand_R")!;
+    s.t += dt;
+    const out = 0.06;
+    const hold = 0.24;
+    const dur = 0.5;
+    if (s.t >= dur || !e.alive) {
+      fore.scale.set(1, 1, 1);
+      hand.scale.set(1, 1, 1);
+      this.slaps.delete(e.id);
+      return;
+    }
+    const f = s.t < out ? 1 - Math.pow(1 - s.t / out, 3) : s.t < hold ? 1 : Math.max(0, 1 - Math.pow((s.t - hold) / (dur - hold), 1.6));
+    const blend = Math.min(1, f * 2.5);
+    fore.scale.set(1, 1, 1);
+    hand.scale.set(1, 1, 1);
+    const up = new THREE.Vector3(0, 1, 0);
+    const aim = (b: THREE.Object3D) => {
+      b.parent!.updateWorldMatrix(true, false);
+      b.updateMatrixWorld(true);
+      const p = b.getWorldPosition(new THREE.Vector3());
+      const dir = s.target.clone().sub(p).normalize();
+      const want = new THREE.Quaternion().setFromUnitVectors(up, dir);
+      const local = b.parent!.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(want);
+      b.quaternion.slerp(local, blend);
+      b.updateMatrixWorld(true);
+    };
+    aim(arm);
+    aim(fore);
+    hand.quaternion.slerp(new THREE.Quaternion(), blend);
+    fore.updateMatrixWorld(true);
+    const elbow = fore.getWorldPosition(new THREE.Vector3());
+    const wrist = hand.getWorldPosition(new THREE.Vector3());
+    const len = Math.max(0.05, elbow.distanceTo(wrist));
+    const reach = Math.max(len, (elbow.distanceTo(s.target) - len * 0.5) * f);
+    const k = Math.max(1, reach / len);
+    fore.scale.set(1, k, 1);
+    hand.scale.set(1, 1 / k, 1);
   }
 
   private swingTrail(e: Entity, v: View): void {

@@ -1,4 +1,5 @@
 import woodUrl from "../../assets/textures/wood.png?url";
+import planksUrl from "../../assets/textures/planks.png?url";
 import blockUrl from "../../assets/textures/wallblock.png?url";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
 import * as THREE from "three";
@@ -21,8 +22,9 @@ function tex(url: string): THREE.Texture {
 }
 const woodTex = tex(woodUrl);
 const blockTex = tex(blockUrl);
-const WOOD = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xf0d4b0 });
-const WOOD_DARK = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xa08060 });
+const plankTex = tex(planksUrl);
+const WOOD = new THREE.MeshLambertMaterial({ map: plankTex, color: 0xffffff });
+const WOOD_DARK = new THREE.MeshLambertMaterial({ map: plankTex, color: 0xb89c84 });
 void blockTex;
 const MOSS_STONE = new THREE.MeshLambertMaterial({
   map: composite(128, (g, img) => {
@@ -762,7 +764,7 @@ export class HazardViews {
       const z = Math.floor(c / W) + 0.5;
       if (m.kind !== "wall") {
         const works = m.kind === "works";
-        const plank = new THREE.Mesh(worldBox(1.02, works ? 0.22 : 0.14, 1.02), (works ? (x + z) % 2 : k % 2) ? WOOD : WOOD_DARK);
+        const plank = new THREE.Mesh(worldBox(1.02, works ? 0.22 : 0.14, 1.02), WOOD);
         plank.position.set(x, m.deck[k] - (works ? 0.11 : 0.07), z);
         g.add(plank);
         const ground = this.world.terrain.groundHeight(x, z);

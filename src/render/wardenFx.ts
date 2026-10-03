@@ -112,7 +112,7 @@ function woodHand(): THREE.Group {
   return g;
 }
 
-export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: number, tz: number, hit: boolean): void {
+export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: number, tz: number, hit: boolean, realArm = false): void {
   const dx = tx - x;
   const dz = tz - z;
   const len = Math.max(0.5, Math.hypot(dx, dz));
@@ -135,7 +135,7 @@ export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: numbe
   limbGeo.computeVertexNormals();
   const limb = new THREE.Mesh(limbGeo, new THREE.MeshLambertMaterial({ map: tex, color: 0xfff0d8, flatShading: true }));
   limb.position.y = 0.5;
-  arm.add(limb);
+  if (!realArm) arm.add(limb);
   const knots: THREE.Object3D[] = [];
   const tuftMat = new THREE.MeshBasicMaterial({ map: WARDEN.moss, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
   for (let i = 0; i < 3; i++) {
@@ -147,10 +147,11 @@ export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: numbe
       k.add(p);
     }
     knots.push(k);
-    h.root.add(k);
+    if (!realArm) h.root.add(k);
   }
   const hand = woodHand();
   hand.scale.setScalar(1.6);
+  hand.visible = !realArm;
   h.root.add(arm, hand);
   const dir = new THREE.Vector3(ux * len, ty - sy, uz * len);
   const full = dir.length();
@@ -179,7 +180,7 @@ export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: numbe
       const at = (0.25 + i * 0.25) * f;
       kn.position.set(x + dir.x * at, sy + dir.y * at, z + dir.z * at);
       kn.rotation.set(0, yaw + i, 0);
-      kn.visible = f > 0.15;
+      kn.visible = !realArm && f > 0.15;
     });
     if (s < out) {
       for (let i = 0; i < 2; i++) {
@@ -208,7 +209,7 @@ export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: numbe
     }
   });
   h.add(hand, dur, () => {});
-  for (const kn of knots) h.add(kn, dur, () => {});
+  for (const kn of knots) if (!realArm) h.add(kn, dur, () => {});
   h.after(dur + 0.1, () => tex.dispose());
 }
 
