@@ -1,0 +1,4 @@
+The FIRST image shows painted HUD icons from our fantasy game, showing the exact painting style. Paint TWO new HUD icon sprites in exactly that style, side by side (left half and right half, each centred in its half, wide gap between, never touching), same scale and outline as the reference icons, readable at tiny sizes:
+1. LEFT: a chunky medieval iron PADLOCK, LOCKED: dark iron body with brass rivets and a brass keyhole plate, the curved iron shackle fully closed into the body.
+2. RIGHT: the SAME padlock UNLOCKED: identical body, the shackle popped open, raised up and swung to the side, a tiny golden glint on the shackle.
+Front view, both identical in body size and position. No text, no frames, no shadows. Plain flat pure magenta background (#FF00FF) everywhere.

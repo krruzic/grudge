@@ -622,8 +622,7 @@ export class Hud {
       if (ev.stage === "warn") this.showCard("AVALANCHE!", `THE ${arm} RUMBLES · GET OUT OF THE LANE`, "peak", now, "#8a1810", ev.seconds);
       else if (ev.stage === "slide") this.showCard("AVALANCHE!", `SNOW COMING DOWN THE ${arm}`, "peak", now, "#8a1810", 0, 2.5);
     } else if (ev.type === "gates" && ev.lock) {
-      if (ev.stage === "warn") this.showCard("THE GATES OPEN IN", "THE BELLS RING · MUSTER AT THE GATES", "bell", now, "#8a5a10", ev.seconds);
-      else this.showCard("THE GATES OPEN", "EVERY KEEP IS OPEN · TO WAR!", "bell", now, "#8a5a10", 0, 3.5);
+      if (ev.stage !== "warn") this.showCard("THE GATES OPEN", "EVERY KEEP IS OPEN · TO WAR!", "bell", now, "#8a5a10", 0, 3.5);
     } else if (ev.type === "gates") {
       const court = ev.pattern === 1;
       if (ev.stage === "warn") this.showCard("THE BELLS RING", court ? "THE COURT OPENS · THE OUTER GATES SEAL" : "THE COURT SEALS · THE OUTER GATES OPEN", "bell", now, "#8a5a10", ev.seconds);
@@ -1509,19 +1508,53 @@ export class Hud {
     const m = w.data.match;
     const sudden = w.match.phase === "sudden";
     const remain = sudden ? w.matchLength + m.suddenDeathSeconds - w.time : w.matchLength - w.time;
-    const r = Math.max(0, Math.ceil(remain));
+    const lockAt = w.mapEvents.lockUntil;
+    const r = Math.max(0, Math.ceil(sudden ? remain : Math.min(remain, w.matchLength - lockAt)));
     const txt = `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
     const s = 1.7;
     const low = r <= 30 && Math.floor(now * 2) % 2 === 0;
-    const col = sudden ? "#ff5a3a" : low ? "#ffd040" : "#ffffff";
-    drawNum(ctx, txt, Math.round((W - textWidth(txt, s, true)) / 2), MARGIN_Y - 1, col, s);
+    const locked = w.mapEvents.locked;
+    const col = sudden ? "#ff5a3a" : locked ? "#d8ccb0" : low ? "#ffd040" : "#ffffff";
+    const tw = textWidth(txt, s, true);
+    const tx = Math.round((W - tw) / 2);
+    drawNum(ctx, txt, tx, MARGIN_Y - 1, col, s);
+    const since = w.time - lockAt;
+    if (lockAt > 0 && (locked || since < 2.5)) this.drawGateLock(ctx, tx - 13, MARGIN_Y + 7.5, w, locked, since, now);
     if (sudden) {
       const lab = "SUDDEN DEATH";
       drawText(ctx, lab, Math.round((W - textWidth(lab, 0.8)) / 2), MARGIN_Y + 17, "#ff9a7a", 0.8);
-    } else if (w.mapEvents.locked) {
-      const lab = `GATES OPEN IN ${Math.max(0, Math.ceil(w.mapEvents.lockUntil - w.time))}`;
-      drawText(ctx, lab, Math.round((W - textWidth(lab, 0.8)) / 2), MARGIN_Y + 17, "#ffd040", 0.8);
     }
+  }
+
+  private drawGateLock(ctx: CanvasRenderingContext2D, x: number, y: number, w: World, locked: boolean, since: number, now: number): void {
+    const total = Math.max(1, w.data.match.lockdown?.seconds ?? 30);
+    const left = Math.max(0, w.mapEvents.lockUntil - w.time);
+    const frac = locked ? left / total : 0;
+    const r = 8.5;
+    ctx.save();
+    ctx.globalAlpha = locked ? 1 : Math.max(0, 1 - since / 2.5);
+    ctx.fillStyle = "rgba(20,12,6,0.7)";
+    ctx.beginPath();
+    ctx.arc(x, y, r + 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineCap = "round";
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = "rgba(255,240,200,0.18)";
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    if (frac > 0) {
+      const warn = left <= 5;
+      ctx.strokeStyle = warn ? (Math.floor(now * 4) % 2 ? "#ffe070" : "#ff9a40") : "#e8b040";
+      ctx.beginPath();
+      ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+      ctx.stroke();
+    }
+    const shake = locked && left <= 5 ? Math.sin(now * 40) * 0.6 * (1 - left / 5) : 0;
+    const pop = locked ? 0 : Math.min(1, since * 4);
+    ctx.translate(shake, 0);
+    hudIcon(ctx, locked ? "lock_closed" : "lock_open", x, y - pop * 0.6, r * 1.75 * (1 + pop * 0.15 * Math.max(0, 1 - since)));
+    ctx.restore();
   }
 
   private drawTeam(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], t: number, now: number, F: Frame | null = null): void {

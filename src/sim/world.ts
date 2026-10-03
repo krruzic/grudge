@@ -673,7 +673,7 @@ export class World {
   }
 
   get matchLength(): number {
-    return this.data.match.matchSeconds * (this.ffa ? this.data.match.ffa?.timeMul ?? 1 : 1);
+    return this.data.match.matchSeconds * (this.ffa ? this.data.match.ffa?.timeMul ?? 1 : 1) + (this.mapEvents?.lockUntil ?? 0);
   }
 
   private updateMatch(): void {
