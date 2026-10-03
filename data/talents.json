@@ -927,17 +927,6 @@
    ],
    "z": [
     {
-     "id": "ricochet",
-     "name": "RICOCHET",
-     "desc": "HEARTSEEKER+: AFTER THE FIRST CHAMPION IT GLANCES OFF TO THE NEAREST FOE WITHIN 10M (ANOTHER CHAMPION IF THERE IS ONE) FOR 60%.",
-     "fx": {
-      "ricochet": {
-       "range": 10,
-       "mul": 0.6
-      }
-     }
-    },
-    {
      "id": "huntersmark",
      "name": "HUNTER'S MARK",
      "desc": "HEARTSEEKER+: EVERYTHING IT HITS IS MARKED FOR 6S (YOUR WHOLE HOUSE DEALS 20% MORE TO THEM) AND PIP FLIES TO THE CHAMPION IF IT'S ON YOUR SHOULDER.",
@@ -1061,19 +1050,6 @@
       "seconds": 4,
       "radius": 2,
       "hp": 300
-     }
-    },
-    {
-     "id": "lastcall",
-     "name": "LAST CALL",
-     "desc": "BREWFEST+: WHEN THE CASK RUNS DRY OR BREAKS IT BURSTS, HEALING ALLIES 150 AND BLASTING FOES FOR 80.",
-     "fx": {
-      "lastCall": {
-       "heal": 150,
-       "damage": 80,
-       "radius": 7,
-       "knockback": 10
-      }
      }
     }
    ]
