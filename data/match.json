@@ -13,7 +13,7 @@
   "economy": {
     "start": 200,
     "income": 1.0,
-    "grain": { "start": 60, "base": 1.6, "perLevel": [0.7, 1.1, 1.5], "unitBountyMul": 1, "surplus": 150, "surplusMul": 0.7, "starvedMul": 2.5 },
+    "grain": { "start": 60, "base": 1.6, "perLevel": [0.7, 1.1, 1.5], "outpostShare": 0.85, "unitBountyMul": 1, "surplus": 150, "surplusMul": 0.7, "starvedMul": 2.5 },
     "respawnCooldownPenalty": 2,
     "respawnBigMul": 1.667,
     "padIncome": {

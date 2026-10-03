@@ -970,7 +970,7 @@ export class World {
         const pad = this.pads[e.structure.padIndex];
         pad.structureId = 0;
         this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius + 0.45, false);
-        pad.rubbleUntil = this.time + this.data.structures.rubbleSeconds;
+        pad.rubbleUntil = this.time + (pad.zone === "home" ? this.data.structures.rubbleHomeSeconds ?? this.data.structures.rubbleSeconds : this.data.structures.rubbleSeconds);
       } else if (e.structure) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.radius, false);
       e.hp = 0;
       e.alive = false;
@@ -1032,6 +1032,11 @@ export class World {
       const s = this.get(p.structureId);
       if (!s?.alive || s.team !== team || !s.structure?.ready || s.structure.type === "core") continue;
       inc += g.perLevel[Math.min(g.perLevel.length, s.structure.level) - 1] ?? 0;
+      const def = this.data.structures.types[s.structure.type as "barracks"];
+      if (g.outpostShare && def?.class === "production" && def.unit) {
+        const every = (def.cadence ?? 10) * (s.structure.level > 1 ? def.upgrade.cadence ?? 1 : 1);
+        inc += ((this.data.units.waves.spawnCost[def.unit] ?? 0) / every) * g.outpostShare;
+      }
     }
     return inc;
   }
@@ -1650,7 +1655,7 @@ export class World {
       this.loseGold(target.team, this.data.match.economy.loss.tower, "TOWER LOST");
       if (killerTeam >= 0) this.rally(killerTeam);
     }
-    pad.rubbleUntil = this.time + this.data.structures.rubbleSeconds;
+    pad.rubbleUntil = this.time + (pad.zone === "home" ? this.data.structures.rubbleHomeSeconds ?? this.data.structures.rubbleSeconds : this.data.structures.rubbleSeconds);
     pad.rubbleTeam = target.team;
   }
 

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { World } from "../sim/world";
 import { abilities } from "../sim/talents";
+import { graveSpots } from "../sim/heroes";
 
 export interface ReticleReq {
   heroId: number;
@@ -8,6 +9,7 @@ export interface ReticleReq {
   dx: number;
   dz: number;
   range: number;
+  cur?: { dx: number; dz: number };
 }
 
 function ringTex(): THREE.CanvasTexture {
@@ -76,9 +78,9 @@ const GRAVE_TEX = areaTex("200,140,255", "#d8a8ff", "#1a0830", "#c890ff");
 
 export class Reticles {
   readonly root = new THREE.Group();
-  private pool: { range: THREE.Mesh; area: THREE.Mesh; wall: THREE.Group }[] = [];
+  private pool: { range: THREE.Mesh; area: THREE.Mesh; wall: THREE.Group; pads: THREE.Group; cursor: THREE.Mesh }[] = [];
 
-  private make(): { range: THREE.Mesh; area: THREE.Mesh; wall: THREE.Group } {
+  private make(): { range: THREE.Mesh; area: THREE.Mesh; wall: THREE.Group; pads: THREE.Group; cursor: THREE.Mesh } {
     const mat = (tex: THREE.Texture, op: number) => new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op, depthWrite: false, depthTest: false, polygonOffset: true, polygonOffsetFactor: -4 });
     const range = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat(RANGE_TEX, 0.55));
     range.rotation.x = -Math.PI / 2;
@@ -92,8 +94,16 @@ export class Reticles {
       b.renderOrder = 6;
       wall.add(b);
     }
-    this.root.add(range, area, wall);
-    const r = { range, area, wall };
+    const pads = new THREE.Group();
+    for (let i = 0; i < 24; i++) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(1, 0.14, 1), new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.55, depthTest: false }));
+      b.renderOrder = 6;
+      pads.add(b);
+    }
+    const cursor = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.9, depthTest: false }));
+    cursor.renderOrder = 7;
+    this.root.add(range, area, wall, pads, cursor);
+    const r = { range, area, wall, pads, cursor };
     this.pool.push(r);
     return r;
   }
@@ -104,7 +114,7 @@ export class Reticles {
       const q = reqs[i];
       const e = q ? world.getAny(q.heroId) : undefined;
       const on = !!q && !!e?.alive;
-      p.range.visible = p.area.visible = p.wall.visible = false;
+      p.range.visible = p.area.visible = p.wall.visible = p.pads.visible = p.cursor.visible = false;
       if (!on || !q || !e) return;
       const hx = e.transform.pos.x;
       const hz = e.transform.pos.z;
@@ -115,20 +125,29 @@ export class Reticles {
       const areaMat = p.area.material as THREE.MeshBasicMaterial;
       const dots = p.wall.children as THREE.Mesh[];
       if (def0.kind === "gravewalk") {
-        const d = Math.hypot(q.dx, q.dz) || 1;
-        const ux = q.dx / d;
-        const uz = q.dz / d;
-        const len = Math.min(16, d - 3);
-        p.wall.visible = len > 1.5;
-        dots.forEach((b, k) => {
-          const s = 1.5 + ((k + (time * 2.5) % 1) / dots.length) * Math.max(0, len - 1.5);
-          const x = hx + ux * s;
-          const z = hz + uz * s;
-          b.position.set(x, world.groundY(x, z) + 0.15, z);
-          b.rotation.y = Math.atan2(ux, uz) + Math.PI / 4;
-          b.scale.setScalar(0.55);
-          (b.material as THREE.MeshBasicMaterial).color.setHex(0xc890ff);
+        const spots = graveSpots(world, e);
+        p.pads.visible = true;
+        (p.pads.children as THREE.Mesh[]).forEach((b, k) => {
+          const sp = spots[k];
+          b.visible = !!sp;
+          if (!sp) return;
+          const sel = Math.hypot(sp.x - tx, sp.z - tz) < 0.5;
+          const size = (sel ? 3.4 : 2.6) * (sel ? 1 + Math.sin(time * 8) * 0.06 : 1);
+          b.position.set(sp.x, world.groundY(sp.x, sp.z) + 0.2, sp.z);
+          b.scale.set(size, 1, size);
+          b.rotation.y = sel ? time * 0.8 : 0;
+          const m = b.material as THREE.MeshBasicMaterial;
+          m.color.setHex(sel ? 0xd8a0ff : 0xffe070);
+          m.opacity = sel ? 0.75 : 0.5;
         });
+        if (q.cur) {
+          const cx = hx + q.cur.dx;
+          const cz = hz + q.cur.dz;
+          p.cursor.visible = true;
+          p.cursor.position.set(cx, world.groundY(cx, cz) + 0.9 + Math.sin(time * 5) * 0.15, cz);
+          p.cursor.rotation.y = time * 2;
+        }
+        if (Math.hypot(q.dx, q.dz) < 0.5) return;
         p.area.visible = true;
         areaMat.map = GRAVE_TEX;
         p.area.position.set(tx, gy + 0.12, tz);

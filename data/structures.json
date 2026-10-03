@@ -237,6 +237,7 @@
   },
   "upgradeSeconds": 10,
   "rubbleSeconds": 20,
+  "rubbleHomeSeconds": 6,
   "builderRadius": 3.6,
   "builderRates": {
     "hero": 1.0,

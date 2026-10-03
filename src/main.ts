@@ -1291,7 +1291,7 @@ async function start(): Promise<void> {
       view.setReticles(mappers.flatMap((m, i) => {
         const r = m?.ui.reticle;
         const h = r ? world.heroForPlayer(i) : undefined;
-        return r && h ? [{ heroId: h.id, slot: r.slot, dx: r.dx, dz: r.dz, range: r.range }] : [];
+        return r && h ? [{ heroId: h.id, slot: r.slot, dx: r.dx, dz: r.dz, range: r.range, cur: r.cur }] : [];
       }));
       if (netMode === "peer") for (const [k, slot] of mySlots) if (mappers[slot]) net.toHost({ t: "cmd", k, c: packCommand(mappers[slot]!.take()) });
     } else if (state === "paused") {

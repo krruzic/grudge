@@ -40,6 +40,8 @@ export class Bot {
   private healing = false;
   private openedAt = -99;
   private fightId = 0;
+  private graveId = 0;
+  private graveAt = -99;
   private seed: number;
   private wantAttack = false;
   private wantB = false;
@@ -614,7 +616,11 @@ export class Bot {
     this.fightId = 0;
 
     const gv = h.grave ? w.get(h.grave.id) : undefined;
-    if (gv?.alive && h.grave && w.time < h.grave.until && !(ehAlive && dHero < 12)) {
+    if (h.grave && h.grave.id !== this.graveId) {
+      this.graveId = h.grave.id;
+      this.graveAt = w.time;
+    }
+    if (gv?.alive && h.grave && w.time < this.graveAt + 12 && !(ehAlive && dHero < 12)) {
       const gx = gv.transform.pos.x;
       const gz = gv.transform.pos.z;
       const dx = p.x - gx;

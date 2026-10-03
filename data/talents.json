@@ -443,10 +443,7 @@
     {
      "id": "risenranks",
      "name": "RISEN RANKS",
-     "desc": "SOLDIERS FROM AN OUTPOST YOU EMPOWER COME OUT AS VETERANS. THE EMPOWER LASTS 4S LONGER.",
-     "add": {
-      "seconds": 4
-     },
+     "desc": "SOLDIERS FROM AN OUTPOST YOU EMPOWER COME OUT AS VETERANS.",
      "fx": {
       "graveRank": 1
      }

@@ -19,7 +19,7 @@ export interface MapperUi {
   charge: { slot: "a" | "b"; k: number } | null;
   morph: number;
   morphBack: boolean;
-  reticle: { slot: "b" | "r" | "z"; dx: number; dz: number; range: number; at?: { x: number; z: number }; spots?: number } | null;
+  reticle: { slot: "b" | "r" | "z"; dx: number; dz: number; range: number; at?: { x: number; z: number }; spots?: number; cur?: { dx: number; dz: number } } | null;
 }
 
 export interface AimInfo {
@@ -33,20 +33,6 @@ export interface AimInfo {
   ready?: { b: boolean; r: boolean; z: boolean };
 }
 
-type Spot = { x: number; z: number };
-
-function spotCone(spots: Spot[], hx: number, hz: number, sx: number, sz: number): { best: Spot; cone: Spot[] } {
-  const sa = Math.atan2(sx, sz);
-  const da = spots.map((s) => {
-    const d = Math.abs(Math.atan2(s.x - hx, s.z - hz) - sa);
-    return d > Math.PI ? Math.PI * 2 - d : d;
-  });
-  let bi = 0;
-  for (let i = 1; i < spots.length; i++) if (da[i] < da[bi]) bi = i;
-  const cone = spots.filter((_, i) => da[i] <= da[bi] + 0.45).sort((a, b) => Math.hypot(a.x - hx, a.z - hz) - Math.hypot(b.x - hx, b.z - hz));
-  return { best: spots[bi], cone };
-}
-
 const TAP = 0.2;
 const CHARGE_FULL = 0.8;
 
@@ -54,9 +40,7 @@ const GROUPS: (UnitType | "all")[] = ["all", "grunt", "ranged", "heavy"];
 
 export class CommandMapper {
   private place = { dx: 0, dz: 0 };
-  private spotAt: { x: number; z: number } | null = null;
-  private tiltArmed = true;
-  private spotPicked = false;
+  private cursor = { dx: 0, dz: 0 };
   private pending: Command = { moveX: 0, moveZ: 0 };
   private armed = true;
   private xDown = false;
@@ -140,11 +124,7 @@ export class CommandMapper {
         }
         this.holdAt[slot] = now;
         this.place = { dx: Math.sin(aim!.facing) * Math.min(range, 4), dz: Math.cos(aim!.facing) * Math.min(range, 4) };
-        if (spots) {
-          this.spotAt = spots[0] ?? null;
-          this.spotPicked = false;
-          this.tiltArmed = true;
-        }
+        if (spots) this.cursor = { dx: 0, dz: 0 };
       }
       if (this.holdAt[slot] < 0) continue;
       const held = now - this.holdAt[slot];
@@ -156,24 +136,19 @@ export class CommandMapper {
         if (held > TAP && range && spots) {
           const hx = aim!.hx ?? 0;
           const hz = aim!.hz ?? 0;
-          const cur = this.spotAt;
-          const mag = Math.hypot(p.stickX, p.stickY);
-          if (!spots.length) this.spotAt = null;
-          else if (mag > 0.5) {
-            const { best, cone } = spotCone(spots, hx, hz, p.stickX, p.stickY);
-            const ci = cur ? cone.findIndex((s) => Math.hypot(s.x - cur.x, s.z - cur.z) < 0.5) : -1;
-            if (this.tiltArmed) this.spotAt = ci >= 0 && this.spotPicked ? cone[(ci + 1) % cone.length] : best;
-            else if (ci < 0) this.spotAt = best;
-            this.tiltArmed = false;
-            this.spotPicked = true;
-          } else {
-            if (mag < 0.3) this.tiltArmed = true;
-            this.spotAt = cur ? spots.reduce((a, s) => (Math.hypot(s.x - cur.x, s.z - cur.z) < Math.hypot(a.x - cur.x, a.z - cur.z) ? s : a)) : spots[0];
+          this.cursor.dx += p.stickX * 34 * dt;
+          this.cursor.dz += p.stickY * 34 * dt;
+          const cd = Math.hypot(this.cursor.dx, this.cursor.dz);
+          if (cd > 90) {
+            this.cursor.dx *= 90 / cd;
+            this.cursor.dz *= 90 / cd;
           }
+          const cx = hx + this.cursor.dx;
+          const cz = hz + this.cursor.dz;
+          const s = spots.length ? spots.reduce((b, q) => (Math.hypot(q.x - cx, q.z - cz) < Math.hypot(b.x - cx, b.z - cz) ? q : b)) : null;
           c.moveX = c.moveZ = 0;
-          const s = this.spotAt;
           this.place = s ? { dx: s.x - hx, dz: s.z - hz } : { dx: 0, dz: 0 };
-          if (s) this.ui.reticle = { slot: k, dx: this.place.dx, dz: this.place.dz, range: 0, at: { x: s.x, z: s.z }, spots: spots.length };
+          this.ui.reticle = { slot: k, dx: this.place.dx, dz: this.place.dz, range: 0, at: s ? { x: s.x, z: s.z } : undefined, spots: spots.length, cur: { ...this.cursor } };
         } else if (held > TAP && range) {
           this.place.dx += p.stickX * 12 * dt;
           this.place.dz += p.stickY * 12 * dt;

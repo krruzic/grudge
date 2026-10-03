@@ -191,7 +191,7 @@ function graveArrive(w: World, e: Entity, a: HeroAction, def: AbilityDef): void 
   const sz = s.transform.pos.z;
   if (Math.hypot(sx - t.pos.x, sz - t.pos.z) > 0.5) t.facing = t.prevFacing = Math.atan2(t.pos.x - sx, t.pos.z - sz);
   w.emit({ type: "blink", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, src: e.id });
-  if (s.structure!.type !== "core") h.grave = { id: s.id, until: w.time + (def.seconds ?? 10) };
+  if (s.structure!.type !== "core") h.grave = { id: s.id, until: Infinity };
   const gb = def.fx?.graveBurst;
   if (gb) {
     const hexSec = w.heroDef(h.type).abilities.b.hexSeconds ?? 6;
@@ -212,7 +212,7 @@ function graveTick(w: World, e: Entity, def: AbilityDef): void {
   const g = h.grave;
   if (!g) return;
   const s = w.get(g.id);
-  if (!s?.alive || s.team !== e.team || !s.structure || w.time >= g.until || def.kind !== "gravewalk") {
+  if (!s?.alive || s.team !== e.team || !s.structure || def.kind !== "gravewalk") {
     h.grave = undefined;
     return;
   }
@@ -1484,16 +1484,18 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         if (!old.alive || old.owner !== e.id || !old.structure?.siege || old.structure.works !== undefined) continue;
         old.expiresAt = w.time;
       }
+      const cellAt = tr.index(Math.floor(sx), Math.floor(sz));
+      const onRamp = perch ?? mine.find((m) => m.cells.includes(cellAt)) ?? null;
       const s = w.addEntity(e.team, "structure", 0.7, sx, sz, def.hp ?? 180);
       const mul = perch ? def.perchMul ?? 1.25 : 1;
       s.structure = {
         type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 0.5,
         range: def.range ?? 11, damage: (def.damage ?? 80) * mul, lastFireAt: -99, shielded: false,
-        siege: { cooldown: def.cooldown ?? 1.8, vs: def.vs ?? {}, modId: perch ? perch.id : 0 },
+        siege: { cooldown: def.cooldown ?? 1.8, vs: def.vs ?? {}, modId: onRamp ? onRamp.id : 0 },
       };
       const core = w.foeCore(e.team, sx, sz);
       if (core) s.transform.facing = s.transform.prevFacing = Math.atan2(core.transform.pos.x - sx, core.transform.pos.z - sz);
-      s.expiresAt = Math.min(perch ? perch.until : Infinity, w.time + (def.seconds ?? 20));
+      s.expiresAt = Math.min(onRamp ? onRamp.until : Infinity, w.time + (def.seconds ?? 20));
       s.owner = e.id;
       w.nav.setBlocked(sx, sz, 0.7, true);
       w.emit({ type: "build", id: s.id, padIndex: -1, team: e.team, upgrade: false });

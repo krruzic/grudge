@@ -327,6 +327,7 @@ export interface StructureData {
   core: { hp: number; radius: number; ward: number };
   upgradeSeconds: number;
   rubbleSeconds: number;
+  rubbleHomeSeconds?: number;
   builderRadius: number;
   builderRates: { hero: number; unit: number; max: number; teamwork: number };
   types: Record<StructureType, StructureDef>;
@@ -340,7 +341,7 @@ export interface MatchData {
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
   lockdown?: { seconds: number; warnSeconds?: number };
   ffa?: { speedMul?: number; waveSeconds: number; spawnRateMul?: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
-  economy: { start: number; income: number; grain?: { start: number; base: number; perLevel: number[]; unitBountyMul?: number; surplus?: number; surplusMul?: number; starvedMul?: number };
+  economy: { start: number; income: number; grain?: { start: number; base: number; perLevel: number[]; outpostShare?: number; unitBountyMul?: number; surplus?: number; surplusMul?: number; starvedMul?: number };
     padIncome?: Record<string, number>; respawnCooldownPenalty?: number; respawnBigMul?: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };
   catchUp: { resourceScale: number; structureWeight: number; incomeBoost: number; productionBoost: number; bountyCut: number; respawnCut: number; fortify: number };
   terrain: {
