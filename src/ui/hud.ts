@@ -1533,13 +1533,13 @@ export class Hud {
     const r = 8.5;
     ctx.save();
     ctx.globalAlpha = locked ? 1 : Math.max(0, 1 - since / 2.5);
-    ctx.fillStyle = "rgba(20,12,6,0.7)";
+    ctx.fillStyle = "rgba(24,16,8,0.72)";
     ctx.beginPath();
-    ctx.arc(x, y, r + 1.6, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.lineCap = "round";
     ctx.lineWidth = 2.2;
-    ctx.strokeStyle = "rgba(255,240,200,0.18)";
+    ctx.strokeStyle = "#4a3820";
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.stroke();
