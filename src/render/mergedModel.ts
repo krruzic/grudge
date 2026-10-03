@@ -60,7 +60,8 @@ export function mergeParts(scene: THREE.Object3D): void {
   });
   for (const [parent, meshes] of groups) {
     const skel = meshes[0].skeleton;
-    const list = meshes.filter((m) => m.skeleton === skel && m.bindMatrix.equals(meshes[0].bindMatrix));
+    const big = (m: THREE.SkinnedMesh) => (((m.material as THREE.MeshStandardMaterial).map?.image as { width?: number } | undefined)?.width ?? 0) > 256;
+    const list = meshes.filter((m) => m.skeleton === skel && m.bindMatrix.equals(meshes[0].bindMatrix) && !big(m));
     if (list.length < 2 || list.length > MAX) continue;
     const keys = Object.keys(list[0].geometry.attributes).sort().join(",");
     if (list.some((m) => Object.keys(m.geometry.attributes).sort().join(",") !== keys || !!m.geometry.index !== !!list[0].geometry.index)) continue;
