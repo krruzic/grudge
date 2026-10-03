@@ -133,7 +133,8 @@ function flushText(): void {
 const CACHE_MAX = 500;
 function render(s: string, color: string, edge: boolean, shadow: boolean, k: number): Baked {
   const kk = Math.round(k * 20);
-  const key = `${edge ? 1 : 0}${shadow ? 1 : 0}|${kk}|${color}|${s}`;
+  const dens = Math.max(SOFT, Math.min(HK, Math.ceil(hiK * 2) / 2));
+  const key = `${edge ? 1 : 0}${shadow ? 1 : 0}|${kk}|${dens}|${color}|${s}`;
   const soft = !edge && !shadow;
   const hit = cache.get(key);
   if (hit) {
@@ -158,8 +159,8 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
   grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
   g.drawImage(layer(w, h, fillMask!, s, PADX, PADY, grad), 0, 0, w, h, 0, 0, w, h);
   const o = document.createElement("canvas");
-  o.width = Math.max(1, Math.round((w / HK) * k * SOFT));
-  o.height = Math.max(1, Math.round((h / HK) * k * SOFT));
+  o.width = Math.max(1, Math.round((w / HK) * k * dens));
+  o.height = Math.max(1, Math.round((h / HK) * k * dens));
   const og = o.getContext("2d")!;
   og.imageSmoothingEnabled = true;
   og.imageSmoothingQuality = "high";
