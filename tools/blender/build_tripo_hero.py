@@ -52,6 +52,30 @@ HEROES = {
         "team_hue": (195, 250),
         "extras": "marksman_extras",
     },
+    "engineer": {
+        "yaw": -90,
+        "height": 1.68,
+        "weight": 1.0,
+        "tex": 1024,
+        "joints": {
+            "hip": 0.7,
+            "chest": 1.0,
+            "neck": 1.33,
+            "head_top": 1.68,
+            "head_y": -0.03,
+            "shoulder": (0.25, 1.21),
+            "elbow": (0.39, 1.04),
+            "wrist": (0.45, 0.84),
+            "finger": (0.52, 0.57),
+            "leg_x": 0.23,
+            "knee": 0.34,
+            "ankle": 0.1,
+        },
+        "rigid": [{"bone": "chest", "box": ((-0.36, 0.2, 0.75), (0.36, 0.7, 1.8))}],
+        "team_hue": (195, 250),
+        "team_box": ((-0.6, -0.6, 0.9), (0.6, 0.6, 1.42)),
+        "extras": "engineer_extras",
+    },
 }
 
 
@@ -292,9 +316,44 @@ def swing_arms_down(src, arm):
         pb.rotation_mode = "XYZ"
 
 
+def team_faces(src, cfg, cols):
+    team_hue = cfg.get("team_hue")
+    if not team_hue:
+        return []
+    (x0, y0, z0), (x1, y1, z1) = cfg.get("team_box", ((-9, -9, -9), (9, 9, 9)))
+    return [hue_in(c, team_hue, 0.25) and x0 <= p.center.x <= x1 and y0 <= p.center.y <= y1 and z0 <= p.center.z <= z1 for p, c in zip(src.data.polygons, cols)]
+
+
+def uv_mask(src, flags, h, w):
+    mask = np.zeros((h, w), dtype=bool)
+    uv = src.data.uv_layers.active.data
+    for p, f in zip(src.data.polygons, flags):
+        if not f:
+            continue
+        pts = np.array([(uv[i].uv.x * w, uv[i].uv.y * h) for i in p.loop_indices])
+        for k in range(1, len(pts) - 1):
+            a, b, c = pts[0], pts[k], pts[k + 1]
+            xa, xb = int(max(0, np.floor(min(a[0], b[0], c[0])) - 1)), int(min(w - 1, np.ceil(max(a[0], b[0], c[0])) + 1))
+            ya, yb = int(max(0, np.floor(min(a[1], b[1], c[1])) - 1)), int(min(h - 1, np.ceil(max(a[1], b[1], c[1])) + 1))
+            if xb < xa or yb < ya:
+                continue
+            gx, gy = np.meshgrid(np.arange(xa, xb + 1) + 0.5, np.arange(ya, yb + 1) + 0.5)
+            d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+            if abs(d) < 1e-9:
+                continue
+            l1 = ((b[1] - c[1]) * (gx - c[0]) + (c[0] - b[0]) * (gy - c[1])) / d
+            l2 = ((c[1] - a[1]) * (gx - c[0]) + (a[0] - c[0]) * (gy - c[1])) / d
+            l3 = 1 - l1 - l2
+            e = -0.15
+            inside = (l1 >= e) & (l2 >= e) & (l3 >= e)
+            mask[ya:yb + 1, xa:xb + 1] |= inside
+    return mask
+
+
 def bake_material(name, src, cfg, img, px, cols):
     size = cfg["tex"]
     team_hue = cfg.get("team_hue")
+    flags = team_faces(src, cfg, cols)
     h, w = px.shape[:2]
     out = px.copy()
     if team_hue:
@@ -306,7 +365,7 @@ def bake_material(name, src, cfg, img, px, cols):
         hue = np.zeros_like(mx)
         d = np.maximum(mx - mn, 1e-5)
         hue = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
-        mask = (hue >= team_hue[0]) & (hue <= team_hue[1]) & (sat > 0.25) & (mx > 0.08)
+        mask = (hue >= team_hue[0] - 15) & (hue <= team_hue[1] + 15) & (sat > 0.15) & (mx > 0.05) & uv_mask(src, flags, h, w)
         lum = (0.3 * r + 0.59 * g + 0.11 * b)
         grey = np.clip(lum * 1.9 + 0.12, 0, 1)
         for k in range(3):
@@ -340,7 +399,7 @@ def bake_material(name, src, cfg, img, px, cols):
     me.materials.append(mk(name + "_skin"))
     if team_hue:
         me.materials.append(mk("team_" + name))
-        idx = [1 if hue_in(c, team_hue, 0.25) else 0 for c in cols]
+        idx = [1 if f else 0 for f in flags]
         me.polygons.foreach_set("material_index", idx)
     for layer in list(me.color_attributes):
         me.color_attributes.remove(layer)
@@ -382,6 +441,31 @@ def marksman_extras(name, arm, images):
         a = k / 5 * math.tau
         off = Vector((math.cos(a) * 0.022, math.sin(a) * 0.022, math.sin(a) * 0.015))
         c.limb(tuple(q0 + off), tuple(q1 + off * 1.3 + Vector((0, 0, 0.01 * (k % 2)))), 0.008, 0.008, "wood", "chest", segs=4, shade=WOOD)
+    return c
+
+
+def engineer_extras(name, arm, images):
+    c = charkit.Char(name + "_gear", images)
+    import build_heroes as bh
+    LTH_D = (0.36, 0.24, 0.16)
+    h0, h1, _ = (tuple(arm.data.bones["hand_R"].head_local), tuple(arm.data.bones["hand_R"].tail_local), None)
+    g = Vector(h0) + (Vector(h1) - Vector(h0)) * 0.55
+    hx, hy, hz = g.x, g.y, g.z
+    lo = (hx, hy + 0.02, hz - 0.14)
+    hi = (hx + 0.08, hy + 0.22, hz + 0.95)
+    c.lathe_ab([(0.045, 0.0), (0.045, 1.0)], lo, hi, "gold", "hand_R", segs=10)
+    for k in range(5):
+        t = 0.05 + k * 0.05
+        p = Vector(lo) + (Vector(hi) - Vector(lo)) * t
+        bh.ring(c, 0.05, 0.012, tuple(p), "leather", "hand_R", segs=10, rot=(0.23, 0.08, 0), shade=LTH_D)
+    c.ico(0.055, lo, "gold", "hand_R", sub=1)
+    c.box((0.3, 0.1, 0.12), (hi[0], hi[1], hi[2] + 0.04), "gold", "hand_R")
+    for sx in (-1, 1):
+        c.box((0.08, 0.1, 0.23), (hi[0] + 0.11 * sx, hi[1], hi[2] + 0.17), "gold", "hand_R")
+        c.box((0.045, 0.105, 0.055), (hi[0] + 0.085 * sx, hi[1], hi[2] + 0.26), "gold", "hand_R")
+    c.lathe_ab([(0.036, 0.0), (0.036, 1.0)], (hi[0] - 0.11, hi[1], hi[2] - 0.04), (hi[0] + 0.11, hi[1], hi[2] - 0.04), "iron", "hand_R", segs=10)
+    for k in range(5):
+        bh.ring(c, 0.038, 0.007, (hi[0] - 0.09 + k * 0.045, hi[1], hi[2] - 0.04), "iron", "hand_R", segs=8, rot=(0, math.pi / 2, 0))
     return c
 
 

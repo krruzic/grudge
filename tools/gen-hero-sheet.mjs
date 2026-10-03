@@ -34,12 +34,12 @@ async function falRun(model, input) {
 }
 
 const dataUri = (path, type) => `data:${type};base64,${readFileSync(path).toString("base64")}`;
-const [, , step, input, out, promptFile] = process.argv;
+const [, , step, input, out, promptFile, ...refs] = process.argv;
 mkdirSync(dirname(out), { recursive: true });
 
 if (step === "sheet") {
   const prompt = readFileSync(promptFile, "utf8");
-  const r = await falRun("fal-ai/nano-banana-pro/edit", { prompt, image_urls: [dataUri(input, "image/jpeg")], aspect_ratio: "16:9", resolution: "2K", output_format: "png" });
+  const r = await falRun("fal-ai/nano-banana-pro/edit", { prompt, image_urls: [input, ...refs].map((f) => dataUri(f, "image/jpeg")), aspect_ratio: "16:9", resolution: "2K", output_format: "png" });
   writeFileSync(out, Buffer.from(await (await fetch(r.images[0].url)).arrayBuffer()));
   console.log("sheet", out, r.description ?? "");
 } else if (step === "mesh") {
