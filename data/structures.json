@@ -109,7 +109,7 @@
       "vs": {
         "grunt": 1.2,
         "ranged": 1.2,
-        "heavy": 0.5,
+        "heavy": 0.8,
         "hero": 0.8,
         "structure": 0
       },

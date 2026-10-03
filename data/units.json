@@ -40,7 +40,7 @@
       "vs": {
         "grunt": 1.0,
         "ranged": 0.6,
-        "heavy": 2.2,
+        "heavy": 2.8,
         "hero": 0.7,
         "structure": 0.9
       },
@@ -65,14 +65,14 @@
       "vs": {
         "grunt": 3.2,
         "ranged": 1.0,
-        "heavy": 0.5,
+        "heavy": 0.8,
         "hero": 0.8,
         "structure": 0.7
       },
       "bounty": 4
     },
     "heavy": {
-      "hp": 380,
+      "hp": 320,
       "speed": 3.5,
       "radius": 0.7,
       "damage": 32,
