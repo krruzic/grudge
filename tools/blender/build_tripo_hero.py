@@ -474,7 +474,7 @@ def bridge(obj, a, b, r, px, uv_pick):
     bm.free()
 
 
-def attach_wrench(name, arm, src_path):
+def load_wrench(name, src_path, tex=512):
     bpy.ops.import_scene.gltf(filepath=src_path)
     w = [o for o in bpy.context.selected_objects if o.type == "MESH"][0]
     for o in list(bpy.context.selected_objects):
@@ -492,7 +492,15 @@ def attach_wrench(name, arm, src_path):
             pick = (sum(uv[i].uv.x for i in p.loop_indices) / p.loop_total, sum(uv[i].uv.y for i in p.loop_indices) / p.loop_total)
             break
     bridge(w, (-0.06, 0.055, 0.01), (0.17, 0.058, 0.01), 0.036, px, pick)
-    bake_material(name + "_wrench", w, {"tex": 512}, img, px, face_colors(w, px))
+    bake_material(name, w, {"tex": tex}, img, px, face_colors(w, px))
+    return w
+
+
+WRENCH_LEN = 1.25
+
+
+def attach_wrench(name, arm, src_path):
+    w = load_wrench(name + "_wrench", src_path)
     hb = arm.data.bones["hand_R"]
     g = hb.head_local + (hb.tail_local - hb.head_local) * 0.55
     lo = g + Vector((0.0, 0.0, -0.2))
@@ -501,7 +509,7 @@ def attach_wrench(name, arm, src_path):
     sx = Vector((1, 0, 0))
     sx = (sx - d * sx.dot(d)).normalized()
     R = Matrix((-d, -sx, (-d).cross(-sx))).transposed().to_4x4()
-    sc = (hi - lo).length / 1.0
+    sc = WRENCH_LEN
     grip = Vector((0.32, 0.06, 0.01))
     w.data.transform(Matrix.Translation(g) @ R @ Matrix.Scale(sc, 4) @ Matrix.Translation(-grip))
     w.name = name + "_wrench"

@@ -137,6 +137,7 @@ export function addOutline(root: THREE.Object3D): void {
       hull = new THREE.Mesh(geo, outlineMat);
     }
     hull.userData.outline = true;
+    if (m.name) hull.name = `${m.name}_hull`;
     hull.position.copy(m.position);
     hull.quaternion.copy(m.quaternion);
     hull.scale.copy(m.scale);
@@ -156,6 +157,7 @@ export function buildHulls(root: THREE.Object3D, mat: THREE.Material, order: num
     if (hull instanceof THREE.SkinnedMesh && m instanceof THREE.SkinnedMesh) hull.bind(m.skeleton, m.bindMatrix);
     hull.userData.outline = true;
     hull.userData.noSil = true;
+    if (m.name) hull.name = `${m.name}_hull`;
     hull.position.copy(m.position);
     hull.quaternion.copy(m.quaternion);
     hull.scale.copy(m.scale);

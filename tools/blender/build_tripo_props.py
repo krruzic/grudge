@@ -18,6 +18,7 @@ import build_tripo_hero as th  # noqa: E402
 PROPS = {
     "ballista": {"scale": 2.75, "split": 0.0, "tex": 512, "team_hue": (195, 250)},
     "tesla": {"scale": 2.5, "tex": 512},
+    "wrench": {},
 }
 
 
@@ -105,6 +106,16 @@ def build_tesla(name, cfg):
     r = (ball[:, 0].max() - ball[:, 0].min()) / 2
     empty("glow", (0, 0, float(top - r)), src)
     return [src] + list(src.children)
+
+
+def build_wrench(name, cfg):
+    th.clear_scene()
+    w = th.load_wrench(name, os.path.join(ROOT, "assets", "source", "wrench_tripo.glb"), tex=256)
+    co = np.array([v.co[:] for v in w.data.vertices])
+    mid = (co.min(0) + co.max(0)) / 2
+    w.data.transform(Matrix.Scale(th.WRENCH_LEN, 4) @ Matrix.Translation(Vector((0.12, -mid[1], -mid[2]))))
+    w.name = name
+    return [w]
 
 
 def export(objs, path):

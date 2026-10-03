@@ -4,6 +4,7 @@ import type { StructureModels } from "./structureModels";
 import goldUrl from "../../assets/textures/gold.png?url";
 import ironUrl from "../../assets/textures/iron.png?url";
 import { starTex, targetTex, type CombatFx } from "./combatFx";
+import { prop } from "./props";
 
 const ironTex = new THREE.TextureLoader().load(ironUrl);
 ironTex.colorSpace = THREE.SRGBColorSpace;
@@ -147,6 +148,15 @@ export class RelicView {
     const bs = w.boomerangs;
     while (this.wrenches.length < bs.length) {
       const g = new THREE.Group();
+      const model = prop("wrench");
+      if (model) {
+        model.rotation.x = -0.25;
+        model.scale.setScalar(1.3);
+        g.add(model);
+        this.wrenches.push(g);
+        this.root.add(g);
+        continue;
+      }
       const bar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.14, 0.2), bombMat);
       const jaw = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.08, 4, 8, Math.PI * 1.4), bombMat);
       jaw.position.x = 0.62;

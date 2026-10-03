@@ -145,6 +145,7 @@ interface View {
   root: THREE.Group;
   body: THREE.Object3D;
   weapon?: THREE.Object3D;
+  held?: THREE.Object3D[];
   spin?: THREE.Object3D;
   level2?: THREE.Object3D;
   level3?: Map<string, THREE.Object3D>;
@@ -814,6 +815,11 @@ export class EntityViews {
         root.add(tag);
       }
       markSilhouette(body, e.team);
+      const held: THREE.Object3D[] = [];
+      body.traverse((o) => {
+        if (o.name.startsWith(`${e.hero!.type}_wrench`)) held.push(o);
+      });
+      if (held.length) view.held = held;
       const bf = new THREE.Mesh(
         new THREE.RingGeometry(0.35, 0.75, 6),
         new THREE.MeshBasicMaterial({ color: team.clone().lerp(white, 0.6), transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
@@ -889,7 +895,7 @@ export class EntityViews {
     });
     const v: View = {
       kind: e.kind, root, body, mixer, actions, bar, seen: true,
-      weapon: view.weapon, spin: view.spin, level2: view.level2, level3: view.level3, shield: view.shield, blockFx: view.blockFx, work: view.work,
+      weapon: view.weapon, held: view.held, spin: view.spin, level2: view.level2, level3: view.level3, shield: view.shield, blockFx: view.blockFx, work: view.work,
       mats, flash: 0, joltX: 0, joltZ: 0, freeze: 0, stepDist: 0,
     };
     root.traverse((o) => {
@@ -1122,6 +1128,10 @@ export class EntityViews {
       v.freeze = Math.max(0, v.freeze - dt);
       if (e.hero) {
         this.syncHero(e, v, facing, adt, time);
+        if (v.held) {
+          const out = this.world.boomerangs.some((b) => b.ownerId === e.id);
+          for (const o of v.held) o.visible = !out;
+        }
         v.baseVisible = v.root.visible;
       }
       else if (e.unit) this.syncUnit(e, v, facing, time, adt);
