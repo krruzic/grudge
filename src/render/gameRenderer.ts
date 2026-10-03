@@ -675,7 +675,7 @@ export class GameRenderer {
     fog.far = cam.userData.fogFar ?? fog.far;
     this.sky.position.copy(cam.position);
     cam.updateMatrixWorld();
-    this.sky.visible = this.skySeen(cam);
+    this.sky.visible = true;
     this.cullMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.cullMat);
     if (this.matrixFrame !== FRAME.id) {

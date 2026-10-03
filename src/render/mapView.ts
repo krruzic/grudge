@@ -243,7 +243,7 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   });
 
   mergeProps(gltf.scene);
-  stripMap(root, terrain);
+  void stripMap;
 
   return {
     root,

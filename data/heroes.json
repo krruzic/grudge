@@ -173,7 +173,6 @@
         "wrenchRange": 10,
         "wrenchCooldown": 1.1,
         "overhaulHeal": 120,
-        "overhaulDamage": 1.25,
         "overhaulSeconds": 6
       },
       "abilities": {
@@ -806,7 +805,7 @@
       "hooks": {
         "speedMul": 0.94,
         "plentyRadius": 7,
-        "plentyHero": 0.006,
+        "plentyHero": 0.008,
         "plentyUnit": 0.012,
         "lowHealMul": 1.25,
         "lowHealBelow": 0.5
@@ -860,7 +859,7 @@
           "puddleRadius": 2.6,
           "dur": 0.5,
           "hitAt": 0.28,
-          "cooldown": 10,
+          "cooldown": 9,
           "bot": "heal",
           "callout": "HEALING KEG"
         },
@@ -889,7 +888,7 @@
           "hp": 600,
           "seconds": 10,
           "radius": 7,
-          "heal": 24,
+          "heal": 28,
           "damageMul": 1.15,
           "slowMul": 0.7,
           "dur": 0.9,

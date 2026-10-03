@@ -1353,11 +1353,6 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
         if (o.team === e.team && o !== e && !o.structure && hk.overhaulHeal) {
           w.heal(o, o.hero ? hk.overhaulHeal * 0.5 : hk.overhaulHeal);
-          if (o.unit) {
-            o.status.buffUntil = w.time + (hk.overhaulSeconds ?? 6);
-            o.status.buffDamageMul = Math.max(o.status.buffUntil > w.time ? o.status.buffDamageMul : 1, hk.overhaulDamage ?? 1.25);
-            o.status.buffSpeedMul = Math.max(1, o.status.buffSpeedMul || 1);
-          }
         } else if (o.team !== e.team && o.kind !== "structure") {
           w.damage(e, o, (def.damage ?? 30) * mul, { knockback: fx?.pull ? 0.5 : 3, stun: def.stunSeconds, big: !!def.stunSeconds });
         }
