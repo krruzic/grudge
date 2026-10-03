@@ -10,7 +10,7 @@ import parchUrl from "../../assets/textures/ui_parchment.png?url";
 import bannerUrl from "../../assets/textures/banner.png?url";
 import { engravedIcon } from "./icons";
 
-import cinzelUrl from "../../assets/fonts/Cinzel.ttf?url";
+import titleFontUrl from "../../assets/fonts/PirataOne.ttf?url";
 
 const KEY_TEXT: Record<string, string> = {
   t_champion: "CHOOSE YOUR CHAMPION", t_field: "CHOOSE THE FIELD", t_rules: "RULES OF COMBAT", t_records: "HALL OF GRUDGES",
@@ -19,8 +19,8 @@ const KEY_TEXT: Record<string, string> = {
 };
 const titleCache = new Map<string, HTMLCanvasElement>();
 let titleReady = false;
-const cinzel = new FontFace("GrudgeTitle", `url(${cinzelUrl})`, { weight: "400 900" });
-cinzel.load().then((f) => {
+const titleFace = new FontFace("GrudgeTitle", `url(${titleFontUrl})`);
+titleFace.load().then((f) => {
   document.fonts.add(f);
   titleReady = true;
   titleCache.clear();
@@ -35,8 +35,8 @@ export function titleArt(text: string): HTMLCanvasElement | null {
   const hit = titleCache.get(s);
   if (hit) return hit;
   const cap = 96;
-  const font = `700 ${Math.round(cap / 0.7)}px GrudgeTitle`;
-  const track = cap * 0.07;
+  const font = `400 ${Math.round(cap / 0.66)}px GrudgeTitle`;
+  const track = cap * 0.035;
   const m = document.createElement("canvas").getContext("2d")!;
   m.font = font;
   let w = 0;
@@ -776,7 +776,7 @@ export function windowCut(ctx: CanvasRenderingContext2D, x: number, y: number, w
 
 export function boardTitle(ctx: CanvasRenderingContext2D, W: number, key: string, fallback: string): void {
   beam(ctx, 4, 2, W - 8, 17);
-  artTitle(ctx, key, fallback, W / 2, 3, 14);
+  artTitle(ctx, key, fallback, W / 2, 2, 16);
 }
 
 export function tag(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, sel: boolean, k: number, body: () => void): void {
