@@ -59,7 +59,7 @@ export class NavGrid {
     const z = cz + 0.5;
     const hc = t.heightAt(x, z);
     this.h[i] = hc;
-    let ok = Number.isFinite(hc);
+    let ok = Number.isFinite(hc) && !(t.chasm !== undefined && hc < t.chasm + 0.5);
     if (ok) {
       for (const [ox, oz] of SLOPE_SAMPLES) {
         if (!(t.slopeAt(x + ox, z + oz) <= this.maxSlope * PLAN_SLOPE)) { ok = false; break; }

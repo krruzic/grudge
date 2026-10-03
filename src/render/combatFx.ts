@@ -1173,6 +1173,10 @@ export class CombatFx implements FxHost {
         });
         break;
       }
+      case "chasm":
+        this.burst(ev.x, ev.y + 0.4, ev.z, starTex, 0xd8f4ff, 12, 0.6, 0.9, 3, true, 3);
+        this.burst(ev.x, ev.y + 0.3, ev.z, puffTex, 0xf0f8ff, 8, 1.1, 0.9, 2.2, false, 0.5);
+        break;
       case "reach":
         if (ev.style === "afterimage") this.afterimage(ev.x, ev.y, ev.z, ev.tx, ev.tz, ev.team);
         else {

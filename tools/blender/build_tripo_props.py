@@ -25,6 +25,8 @@ PROPS = {
     "wallstone": {"static": True, "size": (1.0, 0.95, 2.5), "tex": 256},
     "palisade": {"static": True, "size": (1.05, 0.5, 2.5), "tex": 256},
     "tomb": {"static": True, "height": 1.05, "tex": 256},
+    "iceshard": {"static": True, "height": 4.0, "tex": 256, "tris": 500},
+    "icechunk": {"static": True, "height": 1.5, "tex": 256, "tris": 500},
     "event_lantern": {"static": True, "height": 1.6, "tex": 256},
     "event_horn": {"static": True, "height": 3.0, "tex": 256},
     "event_boulder": {"static": True, "height": 1.0, "tex": 256},
@@ -155,6 +157,12 @@ def build_static(name, cfg):
         me.transform(Matrix.Translation((0, 0, -cfg["size"][2] / 2)))
     src.name = name
     me.name = name
+    if cfg.get("tris") and len(me.polygons) > cfg["tris"]:
+        dec = src.modifiers.new("dec", "DECIMATE")
+        dec.ratio = cfg["tris"] / len(me.polygons)
+        dec.delimit = {"UV"}
+        bpy.context.view_layer.objects.active = src
+        bpy.ops.object.modifier_apply(modifier=dec.name)
     material(name, src, cfg)
     return [src]
 

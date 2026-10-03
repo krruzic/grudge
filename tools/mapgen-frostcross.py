@@ -113,6 +113,7 @@ data = {
     "surround": "alpine",
     "rimHeight": 4.5,
     "waterLevel": -12.0,
+    "chasm": -2.2,
     "avalanche": {"firstSeconds": 50, "everySeconds": 38, "warnSeconds": 6, "sweepSeconds": 1.6, "driftSeconds": 14,
                   "lane": {"x": 22, "z": 42, "w": 18, "h": 28}, "from": "e",
                   "heroDamage": 140, "unitDamage": 0.75, "knock": 4.0},

@@ -604,6 +604,7 @@ export class World {
     this.mapEvents.update();
     this.applyKnockback(dt);
     this.separate();
+    this.updateChasm();
     this.cleanup();
     this.tick++;
     this.time += dt;
@@ -1226,6 +1227,10 @@ export class World {
       return false;
     }
     if (src) src.status.lastAttackAt = this.time;
+    if (src && src.team !== target.team) {
+      target.status.hurtBy = src.id;
+      target.status.hurtAt = this.time;
+    }
     if (src?.hero && !target.structure && target.team !== src.team) {
       src.status.lastHitAt = this.time;
       src.status.lastHitX = tp.pos.x;
@@ -1495,6 +1500,19 @@ export class World {
     const ramp = 3;
     if (p < td.lowSeconds) return Math.max(0, 1 - p / ramp) * (t >= cycle ? 1 : 0);
     return Math.min(1, (p - td.lowSeconds) / ramp);
+  }
+
+  private updateChasm(): void {
+    const below = this.terrain.chasm;
+    if (below === undefined) return;
+    for (const e of this.entities) {
+      if (!e.alive || e.structure || (e.hero && e.hero.jump)) continue;
+      const g = this.terrain.groundHeight(e.transform.pos.x, e.transform.pos.z);
+      if (!(g < below) || e.transform.y > below + 0.6) continue;
+      const by = e.status.hurtBy !== undefined && this.time - (e.status.hurtAt ?? -99) < 6 ? this.get(e.status.hurtBy) : undefined;
+      this.emit({ type: "chasm", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z });
+      this.kill(e, by && by.alive ? by : null);
+    }
   }
 
   private updateTide(): void {

@@ -10,6 +10,7 @@
  "surround": "alpine",
  "rimHeight": 4.5,
  "waterLevel": -12.0,
+ "chasm": -2.2,
  "avalanche": {
   "firstSeconds": 50,
   "everySeconds": 38,

@@ -70,6 +70,7 @@ export interface MapData {
   surround?: string;
   rimHeight: number;
   waterLevel: number;
+  chasm?: number;
   ops: MapOp[];
   props: Prop[];
   cores: MapPoint[];
@@ -180,11 +181,14 @@ export class Terrain {
     return [vx, vz];
   }
 
+  readonly chasm: number | undefined;
+
   constructor(data: MapData) {
     this.width = data.width;
     this.depth = data.depth;
     this.rimHeight = data.rimHeight;
     this.waterLevel = data.waterLevel;
+    this.chasm = data.chasm;
     const W = this.width;
     const D = this.depth;
     const n = W * D;

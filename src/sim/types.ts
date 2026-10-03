@@ -35,6 +35,8 @@ export interface Status {
   invulnUntil: number;
   lastAttackAt: number;
   lastHitAt: number;
+  hurtBy?: number;
+  hurtAt?: number;
   lastHitX: number;
   lastHitZ: number;
   hidden: boolean;
@@ -427,6 +429,7 @@ export type SimEvent =
   | { type: "eliminated"; team: number; by: number }
   | { type: "tide"; high: boolean }
   | { type: "horn"; stage: "blow" | "fail"; horn: number; team: number; arm: number; x: number; y: number; z: number }
+  | { type: "chasm"; x: number; y: number; z: number }
   | { type: "jumppad"; stage: "charge" | "launch" | "land" | "fail"; pad: number; id: number; x: number; y: number; z: number; windup: number; dur: number }
   | { type: "morph"; stage: "start" | "done"; id: number; to: string; back: boolean; x: number; y: number; z: number; team: number; seconds: number }
   | { type: "mist"; stage: "warn" | "in" | "out"; seconds: number }
