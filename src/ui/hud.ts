@@ -6,6 +6,7 @@ import { parchment, texturedRect, uiImagesReady, waxSeal } from "./n64ui";
 import { onHiLayer } from "./font";
 import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
+import { costumeOfPlayer } from "../render/costumes";
 import { buildCost, canSpec, padNear, specCost } from "../sim/structures";
 import { drawNum, drawPlain, drawText, textWidth } from "./font";
 
@@ -299,6 +300,31 @@ function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.fill();
   ctx.restore();
   ctx.restore();
+}
+
+const stockUrls = import.meta.glob("../../assets/ui/costume_icons/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const stockIcons = new Map<string, HTMLImageElement>();
+for (const [p, url] of Object.entries(stockUrls)) {
+  const im = new Image();
+  im.src = url;
+  stockIcons.set(p.split("/").pop()!.replace(".png", ""), im);
+}
+const stockGrey = new Map<HTMLImageElement, HTMLCanvasElement>();
+function stockIcon(hero: string, costume: string, grey = false): HTMLImageElement | HTMLCanvasElement | null {
+  const im = stockIcons.get(`${hero}_${costume || "classic"}`) ?? stockIcons.get(`${hero}_classic`);
+  if (!im?.complete || !im.naturalWidth) return null;
+  if (!grey) return im;
+  let c = stockGrey.get(im);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = im.naturalWidth;
+    c.height = im.naturalHeight;
+    const g = c.getContext("2d")!;
+    g.filter = "grayscale(1) brightness(0.55)";
+    g.drawImage(im, 0, 0);
+    stockGrey.set(im, c);
+  }
+  return c;
 }
 
 const hudIconUrls = import.meta.glob("../../assets/ui/hud/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
@@ -726,6 +752,7 @@ export class Hud {
     if (bannerOn && !this.bannerBig) this.drawBanner(ctx, W, now);
     this.mini = null;
     if (this.minimap) this.drawMinimap(ctx, W, H, w, now, ui);
+    if (this.mini) this.drawStocks(ctx, w);
     if (this.card && now < this.card.until) this.drawCard(ctx, W, w, now);
     if (w.ffa) {
       this.drawFfa(ctx, W, H, w, ui, now);
@@ -1047,6 +1074,57 @@ export class Hud {
     const ok = make(c.getContext("2d")!, t.width, t.depth);
     this.overlays.set(key, ok ? c : null);
     return ok ? c : null;
+  }
+
+  private drawStocks(ctx: CanvasRenderingContext2D, w: World): void {
+    const m = this.mini!;
+    const list = w.players.filter((p) => !p.commander || w.players.every((q) => q.team !== p.team || q.commander));
+    if (!list.length) return;
+    const sz = this.split >= 2 ? 11 : 12;
+    const gap = 2;
+    const total = list.length * sz + (list.length - 1) * gap;
+    let x = Math.round(m.x + m.w / 2 - total / 2);
+    const y = Math.round(m.y - sz - 3);
+    const dead = list.map((p) => {
+      const e = w.getAny(p.heroId);
+      return !e || !e.alive || !!e.hero?.dead;
+    });
+    onHiLayer(ctx, (g) => {
+      list.forEach((p, i) => {
+        const im = stockIcon(p.heroType, costumeOfPlayer(p.player), dead[i]);
+        g.save();
+        g.fillStyle = "rgba(12,8,6,0.55)";
+        g.beginPath();
+        g.arc(x + sz / 2, y + sz / 2, sz / 2 + 0.6, 0, Math.PI * 2);
+        g.fill();
+        if (im) {
+          g.imageSmoothingEnabled = true;
+          g.imageSmoothingQuality = "high";
+          if (dead[i]) g.globalAlpha *= 0.85;
+          g.drawImage(im, x, y, sz, sz);
+        }
+        g.globalAlpha = 1;
+        g.fillStyle = INK;
+        g.fillRect(x + 0.5, y + sz + 0.6, sz - 1, 2.2);
+        g.fillStyle = this.teamColors[p.team] ?? "#9a9068";
+        g.fillRect(x + 1, y + sz + 1, sz - 2, 1.4);
+        if (dead[i]) {
+          g.lineCap = "round";
+          for (const [lw, col] of [[2.6, INK], [1.5, "#e02818"]] as const) {
+            g.lineWidth = lw;
+            g.strokeStyle = col;
+            g.beginPath();
+            g.moveTo(x + 2, y + 2);
+            g.lineTo(x + sz - 2, y + sz - 2);
+            g.moveTo(x + sz - 2, y + 2);
+            g.lineTo(x + 2, y + sz - 2);
+            g.stroke();
+          }
+        }
+        g.restore();
+        x += sz + gap;
+      });
+    });
   }
 
   private drawMinimap(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number, ui: (MapperUi | null)[] = []): void {
