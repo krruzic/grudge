@@ -7,6 +7,7 @@ interface Part {
   emissive: THREE.Color;
   vc: boolean;
   face: boolean;
+  mask: boolean;
 }
 
 interface Merged {
@@ -78,7 +79,7 @@ export function mergeParts(scene: THREE.Object3D): void {
     const mats = list.map((m) => m.material as THREE.MeshStandardMaterial);
     const parts: Part[] = mats.map((m) => {
       const face = m.name.startsWith("face");
-      return { name: m.name, color: (m.color ?? new THREE.Color(1, 1, 1)).clone(), emissive: (m.emissive ?? new THREE.Color(0, 0, 0)).clone(), vc: !face, face };
+      return { name: m.name, color: (m.color ?? new THREE.Color(1, 1, 1)).clone(), emissive: (m.emissive ?? new THREE.Color(0, 0, 0)).clone(), vc: !face, face, mask: m.name.startsWith("dye") };
     });
     merged.set(geo, { tex: layerTexture(mats.map((m) => m.map ?? null)), parts });
     const one = new THREE.SkinnedMesh(geo, mats[0]);
@@ -97,7 +98,10 @@ export function mergedMaterial(geo: THREE.BufferGeometry, dye: (part: string) =>
   if (!info) return null;
   const tint = Array.from({ length: MAX }, () => new THREE.Vector4(1, 1, 1, 1));
   const emis = Array.from({ length: MAX }, () => new THREE.Vector4(0, 0, 0, 0));
+  const mask = new Array<number>(MAX).fill(0);
+  const team = dye("team") ?? new THREE.Color(1, 1, 1);
   info.parts.forEach((p, i) => {
+    mask[i] = p.mask ? 1 : 0;
     const c = dye(p.name) ?? p.color;
     tint[i].set(c.r, c.g, c.b, p.vc ? 1 : 0);
     emis[i].set(p.emissive.r, p.emissive.g, p.emissive.b, p.face ? 1 : 0);
@@ -108,6 +112,8 @@ export function mergedMaterial(geo: THREE.BufferGeometry, dye: (part: string) =>
     shader.uniforms.uLayers = { value: info.tex };
     shader.uniforms.uTint = { value: tint };
     shader.uniforms.uEmis = { value: emis };
+    shader.uniforms.uMask = { value: mask };
+    shader.uniforms.uDye = { value: team };
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
@@ -120,11 +126,11 @@ export function mergedMaterial(geo: THREE.BufferGeometry, dye: (part: string) =>
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        `#include <common>\nuniform highp sampler2DArray uLayers;\nuniform vec4 uEmis[${MAX}];\nflat varying int vMat;\nvarying vec2 vUv0;`,
+        `#include <common>\nuniform highp sampler2DArray uLayers;\nuniform vec4 uEmis[${MAX}];\nuniform float uMask[${MAX}];\nuniform vec3 uDye;\nflat varying int vMat;\nvarying vec2 vUv0;`,
       )
       .replace(
         "#include <map_fragment>",
-        "vec4 em = uEmis[vMat];\nvec2 tuv = vUv0;\nif (em.w > 0.5) { vec2 sz = vec2(textureSize(uLayers, 0).xy); tuv = (floor(fract(tuv) * sz) + 0.5) / sz; }\ndiffuseColor *= texture(uLayers, vec3(tuv, float(vMat)));",
+        "vec4 em = uEmis[vMat];\nvec2 tuv = vUv0;\nif (em.w > 0.5) { vec2 sz = vec2(textureSize(uLayers, 0).xy); tuv = (floor(fract(tuv) * sz) + 0.5) / sz; }\nvec4 tx = texture(uLayers, vec3(tuv, float(vMat)));\nif (uMask[vMat] > 0.5 && tx.a < 0.93) tx = vec4(tx.rgb * uDye, 1.0);\ndiffuseColor *= tx;",
       )
       .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += em.rgb;");
   };

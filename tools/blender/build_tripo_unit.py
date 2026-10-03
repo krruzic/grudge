@@ -8,6 +8,7 @@ CLIP=attack FRAMES=0,4,6 (with a preview dir) renders posed frames instead of ex
 import math
 import os
 import sys
+import tempfile
 
 import bpy
 import numpy as np
@@ -46,12 +47,98 @@ UNITS = {
         "arm_cut": (0.4, 1.32, 0.3, 0.05, 1.0),
         "props": [{"name": "club", "src": "ogre_club_tripo.glb", "bone": "arm_R", "tex": 256, "decimate": 0.5, "rot": 90, "grip": (0.3, 0.0, 0.0), "length": 1.4, "at": 0.97, "axis": (-0.12, -1.0, -0.12), "side": (0, 0, 1)}],
     },
+    "grunt": {
+        "dye": True,
+        "yaw": -90,
+        "height": 1.42,
+        "tex": 256,
+        "decimate": 0.75,
+        "team_hue": (195, 245),
+        "joints": {
+            "hip": 0.42,
+            "neck": 0.93,
+            "top": 1.42,
+            "head_y": 0.0,
+            "shoulder": (0.19, 0.86),
+            "hand": (0.35, 0.42),
+            "leg_x": 0.13,
+            "foot": 0.05,
+        },
+        "islands": [
+            {"bone": "chest", "box": ((0.05, -0.2, 0.7), (0.35, 0.25, 1.0))},
+            {"bone": "head", "box": ((-0.2, -0.2, 0.9), (0.2, 0.1, 1.2))},
+        ],
+        "arm_cut": (0.22, 0.84, 0.15, 0.03, 0.7),
+        "props": [
+            {"name": "spear", "src": "grunt_spear_tripo.glb", "bone": "arm_R", "tex": 256, "decimate": 0.5, "pre": (("Y", -90),), "grip": (0.25, 0.0, 0.0), "length": 1.25, "at": 0.95, "axis": (0.0, -0.2, 1.0), "side": (1, 0, 0)},
+            {"name": "shield", "src": "grunt_shield_tripo.glb", "bone": "arm_L", "tex": 256, "decimate": 0.5, "team_hue": (195, 245), "grip": (-0.12, 0.0, 0.0), "length": 0.5, "at": 0.85, "axis": (-1.0, 0.35, 0.0), "side": (0, 0, 1)},
+        ],
+    },
+    "ranged": {
+        "dye": True,
+        "yaw": -90,
+        "height": 1.6,
+        "tex": 256,
+        "decimate": 0.8,
+        "team_hue": (195, 245),
+        "clips": "ranged_clips",
+        "joints": {
+            "hip": 0.45,
+            "neck": 1.0,
+            "top": 1.6,
+            "head_y": -0.05,
+            "shoulder": (0.2, 0.93),
+            "hand": (0.38, 0.47),
+            "leg_x": 0.14,
+            "foot": 0.05,
+        },
+        "islands": [{"bone": "chest", "box": ((-0.45, 0.12, 0.5), (0.35, 0.4, 1.35)), "shift": (0.0, -0.06, 0.0)}],
+        "arm_cut": (0.24, 0.9, 0.17, 0.03, 0.75),
+        "props": [
+            {"name": "bow", "src": "ranged_bow_tripo.glb", "bone": "arm_L", "tex": 256, "decimate": 0.6, "string": ((0.0, -0.118, 0.47), (0.0, -0.118, -0.47), 0.006), "pre": (("Y", -90),), "grip": (0.0, 0.05, 0.0), "length": 1.0, "at": 0.97, "axis": (0.0, -0.7, 0.7), "side": (0, 1, 0)},
+        ],
+    },
+    "heavy": {
+        "dye": True,
+        "yaw": -90,
+        "height": 1.85,
+        "weight": 1.3,
+        "tex": 256,
+        "decimate": 0.75,
+        "team_hue": (195, 245),
+        "joints": {
+            "hip": 0.68,
+            "neck": 1.42,
+            "top": 1.85,
+            "head_y": 0.0,
+            "shoulder": (0.42, 1.3),
+            "hand": (0.6, 0.45),
+            "leg_x": 0.23,
+            "foot": 0.05,
+        },
+        "islands": [
+            {"bone": "chest", "box": ((-0.7, -0.45, 1.05), (-0.15, 0.45, 1.65))},
+            {"bone": "chest", "box": ((0.15, -0.45, 1.05), (0.7, 0.45, 1.65))},
+        ],
+        "arm_cut": (0.42, 1.2, 0.32, 0.04, 1.0),
+        "props": [
+            {"name": "hammer", "src": "heavy_hammer_tripo.glb", "bone": "arm_R", "tex": 256, "decimate": 0.5, "team_hue": (195, 245), "pre": (("Y", -90),), "grip": (0.3, 0.0, 0.0), "length": 1.0, "at": 0.95, "axis": (-0.15, -1.0, 0.35), "side": (0, 0, 1)},
+        ],
+    },
 }
 
 
 def ogre_clips(clips):
     clips["death"]["bones"]["arm_R"] = [(0, (0, 0, 0)), (6, (-35, 0, 25)), (18, (-15, 80, 40))]
     clips["death"]["bones"]["arm_L"] = [(0, (0, 0, 0)), (6, (-35, 0, -25)), (18, (-15, 0, -40))]
+    return clips
+
+
+def ranged_clips(clips):
+    clips["attack"] = {"bones": {
+        "arm_L": [(0, (0, 0, 0)), (3, (-85, 0, -10)), (9, (-85, 0, -10)), (12, (0, 0, 0))],
+        "arm_R": [(0, (0, 0, 0)), (3, (-80, 0, 20)), (8, (-70, 0, -10)), (12, (0, 0, 0))],
+    }}
     return clips
 
 
@@ -159,6 +246,9 @@ def fix_weights(src, arm, cfg):
             continue
         if rule:
             set_weights(src, isl, {rule["bone"]: 1.0})
+            if rule.get("shift"):
+                for i in isl:
+                    me.vertices[i].co += Vector(rule["shift"])
             continue
         tot = {}
         for i in isl:
@@ -172,7 +262,7 @@ def fix_weights(src, arm, cfg):
         side = "R" if co[i][0] < 0 else "L"
         v = me.vertices[i]
         ws = {names[g.group]: g.weight for g in v.groups}
-        if z < 0.45:
+        if z < cfg.get("leg_z", 0.45):
             continue
         if z < az:
             a = min(1.0, max(0.0, (x - ax + ramp) / (2 * ramp))) if z > rz else float(x > ax)
@@ -201,11 +291,93 @@ def fix_weights(src, arm, cfg):
                         tot[b] = tot.get(b, 0.0) + g.weight
             s = sum(tot.values())
             set_weights(src, [i], {b: w / s for b, w in tot.items()} if s > 0 else torso_blend(co[i][2], J))
+    for r in cfg.get("rigid", []):
+        lo, hi = r["box"]
+        idx = [i for i in range(len(co)) if all(lo[k] <= co[i][k] <= hi[k] for k in range(3))]
+        if idx:
+            set_weights(src, idx, {r["bone"]: 1.0})
 
 
-def attach_prop(name, arm, pc):
-    w = th.import_prop(f"{name}_{pc['name']}", os.path.join(ROOT, "assets", "source", pc["src"]), tex=pc["tex"])
+def bake_dye(name, obj, px, size, hue, sat=0.3):
+    """Single material `dye_<name>`: texels of the team hue are greyed and get alpha 0.75, the game dyes them per texel."""
+    h, w = px.shape[:2]
+    rgb = px[:, :, :3]
+    mx = rgb.max(axis=2)
+    mn = rgb.min(axis=2)
+    d = np.maximum(mx - mn, 1e-5)
+    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+    hh = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
+    s = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
+    out = px.copy()
+    out[:, :, 3] = 1.0
+    if hue:
+        mask = (hh >= hue[0]) & (hh <= hue[1]) & (s > sat) & (mx > 0.1)
+        grey = np.clip((0.3 * r + 0.59 * g + 0.11 * b) * 1.9 + 0.12, 0, 1)
+        for k in range(3):
+            out[:, :, k] = np.where(mask, grey, out[:, :, k])
+        out[:, :, 3] = np.where(mask, 0.75, 1.0)
+    k = max(1, h // size)
+    out = out[: size * k, : size * k].reshape(size, k, size, k, 4).mean(axis=(1, 3))
+    tex = bpy.data.images.new(name + "_dye", size, size, alpha=True)
+    tex.pixels.foreach_set(out.astype(np.float32).ravel())
+    tex.file_format = "PNG"
+    path = os.path.join(tempfile.gettempdir(), name + "_dye.png")
+    tex.filepath_raw = path
+    tex.save()
+    tex = bpy.data.images.load(path, check_existing=False)
+    tex.pack()
+    m = bpy.data.materials.new("dye_" + name)
+    m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    o = nt.nodes.new("ShaderNodeOutputMaterial")
+    bs = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    bs.inputs["Roughness"].default_value = 1.0
+    t = nt.nodes.new("ShaderNodeTexImage")
+    t.image = tex
+    nt.links.new(t.outputs["Color"], bs.inputs["Base Color"])
+    nt.links.new(bs.outputs[0], o.inputs["Surface"])
+    me = obj.data
+    me.materials.clear()
+    me.materials.append(m)
+    for layer in list(me.color_attributes):
+        me.color_attributes.remove(layer)
+    col = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    col.data.foreach_set("color", [1.0] * (len(col.data) * 4))
+    me.color_attributes.active_color = col
+    for p in me.polygons:
+        p.use_smooth = True
+
+
+def import_dye_prop(name, path, size, hue):
+    bpy.ops.import_scene.gltf(filepath=path)
+    w = [o for o in bpy.context.selected_objects if o.type == "MESH"][0]
+    for o in list(bpy.context.selected_objects):
+        if o is not w:
+            bpy.data.objects.remove(o, do_unlink=True)
+    w.parent = None
+    w.data.transform(w.matrix_world)
+    w.matrix_world = Matrix.Identity(4)
+    img, px = th.tex_lookup(w)
+    bake_dye(name, w, px, size, hue)
+    return w
+
+
+def attach_prop(name, arm, pc, dye=False):
+    path = os.path.join(ROOT, "assets", "source", pc["src"])
+    if dye:
+        w = import_dye_prop(f"{name}_{pc['name']}", path, pc["tex"], pc.get("team_hue"))
+    else:
+        w = th.import_prop(f"{name}_{pc['name']}", path, tex=pc["tex"], team_hue=pc.get("team_hue"))
     decimate(w, pc.get("decimate", 1.0))
+    if pc.get("string"):
+        a, b, r = pc["string"]
+        uv = w.data.uv_layers.active.data
+        p = min(w.data.polygons, key=lambda p: (p.center - Vector(a)).length)
+        pick = (sum(uv[i].uv.x for i in p.loop_indices) / p.loop_total, sum(uv[i].uv.y for i in p.loop_indices) / p.loop_total)
+        th.bridge(w, a, b, r, None, pick)
+    for ax, deg in pc.get("pre", ()):
+        w.data.transform(Matrix.Rotation(math.radians(deg), 4, ax))
     w.data.transform(Matrix.Rotation(math.radians(pc.get("rot", 0)), 4, "Z"))
     th.place_on_bone(w, arm, pc["bone"], pc["grip"], pc["axis"], pc["length"], pc["at"], pc["side"])
     w.name = f"{name}_{pc['name']}"
@@ -248,8 +420,11 @@ def build(name, prev=None):
     m.object = arm
     for pb in arm.pose.bones:
         pb.rotation_mode = "XYZ"
-    th.bake_material(name, src, cfg, img, px, cols)
-    objs = [src] + [attach_prop(name, arm, pc) for pc in cfg.get("props", [])]
+    if cfg.get("dye"):
+        bake_dye(name, src, px, cfg["tex"], cfg.get("team_hue"))
+    else:
+        th.bake_material(name, src, cfg, img, px, cols)
+    objs = [src] + [attach_prop(name, arm, pc, cfg.get("dye", False)) for pc in cfg.get("props", [])]
     clips = anims.unit_clips(cfg.get("weight", 1.0))
     if cfg.get("clips"):
         clips = globals()[cfg["clips"]](clips)
