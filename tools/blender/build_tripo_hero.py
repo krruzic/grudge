@@ -75,6 +75,7 @@ HEROES = {
         "team_hue": (195, 250),
         "team_box": ((-0.6, -0.6, 0.9), (0.6, 0.6, 1.42)),
         "attach": [("attach_wrench", "wrench_tripo.glb")],
+        "clips": "engineer_clips",
     },
 }
 
@@ -503,9 +504,7 @@ def attach_wrench(name, arm, src_path):
     w = load_wrench(name + "_wrench", src_path)
     hb = arm.data.bones["hand_R"]
     g = hb.head_local + (hb.tail_local - hb.head_local) * 0.55
-    lo = g + Vector((0.0, 0.0, -0.2))
-    hi = g + Vector((-0.1, 0.08, 1.05))
-    d = (hi - lo).normalized()
+    d = Vector((0.0, -0.8, 0.6)).normalized()
     sx = Vector((1, 0, 0))
     sx = (sx - d * sx.dot(d)).normalized()
     R = Matrix((-d, -sx, (-d).cross(-sx))).transposed().to_4x4()
@@ -519,6 +518,39 @@ def attach_wrench(name, arm, src_path):
     m = w.modifiers.new("Armature", "ARMATURE")
     m.object = arm
     return w
+
+
+def engineer_clips(clips):
+    clips["attack_b"] = {
+        "bones": {
+            "arm_R": [(0, (-40, 0, 60)), (3, (-70, 0, 85)), (5, (-85, 0, -45)), (6, (-80, 0, -60)), (9, (-60, 0, -40)), (14, (0, 0, 6))],
+            "forearm_R": [(0, (-50, -70, 0)), (3, (-60, -80, 0)), (5, (-10, 0, 0)), (9, (-20, 0, 0)), (14, (-22, 0, 0))],
+            "hand_R": [(0, (20, 0, 0)), (3, (30, 0, 0)), (5, (40, 0, 0)), (7, (45, 0, 0)), (9, (35, 0, 0)), (14, (0, 0, 0))],
+            "spine": [(0, (5, -30, 0)), (3, (5, -50, 0)), (5, (12, 45, 0)), (6, (12, 52, 0)), (14, (0, 0, 0))],
+            "head": [(0, (0, 20, 0)), (3, (0, 30, 0)), (5, (0, -25, 0)), (14, (0, 0, 0))],
+            "arm_L": [(0, (-20, 0, -30)), (3, (-30, 0, -45)), (5, (20, 0, -10)), (14, (0, 0, -6))],
+            "thigh_R": [(0, (-20, 0, 0)), (5, (20, 0, 0)), (14, (0, 0, 0))],
+            "thigh_L": [(0, (0, 0, 0)), (5, (-30, 0, 0)), (14, (0, 0, 0))],
+            "shin_L": [(0, (0, 0, 0)), (5, (30, 0, 0)), (14, (0, 0, 0))],
+        },
+        "loc": {"hips": [(0, (0, 0, 0)), (3, (0, 0.03, 0.02)), (5, (0, -0.08, -0.06)), (14, (0, 0, 0))]},
+    }
+    return clips
+
+
+def preview_clip(src, arm, path, clip, frames, extra=(), angles=(0, 45, 90)):
+    act = bpy.data.actions.get(clip + "_" + arm.name)
+    for t in arm.animation_data.nla_tracks:
+        t.mute = True
+    arm.animation_data.action = act
+    files = []
+    for f in frames:
+        bpy.context.scene.frame_set(f)
+        files += render(src, arm, f"{path}_{clip}_{f}", extra=extra, angles=angles)
+    arm.animation_data.action = None
+    for t in arm.animation_data.nla_tracks:
+        t.mute = False
+    return files
 
 
 def build(name, preview=None):
@@ -560,7 +592,14 @@ def build(name, preview=None):
         objs.append(gobj)
     for fn, srcf in cfg.get("attach", []):
         objs.append(globals()[fn](name, arm, os.path.join(ROOT, "assets", "source", srcf)))
-    charkit.animate(arm, anims.hero_clips(cfg.get("weight", 1.0)))
+    clips = anims.hero_clips(cfg.get("weight", 1.0))
+    if cfg.get("clips"):
+        clips = globals()[cfg["clips"]](clips)
+    charkit.animate(arm, clips)
+    if preview and os.environ.get("CLIP"):
+        for c in os.environ["CLIP"].split(","):
+            preview_clip(src, arm, os.path.join(preview, name), c, [int(x) for x in os.environ.get("FRAMES", "0,3,5,7").split(",")], extra=objs[2:])
+        return {}
     if preview:
         for t in arm.animation_data.nla_tracks:
             t.mute = True
@@ -613,7 +652,8 @@ def render(src, arm, path, markers=None, extra=(), angles=(0, 90, 180, 270)):
     files = []
     for k, a in enumerate(angles):
         r = math.radians(a)
-        d = Vector((math.sin(r), -math.cos(r), 0))
+        el = math.radians(float(os.environ.get("ELEV", "0")))
+        d = Vector((math.sin(r) * math.cos(el), -math.cos(r) * math.cos(el), math.sin(el)))
         cam.location = Vector((0, 0, 0.98)) + d * 5
         cam.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()
         sc.render.filepath = f"{path}_{k}.png"
