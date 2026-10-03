@@ -30,6 +30,7 @@ import { loadMap } from "./render/mapView";
 import { HeroModels } from "./render/heroModels";
 import { StructureModels } from "./render/structureModels";
 import { loadProps } from "./render/props";
+import { chasmIce } from "./render/chasmIce";
 import { UnitModels } from "./render/unitModels";
 import { Hud, UiCanvas } from "./ui/hud";
 import { loadFont } from "./ui/font";
@@ -118,6 +119,11 @@ async function start(): Promise<void> {
     unitModels.load(Object.fromEntries(Object.entries(unitUrls).map(([p, u]) => [p.split("/").pop()!.replace(".glb", ""), u]))),
     loadFont(),
   ]);
+
+  mapViews.forEach((mv, i) => {
+    const ice = chasmIce(new Terrain(maps[i].data));
+    if (ice) mv.root.add(ice);
+  });
 
   const dbgZoom = params.get("zoom");
   if (dbgZoom) Object.assign(renderData, { minViewWidth: Number(dbgZoom), viewMargin: 0 });
