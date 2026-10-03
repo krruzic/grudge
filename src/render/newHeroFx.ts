@@ -6,6 +6,7 @@ import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts
 import { KITS, type HitEvent } from "./kits";
 import { prop } from "./props";
 import { costumeOfPlayer } from "./costumes";
+import brewRingUrl from "../../assets/fx/brewfest_ring.png?url";
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);
@@ -124,15 +125,12 @@ export const ZONE_DECALS: Record<string, THREE.Texture> = {
   }),
 };
 ZONE_DECALS.ale = FRIAR.puddle;
-ZONE_DECALS.brewfest = composite(256, (g, img) => {
-  const gr = g.createRadialGradient(128, 128, 20, 128, 128, 120);
-  gr.addColorStop(0, "rgba(250,200,90,0.28)");
-  gr.addColorStop(0.85, "rgba(240,180,60,0.18)");
-  gr.addColorStop(1, "rgba(240,180,60,0)");
-  g.fillStyle = gr;
-  g.fillRect(0, 0, 256, 256);
-  g.drawImage(img(FRIAR.hopRing), 0, 0, 256, 256);
-});
+ZONE_DECALS.brewfest = (() => {
+  const t = new THREE.TextureLoader().load(brewRingUrl);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+})();
 ZONE_DECALS.aletrail = ZONE_DECALS.ale;
 
 const WOOD = keep(new THREE.MeshLambertMaterial({ color: 0x9a6232, flatShading: true }));

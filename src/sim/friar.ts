@@ -223,6 +223,7 @@ export function brewfest(w: World, e: Entity, a: HeroAction, def: AbilityDef): v
   s.transform.facing = s.transform.prevFacing = Math.atan2(t.pos.x - x, t.pos.z - z);
   s.expiresAt = w.time + (def.seconds ?? 10);
   s.owner = e.id;
+  w.nav.setBlocked(x, z, 0.3, true);
   w.zones.push({
     id: w.newId(), team: e.team, ownerId: e.id, x, z, radius: def.radius ?? 7, until: s.expiresAt, dps: 0, slowMul: def.slowMul ?? 0.7,
     style: "brewfest", heal: def.heal ?? 24, anchor: s.id, brew: def.damageMul ?? 1.15,

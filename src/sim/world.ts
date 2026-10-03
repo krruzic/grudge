@@ -1664,7 +1664,7 @@ export class World {
       return;
     }
     if (st.padIndex < 0) {
-      if (!st.cask) this.nav.setBlocked(tp.pos.x, tp.pos.z, target.radius, false);
+      this.nav.setBlocked(tp.pos.x, tp.pos.z, st.cask ? 0.3 : target.radius, false);
       return;
     }
     const pad = this.pads[st.padIndex];
@@ -1819,7 +1819,7 @@ export class World {
       if (d < 1.15 + e.radius * 0.8 && d < Math.hypot(ah.x - e.transform.pos.x, ah.z - e.transform.pos.z)) return true;
     }
     for (const s of this.entities) {
-      if (!s.alive || s.kind !== "structure" || s === e || s.structure?.works !== undefined || s.structure?.cask) continue;
+      if (!s.alive || s.kind !== "structure" || s === e || s.structure?.works !== undefined) continue;
       const d = Math.hypot(s.transform.pos.x - x, s.transform.pos.z - z);
       const min = s.radius + e.radius * 0.8;
       if (d < min) {
@@ -2074,7 +2074,7 @@ export class World {
       if (e.alive && e.expiresAt !== undefined && t >= e.expiresAt) {
         e.alive = false;
         this.emit({ type: "death", id: e.id, kind: e.kind, x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, big: false });
-        if (e.structure && e.structure.padIndex < 0 && !e.structure.cask) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.radius, false);
+        if (e.structure && e.structure.padIndex < 0) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.structure.cask ? 0.3 : e.radius, false);
       }
     }
     for (let i = this.traps.length - 1; i >= 0; i--) {
