@@ -683,10 +683,7 @@ export function drawLogo(ctx: CanvasRenderingContext2D, cx: number, y: number, h
     return;
   }
   const w = (logo.naturalWidth / logo.naturalHeight) * h;
-  const smooth = ctx.imageSmoothingEnabled;
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(logo, cx - w / 2, y, w, h);
-  ctx.imageSmoothingEnabled = smooth;
+  hiImage(ctx, logo, cx - w / 2, y, w, h);
 }
 
 export function card(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tilt: number, pinColor: string | null, body: () => void): void {
