@@ -100,8 +100,8 @@ function mergeStatic(parent: THREE.Object3D): void {
 
 const templates = new Map<number, THREE.Group>();
 
-function propBallista(team: THREE.Color): THREE.Group | null {
-  const o = prop("ballista", team);
+function propBallista(team: THREE.Color, costume?: string): THREE.Group | null {
+  const o = prop("ballista", team, { hero: "engineer", costume });
   if (!o) return null;
   const tilt = o.getObjectByName("tilt");
   const nut = o.getObjectByName("nut");
@@ -117,8 +117,8 @@ function propBallista(team: THREE.Color): THREE.Group | null {
   return g;
 }
 
-export function ballistaMesh(team: THREE.Color): THREE.Group {
-  const fromProp = propBallista(team);
+export function ballistaMesh(team: THREE.Color, costume?: string): THREE.Group {
+  const fromProp = propBallista(team, costume);
   if (fromProp) return fromProp;
   const key = team.getHex();
   let t = templates.get(key);

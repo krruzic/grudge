@@ -30,6 +30,7 @@ import { loadMap } from "./render/mapView";
 import { HeroModels } from "./render/heroModels";
 import { StructureModels } from "./render/structureModels";
 import { loadProps } from "./render/props";
+import { costumesOf, preloadCostumes, setPlayerCostumes } from "./render/costumes";
 import { chasmIce } from "./render/chasmIce";
 import { beachDebris } from "./render/beachDebris";
 import { UnitModels } from "./render/unitModels";
@@ -117,6 +118,7 @@ async function start(): Promise<void> {
     })(),
     structures.load(sUrls),
     loadProps(),
+    preloadCostumes(),
     unitModels.load(Object.fromEntries(Object.entries(unitUrls).map(([p, u]) => [p.split("/").pop()!.replace(".glb", ""), u]))),
     loadFont(),
   ]);
@@ -330,6 +332,7 @@ async function start(): Promise<void> {
   let mathWarned = false;
   const MATH = mathPrint();
   const present = (i: number) => pads.players[i].connected || i < forceJoin || remoteAt(i) >= 0;
+  const costumeFlick = [0, 0, 0, 0];
   const padsForCursors = () => pads.players.map((p, i) => (i < forceJoin && !p.connected ? { ...p, connected: true } : p));
   const slotActive = (i: number) => i < 2 || mode !== "1v1";
   const commanderSlot = (i: number) => i >= 2 && mode !== "ffa" && save.data.rules.partners === 0;
@@ -458,6 +461,7 @@ async function start(): Promise<void> {
   };
   const startNetMatch = (spec: MatchSpec, local: boolean[], remote: boolean[]) => {
     players = spec.players;
+    setPlayerCostumes(spec.costumes ?? []);
     mode = spec.mode ?? (spec.players === 4 ? "2v2" : "1v1");
     setupControl(local, spec.levels, remote, netMode !== "peer");
     if (spec.training) bots = bots.map(() => null);
@@ -539,6 +543,7 @@ async function start(): Promise<void> {
     const spec: MatchSpec = {
       map: maps[mapIndex].id, seed: seed++, rules: { ...save.data.rules }, heroes: slots.slice(0, players).map((s) => s.hero), players,
       levels: slots.slice(0, players).map((s) => s.level), humans, training: training && netMode === "off", names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)), tagIds: slots.slice(0, players).map((s) => (s.cpu ? null : s.tagId ?? null)), mode,
+      costumes: slots.slice(0, players).map((s) => (costumesOf(s.hero).includes(s.costume ?? "") ? s.costume ?? "" : "")),
     };
     for (const r of rseats) {
       r.queue = [];
@@ -634,6 +639,7 @@ async function start(): Promise<void> {
 
   function beginMatchWithBots(): void {
     const hs = (params.get("heroes") ?? "").split(",").filter((h) => roster.includes(h));
+    setPlayerCostumes((params.get("costumes") ?? "").split(","));
     if (houses(mapIndex) === 4 && params.has("map")) mode = "ffa";
     if (!fields().includes(mapIndex)) mapIndex = fields()[0] ?? mapIndex;
     players = mode === "1v1" ? 2 : 4;
@@ -733,7 +739,7 @@ async function start(): Promise<void> {
     mode,
     map: pickIndex >= fields().length ? "RANDOM FIELD" : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
     phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
-    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, level: s.level, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i), cam: remoteAt(i) >= 0 ? remoteCam[i] : save.data.options.zoom?.[i] ?? 0 })),
+    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, level: s.level, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i), cam: remoteAt(i) >= 0 ? remoteCam[i] : save.data.options.zoom?.[i] ?? 0, costume: s.costume ?? "" })),
   });
   const freeSeat = (r: RSeat, now: number) => {
     const i = r.slot;
@@ -785,6 +791,12 @@ async function start(): Promise<void> {
       return;
     }
     const i = r.slot;
+    if (m.t === "costume" && i >= 0) {
+      const id = String(m.id ?? "");
+      slots[i].costume = costumesOf(slots[i].hero).includes(id) ? id : "";
+      lobbySentAt = 0;
+      return;
+    }
     if (m.t === "cam" && i >= 0) {
       remoteCam[i] = m.on ? 1 : 0;
       lobbySentAt = 0;
@@ -1140,6 +1152,19 @@ async function start(): Promise<void> {
         if (netMode !== "host" && sl.open) { makeCpu(i); sl.autoCpu = true; }
       });
       runNaming((slot) => (pads.players[slot]?.connected ? slot : -1), now);
+      pads.players.forEach((p, i) => {
+        const dir = Math.abs(p.cX) > 0.6 && Math.abs(p.cX) > Math.abs(p.cY) ? Math.sign(p.cX) : 0;
+        if (dir && dir !== costumeFlick[i] && !slots[i].cpu && !slots[i].open && !naming(i)) {
+          const list = costumesOf(slots[i].hero);
+          if (list.length > 1) {
+            const at = Math.max(0, list.indexOf(slots[i].costume ?? ""));
+            slots[i].costume = list[(at + dir + list.length) % list.length];
+            lobbySentAt = 0;
+            audio.ui("move");
+          }
+        }
+        costumeFlick[i] = dir;
+      });
       const acts = cursors.update(cursorPads(padsForCursors()), dt, now, (slot, by) => slotActive(slot) && !commanderSlot(slot) && (slot === by ? !slots[slot].cpu : slots[slot].cpu));
       for (const act of acts) {
         if (act.type === "hover") {
@@ -1314,6 +1339,20 @@ async function start(): Promise<void> {
         }
         for (const c of cursors.cursors) if (c.holding >= 0 && ![...mySlots.values()].includes(c.holding)) c.holding = -1;
         const kOf = (i: number) => [...mySlots].find(([, v]) => v === i)?.[0] ?? -1;
+        for (const [k, i] of mySlots) {
+          const p = pads.players[k];
+          const dir = p && Math.abs(p.cX) > 0.6 && Math.abs(p.cX) > Math.abs(p.cY) ? Math.sign(p.cX) : 0;
+          if (dir && dir !== costumeFlick[k] && lb.phase === "lobby" && !naming(k)) {
+            const list = costumesOf(lb.slots[i].hero);
+            if (list.length > 1) {
+              const at = Math.max(0, list.indexOf(lb.slots[i].costume ?? ""));
+              lb.slots[i].costume = list[(at + dir + list.length) % list.length];
+              net.toHost({ t: "costume", k, id: lb.slots[i].costume });
+              audio.ui("move");
+            }
+          }
+          costumeFlick[k] = dir;
+        }
         runNaming((slot) => [...mySlots].find(([, v]) => v === slot)?.[0] ?? -1, now);
         const acts = cursors.update(cursorPads(pads.players), dt, now, (slot, by) => lb.phase === "lobby" && !guestField && mySlots.get(by) === slot && !lb.slots[slot].commander);
         let leave = false;
@@ -1390,7 +1429,7 @@ async function start(): Promise<void> {
           menus.open("network");
         } else {
           const ss: SelectSlot[] = lb.slots.map((sl, i) => ({
-            joined: !sl.cpu && !sl.open, ready: sl.ready, hero: sl.hero, cpu: sl.cpu, level: sl.level ?? 2, open: sl.open, tag: sl.name, local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i,
+            joined: !sl.cpu && !sl.open, ready: sl.ready, hero: sl.hero, cpu: sl.cpu, level: sl.level ?? 2, open: sl.open, tag: sl.name, local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i, costume: sl.costume,
           }));
           screens.updateSelect(ss, data.heroes.heroes, roster, lb.mode, lb.rules.partners === 1);
           screens.hosting = false;

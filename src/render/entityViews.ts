@@ -1,4 +1,5 @@
 import { teslaCoil } from "./hazardViews";
+import { costumeOfPlayer } from "./costumes";
 import { FX, SUMMONER } from "./fxKit";
 import { KITS } from "./kits";
 import * as THREE from "three";
@@ -857,7 +858,7 @@ export class EntityViews {
       const player = e.hero.player;
       const pc = this.world.ffa ? team : this.playerColors[player] ?? team;
       const twin = this.world.players.some((q) => q.team === e.team && q.player < player && q.heroType === e.hero!.type);
-      const inst = this.heroes.create(e.hero.type, team, `P${player + 1}`, pc, twin ? team.clone().lerp(pc, 0.7) : undefined);
+      const inst = this.heroes.create(e.hero.type, team, `P${player + 1}`, pc, twin ? team.clone().lerp(pc, 0.7) : undefined, costumeOfPlayer(player));
       inst.root.scale.setScalar(this.heroScale);
       root.add(inst.root);
       body = inst.body;
@@ -923,7 +924,8 @@ export class EntityViews {
         view.work = makeBar(2.6, new THREE.Color(0x9fe0ff), 0, 1.05);
         root.add(view.work.group);
       } else {
-        body = st.works !== undefined ? new THREE.Group() : st.tesla ? teslaCoil(1.1) : st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
+        const oc = costumeOfPlayer(this.world.getAny(e.owner ?? -1)?.hero?.player);
+        body = st.works !== undefined ? new THREE.Group() : st.tesla ? teslaCoil(1.1, oc) : st.siege ? ballistaMesh(team, oc) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
         body.traverse((o) => {
           if (!view.spin && o.name.startsWith("spin")) view.spin = o;
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;

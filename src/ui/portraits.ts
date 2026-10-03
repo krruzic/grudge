@@ -49,8 +49,8 @@ export class Portraits {
     this.scene.add(sun, new THREE.HemisphereLight("#b8d4ff", "#6a5a3a", 1.6));
   }
 
-  private pose(type: string, team: THREE.Color): { root: THREE.Group; body: THREE.Object3D; mixer?: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; height: number; center: THREE.Vector3; top: number } {
-    const inst = this.heroes.create(type, team, "");
+  private pose(type: string, team: THREE.Color, costume?: string): { root: THREE.Group; body: THREE.Object3D; mixer?: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; height: number; center: THREE.Vector3; top: number } {
+    const inst = this.heroes.create(type, team, "", team, team, costume);
     const root = new THREE.Group();
     root.add(inst.body);
     inst.actions.get("idle")?.play();
@@ -223,11 +223,11 @@ export class Portraits {
     return c;
   }
 
-  stage(slot: number, type: string, team: number, ready: boolean): HTMLCanvasElement {
-    const key = `${type}|${team}`;
+  stage(slot: number, type: string, team: number, ready: boolean, costume?: string): HTMLCanvasElement {
+    const key = `${type}|${team}|${costume ?? ""}`;
     let s = this.stages.get(slot);
     if (!s || s.key !== key) {
-      const p = this.pose(type, this.teamColors[team] ?? NEUTRAL);
+      const p = this.pose(type, this.teamColors[team] ?? NEUTRAL, costume);
       s = { key, ...p, canvas: s?.canvas ?? document.createElement("canvas"), ready: false, flourishUntil: 0 };
       this.stages.set(slot, s);
     }

@@ -4,6 +4,7 @@ import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from 
 import { drawNum, drawPlain, drawText, occlude, textWidth, onHiLayer } from "./font";
 import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
+import { COSTUME_NAMES, costumesOf } from "../render/costumes";
 import glyphUrl from "../../assets/ui/abilities.png?url";
 import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor, markWindow } from "./n64ui";
 import type { Portraits } from "./portraits";
@@ -47,6 +48,7 @@ export interface SelectSlot {
   tagId?: string | null;
   local?: boolean;
   open?: boolean;
+  costume?: string;
 }
 
 type HeroInfo = { name: string; blurb: string; abilities?: Record<string, { kind: string }> };
@@ -63,6 +65,7 @@ export interface LobbySlot {
   active: boolean;
   commander: boolean;
   cam?: number;
+  costume?: string;
 }
 
 export interface LobbyView {
@@ -671,7 +674,7 @@ export class Screens {
     const fy = y + iy;
     const fw = w - 10;
     if (this.portraits) {
-      const cv = this.portraits.stage(i, s.hero, team, s.ready);
+      const cv = this.portraits.stage(i, s.hero, team, s.ready, s.costume);
       const k = Math.min(fw / cv.width, (ih + 4) / cv.height);
       const dw = cv.width * k;
       const dh = cv.height * k;
@@ -725,6 +728,10 @@ export class Screens {
       });
       else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
     });
+    if (!s.cpu && !commander && costumesOf(s.hero).length > 1) {
+      const cn = `< ${COSTUME_NAMES[s.costume ?? ""] ?? (s.costume ?? "").toUpperCase()} >`;
+      onHiLayer(ctx, (t) => shadowText(t, cn, x + w / 2 - textWidth(cn, 0.5) / 2, fy + ih - 9, "#fff2d0", 0.5));
+    }
     if (sitHere) onHiLayer(ctx, (t) => this.woodButton(t, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16));
     if (s.ready && !commander && human) {
       onHiLayer(ctx, (t) => {

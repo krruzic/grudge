@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { dyeColor, toLambert } from "./heroModels";
 import { markModel } from "./placeholders";
+import { costumeTexture } from "./costumes";
 
 const propUrls = import.meta.glob("../../assets/props/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
 const scenes = new Map<string, THREE.Object3D>();
@@ -40,10 +41,27 @@ export async function loadProps(): Promise<void> {
 
 const dyed = new Map<string, THREE.Material>();
 
-export function prop(name: string, team?: THREE.Color): THREE.Object3D | null {
+export function prop(name: string, team?: THREE.Color, owner?: { hero: string; costume?: string }): THREE.Object3D | null {
   const s = scenes.get(name);
   if (!s) return null;
   const o = s.clone(true);
+  if (owner?.costume) {
+    o.traverse((m) => {
+      if (!(m instanceof THREE.Mesh) || Array.isArray(m.material)) return;
+      const ct = costumeTexture(owner.hero, owner.costume, m.material.name);
+      if (!ct) return;
+      const key = `${m.material.uuid}:${owner.hero}/${owner.costume}`;
+      let c = dyed.get(key);
+      if (!c) {
+        const n = m.material.clone() as THREE.MeshLambertMaterial;
+        n.map = ct;
+        n.userData.keep = true;
+        dyed.set(key, n);
+        c = n;
+      }
+      m.material = c;
+    });
+  }
   if (team) {
     o.traverse((m) => {
       if (!(m instanceof THREE.Mesh) || Array.isArray(m.material) || !m.material.name.startsWith("team")) return;

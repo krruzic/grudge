@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergedMaterial, mergeParts } from "./mergedModel";
+import { costumeTexture } from "./costumes";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { blobShadow, footRing, markModel, playerTag, warlordPlaceholder } from "./placeholders";
@@ -187,7 +188,7 @@ export class HeroModels {
     );
   }
 
-  create(type: string, team: THREE.Color, label: string, mark: THREE.Color = team, dye: THREE.Color = team): HeroInstance {
+  create(type: string, team: THREE.Color, label: string, mark: THREE.Color = team, dye: THREE.Color = team, costume?: string): HeroInstance {
     const root = new THREE.Group();
     const gltf = this.gltfs.get(type);
     let body: THREE.Object3D;
@@ -210,6 +211,8 @@ export class HeroModels {
           let c = teamMat.get(m);
           if (!c) {
             c = toLambert(m);
+            const ct = costumeTexture(type, costume, m.name);
+            if (ct) (c as THREE.MeshLambertMaterial).map = ct;
             if (m.name.startsWith("team")) (c as THREE.MeshLambertMaterial).color.copy(dyeColor(dye));
             teamMat.set(m, c);
           }

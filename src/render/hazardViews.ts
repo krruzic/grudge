@@ -148,9 +148,9 @@ const stakeGeo = (() => {
 const STAKE = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xe8c8a0, flatShading: true });
 const ROPE = new THREE.MeshLambertMaterial({ color: 0x8a6a40, flatShading: true });
 
-export function teslaCoil(scale = 1): THREE.Group {
+export function teslaCoil(scale = 1, costume?: string): THREE.Group {
   const g = new THREE.Group();
-  const model = prop("tesla");
+  const model = prop("tesla", undefined, { hero: "engineer", costume });
   if (model) {
     g.add(model);
     const at = model.getObjectByName("glow");

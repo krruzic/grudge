@@ -5,6 +5,7 @@ import goldUrl from "../../assets/textures/gold.png?url";
 import ironUrl from "../../assets/textures/iron.png?url";
 import { starTex, targetTex, type CombatFx } from "./combatFx";
 import { prop } from "./props";
+import { costumeOfPlayer } from "./costumes";
 
 const ironTex = new THREE.TextureLoader().load(ironUrl);
 ironTex.colorSpace = THREE.SRGBColorSpace;
@@ -172,6 +173,17 @@ export class RelicView {
       const b = bs[i];
       g.visible = !!b;
       if (!b) return;
+      const cos = costumeOfPlayer(w.getAny(b.ownerId)?.hero?.player);
+      if ((g.userData.costume ?? "") !== cos && g.children.length === 1) {
+        const m = prop("wrench", undefined, { hero: "engineer", costume: cos });
+        if (m) {
+          m.rotation.x = -0.25;
+          m.scale.setScalar(1.3);
+          g.clear();
+          g.add(m);
+        }
+        g.userData.costume = cos;
+      }
       g.position.set(b.x, b.y, b.z);
       g.rotation.set(0, this.t * 22, 0);
       if (this.fx && Math.random() < 0.5) this.fx.dust(b.x, b.y - 0.3, b.z, 0.4, 1, 0.2, 0xd8d0c0);

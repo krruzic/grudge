@@ -12,6 +12,7 @@ export interface MatchSpec {
   humans: boolean[];
   names: (string | null)[];
   tagIds?: (string | null)[];
+  costumes?: string[];
   mode?: MatchMode;
   training?: boolean;
 }
