@@ -27,6 +27,7 @@ UNITS = {
         "height": 1.97,
         "weight": 1.5,
         "tex": 1024,
+        "vivid": {"hue": (55, 150), "to": 100, "pull": 0.35, "sat": 1.7, "val": 1.15},
         "decimate": 0.82,
         "clips": "ogre_clips",
         "joints": {

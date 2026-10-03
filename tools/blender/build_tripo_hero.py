@@ -316,6 +316,34 @@ def uv_mask(src, flags, h, w):
     return mask
 
 
+def vivid(rgb, v):
+    mx = rgb.max(axis=2)
+    mn = rgb.min(axis=2)
+    d = np.maximum(mx - mn, 1e-5)
+    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+    hue = (np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60) % 360
+    sat = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
+    lo, hi = v["hue"]
+    inside = (hue >= lo) & (hue <= hi) & (sat > v.get("min_sat", 0.08))
+    tgt = v.get("to", (lo + hi) / 2)
+    hue = np.where(inside, hue + (tgt - hue) * v.get("pull", 0.5), hue)
+    sat = np.where(inside, np.clip(sat * v.get("sat", 1.5), 0, 1), sat)
+    val = np.where(inside, np.clip(mx * v.get("val", 1.1), 0, 1), mx)
+    h6 = hue / 60.0
+    i = np.floor(h6).astype(int) % 6
+    f = h6 - np.floor(h6)
+    p = val * (1 - sat)
+    q = val * (1 - sat * f)
+    t = val * (1 - sat * (1 - f))
+    out = np.zeros_like(rgb)
+    for k, (a, bb, c) in enumerate(((val, t, p), (q, val, p), (p, val, t), (p, q, val), (t, p, val), (val, p, q))):
+        m = i == k
+        out[:, :, 0] = np.where(m, a, out[:, :, 0])
+        out[:, :, 1] = np.where(m, bb, out[:, :, 1])
+        out[:, :, 2] = np.where(m, c, out[:, :, 2])
+    return out
+
+
 def bake_material(name, src, cfg, img, px, cols):
     size = cfg["tex"]
     team_hue = cfg.get("team_hue")
@@ -332,6 +360,8 @@ def bake_material(name, src, cfg, img, px, cols):
         wgt = np.clip((cfg["warm"].get("below", 0.3) - sat) / cfg["warm"].get("below", 0.3), 0, 1) * cfg["warm"]["amount"]
         for k in range(3):
             out[:, :, k] = np.clip(rgb[:, :, k] * (1 - wgt) + lum * tint[k] * wgt, 0, 1)
+    if cfg.get("vivid"):
+        out[:, :, :3] = vivid(out[:, :, :3], cfg["vivid"])
     if team_hue:
         rgb = out[:, :, :3]
         mx = rgb.max(axis=2)
