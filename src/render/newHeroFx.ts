@@ -317,8 +317,8 @@ function pipFallback(): THREE.Group {
 
 function pipModel(costume: string): { obj: THREE.Group; wings: THREE.Object3D[]; base: number[] } {
   const p = prop("pip", undefined, { hero: "marksman", costume });
-  const obj = p ? normalized(p, 0.85) : pipFallback();
-  if (!p) obj.scale.setScalar(1.35);
+  const obj = p ? normalized(p, 1.7) : pipFallback();
+  if (!p) obj.scale.setScalar(2.7);
   const wings: THREE.Object3D[] = [];
   obj.traverse((o) => {
     if (o.name.startsWith("wing_L") || o.name.startsWith("wing_R")) wings.push(o);

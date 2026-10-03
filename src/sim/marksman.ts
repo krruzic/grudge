@@ -182,7 +182,7 @@ export function updatePip(w: World, e: Entity): void {
     return d - step;
   };
   if (p.phase === "out") {
-    if (!alive || w.time - p.since > 2.5) p.phase = "back";
+    if (!alive || w.time - p.since > (def.range ?? 14) / (def.speed ?? 8) + 2) p.phase = "back";
     else {
       const left = toward(tgt!.transform.pos.x, tgt!.transform.y + 2.3, tgt!.transform.pos.z, def.speed ?? 24);
       if (left < 0.5) {

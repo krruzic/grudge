@@ -1,6 +1,7 @@
 {
   "tiers": {
     "health": {
+      "frail": 480,
       "low": 600,
       "mid": 800,
       "high": 1000,
@@ -702,8 +703,8 @@
     "marksman": {
       "name": "Wren",
       "blurb": "Longbow. Vantage: hits 25% harder and reaches 20% farther from high ground or after standing still a second. Pip marks, reveals and interrupts.",
-      "health": "low",
-      "speed": "mid",
+      "health": "frail",
+      "speed": "low",
       "damage": "mid",
       "defaultBuild": "range",
       "botRange": 9,
@@ -717,13 +718,13 @@
         "a": {
           "kind": "shoot",
           "anim": "shoot",
-          "damage": 62,
+          "damage": 56,
           "range": 11,
           "speed": 32,
           "pierceRange": 14,
           "dur": 0.5,
           "hitAt": 0.22,
-          "cooldown": 0,
+          "cooldown": 1.4,
           "bot": "fight",
           "botRange": 10.5,
           "variance": 0.12,
@@ -736,11 +737,11 @@
           "seconds": 5,
           "markMul": 1.15,
           "peck": 20,
-          "rake": 80,
+          "rake": 70,
           "blindSeconds": 2.5,
           "blindMiss": 0.5,
           "slowMul": 0.75,
-          "speed": 24,
+          "speed": 8,
           "dur": 0.4,
           "hitAt": 0.2,
           "cooldown": 14,
