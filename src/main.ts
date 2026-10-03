@@ -1567,12 +1567,6 @@ async function start(): Promise<void> {
     screens.draw(ctx, pixel.w, pixel.h, now);
     if (state === "menu") menus.draw(ctx, pixel.w, pixel.h, now);
     if (state === "paused") menus.drawPause(ctx, pixel.w, pixel.h, now, world);
-    if (netMode === "host" && (state === "select" || state === "map")) {
-      const joined = rseats.filter((r) => r.slot >= 0).length;
-      const where = hostPublic ? hostPublic : hostAddrs[0] ? `http://${hostAddrs[0]}` : location.host;
-      const t = `ONLINE · ${joined} FRIEND${joined === 1 ? "" : "S"} JOINED · OTHERS OPEN ${where} > VERSUS ONLINE > JOIN`;
-      drawText(ctx, t, Math.round((pixel.w - textWidth(t, 0.6)) / 2), pixel.h - 9, "#f8e8a0", 0.6);
-    }
     if (netMode !== "off" && (state === "match" || state === "paused")) {
       const t = desync ? "OUT OF SYNC" : netMode === "host" ? "HOSTING" : "ONLINE";
       drawText(ctx, t, 4, pixel.h - 9, desync ? "#ff6040" : "#c8c0a8", 0.55);
