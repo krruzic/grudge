@@ -15,7 +15,7 @@ export function costumesOf(hero: string): string[] {
   return ["", ...[...files.keys()].filter((k) => k.startsWith(`${hero}/`)).map((k) => k.slice(hero.length + 1)).sort()];
 }
 
-export const COSTUME_NAMES: Record<string, string> = { "": "CLASSIC", frost: "FROSTFORGE" };
+export const COSTUME_NAMES: Record<string, string> = { "": "CLASSIC", frost: "FROSTFORGE", ember: "SOOT & EMBER", bloodmoon: "BLOODMOON", nightshade: "NIGHTSHADE", lich: "LICH KING", blackrose: "BLACK ROSE", winterbark: "WINTERBARK", blackknight: "BLACK KNIGHT", clock: "CLOCKWORK GOLD", gilded: "GILDED TYRANT", swamp: "SWAMP BRUTE", jackal: "DESERT JACKAL", bonecloak: "BONECLOAK", plague: "PLAGUE DOCTOR", crimson: "CRIMSON CULT", bleu: "MUSKETEER BLEU", carnival: "CARNIVAL", autumn: "AUTUMN ELDER", blossom: "BLOSSOM", paladin: "PALADIN OF THE SUN", revenant: "RUSTED REVENANT" };
 
 export function costumeTexture(hero: string, costume: string | undefined, matName: string): THREE.Texture | null {
   if (!costume) return null;

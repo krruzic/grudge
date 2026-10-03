@@ -137,6 +137,18 @@ function abilityGlyph(col: number, row: number): { dark: HTMLCanvasElement; ligh
   return out;
 }
 
+const costumeIconUrls = import.meta.glob("../../assets/ui/costume_icons/*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const costumeIcons = new Map<string, HTMLImageElement>();
+for (const [path, url] of Object.entries(costumeIconUrls)) {
+  const im = new Image();
+  im.src = url;
+  costumeIcons.set(path.split("/").pop()!.replace(".png", ""), im);
+}
+function costumeIcon(hero: string, costume: string): HTMLImageElement | null {
+  const im = costumeIcons.get(`${hero}_${costume || "classic"}`);
+  return im?.complete && im.naturalWidth ? im : null;
+}
+
 const TEAM_CLOTH = ["#3a58e0", "#d83828", "#d8a818", "#2a9a40"];
 const TEAM_TEXT_R = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24"];
 const BROWN_S = "#3a2410";
@@ -728,9 +740,45 @@ export class Screens {
       });
       else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
     });
-    if (!s.cpu && !commander && costumesOf(s.hero).length > 1) {
-      const cn = `< ${COSTUME_NAMES[s.costume ?? ""] ?? (s.costume ?? "").toUpperCase()} >`;
-      onHiLayer(ctx, (t) => shadowText(t, cn, x + w / 2 - textWidth(cn, 0.5) / 2, fy + ih - 9, "#fff2d0", 0.5));
+    const cl = costumesOf(s.hero);
+    if (!commander && cl.length > 1) {
+      const cur = Math.max(0, cl.indexOf(s.costume ?? ""));
+      const sz = Math.min(15, (fw - 6) / cl.length - 2);
+      const gap = 2;
+      const rowW = cl.length * sz + (cl.length - 1) * gap;
+      const rx = fx + fw / 2 - rowW / 2;
+      const ry = fy + ih - sz - 13;
+      const nm = COSTUME_NAMES[cl[cur]] ?? cl[cur].toUpperCase();
+      onHiLayer(ctx, (t) => {
+        cl.forEach((c, k) => {
+          const ic = costumeIcon(s.hero, c);
+          const ix = rx + k * (sz + gap);
+          const on = k === cur;
+          if (on) {
+            t.fillStyle = "rgba(10, 6, 2, 0.75)";
+            t.fillRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
+            t.strokeStyle = "#f4e2b0";
+            t.lineWidth = 1.2;
+            t.strokeRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
+          }
+          if (ic) {
+            t.globalAlpha = on ? 1 : 0.8;
+            t.imageSmoothingEnabled = true;
+            t.imageSmoothingQuality = "high";
+            t.drawImage(ic, ix, ry, sz, sz);
+            t.globalAlpha = 1;
+          }
+        });
+        const ps = 0.5;
+        const pw = textWidth(nm, ps, true) + 14;
+        const px = fx + fw / 2 - pw / 2;
+        const py = fy + ih - 11;
+        t.fillStyle = "rgba(244, 236, 216, 0.92)";
+        t.beginPath();
+        t.roundRect(px, py, pw, 9, 4.5);
+        t.fill();
+        drawPlain(t, nm, fx + fw / 2 - textWidth(nm, ps, true) / 2, py + 1.5, "#3a2a1c", ps, true);
+      });
     }
     if (sitHere) onHiLayer(ctx, (t) => this.woodButton(t, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16));
     if (s.ready && !commander && human) {
