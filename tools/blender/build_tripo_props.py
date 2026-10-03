@@ -27,6 +27,8 @@ PROPS = {
     "tomb": {"static": True, "height": 1.05, "tex": 256},
     "iceshard": {"static": True, "height": 4.0, "tex": 256, "tris": 500},
     "icechunk": {"static": True, "height": 1.5, "tex": 256, "tris": 500},
+    "iceshard_lo": {"static": True, "src": "iceshard", "height": 4.0, "tex": 128, "tris": 180},
+    "icechunk_lo": {"static": True, "src": "icechunk", "height": 1.5, "tex": 128, "tris": 180},
     "event_lantern": {"static": True, "height": 1.6, "tex": 256},
     "event_horn": {"static": True, "height": 3.0, "tex": 256},
     "event_boulder": {"static": True, "height": 1.0, "tex": 256},
@@ -133,7 +135,7 @@ def build_wrench(name, cfg):
 
 def build_static(name, cfg):
     th.clear_scene()
-    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", f"{name}_tripo.glb"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", f"{cfg.get('src', name)}_tripo.glb"))
     src = [o for o in bpy.context.scene.objects if o.type == "MESH"][0]
     for o in list(bpy.context.scene.objects):
         if o is not src:
