@@ -116,6 +116,37 @@ const HERO_COL = ["warlord", "engineer", "raider", "summoner", "duelist", "warde
 const glyphSheet = new Image();
 glyphSheet.src = glyphUrl;
 const glyphCache = new Map<number, { dark: HTMLCanvasElement; light: HTMLCanvasElement }>();
+const glyphStripUrls = import.meta.glob("../../assets/ui/ability_glyphs/*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const glyphStrips = new Map<string, HTMLImageElement>();
+for (const [path, url] of Object.entries(glyphStripUrls)) {
+  const im = new Image();
+  im.src = url;
+  glyphStrips.set(path.split("/").pop()!.replace(".png", ""), im);
+}
+function heroGlyph(hero: string, row: number): { dark: HTMLCanvasElement; light: HTMLCanvasElement } | null {
+  const col = HERO_COL.indexOf(hero);
+  if (col >= 0) return abilityGlyph(col, row);
+  const strip = glyphStrips.get(hero);
+  if (!strip?.complete || !strip.naturalWidth) return null;
+  const key = `${hero}:${row}`;
+  const hit = stripCache.get(key);
+  if (hit) return hit;
+  const C = strip.naturalHeight;
+  const tint = (color: string) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = C;
+    const g = c.getContext("2d")!;
+    g.drawImage(strip, row * C, 0, C, C, 0, 0, C, C);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = color;
+    g.fillRect(0, 0, C, C);
+    return c;
+  };
+  const out = { dark: tint("#4a3018"), light: tint("#fff2d0") };
+  stripCache.set(key, out);
+  return out;
+}
+const stripCache = new Map<string, { dark: HTMLCanvasElement; light: HTMLCanvasElement }>();
 function abilityGlyph(col: number, row: number): { dark: HTMLCanvasElement; light: HTMLCanvasElement } | null {
   if (!glyphSheet.complete || !glyphSheet.naturalWidth) return null;
   const key = col * 4 + row;
@@ -727,10 +758,9 @@ export class Screens {
         drawTree(t, s.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
       });
     }
-    const col = HERO_COL.indexOf(s.hero);
     (["a", "b", "r", "z"] as const).forEach((a, j) => {
       const cx = x + (w / 4) * (j + 0.5);
-      const g = col >= 0 ? abilityGlyph(col, j) : null;
+      const g = heroGlyph(s.hero, j);
       if (g) onHiLayer(ctx, (t) => {
         t.imageSmoothingEnabled = true;
         t.imageSmoothingQuality = "high";
