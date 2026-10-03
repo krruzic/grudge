@@ -1,4 +1,12 @@
 This image shows the same character from four sides (front, her left, back, her right). Repaint her as an alternate COSTUME called "WINTER HUNT", in the same hand-painted game texture style, but KEEP EVERY SHAPE, EDGE, POSE, POSITION AND SILHOUETTE EXACTLY THE SAME in all four views — only change colours, materials and painted surface details, as if repainting the same 3D model. Do not move, add or remove any part. Keep the plain grey background and the four views at exactly the same place and size. Use rich contrast and painted detail, not flat colours. The plain light grey/white cloth tabard panel down her front (team-dye area) stays plain light grey. Keep her face friendly and appealing, same face shape and features.
 
-Costume: a snow-white hooded cloak and hood lined and trimmed with thick white fur, frosted with snow along the hem, pale icy-blue embroidered trim; the feather mantle on her shoulders becomes snowy white and silver-grey owl feathers with black speckles; soft grey-white suede jerkin and pale grey leathers with silver buckles; frosted pale-grey trousers; white fur boot cuffs and grey boots; the quiver is pale birch bark with silver bands, the arrow fletchings white with black tips; her hair a pale strawberry-blonde braid, light frost-blue eyes, rosy cold cheeks.
-The costume must look clearly and strikingly different from her default moss-green hood, rust-brown feathers and brown leathers.
+Costume: a colourful Nordic winter huntress, NOT plain white. Lots of saturated colour and painted texture so the parts read clearly apart:
+- hood and cloak: deep midnight-blue / indigo wool with a bold folk-knit pattern band of red, cream and teal snowflakes and diamonds along the hood edge and the hem, lined and trimmed with thick creamy white fur with visible fur strands, a dusting of snow on the shoulders and hem;
+- the feather mantle on her shoulders: snowy owl feathers, cream white with strong black and slate-grey bars and speckles, each feather edged and shaded so they read individually;
+- jerkin: rich teal-blue quilted leather with cream stitching, a red-and-cream embroidered collar, polished silver buckles and clasps with small ice-blue gems;
+- belt and straps: deep red-brown leather with silver studs; a sprig of red holly berries and dark green leaves pinned on the chest strap;
+- bracers: dark navy leather with silver snowflake tooling;
+- trousers: charcoal-grey wool; boots: dark navy leather with thick cream fur cuffs and red laces;
+- quiver: pale birch bark with dark birch markings, red leather bands and silver fittings; arrow fletchings white with black tips and a red band;
+- hair: a bright strawberry-blonde/ginger braid with a little blue ribbon, frost-blue eyes, rosy cold cheeks and nose.
+The costume must look clearly and strikingly different from her default moss-green hood, rust-brown feathers and brown leathers, and must NOT be mostly white: white only on the fur and owl feathers.
