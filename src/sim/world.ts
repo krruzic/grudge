@@ -11,6 +11,9 @@ import { spawnUnit, tryBuild, trySpec, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
 import { MapEvents } from "./mapEvents.ts";
 import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, learned as learnedOf, options, onKill, recompute, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
+import { onArrowHit, pipMarkMul, vantageMul } from "./marksman.ts";
+import { healFrom, onZoneEnd, updateKegs } from "./friar.ts";
+import type { Keg } from "./types.ts";
 
 export type { Vec2, Entity, Command } from "./types.ts";
 
@@ -42,6 +45,7 @@ export interface DamageOpts {
   executeMul?: number;
   tick?: boolean;
   pull?: number;
+  crit?: boolean;
 }
 
 export interface PlayerSlot {
@@ -68,6 +72,7 @@ export class World {
   readonly projectiles: Projectile[] = [];
   readonly boomerangs: Boomerang[] = [];
   readonly missiles: Missile[] = [];
+  readonly kegs: Keg[] = [];
   private timers: { at: number; seq: number; fn: () => void }[] = [];
   private timerSeq = 0;
 
@@ -603,6 +608,7 @@ export class World {
     this.updateProjectiles(dt);
     updateBoomerangs(this);
     updateMissiles(this);
+    updateKegs(this);
     tickStatus(this);
     this.runTimers();
     this.updateHazards();
@@ -1094,7 +1100,8 @@ export class World {
         const inGrass = this.terrain.hasFlag(Math.floor(e.transform.pos.x), Math.floor(e.transform.pos.z), FLAG_GRASS);
         const cover = inGrass || this.mapEvents.misted(e.transform.pos.x, e.transform.pos.z);
         const smoked = this.time < s.stealthUntil;
-        s.hidden = (cover && this.time - s.lastAttackAt > revealT) || smoked;
+        const pipped = s.pipUntil !== undefined && this.time < s.pipUntil;
+        s.hidden = !pipped && ((cover && this.time - s.lastAttackAt > revealT) || smoked);
         s.seenBy = 0;
         if (s.hidden && !smoked) covered.push(e);
       }
@@ -1213,6 +1220,7 @@ export class World {
     const s = src.status;
     let m = (this.time < s.buffUntil ? s.buffDamageMul : 1) * s.auraDamageMul * s.supportDamageMul;
     if (this.time < s.rallyUntil) m *= this.data.match.economy.rally.damageMul;
+    if (s.brewUntil !== undefined && this.time < s.brewUntil) m *= s.brewMul ?? 1;
     if (src.hero) m *= this.mapEvents.hauntMul(src, "damage");
     if (src.hero) m *= src.hero.damageMul * (src.hero.action?.power ?? 1);
     if (src.unit && this.isSudden()) m *= this.data.match.suddenDeath.unitDamageMul;
@@ -1296,8 +1304,13 @@ export class World {
       }
     }
     amount *= this.synergyMul(src, target, opts);
+    if (src?.hero && !opts.tick) amount *= vantageMul(this, src, target);
+    if (src) amount *= pipMarkMul(this, src, target);
     let crit = false;
-    if (src?.hero && !opts.tick) {
+    if (opts.crit) {
+      crit = true;
+      amount *= this.data.match.rolls.critMul;
+    } else if (src?.hero && !opts.tick) {
       const rl = this.data.match.rolls;
       const act = src.hero.action;
       const ab = act && (act.name === "a" || act.name === "b" || act.name === "r" || act.name === "z") ? abilities(this, src)[act.name] : undefined;
@@ -1647,7 +1660,7 @@ export class World {
       return;
     }
     if (st.padIndex < 0) {
-      this.nav.setBlocked(tp.pos.x, tp.pos.z, target.radius, false);
+      if (!st.cask) this.nav.setBlocked(tp.pos.x, tp.pos.z, target.radius, false);
       return;
     }
     const pad = this.pads[st.padIndex];
@@ -1802,7 +1815,7 @@ export class World {
       if (d < 1.15 + e.radius * 0.8 && d < Math.hypot(ah.x - e.transform.pos.x, ah.z - e.transform.pos.z)) return true;
     }
     for (const s of this.entities) {
-      if (!s.alive || s.kind !== "structure" || s === e || s.structure?.works !== undefined) continue;
+      if (!s.alive || s.kind !== "structure" || s === e || s.structure?.works !== undefined || s.structure?.cask) continue;
       const d = Math.hypot(s.transform.pos.x - x, s.transform.pos.z - z);
       const min = s.radius + e.radius * 0.8;
       if (d < min) {
@@ -2000,8 +2013,9 @@ export class World {
         this.projectiles.splice(i, 1);
         const src = this.getAny(p.sourceId) ?? null;
         const who = src && src.alive ? src : null;
-        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss, slowMul: p.slow?.slowMul, slowSeconds: p.slow?.slowSeconds, noFlinch: !p.splash && !!who?.hero }) : false;
+        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss, slowMul: p.slow?.slowMul, slowSeconds: p.slow?.slowSeconds, noFlinch: !p.splash && !!who?.hero, crit: p.crit }) : false;
         if (landed && who && target && p.talent) afterShot(this, who, target, p.damage, p.talent === "orb");
+        if (landed && who && target && p.arrow) onArrowHit(this, who, target);
         if (p.burn) this.emit({ type: "pulse", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: p.burn.radius, team: p.team, style: "fireburst" });
         if (p.splash) {
           const sp = p.splash;
@@ -2056,7 +2070,7 @@ export class World {
       if (e.alive && e.expiresAt !== undefined && t >= e.expiresAt) {
         e.alive = false;
         this.emit({ type: "death", id: e.id, kind: e.kind, x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, big: false });
-        if (e.structure && e.structure.padIndex < 0) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.radius, false);
+        if (e.structure && e.structure.padIndex < 0 && !e.structure.cask) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.radius, false);
       }
     }
     for (let i = this.traps.length - 1; i >= 0; i--) {
@@ -2078,17 +2092,32 @@ export class World {
     }
     for (let i = this.zones.length - 1; i >= 0; i--) {
       const z = this.zones[i];
-      if (t >= z.until) { this.zones.splice(i, 1); continue; }
+      if (t >= z.until || (z.anchor !== undefined && !this.get(z.anchor))) {
+        this.zones.splice(i, 1);
+        onZoneEnd(this, z);
+        continue;
+      }
       const owner = this.get(z.ownerId) ?? null;
       const tickDmg = this.tick % 15 === 0;
       if (z.heal && tickDmg) {
+        const healer = owner ?? this.getAny(z.ownerId);
         for (const o of this.entities) {
           if (!o.alive || o.team !== z.team || o.kind === "structure" || o.hp >= o.maxHp) continue;
           if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
-          this.heal(o, z.heal * 0.5);
+          healFrom(this, healer, o, z.heal * 0.5);
           if (this.tick % 30 === 0) this.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: z.team });
         }
       }
+      if (z.brew) {
+        for (const o of this.entities) {
+          if (!o.alive || o.team !== z.team || o.kind === "structure") continue;
+          if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
+          o.status.brewUntil = t + 0.3;
+          o.status.brewMul = z.brew;
+          if (o.status.slowUntil > t && o.status.slowMul < 1) o.status.slowUntil = 0;
+        }
+      }
+      if (z.slowMul >= 1 && z.dps <= 0) continue;
       for (const o of this.entities) {
         if (!o.alive || o.team === z.team || o.kind === "structure") continue;
         if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;

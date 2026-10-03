@@ -34,7 +34,8 @@ const KIND_LABEL: Record<string, string> = {
   combo: "3-HIT COMBO", slam: "GROUND SLAM", quake: "EARTHQUAKE", warcry: "WAR CRY", shoot: "MAGIC BOLT",
   hex: "HEX BLAST", leap: "CLIFF LEAP", dash: "PIERCING DASH", stealth: "SMOKE AMBUSH", summon: "SUMMON TROOPS", gravewalk: "GRAVEWALK",
   repair: "REPAIR PULSE", turret: "DROP TURRET", ramp: "BUILD RAMP", wall: "STONE WALL", trap: "THROW TRAP", reach: "LONG ARM SLAP",
-  zone: "BRAMBLE FIELD", flurry: "BLADE FLURRY", parry: "PARRY", none: "-",
+  zone: "BRAMBLE FIELD", flurry: "BLADE FLURRY", parry: "PARRY", pip: "SEND PIP", volley: "VOLLEY", heartseeker: "HEARTSEEKER",
+  keg: "HEALING KEG", powderkeg: "POWDER KEG", brewfest: "BREWFEST", none: "-",
 };
 
 export interface SelectSlot {
@@ -394,8 +395,8 @@ export class Screens {
     this.hit("camera", 4, 1, cw + 8, 17);
 
     const n = this.roster.length;
-    const sw = 42;
-    const sh = 54;
+    const sw = Math.max(26, Math.min(42, Math.floor((W - 24 - (n - 1) * 6) / Math.max(1, n))));
+    const sh = Math.round(sw * 54 / 42);
     const gap = Math.min(12, Math.floor((W - 24 - n * sw) / Math.max(1, n - 1)));
     const gx = Math.round((W - (n * sw + (n - 1) * gap)) / 2);
     const gy = 25;

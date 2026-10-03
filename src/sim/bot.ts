@@ -3,6 +3,7 @@ import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./typ
 import { buildCost, canBuildOn, canSpec, specCost } from "./structures.ts";
 import { learned as learnedOf, options } from "./talents.ts";
 import { graveSpots } from "./heroes.ts";
+import { clumpScore, healSpotScore } from "./friar.ts";
 
 interface PlanItem {
   zone: Pad["zone"] | "front";
@@ -466,6 +467,7 @@ export class Bot {
         if (esc === "b") this.wantB = true;
         else this.wantR = true;
       }
+      if (plan.healer && (h.cooldowns.b ?? 0) <= w.time && healSpotScore(w, me) >= 80) this.wantB = true;
       const cover = ehAlive ? this.grassCover(w, me, enemyHero!, dHero) : null;
       if (cover) this.goal = cover;
       this.wantBlock = dHero < 3 && this.rand() < 0.5;
@@ -512,6 +514,7 @@ export class Bot {
         case "works": return !w.mods.some((m) => m.kind === "works" && m.owner === me.id) && w.entities.some((o) => o.alive && o.structure && o.team !== me.team && !o.structure.siege && w.dist(me, o) < (a.botRange ?? 12));
         case "repair": return w.entities.some((o) => o.alive && o.structure && o.team === me.team && o.hp < o.maxHp * 0.7 && w.dist(me, o) < (a.radius ?? 6))
           || (!!w.heroDef(me.hero!.type).hooks.overhaulHeal && nearby.length >= 1 && w.entities.filter((o) => o.alive && o.unit && o.team === me.team && w.dist(me, o) < (a.radius ?? 6)).length >= 3);
+        case "heal": return healSpotScore(w, me) >= (this.role === "solo" ? 150 : 110);
         default: return false;
       }
     };
@@ -519,6 +522,12 @@ export class Bot {
     const siegeHero = ab.z.kind === "ballista";
     const zTarget = plan.zBelow === undefined || (ehAlive && enemyHero!.hp < enemyHero!.maxHp * plan.zBelow);
     if (full && zTarget && (!siegeHero || !rdy("r")) && ((ehAlive && useHint("z", dHero)) || (plan.zBelow === undefined && nearby.length >= 4))) this.wantZ = true;
+    if (this.wantZ && ehAlive && prefer > 3 && w.canSee(me, enemyHero!)) {
+      const zx = enemyHero!.transform.pos.x - p.x;
+      const zz = enemyHero!.transform.pos.z - p.z;
+      const zl = Math.hypot(zx, zz) || 1;
+      this.wantFace = { x: zx / zl, z: zz / zl };
+    }
     if (siegeHero && full && !lowHp) {
       const works = w.mods.find((m) => m.kind === "works" && m.owner === me.id && m.cx !== undefined);
       if (works) {
@@ -530,7 +539,8 @@ export class Bot {
       } else if (rdy("r") && ((ehAlive && dHero < 10) || nearby.length >= 2 || w.entities.some((o) => o.alive && o.structure && o.team !== me.team && !o.structure.siege && w.dist(me, o) < 16))) this.wantR = true;
     }
     if (rdy("r") && ab.r.bot !== "fight" && useHint("r", dHero)) this.wantR = true;
-    if (rdy("b") && (ab.b.bot === "repair" || ab.b.bot === "banner") && useHint("b", 0)) this.wantB = true;
+    if (rdy("b") && (ab.b.bot === "repair" || ab.b.bot === "banner" || ab.b.bot === "heal") && useHint("b", 0)) this.wantB = true;
+    if (plan.healer && rdy("r") && ab.r.bot === "fight" && clumpScore(w, me) >= 3 && this.rand() < 0.5) this.wantR = true;
 
     const lan = w.mapEvents.lantern;
     if (lan && lan.state !== "rise" && !lowHp && Math.hypot(lan.x - p.x, lan.z - p.z) < 22 && !(ehAlive && dHero < 4) && this.ok(w, me, lan)) {
@@ -610,6 +620,20 @@ export class Bot {
           if (enemyAttacking && d < 3 && this.rand() < 0.3 * this.skill) this.wantDodge = true;
         }
         if ((this.wantAttack || this.wantB || this.wantR) && !this.wantDodge) this.wantFace = { x: tx / tl, z: tz / tl };
+      }
+      if (plan.healer && ab.a.kind === "combo") {
+        if (!fight.hero) {
+          this.goal = { x: fx, z: fz };
+          if (d < aReach && this.rand() < this.skill) this.wantAttack = true;
+        }
+        const close = nearby.filter((o) => !o.structure && w.canSee(me, o) && w.dist(me, o) - o.radius < aReach + 0.2).sort((a, b) => w.dist(me, a) - w.dist(me, b))[0];
+        if (close && !this.wantDodge && this.rand() < this.skill) {
+          const cx = close.transform.pos.x - p.x;
+          const cz = close.transform.pos.z - p.z;
+          const cl = Math.hypot(cx, cz) || 1;
+          this.wantAttack = true;
+          if (!this.wantB && !this.wantR) this.wantFace = { x: cx / cl, z: cz / cl };
+        }
       }
       return;
     }

@@ -956,8 +956,14 @@ export class Hud {
     }).join(",");
     return [
       x0, y0, blockW, right, local, tag, h.dead, h.dead ? Math.ceil(h.respawnAt - w.time) : 0, cd("b"), cd("r"), frac, frac >= 1 ? Math.floor(now * 5) % 2 : 0,
-      !!cfgXp, commander, h.level, h.xp, talents, local && h.picks.length ? Math.floor(now * 3) % 3 : -1,
+      !!cfgXp, commander, h.level, h.xp, talents, local && h.picks.length ? Math.floor(now * 3) % 3 : -1, h.pip ? 1 : 0, this.vantageOn(w, e) ? 1 : 0,
     ].join("|");
+  }
+
+  private vantageOn(w: World, e: Entity): boolean {
+    const h = e.hero!;
+    const hk = w.heroDef(h.type).hooks;
+    return !!hk.vantageMul && !h.dead && w.time - (h.stillAt ?? -99) >= (hk.vantageStill ?? 1);
   }
 
   private drawPlayerPanel(ctx: CanvasRenderingContext2D, w: World, e: Entity, x0: number, y0: number, blockW: number, right: boolean, now: number, local: boolean, tag: string): number {
@@ -986,12 +992,33 @@ export class Hud {
           const n = String(Math.ceil(left));
           drawNum(ctx, n, bxx - textWidth(n, 0.72, true) / 2 - 0.5, y + 1.2, "#ffffff", 0.72);
         }
+        if (k === "b" && h.pip) {
+          ctx.fillStyle = INK;
+          ctx.beginPath();
+          ctx.arc(bxx + 4, y + 1.2, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ff4a30";
+          ctx.beginPath();
+          ctx.arc(bxx + 4, y + 1.2, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
       const frac = h.meter / w.data.heroes.baseline.superMax;
       const full = frac >= 1;
       const zx = ax(px + 30);
       ringMeter(ctx, zx, y + 5, 6.4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
       padButton(ctx, zx, y + 5, 4.4, full ? "#e8c030" : PAD.z, "Z", !full);
+      if (this.vantageOn(w, e)) {
+        const vx = ax(px + 39);
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.moveTo(vx, y + 1); ctx.lineTo(vx + 3.2, y + 5); ctx.lineTo(vx, y + 9); ctx.lineTo(vx - 3.2, y + 5); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#ffe070";
+        ctx.beginPath();
+        ctx.moveTo(vx, y + 2); ctx.lineTo(vx + 2.2, y + 5); ctx.lineTo(vx, y + 8); ctx.lineTo(vx - 2.2, y + 5); ctx.closePath();
+        ctx.fill();
+      }
       px += 42;
     }
     const cfgXp = w.data.talents?.xp;

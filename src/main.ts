@@ -701,7 +701,7 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { Bot, dbg, hud, screens, levelUp: (player: number, picks: number[]) => {
+  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { Bot, dbg, hud, screens, spawnUnit, levelUp: (player: number, picks: number[]) => {
     const e = world.heroForPlayer(player);
     if (!e?.hero) return [];
     gainXp(world, e, 99999);
@@ -1644,9 +1644,9 @@ async function start(): Promise<void> {
   let demoBase = "";
   let demoLoop = 0;
   let demo: { key: string; w: World; t: number; acc: number; loop: number; len: number; presses: number[]; dist: number; btn: keyof Command; mapShown: boolean; kind: string } | null = null;
-  const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner"]);
-  const BIG = new Set(["quake", "zone", "summon", "gravewalk", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth", "teslatower", "palisade", "wall", "repair"]);
-  const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry"]);
+  const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner", "keg", "brewfest"]);
+  const BIG = new Set(["quake", "zone", "summon", "gravewalk", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth", "teslatower", "palisade", "wall", "repair", "volley", "brewfest", "heartseeker"]);
+  const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry", "pip", "keg", "powderkeg"]);
   const DEMO_SPOT = { x: 23.5, z: 7 };
   function runDemo(dt: number): number | null {
     const spec = state === "menu" ? menus.codexDemo() : null;
@@ -1835,8 +1835,11 @@ async function start(): Promise<void> {
       me.hero!.action = null;
       me.hero!.cooldowns = {};
       me.hero!.meter = 9999;
+      me.hero!.pip = undefined;
+      if (d.kind === "keg" || d.kind === "brewfest") me.hp = me.maxHp * 0.45;
       me.status.stealthUntil = 0;
       me.status.hidden = false;
+      w.kegs.length = 0;
       for (const u of w.entities) if (u.unit || (u.structure && u.structure.padIndex < 0 && u.structure.type !== "core")) u.alive = false;
       w.zones.length = 0;
       w.traps.length = 0;
@@ -1857,6 +1860,7 @@ async function start(): Promise<void> {
           const u = spawnUnit(w, 0, "grunt", DEMO_SPOT.x - 1.2 + (k === 1 ? -0.8 : 0), DEMO_SPOT.z - 1.6 + k * 1.6, 1);
           if (u?.unit) {
             u.unit.damage = 0;
+            if (d.kind === "keg" || d.kind === "brewfest") u.hp = u.maxHp * 0.35;
             u.transform.facing = u.transform.prevFacing = Math.PI / 2;
           }
         }

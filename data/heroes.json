@@ -699,6 +699,212 @@
         ]
       }
     },
+    "marksman": {
+      "name": "Wren",
+      "blurb": "Longbow. Vantage: hits 25% harder and reaches 20% farther from high ground or after standing still a second. Pip marks, reveals and interrupts.",
+      "health": "low",
+      "speed": "mid",
+      "damage": "mid",
+      "defaultBuild": "range",
+      "botRange": 9,
+      "hooks": {
+        "vantageMul": 1.25,
+        "vantageRange": 1.2,
+        "vantageHeight": 1.0,
+        "vantageStill": 1.0
+      },
+      "abilities": {
+        "a": {
+          "kind": "shoot",
+          "anim": "shoot",
+          "damage": 42,
+          "range": 11,
+          "speed": 32,
+          "pierceRange": 14,
+          "dur": 0.55,
+          "hitAt": 0.24,
+          "cooldown": 0,
+          "bot": "fight",
+          "botRange": 10.5,
+          "variance": 0.12,
+          "crit": 0.1
+        },
+        "b": {
+          "kind": "pip",
+          "anim": "cast",
+          "range": 14,
+          "seconds": 5,
+          "markMul": 1.15,
+          "peck": 12,
+          "speed": 24,
+          "dur": 0.4,
+          "hitAt": 0.2,
+          "cooldown": 14,
+          "bot": "fight",
+          "botRange": 13,
+          "callout": "SEND PIP \u00b7 MARKED, REVEALED, INTERRUPTED"
+        },
+        "r": {
+          "kind": "volley",
+          "anim": "volley",
+          "range": 9,
+          "radius": 3.5,
+          "damage": 26,
+          "unitMul": 1.5,
+          "waves": 5,
+          "interval": 0.4,
+          "delay": 0.35,
+          "slowMul": 0.6,
+          "slowSeconds": 0.6,
+          "dur": 0.6,
+          "hitAt": 0.35,
+          "cooldown": 12,
+          "bot": "fight",
+          "botRange": 9.5,
+          "callout": "VOLLEY \u00b7 ARROW RAIN"
+        },
+        "z": {
+          "kind": "heartseeker",
+          "anim": "heartseeker",
+          "range": 28,
+          "width": 1.0,
+          "heroDamage": 220,
+          "damage": 110,
+          "structureDamage": 120,
+          "knockback": 12,
+          "dur": 1.25,
+          "hitAt": 0.9,
+          "bot": "fight",
+          "botRange": 22,
+          "callout": "HEARTSEEKER",
+          "variance": 0.08
+        }
+      },
+      "botPlan": {
+        "retreatHp": 0.4,
+        "picks": [
+          0,
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    "friar": {
+      "name": "Maddock",
+      "blurb": "Alemonk. Plenty: allies within 7 m slowly regenerate, and he heals 25% more to anyone below half health. Kegs heal friends and flatten foes.",
+      "health": "sturdy",
+      "speed": "mid",
+      "damage": "low",
+      "defaultBuild": "barracks",
+      "botRange": 4.5,
+      "hooks": {
+        "speedMul": 0.94,
+        "plentyRadius": 7,
+        "plentyHero": 0.006,
+        "plentyUnit": 0.012,
+        "lowHealMul": 1.25,
+        "lowHealBelow": 0.5
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 40,
+              "range": 2.4,
+              "arcDeg": 120,
+              "dur": 0.42,
+              "hitAt": 0.2,
+              "lunge": 1.5,
+              "knockback": 1.2
+            },
+            {
+              "damage": 40,
+              "range": 2.4,
+              "arcDeg": 130,
+              "dur": 0.42,
+              "hitAt": 0.2,
+              "lunge": 1.5,
+              "knockback": 1.2
+            },
+            {
+              "damage": 64,
+              "range": 2.7,
+              "arcDeg": 170,
+              "dur": 0.62,
+              "hitAt": 0.32,
+              "lunge": 2.0,
+              "knockback": 5.5
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight",
+          "variance": 0.15
+        },
+        "b": {
+          "kind": "keg",
+          "anim": "throw",
+          "range": 8,
+          "radius": 3,
+          "heal": 110,
+          "flight": 0.35,
+          "puddleSeconds": 5,
+          "puddleHeal": 22,
+          "puddleRadius": 2.6,
+          "dur": 0.5,
+          "hitAt": 0.28,
+          "cooldown": 10,
+          "bot": "heal",
+          "callout": "HEALING KEG"
+        },
+        "r": {
+          "kind": "powderkeg",
+          "anim": "throw",
+          "range": 8,
+          "radius": 3.2,
+          "damage": 110,
+          "unitMul": 1.6,
+          "structureDamage": 160,
+          "knockback": 10,
+          "fuse": 1.0,
+          "flight": 0.35,
+          "dur": 0.5,
+          "hitAt": 0.28,
+          "cooldown": 11,
+          "bot": "fight",
+          "botRange": 8,
+          "callout": "POWDER KEG",
+          "variance": 0.15
+        },
+        "z": {
+          "kind": "brewfest",
+          "anim": "slam",
+          "hp": 600,
+          "seconds": 10,
+          "radius": 7,
+          "heal": 24,
+          "damageMul": 1.15,
+          "slowMul": 0.7,
+          "dur": 0.9,
+          "hitAt": 0.55,
+          "bot": "allies",
+          "botRange": 6,
+          "callout": "BREWFEST \u00b7 ALLIES HEAL AND HIT HARDER"
+        }
+      },
+      "botPlan": {
+        "retreatHp": 0.4,
+        "healer": true,
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
     "herald": {
       "name": "Herald",
       "role": "commander",

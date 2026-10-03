@@ -36,7 +36,7 @@ one Tripo call per mesh, and at most one retry of a step if its output is unusab
      game dyes them.
    - `attach`: `[("fn_name", "<prop>_tripo.glb")]`, functions in the hero file using `th.import_prop(...)` and
      `th.place_on_bone(w, arm, "hand_R", grip, axis, length, at, side)`. Name weapon objects `<hero>_<thing>`.
-   - `extras`: procedural charkit parts (e.g. Wren's bow), `clips`: function overriding clips from `anims.hero_clips`.
+   - `extras`: procedural charkit parts, `clips`: function overriding clips from `anims.hero_clips` (Wren's poses them with IK helpers and keys an extra `bow_string` bone).
    Build with `blender -b --python tools/blender/build_tripo_hero.py -- <hero> <preview_dir>`: renders
    `<hero>_apose_*` (joint markers) and `<hero>_rest_*`, exports `assets/heroes/<hero>.glb`.
    `CLIP=attack_b FRAMES=0,3,5,7 ELEV=50` (with a preview dir) renders posed frames instead of exporting.

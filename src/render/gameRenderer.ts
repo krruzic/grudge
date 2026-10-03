@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { RelicView } from "./relicView";
+import { HeroPropViews } from "./newHeroFx";
 import type { World } from "../sim/world";
 import type { Terrain } from "../sim/terrain";
 import type { MapView } from "./mapView";
@@ -289,6 +290,7 @@ export class GameRenderer {
   }
 
   private relicView: RelicView | null = null;
+  private heroProps: HeroPropViews | null = null;
 
   setWorld(world: World): void {
     this.scene.remove(this.entityViews.root, this.entityViews.extras, this.combatFx.root);
@@ -304,6 +306,10 @@ export class GameRenderer {
     this.hazards = new HazardViews(world, this.teamColors, this.combatFx);
     this.scene.add(this.hazards.root);
     this.relicView.fx = this.combatFx;
+    if (this.heroProps) this.scene.remove(this.heroProps.root);
+    this.heroProps = new HeroPropViews(world, this.cfg.heroScale);
+    this.heroProps.fx = this.combatFx;
+    this.scene.add(this.heroProps.root);
     this.entityViews = new EntityViews(world, this.teamColors, this.heroModels, this.structureModels, this.cfg.heroScale, this.combatFx, this.unitModels, this.cfg.playerColors.map((c) => new THREE.Color(c)));
     this.entityViews.humans = this.humanList;
     this.entityViews.hints = this.hints;
@@ -640,6 +646,7 @@ export class GameRenderer {
     this.world.events.length = 0;
     this.entityViews.sync(alpha, dt, this.time);
     this.relicView?.sync(alpha, dt);
+    this.heroProps?.sync(alpha, dt);
     this.combatFx.syncProjectiles(this.world, alpha);
     this.combatFx.syncMissiles(this.world);
     this.combatFx.syncBanners(this.world, performance.now() / 1000);

@@ -62,6 +62,15 @@ export interface TalentFx {
   tesla?: boolean;
   graveRank?: number;
   graveBurst?: { radius: number; damage: number; slowMul: number; slowSeconds: number; shield: number };
+  pipSlow?: number;
+  pipAutoPeck?: number;
+  pipOnHit?: boolean;
+  cluster?: { count: number; damage?: number; heal?: number; radius: number; dist: number };
+  lastCall?: { heal: number; damage: number; radius: number; knockback: number };
+  ricochet?: { range: number; mul: number };
+  puddleHaste?: number;
+  puddleSlow?: number;
+  kegShield?: { amount: number; seconds: number };
 }
 
 export interface TalentWith {
@@ -118,7 +127,7 @@ export interface AbilityDef {
   comboCooldown?: number;
   seconds?: number;
   stunSeconds?: number;
-  bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "gravewalk" | "never";
+  bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "gravewalk" | "heal" | "never";
   botRange?: number;
   heal?: number;
   length?: number;
@@ -164,6 +173,19 @@ export interface AbilityDef {
   interruptCooldown?: number;
   spawnMul?: number;
   towerHaste?: number;
+  markMul?: number;
+  peck?: number;
+  waves?: number;
+  unitMul?: number;
+  fuse?: number;
+  flight?: number;
+  puddleSeconds?: number;
+  puddleHeal?: number;
+  puddleRadius?: number;
+  heroDamage?: number;
+  splash?: number;
+  splashDamage?: number;
+  pierceRange?: number;
 }
 
 export interface BotPlan {
@@ -180,6 +202,7 @@ export interface BotPlan {
   picks?: number[];
   zBelow?: number;
   raid?: number;
+  healer?: boolean;
 }
 
 export interface HeroDef {

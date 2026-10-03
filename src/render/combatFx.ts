@@ -1116,6 +1116,12 @@ export class CombatFx implements FxHost {
         this.decal(frostTex, ev.x, ev.y, ev.z, ev.radius, 0.6, 0.6, 0);
         this.burst(ev.x, ev.y + 0.4, ev.z, starTex, 0xbfe8ff, 8, 0.4, 0.5, ev.radius * 0.8, true, 0.6);
         break;
+      case "heroFx":
+        if (ev.name === "healNum" && ev.radius) {
+          this.number(ev.x, ev.y, ev.z, ev.radius, "#7dff7a", true);
+          emit(this, { tex: HERALD.heal, n: 3, x: ev.x, y: ev.y + 0.6, z: ev.z, size: [0.45, 0.6], life: [0.8, 1.1], speed: [0.2, 0.6], up: [1, 1.6], jitter: 0.8 });
+        }
+        break;
       case "heal":
         emit(this, { tex: HERALD.heal, n: 2, x: ev.x, y: ev.y + 1.4, z: ev.z, size: [0.4, 0.55], life: [0.8, 1.1], speed: [0.2, 0.6], up: [1, 1.6], jitter: 0.8 });
         break;
@@ -1587,6 +1593,15 @@ export class CombatFx implements FxHost {
           obj.add(sp);
         } else if (m.style === "rock") {
           spr(WARLORD.dust, 1.4).material.opacity = 0.8;
+        } else if (m.style === "powershot") {
+          const ar = towerProjectile("spear");
+          if (ar) {
+            ar.userData.towerProj = undefined;
+            ar.name = "yaw";
+            ar.scale.setScalar(0.9);
+            obj.add(ar);
+          }
+          spr(FX.burst2, 1.3, true, 0xd8ffa0);
         }
         this.root.add(obj);
         v = { obj, lastSpike: -1 };
@@ -1596,12 +1611,15 @@ export class CombatFx implements FxHost {
       v.obj.position.set(m.x, m.y, m.z);
       const flat = v.obj.getObjectByName("flat");
       if (flat) flat.rotation.set(-Math.PI / 2, 0, -yaw + Math.PI);
+      const yo = v.obj.getObjectByName("yaw");
+      if (yo) yo.rotation.set(0, yaw, 0);
       const spin = v.obj.getObjectByName("spin") as THREE.Sprite | undefined;
       if (spin) spin.material.rotation = performance.now() / 60;
       if (Math.random() < 0.6) {
         if (m.style === "rivet") emit(this, { tex: FX.twinkle, n: 1, x: m.x, y: m.y, z: m.z, color: 0xffa040, size: [0.25, 0.4], life: [0.2, 0.3], speed: [0.3, 1], gravity: 6, additive: true });
         else if (m.style === "dagger") emit(this, { tex: RAIDER.drop, n: 1, x: m.x, y: m.y, z: m.z, color: 0x80ff60, size: [0.18, 0.26], life: [0.3, 0.5], speed: [0, 0.5], gravity: 10 });
         else if (m.style === "slash") emit(this, { tex: DUELIST.sparkle, n: 1, x: m.x, y: m.y, z: m.z, size: [0.3, 0.45], life: [0.25, 0.4], speed: [0.3, 1], additive: true, jitter: 0.8 });
+        else if (m.style === "powershot") emit(this, { tex: FX.twinkle, n: 2, x: m.x, y: m.y, z: m.z, color: 0xd8ffa0, size: [0.25, 0.4], life: [0.25, 0.4], speed: [0.2, 0.8], additive: true, jitter: 0.4 });
       }
       if (m.style === "rock" && m.dist - v.lastSpike > 0.6) {
         v.lastSpike = m.dist;

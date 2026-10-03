@@ -123,6 +123,19 @@ const STROKES: Record<string, Draw> = {
     c.moveTo(-0.2, -0.75); c.lineTo(0.2, -0.75); c.lineTo(0.2, -0.2); c.lineTo(0.75, -0.2); c.lineTo(0.75, 0.2); c.lineTo(0.2, 0.2);
     c.lineTo(0.2, 0.75); c.lineTo(-0.2, 0.75); c.lineTo(-0.2, 0.2); c.lineTo(-0.75, 0.2); c.lineTo(-0.75, -0.2); c.lineTo(-0.2, -0.2); c.closePath();
   },
+  volley: (c) => {
+    for (const ox of [-0.55, 0, 0.55]) {
+      c.moveTo(ox - 0.2, -0.85); c.lineTo(ox + 0.1, 0.45);
+      c.moveTo(ox - 0.12, 0.25); c.lineTo(ox + 0.1, 0.45); c.lineTo(ox + 0.22, 0.2);
+    }
+    c.moveTo(-0.9, 0.75); c.lineTo(0.9, 0.75);
+  },
+  heartseeker: (c) => {
+    c.moveTo(-0.9, 0.55); c.lineTo(0.75, -0.45);
+    c.moveTo(0.42, -0.5); c.lineTo(0.78, -0.47); c.lineTo(0.62, -0.15);
+    c.moveTo(-0.9, 0.55); c.lineTo(-0.85, 0.25); c.moveTo(-0.9, 0.55); c.lineTo(-0.6, 0.6);
+    c.moveTo(0, 0.35); c.bezierCurveTo(-0.45, 0.05, -0.3, -0.35, 0, -0.15); c.bezierCurveTo(0.3, -0.35, 0.45, 0.05, 0, 0.35);
+  },
   none: (c) => { c.moveTo(-0.5, 0); c.lineTo(0.5, 0); },
   river: (c) => {
     for (const oy of [-0.15, 0.35]) {
@@ -215,11 +228,28 @@ const FILLS: Record<string, Draw> = {
     c.rect(-0.8, -0.8, 1.6, 1.6);
     c.rect(-0.45, -0.45, 0.9, 0.9);
   },
+  pip: (c) => {
+    c.moveTo(-0.85, -0.1); c.quadraticCurveTo(-0.4, -0.75, 0.05, -0.15); c.quadraticCurveTo(0.45, -0.75, 0.9, -0.2);
+    c.quadraticCurveTo(0.45, -0.05, 0.25, 0.15); c.lineTo(0.45, 0.35); c.lineTo(0.2, 0.3); c.lineTo(0.05, 0.75); c.lineTo(-0.12, 0.3); c.lineTo(-0.4, 0.35);
+    c.lineTo(-0.2, 0.12); c.quadraticCurveTo(-0.45, -0.05, -0.85, -0.1); c.closePath();
+  },
+  keg: (c) => {
+    c.moveTo(-0.5, -0.75); c.lineTo(0.5, -0.75); c.quadraticCurveTo(0.8, 0, 0.5, 0.75); c.lineTo(-0.5, 0.75); c.quadraticCurveTo(-0.8, 0, -0.5, -0.75); c.closePath();
+  },
+  powderkeg: (c) => {
+    c.moveTo(-0.5, -0.55); c.lineTo(0.5, -0.55); c.quadraticCurveTo(0.78, 0.1, 0.5, 0.8); c.lineTo(-0.5, 0.8); c.quadraticCurveTo(-0.78, 0.1, -0.5, -0.55); c.closePath();
+    c.moveTo(0.05, -0.55); c.lineTo(0.2, -0.8); c.lineTo(0.12, -0.8); c.lineTo(0.3, -0.98); c.lineTo(0.28, -0.82); c.lineTo(0.36, -0.82); c.lineTo(0.15, -0.55); c.closePath();
+  },
+  brewfest: (c) => {
+    c.moveTo(-0.6, -0.55); c.lineTo(0.35, -0.55); c.lineTo(0.3, 0.85); c.lineTo(-0.55, 0.85); c.closePath();
+    c.moveTo(0.35, -0.3); c.quadraticCurveTo(0.9, -0.3, 0.85, 0.15); c.quadraticCurveTo(0.8, 0.5, 0.32, 0.45); c.lineTo(0.33, 0.25); c.quadraticCurveTo(0.62, 0.28, 0.62, 0.1); c.quadraticCurveTo(0.62, -0.1, 0.34, -0.1); c.closePath();
+    c.moveTo(-0.7, -0.55); c.arc(-0.45, -0.62, 0.28, Math.PI, 0); c.arc(-0.05, -0.7, 0.3, Math.PI, 0); c.arc(0.3, -0.62, 0.22, Math.PI, 0); c.closePath();
+  },
 };
 
 const TINT: Record<string, string> = {
   shoot: "#ffe04a", hex: "#d68cff", stealth: "#d8dce8", summon: "#ffd08a", gravewalk: "#c890ff", turret: "#c8ccd8", ramp: "#e0b070", parry: "#8cd0ff",
-  pad: "#f0b830", size: "#e8e0c8",
+  pad: "#f0b830", size: "#e8e0c8", pip: "#ff5a40", keg: "#c88a48", powderkeg: "#7a4a28", brewfest: "#ffc848",
 };
 
 export function engravedIcon(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: number, size: number, dark: string): void {

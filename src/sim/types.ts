@@ -68,6 +68,43 @@ export interface Status {
   markMul: number;
   markAll: boolean;
   markWeaken: number;
+  pipUntil?: number;
+  pipOwner?: number;
+  brewUntil?: number;
+  brewMul?: number;
+}
+
+export interface PipState {
+  target: number;
+  phase: "out" | "on" | "back";
+  x: number;
+  y: number;
+  z: number;
+  px: number;
+  py: number;
+  pz: number;
+  until: number;
+  since: number;
+  peckAt: number;
+  intAt: number;
+}
+
+export interface Keg {
+  id: number;
+  ownerId: number;
+  team: number;
+  kind: "heal" | "powder" | "minipowder" | "miniheal";
+  fromX: number;
+  fromY: number;
+  fromZ: number;
+  toX: number;
+  toY: number;
+  toZ: number;
+  start: number;
+  dur: number;
+  landed: boolean;
+  fuseAt: number;
+  mul: number;
 }
 
 export interface HeroAction {
@@ -147,6 +184,10 @@ export interface HeroState {
   crack?: { at: number; dirX: number; dirZ: number };
   riposteUntil?: number;
   aim: { x: number; z: number; until: number } | null;
+  pip?: PipState;
+  stillAt?: number;
+  stillX?: number;
+  stillZ?: number;
 }
 
 export interface UnitState {
@@ -208,6 +249,7 @@ export interface StructureState {
   graveMul?: number;
   graveHaste?: number;
   graveRank?: number;
+  cask?: boolean;
 }
 
 export interface Entity {
@@ -257,6 +299,8 @@ export interface Zone {
   style?: string;
   heal?: number;
   haste?: number;
+  anchor?: number;
+  brew?: number;
 }
 
 export interface Delayed {
@@ -314,6 +358,8 @@ export interface Missile {
   splashDamage?: number;
   chain?: number;
   endBurst?: { radius: number; damage: number };
+  arrow?: boolean;
+  knockback?: number;
 }
 
 export interface Boomerang {
@@ -350,6 +396,8 @@ export interface Projectile {
   slow?: { slowMul: number; slowSeconds: number };
   burn?: { radius: number; dps: number; seconds: number };
   talent?: "bolt" | "orb";
+  crit?: boolean;
+  arrow?: boolean;
 }
 
 export interface Pad {
@@ -477,6 +525,7 @@ export type SimEvent =
   | { type: "charge"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "shove"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "fall"; x: number; y: number; z: number }
+  | { type: "heroFx"; name: string; src: number; team: number; x: number; y: number; z: number; radius?: number; tx?: number; tz?: number; seconds?: number; id?: number }
   | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };
 
 export interface MatchState {

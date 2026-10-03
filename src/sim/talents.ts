@@ -2,6 +2,7 @@ import type { World } from "./world.ts";
 import type { AbilityDef, TalentDef, TalentFx } from "./config.ts";
 import type { Entity, Missile } from "./types.ts";
 import { spawnUnit } from "./structures.ts";
+import { onArrowHit } from "./marksman.ts";
 
 type Slot = "a" | "b" | "r" | "z";
 
@@ -238,10 +239,11 @@ export function updateMissiles(w: World): void {
       if (m.style !== "rock" && Math.abs(o.transform.y + 1 - m.y) > 2.5) continue;
       m.hit.push(o.id);
       const dmg = o.structure ? m.damage * 0.5 : m.damage;
-      w.damage(owner, o, dmg, {
-        fromX: m.x - m.dirX, fromZ: m.z - m.dirZ, knockback: m.style === "rock" ? 3 : 1.5, stun: m.stun, slowMul: m.slowMul, slowSeconds: m.slowSeconds,
-        big: m.style === "rock" || m.style === "slash", structureDamage: o.structure ? dmg : undefined,
+      const landed = w.damage(owner, o, dmg, {
+        fromX: m.x - m.dirX, fromZ: m.z - m.dirZ, knockback: m.knockback ?? (m.style === "rock" ? 3 : 1.5), stun: m.stun, slowMul: m.slowMul, slowSeconds: m.slowSeconds,
+        big: m.style === "rock" || m.style === "slash" || !!m.arrow, structureDamage: o.structure ? dmg : undefined,
       });
+      if (landed && m.arrow && owner && !o.structure) onArrowHit(w, owner, o);
       if (m.splash) {
         w.emit({ type: "slam", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, radius: m.splash, team: m.team });
         for (const q of w.entities.slice()) {

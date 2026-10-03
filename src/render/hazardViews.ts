@@ -6,12 +6,13 @@ import * as THREE from "three";
 import { prop, propParts } from "./props";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
-import { composite, ENGINEER, FX, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
+import { composite, ENGINEER, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
 import type { FxHost } from "./fxParts";
 import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
 import { buildFissures } from "./fxParts";
 import { SpriteBatches } from "./spriteBatch";
 import { MapFx } from "./mapFx";
+import { BUBBLE, FOAM, ZONE_DECALS } from "./newHeroFx";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -724,6 +725,22 @@ export class HazardViews {
       } else if (style === "smoke") {
         ring(Math.round(r * 4), [0, 1], (x, z) => sprite(RAIDER.smoke, 1.6 + Math.random() * 1.2, x, z, 0.1, false, "smoke"));
         ring(4, [0.2, 0.8], (x, z) => sprite(RAIDER.shadow, 1.2, x, z, 0.6, false, "smoke"));
+      } else if (style === "ale" || style === "aletrail") {
+        decal.material = new THREE.MeshBasicMaterial({ map: ZONE_DECALS.ale, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.visible = true;
+        ring(style === "ale" ? Math.round(r * 3) : 1, [0.05, 0.85], (x, z) => sprite(BUBBLE, 0.22 + Math.random() * 0.16, x, z, -0.05, false, "bubble"));
+        if (style === "ale") ring(Math.round(r * 1.5), [0.75, 0.98], (x, z) => sprite(FOAM, 0.45 + Math.random() * 0.3, x, z, -0.2, false, "foam"));
+      } else if (style === "tar") {
+        decal.material = new THREE.MeshBasicMaterial({ map: ZONE_DECALS.tar, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.visible = true;
+        ring(Math.round(r * 2), [0.05, 0.85], (x, z) => sprite(BUBBLE, 0.25 + Math.random() * 0.2, x, z, -0.05, false, "tarbubble"));
+        ring(Math.round(r * 1.5), [0.1, 0.9], (x, z) => sprite(WARLORD.ember, 0.3, x, z, 0.1, true, "ember"));
+        ring(Math.round(r * 1.2), [0.1, 0.9], (x, z) => sprite(FX.fire, 0.6 + Math.random() * 0.3, x, z, -0.1, true, "glow"));
+      } else if (style === "brewfest") {
+        decal.material = new THREE.MeshBasicMaterial({ map: ZONE_DECALS.brewfest, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.visible = true;
+        ring(Math.round(r * 2.2), [0.25, 0.95], (x, z) => sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"));
+        ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));
       } else if (style === "grove") {
         ring(Math.round(r * 2.2), [0.1, 0.95], (x, z) => {
           const f = crossQuad(FLOWER, 0.35 + Math.random() * 0.15, 0.35);
@@ -997,6 +1014,17 @@ export class HazardViews {
         else if (c.name === "ember" && b) { const q = (time * 0.7 + ph) % 1; c.position.set(b.x, b.y + q * 1.6, b.z); (c as THREE.Sprite).material.opacity = life * (1 - q); }
         else if (c.name === "smoke" && b) { c.position.set(b.x + Math.sin(time * 0.5 + ph) * 0.3, b.y + Math.sin(time * 0.7 + ph) * 0.15, b.z); (c as THREE.Sprite).material.rotation = time * 0.2 + ph; (c as THREE.Sprite).material.opacity = 0.9 * life; }
         else if (c.name === "spark") (c as THREE.Sprite).material.opacity = Math.random() < 0.3 ? life : 0;
+        else if ((c.name === "bubble" || c.name === "tarbubble") && b) {
+          const q = (time * (c.name === "tarbubble" ? 0.45 : 0.8) + ph) % 1;
+          c.position.set(b.x, b.y + q * (c.name === "tarbubble" ? 0.25 : 0.7), b.z);
+          const s0 = (c.userData.s0 ??= c.scale.x) as number;
+          c.scale.setScalar(s0 * (0.5 + q * 0.7));
+          (c as THREE.Sprite).material.opacity = life * (q < 0.8 ? 0.9 : (1 - q) * 4.5);
+        }
+        else if (c.name === "foam" && b) {
+          c.position.set(b.x + Math.sin(time * 0.8 + ph) * 0.08, b.y, b.z + Math.cos(time * 0.7 + ph) * 0.08);
+          (c as THREE.Sprite).material.opacity = life * 0.9;
+        }
         else if (c.name === "zap") {
           const sp = c as THREE.Sprite;
           if (Math.random() < 0.4) {

@@ -20,6 +20,7 @@ import { StructureBatch } from "./structureBatch";
 import { SpriteBatches } from "./spriteBatch";
 import { FxBatch, type FxInst } from "./fxInstances";
 import { ballistaMesh, syncBallista } from "./ballista";
+import { caskMesh, syncCask } from "./newHeroFx";
 import { drawText, fontReady, textWidth } from "../ui/font";
 import { padButton } from "../ui/hud";
 import outpostIcon from "../../assets/ui/talents/p_outpost.png?url";
@@ -149,6 +150,7 @@ interface View {
   body: THREE.Object3D;
   weapon?: THREE.Object3D;
   held?: THREE.Object3D[];
+  pipNodes?: THREE.Object3D[];
   spin?: THREE.Object3D;
   level2?: THREE.Object3D;
   level3?: Map<string, THREE.Object3D>;
@@ -196,9 +198,12 @@ interface View {
 
 const red = new THREE.Color(1, 0.15, 0.1);
 
-const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "shoot", "hit", "death", "dodge", "attack"]);
+const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "shoot", "hit", "death", "dodge", "attack", "throw", "volley", "heartseeker"]);
+
+const ANIM_FALLBACK: Record<string, string> = { throw: "attack_b", volley: "shoot", heartseeker: "shoot", shoot: "cast" };
 
 const KIND_ANIM: Record<string, string> = {
+  pip: "cast", volley: "volley", heartseeker: "heartseeker", keg: "throw", powderkeg: "throw", brewfest: "slam", kegrocket: "block",
   slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", gravewalk: "cast", hex: "cast", repair: "cast",
   turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
   banner: "cast", rally: "cast", works: "cast", ballista: "cast", whirl: "attack_c",
@@ -878,10 +883,13 @@ export class EntityViews {
       }
       markSilhouette(body, e.team);
       const held: THREE.Object3D[] = [];
+      const pipNodes: THREE.Object3D[] = [];
       body.traverse((o) => {
         if (o.name.startsWith(`${e.hero!.type}_wrench`)) held.push(o);
+        if (o.name.startsWith(`${e.hero!.type}_pip`) || o.name.startsWith(`${e.hero!.type}_keg`)) pipNodes.push(o);
       });
       if (held.length) view.held = held;
+      if (pipNodes.length) view.pipNodes = pipNodes;
       const bf = new THREE.Mesh(
         new THREE.RingGeometry(0.35, 0.75, 6),
         new THREE.MeshBasicMaterial({ color: team.clone().lerp(white, 0.6), transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
@@ -928,14 +936,14 @@ export class EntityViews {
         root.add(view.work.group);
       } else {
         const oc = costumeOfPlayer(this.world.getAny(e.owner ?? -1)?.hero?.player);
-        body = st.works !== undefined ? new THREE.Group() : st.tesla ? teslaCoil(1.1, oc) : st.siege ? ballistaMesh(team, oc) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
+        body = st.works !== undefined ? new THREE.Group() : st.cask ? caskMesh(team, oc) : st.tesla ? teslaCoil(1.1, oc) : st.siege ? ballistaMesh(team, oc) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
         body.traverse((o) => {
           if (!view.spin && o.name.startsWith("spin")) view.spin = o;
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
           if (o.name.startsWith("level3_") && o.parent && !o.parent.name.startsWith("level3_")) (view.level3 ??= new Map()).set(o.name.slice(7).replace(/[._]\d+$/, ""), o);
         });
         body.rotation.y = e.transform.facing;
-        bar = st.works !== undefined ? makeBar(2.2, team, 3.6) : st.siege ? makeBar(1.2, team, 2.4) : makeBar(1.9, team, 0, 0.5);
+        bar = st.works !== undefined ? makeBar(2.2, team, 3.6) : st.cask ? makeBar(1.5, team, 3.2) : st.siege ? makeBar(1.2, team, 2.4) : makeBar(1.9, team, 0, 0.5);
         if (!st.siege && st.works === undefined) {
           view.work = makeBar(1.9, new THREE.Color(0xffd040), 0, 0.8);
           root.add(view.work.group);
@@ -958,7 +966,7 @@ export class EntityViews {
     });
     const v: View = {
       kind: e.kind, root, body, mixer, actions, bar, seen: true,
-      weapon: view.weapon, held: view.held, spin: view.spin, level2: view.level2, level3: view.level3, shield: view.shield, blockFx: view.blockFx, work: view.work,
+      weapon: view.weapon, held: view.held, pipNodes: view.pipNodes, spin: view.spin, level2: view.level2, level3: view.level3, shield: view.shield, blockFx: view.blockFx, work: view.work,
       mats, flash: 0, joltX: 0, joltZ: 0, freeze: 0, stepDist: 0,
     };
     root.traverse((o) => {
@@ -1239,6 +1247,11 @@ export class EntityViews {
           const out = this.world.boomerangs.some((b) => b.ownerId === e.id);
           for (const o of v.held) o.visible = !out;
         }
+        if (v.pipNodes) {
+          const ha = e.hero.action;
+          const away = !!e.hero.pip || ha?.kind === "kegrocket" || ((ha?.kind === "keg" || ha?.kind === "powderkeg") && ha.t >= ha.hitAt - 0.03);
+          for (const o of v.pipNodes) o.visible = !away;
+        }
         v.baseVisible = v.root.visible;
       }
       else if (e.unit) this.syncUnit(e, v, facing, time, adt);
@@ -1446,12 +1459,13 @@ export class EntityViews {
           this.fx.slash(p.x, p.y, p.z, facing, e.team, k, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
         }
       }
-      else if (a.name === "dodge") {
+      else if (a.name === "dodge" && a.kind !== "kegrocket") {
         anim = "dodge";
         this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.8, 5, 2.2);
       }
       else if (a.name === "hit") anim = "hit";
       else anim = KIND_ANIM[a.kind] ?? "cast";
+      for (let k = 0; k < 3 && !v.actions.has(anim) && ANIM_FALLBACK[anim]; k++) anim = ANIM_FALLBACK[anim];
       const len = this.clipLen(v, anim);
       const scale = anim === "block" || anim === "idle" ? 1 : len / Math.max(0.15, Math.min(a.dur, 1.2));
       this.play(v, anim, swing ? Math.min(scale, 2) : scale, true, swing && scale > 2 ? 0.04 : 0.1);
@@ -1475,6 +1489,7 @@ export class EntityViews {
     let lift = 0;
     if (a?.kind === "quake" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 1.8;
     if (a?.kind === "leap" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 2.6;
+    if (a?.kind === "kegrocket") lift = Math.min(1, a.t / 0.08, (a.dur - a.t) / 0.1) * 0.75;
     if (h.jump) {
       const j = h.jump;
       const k = (w.time - j.start) / j.dur;
@@ -1710,6 +1725,11 @@ export class EntityViews {
         const idle = !st.ready && builderRate(w, e) <= 0;
         v.work.fgColor.set(idle && Math.floor(time * 3) % 2 === 0 ? 0x806020 : 0xffd040);
       }
+    }
+    if (st.cask) {
+      v.bar.group.visible = true;
+      syncCask(v.body, w.time - st.builtAt, time);
+      return;
     }
     if (st.siege) {
       const age = w.time - st.builtAt;

@@ -4,6 +4,8 @@ import type { Command, Entity, HeroAction, TerrainMod, UnitType } from "./types.
 import { Kind } from "./terrain.ts";
 import { spawnUnit } from "./structures.ts";
 import { abilities, addShield, afterMelee, bCooldown, fireMissile, frenzySpeed, markTargets, meleeMods, onBUse, pullTo, zoneAt } from "./talents.ts";
+import { heartseeker, isMarksman, marksmanShot, sendPip, skyshot, trackStill, updatePip, volley } from "./marksman.ts";
+import { brewfest, kegRocketTick, plentyTick, startKegRocket, throwKeg } from "./friar.ts";
 
 type Slot = "a" | "b" | "r" | "z";
 
@@ -60,7 +62,7 @@ function begin(e: Entity, name: HeroAction["name"], kind: string, dur: number, h
   return a;
 }
 
-export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7, leap: 0, hex: 0, banner: 0, blink: 0, rootcage: 0, turret: 7 };
+export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7, leap: 0, hex: 0, banner: 0, blink: 0, rootcage: 0, turret: 7, pip: 0, volley: 0, keg: 0, powderkeg: 0 };
 
 function placeRange(def: AbilityDef): number | undefined {
   const r = PLACEABLE[def.kind];
@@ -305,6 +307,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   const ab = abilities(w, e);
   const t = e.transform;
 
+  if (h.pip) updatePip(w, e);
   if (h.dead) {
     h.grave = undefined;
     if (w.time >= h.respawnAt) {
@@ -330,6 +333,8 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     return;
   }
   graveTick(w, e, ab.r);
+  if (def.hooks.vantageMul) trackStill(w, e);
+  if (def.hooks.plentyRadius) plentyTick(w, e);
   if (h.jump) {
     const j = h.jump;
     h.vel.x = h.vel.z = 0;
@@ -537,6 +542,8 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     const adef = a.name === "a" || a.name === "b" || a.name === "r" || a.name === "z" ? ab[a.name] : null;
     if (a.kind === "dodge") {
       w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
+    } else if (a.kind === "kegrocket") {
+      kegRocketTick(w, e, a);
     } else if (a.kind === "combo" && a.t < a.hitAt) {
       const hit = ab.a.hits![a.combo];
       const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? ab.a.fx?.finisherBonus?.lunge ?? 1 : 1;
@@ -655,6 +662,8 @@ function combo(w: World, e: Entity, cmd: Command): boolean {
   }
   if (cmd.dodge && ready(e, "dodge", w.time) && !act) {
     const dodgeCd = () => (h.cooldowns.dodge = w.time + w.data.heroes.baseline.dodgeSeconds + w.data.heroes.baseline.dodgeCooldown);
+    if (isMarksman(w, e) && skyshot(w, e, cmd)) return true;
+    if (ab.b.kind === "keg" && startKegRocket(w, e, cmd)) return true;
     if (ab.r.kind === "works" && onWorks(w, e)) {
       for (let d = 11; d >= 5; d -= 1) {
         if (w.startJump(e, t.pos.x + mx * d, t.pos.z + mz * d, 0.9, 4)) {
@@ -1157,7 +1166,29 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       }
       return;
     }
+    case "pip":
+      sendPip(w, e, a, def);
+      return;
+    case "volley":
+      volley(w, e, a, def, mul);
+      return;
+    case "heartseeker":
+      heartseeker(w, e, a, def, mul);
+      return;
+    case "keg":
+      throwKeg(w, e, a, def, "heal", mul);
+      return;
+    case "powderkeg":
+      throwKeg(w, e, a, def, "powder", mul);
+      return;
+    case "brewfest":
+      brewfest(w, e, a, def);
+      return;
     case "shoot": {
+      if (a.name === "a" && isMarksman(w, e)) {
+        marksmanShot(w, e, a, def, mul);
+        return;
+      }
       const target = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, def.range ?? 8);
       const sh = a.name === "a" && def.shots ? def.shots[a.combo] : undefined;
       const dmg = (sh?.damage ?? def.damage ?? 30) * mul;

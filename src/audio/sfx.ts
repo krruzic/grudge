@@ -171,6 +171,8 @@ export class Audio {
           if (!this.allow("shot", 3)) break;
           if (ev.style === "ballista") { this.tone("sine", 180, 60, 0.18, 0.4, pan); this.hiss(900, 1.5, 0.12, 0.2, pan); }
           else if (ev.style === "arrow") this.hiss(3500, 3, 0.09, 0.1, pan, "bandpass", 0, 1500);
+          else if (ev.style === "longarrow" || ev.style === "skyshot") { this.tone("triangle", 260, 140, 0.08, 0.08, pan); this.hiss(3200, 3, 0.12, 0.11, pan, "bandpass", 0, 1400); }
+          else if (ev.style === "powershot") { this.tone("triangle", 200, 90, 0.15, 0.14, pan); this.hiss(2600, 2.5, 0.25, 0.16, pan, "bandpass", 0, 900); }
           else if (ev.style === "orb") { this.tone("sawtooth", 300, 120, 0.35, 0.1, pan); this.tone("sine", 700, 250, 0.35, 0.09, pan); }
           else if (ev.style === "magic") { this.tone("sawtooth", 900, 300, 0.2, 0.07, pan); this.tone("sine", 1200, 600, 0.2, 0.08, pan); }
           else this.tone("square", 1200, 200, 0.15, 0.06, pan);
@@ -245,6 +247,18 @@ export class Audio {
         case "shove":
           this.hiss(700, 0.8, 0.14, ev.team >= 0 ? 0.35 : 0.15, pan, "lowpass", 0, 200);
           if (ev.team >= 0) this.tone("sine", 160, 60, 0.15, 0.3, pan);
+          break;
+        case "heroFx":
+          if (ev.name === "pipLaunch" || ev.name === "pipLatch") [1800, 2400, 2100].forEach((f, i) => this.tone("sine", f, f * 1.25, 0.06, 0.05, pan, i * 0.07));
+          else if (ev.name === "pipPeck" && this.allow("peck", 2)) this.tone("square", 2600, 1800, 0.03, 0.04, pan);
+          else if (ev.name === "heartseeker") { this.tone("sawtooth", 160, 50, 0.5, 0.18, pan); this.hiss(2200, 2, 0.4, 0.3, pan, "bandpass", 0, 500); }
+          else if (ev.name === "volley") this.hiss(3000, 2, 0.6, 0.12, pan, "bandpass", 0.1, 1200);
+          else if (ev.name === "volleyWave" && this.allow("volleyWave", 1)) this.hiss(1800, 1.5, 0.15, 0.12, pan, "bandpass");
+          else if (ev.name === "kegSplash" || ev.name === "kegSplashSmall") { this.hiss(900, 0.8, 0.35, ev.name === "kegSplash" ? 0.3 : 0.15, pan, "lowpass", 0, 300); this.tone("sine", 320, 520, 0.2, 0.06, pan, 0.05); }
+          else if (ev.name === "kegBoom" || ev.name === "kegPop" || ev.name === "lastCall") { this.tone("sine", 90, 30, 0.6, ev.name === "kegPop" ? 0.35 : 0.75, pan); this.hiss(1200, 0.4, 0.7, 0.55, pan, "lowpass", 0, 90); }
+          else if (ev.name === "kegLand") { this.tone("square", 140, 90, 0.08, 0.1, pan); this.hiss(6000, 1.5, 0.9, 0.06, pan, "highpass"); }
+          else if (ev.name === "brewfest") { this.tone("sine", 70, 40, 0.5, 0.6, pan); [392, 494, 587].forEach((f, i) => this.tone("triangle", f, f, 0.25, 0.08, pan, 0.15 + i * 0.08)); }
+          else if (ev.name === "kegRocket") this.tone("sawtooth", 180, 420, 0.4, 0.1, pan);
           break;
         case "fall":
           this.tone("triangle", 700, 150, 0.3, 0.08, pan);
