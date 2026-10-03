@@ -39,10 +39,23 @@ FLAG_DIRT, FLAG_PAVING, FLAG_GRASS = 1, 2, 4
 TEAM = [texgen.hexc("#3a6cff"), texgen.hexc("#ff3a2a"), texgen.hexc("#ffcf1a"), texgen.hexc("#2fc84a")]
 
 MATS = ["grass", "dirt", "cobble", "cliff", "brick", "wood", "leaves", "pine",
-        "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch"]
+        "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch", "planks"]
 TEX_METERS = {"grass": 7, "dirt": 6, "cobble": 4, "cliff": 5, "brick": 3.5, "wood": 2.5,
               "leaves": 3, "pine": 3, "bark": 2, "tallgrass": 1, "cloth": 1.5, "gold": 2, "iron": 1.5,
-              "roof": 2.5, "thatch": 2.0}
+              "roof": 2.5, "thatch": 2.0, "planks": 1.25}
+
+TRIPO_TEX = 128
+TRIPO = {
+    "rock_a": {"size": (2.3, 2.0, 1.4), "faces": 480, "lo": 60},
+    "rock_b": {"size": (2.2, 2.0, 1.6), "faces": 520, "lo": 70},
+    "rock_c": {"size": (2.0, 2.4, 1.0), "faces": 480},
+    "tree_a": {"size": (2.5, 2.9, 3.4), "trunk": True, "mirror": True, "faces": 1100},
+    "tree_b": {"size": (2.2, 2.2, 3.7), "trunk": True, "smooth": 3},
+    "pine_a": {"size": (2.5, 2.5, 3.9), "trunk": True, "faces": 850},
+    "pine_snow": {"size": (2.5, 2.5, 3.9), "trunk": True, "faces": 900},
+    "deadtree": {"size": (2.8, 2.8, 3.4), "trunk": True, "faces": 700},
+}
+ROCKS = ("rock_a", "rock_b", "rock_c")
 
 
 def G(x, y, z):
@@ -160,6 +173,136 @@ def make_materials(images):
         nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
 
 
+def tripo_image(src, name):
+    mat = src.data.materials[0]
+    bsdf = next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    img = bsdf.inputs["Base Color"].links[0].from_node.image
+    tex = img.copy()
+    tex.name = name
+    tex.scale(TRIPO_TEX, TRIPO_TEX)
+    path = os.path.join(bpy.app.tempdir or "/tmp", name + ".png")
+    tex.filepath_raw = path
+    tex.file_format = "PNG"
+    tex.save()
+    out = bpy.data.images.load(path, check_existing=False)
+    out.name = name
+    out.pack()
+    bpy.data.images.remove(tex)
+    return out
+
+
+def tripo_tris(obj, depsgraph=None):
+    me = obj.evaluated_get(depsgraph).to_mesh() if depsgraph else obj.data
+    uv = me.uv_layers.active.data
+    tris = []
+    for p in me.polygons:
+        tris.append(([me.vertices[me.loops[i].vertex_index].co.copy() for i in p.loop_indices],
+                     [tuple(uv[i].uv) for i in p.loop_indices]))
+    return tris
+
+
+def mirror_half(me):
+    zs = [v.co.z for v in me.vertices]
+    z0 = min(zs) + (max(zs) - min(zs)) * 0.06
+    base = [v.co.x for v in me.vertices if v.co.z < z0]
+    cx = sum(base) / len(base)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    behind = [f for f in bm.faces if all(v.co.x <= cx for v in f.verts)]
+    bmesh.ops.delete(bm, geom=behind, context="FACES")
+    for v in bm.verts:
+        v.co.x = max(v.co.x, cx)
+    dup = bmesh.ops.duplicate(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces))
+    for e in dup["geom"]:
+        if isinstance(e, bmesh.types.BMVert):
+            e.co.x = 2 * cx - e.co.x
+    bmesh.ops.reverse_faces(bm, faces=[e for e in dup["geom"] if isinstance(e, bmesh.types.BMFace)])
+    bmesh.ops.remove_doubles(bm, verts=list(bm.verts), dist=1e-5)
+    bm.to_mesh(me)
+    bm.free()
+
+
+def smooth_canopy(me, iters):
+    zs = [v.co.z for v in me.vertices]
+    z0 = min(zs) + (max(zs) - min(zs)) * 0.45
+    key = [tuple(round(c, 4) for c in v.co) for v in me.vertices]
+    ids = {}
+    gid = [ids.setdefault(k, len(ids)) for k in key]
+    pos = [None] * len(ids)
+    for v, g in zip(me.vertices, gid):
+        pos[g] = v.co.copy()
+    nb = [set() for _ in ids]
+    for e in me.edges:
+        a, b = gid[e.vertices[0]], gid[e.vertices[1]]
+        if a != b:
+            nb[a].add(b)
+            nb[b].add(a)
+    for _ in range(iters):
+        new = list(pos)
+        for g, p in enumerate(pos):
+            if p.z > z0 and nb[g]:
+                avg = sum((pos[n] for n in nb[g]), Vector()) / len(nb[g])
+                new[g] = p.lerp(avg, 0.5)
+        pos = new
+    for v, g in zip(me.vertices, gid):
+        v.co = pos[g]
+
+
+def load_tripo(name, cfg):
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", f"map_{name}_tripo.glb"))
+    new = [o for o in bpy.data.objects if o not in before]
+    src = next(o for o in new if o.type == "MESH")
+    me = src.data
+    me.transform(src.matrix_world)
+    src.matrix_world = Matrix.Identity(4)
+    if cfg.get("mirror"):
+        mirror_half(me)
+    if cfg.get("smooth"):
+        smooth_canopy(me, cfg["smooth"])
+    if cfg.get("faces") and len(me.polygons) > cfg["faces"]:
+        mod = src.modifiers.new("dec", "DECIMATE")
+        mod.ratio = cfg["faces"] / len(me.polygons)
+        dg = bpy.context.evaluated_depsgraph_get()
+        me = bpy.data.meshes.new_from_object(src.evaluated_get(dg))
+        src.modifiers.clear()
+        src.data = me
+    lo = Vector([min(v.co[k] for v in me.vertices) for k in range(3)])
+    hi = Vector([max(v.co[k] for v in me.vertices) for k in range(3)])
+    dims = hi - lo
+    if cfg.get("trunk"):
+        base = [v.co for v in me.vertices if v.co.z < lo.z + dims.z * 0.06]
+        cx, cy = sum(c.x for c in base) / len(base), sum(c.y for c in base) / len(base)
+    else:
+        cx, cy = (lo.x + hi.x) / 2, (lo.y + hi.y) / 2
+    sx, sy, sz = (cfg["size"][k] / dims[k] for k in range(3))
+    me.transform(Matrix.Diagonal((sx, sy, sz, 1.0)) @ Matrix.Translation((-cx, -cy, -lo.z)))
+    mname = "mp_" + name
+    mat = bpy.data.materials.get(mname) or bpy.data.materials.new(mname)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = tripo_image(src, mname)
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 1.0
+    nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
+    tpl = {"mat": mname, "hi": tripo_tris(src)}
+    if cfg.get("lo"):
+        mod = src.modifiers.new("lo", "DECIMATE")
+        mod.ratio = cfg["lo"] / len(me.polygons)
+        dg = bpy.context.evaluated_depsgraph_get()
+        tpl["lo"] = tripo_tris(src, dg)
+        src.evaluated_get(dg).to_mesh_clear()
+    for o in new:
+        bpy.data.objects.remove(o, do_unlink=True)
+    if mname not in MATS:
+        MATS.append(mname)
+    return tpl
+
+
 def solid(B, v8, mat, col=(1, 1, 1), cols=None):
     bm = bmesh.new()
     vs = [bm.verts.new(v) for v in v8]
@@ -180,6 +323,8 @@ class MapBuilder:
         self.tufts = Builder("Tufts")
         self.fx = []
         self.sur = g.get("surround")
+        self.alpine = bool(self.sur) and self.sur.get("style") == "alpine"
+        self.tpl = None
 
     def idx(self, x, z):
         return z * self.W + x if 0 <= x < self.W and 0 <= z < self.D else -1
@@ -328,8 +473,64 @@ class MapBuilder:
             floor = list(reversed(floor))
         P.face(floor, "cliff", col=bot_c)
 
+    def bridge_axes(self):
+        seen, axes = set(), {}
+        for z0 in range(self.D):
+            for x0 in range(self.W):
+                if self.kind(x0, z0) != BRIDGE or (x0, z0) in seen:
+                    continue
+                st = self.style(x0, z0)
+                comp, todo = [], [(x0, z0)]
+                seen.add((x0, z0))
+                while todo:
+                    c = todo.pop()
+                    comp.append(c)
+                    for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        n = (c[0] + dx, c[1] + dz)
+                        if n not in seen and self.kind(*n) == BRIDGE and self.style(*n) == st:
+                            seen.add(n)
+                            todo.append(n)
+                cells = set(comp)
+                land = {"x": 0, "z": 0}
+                for (cx, cz) in comp:
+                    for dx, dz, ax in ((1, 0, "x"), (-1, 0, "x"), (0, 1, "z"), (0, -1, "z")):
+                        n = (cx + dx, cz + dz)
+                        if n not in cells and self.kind(*n) in (GROUND, PROP, FORD):
+                            land[ax] += 1
+                xs, zs = [c[0] for c in comp], [c[1] for c in comp]
+                if land["x"] == land["z"]:
+                    walk = "x" if max(xs) - min(xs) >= max(zs) - min(zs) else "z"
+                else:
+                    walk = "x" if land["x"] > land["z"] else "z"
+                for c in comp:
+                    axes[c] = walk
+        return axes
+
+    def plank_uv(self, along):
+        m = TEX_METERS["planks"]
+
+        def fn(pts):
+            n = newell(pts).normalized()
+            u = n.cross(along)
+            if u.length < 0.3:
+                u = n.cross(Vector((0, 0, 1)))
+                v = n.cross(u)
+            else:
+                v = along
+            u.normalize()
+            return [(p.dot(u) / m, p.dot(v) / m) for p in pts]
+        return fn
+
+    def plank_box(self, B, cx, y0, cz, w, h, d, along, col=(1, 1, 1)):
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        m = Matrix.Translation(G(cx, y0 + h / 2, cz)) @ Matrix.Diagonal((w, d, h, 1))
+        B.add_bm(bm, "planks", col=col, matrix=m, uv_fn=self.plank_uv(along),
+                 col_fn=lambda p: tuple(c * (0.72 + 0.28 * min(1, max(0, (p.z - y0) / max(h, 0.01)))) for c in col))
+
     def bridges(self):
         P = self.props
+        axes = self.bridge_axes()
         for z in range(self.D):
             for x in range(self.W):
                 if self.kind(x, z) != BRIDGE:
@@ -337,11 +538,14 @@ class MapBuilder:
                 stone = self.style(x, z) == "stone"
                 y = self.deck(x, z)
                 thick = 0.6 if stone else 0.25
-                top_mat = "cobble" if stone else "wood"
-                side_mat = "brick" if stone else "wood"
-                P.face([G(x, y, z), G(x, y, z + 1), G(x + 1, y, z + 1), G(x + 1, y, z)], top_mat)
-                P.face([G(x, y - thick, z), G(x + 1, y - thick, z), G(x + 1, y - thick, z + 1), G(x, y - thick, z + 1)],
-                       side_mat, col=(0.5, 0.5, 0.5))
+                top_mat = "cobble" if stone else "planks"
+                side_mat = "brick" if stone else "planks"
+                across = G(0, 0, 1) if axes[(x, z)] == "x" else G(1, 0, 0)
+                puv = None if stone else self.plank_uv(across)
+                top = [G(x, y, z), G(x, y, z + 1), G(x + 1, y, z + 1), G(x + 1, y, z)]
+                bot = [G(x, y - thick, z), G(x + 1, y - thick, z), G(x + 1, y - thick, z + 1), G(x, y - thick, z + 1)]
+                P.face(top, top_mat, uvs=puv(top) if puv else None)
+                P.face(bot, side_mat, col=(0.5, 0.5, 0.5), uvs=puv(bot) if puv else None)
                 edges = (
                     (x, z - 1, (x + 1, z), (x, z)),
                     (x, z + 1, (x, z + 1), (x + 1, z + 1)),
@@ -351,8 +555,9 @@ class MapBuilder:
                 for (nx, nz, a, b) in edges:
                     if self.kind(nx, nz) == BRIDGE:
                         continue
-                    P.face([G(a[0], y, a[1]), G(a[0], y - thick, a[1]), G(b[0], y - thick, b[1]), G(b[0], y, b[1])],
-                           side_mat, cols=[(1, 1, 1), (0.65, 0.65, 0.65), (0.65, 0.65, 0.65), (1, 1, 1)])
+                    side = [G(a[0], y, a[1]), G(a[0], y - thick, a[1]), G(b[0], y - thick, b[1]), G(b[0], y, b[1])]
+                    P.face(side, side_mat, cols=[(1, 1, 1), (0.65, 0.65, 0.65), (0.65, 0.65, 0.65), (1, 1, 1)],
+                           uvs=puv(side) if puv else None)
                     nk = self.kind(nx, nz)
                     ng = self.ground_h(nx + 0.5, nz + 0.5)
                     bank = nk in (GROUND, PROP, FORD) and abs(ng - y) < 0.6
@@ -364,17 +569,46 @@ class MapBuilder:
                     if stone:
                         self.box(P, mx + ix, y, mz + iz, 1.0 if along_x else 0.3, 0.55, 0.3 if along_x else 1.0, "brick")
                     else:
-                        self.box(P, mx + ix * 0.5, y, mz + iz * 0.5, 0.12, 0.85, 0.12, "wood")
-                        self.box(P, mx + ix * 0.5, y + 0.75, mz + iz * 0.5, 1.0 if along_x else 0.1, 0.1,
-                                 0.1 if along_x else 1.0, "wood")
+                        up = G(0, 1, 0)
+                        self.plank_box(P, mx + ix * 0.5, y, mz + iz * 0.5, 0.12, 0.85, 0.12, up)
+                        self.plank_box(P, mx + ix * 0.5, y + 0.75, mz + iz * 0.5, 1.0 if along_x else 0.1, 0.1,
+                                       0.1 if along_x else 1.0, G(1, 0, 0) if along_x else G(0, 0, 1))
                 gy = self.ground_h(x + 0.5, z + 0.5)
                 if gy < y - thick - 0.3:
                     if stone and (x + z) % 3 == 0:
                         self.box(P, x + 0.5, gy - 0.3, z + 0.5, 0.9, y - thick - gy + 0.3, 0.9, "brick", col=(0.8, 0.8, 0.8))
                     if not stone and (x + z) % 2 == 0:
-                        self.box(P, x + 0.5, gy - 0.3, z + 0.5, 0.18, y - gy + 0.3, 0.18, "wood", col=(0.7, 0.7, 0.7))
+                        self.plank_box(P, x + 0.5, gy - 0.3, z + 0.5, 0.18, y - gy + 0.3, 0.18, G(0, 1, 0), col=(0.7, 0.7, 0.7))
+
+    def inside(self, x, z):
+        return self.tpl is not None and 0 <= x <= self.W and 0 <= z <= self.D
+
+    def place_tripo(self, name, x, y, z, s, r, lo=False):
+        tpl = self.tpl[name]
+        tint = r.uniform(0.9, 1.04)
+        m = Matrix.Translation(G(x, y, z)) @ Matrix.Rotation(r.uniform(0, math.tau), 4, "Z") @ Matrix.Scale(s, 4)
+        for pts, uvs in tpl["lo" if lo and "lo" in tpl else "hi"]:
+            self.props.face([m @ p for p in pts], tpl["mat"], col=(tint, tint, tint), uvs=uvs)
+
+    def tripo_rock(self, x, z, s, seed, y=None):
+        r = random.Random(seed * 7 + 3)
+        pool = ROCKS if s >= 0.6 else ROCKS[:2]
+        name = pool[int(hsh(x, z, 17) * len(pool)) % len(pool)]
+        s *= r.uniform(0.92, 1.08)
+        w = max(TRIPO[name]["size"][:2]) * s * 0.35
+        gs = [self.ground_h(x + dx, z + dz) for dx, dz in ((0, 0), (w, 0), (-w, 0), (0, w), (0, -w))]
+        base = (gs[0] + min(gs)) / 2 if y is None else min(y, (gs[0] + min(gs)) / 2)
+        self.place_tripo(name, x, base - TRIPO[name]["size"][2] * s * 0.18, z, s, r, lo=s < 0.6)
+
+    def tripo_tree(self, name, x, z, s, seed):
+        r = random.Random(seed * 3 + 1)
+        gs = [self.ground_h(x + dx, z + dz) for dx, dz in ((0, 0), (0.3, 0), (-0.3, 0), (0, 0.3), (0, -0.3))]
+        self.place_tripo(name, x, min(gs) - 0.12 * s, z, s * r.uniform(0.94, 1.06), r)
 
     def rock(self, x, z, s, seed=0, y=None):
+        if self.inside(x, z):
+            self.tripo_rock(x, z, s, seed, y)
+            return
         r = random.Random(seed)
         y = self.ground_h(x, z) if y is None else y
         bm = bmesh.new()
@@ -582,7 +816,15 @@ class MapBuilder:
             y = self.ground_h(x, z) - 0.1
             seed = int(x * 100 + z * 7)
             s = (0.9 + hsh(x, z, 8) * 0.4) * p.get("scale", 1.0)
-            if t == "tree":
+            if t in ("tree", "pine", "deadtree") and self.inside(x, z):
+                if t == "tree":
+                    name = "tree_a" if hsh(x, z, 23) < 0.55 else "tree_b"
+                elif t == "pine":
+                    name = "pine_snow" if self.alpine else "pine_a"
+                else:
+                    name, s = "deadtree", p.get("scale", 1.0)
+                self.tripo_tree(name, x, z, s, seed)
+            elif t == "tree":
                 self.tree(x, y, z, s, seed)
             elif t == "pine":
                 self.pine(x, y, z, s, seed)
@@ -635,6 +877,26 @@ class MapBuilder:
         return obj
 
 
+def smooth_corners(mesh, c):
+    mp = {i for i, m in enumerate(mesh.materials) if m.name.startswith("mp_")}
+    if not mp:
+        return
+    sums, cnt, loops = {}, {}, []
+    for p in mesh.polygons:
+        if p.material_index not in mp:
+            continue
+        for li in p.loop_indices:
+            v = mesh.loops[li].vertex_index
+            s = sums.setdefault(v, [0.0, 0.0, 0.0])
+            for k in range(3):
+                s[k] += c[li * 4 + k]
+            cnt[v] = cnt.get(v, 0) + 1
+            loops.append((li, v))
+    for li, v in loops:
+        for k in range(3):
+            c[li * 4 + k] = sums[v][k] / cnt[v]
+
+
 def bake_ao(objs, occluders):
     scene = bpy.context.scene
     keep = set(objs) | set(occluders)
@@ -666,6 +928,7 @@ def bake_ao(objs, occluders):
             f = 0.35 + 0.65 * a[i * 4]
             for k in range(3):
                 c[i * 4 + k] *= f
+        smooth_corners(mesh, c)
         col.data.foreach_set("color", c)
         mesh.color_attributes.remove(ao)
         mesh.color_attributes.active_color = mesh.color_attributes["Col"]
@@ -696,6 +959,7 @@ def main():
     make_materials(images)
 
     mb = MapBuilder(grid)
+    mb.tpl = {n: load_tripo(n, c) for n, c in TRIPO.items()}
     mb.walls()
     mb.bridges()
     mb.place_props()

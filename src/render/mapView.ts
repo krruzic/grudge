@@ -80,6 +80,38 @@ function waterMaterial(map: THREE.Texture): THREE.Material {
   return mat;
 }
 
+const PROP_LAYER = 128;
+
+function upscaled(map: THREE.Texture, size: number): THREE.Texture {
+  const img = map.image as CanvasImageSource & { width: number; height: number };
+  const w = img.width, h = img.height;
+  if (w === size && h === size) return map;
+  const src = document.createElement("canvas");
+  src.width = w;
+  src.height = h;
+  const sctx = src.getContext("2d", { willReadFrequently: true })!;
+  sctx.drawImage(img, 0, 0);
+  const sp = sctx.getImageData(0, 0, w, h).data;
+  const out = document.createElement("canvas");
+  out.width = out.height = size;
+  const octx = out.getContext("2d")!;
+  const od = octx.createImageData(size, size);
+  const px = (x: number, y: number, c: number) => sp[((((y % h) + h) % h) * w + (((x % w) + w) % w)) * 4 + c];
+  for (let y = 0; y < size; y++) {
+    const fy = ((y + 0.5) * h) / size - 0.5, y0 = Math.floor(fy), ty = fy - y0;
+    for (let x = 0; x < size; x++) {
+      const fx = ((x + 0.5) * w) / size - 0.5, x0 = Math.floor(fx), tx = fx - x0;
+      for (let c = 0; c < 4; c++) {
+        const a = px(x0, y0, c) * (1 - tx) + px(x0 + 1, y0, c) * tx;
+        const b = px(x0, y0 + 1, c) * (1 - tx) + px(x0 + 1, y0 + 1, c) * tx;
+        od.data[(y * size + x) * 4 + c] = a * (1 - ty) + b * ty;
+      }
+    }
+  }
+  octx.putImageData(od, 0, 0);
+  return new THREE.Texture(out);
+}
+
 function mergeProps(scene: THREE.Object3D): void {
   scene.updateMatrixWorld(true);
   const list: THREE.Mesh[] = [];
@@ -87,8 +119,8 @@ function mergeProps(scene: THREE.Object3D): void {
     if (!(o instanceof THREE.Mesh) || Array.isArray(o.material)) return;
     const m = o.material as THREE.MeshLambertMaterial;
     if (m.name === "tallgrass" || !m.map || m.transparent || m.alphaTest > 0 || m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) return;
-    const img = m.map.image as { width?: number } | undefined;
-    if (img?.width !== 64) return;
+    const img = m.map.image as { width?: number; height?: number } | undefined;
+    if (!img?.width || img.width > PROP_LAYER || img.width !== img.height) return;
     list.push(o);
   });
   if (list.length < 2) return;
@@ -109,7 +141,8 @@ function mergeProps(scene: THREE.Object3D): void {
   const geo = mergeGeometries(geos, false);
   if (!geo) return;
   for (const g of geos) g.dispose();
-  const tex = layerTexture(mats.map((m) => m.map));
+  const size = Math.max(...mats.map((m) => (m.map?.image as { width: number }).width));
+  const tex = layerTexture(mats.map((m) => m.map && upscaled(m.map, size)));
   const tint = mats.map((m) => new THREE.Vector4(m.color.r, m.color.g, m.color.b, m.side === THREE.FrontSide ? 0 : 1));
   const double = tint.some((t) => t.w > 0);
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: double ? THREE.DoubleSide : THREE.FrontSide, name: "props" });
