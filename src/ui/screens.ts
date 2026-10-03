@@ -4,7 +4,7 @@ import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from 
 import { drawNum, drawPlain, drawText, occlude, textWidth, onHiLayer } from "./font";
 import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
-import { COSTUME_NAMES, costumesOf } from "../render/costumes";
+import { costumesOf } from "../render/costumes";
 import glyphUrl from "../../assets/ui/abilities.png?url";
 import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor, markWindow } from "./n64ui";
 import type { Portraits } from "./portraits";
@@ -252,6 +252,7 @@ export class Screens {
   cameraMode = 1;
   training = false;
   zoomModes: number[] = [0, 0, 0, 0];
+  costumeShownUntil: number[] = [0, 0, 0, 0];
   private results: World | null = null;
 
   constructor(private teamColors: string[]) {}
@@ -741,14 +742,13 @@ export class Screens {
       else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
     });
     const cl = costumesOf(s.hero);
-    if (!commander && cl.length > 1) {
+    if (!commander && cl.length > 1 && performance.now() / 1000 < (this.costumeShownUntil[i] ?? 0)) {
       const cur = Math.max(0, cl.indexOf(s.costume ?? ""));
       const sz = Math.min(15, (fw - 6) / cl.length - 2);
       const gap = 2;
       const rowW = cl.length * sz + (cl.length - 1) * gap;
       const rx = fx + fw / 2 - rowW / 2;
-      const ry = fy + ih - sz - 13;
-      const nm = COSTUME_NAMES[cl[cur]] ?? cl[cur].toUpperCase();
+      const ry = fy + ih - sz - 4;
       onHiLayer(ctx, (t) => {
         cl.forEach((c, k) => {
           const ic = costumeIcon(s.hero, c);
@@ -769,15 +769,6 @@ export class Screens {
             t.globalAlpha = 1;
           }
         });
-        const ps = 0.5;
-        const pw = textWidth(nm, ps, true) + 14;
-        const px = fx + fw / 2 - pw / 2;
-        const py = fy + ih - 11;
-        t.fillStyle = "rgba(244, 236, 216, 0.92)";
-        t.beginPath();
-        t.roundRect(px, py, pw, 9, 4.5);
-        t.fill();
-        drawPlain(t, nm, fx + fw / 2 - textWidth(nm, ps, true) / 2, py + 1.5, "#3a2a1c", ps, true);
       });
     }
     if (sitHere) onHiLayer(ctx, (t) => this.woodButton(t, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16));

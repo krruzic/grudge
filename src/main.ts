@@ -341,7 +341,11 @@ async function start(): Promise<void> {
     const sl = slots[i];
     if (commanderSlot(i)) { sl.hero = commanderType; sl.ready = true; cursors.placeChip(i, null); return; }
     if (heldBy(i) >= 0) return;
-    if (!sl.ready || sl.open || !roster.includes(sl.hero)) sl.hero = randomHero();
+    if (!sl.ready || sl.open || !roster.includes(sl.hero)) {
+      sl.hero = randomHero();
+      const cl = costumesOf(sl.hero);
+      sl.costume = cl[Math.floor(Math.random() * cl.length)] ?? "";
+    }
     sl.ready = true;
     cursors.placeChip(i, sl.hero);
   };
@@ -535,7 +539,11 @@ async function start(): Promise<void> {
       sl.open = false;
       sl.cpu = true;
       sl.joined = false;
-      if (!commanderSlot(i)) sl.hero = randomHero();
+      if (!commanderSlot(i)) {
+        sl.hero = randomHero();
+        const cl = costumesOf(sl.hero);
+        sl.costume = cl[Math.floor(Math.random() * cl.length)] ?? "";
+      }
     }
     const humans0 = slots.slice(0, players).map((s) => s.joined && !s.cpu);
     void humans0;
@@ -1154,6 +1162,7 @@ async function start(): Promise<void> {
       runNaming((slot) => (pads.players[slot]?.connected ? slot : -1), now);
       pads.players.forEach((p, i) => {
         const dir = Math.abs(p.cX) > 0.6 && Math.abs(p.cX) > Math.abs(p.cY) ? Math.sign(p.cX) : 0;
+        if (dir && !slots[i].cpu && !slots[i].open && !naming(i)) screens.costumeShownUntil[i] = now + 2.5;
         if (dir && dir !== costumeFlick[i] && !slots[i].cpu && !slots[i].open && !naming(i)) {
           const list = costumesOf(slots[i].hero);
           if (list.length > 1) {
@@ -1342,6 +1351,7 @@ async function start(): Promise<void> {
         for (const [k, i] of mySlots) {
           const p = pads.players[k];
           const dir = p && Math.abs(p.cX) > 0.6 && Math.abs(p.cX) > Math.abs(p.cY) ? Math.sign(p.cX) : 0;
+          if (dir && lb.phase === "lobby" && !naming(k)) screens.costumeShownUntil[i] = now + 2.5;
           if (dir && dir !== costumeFlick[k] && lb.phase === "lobby" && !naming(k)) {
             const list = costumesOf(lb.slots[i].hero);
             if (list.length > 1) {
