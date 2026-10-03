@@ -11,6 +11,7 @@ export interface TerrainTextures {
   water: THREE.Texture;
   sand?: THREE.Texture;
   ruin?: { id: THREE.Texture; crack: THREE.Texture };
+  lake?: THREE.Texture;
 }
 
 const MARGIN = 48;
@@ -192,6 +193,7 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
 
   const splat = new Float32Array(count * 4);
   const sandW = new Float32Array(count);
+  const lakeW = tex.lake ? new Float32Array(count) : null;
   const altFromGrass = sur?.style === "sea" || sur?.style === "alpine";
   const altFromDirt = sur?.style === "garden";
   const col = new Float32Array(count * 3);
@@ -316,6 +318,7 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
       }
       if (wet > 0) dirt = Math.max(dirt, wet);
       const wob = (vnoise(x * 0.45, z * 0.45) - 0.5) * 0.7;
+      if (lakeW) lakeW[k] = THREE.MathUtils.smoothstep(wet + wob * 0.4, 0.15, 0.6) * (h < t.waterLevel - 0.05 ? 0.4 : 1);
       dirt = THREE.MathUtils.smoothstep(dirt + wob, 0.2, 0.75);
       paving = THREE.MathUtils.smoothstep(paving + wob * 0.3, 0.3, 0.7);
       if (h < t.waterLevel + 0.25) dirt = Math.max(dirt, 0.9);
@@ -442,6 +445,8 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   const hasSand = !!tex.sand && sandW.some((v) => v > 0);
   if (hasSand) geo.setAttribute("aSand", new THREE.BufferAttribute(sandW, 1));
   if (ruinW) geo.setAttribute("aRuin", new THREE.BufferAttribute(ruinW, 4));
+  const hasLake = !!lakeW && lakeW.some((v) => v > 0);
+  if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
   const mat = light ? new THREE.MeshBasicMaterial({ vertexColors: true }) : new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -453,24 +458,25 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
     tSand: { value: hasSand ? prepare(tex.sand!) : null },
     tPavId: { value: tex.ruin ? rawData(tex.ruin.id) : null },
     tCrack: { value: tex.ruin ? prepare(tex.ruin.crack) : null },
+    tLake: { value: hasLake ? prepare(tex.lake!) : null },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
-        `#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;${hasSand ? "\nattribute float aSand;\nvarying float vSand;" : ""}${ruined ? "\nattribute vec4 aRuin;\nvarying vec4 vRuin;" : ""}`,
+        `#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;${hasSand ? "\nattribute float aSand;\nvarying float vSand;" : ""}${ruined ? "\nattribute vec4 aRuin;\nvarying vec4 vRuin;" : ""}${hasLake ? "\nattribute float aLake;\nvarying float vLake;" : ""}`,
       )
       .replace(
         "#include <worldpos_vertex>",
-        `#include <worldpos_vertex>${hasSand ? "\nvSand = aSand;" : ""}${ruined ? "\nvRuin = aRuin;" : ""}\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);`,
+        `#include <worldpos_vertex>${hasSand ? "\nvSand = aSand;" : ""}${ruined ? "\nvRuin = aRuin;" : ""}${hasLake ? "\nvLake = aLake;" : ""}\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
 uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tRock; uniform sampler2D tCobble;
-varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}`,
+varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}${hasLake ? "\nuniform sampler2D tLake; varying float vLake;" : ""}`,
       )
       .replace(
         "#include <map_fragment>",
@@ -484,6 +490,7 @@ vec3 tsum = vec3(0.0);
 if (sw.x > 0.0) tsum += textureGrad(tGrass, wuv / 7.0, dpx.xz / 7.0, dpy.xz / 7.0).rgb * sw.x;
 if (sw.y > 0.0) {
   vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}
+${hasLake ? "  if (vLake > 0.0) {\n    vec3 lk = textureGrad(tLake, wuv / 3.5, dpx.xz / 3.5, dpy.xz / 3.5).rgb;\n    float salt = textureGrad(tLake, wuv / 29.0 + 0.37, dpx.xz / 29.0, dpy.xz / 29.0).r;\n    lk *= 0.82 + salt * 0.38;\n    cd = mix(cd, lk * 1.12, vLake);\n  }" : ""}
   tsum += cd * sw.y;
 }
 if (sw.z > 0.0) {
@@ -498,7 +505,7 @@ diffuseColor.rgb *= tsum;`,
       );
   };
 
-  mat.customProgramCacheKey = () => `terrain${hasSand ? "-sand" : ""}${ruined ? "-ruin" : ""}`;
+  mat.customProgramCacheKey = () => `terrain${hasSand ? "-sand" : ""}${ruined ? "-ruin" : ""}${hasLake ? "-lake" : ""}`;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = "Terrain";
   mesh.receiveShadow = true;

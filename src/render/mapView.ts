@@ -9,6 +9,7 @@ import snowUrl from "../../assets/textures/snow.png?url";
 import gravelUrl from "../../assets/textures/gravel.png?url";
 import pavIdUrl from "../../assets/textures/cobble_id.png?url";
 import crackUrl from "../../assets/textures/cobble_crack.png?url";
+import lakeUrl from "../../assets/textures/lakebed.png?url";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./terrainMesh";
 
 export interface MapView {
@@ -177,7 +178,7 @@ function mergeProps(scene: THREE.Object3D): void {
   }
 }
 
-export async function loadMap(url: string, terrain: Terrain, textureUrls: Record<Exclude<keyof TerrainTextures, "ruin">, string>, light?: TerrainLight): Promise<MapView> {
+export async function loadMap(url: string, terrain: Terrain, textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake">, string>, light?: TerrainLight): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
   const [gltf, ...texs] = await Promise.all([
     new GLTFLoader().loadAsync(url),
@@ -191,7 +192,9 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   root.add(gltf.scene);
   const sur = surroundFor(terrain);
   const ruin = ruined ? { id: pavId, crack } : undefined;
-  root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water, sand, ruin }, light, sur));
+  const lake = terrain.tideCells.length ? await texLoader.loadAsync(lakeUrl) : undefined;
+  if (lake) lake.anisotropy = ANISO;
+  root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water, sand, ruin, lake }, light, sur));
   for (const t of [grass, dirt, rock, cobble, sand, ...(ruined ? [crack] : [])]) t.anisotropy = ANISO;
   const waterMesh = buildWaterMesh(terrain, waterMaterial(water), sur);
   root.add(waterMesh);
