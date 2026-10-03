@@ -1,18 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SRC=$(ls -d /usr/src/hid-gamecube-adapter-r* | grep -v grudge | head -1)
-VER="$(basename "$SRC" | sed 's/^hid-gamecube-adapter-//')grudge"
-DST=/usr/src/hid-gamecube-adapter-$VER
+
+if [ "$(id -u)" -ne 0 ]; then
+  exec sudo "$0" "$@"
+fi
+
 HERE=$(cd "$(dirname "$0")" && pwd)
-rm -rf "$DST"
-cp -r "$SRC" "$DST"
-patch -d "$DST" -p1 < "$HERE/per-port-parent.patch"
-sed -i "s/^PACKAGE_VERSION=.*/PACKAGE_VERSION=\"$VER\"/" "$DST/dkms.conf"
-for v in $(dkms status hid-gamecube-adapter | sed -n 's#^hid-gamecube-adapter/\([^,]*\),.*#\1#p' | sort -u); do
-  dkms remove "hid-gamecube-adapter/$v" --all || true
+NAME=hid-gamecube-adapter
+VER=$(sed -n 's/^PACKAGE_VERSION="\(.*\)"/\1/p' "$HERE/src/dkms.conf")
+DST=/usr/src/$NAME-$VER
+
+for cmd in dkms make patch; do
+  command -v "$cmd" >/dev/null || { echo "missing: $cmd (Arch: pacman -S dkms base-devel)"; exit 1; }
 done
-dkms install "hid-gamecube-adapter/$VER"
-modprobe -r hid_gamecube_adapter || true
+if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
+  echo "missing kernel headers for $(uname -r) (Arch: pacman -S linux-headers, or the headers for your kernel flavour)"
+  exit 1
+fi
+
+if command -v pacman >/dev/null && pacman -Qq hid-gamecube-adapter-dkms-git >/dev/null 2>&1; then
+  echo "note: AUR hid-gamecube-adapter-dkms-git is installed; its DKMS module is removed below so only this build loads"
+fi
+
+for v in $(dkms status "$NAME" 2>/dev/null | sed -n "s#^$NAME/\([^,]*\),.*#\1#p" | sort -u); do
+  dkms remove "$NAME/$v" --all || true
+done
+
+rm -rf "$DST"
+mkdir -p "$DST"
+cp -r "$HERE/src/." "$DST/"
+dkms install "$NAME/$VER"
+
+install -m 0644 "$HERE"/udev/*.rules /etc/udev/rules.d/
+udevadm control --reload-rules
+udevadm trigger --subsystem-match=usb --subsystem-match=hidraw || true
+
+modprobe -r hid_gamecube_adapter 2>/dev/null || true
 modprobe hid_gamecube_adapter
 sleep 1
-grep -A1 -i "gamecube controller" /proc/bus/input/devices | grep -E "^N:|^P:" || true
+
+echo
+echo "installed $NAME/$VER for $(uname -r)"
+if ls -d /sys/bus/hid/devices/*057E:0337*/gcport* >/dev/null 2>&1; then
+  echo "per-port devices:"
+  ls -d /sys/bus/hid/devices/*057E:0337*/gcport*
+else
+  echo "adapter not detected (plug it in; ports appear as gcport1-gcport4 under the adapter)"
+fi
+grep -B1 -A1 -i "gamecube controller" /proc/bus/input/devices | grep -E "^N:|^P:" || true
