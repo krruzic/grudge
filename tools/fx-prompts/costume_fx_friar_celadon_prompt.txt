@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume BROTHER CELADON: a jolly porcelain figurine friar glazed in blue-and-white willow pattern with red lacquer details, pouring tea, with porcelain shards mended in gold kintsugi. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a fluffy cloud of white steam from hot tea
+2. a single translucent jade-green tea bubble with a white highlight
+3. a single jade-green tea droplet
+4. a splash crown of jade-green tea with white tips, side view
+5. a round pool of pale jade-green tea seen from directly above, with floating tea leaves and a glossy highlight
+6. a single fresh green tea leaf
+7. a sprig of green tea leaves with a small white jasmine flower
+8. a curved shard of blue-and-white willow-pattern porcelain with a gold kintsugi edge
+9. a red lacquer ring with gold trim seen at an angle
+10. a small blue-and-white porcelain teacup
+11. a chunky blue-and-white porcelain plus symbol with gold kintsugi seams
+12. a golden kintsugi sparkle star
+13. a lumpy puff of pale grey porcelain dust and steam
+14. a bright gold kintsugi spark with tiny sparks flying out
+15. a burst of shattering blue-and-white porcelain shards with gold sparks
+16. a ring of green tea leaves and small blue-and-white porcelain blossoms seen from directly above, forming a circle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

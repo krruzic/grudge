@@ -70,28 +70,33 @@ def attach_stump(name, arm, src_path):
             src.vertex_groups[names[gi]].remove(part)
         for gi, wt in wts:
             src.vertex_groups[names[gi]].add(part, wt, "REPLACE")
+    lighten(src, isl)
     img, px = th.tex_lookup(src)
     cols = th.face_colors(src, px)
-    uv = src.data.uv_layers.active.data
-    pool = []
+    flags = []
     for p, c in zip(src.data.polygons, cols):
         h, s, v = colorsys.rgb_to_hsv(*[float(x) for x in c])
-        if 0.95 < p.center.z < 1.45 and abs(p.center.x) < 0.25 and p.center.y > 0.05 and 0.12 < h < 0.25 and s > 0.4:
-            pool.append((v, (sum(uv[i].uv.x for i in p.loop_indices) / p.loop_total, sum(uv[i].uv.y for i in p.loop_indices) / p.loop_total)))
-    pool.sort()
-    dark, light = pool[len(pool) * 3 // 10][1], pool[len(pool) * 11 // 20][1]
+        flags.append(0.95 < p.center.z < 1.45 and abs(p.center.x) < 0.25 and p.center.y > 0.05 and 0.12 < h < 0.25 and s > 0.4)
+    x0, y0, side = skin_patch(src, flags, px)
+    th_, tw = px.shape[:2]
+
+    def patch_uv(a, t):
+        u = 1 - abs(2 * (a % 1.0) - 1)
+        return ((x0 + 0.5 + u * (side - 1)) / tw, (y0 + 0.5 + t * (side - 1)) / th_)
     me = bpy.data.meshes.new(name + "_stump")
     bm = bmesh.new()
     seg, cx, cy, rx, ry = 16, 0.0, -0.02, 0.22, 0.18
     zs = [1.52, 1.7, 1.86, 1.98, 2.06, 2.11]
     sc = [1.0, 1.0, 0.98, 0.9, 0.72, 0.42]
     rings = []
+    param = {}
     for z, k in zip(zs, sc):
         ring = []
         for i in range(seg):
             a = 2 * math.pi * i / seg
-            r = k * (1.0 if i % 2 == 0 else 0.88)
+            r = k * (1.0 if i % 2 == 0 else 0.84)
             ring.append(bm.verts.new((cx + math.cos(a) * rx * r, cy + math.sin(a) * ry * r, z)))
+            param[ring[-1]] = (i / seg, (z - zs[0]) / (2.13 - zs[0]))
         rings.append(ring)
     top = bm.verts.new((cx, cy, 2.13))
     faces = []
@@ -103,10 +108,11 @@ def attach_stump(name, arm, src_path):
     faces.append(bm.faces.new(list(reversed(rings[0]))))
     bm.normal_update()
     uvl = bm.loops.layers.uv.new(src.data.uv_layers.active.name)
-    for k, f in enumerate(faces):
+    for f in faces:
         f.smooth = True
+        a0 = param[f.loops[0].vert][0]
         for l in f.loops:
-            l[uvl].uv = dark if k % 2 else light
+            l[uvl].uv = patch_uv(*param.get(l.vert, (a0, 1.0)))
     bm.to_mesh(me)
     bm.free()
     st = bpy.data.objects.new(name + "_stump", me)
@@ -121,7 +127,107 @@ def attach_stump(name, arm, src_path):
     src.select_set(True)
     bpy.context.view_layer.objects.active = src
     bpy.ops.object.join()
-    return src
+    return arm
+
+
+def skin_patch(src, flags, px):
+    h, w = px.shape[:2]
+    rgb = px[:, :, :3]
+    mx = rgb.max(axis=2)
+    mn = rgb.min(axis=2)
+    sat = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
+    green = (rgb[:, :, 1] >= rgb[:, :, 0] * 0.8) & (rgb[:, :, 1] > rgb[:, :, 2] * 1.4) & (sat > 0.4) & (mx > 0.25)
+    ok = th.uv_mask(src, flags, h, w) & green
+    dp = np.zeros((h + 1, w + 1), dtype=np.int32)
+    for y in range(h):
+        row, prev, cur = ok[y], dp[y], dp[y + 1]
+        for x in np.nonzero(row)[0]:
+            cur[x + 1] = 1 + min(prev[x], prev[x + 1], cur[x])
+    s = min(PATCH, int(dp.max()))
+    lum = rgb @ np.array([0.3, 0.59, 0.11], dtype=np.float32)
+    I = np.zeros((h + 1, w + 1))
+    I2 = np.zeros((h + 1, w + 1))
+    I[1:, 1:] = lum.cumsum(0).cumsum(1)
+    I2[1:, 1:] = (lum * lum).cumsum(0).cumsum(1)
+    ys, xs = np.nonzero(dp[1:, 1:] >= s)
+    y0, x0 = ys - s + 1, xs - s + 1
+
+    def box(T):
+        return T[ys + 1, xs + 1] - T[y0, xs + 1] - T[ys + 1, x0] + T[y0, x0]
+    m = box(I) / (s * s)
+    var = box(I2) / (s * s) - m * m
+    k = int(np.argmin(var - 0.02 * m))
+    return int(x0[k]), int(y0[k]), s
+
+
+def island_ratio(tris, lo, hi):
+    size = max(h - l for h, l in zip(hi, lo))
+    if tris <= SPINE_TRIS and size < 0.15 and hi[2] < 2.0:
+        return 0.0 if size < SPINE_DROP else SPINE_RATIO
+    r = min(1.0, DENSITY * size * size / tris)
+    if lo[2] > 1.55 and hi[2] > 2.0 and tris > 200:
+        r *= HEAD_RATIO
+    return r
+
+
+def lighten(src, isl):
+    import bmesh
+    me = src.data
+    vi = {}
+    for k, part in enumerate(isl):
+        for i in part:
+            vi[i] = k
+    tris = [0] * len(isl)
+    for p in me.polygons:
+        tris[vi[p.vertices[0]]] += len(p.vertices) - 2
+    ratio = []
+    for k, part in enumerate(isl):
+        cs = [me.vertices[i].co for i in part]
+        lo = [min(c[a] for c in cs) for a in range(3)]
+        hi = [max(c[a] for c in cs) for a in range(3)]
+        ratio.append(round(island_ratio(tris[k], lo, hi) * 20) / 20)
+    buckets = {}
+    for p in me.polygons:
+        r = ratio[vi[p.vertices[0]]]
+        if r < 1.0:
+            buckets.setdefault(r, set()).add(p.index)
+    parts = []
+    for r, faces in sorted(buckets.items()):
+        if r <= 0:
+            continue
+        d = src.copy()
+        d.data = me.copy()
+        d.modifiers.clear()
+        bpy.context.scene.collection.objects.link(d)
+        bm = bmesh.new()
+        bm.from_mesh(d.data)
+        bm.faces.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in faces], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(d.data)
+        bm.free()
+        dec = d.modifiers.new("dec", "DECIMATE")
+        dec.ratio = r
+        dec.delimit = {"UV"}
+        bpy.context.view_layer.objects.active = d
+        bpy.ops.object.modifier_apply(modifier=dec.name)
+        parts.append(d)
+    gone = set().union(*buckets.values()) if buckets else set()
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index in gone], context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(me)
+    bm.free()
+    if parts:
+        for o in bpy.context.view_layer.objects:
+            o.select_set(False)
+        for d in parts:
+            d.select_set(True)
+        src.select_set(True)
+        bpy.context.view_layer.objects.active = src
+        bpy.ops.object.join()
 
 
 def attach_sun_shield(name, arm, src_path):
@@ -134,7 +240,7 @@ def attach_sun_shield(name, arm, src_path):
     w.data.transform(w.matrix_world)
     w.matrix_world = Matrix.Identity(4)
     dec = w.modifiers.new("dec", "DECIMATE")
-    dec.ratio = 0.5
+    dec.ratio = SHIELD_TRIS / sum(len(p.vertices) - 2 for p in w.data.polygons)
     dec.delimit = {"UV"}
     bpy.context.view_layer.objects.active = w
     bpy.ops.object.modifier_apply(modifier=dec.name)
@@ -161,6 +267,13 @@ def attach_sun_shield(name, arm, src_path):
     return w
 
 
+PATCH = 24
+SPINE_TRIS = 60
+SPINE_DROP = 0.06
+SPINE_RATIO = 0.5
+DENSITY = 9000
+HEAD_RATIO = 0.6
+SHIELD_TRIS = 1300
 SHIELD_SIZE = 0.8
 SHIELD_FLAT = 0.6
 SHIELD_AT = 0.55

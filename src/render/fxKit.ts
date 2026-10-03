@@ -13,10 +13,13 @@ import friarUrl from "../../assets/fx/friar.png?url";
 const CELL = 128;
 const COLS = 4;
 
+const variantUrls = import.meta.glob("../../assets/fx/*@*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const VARIANT_URL = new Map(Object.entries(variantUrls).map(([p, u]) => [p.split("/").pop()!.replace(".png", ""), u]));
+
 const waits: Promise<void>[] = [];
-function sheet(url: string, count: number): THREE.CanvasTexture[] {
+function cells(): THREE.CanvasTexture[] {
   const out: THREE.CanvasTexture[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < 16; i++) {
     const c = document.createElement("canvas");
     c.width = c.height = CELL;
     const t = new THREE.CanvasTexture(c);
@@ -25,9 +28,10 @@ function sheet(url: string, count: number): THREE.CanvasTexture[] {
     t.minFilter = THREE.LinearMipmapLinearFilter;
     out.push(t);
   }
+  return out;
+}
+function load(url: string, out: THREE.CanvasTexture[], done: () => void): void {
   const img = new Image();
-  let done: () => void = () => {};
-  waits.push(new Promise<void>((r) => (done = r)));
   img.onload = () => {
     out.forEach((t, i) => {
       const g = (t.image as HTMLCanvasElement).getContext("2d")!;
@@ -36,34 +40,182 @@ function sheet(url: string, count: number): THREE.CanvasTexture[] {
     });
     done();
   };
+  img.onerror = () => done();
   img.src = url;
+}
+function sheet(url: string): THREE.CanvasTexture[] {
+  const out = cells();
+  waits.push(new Promise<void>((r) => load(url, out, r)));
   return out;
 }
 
-const C = sheet(commonUrl, 16);
-const W = sheet(wardenUrl, 16);
-const WL = sheet(warlordUrl, 16);
-const EN = sheet(engineerUrl, 16);
-const RA = sheet(raiderUrl, 16);
-const SU = sheet(summonerUrl, 16);
-const DU = sheet(duelistUrl, 16);
-const HE = sheet(heraldUrl, 16);
-const WR = sheet(wrenUrl, 16);
-const FR = sheet(friarUrl, 16);
+interface Atlas { name: string; base: THREE.CanvasTexture[]; vars: Map<string, THREE.CanvasTexture[] | null | "loading"> }
+const CELL_OF = new Map<THREE.Texture, { a: Atlas; i: number }>();
+const BASE_OF = new Map<THREE.Texture, THREE.Texture>();
+let active = "";
+let touched = false;
+let missed = false;
 
-export const fxReady = Promise.all(waits).then(() => undefined);
+function variant(a: Atlas, c: string): THREE.CanvasTexture[] | null {
+  let v = a.vars.get(c);
+  if (v === undefined) {
+    const url = VARIANT_URL.get(`${a.name}@${c}`);
+    if (!url) {
+      a.vars.set(c, null);
+      return null;
+    }
+    const out = cells();
+    out.forEach((t, i) => BASE_OF.set(t, a.base[i]));
+    a.vars.set(c, "loading");
+    load(url, out, () => a.vars.set(c, out));
+    v = "loading";
+  }
+  if (v === "loading") {
+    missed = true;
+    return null;
+  }
+  if (v) touched = true;
+  return v;
+}
 
-export function composite(size: number, draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void, repeat = false): THREE.CanvasTexture {
+function atlas<K extends string>(name: string, url: string, keys: readonly K[]): Record<K, THREE.CanvasTexture> {
+  const a: Atlas = { name, base: sheet(url), vars: new Map() };
+  a.base.forEach((t, i) => CELL_OF.set(t, { a, i }));
+  const o = {} as Record<K, THREE.CanvasTexture>;
+  keys.forEach((k, i) => Object.defineProperty(o, k, { enumerable: true, get: () => (active && variant(a, active)?.[i]) || a.base[i] }));
+  return o;
+}
+
+export function useCostume(c: string | undefined): string {
+  const prev = active;
+  active = c ?? "";
+  return prev;
+}
+
+export function withCostume<T>(c: string | undefined, fn: () => T): T {
+  const prev = useCostume(c);
+  try {
+    return fn();
+  } finally {
+    active = prev;
+  }
+}
+
+export function activeCostume(): string {
+  return active;
+}
+
+export function preloadCostumeFx(list: string[]): void {
+  for (const c of list) if (c) for (const t of CELL_OF.keys()) cv(t, c);
+}
+
+export function baseTex(t: THREE.Texture): THREE.Texture {
+  return BASE_OF.get(t) ?? t;
+}
+
+interface Comp { size: number; draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void; repeat: boolean; vars: Map<string, THREE.CanvasTexture | null> }
+const COMPS = new Map<THREE.Texture, Comp>();
+let baseReady = false;
+
+function paint(size: number, repeat: boolean): { t: THREE.CanvasTexture; g: CanvasRenderingContext2D } {
   const k = Math.max(1, Math.round(256 / size));
   const c = document.createElement("canvas");
   c.width = c.height = size * k;
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  const g = c.getContext("2d")!;
+  g.scale(k, k);
+  return { t, g };
+}
+
+function compVariant(base: THREE.Texture, comp: Comp, c: string): THREE.Texture {
+  const v = comp.vars.get(c);
+  if (v !== undefined) return v ?? base;
+  if (!baseReady) return base;
+  const st = [touched, missed];
+  touched = missed = false;
+  const { t, g } = paint(comp.size, comp.repeat);
+  const prev = useCostume(c);
+  comp.draw(g, (x) => cv(x).image as CanvasImageSource);
+  active = prev;
+  const hit = touched;
+  const pending = missed;
+  [touched, missed] = st;
+  if (hit) {
+    t.needsUpdate = true;
+    BASE_OF.set(t, base);
+    comp.vars.set(c, t);
+    return t;
+  }
+  t.dispose();
+  if (!pending) comp.vars.set(c, null);
+  return base;
+}
+
+const ALIAS = new Map<THREE.Texture, Map<string, THREE.Texture>>();
+export function setCostumeTex(base: THREE.Texture, c: string, t: THREE.Texture): void {
+  if (!ALIAS.has(base)) ALIAS.set(base, new Map());
+  ALIAS.get(base)!.set(c, t);
+  BASE_OF.set(t, base);
+}
+
+export function cv<T extends THREE.Texture>(t: T, c = active): T {
+  if (!c) return t;
+  const al = ALIAS.get(t)?.get(c);
+  if (al) return cv(al as T, c);
+  const cell = CELL_OF.get(t);
+  if (cell) return ((variant(cell.a, c)?.[cell.i] as unknown as T) ?? t);
+  const comp = COMPS.get(t);
+  if (comp) return compVariant(t, comp, c) as T;
+  return t;
+}
+
+const MAT_VARS = new WeakMap<THREE.Material, Map<string, THREE.Material>>();
+export function cm<M extends THREE.Material>(m: M, c = active): M {
+  const map = (m as unknown as { map?: THREE.Texture | null }).map;
+  if (!c || !map) return m;
+  const t = cv(map, c);
+  if (t === map) return m;
+  let per = MAT_VARS.get(m);
+  if (!per) MAT_VARS.set(m, (per = new Map()));
+  let v = per.get(c) as M | undefined;
+  if (!v) {
+    v = m.clone() as M;
+    (v as unknown as { map: THREE.Texture }).map = t;
+    v.userData.keep = true;
+    per.set(c, v);
+  }
+  return v;
+}
+
+const TINTS: Record<string, Record<number, number>> = {};
+export function setCostumeTints(c: string, map: Record<number, number>): void {
+  TINTS[c] = { ...TINTS[c], ...map };
+}
+export function tint<C extends THREE.ColorRepresentation | undefined>(col: C, c = active): C {
+  if (!c || typeof col !== "number") return col;
+  const m = TINTS[c];
+  return (m && m[col] !== undefined ? m[col] : col) as C;
+}
+
+const TRAILS: Record<string, Record<string, number>> = {};
+export function setCostumeTrail(c: string, slot: string, col: number): void {
+  (TRAILS[c] ??= {})[slot] = col;
+}
+export function trailOf(c: string | undefined, slot = "trail"): number | undefined {
+  return c ? TRAILS[c]?.[slot] : undefined;
+}
+
+const C = sheet(commonUrl);
+
+export function composite(size: number, draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void, repeat = false): THREE.CanvasTexture {
+  const { t, g } = paint(size, repeat);
+  COMPS.set(t, { size, draw, repeat, vars: new Map() });
   void fxReady.then(() => {
-    const g = c.getContext("2d")!;
-    g.scale(k, k);
+    const prev = useCostume("");
     draw(g, (x) => x.image as CanvasImageSource);
+    active = prev;
     t.needsUpdate = true;
   });
   return t;
@@ -88,61 +240,24 @@ export const FX = {
   splash: C[15],
 };
 
-export const WARDEN = {
-  leaf: W[0],
-  leafAutumn: W[1],
-  bark: W[2],
-  moss: W[3],
-  wisp: W[4],
-  vine: W[5],
-  wreath: W[6],
-  roots: W[7],
-  splinters: W[8],
-  natureBurst: W[9],
-  stone: W[10],
-  pebbleDust: W[11],
-  mossCrack: W[12],
-  thorn: W[13],
-  flower: W[14],
-  rune: W[15],
-};
+export const WARDEN = atlas("warden", wardenUrl, ["leaf", "leafAutumn", "bark", "moss", "wisp", "vine", "wreath", "roots", "splinters", "natureBurst", "stone", "pebbleDust", "mossCrack", "thorn", "flower", "rune"] as const);
 
-export const WARLORD = {
-  rage: WL[0], slab: WL[1], lavaCrack: WL[2], shout: WL[3], helm: WL[4], dust: WL[5], ember: WL[6], splash: WL[7],
-  ring: WL[8], swoosh: WL[9], pebbles: WL[10], impact: WL[11], horn: WL[12], lavaGlow: WL[13], crackRing: WL[14], rune: WL[15],
-};
+export const WARLORD = atlas("warlord", warlordUrl, ["rage", "slab", "lavaCrack", "shout", "helm", "dust", "ember", "splash", "ring", "swoosh", "pebbles", "impact", "horn", "lavaGlow", "crackRing", "rune"] as const);
 
-export const ENGINEER = {
-  gear: EN[0], gearSmall: EN[1], weld: EN[2], steam: EN[3], nut: EN[4], spring: EN[5], wrench: EN[6], plank: EN[7],
-  rivet: EN[8], arc: EN[9], oilSmoke: EN[10], clang: EN[11], ring: EN[12], blueprint: EN[13], shards: EN[14], heal: EN[15],
-};
+export const ENGINEER = atlas("engineer", engineerUrl, ["gear", "gearSmall", "weld", "steam", "nut", "spring", "wrench", "plank", "rivet", "arc", "oilSmoke", "clang", "ring", "blueprint", "shards", "heal"] as const);
 
-export const RAIDER = {
-  smoke: RA[0], shadow: RA[1], poison: RA[2], slash: RA[3], cross: RA[4], glint: RA[5], knife: RA[6], drop: RA[7],
-  darkSlash: RA[8], dashStreak: RA[9], bubble: RA[10], smokeRing: RA[11], skull: RA[12], afterimage: RA[13], dust: RA[14], vortex: RA[15],
-};
+export const RAIDER = atlas("raider", raiderUrl, ["smoke", "shadow", "poison", "slash", "cross", "glint", "knife", "drop", "darkSlash", "dashStreak", "bubble", "smokeRing", "skull", "afterimage", "dust", "vortex"] as const);
 
-export const SUMMONER = {
-  orb: SU[0], crystal: SU[1], sparkle: SU[2], ghost: SU[3], bones: SU[4], hex: SU[5], flame: SU[6], soulFlame: SU[7],
-  graveHand: SU[8], trail: SU[9], burst: SU[10], smoke: SU[11], skull: SU[12], bolt: SU[13], eyes: SU[14], circle: SU[15],
-};
+export const SUMMONER = atlas("summoner", summonerUrl, ["orb", "crystal", "sparkle", "ghost", "bones", "hex", "flame", "soulFlame", "graveHand", "trail", "burst", "smoke", "skull", "bolt", "eyes", "circle"] as const);
 
-export const DUELIST = {
-  glint: DU[0], rapier: DU[1], crescent: DU[2], feather: DU[3], sparkle: DU[4], clash: DU[5], speed: DU[6], fleur: DU[7],
-  ribbon: DU[8], star: DU[9], crossed: DU[10], petal: DU[11], gust: DU[12], parryRing: DU[13], crit: DU[14], cut: DU[15],
-};
+export const DUELIST = atlas("duelist", duelistUrl, ["glint", "rapier", "crescent", "feather", "sparkle", "clash", "speed", "fleur", "ribbon", "star", "crossed", "petal", "gust", "parryRing", "crit", "cut"] as const);
 
-export const HERALD = {
-  beams: HE[0], fleur: HE[1], horn: HE[2], flag: HE[3], halo: HE[4], coin: HE[5], rays: HE[6], heal: HE[7],
-  shield: HE[8], laurel: HE[9], blast: HE[10], arrow: HE[11], plume: HE[12], star: HE[13], dust: HE[14], crown: HE[15],
-};
+export const HERALD = atlas("herald", heraldUrl, ["beams", "fleur", "horn", "flag", "halo", "coin", "rays", "heal", "shield", "laurel", "blast", "arrow", "plume", "star", "dust", "crown"] as const);
 
-export const WREN = {
-  feather: WR[0], feathers: WR[1], claws: WR[2], arrow: WR[3], streak: WR[4], splinters: WR[5], leaf: WR[6], leaves: WR[7],
-  markRing: WR[8], arrowRing: WR[9], heart: WR[10], glint: WR[11], dizzy: WR[12], gust: WR[13], flame: WR[14], spiral: WR[15],
-};
+export const WREN = atlas("wren", wrenUrl, ["feather", "feathers", "claws", "arrow", "streak", "splinters", "leaf", "leaves", "markRing", "arrowRing", "heart", "glint", "dizzy", "gust", "flame", "spiral"] as const);
 
-export const FRIAR = {
-  foam: FR[0], bubble: FR[1], drop: FR[2], splash: FR[3], puddle: FR[4], hop: FR[5], barley: FR[6], stave: FR[7],
-  hoop: FR[8], bung: FR[9], heal: FR[10], cheers: FR[11], smoke: FR[12], spark: FR[13], blast: FR[14], hopRing: FR[15],
-};
+export const FRIAR = atlas("friar", friarUrl, ["foam", "bubble", "drop", "splash", "puddle", "hop", "barley", "stave", "hoop", "bung", "heal", "cheers", "smoke", "spark", "blast", "hopRing"] as const);
+
+export const fxReady = Promise.all(waits).then(() => {
+  baseReady = true;
+});

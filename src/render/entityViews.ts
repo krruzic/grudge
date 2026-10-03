@@ -1,6 +1,6 @@
 import { teslaCoil } from "./hazardViews";
 import { costumeOfPlayer } from "./costumes";
-import { FX, SUMMONER } from "./fxKit";
+import { cv, FX, SUMMONER, trailOf, withCostume } from "./fxKit";
 import { KITS } from "./kits";
 import * as THREE from "three";
 import { builderRate, canSpec, padNear } from "../sim/structures";
@@ -1336,7 +1336,7 @@ export class EntityViews {
     }
     const grave = !!st && !!st.graveUntil && w.time < st.graveUntil && e.alive;
     if (grave && !v.graveRing) {
-      v.graveRing = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: SUMMONER.circle, color: 0xb070ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      v.graveRing = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: cv(SUMMONER.circle, costumeOfPlayer(e.hero?.player)), color: trailOf(costumeOfPlayer(e.hero?.player), "grave") ?? 0xb070ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       v.graveRing.rotation.x = -Math.PI / 2;
       v.graveRing.renderOrder = 4;
       v.graveRing.userData.noSil = true;
@@ -1361,7 +1361,7 @@ export class EntityViews {
     if (h && w.time < h.empowerUntil) this.fx.aura("spark", p.x, p.y, p.z);
     if (w.time < s.bleedUntil && s.bleedStacks > 0 && Math.random() < 0.3 * s.bleedStacks) this.fx.aura("drip", p.x, p.y, p.z);
     if (haste) this.fx.aura("steam", p.x + (Math.random() - 0.5), p.y + 4.5, p.z + (Math.random() - 0.5));
-    if (grave) for (let k = 0; k < 2; k++) this.fx.aura("grave", p.x, p.y, p.z, e.radius * 1.7);
+    if (grave) withCostume(costumeOfPlayer(e.hero?.player), () => { for (let k = 0; k < 2; k++) this.fx.aura("grave", p.x, p.y, p.z, e.radius * 1.7); });
   }
 
   private syncMark(e: Entity, v: View, time: number): void {
@@ -1524,7 +1524,7 @@ export class EntityViews {
     }
     if (v.blockFx) v.blockFx.visible = h.blocking;
     if (h.charging && !v.chargeAura) {
-      const col = new THREE.Color(KITS[h.type]?.trail ?? this.teamColors[e.team].getHex());
+      const col = new THREE.Color(trailOf(costumeOfPlayer(h.player)) ?? KITS[h.type]?.trail ?? this.teamColors[e.team].getHex());
       const g = new THREE.Group();
       const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.burst, color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       glow.position.y = 1.4;
@@ -1646,7 +1646,8 @@ export class EntityViews {
     a.addScaledVector(tmp.subVectors(a, b), 0.35);
     const kit = e.hero ? KITS[e.hero.type] : undefined;
     if (kit?.trailWidth) a.addScaledVector(tmp.subVectors(a, b), kit.trailWidth);
-    const c = kit?.trail !== undefined ? new THREE.Color(kit.trail) : this.teamColors[e.team].clone().lerp(new THREE.Color(1, 1, 1), 0.6);
+    const ct = trailOf(costumeOfPlayer(e.hero?.player)) ?? kit?.trail;
+    const c = ct !== undefined ? new THREE.Color(ct) : this.teamColors[e.team].clone().lerp(new THREE.Color(1, 1, 1), 0.6);
     this.fx.handTrail(`h${e.id}`, a, b, c);
   }
 

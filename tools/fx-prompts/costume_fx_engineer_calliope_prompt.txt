@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background. Image 2 shows the hero costume CALLIOPE STIG: a jolly carnival calliope steam-organ engineer in violet and gold with brass organ pipes on his back, steam and carnival confetti. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a large gold gear with violet enamel inlay
+2. a small violet-and-gold gear
+3. a bright burst of gold and violet carnival confetti sparks
+4. a fluffy white steam puff with a few tiny gold confetti flecks
+5. a brass organ-pipe stop knob and a gold nut
+6. a coiled gold spring with violet stripes
+7. a crossed brass wrench and short brass organ pipe, spinning
+8. a striped violet-and-cream carnival wooden plank
+9. a round glowing gold carnival light bulb stud
+10. a crackling violet-and-gold electric arc, diagonal
+11. a lumpy dark violet smoke puff
+12. a gold eight-point star burst with a violet centre
+13. a swirling violet and gold ring of steam
+14. a square violet panel with an ornate gold carnival filigree frame and a gold circle pattern
+15. broken brass organ-pipe shards
+16. a chunky gold plus symbol with violet carnival stripes
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.

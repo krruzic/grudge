@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
-import { FX, WARDEN } from "./fxKit";
+import { activeCostume, FX, WARDEN } from "./fxKit";
+import { cactusMat, isDesert } from "./desertKit";
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
 import { KITS } from "./kits";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -22,6 +23,7 @@ function tubeBundle(h: FxHost, geos: THREE.BufferGeometry[], src: THREE.Material
   const geo = mergeGeometries(parts, false)!;
   for (const q of parts) q.dispose();
   const mat = src.clone();
+  mat.userData.keep = false;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uShown = { value: shown };
     shader.uniforms.uSink = { value: sink };
@@ -133,7 +135,7 @@ export function wardenSlap(h: FxHost, x: number, y: number, z: number, tx: numbe
     lp.setZ(i, lp.getZ(i) * wob);
   }
   limbGeo.computeVertexNormals();
-  const limb = new THREE.Mesh(limbGeo, new THREE.MeshLambertMaterial({ map: tex, color: 0xfff0d8, flatShading: true }));
+  const limb = new THREE.Mesh(limbGeo, isDesert(activeCostume()) ? cactusMat([6, 3]) : new THREE.MeshLambertMaterial({ map: tex, color: 0xfff0d8, flatShading: true }));
   limb.position.y = 0.5;
   if (!realArm) arm.add(limb);
   const knots: THREE.Object3D[] = [];
@@ -274,7 +276,7 @@ export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r:
   const rootTex = barkTex.clone();
   rootTex.repeat.set(1, 6);
   rootTex.needsUpdate = true;
-  const rootMat = new THREE.MeshLambertMaterial({ map: rootTex, color: 0xb89870, flatShading: true });
+  const rootMat = isDesert(activeCostume()) ? cactusMat([6, 1]) : new THREE.MeshLambertMaterial({ map: rootTex, color: 0xb89870, flatShading: true });
   tubeBundle(h, rootGeos, rootMat, 1.4, (k, shown, sink) => {
     rootInfo.forEach((ri, i) => {
       const t = k * 1.4 - ri.delay;
@@ -288,7 +290,7 @@ export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r:
       }
     });
   });
-  rootMat.dispose();
+  if (!rootMat.userData.keep) rootMat.dispose();
   h.after(1.6, () => rootTex.dispose());
   emit(h, { tex: WARDEN.wisp, n: 10, x, y: gy + 0.5, z, size: [0.5, 0.8], life: [1.2, 1.8], speed: [1, r * 0.5], flatSpread: true, up: [1, 2.5], drag: 1.5, additive: true, jitter: r });
   h.shake = Math.max(h.shake, 0.3);
@@ -296,7 +298,7 @@ export function wardenBrambleCast(h: FxHost, x: number, y: number, z: number, r:
 
 export function wardenSnap(h: FxHost, x: number, y: number, z: number, r: number): void {
   const gy = ground(h, x, z, y);
-  const mat = new THREE.MeshLambertMaterial({ map: barkTex, color: 0xa8b870, flatShading: true });
+  const mat = isDesert(activeCostume()) ? cactusMat([4, 1]) : new THREE.MeshLambertMaterial({ map: barkTex, color: 0xa8b870, flatShading: true });
   const n = 6;
   const vines: THREE.BufferGeometry[] = [];
   for (let i = 0; i < n; i++) {
@@ -316,7 +318,7 @@ export function wardenSnap(h: FxHost, x: number, y: number, z: number, r: number
       sink[i] = k > 0.6 ? -Math.pow((k - 0.6) / 0.4, 2) * 2.4 : 0;
     });
   });
-  mat.dispose();
+  if (!mat.userData.keep) mat.dispose();
   emit(h, { tex: WARDEN.natureBurst, n: 1, x, y: gy + 1, z, size: [2.4, 2.4], grow: 1.3, life: [0.22, 0.22], speed: [0, 0], order: 5 });
   emit(h, { tex: FX.dust, n: 6, x, y: gy + 0.4, z, size: [0.9, 1.3], grow: 1.8, life: [0.5, 0.8], speed: [1.5, 3], flatSpread: true, drag: 3, opacity: 0.85 });
   tumblers(h, LEAVES, 8, x, gy + 1.2, z, { speed: [1.5, 3.5], up: [3, 5], size: [0.35, 0.5], life: [1.6, 2.2] });

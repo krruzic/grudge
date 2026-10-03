@@ -82,7 +82,12 @@ export function prop(name: string, team?: THREE.Color, owner?: { hero: string; c
 
 const parts = new Map<string, { geo: THREE.BufferGeometry; mat: THREE.Material } | null>();
 
-export function propParts(name: string): { geo: THREE.BufferGeometry; mat: THREE.Material } | null {
+export function hasCostumeProp(name: string, costume?: string): boolean {
+  return !!costume && scenes.has(`${name}@${costume}`);
+}
+
+export function propParts(name: string, costume?: string): { geo: THREE.BufferGeometry; mat: THREE.Material } | null {
+  if (hasCostumeProp(name, costume)) name = `${name}@${costume}`;
   if (parts.has(name)) return parts.get(name)!;
   const s = scenes.get(name);
   if (!s) return null;

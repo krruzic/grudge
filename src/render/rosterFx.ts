@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER } from "./fxKit";
+import { DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER, tint } from "./fxKit";
 import { prop } from "./props";
+import { costumeOfPlayer } from "./costumes";
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
 import { KITS, type HitEvent } from "./kits";
 
@@ -34,7 +35,7 @@ function streakLine(h: FxHost, tex: THREE.Texture, x0: number, y: number, z0: nu
   for (let k = 0; k <= n; k++) {
     const f = k / n;
     h.after(f * 0.12, () => {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: tint(color), transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
       s.material.rotation = rot;
       s.position.set(x0 + (x1 - x0) * f, y + (Math.random() - 0.5) * 0.3, z0 + (z1 - z0) * f);
       h.add(s, 0.35, (q) => {
@@ -170,7 +171,7 @@ KITS.summoner = {
     if (style !== "magic" && style !== "orb") return null;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: SUMMONER.orb, transparent: true, depthWrite: false }));
     s.scale.setScalar(style === "orb" ? 1.5 : 0.9);
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: SUMMONER.sparkle, color: 0xc080ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: SUMMONER.sparkle, color: tint(0xc080ff), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     glow.scale.setScalar(style === "orb" ? 2.6 : 1.6);
     s.add(glow);
     void h;
@@ -183,10 +184,11 @@ KITS.summoner = {
     if (Math.random() < 0.7) emit(h, { tex: SUMMONER.sparkle, n: 1, x, y, z, color: 0xd0a0ff, size: [0.25, 0.45], life: [0.25, 0.4], speed: [0.2, 0.6], additive: true, jitter: 0.3 });
     if (Math.random() < 0.3) emit(h, { tex: SUMMONER.smoke, n: 1, x, y, z, size: [0.4, 0.6], grow: 1.8, life: [0.35, 0.5], speed: [0, 0.3], opacity: 0.5 });
   },
-  event(h, ev) {
+  event(h, ev, src) {
     if (ev.type === "telegraph") {
       const r = ev.radius;
       const summon = ev.seconds < 0.6;
+      const owner = { hero: "summoner", costume: costumeOfPlayer(src.hero?.player) };
       decal(h, summon ? SUMMONER.circle : SUMMONER.hex, ev.x, ev.y, ev.z, r * 1.05, ev.seconds + 0.35, { grow: 0.18, spin: summon ? 1.5 : -2, additive: summon, color: summon ? 0xa0ffa0 : 0xffffff });
       emit(h, { tex: SUMMONER.flame, n: 6, x: ev.x, y: ev.y + 0.4, z: ev.z, size: [0.6, 0.9], life: [0.5, 0.9], speed: [0.2, 0.6], up: [1, 2], additive: true, jitter: r * 1.2, opacity: 0.8 });
       h.after(ev.seconds, () => {
@@ -211,7 +213,7 @@ KITS.summoner = {
           emit(h, { tex: SUMMONER.bones, n: 4, x: ev.x, y: ev.y + 0.4, z: ev.z, size: [0.4, 0.6], life: [0.6, 0.9], speed: [2, 4], up: [3, 5], gravity: 14, spin: 8, floor: ev.y + 0.05 });
         } else {
           emit(h, { tex: SUMMONER.skull, n: 1, x: ev.x, y: ev.y + 1.5, z: ev.z, size: [1, 1], grow: 1.3, life: [0.7, 0.7], speed: [0, 0], up: [1, 1], fadeIn: 0.1 });
-          const idol = prop("hexidol");
+          const idol = prop("hexidol", undefined, owner);
           if (idol) {
             const gy = ground(h, ev.x, ev.z, ev.y);
             const yaw = Math.random() * Math.PI * 2;
@@ -231,8 +233,9 @@ KITS.summoner = {
     }
     return false;
   },
-  act(h, ev) {
+  act(h, ev, src) {
     if (ev.kind !== "gravewalk" || ev.toX === undefined || ev.toZ === undefined) return;
+    const owner = { hero: "summoner", costume: costumeOfPlayer(src.hero?.player) };
     const gy = ground(h, ev.x, ev.z, ev.y);
     const tx = ev.toX;
     const tz = ev.toZ;
@@ -268,7 +271,7 @@ KITS.summoner = {
     emit(h, { tex: SUMMONER.ghost, n: 8, x: tx, y: ty + 0.8, z: tz, size: [0.9, 1.3], life: [1, 1.5], speed: [1, 2.5], up: [1.5, 3], additive: true, color: 0xd8b0ff, opacity: 0.9, jitter: 1.5 });
     emit(h, { tex: SUMMONER.bones, n: 6, x: tx, y: ty + 0.4, z: tz, size: [0.4, 0.6], life: [0.6, 0.9], speed: [2, 4], up: [3, 5], gravity: 14, spin: 8, floor: ty + 0.05 });
     emit(h, { tex: SUMMONER.skull, n: 1, x: tx, y: ty + 2.4, z: tz, size: [1.1, 1.1], grow: 1.3, life: [0.8, 0.8], speed: [0, 0], up: [1, 1], fadeIn: 0.1 });
-    const idol = prop("hexidol");
+    const idol = prop("hexidol", undefined, owner);
     if (idol) {
       const yaw = Math.random() * Math.PI * 2;
       const s = 1.5;
@@ -285,7 +288,7 @@ KITS.summoner = {
       });
     }
     for (let i = 0; i < 4; i++) {
-      const tomb = prop("tomb");
+      const tomb = prop("tomb", undefined, owner);
       if (!tomb) break;
       const a = (i / 4) * Math.PI * 2 + Math.random() * 0.6;
       const r = 2.2 + Math.random() * 0.6;

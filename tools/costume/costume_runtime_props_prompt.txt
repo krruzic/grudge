@@ -1,0 +1,19 @@
+Image 1 shows four CLASSIC props from a stylised late-1990s console fantasy action game (left to right: an earth spike that bursts out of the ground, a tall hex idol totem, a tombstone, a stone wall pillar). Images 2, 3 and 4 are three hero COSTUMES from the same game: IRON COLOSSUS (a riveted gunmetal steam automaton with magenta enamel plates and brass trim), THE SHADOW PLAY (a shadow-theatre puppet of black lacquered card with bold gold leaf, punched gold lace and brass pins), THE SUN TOTEM (a saguaro cactus guardian with a carved sandstone sun mask and turquoise-and-gold bands).
+
+Paint SIX new props, each the costume version of a classic prop, in EXACTLY the same painted art style as these heroes (same hand-painted textures, chunky readable cartoon shapes, same materials and colours as the matching hero). Every prop is ONE single solid closed chunky object with all parts connected, no thin floating bits, no holes you can see through.
+
+Arrange them in a 3 x 2 grid (three across, two rows), each in its own cell, centred, fully visible, NOT overlapping, lots of empty background around each, each seen from a three-quarter front view slightly from above:
+
+1. TOP LEFT (Iron Colossus earth spike): a riveted dark gunmetal IRON STEAM-PISTON STAKE punching up out of the ground: a thick round piston rod that tapers to a sharp conical drill point at the top, two glossy MAGENTA ENAMEL bands with brass trim around it, rows of rivets, a heavy round iron flange collar at the bottom sitting on a few broken rock chunks. Upright, about one and a half times as tall as wide.
+
+2. TOP MIDDLE (Shadow Play hex idol): a tall narrow totem: a black lacquered card post with gold-leaf filigree and brass pins, crowned by a black-and-gold PAPER LANTERN IDOL: a round ribbed black paper lantern with gold punched-lace patterns and a flat gilded beak mask face on its front, a small spiky black-and-gold crown on top, a gold tassel hanging below it. About three times as tall as wide. Unlit, no glow.
+
+3. TOP RIGHT (Shadow Play tombstone): an upright PAPER-THEATRE COFFIN: a small shadow-puppet theatre stage box shaped like an upright coffin (six-sided coffin outline), black lacquered card covered in gold-leaf filigree, the front is a little stage with tiny gold paper curtains framing a cut-out gold skull silhouette, standing on a low black card plinth. About as wide as tall.
+
+4. BOTTOM LEFT (Sun Totem wall): a tall rectangular ADOBE WALL PILLAR of warm sandstone and smoothed adobe clay with soft rounded hand-made edges, a band of TURQUOISE mosaic inlay in a zig-zag pattern and a small carved sun disc with turquoise centre, two short round wooden beam ends sticking out near the top. About two and a half times as tall as wide.
+
+5. BOTTOM MIDDLE (Sun Totem bramble): a SAGUARO CACTUS: a thick ribbed green saguaro trunk with one arm curving up from the side, rows of small pale spines along the ribs, a few small pink and yellow cactus flowers on top, a bit of sandy ground at its base. About twice as tall as wide.
+
+6. BOTTOM RIGHT (Sun Totem thorns): a low wide DESERT THORN TANGLE: a sprawling clump of dry twisted grey-brown thorny desert branches bristling with long pale spines, with two small round green prickly-pear cactus pads and one tiny pink flower, on a little patch of sand. Much wider than tall.
+
+Plain flat light grey background, soft even lighting, no cast shadows, no smoke, no steam, no sparks, no glow, no text, no labels, no frames, no characters.

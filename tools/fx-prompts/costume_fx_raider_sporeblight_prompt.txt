@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume SPOREBLIGHT: a hunched green goblin wearing a huge crimson white-spotted toadstool cap, spores drifting around him and a mossy green glow. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a pale cream cloud of puffed spores
+2. a dark mossy-green wispy shadow trail with drifting pale spores
+3. a splat of glowing mossy-green spore goo
+4. a glowing moss-green crescent slash
+5. an X slash in crimson and glowing moss-green
+6. a four-point glowing moss-green spore sparkle
+7. a crude goblin knife with a crimson white-spotted toadstool cap pommel
+8. a single drop of crimson toadstool sap
+9. a dark crimson crescent slash trailing spores
+10. a horizontal streak of dark drifting spores
+11. a glowing translucent green spore-pod bubble
+12. a ring of dusty spore cloud
+13. a crimson white-spotted toadstool shaped like a skull inside a crimson target glow
+14. a pale blurred motion streak of spores
+15. a puff of brown-green spore dust
+16. a swirl vortex of dark crimson and moss-green spores
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. The background must be plain flat pure saturated magenta (#FF00FF) everywhere exactly like image 1, one uniform colour, no white, no gradient, no checkerboard.

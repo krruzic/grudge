@@ -5,6 +5,7 @@ import stoneUrl from "../../assets/textures/stone.png?url";
 import lavaUrl from "../../assets/fx/lava.png?url";
 import { FxBatch, fxBatch, FxInst } from "./fxInstances";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { activeCostume, baseTex, cv, tint } from "./fxKit";
 
 export interface FxHost {
   root: THREE.Group;
@@ -66,6 +67,7 @@ function randomDir(dir: THREE.Vector3 | null, cone: number, flat: boolean): THRE
 }
 
 export function emit(h: FxHost, o: EmitOpts): void {
+  if (activeCostume()) o = { ...o, tex: cv(o.tex), color: tint(o.color) };
   const dir = o.dir ? new THREE.Vector3(o.dir.x, o.dir.y, o.dir.z).normalize() : null;
   if (h.particles) {
     const P = h.particles;
@@ -134,7 +136,7 @@ export function emit(h: FxHost, o: EmitOpts): void {
 const leafGeo = new THREE.PlaneGeometry(1, 1);
 export function tumblers(h: FxHost, texes: THREE.Texture[], n: number, x: number, y: number, z: number, opts: { speed: Range; up: Range; size: Range; life: Range; dir?: { x: number; z: number }; spread?: number; floorY?: number }): void {
   for (let i = 0; i < n; i++) {
-    const tex = texes[i % texes.length];
+    const tex = cv(texes[i % texes.length]);
     const m = fxBatch(h.root, `leaf|${tex.uuid}`, () => new FxBatch(leafGeo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, depthWrite: true }), false, true)).spawn();
     const sz = rr(opts.size);
     m.scale.setScalar(sz);
@@ -229,7 +231,7 @@ const torusGeo = new THREE.TorusGeometry(1, 0.05, 4, 36);
 torusGeo.userData.model = true;
 export function shockwave(h: FxHost, _tex: THREE.Texture, x: number, y: number, z: number, normal: THREE.Vector3, r0: number, r1: number, dur: number, color: THREE.ColorRepresentation = 0xffffff, opacity = 1): void {
   const m = fxBatch(h.root, "shock", () => new FxBatch(torusGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))).spawn();
-  m.color.set(color);
+  m.color.set(tint(color));
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.clone().normalize());
   m.position.set(x, y, z);
   h.add(m, dur, (k) => {
@@ -327,8 +329,12 @@ export function fissures(h: FxHost, x: number, y: number, z: number, r: number, 
     for (const o of p.o.children) {
       if (!(o instanceof THREE.Mesh)) continue;
       const mat = o.material as THREE.Material;
-      const key = FIS_KEYS.get(mat) ?? "fx";
-      const inst = fxBatch(h.root, key, () => new FxBatch(o.geometry, mat.clone())).spawn();
+      const key = `${FIS_KEYS.get(mat) ?? "fx"}${activeCostume()}`;
+      const inst = fxBatch(h.root, key, () => {
+        const mc = mat.clone() as THREE.MeshLambertMaterial;
+        if (mc.color) mc.color.setHex(tint(mc.color.getHex()));
+        return new FxBatch(o.geometry, mc);
+      }).spawn();
       const sc = new THREE.Vector3();
       o.matrixWorld.decompose(inst.position, inst.quaternion, sc);
       inst.scale.set(0, 0, 0);
@@ -582,12 +588,14 @@ function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: num
 }
 
 export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): FxInst | null {
-  const fis = FISSURE_TEX.get(tex);
+  tex = cv(tex);
+  opts = { ...opts, color: tint(opts.color) };
+  const fis = FISSURE_TEX.get(baseTex(tex));
   if (fis) {
     fissures(h, x, y, z, radius, fis, Math.max(dur, 1.2), opts.grow ?? 0.25);
     return null;
   }
-  const d3 = DECAL_3D.get(tex);
+  const d3 = DECAL_3D.get(baseTex(tex));
   if (d3 === "laurel" || d3 === "crown" || d3 === "crest") {
     model3d(h, d3, x, y, z, radius, dur, opts.color ?? 0xffe0a0, d3 === "laurel" ? 0 : (opts.spin ?? 1) * 0.5, opts.grow ?? 0.2, opts.opacity ?? 1);
     return null;

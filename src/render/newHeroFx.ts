@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { World } from "../sim/world";
 import type { Entity, Keg } from "../sim/types";
-import { composite, FRIAR, FX, WREN } from "./fxKit";
+import { activeCostume, composite, cv, FRIAR, FX, setCostumeTex, tint, useCostume, withCostume, WREN } from "./fxKit";
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
 import { KITS, type HitEvent } from "./kits";
 import { prop } from "./props";
@@ -132,6 +132,7 @@ ZONE_DECALS.brewfest = (() => {
   return t;
 })();
 ZONE_DECALS.aletrail = ZONE_DECALS.ale;
+setCostumeTex(ZONE_DECALS.brewfest, "celadon", composite(256, (g, img) => g.drawImage(img(FRIAR.hopRing), 0, 0, 256, 256)));
 
 const WOOD = keep(new THREE.MeshLambertMaterial({ color: 0x9a6232, flatShading: true }));
 const WOOD_DARK = keep(new THREE.MeshLambertMaterial({ color: 0x4e3018, flatShading: true }));
@@ -209,7 +210,7 @@ function kegModel(kind: Keg["kind"], costume: string): THREE.Object3D {
     f.name = "fuse";
     g.add(f);
   } else {
-    const foam = new THREE.Sprite(new THREE.SpriteMaterial({ map: FOAM, transparent: true, depthWrite: false }));
+    const foam = new THREE.Sprite(new THREE.SpriteMaterial({ map: cv(FOAM), transparent: true, depthWrite: false }));
     foam.scale.setScalar(0.55);
     foam.position.y = 1.05;
     g.add(foam);
@@ -252,7 +253,7 @@ export function caskMesh(team: THREE.Color, costume?: string): THREE.Group {
   pole.position.set(-0.62, 2.35, 0);
   flag.name = "spin";
   g.add(flag, pole);
-  const foam = new THREE.Sprite(new THREE.SpriteMaterial({ map: FOAM, transparent: true, depthWrite: false }));
+  const foam = new THREE.Sprite(new THREE.SpriteMaterial({ map: cv(FOAM), transparent: true, depthWrite: false }));
   foam.scale.setScalar(0.9);
   foam.position.set(0, 2.25, 0);
   g.add(foam);
@@ -272,11 +273,16 @@ const tipGeo = model(new THREE.ConeGeometry(0.075, 0.26, 4).rotateX(Math.PI / 2)
 const fletchGeo = model(new THREE.PlaneGeometry(0.16, 0.3).translate(0, 0, -0.6));
 const fletch2 = model(fletchGeo.clone().rotateZ(Math.PI / 2));
 
+const STAR_SHAFT = keep(new THREE.MeshLambertMaterial({ color: 0xc8cce0, flatShading: true }));
+const STAR_TIP = keep(new THREE.MeshBasicMaterial({ color: 0xd8c8ff }));
+const STAR_FLETCH = keep(new THREE.MeshLambertMaterial({ color: 0x9a4ad8, emissive: 0x3a1060, flatShading: true, side: THREE.DoubleSide }));
+
 function arrowMesh(scale: number, glow?: number): THREE.Group {
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(shaftGeo, WOOD), new THREE.Mesh(tipGeo, IRON), new THREE.Mesh(fletchGeo, FEATHER_MAT), new THREE.Mesh(fletch2, FEATHER_MAT));
+  const star = activeCostume() === "starfall";
+  g.add(new THREE.Mesh(shaftGeo, star ? STAR_SHAFT : WOOD), new THREE.Mesh(tipGeo, star ? STAR_TIP : IRON), new THREE.Mesh(fletchGeo, star ? STAR_FLETCH : FEATHER_MAT), new THREE.Mesh(fletch2, star ? STAR_FLETCH : FEATHER_MAT));
   if (glow !== undefined) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.burst2, color: glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.burst2, color: tint(glow), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     s.scale.setScalar(0.9);
     s.position.z = 0.7;
     g.add(s);
@@ -358,11 +364,11 @@ export class HeroPropViews {
       if (!e || !h) continue;
       if (h.pip) {
         seenPip.add(e.id);
-        this.syncPip(e, alpha, dt, puff);
+        withCostume(costumeOfPlayer(h.player), () => this.syncPip(e, alpha, dt, puff));
       }
       if (e.alive && h.action?.kind === "kegrocket") {
         seenRider.add(e.id);
-        this.syncRider(e, alpha, puff);
+        withCostume(costumeOfPlayer(h.player), () => this.syncRider(e, alpha, puff));
       }
       if (e.alive && w.heroDef(h.type).hooks.vantageMul) this.syncVantage(e, alpha);
     }
@@ -494,11 +500,13 @@ export class HeroPropViews {
   private syncKegs(alpha: number, puff: boolean): void {
     const w = this.world;
     const seen = new Set<number>();
+    const prevC = useCostume("");
     for (const k of w.kegs) {
       seen.add(k.id);
       let v = this.kegs.get(k.id);
+      const owner = w.getAny(k.ownerId);
+      useCostume(costumeOfPlayer(owner?.hero?.player));
       if (!v) {
-        const owner = w.getAny(k.ownerId);
         const obj = kegModel(k.kind, costumeOfPlayer(owner?.hero?.player));
         v = { obj };
         if (k.kind === "powder") {
@@ -551,6 +559,7 @@ export class HeroPropViews {
         }
       }
     }
+    useCostume(prevC);
     for (const [id, v] of this.kegs) {
       if (seen.has(id)) continue;
       this.root.remove(v.obj);
@@ -569,7 +578,7 @@ function streak(h: FxHost, tex: THREE.Texture, x0: number, y: number, z0: number
   for (let k = 0; k <= n; k++) {
     const f = k / n;
     h.after(f * 0.1, () => {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: tint(color), transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
       s.material.rotation = rot;
       s.position.set(x0 + (x1 - x0) * f, y, z0 + (z1 - z0) * f);
       h.add(s, dur, (q) => {
@@ -584,7 +593,7 @@ function beam(h: FxHost, x0: number, y: number, z0: number, x1: number, z1: numb
   const len = Math.hypot(x1 - x0, z1 - z0);
   if (len < 0.1) return;
   const geo = new THREE.PlaneGeometry(len, width);
-  const mat = new THREE.MeshBasicMaterial({ map: BEAM, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const mat = new THREE.MeshBasicMaterial({ map: BEAM, color: tint(color), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
   const g = new THREE.Group();
   for (let k = 0; k < 2; k++) {
     const m = new THREE.Mesh(geo, mat);

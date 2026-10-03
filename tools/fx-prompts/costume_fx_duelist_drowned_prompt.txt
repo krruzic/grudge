@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume THE DROWNED CAPTAIN: a deep-sea ghost pirate captain in indigo, draped in kelp, with bubbles, seawater and jellyfish-cyan glow. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a barnacled cutlass with a bright cyan glint at its tip
+2. a cutlass with a curved cyan seawater swing trail
+3. a crescent wave slash of indigo seawater with cyan foam
+4. a single strand of green-brown kelp
+5. a few glowing cyan bubble sparkles
+6. an X clash of cyan water spray
+7. horizontal streaming water speed lines with tiny bubbles
+8. a glowing cyan jellyfish
+9. a twisting ribbon of indigo and cyan seawater current
+10. a four-point pale cyan glint, like light through water
+11. crossed barnacled cutlasses
+12. a small pale pink scallop shell
+13. a swirling waterspout whirlpool
+14. a ring of cyan water ripple
+15. an indigo and cyan water splash burst
+16. a thin bright cyan water-blade slash line, diagonal
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

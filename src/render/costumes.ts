@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { preloadCostumeFx } from "./fxKit";
 
 const urls = import.meta.glob("../../assets/costumes/*/*/*.jpg", { query: "?url", import: "default", eager: true }) as Record<string, string>;
 const files = new Map<string, Map<string, string>>();
@@ -59,7 +60,13 @@ export async function preloadCostumes(): Promise<void> {
 let playerCostumes: string[] = [];
 export function setPlayerCostumes(list: string[]): void {
   playerCostumes = list.slice();
+  preloadCostumeFx(playerCostumes);
 }
 export function costumeOfPlayer(p: number | undefined): string {
   return p === undefined ? "" : playerCostumes[p] ?? "";
+}
+export function costumeOfEntity(w: { getAny(id: number): { hero?: { player: number } } | undefined } | undefined, e: { hero?: { player: number }; owner?: number } | undefined): string {
+  if (!e) return "";
+  if (e.hero) return costumeOfPlayer(e.hero.player);
+  return e.owner !== undefined ? costumeOfPlayer(w?.getAny(e.owner)?.hero?.player) : "";
 }

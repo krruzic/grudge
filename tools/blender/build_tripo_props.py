@@ -41,7 +41,40 @@ PROPS = {
     "keg@celadon": {"static": True, "src": "keg_celadon", "height": 0.55, "tex": 512},
     "powderkeg@celadon": {"static": True, "src": "powderkeg_celadon", "height": 0.62, "tex": 512},
     "bigkeg@celadon": {"static": True, "src": "bigkeg_celadon", "height": 2.3, "tex": 1024},
+    "ballista@calliope": {"build": "cannon", "src": "ballista_calliope", "length": 2.3, "tex": 512},
+    "spike@colossus": {"static": True, "src": "spike_colossus", "size": (1.05, 1.05, 1.6), "center": True, "tex": 512, "tris": 1500},
+    "hexidol@shadowplay": {"static": True, "src": "hexidol_shadowplay", "height": 2.1, "tex": 512, "tris": 2400},
+    "tomb@shadowplay": {"static": True, "src": "tomb_shadowplay", "height": 1.3, "tex": 512, "tris": 1500},
+    "wallstone@suntotem": {"static": True, "src": "wallstone_suntotem", "size": (1.0, 0.95, 2.5), "tex": 512, "tris": 1700},
+    "cactus@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, -1), "height": 1.7, "tex": 512, "tris": 1800},
+    "thorns@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, 1), "height": 0.9, "tex": 512, "tris": 2400},
 }
+
+
+def keep_side(src, axis, sign):
+    import bmesh
+    t = np.array([v.co[axis] for v in src.data.vertices])
+    hist, edges = np.histogram(t, 200)
+    best, run, at = 0, 0, 0.0
+    for i in range(40, 160):
+        run = run + 1 if hist[i] == 0 else 0
+        if run > best:
+            best, at = run, (edges[i - run + 1] + edges[i + 1]) / 2
+    print("KEEP gap", best, "at", round(float(at), 3))
+    bm = bmesh.new()
+    bm.from_mesh(src.data)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if (f.calc_center_median()[axis] - at) * sign <= 0], context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(src.data)
+    bm.free()
+    isl = th.mesh_islands(src.data)
+    big = max(len(i) for i in isl)
+    bm = bmesh.new()
+    bm.from_mesh(src.data)
+    bm.verts.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[bm.verts[i] for p in isl if len(p) < big * 0.01 for i in p], context="VERTS")
+    bm.to_mesh(src.data)
+    bm.free()
 
 
 def barrel_fit(co, axis, zmin):
@@ -251,6 +284,38 @@ def build_ballista(name, cfg):
     return [root, src, yaw, tilt, top] + list(tilt.children)
 
 
+def build_cannon(name, cfg):
+    """A ballista replacement that turns as one piece: the whole mesh sits under yaw > tilt, muzzle toward -Y."""
+    th.clear_scene()
+    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", f"{cfg['src']}_tripo.glb"))
+    src = [o for o in bpy.context.scene.objects if o.type == "MESH"][0]
+    for o in list(bpy.context.scene.objects):
+        if o is not src:
+            bpy.data.objects.remove(o, do_unlink=True)
+    src.parent = None
+    me = src.data
+    me.transform(src.matrix_world)
+    src.matrix_world = Matrix.Identity(4)
+    co = np.array([v.co[:] for v in me.vertices])
+    mid = (co.min(0) + co.max(0)) / 2
+    muzzle = co[co[:, 2] > np.percentile(co[:, 2], 92)].mean(0) - mid
+    ang = math.atan2(muzzle[1], muzzle[0])
+    me.transform(Matrix.Rotation(-math.pi / 2 - ang, 4, "Z") @ Matrix.Translation(Vector(-mid)))
+    co = np.array([v.co[:] for v in me.vertices])
+    lo, hi = co.min(0), co.max(0)
+    s = cfg["length"] / (hi[1] - lo[1])
+    me.transform(Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-(lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2, -lo[2]))))
+    src.name = name + "_turret"
+    me.name = name
+    material(name.replace("@", "_"), src, cfg)
+    root = empty("ballista", (0, 0, 0), None)
+    yaw = empty("yaw", (0, 0, 0), root)
+    tilt = empty("tilt", (0, 0, 0), yaw)
+    src.parent = tilt
+    print("CANNON", name, "yaw", round(math.degrees(ang), 1), "dims", tuple(round(float(v), 3) for v in src.dimensions))
+    return [root, yaw, tilt, src]
+
+
 def build_tesla(name, cfg):
     src, _ = load(name, cfg)
     material(name, src, cfg)
@@ -372,6 +437,8 @@ def build_static(name, cfg):
     me = src.data
     me.transform(src.matrix_world)
     src.matrix_world = Matrix.Identity(4)
+    if cfg.get("keep"):
+        keep_side(src, *cfg["keep"])
     if cfg.get("barrel"):
         barrel_fix(src, cfg["barrel"])
     if cfg.get("lathe"):
@@ -590,7 +657,7 @@ if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     out = {}
     for n in argv or list(PROPS):
-        objs = (build_static if PROPS[n].get("static") else globals()["build_" + n])(n, PROPS[n])
+        objs = (build_static if PROPS[n].get("static") else globals()["build_" + PROPS[n].get("build", n)])(n, PROPS[n])
         os.makedirs(os.path.join(ROOT, "assets", "props"), exist_ok=True)
         tris = sum(len(p.vertices) - 2 for o in objs if o.type == "MESH" for p in o.data.polygons)
         out[n] = {"tris": tris, "bytes": export(objs, os.path.join(ROOT, "assets", "props", n + ".glb"))}

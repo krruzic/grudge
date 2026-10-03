@@ -1,11 +1,12 @@
 import * as THREE from "three";
-import { FX, RAIDER, WARLORD } from "./fxKit";
+import { activeCostume, cm, FX, RAIDER, WARLORD } from "./fxKit";
 
 const RAIDER_DROP = RAIDER.drop;
 import { chunks, decal, emit, shockwave, type FxHost } from "./fxParts";
 import { FxBatch, fxBatch } from "./fxInstances";
 import { KITS } from "./kits";
-import { propParts } from "./props";
+import { hasCostumeProp, propParts } from "./props";
+import { costumeOfPlayer } from "./costumes";
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);
@@ -31,7 +32,7 @@ function slabs(h: FxHost, x: number, z: number, r: number, n: number, up: number
     const sx = x + Math.cos(a) * d;
     const sz = z + Math.sin(a) * d;
     const gy = ground(h, sx, sz, 0);
-    const m = fxBatch(h.root, "slab", () => new FxBatch(slabGeo, slabMat.clone())).spawn();
+    const m = fxBatch(h.root, `slab${activeCostume()}`, () => new FxBatch(slabGeo, cm(slabMat).clone())).spawn();
     const s = 0.7 + Math.random() * 0.7;
     m.scale.set(0, 0, 0);
     m.rotation.order = "YXZ";
@@ -48,21 +49,22 @@ function slabs(h: FxHost, x: number, z: number, r: number, n: number, up: number
   }
 }
 
-export function spikeBatch(root: THREE.Object3D): FxBatch {
-  return fxBatch(root, "spike", () => {
-    const p = propParts("spike");
+export function spikeBatch(root: THREE.Object3D, costume?: string): FxBatch {
+  const c = hasCostumeProp("spike", costume) ? costume : undefined;
+  return fxBatch(root, c ? `spike@${c}` : "spike", () => {
+    const p = propParts("spike", c);
     return p ? new FxBatch(p.geo, p.mat.clone()) : new FxBatch(spikeGeo, spikeMat.clone());
   });
 }
 
-function spikes(h: FxHost, x: number, z: number, r: number, n: number, life: number): void {
+function spikes(h: FxHost, x: number, z: number, r: number, n: number, life: number, costume?: string): void {
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
     const d = r * (0.3 + Math.random() * 0.65);
     const sx = x + Math.cos(a) * d;
     const sz = z + Math.sin(a) * d;
     const gy = ground(h, sx, sz, 0);
-    const m = spikeBatch(h.root).spawn();
+    const m = spikeBatch(h.root, costume).spawn();
     const s = 0.7 + Math.random() * 0.8;
     const sy = s * (0.9 + Math.random() * 0.6);
     m.scale.set(0, 0, 0);
@@ -105,7 +107,7 @@ export function warlordHit(h: FxHost, x: number, y: number, z: number, dx: numbe
   h.shake = Math.max(h.shake, big ? 0.35 : 0.14);
 }
 
-function slamFx(h: FxHost, x: number, z: number, r: number, heavy: boolean): void {
+function slamFx(h: FxHost, x: number, z: number, r: number, heavy: boolean, costume?: string): void {
   const gy = ground(h, x, z, 0);
   decal(h, WARLORD.crackRing, x, gy, z, r * 0.9, 1.8, { grow: 0.08 });
   decal(h, WARLORD.lavaCrack, x, gy + 0.01, z, r * (heavy ? 1.1 : 0.7), heavy ? 2.4 : 1.6, { grow: 0.12, opacity: 0.95 });
@@ -122,7 +124,7 @@ function slamFx(h: FxHost, x: number, z: number, r: number, heavy: boolean): voi
   emit(h, { tex: WARLORD.ember, n: heavy ? 18 : 8, x, y: gy + 0.5, z, size: [0.25, 0.5], life: [0.5, 1.1], speed: [1, 4], up: [3, 6], gravity: 5, additive: true, jitter: r });
   chunks(h, heavy ? 10 : 5, x, gy + 0.4, z, { size: [0.16, 0.32], speed: [2, 5], up: [5, 9] });
   if (heavy) {
-    spikes(h, x, z, r, Math.round(r * 2.2), 1.8);
+    spikes(h, x, z, r, Math.round(r * 2.2), 1.8, costume);
     emit(h, { tex: WARLORD.splash, n: 5, x, y: gy + 0.3, z, size: [0.7, 1.1], grow: 1.2, life: [0.4, 0.7], speed: [0, 0.4], up: [1.5, 3], gravity: 6, jitter: r * 0.9 });
   } else slabs(h, x, z, r, Math.round(r * 2.4), 0.45, 1.3);
   h.shake = Math.max(h.shake, heavy ? 0.75 : 0.4);
@@ -212,7 +214,7 @@ KITS.warlord = {
   event(h, ev, src) {
     if (ev.type === "slam") {
       const a = src.hero?.action;
-      slamFx(h, ev.x, ev.z, ev.radius, a?.kind === "quake");
+      slamFx(h, ev.x, ev.z, ev.radius, a?.kind === "quake", costumeOfPlayer(src.hero?.player));
       return true;
     }
     if (ev.type === "warcry") {

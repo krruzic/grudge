@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background. Image 2 shows the hero costume STARFALL: a celestial huntress in violet-magenta and silver with stars, comets and a constellation phoenix companion. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single silver-violet star-shard feather with a glowing tip
+2. a burst cluster of five violet and silver phoenix feathers with glowing tips
+3. three parallel curved violet-white comet claw slash marks
+4. a silver arrow with a glowing violet crystal tip and starlight fletching, diagonal
+5. a silver-violet comet streak tapering to a point, horizontal
+6. a few shards of broken silver starlight crystal
+7. a single glowing silver four-point star shard
+8. a small cluster of three glowing violet and silver stars
+9. a thin silver-violet constellation ring with four inward notches seen from directly above, with tiny stars on it
+10. a top-down ring of glowing silver arrow shafts stuck in the ground, evenly spaced around a circle
+11. a glowing violet-magenta star-heart with a soft white core
+12. a four-point silver sparkle with a violet centre
+13. a small circling swirl of deep indigo night sky with three tiny silver stars
+14. a pale violet-silver stardust wind swirl
+15. a violet-white comet flame
+16. a violet-magenta galaxy spiral burst with stars
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.
