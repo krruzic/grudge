@@ -145,8 +145,220 @@ def process(name: str, spec: dict) -> str:
     return path
 
 
+PAINT_SRC = os.path.join(ROOT, "assets", "source", "map_textures_ai.png")
+PAINTED = {
+    "grass": {"cell": (0, 0)},
+    "dirt": {"cell": (0, 1), "flat": False, "contrast": 0.7},
+    "gravel": {"cell": (0, 2), "contrast": 0.55, "repeat": 2},
+    "cobble": {"cell": (0, 3), "search": True},
+    "sand": {"cell": (1, 0), "size": 64},
+    "snow": {"cell": (1, 1), "size": 64},
+    "cliff": {"cell": (1, 2)},
+    "brick": {"cell": (1, 3)},
+    "wallblock": {"cell": (2, 0), "flat": False},
+    "ruinstone": {"cell": (2, 1)},
+    "hedge": {"cell": (2, 2)},
+    "planks": {"cell": (2, 3), "search": True, "fade": True},
+}
+
+
+def grid_cells(a: np.ndarray) -> list:
+    lum = a.mean(2)
+    spans = []
+    for prof in (lum.mean(1), lum.mean(0)):
+        dark = prof < 40
+        cuts, i = [0], 0
+        while i < len(dark):
+            if dark[i]:
+                j = i
+                while j < len(dark) and dark[j]:
+                    j += 1
+                cuts += [i, j]
+                i = j
+            else:
+                i += 1
+        cuts.append(len(dark))
+        spans.append([(cuts[k], cuts[k + 1]) for k in range(0, len(cuts), 2)])
+    return spans
+
+
+def cut_paths(cost: np.ndarray) -> tuple:
+    h, w = cost.shape
+    back = np.zeros((h, w, w), np.int32)
+    cur = np.full((w, w), np.inf)
+    cur[np.arange(w), np.arange(w)] = cost[0, np.arange(w)]
+    for y in range(1, h):
+        l = np.concatenate([np.full((w, 1), np.inf), cur[:, :-1]], 1)
+        r = np.concatenate([cur[:, 1:], np.full((w, 1), np.inf)], 1)
+        st = np.stack([l, cur, r], -1)
+        back[y] = st.argmin(-1) - 1
+        cur = st.min(-1) + cost[y][None]
+    end = cur[np.arange(w), np.arange(w)]
+    s = int(end.argmin())
+    path = np.zeros(h, np.int32)
+    x = s
+    for y in range(h - 1, -1, -1):
+        path[y] = x
+        if y > 0:
+            x = x + back[y][s, x]
+    return path, float(end[s])
+
+
+def heal_x(a: np.ndarray, search: bool = True) -> np.ndarray:
+    n = a.shape[1]
+    lo, hi = n // 8, 3 * n // 8
+    best = None
+    h2 = a[::2, ::2]
+    m = n // 2
+    for ox in (range(n // 4, 3 * n // 4 + 1, 4) if search else [n // 2]):
+        diff = ((h2 - np.roll(h2, ox // 2, 1)) ** 2).sum(-1)
+        total = cut_paths(diff[:, lo // 2:hi // 2])[1] + cut_paths(diff[:, m - hi // 2:m - lo // 2])[1]
+        if best is None or total < best[0]:
+            best = (total, ox)
+    b = np.roll(a, best[1], 1)
+    diff = ((a - b) ** 2).sum(-1)
+    pl = cut_paths(diff[:, lo:hi])[0] + lo
+    pr = cut_paths(diff[:, n - hi:n - lo])[0] + n - hi
+    xs = np.arange(n)[None, :]
+    mask = ((xs < pl[:, None]) | (xs >= pr[:, None])).astype(np.float32)
+    soft = mask
+    for _ in range(2):
+        soft = (np.roll(soft, 1, 1) + soft + np.roll(soft, -1, 1)) / 3
+    return a * (1 - soft[..., None]) + b * soft[..., None]
+
+
+def flatten(a: np.ndarray, k: int) -> np.ndarray:
+    pad = np.pad(a, ((k, k), (k, k), (0, 0)), mode="reflect")
+    c = pad.cumsum(0).cumsum(1)
+    c = np.pad(c, ((1, 0), (1, 0), (0, 0)))
+    n0, n1 = a.shape[:2]
+    w = 2 * k + 1
+    box = (c[w:w + n0, w:w + n1] - c[:n0, w:w + n1] - c[w:w + n0, :n1] + c[:n0, :n1]) / (w * w)
+    return a - box + a.reshape(-1, 3).mean(0)
+
+
+def fade_y(a: np.ndarray) -> np.ndarray:
+    n = a.shape[0]
+    w = np.clip((1 - np.abs(np.linspace(-1, 1, n))) * 2, 0, 1)[:, None, None]
+    return a * w + np.roll(a, n // 2, 0) * (1 - w)
+
+
+def make_seamless(a: np.ndarray, search: bool = True, flat: bool = True, fade: bool = False) -> np.ndarray:
+    if flat:
+        a = flatten(a, a.shape[0] // 4)
+    a = heal_x(a, search)
+    if fade:
+        return fade_y(a)
+    return heal_x(a.transpose(1, 0, 2), search).transpose(1, 0, 2)
+
+
+def painted(name: str, spec: dict, sheet: np.ndarray, spans: list) -> str:
+    (y0, y1), (x0, x1) = spans[0][spec["cell"][0]], spans[1][spec["cell"][1]]
+    inset = 8
+    s = min(y1 - y0, x1 - x0) - 2 * inset
+    a = sheet[y0 + inset:y0 + inset + s, x0 + inset:x0 + inset + s]
+    w = 256
+    a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).resize((w, w), Image.LANCZOS), np.float32) / 255
+    a = make_seamless(a, spec.get("search", False), spec.get("flat", True), spec.get("fade", False))
+    if "contrast" in spec:
+        m = a.reshape(-1, 3).mean(0)
+        a = m + (a - m) * spec["contrast"]
+    size = spec.get("size", 128)
+    rep = spec.get("repeat", 1)
+    img = Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8)).resize((size // rep, size // rep), Image.LANCZOS)
+    if rep > 1:
+        img = Image.fromarray(np.tile(np.asarray(img), (rep, rep, 1)))
+    path = os.path.join(OUT, name + ".png")
+    img.convert("RGBA").save(path)
+    return path
+
+
+CARD_SRC = os.path.join(ROOT, "assets", "source", "map_props_ai.png")
+CARDS = {"tallgrass": {"x0": 1330, "cell": (128, 208), "bg": 207}}
+
+
+def dilate_rgb(rgb: np.ndarray, alpha: np.ndarray, iters: int = 12) -> np.ndarray:
+    rgb, a = rgb.copy(), alpha.copy()
+    for _ in range(iters):
+        acc = np.zeros_like(rgb)
+        cnt = np.zeros(a.shape)
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            sa = np.roll(np.roll(a, dy, 0), dx, 1)
+            acc += np.roll(np.roll(rgb, dy, 0), dx, 1) * sa[..., None]
+            cnt += sa
+        grow = (a == 0) & (cnt > 0)
+        rgb[grow] = acc[grow] / cnt[grow][:, None]
+        a = np.where(grow, 1.0, a)
+    return rgb
+
+
+def cards(name: str, spec: dict) -> str:
+    src = np.asarray(Image.open(CARD_SRC).convert("RGB"), np.float32)
+    key = np.abs(src - spec["bg"]).sum(2) > 40
+    cols = key[:, spec["x0"]:].any(0)
+    runs, i = [], 0
+    while i < len(cols):
+        if cols[i]:
+            j = i
+            while j < len(cols) and cols[j]:
+                j += 1
+            if j - i > 50:
+                runs.append((i + spec["x0"], j + spec["x0"]))
+            i = j
+        else:
+            i += 1
+    cw, ch = spec["cell"]
+    out = np.zeros((ch, cw * len(runs), 4), np.float32)
+    for k, (x0, x1) in enumerate(runs):
+        ys = np.where(key[:, x0:x1].any(1))[0]
+        crop = src[ys.min():ys.max() + 1, x0:x1] / 255
+        dist = np.abs(crop * 255 - spec["bg"]).sum(2)
+        sat = crop.max(2) - crop.min(2)
+        alpha = np.clip((np.maximum(dist - 30, 0) / 40) + sat * 4 - 0.2, 0, 1)
+        alpha = (alpha > 0.5).astype(np.float32)
+        rgb = dilate_rgb(crop, alpha, 6)
+        h, w = crop.shape[:2]
+        s = min(cw / w, ch / h)
+        nw, nh = max(1, int(w * s)), max(1, int(h * s))
+        rgba = np.concatenate([rgb, alpha[..., None]], -1)
+        im = Image.fromarray((np.clip(rgba, 0, 1) * 255).astype(np.uint8), "RGBA").resize((nw, nh), Image.LANCZOS)
+        r = np.asarray(im, np.float32) / 255
+        ox = k * cw + (cw - nw) // 2
+        out[ch - nh:, ox:ox + nw] = r
+    a = (out[..., 3] > 0.45).astype(np.float32)
+    rgb = dilate_rgb(out[..., :3], a, 16)
+    path = os.path.join(OUT, name + ".png")
+    Image.fromarray((np.concatenate([rgb, a[..., None]], -1) * 255 + 0.5).astype(np.uint8), "RGBA").save(path)
+    return path
+
+
+def main_painted(names: list) -> None:
+    if names and all(n in CARDS for n in names):
+        for n in names:
+            print(n, "->", os.path.relpath(cards(n, CARDS[n]), ROOT))
+        manifest = os.path.join(OUT, "photo.json")
+        prev = json.load(open(manifest))
+        prev.update({n: "painted:" + os.path.basename(CARD_SRC) for n in names})
+        json.dump(prev, open(manifest, "w"), indent=1, sort_keys=True)
+        return
+    sheet = np.asarray(Image.open(PAINT_SRC).convert("RGB"), np.float32)
+    spans = grid_cells(sheet)
+    sheet /= 255
+    done = []
+    for n in names or list(PAINTED):
+        print(n, "->", os.path.relpath(painted(n, PAINTED[n], sheet, spans), ROOT))
+        done.append(n)
+    manifest = os.path.join(OUT, "photo.json")
+    prev = json.load(open(manifest)) if os.path.exists(manifest) else {}
+    prev.update({n: "painted:" + os.path.basename(PAINT_SRC) for n in done})
+    json.dump(prev, open(manifest, "w"), indent=1, sort_keys=True)
+
+
 def main() -> None:
-    names = sys.argv[1:] or list(SPECS)
+    if sys.argv[1:2] == ["--painted"]:
+        main_painted(sys.argv[2:])
+        return
+    names = sys.argv[1:] or [n for n in SPECS if n not in PAINTED]
     done = {}
     for n in names:
         done[n] = process(n, SPECS[n])

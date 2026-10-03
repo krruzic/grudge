@@ -81,6 +81,7 @@ function waterMaterial(map: THREE.Texture): THREE.Material {
 }
 
 const PROP_LAYER = 128;
+const ANISO = 4;
 
 function upscaled(map: THREE.Texture, size: number): THREE.Texture {
   const img = map.image as CanvasImageSource & { width: number; height: number };
@@ -143,6 +144,7 @@ function mergeProps(scene: THREE.Object3D): void {
   for (const g of geos) g.dispose();
   const size = Math.max(...mats.map((m) => (m.map?.image as { width: number }).width));
   const tex = layerTexture(mats.map((m) => m.map && upscaled(m.map, size)));
+  tex.anisotropy = ANISO;
   const tint = mats.map((m) => new THREE.Vector4(m.color.r, m.color.g, m.color.b, m.side === THREE.FrontSide ? 0 : 1));
   const double = tint.some((t) => t.w > 0);
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: double ? THREE.DoubleSide : THREE.FrontSide, name: "props" });
@@ -186,6 +188,7 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   root.add(gltf.scene);
   const sur = surroundFor(terrain);
   root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water, sand }, light, sur));
+  for (const t of [grass, dirt, rock, cobble, sand]) t.anisotropy = ANISO;
   const waterMesh = buildWaterMesh(terrain, waterMaterial(water), sur);
   root.add(waterMesh);
   const fx: MapView["fx"] = [];

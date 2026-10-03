@@ -39,10 +39,10 @@ FLAG_DIRT, FLAG_PAVING, FLAG_GRASS = 1, 2, 4
 TEAM = [texgen.hexc("#3a6cff"), texgen.hexc("#ff3a2a"), texgen.hexc("#ffcf1a"), texgen.hexc("#2fc84a")]
 
 MATS = ["grass", "dirt", "cobble", "cliff", "brick", "wood", "leaves", "pine",
-        "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch", "planks"]
+        "bark", "tallgrass", "cloth", "gold", "iron", "roof", "thatch", "planks", "ruinstone", "hedge"]
 TEX_METERS = {"grass": 7, "dirt": 6, "cobble": 4, "cliff": 5, "brick": 3.5, "wood": 2.5,
               "leaves": 3, "pine": 3, "bark": 2, "tallgrass": 1, "cloth": 1.5, "gold": 2, "iron": 1.5,
-              "roof": 2.5, "thatch": 2.0, "planks": 1.25}
+              "roof": 2.5, "thatch": 2.0, "planks": 1.25, "ruinstone": 3.0, "hedge": 2.2}
 
 TRIPO_TEX = 128
 TRIPO = {
@@ -54,6 +54,7 @@ TRIPO = {
     "pine_a": {"size": (2.5, 2.5, 3.9), "trunk": True, "faces": 850},
     "pine_snow": {"size": (2.5, 2.5, 3.9), "trunk": True, "faces": 900},
     "deadtree": {"size": (2.8, 2.8, 3.4), "trunk": True, "faces": 700},
+    "pad": {"size": (3.4, 2.95, 0.42), "rot": 90, "faces": 520, "mat": "padstone", "inlay": "padteam"},
 }
 ROCKS = ("rock_a", "rock_b", "rock_c")
 
@@ -65,6 +66,23 @@ def G(x, y, z):
 def hsh(*v):
     s = math.sin(sum(a * b for a, b in zip(v, (127.1, 311.7, 74.7, 191.3))) + 0.5) * 43758.5453
     return s - math.floor(s)
+
+
+def vnoise3(x, y, z):
+    ix, iy, iz = math.floor(x), math.floor(y), math.floor(z)
+    fx, fy, fz = x - ix, y - iy, z - iz
+    fx, fy, fz = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy), fz * fz * (3 - 2 * fz)
+
+    def h(a, b, c):
+        return hsh(ix + a, iy + b, iz + c, 5.0)
+
+    def lx(b, c):
+        return h(0, b, c) + (h(1, b, c) - h(0, b, c)) * fx
+
+    def ly(c):
+        return lx(0, c) + (lx(1, c) - lx(0, c)) * fy
+
+    return ly(0) + (ly(1) - ly(0)) * fz
 
 
 def newell(pts):
@@ -191,6 +209,70 @@ def tripo_image(src, name):
     return out
 
 
+def image_material(mname, img):
+    mat = bpy.data.materials.get(mname) or bpy.data.materials.new(mname)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 1.0
+    nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
+    return mat
+
+
+def warm(c):
+    mx, mn = max(c[:3]), min(c[:3])
+    if mx < 0.12 or mx - mn < 0.12 * mx + 0.04:
+        return False
+    if mx == c[0]:
+        h = ((c[1] - c[2]) / (mx - mn)) % 6
+    elif mx == c[1]:
+        h = (c[2] - c[0]) / (mx - mn) + 2
+    else:
+        h = (c[0] - c[1]) / (mx - mn) + 4
+    return 0.15 <= h <= 1.25
+
+
+def inlay_faces(img, tris):
+    w, h = img.size
+    px = list(img.pixels)
+    out = []
+    for pts, uvs in tris:
+        u = sum(t[0] for t in uvs) / len(uvs)
+        v = sum(t[1] for t in uvs) / len(uvs)
+        i = (min(h - 1, max(0, int(v % 1.0 * h))) * w + min(w - 1, max(0, int(u % 1.0 * w)))) * 4
+        out.append(warm(px[i:i + 4]))
+    return out
+
+
+def recolor(img, name, rich):
+    w, h = img.size
+    px = list(img.pixels)
+    for i in range(0, len(px), 4):
+        c = px[i:i + 3]
+        if warm(c):
+            l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]
+            if rich:
+                px[i:i + 3] = [min(1.0, max(0.0, l + (k - l) * 1.6)) for k in c]
+            else:
+                px[i:i + 3] = [min(1.0, l * 1.45)] * 3
+    out = bpy.data.images.new(name + "_tmp", w, h, alpha=True)
+    out.pixels.foreach_set(px)
+    path = os.path.join(bpy.app.tempdir or "/tmp", name + ".png")
+    out.filepath_raw = path
+    out.file_format = "PNG"
+    out.save()
+    bpy.data.images.remove(out)
+    res = bpy.data.images.load(path, check_existing=False)
+    res.name = name
+    res.pack()
+    return res
+
+
 def tripo_tris(obj, depsgraph=None):
     me = obj.evaluated_get(depsgraph).to_mesh() if depsgraph else obj.data
     uv = me.uv_layers.active.data
@@ -256,6 +338,8 @@ def load_tripo(name, cfg):
     me = src.data
     me.transform(src.matrix_world)
     src.matrix_world = Matrix.Identity(4)
+    if cfg.get("rot"):
+        me.transform(Matrix.Rotation(math.radians(cfg["rot"]), 4, "Z"))
     if cfg.get("mirror"):
         mirror_half(me)
     if cfg.get("smooth"):
@@ -277,19 +361,19 @@ def load_tripo(name, cfg):
         cx, cy = (lo.x + hi.x) / 2, (lo.y + hi.y) / 2
     sx, sy, sz = (cfg["size"][k] / dims[k] for k in range(3))
     me.transform(Matrix.Diagonal((sx, sy, sz, 1.0)) @ Matrix.Translation((-cx, -cy, -lo.z)))
-    mname = "mp_" + name
-    mat = bpy.data.materials.get(mname) or bpy.data.materials.new(mname)
-    mat.use_nodes = True
-    nt = mat.node_tree
-    nt.nodes.clear()
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    tex = nt.nodes.new("ShaderNodeTexImage")
-    tex.image = tripo_image(src, mname)
-    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 1.0
-    nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
+    mname = cfg.get("mat", "mp_" + name)
+    img = tripo_image(src, mname)
     tpl = {"mat": mname, "hi": tripo_tris(src)}
+    if cfg.get("inlay"):
+        tpl["inlay"] = cfg["inlay"]
+        tpl["gold"] = inlay_faces(img, tpl["hi"])
+        rich = recolor(img, mname + "_rich", True)
+        bpy.data.images.remove(img)
+        img = rich
+        image_material(cfg["inlay"], recolor(img, cfg["inlay"], False))
+        if cfg["inlay"] not in MATS:
+            MATS.append(cfg["inlay"])
+    image_material(mname, img)
     if cfg.get("lo"):
         mod = src.modifiers.new("lo", "DECIMATE")
         mod.ratio = cfg["lo"] / len(me.polygons)
@@ -410,8 +494,8 @@ class MapBuilder:
                     tops = [top + (hsh(px, pz, 9) - 0.5) * 0.5 for (px, pz) in ((x, z), (x + 1, z), (x + 1, z + 1), (x, z + 1))]
                 pts = [(x, z), (x + 1, z), (x + 1, z + 1), (x, z + 1)]
                 v8 = [G(px, base, pz) for (px, pz) in pts] + [G(px, t, pz) for (px, pz), t in zip(pts, tops)]
-                tint = (1, 1, 1) if st == "castle" else (0.85, 0.95, 0.78)
-                solid(P, v8, "brick", cols=lambda p, b=base, t=top, tint=tint: tuple(
+                tint = (1, 1, 1) if st == "castle" else (0.95, 0.97, 0.92)
+                solid(P, v8, "brick" if st == "castle" else "ruinstone", cols=lambda p, b=base, t=top, tint=tint: tuple(
                     c * (0.7 + 0.3 * min(1, max(0, (p.z - b) / max(0.1, t - b)))) for c in tint))
                 if st == "castle":
                     P.face([G(x, top + 0.01, z), G(x, top + 0.01, z + 1), G(x + 1, top + 0.01, z + 1), G(x + 1, top + 0.01, z)],
@@ -424,22 +508,79 @@ class MapBuilder:
     def is_hedge(self, x, z):
         return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) == "hedge"
 
+    def hedge_edge(self, px, pz):
+        best, vec = 9.0, Vector((0, 0))
+        for cz in range(int(math.floor(pz)) - 1, int(math.floor(pz)) + 2):
+            for cx in range(int(math.floor(px)) - 1, int(math.floor(px)) + 2):
+                if self.is_hedge(cx, cz):
+                    continue
+                dx = max(cx - px, 0.0, px - cx - 1)
+                dz = max(cz - pz, 0.0, pz - cz - 1)
+                d = math.hypot(dx, dz)
+                vx = (1 if cx + 0.5 > px else -1) if (px <= cx + 1e-6 or px >= cx + 1 - 1e-6) else 0
+                vz = (1 if cz + 0.5 > pz else -1) if (pz <= cz + 1e-6 or pz >= cz + 1 - 1e-6) else 0
+                if d < best - 1e-6:
+                    best, vec = d, Vector((vx, vz))
+                elif d < best + 1e-6:
+                    vec += Vector((vx, vz))
+        if vec.length > 0:
+            vec.normalize()
+        return best, vec
+
+    def hedge_pt(self, px, py, pz, top):
+        d, out = self.hedge_edge(px, pz)
+        r = 0.42
+        e = min(d, r)
+        drop = r - math.sqrt(max(0.0, r * r - (r - e) ** 2))
+        n1 = vnoise3(px * 2.3, py * 2.3, pz * 2.3)
+        n2 = vnoise3(px * 0.7 + 7, py * 0.7, pz * 0.7 + 3)
+        lump = (n1 - 0.5) * 0.2 + (n2 - 0.5) * 0.16
+        y = min(py, top - drop)
+        k = 1.0 - min(1.0, d / r)
+        push = (lump - 0.07) * k
+        return Vector((px + out.x * push, -(pz + out.y * push), y + (lump * 0.8 if py >= top - drop - 1e-6 else 0.0)))
+
     def hedge(self, x, z, c):
         P = self.props
         base = min(c) - 0.3
         top = max(c) + 1.75
-        g = 0.9 + hsh(x, z, 3) * 0.15
-        tint = (0.62 * g, 0.92 * g, 0.55 * g)
-        inset = 0.12
-        x0 = x + (0 if self.is_hedge(x - 1, z) else inset)
-        x1 = x + 1 - (0 if self.is_hedge(x + 1, z) else inset)
-        z0 = z + (0 if self.is_hedge(x, z - 1) else inset)
-        z1 = z + 1 - (0 if self.is_hedge(x, z + 1) else inset)
-        tops = [top + (hsh(px, pz, 9) - 0.5) * 0.12 for (px, pz) in ((x0, z0), (x1, z0), (x1, z1), (x0, z1))]
-        pts = [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
-        v8 = [G(px, base, pz) for (px, pz) in pts] + [G(px, t, pz) for (px, pz), t in zip(pts, tops)]
-        solid(P, v8, "leaves", cols=lambda p, b=base, t=top: tuple(
-            k * (0.55 + 0.45 * min(1, max(0, (p.z - b) / max(0.1, t - b)))) for k in tint))
+        steps = (0.0, 0.25, 0.75, 1.0)
+        tops = {}
+
+        def tp(u, v):
+            key = (u, v)
+            if key not in tops:
+                tops[key] = self.hedge_pt(x + u, 99.0, z + v, top)
+            return tops[key]
+
+        def col(p):
+            t = min(1.0, max(0.0, (p.z - base) / (top - base)))
+            g = 0.9 + 0.12 * vnoise3(p.x * 0.5, 3.1, p.y * 0.5)
+            k = g * (0.66 + 0.34 * t)
+            return (min(1.0, k * 1.02), min(1.0, k * 1.04), k * 0.92)
+
+        n = len(steps) - 1
+        for i in range(n):
+            for j in range(n):
+                q = [tp(steps[i], steps[j]), tp(steps[i], steps[j + 1]), tp(steps[i + 1], steps[j + 1]), tp(steps[i + 1], steps[j])]
+                if newell(q).z < 0:
+                    q.reverse()
+                P.face(q, "hedge", uvs=[(p.x / TEX_METERS["hedge"], p.y / TEX_METERS["hedge"]) for p in q], cols=[col(p) for p in q])
+        sides = (((0, -1), lambda t: (t, 0.0)), ((1, 0), lambda t: (1.0, t)), ((0, 1), lambda t: (1 - t, 1.0)), ((-1, 0), lambda t: (0.0, 1 - t)))
+        hs = (0.0, 0.6)
+        for (dx, dz), at in sides:
+            if self.is_hedge(x + dx, z + dz):
+                continue
+            for i in range(n):
+                a, b = at(steps[i]), at(steps[i + 1])
+                ta, tb = tp(*a), tp(*b)
+                col_a = [self.hedge_pt(x + a[0], base + (ta.z - base) * f, z + a[1], top) for f in hs] + [ta]
+                col_b = [self.hedge_pt(x + b[0], base + (tb.z - base) * f, z + b[1], top) for f in hs] + [tb]
+                for k in range(len(hs)):
+                    q = [col_a[k], col_b[k], col_b[k + 1], col_a[k + 1]]
+                    if newell(q).dot(Vector((dx, -dz, 0))) < 0:
+                        q.reverse()
+                    P.face(q, "hedge", cols=[col(p) for p in q])
 
     def is_pit(self, x, z):
         return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) == "pit"
@@ -578,7 +719,7 @@ class MapBuilder:
                     if stone and (x + z) % 3 == 0:
                         self.box(P, x + 0.5, gy - 0.3, z + 0.5, 0.9, y - thick - gy + 0.3, 0.9, "brick", col=(0.8, 0.8, 0.8))
                     if not stone and (x + z) % 2 == 0:
-                        self.plank_box(P, x + 0.5, gy - 0.3, z + 0.5, 0.18, y - gy + 0.3, 0.18, G(0, 1, 0), col=(0.7, 0.7, 0.7))
+                        self.plank_box(P, x + 0.5, gy - 0.3, z + 0.5, 0.18, y - thick - 0.02 - gy + 0.3, 0.18, G(0, 1, 0), col=(0.7, 0.7, 0.7))
 
     def inside(self, x, z):
         return self.tpl is not None and 0 <= x <= self.W and 0 <= z <= self.D
@@ -753,28 +894,36 @@ class MapBuilder:
         self.fx.append(("fx_glow", (x, y + 3.8, z)))
 
     def pad(self, x, z, zone, side):
-        P = self.props
         y = max(self.ground_h(x + dx, z + dz) for dx in (-1.4, 0, 1.4) for dz in (-1.4, 0, 1.4))
         base = min(self.ground_h(x + dx, z + dz) for dx in (-1.4, 0, 1.4) for dz in (-1.4, 0, 1.4))
-        h = y - base + 0.25
-        bm = bmesh.new()
-        bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=1.7, radius2=1.55, depth=h)
-        rim = (1, 1, 1) if zone == "neutral" else tuple(0.25 + c * 0.75 for c in TEAM[side])
-        P.add_bm(bm, "cobble", matrix=Matrix.Translation(G(x, base + h / 2, z)), col=rim)
-        bm = bmesh.new()
-        bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=1.25, radius2=1.2, depth=0.1)
-        inlay = (1, 1, 1) if zone == "neutral" else tuple(0.15 + c * 0.85 for c in TEAM[side])
-        P.add_bm(bm, "gold", matrix=Matrix.Translation(G(x, y + 0.3, z)), col=inlay)
+        tpl = self.tpl["pad"]
+        H = TRIPO["pad"]["size"][2]
+        top = y + 0.33
+        sink = top - H - (base - 0.08)
+        team = zone != "neutral"
+        tc = TEAM[side]
+        stone = tuple(0.5 + c * 0.5 for c in tc) if team else (1, 1, 1)
+        inlay = tuple(0.12 + c * 0.88 for c in tc) if team else (1, 1, 1)
+        for (pts, uvs), gold in zip(tpl["hi"], tpl["gold"]):
+            out = []
+            for p in pts:
+                zz = p.z
+                if zz < H * 0.6 and sink > 0:
+                    zz -= sink * (1 - zz / (H * 0.6))
+                out.append(Vector((x + p.x, -z + p.y, top - H + zz)))
+            mat = tpl["inlay"] if gold and team else tpl["mat"]
+            self.props.face(out, mat, col=inlay if gold else stone, uvs=uvs)
         self.fx.append(("pad_" + zone, (x, y + 0.35, z)))
 
-    def clump(self, B, x, z, w, h, a, cards=3):
-        y = self.ground_h(x, z) - 0.05
+    def clump(self, B, x, z, w, h, a, cards=2, variant=0):
+        y = self.ground_h(x, z) - 0.06
+        u0, u1 = variant / 3 + 0.004, (variant + 1) / 3 - 0.004
         for i in range(cards):
             da = a + i * math.pi / cards
             dx, dz = math.cos(da) * w / 2, math.sin(da) * w / 2
             pts = [G(x - dx, y, z - dz), G(x + dx, y, z + dz), G(x + dx, y + h, z + dz), G(x - dx, y + h, z - dz)]
-            B.face(pts, "tallgrass", uvs=[(0, 0), (1, 0), (1, 1), (0, 1)],
-                   cols=[(0.55, 0.6, 0.5), (0.55, 0.6, 0.5), (1, 1, 1), (1, 1, 1)])
+            B.face(pts, "tallgrass", uvs=[(u0, 0), (u1, 0), (u1, 1), (u0, 1)],
+                   cols=[(0.86, 0.9, 0.82), (0.86, 0.9, 0.82), (1, 1, 1), (1, 1, 1)])
 
     def vegetation(self):
         r = random.Random(11)
@@ -786,9 +935,10 @@ class MapBuilder:
                 c = self.corners(x, z)
                 if min(c) < wl + 0.1:
                     continue
-                if self.flag(x, z, FLAG_GRASS) and r.random() < 0.6:
-                    self.clump(self.grass, x + r.uniform(0.25, 0.75), z + r.uniform(0.25, 0.75),
-                               r.uniform(1.3, 1.6), r.uniform(0.9, 1.15), r.uniform(0, 3.14))
+                if self.flag(x, z, FLAG_GRASS) and r.random() < 0.7:
+                    for k in range(2):
+                        self.clump(self.grass, x + 0.5 + (k - 0.5) * 0.45 + r.uniform(-0.15, 0.15), z + r.uniform(0.25, 0.75),
+                                   r.uniform(1.1, 1.3), r.uniform(1.2, 1.45), r.uniform(0, 3.14), variant=r.randrange(3))
 
     def rim_forest(self):
         r = random.Random(3)
@@ -879,14 +1029,19 @@ class MapBuilder:
 
 def smooth_corners(mesh, c):
     mp = {i for i, m in enumerate(mesh.materials) if m.name.startswith("mp_")}
-    if not mp:
+    flat = {i for i, m in enumerate(mesh.materials) if m.name in ("planks", "hedge")}
+    if not mp and not flat:
         return
     sums, cnt, loops = {}, {}, []
     for p in mesh.polygons:
-        if p.material_index not in mp:
+        if p.material_index in mp:
+            tag = None
+        elif p.material_index in flat:
+            tag = (p.material_index, tuple(round(k * 2) for k in p.normal))
+        else:
             continue
         for li in p.loop_indices:
-            v = mesh.loops[li].vertex_index
+            v = (mesh.loops[li].vertex_index, tag)
             s = sums.setdefault(v, [0.0, 0.0, 0.0])
             for k in range(3):
                 s[k] += c[li * 4 + k]
