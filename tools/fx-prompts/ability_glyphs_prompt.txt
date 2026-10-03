@@ -1,0 +1,7 @@
+Design 28 minimal ICON GLYPHS for a fantasy game's ability buttons, in a clean flat VECTOR style: solid pure WHITE silhouettes on a pure BLACK background, bold simple shapes, no gradients, no shading, no outlines, no texture, like a polished icon font. Each glyph centred in its own square cell with generous black padding. Arrange as a grid of 7 COLUMNS x 4 ROWS of equal square cells, no visible grid lines. NO TEXT, NO LETTERS, NO NUMBERS.
+
+Columns are heroes (left to right): WARLORD (ogre), STIG (dwarf engineer), GRIM (goblin assassin), REMNIL (necromancer), FRANCOIS (duellist), THORN (treant), HERALD (knight).
+ROW 1: spiked club; adjustable wrench; two crossed curved daggers; crystal-tipped staff with a bolt; rapier with a small star sparkle; clenched wooden fist; straight sword with light rays.
+ROW 2: club smashing ground with cracks; wrench over a gear with plus signs; leaping goblin silhouette with a curved motion arc; hexagonal hex sigil with a rune inside; rapier with speed lines (lunge); long stretching arm with open hand; planted banner flag on a pole.
+ROW 3: roaring open mouth with sound waves; wooden ramp scaffold; smoke cloud with two eyes; tombstone with wisps rising; two crossed rapiers with a spark (parry); row of three standing stones; war horn with sound waves.
+ROW 4: ground fissure with jagged rock spikes; ballista crossbow siege engine; dagger with a sharp slash streak; skeletal hands rising from the ground; whirlwind of blades; thorny bramble vines; shield with a plus.

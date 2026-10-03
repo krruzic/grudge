@@ -4,6 +4,7 @@ import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from 
 import { drawNum, drawPlain, drawText, occlude, textWidth, onHiLayer } from "./font";
 import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
+import glyphUrl from "../../assets/ui/abilities.png?url";
 import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor, markWindow } from "./n64ui";
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
@@ -105,6 +106,31 @@ for (const [path, url] of Object.entries(stageUrls)) {
   const im = new Image();
   im.src = url;
   stageArt.set(path.split("/").pop()!.replace(".jpg", ""), im);
+}
+
+const HERO_COL = ["warlord", "engineer", "raider", "summoner", "duelist", "warden", "herald"];
+const glyphSheet = new Image();
+glyphSheet.src = glyphUrl;
+const glyphCache = new Map<number, { dark: HTMLCanvasElement; light: HTMLCanvasElement }>();
+function abilityGlyph(col: number, row: number): { dark: HTMLCanvasElement; light: HTMLCanvasElement } | null {
+  if (!glyphSheet.complete || !glyphSheet.naturalWidth) return null;
+  const key = col * 4 + row;
+  const hit = glyphCache.get(key);
+  if (hit) return hit;
+  const C = 96;
+  const tint = (color: string) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = C;
+    const g = c.getContext("2d")!;
+    g.drawImage(glyphSheet, col * C, row * C, C, C, 0, 0, C, C);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = color;
+    g.fillRect(0, 0, C, C);
+    return c;
+  };
+  const out = { dark: tint("#4a3018"), light: tint("#fff2d0") };
+  glyphCache.set(key, out);
+  return out;
 }
 
 const TEAM_CLOTH = ["#3a58e0", "#d83828", "#d8a818", "#2a9a40"];
@@ -684,9 +710,19 @@ export class Screens {
         drawTree(t, s.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
       });
     }
+    const col = HERO_COL.indexOf(s.hero);
     (["a", "b", "r", "z"] as const).forEach((a, j) => {
       const cx = x + (w / 4) * (j + 0.5);
-      abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
+      const g = col >= 0 ? abilityGlyph(col, j) : null;
+      if (g) onHiLayer(ctx, (t) => {
+        t.imageSmoothingEnabled = true;
+        t.imageSmoothingQuality = "high";
+        t.globalAlpha = 0.5;
+        t.drawImage(g.light, cx - 7, y + h - 17 + 0.8, 14, 14);
+        t.globalAlpha = 1;
+        t.drawImage(g.dark, cx - 7, y + h - 17, 14, 14);
+      });
+      else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
     });
     if (sitHere) onHiLayer(ctx, (t) => this.woodButton(t, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16));
     if (s.ready && !commander && human) {
