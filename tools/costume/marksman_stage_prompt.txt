@@ -1,0 +1,5 @@
+This is a painted background for a fantasy game's character select screen: an autumn woodland clearing. Repaint it as a clean, finished, full-frame 16:9 background in EXACTLY the same painted style, colours and composition, with these changes only:
+- Remove the hawk: the wooden falconry perch on the left stays, but it is EMPTY, with a small leather jess and a little tuft of red feather tied to the crossbar.
+- Remove any text, label or banner at the bottom; continue the leafy grass and fallen leaves there instead.
+- Keep the centre of the image open grass (a character will stand there), no people, no animals, no birds.
+- Extend the scene slightly so it fills the whole frame, with no borders or frames.

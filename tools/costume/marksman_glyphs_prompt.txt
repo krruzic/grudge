@@ -1,0 +1,7 @@
+The attached image is the finished ability-glyph sheet of a fantasy game, showing the EXACT style to match. Design 4 more glyphs in exactly that style: minimal ICON GLYPHS in a clean flat VECTOR style, solid pure WHITE silhouettes on a pure BLACK square, bold simple shapes, no gradients, no shading, no outlines, no texture, like a polished icon font, same line weight and level of detail as the reference. Arrange them as ONE ROW of 4 equal black square cells, left to right, separated by thin light grey gaps, each glyph centred in its cell with generous black padding. NO TEXT, NO LETTERS, NO NUMBERS.
+
+They belong to WREN, a huntress archer with a pet hawk:
+1. LONGBOW SHOT: a tall curved longbow drawn with an arrow nocked, the arrow pointing up-right.
+2. HAWK DIVE: a hawk diving steeply downward with wings swept back and talons out, a couple of short speed lines behind it.
+3. ARROW RAIN: five or six arrows falling diagonally downward in parallel from the top, like a volley raining down.
+4. HEARTSEEKER: a single long arrow piercing straight through a heart shape.
