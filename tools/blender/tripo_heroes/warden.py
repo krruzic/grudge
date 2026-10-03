@@ -1,6 +1,7 @@
 """Thorn (warden): Tripo treant body, Tripo bark shield strapped to the left forearm."""
 
 WARM = {"tint": (1.3, 0.92, 0.62), "amount": 0.85, "below": 0.32}
+VIVID = {"hue": (5, 40), "to": 26, "pull": 0.3, "sat": 1.9, "val": 1.12}
 
 CFG = {
     "yaw": -90,
@@ -24,6 +25,7 @@ CFG = {
     "rigid": [],
     "team_hue": (190, 250),
     "warm": WARM,
+    "vivid": VIVID,
     "attach": [("attach_shield", "warden_shield_tripo.glb")],
 }
 
@@ -56,7 +58,7 @@ def attach_shield(name, arm, src_path):
 
     th.team_faces = compact
     try:
-        th.bake_material(name + "_shield", w, {"tex": 512, "team_hue": (190, 250), "warm": WARM}, img, px, th.face_colors(w, px))
+        th.bake_material(name + "_shield", w, {"tex": 512, "team_hue": (190, 250), "warm": WARM, "vivid": VIVID}, img, px, th.face_colors(w, px))
     finally:
         th.team_faces = orig
     fb = arm.data.bones["forearm_L"]
