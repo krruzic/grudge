@@ -5,9 +5,12 @@ import blockUrl from "../../assets/textures/wallblock.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
 import ironUrl from "../../assets/textures/iron.png?url";
 import cobbleUrl from "../../assets/textures/cobble.png?url";
+import snowUrl from "../../assets/textures/snow.png?url";
 import { FX, SUMMONER } from "./fxKit";
 import { gateSlots, type FountainDef, type GatesDef, type GateSlot } from "../sim/mapEvents";
 import { chunks, emit, type FxHost } from "./fxParts";
+import { propParts } from "./props";
+import { SimplifyModifier } from "three/examples/jsm/modifiers/SimplifyModifier.js";
 
 interface Rect {
   x: number;
@@ -17,7 +20,7 @@ interface Rect {
 }
 
 interface Run {
-  stage: "warn" | "slide";
+  stage: "warn";
   rect: Rect;
   dx: number;
   dz: number;
@@ -26,10 +29,43 @@ interface Run {
   acc: number;
 }
 
-interface Drift {
-  mesh: THREE.Mesh;
+interface Piece {
+  u: number;
+  a: number;
+  s: number;
+  sy: number;
+  rot: number;
+  sink: number;
+  melt: number;
+  roll: { lag: number; r: number; phase: number; tilt: THREE.Quaternion } | null;
+}
+
+interface PieceSet {
+  mesh: THREE.InstancedMesh | null;
+  geo: THREE.BufferGeometry;
+  mat: THREE.Material;
+  items: Piece[];
+  w: number;
+  h: number;
+  y0: number;
+  fallback: number;
+}
+
+interface Ava {
+  rect: Rect;
+  dx: number;
+  dz: number;
+  span: number;
   start: number;
+  sweep: number;
   until: number;
+  group: THREE.Group;
+  blanket: THREE.Mesh;
+  uni: { uFront: { value: number }; uMelt: { value: number } };
+  sets: PieceSet[];
+  acc: number;
+  settled: boolean;
+  hAt: (x: number, z: number) => number;
 }
 
 interface Gate {
@@ -51,10 +87,165 @@ const BAR_H = 2.7;
 const SNOW = new THREE.MeshLambertMaterial({ color: 0xdfe6f2, vertexColors: true });
 SNOW.userData.keep = true;
 
+const UP = new THREE.Vector3(0, 1, 0);
+const MELT = 3.5;
+const FALLBACK_GEO = new THREE.IcosahedronGeometry(0.5, 1);
+FALLBACK_GEO.translate(0, 0.5, 0);
+FALLBACK_GEO.deleteAttribute("uv");
+FALLBACK_GEO.userData.model = true;
+
+let snowCache: THREE.Texture | null = null;
+function snowTex(): THREE.Texture {
+  if (snowCache) return snowCache;
+  const t = new THREE.TextureLoader().load(snowUrl);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  snowCache = t;
+  return t;
+}
+
+function blanketMat(uni: { uFront: { value: number }; uMelt: { value: number } }): THREE.Material {
+  const m = new THREE.MeshLambertMaterial({ map: snowTex(), vertexColors: true });
+  m.onBeforeCompile = (s) => {
+    s.uniforms.uFront = uni.uFront;
+    s.uniforms.uMelt = uni.uMelt;
+    s.vertexShader = s.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute float aArrive;\nattribute float aLift;\nattribute float aMelt;\nuniform float uFront;\nuniform float uMelt;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nfloat bf = clamp((uFront - aArrive) / 3.0, 0.0, 1.0);\nfloat bg = bf * (1.0 + 0.5 * sin(bf * 3.14159));\nfloat bm = clamp(uMelt * 1.8 - aMelt * 0.8, 0.0, 1.0);\ntransformed.y -= aLift * (1.0 - bg * (1.0 - bm));");
+  };
+  m.customProgramCacheKey = () => "snowBlanket";
+  return m;
+}
+
+function puffTexture(): THREE.Texture {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d")!;
+  const blobs = [[64, 70, 40], [44, 62, 28], [86, 60, 30], [60, 44, 28], [80, 82, 26], [42, 84, 24], [70, 56, 34]];
+  for (const [x, y, r] of blobs) {
+    const q = g.createRadialGradient(x - r * 0.25, y - r * 0.3, r * 0.1, x, y, r);
+    q.addColorStop(0, "rgba(255,255,255,0.95)");
+    q.addColorStop(0.55, "rgba(236,244,252,0.75)");
+    q.addColorStop(0.85, "rgba(205,222,240,0.35)");
+    q.addColorStop(1, "rgba(200,218,238,0)");
+    g.fillStyle = q;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const PUFF = puffTexture();
+
+const lods = new Map<string, THREE.BufferGeometry>();
+function prepLods(): void {
+  for (const n of ["event_drift", "event_heap", "event_boulder"]) {
+    const p = propParts(n);
+    if (!p || lods.has(n)) continue;
+    lods.set(n, p.geo);
+    void new SimplifyModifier()
+      .modify(p.geo, Math.floor(p.geo.getAttribute("position").count * 0.6))
+      .then((g) => {
+        g.userData.model = true;
+        g.computeBoundingBox();
+        g.computeBoundingSphere();
+        lods.set(n, g);
+      })
+      .catch(() => undefined);
+  }
+}
+
+const bright = new Map<THREE.Material, THREE.Material>();
+function brightMat(src: THREE.Material): THREE.Material {
+  let m = bright.get(src);
+  if (!m) {
+    const c = (src as THREE.MeshLambertMaterial).clone();
+    c.color.setRGB(1.18, 1.2, 1.22);
+    c.userData.keep = true;
+    bright.set(src, c);
+    m = c;
+  }
+  return m;
+}
+
+const LANTERN_SCALE = 1.45;
+const LANTERN_GLOW = { value: 1 };
+
+function glowTexture(): THREE.Texture {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d")!;
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, "rgba(255,255,255,1)");
+  r.addColorStop(0.25, "rgba(255,255,255,0.55)");
+  r.addColorStop(0.6, "rgba(255,255,255,0.12)");
+  r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r;
+  g.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+const HALO = new THREE.SpriteMaterial({ map: glowTexture(), color: 0x70ff80, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+HALO.userData.keep = true;
+const DECAL = new THREE.MeshBasicMaterial({ map: SUMMONER.circle, color: 0x70ff80, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -2 });
+DECAL.userData.keep = true;
+const CHAIN = new THREE.MeshBasicMaterial({ color: 0x90ffa0, vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending });
+CHAIN.userData.keep = true;
+const coreGeo = new THREE.IcosahedronGeometry(0.16, 1);
+const decalGeo = new THREE.PlaneGeometry(1, 1);
+let chainCache: THREE.BufferGeometry | null = null;
+function chainGeo(): THREE.BufferGeometry {
+  if (chainCache) return chainCache;
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 9; i++) {
+    const t = new THREE.TorusGeometry(0.11, 0.028, 4, 10);
+    t.scale(1, 1.45, 1);
+    if (i % 2) t.rotateY(Math.PI / 2);
+    t.translate(0, 0.12 + i * 0.27, 0);
+    parts.push(t.toNonIndexed());
+    t.dispose();
+  }
+  const m = mergeGeometries(parts, false)!;
+  parts.forEach((p) => p.dispose());
+  const pos = m.getAttribute("position");
+  const col = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const f = Math.max(0, 1 - pos.getY(i) / 2.5);
+    col.set([f, f, f], i * 3);
+  }
+  m.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  chainCache = m;
+  LANTERN_GEOS.add(m);
+  return m;
+}
+const LANTERN_GEOS = new Set<THREE.BufferGeometry>([coreGeo, decalGeo]);
+
+const lanternMats = new Map<THREE.Material, THREE.Material>();
+function lanternMat(src: THREE.Material): THREE.Material {
+  let m = lanternMats.get(src);
+  if (m) return m;
+  const c = (src as THREE.MeshLambertMaterial).clone();
+  c.userData.keep = true;
+  c.onBeforeCompile = (s) => {
+    s.uniforms.uGlow = LANTERN_GLOW;
+    s.fragmentShader = s.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform float uGlow;")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\nfloat gk = smoothstep(0.04, 0.2, diffuseColor.g - max(diffuseColor.r, diffuseColor.b));\ntotalEmissiveRadiance += mix(diffuseColor.rgb, vec3(0.3, 1.0, 0.4) * max(diffuseColor.g, 0.4), 0.6) * gk * uGlow * 1.2;");
+  };
+  c.customProgramCacheKey = () => "lanternGlow";
+  lanternMats.set(src, c);
+  m = c;
+  return m;
+}
+
 export class MapFx {
   readonly root = new THREE.Group();
   private runs: Run[] = [];
-  private drifts: Drift[] = [];
+  private avas: Ava[] = [];
   private now = 0;
 
   private gates: Gate[] = [];
@@ -64,6 +255,10 @@ export class MapFx {
   private lanternObj: THREE.Group | null = null;
   private lanternId = 0;
   private lanternY = 0;
+  private lanternPos = new THREE.Vector2();
+  private lanternTilt = new THREE.Vector4();
+  private lanternEnd: { kind: "taken" | "fade"; hero: number } = { kind: "fade", hero: 0 };
+  private lanternOut: { obj: THREE.Group; start: number; kind: "taken" | "fade"; hero: number; from?: THREE.Vector3 }[] = [];
   private wispAcc = 0;
   private mistCells: number[] = [];
   private mistAcc = 0;
@@ -71,7 +266,7 @@ export class MapFx {
   private morphs: { id: number; start: number; until: number; team: number; acc: number }[] = [];
   teamColors: THREE.Color[] = [];
 
-  private hornObjs: { ring: THREE.Mesh; mat: THREE.MeshBasicMaterial; flag: THREE.Mesh; horn: THREE.Object3D }[] = [];
+  private hornObjs: { ring: THREE.Mesh; mat: THREE.MeshBasicMaterial; flag: THREE.Mesh; horn: THREE.Object3D; k: number }[] = [];
 
   private buildHorns(): void {
     const w = this.world;
@@ -99,43 +294,52 @@ export class MapFx {
       pos.setXYZ(i, v.x, v.y, v.z);
     }
     hornGeo.computeVertexNormals();
+    const hp = propParts("event_horn");
     hs.forEach((h) => {
       const g = new THREE.Group();
       g.position.set(h.x, w.groundY(h.x, h.z), h.z);
       g.rotation.y = Math.atan2(w.terrain.width / 2 - h.x, w.terrain.depth / 2 - h.z);
       g.scale.setScalar(1.6);
-      [[1.1, 0.5, 0], [0.8, 0.4, 0.45], [0.55, 0.35, 0.8]].forEach(([r, hh, y], k) => {
-        const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), stone);
-        m.scale.set(1, hh / r, 1);
-        m.position.y = y + hh * 0.6;
-        m.rotation.y = k * 0.7;
-        g.add(m);
-      });
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.75, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), snow);
-      cap.scale.y = 0.25;
-      cap.position.y = 0.9;
-      g.add(cap);
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.6, 6), wood);
-      post.position.set(0, 1.6, 0);
-      g.add(post);
-      const horn = new THREE.Group();
-      horn.position.set(0, 1.85, 0);
-      const hm = new THREE.Mesh(hornGeo, bone);
-      hm.position.x = -0.45;
-      horn.add(hm);
-      for (const t of [0.35, 0.65]) {
-        const p = curve.getPoint(t);
-        const band = new THREE.Mesh(new THREE.TorusGeometry(0.08 + 0.3 * Math.pow(t, 3) + 0.01, 0.025, 4, 10), brass);
-        band.position.set(p.x - 0.45, p.y, p.z);
-        band.lookAt(new THREE.Vector3().copy(curve.getTangent(t)).add(band.position));
-        horn.add(band);
+      let horn: THREE.Object3D;
+      if (hp) {
+        horn = new THREE.Mesh(hp.geo, hp.mat);
+        horn.scale.setScalar(1 / 1.6);
+        horn.castShadow = true;
+        g.add(horn);
+      } else {
+        [[1.1, 0.5, 0], [0.8, 0.4, 0.45], [0.55, 0.35, 0.8]].forEach(([r, hh, y], k) => {
+          const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), stone);
+          m.scale.set(1, hh / r, 1);
+          m.position.y = y + hh * 0.6;
+          m.rotation.y = k * 0.7;
+          g.add(m);
+        });
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.75, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), snow);
+        cap.scale.y = 0.25;
+        cap.position.y = 0.9;
+        g.add(cap);
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.6, 6), wood);
+        post.position.set(0, 1.6, 0);
+        g.add(post);
+        horn = new THREE.Group();
+        horn.position.set(0, 1.85, 0);
+        const hm = new THREE.Mesh(hornGeo, bone);
+        hm.position.x = -0.45;
+        horn.add(hm);
+        for (const t of [0.35, 0.65]) {
+          const p = curve.getPoint(t);
+          const band = new THREE.Mesh(new THREE.TorusGeometry(0.08 + 0.3 * Math.pow(t, 3) + 0.01, 0.025, 4, 10), brass);
+          band.position.set(p.x - 0.45, p.y, p.z);
+          band.lookAt(new THREE.Vector3().copy(curve.getTangent(t)).add(band.position));
+          horn.add(band);
+        }
+        g.add(horn);
       }
-      g.add(horn);
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.4, 5), wood);
-      pole.position.set(0.55, 1.6, 0.3);
+      pole.position.set(hp ? 0.62 : 0.55, hp ? 1.1 : 1.6, hp ? -0.42 : 0.3);
       g.add(pole);
       const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4), new THREE.MeshLambertMaterial({ color: 0x8a8070, side: THREE.DoubleSide }));
-      flag.position.set(0.85, 2.05, 0.3);
+      flag.position.set(pole.position.x + 0.3, pole.position.y + 0.45, pole.position.z);
       g.add(flag);
       const mat = new THREE.MeshBasicMaterial({ color: 0xffd040, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide });
       const ring = new THREE.Mesh(new THREE.RingGeometry(1.45, 1.62, 40, 1, 0, 0.001), mat);
@@ -144,7 +348,7 @@ export class MapFx {
       ring.renderOrder = 5;
       g.add(ring);
       this.root.add(g);
-      this.hornObjs.push({ ring, mat, flag, horn });
+      this.hornObjs.push({ ring, mat, flag, horn, k: -1 });
     });
   }
 
@@ -155,8 +359,12 @@ export class MapFx {
       if (!o) return;
       const ready = w.time >= h.readyAt;
       const k = ready ? (h.progress > 0 ? h.progress / w.mapEvents.hornCapture : 1) : 1 - (h.readyAt - w.time) / w.mapEvents.hornCooldown;
-      o.ring.geometry.dispose();
-      o.ring.geometry = new THREE.RingGeometry(1.45, 1.62, 40, 1, Math.PI / 2, Math.max(0.001, Math.min(1, k)) * Math.PI * 2);
+      const kq = Math.round(Math.max(0.001, Math.min(1, k)) * 120) / 120;
+      if (kq !== o.k) {
+        o.k = kq;
+        o.ring.geometry.dispose();
+        o.ring.geometry = new THREE.RingGeometry(1.45, 1.62, 40, 1, Math.PI / 2, Math.max(0.001, kq) * Math.PI * 2);
+      }
       const tc = h.team >= 0 ? this.teamColors[h.team] : undefined;
       o.mat.color.set(ready ? (h.progress > 0 && tc ? tc : new THREE.Color(0xffd040)) : new THREE.Color(0x606878));
       o.mat.opacity = ready ? (h.progress > 0 ? 0.85 : 0.35 + Math.sin(time * 3) * 0.15) : 0.3;
@@ -291,11 +499,53 @@ export class MapFx {
     this.fountain = world.terrain.fountain as FountainDef | undefined;
     this.buildJumpPads();
     this.buildHorns();
+    if (world.terrain.avalanche) prepLods();
     const m = world.mapEvents.mistMask;
     if (m) for (let i = 0; i < m.length; i++) if (m[i]) this.mistCells.push(i);
   }
 
   private buildLantern(): THREE.Group {
+    const p = propParts("event_lantern");
+    if (!p) return this.buildOldLantern();
+    if (!p.geo.boundingBox) p.geo.computeBoundingBox();
+    const bb = p.geo.boundingBox!;
+    const h = bb.max.y - bb.min.y;
+    const g = new THREE.Group();
+    const pivot = new THREE.Group();
+    pivot.name = "pivot";
+    pivot.position.y = h * 0.5 * LANTERN_SCALE;
+    g.add(pivot);
+    const spin = new THREE.Group();
+    spin.name = "spin";
+    spin.scale.setScalar(LANTERN_SCALE);
+    pivot.add(spin);
+    const body = new THREE.Mesh(p.geo, lanternMat(p.mat));
+    body.position.y = -bb.max.y;
+    body.castShadow = true;
+    spin.add(body);
+    const core = new THREE.Mesh(coreGeo, SOUL);
+    core.name = "core";
+    core.position.y = -bb.max.y + bb.min.y + h * 0.4;
+    spin.add(core);
+    const halo = new THREE.Sprite(HALO);
+    halo.name = "halo";
+    halo.position.copy(core.position);
+    halo.scale.setScalar(2.4);
+    halo.renderOrder = 4;
+    spin.add(halo);
+    const chain = new THREE.Mesh(chainGeo(), CHAIN);
+    chain.name = "chain";
+    chain.position.y = 0.05;
+    pivot.add(chain);
+    const ring = new THREE.Mesh(decalGeo, DECAL);
+    ring.name = "decal";
+    ring.rotation.x = -Math.PI / 2;
+    ring.renderOrder = 3;
+    g.add(ring);
+    return g;
+  }
+
+  private buildOldLantern(): THREE.Group {
     const g = new THREE.Group();
     const parts: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 6; i++) {
@@ -329,45 +579,111 @@ export class MapFx {
     return g;
   }
 
+  private syncLanternOut(time: number): void {
+    for (let i = this.lanternOut.length - 1; i >= 0; i--) {
+      const o = this.lanternOut[i];
+      const taken = o.kind === "taken";
+      const k = Math.min(1, (time - o.start) / (taken ? 0.35 : 0.9));
+      if (!o.from) o.from = o.obj.position.clone();
+      const hero = taken ? this.world.getAny(o.hero) : undefined;
+      if (hero) {
+        const e = k * k;
+        o.obj.position.set(o.from.x + (hero.transform.pos.x - o.from.x) * e, o.from.y + (hero.transform.y + 1.2 - o.from.y) * e + Math.sin(k * Math.PI) * 0.8, o.from.z + (hero.transform.pos.z - o.from.z) * e);
+      } else o.obj.position.y = o.from.y + k * 1.2;
+      o.obj.scale.setScalar(Math.max(0.001, 1 - k * k));
+      o.obj.rotation.y += taken ? 0.5 : 0.2;
+      if (k < 1) continue;
+      this.root.remove(o.obj);
+      o.obj.traverse((m) => {
+        const g = (m as THREE.Mesh).geometry;
+        if (g && !g.userData.model && !LANTERN_GEOS.has(g)) g.dispose();
+      });
+      this.lanternOut.splice(i, 1);
+      if (this.fx && hero) {
+        emit(this.fx, { tex: SUMMONER.burst, n: 1, x: hero.transform.pos.x, y: hero.transform.y + 1.2, z: hero.transform.pos.z, size: [2.0, 2.0], grow: 1.5, life: [0.3, 0.3], speed: [0, 0], additive: true, color: 0x9cff9c });
+        emit(this.fx, { tex: SUMMONER.soulFlame, n: 8, x: hero.transform.pos.x, y: hero.transform.y + 1, z: hero.transform.pos.z, size: [0.5, 0.8], life: [0.4, 0.7], speed: [1.5, 3], up: [1, 2], additive: true, color: 0x80ff90 });
+      }
+    }
+  }
+
   private syncLantern(time: number, dt: number): void {
     const w = this.world;
     const me = w.mapEvents;
     const l = me.lantern;
     const def = me.lanternDef;
-    if (!l || !def) {
-      if (this.lanternObj) {
-        this.root.remove(this.lanternObj);
-        this.lanternObj.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
-        this.lanternObj = null;
-      }
-    } else {
-      if (!this.lanternObj || this.lanternId !== l.id) {
-        if (this.lanternObj) this.root.remove(this.lanternObj);
+    if ((!l || !def || this.lanternId !== l.id) && this.lanternObj) {
+      this.lanternOut.push({ obj: this.lanternObj, start: time, ...this.lanternEnd });
+      this.lanternEnd = { kind: "fade", hero: 0 };
+      this.lanternObj = null;
+    }
+    this.syncLanternOut(time);
+    if (l && def) {
+      if (!this.lanternObj) {
         this.lanternObj = this.buildLantern();
         this.lanternId = l.id;
+        this.lanternPos.set(l.x, l.z);
+        this.lanternTilt.set(0, 0, 0, 0);
         this.root.add(this.lanternObj);
       }
       const o = this.lanternObj;
-      const ground = w.groundY(l.x, l.z);
+      const sk = 1 - Math.exp(-dt * 10);
+      const px = this.lanternPos.x;
+      const pz = this.lanternPos.y;
+      this.lanternPos.x += (l.x - px) * sk;
+      this.lanternPos.y += (l.z - pz) * sk;
+      const lx = this.lanternPos.x;
+      const lz = this.lanternPos.y;
+      const vx = dt > 0 ? (lx - px) / dt : 0;
+      const vz = dt > 0 ? (lz - pz) / dt : 0;
+      const ground = w.groundY(lx, lz);
       const hover = 1.9 + Math.sin(time * 2.2) * 0.18;
       let y = ground + hover;
+      let rk = 1;
       if (l.state === "rise") {
-        const k = Math.min(1, (w.time - l.start) / def.riseSeconds);
-        y = ground - 3 + (hover + 3) * (k * k * (3 - 2 * k));
+        rk = Math.min(1, (w.time - l.start) / def.riseSeconds);
+        y = ground - 3 + (hover + 3) * (rk * rk * (3 - 2 * rk));
       }
       this.lanternY = y;
-      o.position.set(l.x, y, l.z);
-      o.rotation.y = time * 0.9;
-      o.rotation.z = Math.sin(time * 1.7) * 0.12;
-      const core = o.getObjectByName("core") as THREE.Mesh;
-      core.scale.setScalar(1 + Math.sin(time * 9) * 0.12);
+      o.position.set(lx, y, lz);
+      const tt = this.lanternTilt;
+      const ax = vz * 0.22 + Math.sin(time * 1.6) * 0.07;
+      const az = -vx * 0.22 + Math.cos(time * 1.25) * 0.06;
+      tt.z += ((ax - tt.x) * 30 - tt.z * 3.2) * dt;
+      tt.w += ((az - tt.y) * 30 - tt.w * 3.2) * dt;
+      tt.x += tt.z * dt;
+      tt.y += tt.w * dt;
+      const pivot = o.getObjectByName("pivot");
+      const spin = o.getObjectByName("spin");
+      if (pivot && spin) {
+        pivot.rotation.set(tt.x, 0, tt.y);
+        spin.rotation.y = time * 0.5 + (1 - rk) * (1 - rk) * 9;
+        const s = 0.55 + 0.45 * rk;
+        pivot.scale.setScalar(s);
+        const flick = 0.75 + Math.sin(time * 11) * 0.08 + Math.sin(time * 17.3) * 0.06 + Math.random() * 0.06;
+        LANTERN_GLOW.value = 0.85 + flick * 0.5;
+        (o.getObjectByName("halo") as THREE.Sprite).material.opacity = (0.45 + flick * 0.35) * rk;
+        (o.getObjectByName("core") as THREE.Mesh).scale.setScalar(0.85 + flick * 0.3);
+        const chain = o.getObjectByName("chain")!;
+        chain.visible = l.state !== "rise";
+        CHAIN.opacity = 0.35 + Math.sin(time * 3) * 0.1;
+        const decal = o.getObjectByName("decal")!;
+        decal.position.y = ground + 0.12 - y;
+        decal.rotation.z = -time * 0.4;
+        decal.scale.setScalar((2.6 + Math.sin(time * 2.2) * 0.15) * (0.3 + 0.7 * rk));
+        DECAL.opacity = (0.5 + flick * 0.2) * rk;
+      } else {
+        o.rotation.y = time * 0.9;
+        o.rotation.z = Math.sin(time * 1.7) * 0.12;
+        (o.getObjectByName("core") as THREE.Mesh).scale.setScalar(1 + Math.sin(time * 9) * 0.12);
+      }
       if (this.fx) {
         this.wispAcc += dt;
         if (this.wispAcc > 0.06) {
           this.wispAcc = 0;
-          emit(this.fx, { tex: SUMMONER.soulFlame, n: 2, x: l.x, y: y + 0.1, z: l.z, size: [0.8, 1.2], grow: 0.6, life: [0.4, 0.7], speed: [0.3, 0.8], up: [0.8, 1.4], additive: true, color: 0x60ff70, jitter: 0.25 });
-          if (Math.random() < 0.4) emit(this.fx, { tex: SUMMONER.ghost, n: 1, x: l.x, y: y - 0.3, z: l.z, size: [0.6, 0.9], grow: 1.2, life: [0.8, 1.2], speed: [0.4, 0.9], up: [0.2, 0.5], opacity: 0.55, color: 0xc8ffd0, jitter: 0.8 });
-          if (l.state === "rise" && Math.random() < 0.6) emit(this.fx, { tex: SUMMONER.graveHand, n: 1, x: l.x, y: ground - 0.2, z: l.z, size: [0.7, 1.0], life: [0.6, 0.9], speed: [0.2, 0.5], up: [1, 2], opacity: 0.85, color: 0xb8e8b0, jitter: 1.6 });
+          emit(this.fx, { tex: SUMMONER.soulFlame, n: 1, x: lx, y: y + 0.35, z: lz, size: [0.5, 0.8], grow: 0.5, life: [0.35, 0.6], speed: [0.2, 0.5], up: [0.8, 1.3], additive: true, color: 0x60ff70, jitter: 0.25 });
+          if (Math.random() < 0.3) emit(this.fx, { tex: SUMMONER.ghost, n: 1, x: lx, y: y - 0.3, z: lz, size: [0.6, 0.9], grow: 1.2, life: [0.8, 1.2], speed: [0.4, 0.9], up: [0.2, 0.5], opacity: 0.5, color: 0xc8ffd0, jitter: 1.0 });
+          if (Math.random() < 0.25) emit(this.fx, { tex: FX.twinkle, n: 1, x: lx, y: y - 0.2, z: lz, size: [0.2, 0.35], life: [0.6, 1.0], speed: [0.3, 0.8], up: [-0.6, 0.2], additive: true, color: 0x80ff90, jitter: 0.9 });
+          if (l.state === "rise" && Math.random() < 0.6) emit(this.fx, { tex: SUMMONER.graveHand, n: 1, x: lx, y: ground - 0.2, z: lz, size: [0.7, 1.0], life: [0.6, 0.9], speed: [0.2, 0.5], up: [1, 2], opacity: 0.85, color: 0xb8e8b0, jitter: 1.6 });
         }
       }
     }
@@ -528,7 +844,7 @@ export class MapFx {
       const hv = ev as unknown as { x: number; y: number; z: number };
       if (this.fx) {
         for (let k = 0; k < 3; k++) emit(this.fx, { tex: FX.shock, n: 1, x: hv.x, y: hv.y + 2, z: hv.z, size: [2 + k * 2, 2 + k * 2], grow: 3, life: [0.6 + k * 0.2, 0.6 + k * 0.2], speed: [0, 0], opacity: 0.5, color: 0xf0f4ff });
-        emit(this.fx, { tex: FX.smoke, n: 10, x: hv.x, y: hv.y + 2, z: hv.z, size: [1, 1.8], grow: 2, life: [1, 1.6], speed: [2, 5], opacity: 0.6, color: 0xf4f8ff });
+        emit(this.fx, { tex: PUFF, n: 10, x: hv.x, y: hv.y + 2, z: hv.z, size: [1, 1.8], grow: 2, life: [1, 1.6], speed: [2, 5], opacity: 0.6, color: 0xf4f8ff });
         this.fx.shake = Math.max(this.fx.shake, 0.6);
       }
       return;
@@ -561,13 +877,16 @@ export class MapFx {
     }
     if (ev.type === "lantern") {
       const l = ev as unknown as { stage: string; x: number; z: number; hero: number };
+      if (l.stage === "taken" || l.stage === "fade") this.lanternEnd = { kind: l.stage, hero: l.hero };
       if (this.fx && l.stage === "taken") {
         emit(this.fx, { tex: SUMMONER.burst, n: 1, x: l.x, y: this.lanternY, z: l.z, size: [2.4, 2.4], grow: 1.6, life: [0.4, 0.4], speed: [0, 0], additive: true, color: 0x9cff9c });
         emit(this.fx, { tex: SUMMONER.ghost, n: 8, x: l.x, y: this.lanternY, z: l.z, size: [0.6, 1.0], life: [0.6, 1.0], speed: [2, 4], additive: true, color: 0xb0ffb8 });
         emit(this.fx, { tex: SUMMONER.bones, n: 5, x: l.x, y: this.lanternY, z: l.z, size: [0.3, 0.5], life: [0.6, 0.9], speed: [2, 4], up: [1, 3], gravity: 9 });
       } else if (this.fx && l.stage === "rise") {
         const y = this.world.groundY(l.x, l.z);
-        emit(this.fx, { tex: FX.smoke, n: 6, x: l.x, y: y + 0.3, z: l.z, size: [1.6, 2.6], grow: 1.6, life: [1.0, 1.6], speed: [0.3, 1], up: [1, 2], opacity: 0.6, color: 0x405848, jitter: 1.5 });
+        emit(this.fx, { tex: FX.smoke, n: 5, x: l.x, y: y + 0.3, z: l.z, size: [1.2, 2.0], grow: 1.6, life: [0.9, 1.4], speed: [0.4, 1.2], up: [1, 2], opacity: 0.35, color: 0x6a9a78, jitter: 1.5 });
+        emit(this.fx, { tex: FX.dust, n: 8, x: l.x, y: y + 0.1, z: l.z, size: [0.8, 1.3], grow: 1.5, life: [0.5, 0.8], speed: [2, 3.5], flatSpread: true, opacity: 0.6 });
+        chunks(this.fx, 4, l.x, y + 0.2, l.z, { size: [0.08, 0.16], speed: [1.5, 3], up: [3, 5] });
         emit(this.fx, { tex: SUMMONER.skull, n: 3, x: l.x, y: y + 0.6, z: l.z, size: [0.5, 0.8], life: [1.0, 1.4], speed: [0.3, 0.8], up: [1.5, 2.5], additive: true, color: 0x90ff9c, jitter: 1 });
       } else if (this.fx && l.stage === "fade") {
         emit(this.fx, { tex: SUMMONER.ghost, n: 6, x: l.x, y: this.lanternY, z: l.z, size: [0.6, 1.0], life: [0.8, 1.2], speed: [0.5, 1.5], up: [1, 2], opacity: 0.6, color: 0xc8ffd0 });
@@ -585,11 +904,17 @@ export class MapFx {
     if (ev.type !== "avalanche") return;
     const e = ev as unknown as { stage: "warn" | "slide" | "settle"; rect: Rect; dx: number; dz: number; seconds: number };
     if (e.stage === "settle") {
-      this.drift(e.rect, e.seconds);
+      let a = this.avas.find((v) => v.until === Infinity && v.rect.x === e.rect.x && v.rect.z === e.rect.z);
+      if (!a) a = this.buildAva(e.rect, e.dx, e.dz, this.now - 2, 1.6);
+      a.until = this.now + e.seconds;
+      return;
+    }
+    if (e.stage === "slide") {
+      this.buildAva(e.rect, e.dx, e.dz, this.now, e.seconds);
+      if (this.fx) this.fx.shake = Math.max(this.fx.shake, 0.8);
       return;
     }
     this.runs.push({ stage: e.stage, rect: e.rect, dx: e.dx, dz: e.dz, start: this.now, seconds: e.seconds, acc: 0 });
-    if (e.stage === "slide" && this.fx) this.fx.shake = Math.max(this.fx.shake, 0.8);
   }
 
   private edge(r: Rect, dx: number, dz: number, u: number, along: number): { x: number; z: number } {
@@ -626,87 +951,247 @@ export class MapFx {
       }
       if (!fx) continue;
       r.acc += dt;
-      const span = r.dx !== 0 ? r.rect.w : r.rect.h;
-      const cross = r.dx !== 0 ? r.rect.h : r.rect.w;
-      if (r.stage === "warn") {
-        if (r.acc < 0.12) continue;
-        r.acc = 0;
-        fx.shake = Math.max(fx.shake, 0.08 + k * 0.2);
-        for (let n = 0; n < 2; n++) {
-          const p = this.edge(r.rect, r.dx, r.dz, Math.random(), -1.5 + Math.random() * 2);
-          const y = w.groundY(p.x, p.z);
-          emit(fx, { tex: FX.smoke, n: 1, x: p.x, y: y + 1.5, z: p.z, size: [1.4, 2.4], grow: 1.8, life: [0.8, 1.4], speed: [0.5, 1.6], dir: { x: r.dx, y: -0.2, z: r.dz }, cone: 0.6, opacity: 0.85, color: 0xf4f8ff });
-        }
-        if (Math.random() < 0.3) {
-          const p = this.edge(r.rect, r.dx, r.dz, Math.random(), 0);
-          chunks(fx, 1, p.x, w.groundY(p.x, p.z) + 1, p.z, { size: [0.12, 0.25], speed: [1, 3], up: [1, 2] });
-        }
-        continue;
-      }
-      if (r.acc < 0.05) continue;
+      if (r.acc < 0.12) continue;
       r.acc = 0;
-      fx.shake = Math.max(fx.shake, 0.5);
-      const along = k * (span + 4) - 2;
-      const n = Math.ceil(cross / 2.2);
-      for (let j = 0; j < n; j++) {
-        const p = this.edge(r.rect, r.dx, r.dz, (j + Math.random()) / n, along);
+      fx.shake = Math.max(fx.shake, 0.08 + k * 0.2);
+      for (let n = 0; n < 2; n++) {
+        const p = this.edge(r.rect, r.dx, r.dz, Math.random(), -1.5 + Math.random() * 2);
         const y = w.groundY(p.x, p.z);
-        emit(fx, { tex: FX.smoke, n: 1, x: p.x, y: y + 1.2, z: p.z, size: [3.0, 4.6], grow: 1.6, life: [0.7, 1.2], speed: [3, 6], dir: { x: r.dx, y: 0.35, z: r.dz }, cone: 0.5, opacity: 0.95, color: 0xf8fbff });
-        emit(fx, { tex: FX.smoke, n: 1, x: p.x, y: y + 0.4, z: p.z, size: [1.6, 2.4], grow: 1.5, life: [0.5, 0.9], speed: [5, 8], dir: { x: r.dx, y: 0.6, z: r.dz }, cone: 0.7, opacity: 0.9, color: 0xe8f0ff, gravity: 6 });
-        if (Math.random() < 0.25) chunks(fx, 1, p.x, y + 0.8, p.z, { size: [0.18, 0.35], speed: [3, 6], up: [2, 4] });
+        emit(fx, { tex: PUFF, n: 1, x: p.x, y: y + 1.5, z: p.z, size: [1.4, 2.4], grow: 1.8, life: [0.8, 1.4], speed: [0.5, 1.6], dir: { x: r.dx, y: -0.2, z: r.dz }, cone: 0.6, opacity: 0.75, color: 0xf4f8ff });
+      }
+      if (Math.random() < 0.25 + k * 0.5) {
+        const p = this.edge(r.rect, r.dx, r.dz, Math.random(), Math.random() * 1.5);
+        emit(fx, { tex: PUFF, n: 1 + Math.floor(k * 3), x: p.x, y: w.groundY(p.x, p.z) + 1.2, z: p.z, size: [0.3, 0.5], life: [0.6, 1.0], speed: [1.5, 3.5], dir: { x: r.dx, y: 0.6, z: r.dz }, cone: 0.5, gravity: 12, opacity: 0.95, color: 0xffffff });
+      }
+      if (Math.random() < 0.15 + k * 0.3) {
+        const p = this.edge(r.rect, r.dx, r.dz, Math.random(), Math.random() * 3);
+        emit(fx, { tex: PUFF, n: 1, x: p.x, y: w.groundY(p.x, p.z) + 0.2, z: p.z, size: [0.6, 1.0], grow: 1.6, life: [0.5, 0.8], speed: [1.5, 3], dir: { x: r.dx, y: 0.1, z: r.dz }, cone: 0.4, opacity: 0.7, color: 0xf8fbff });
       }
     }
-    for (let i = this.drifts.length - 1; i >= 0; i--) {
-      const d = this.drifts[i];
-      const grow = Math.min(1, (time - d.start) / 0.5);
-      const melt = Math.max(0, Math.min(1, (time - (d.until - 2.5)) / 2.5));
-      d.mesh.position.y = -0.6 * (1 - grow) - 0.9 * melt;
-      if (time >= d.until) {
-        this.root.remove(d.mesh);
-        d.mesh.geometry.dispose();
-        this.drifts.splice(i, 1);
+    this.syncAvas(time, dt);
+  }
+
+  private buildAva(rect: Rect, dx: number, dz: number, start: number, sweep: number): Ava {
+    const w = this.world;
+    const span = dx !== 0 ? rect.w : rect.h;
+    const cross = dx !== 0 ? rect.h : rect.w;
+    const alongOf = (x: number, z: number) => (dx > 0 ? x - rect.x : dx < 0 ? rect.x + rect.w - x : dz > 0 ? z - rect.z : rect.z + rect.h - z);
+    const crossOf = (x: number, z: number) => (dx !== 0 ? (z - rect.z) / rect.h : (x - rect.x) / rect.w);
+    const ph = [Math.random() * 6, Math.random() * 6, Math.random() * 6, Math.random() * 6, Math.random() * 6];
+    const m = 0.9;
+    const hAt = (x: number, z: number) => {
+      const d = Math.min(x - rect.x + m, rect.x + rect.w + m - x, z - rect.z + m, rect.z + rect.h + m - z);
+      const wob = 0.7 * Math.sin(x * 0.8 + z * 0.3 + ph[4]) + 0.5 * Math.sin(z * 1.1 - x * 0.45 + ph[2]);
+      const ed = Math.max(0, Math.min(1, (d - 0.6 + wob) / 1.8));
+      const e = ed * ed * (3 - 2 * ed);
+      const a = alongOf(x, z);
+      const u = crossOf(x, z);
+      const n = 0.5 + 0.3 * Math.sin(x * 0.9 + ph[0]) * Math.sin(z * 0.75 + ph[1]) + 0.2 * Math.sin(x * 0.37 + z * 0.53 + ph[2]);
+      const fk = Math.max(0, Math.min(1, (a - span * 0.45) / (span * 0.55)));
+      return e * (0.2 + 0.34 * n + 0.32 * fk * fk + 0.05 * Math.sin(a * 1.6 + u * 4 + ph[3])) - (1 - e) * 0.2;
+    };
+    const step = 0.8;
+    const nx = Math.ceil((rect.w + m * 2) / step) + 1;
+    const nz = Math.ceil((rect.h + m * 2) / step) + 1;
+    const pos = new Float32Array(nx * nz * 3);
+    const col = new Float32Array(nx * nz * 3);
+    const uv = new Float32Array(nx * nz * 2);
+    const arrive = new Float32Array(nx * nz);
+    const lift = new Float32Array(nx * nz);
+    const melt = new Float32Array(nx * nz);
+    for (let j = 0; j < nz; j++) {
+      for (let i = 0; i < nx; i++) {
+        const k = j * nx + i;
+        const x = rect.x - m + Math.min(rect.w + m * 2, i * step);
+        const z = rect.z - m + Math.min(rect.h + m * 2, j * step);
+        const h = hAt(x, z);
+        const g = w.groundY(x, z);
+        pos.set([x, g + h + 0.03, z], k * 3);
+        const c = 0.8 + 0.2 * Math.max(0, Math.min(1, h / 0.55));
+        col.set([c * 0.94, c * 0.97, Math.min(1, c * 1.04)], k * 3);
+        uv.set([x / 4, z / 4], k * 2);
+        arrive[k] = alongOf(x, z);
+        lift[k] = Math.max(0, h) + 0.3;
+        melt[k] = Math.max(0, Math.min(1, h / 0.6)) * 0.7 + Math.random() * 0.3;
+      }
+    }
+    const idx: number[] = [];
+    for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
+      const a = j * nx + i;
+      idx.push(a, a + nx, a + 1, a + 1, a + nx, a + nx + 1);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    geo.setAttribute("aArrive", new THREE.BufferAttribute(arrive, 1));
+    geo.setAttribute("aLift", new THREE.BufferAttribute(lift, 1));
+    geo.setAttribute("aMelt", new THREE.BufferAttribute(melt, 1));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    const uni = { uFront: { value: -10 }, uMelt: { value: 0 } };
+    const mat = blanketMat(uni);
+    const blanket = new THREE.Mesh(geo, mat);
+    blanket.receiveShadow = true;
+    const group = new THREE.Group();
+    group.add(blanket);
+    const sets: PieceSet[] = [];
+    const set = (name: string, fallback: number) => {
+      const p = propParts(name);
+      const geo = (p && lods.get(name)) ?? p?.geo ?? FALLBACK_GEO;
+      if (!geo.boundingBox) geo.computeBoundingBox();
+      const bb = geo.boundingBox!;
+      const s: PieceSet = { mesh: null, geo, mat: p ? (fallback < 2 ? brightMat(p.mat) : p.mat) : SNOW, items: [], w: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) || 1, h: bb.max.y - bb.min.y || 1, y0: bb.min.y, fallback };
+      sets.push(s);
+      return s;
+    };
+    const drift = set("event_drift", 0);
+    const heap = set("event_heap", 1);
+    const rock = set("event_boulder", 2);
+    const marks = [...w.terrain.pads, ...w.jumpPads];
+    const blocked = (x: number, z: number) => marks.some((p) => Math.hypot(p.x - x, p.z - z) < 2.6);
+    const sp = 4.6;
+    for (let a = sp * 0.5; a < span; a += sp) {
+      for (let c = sp * 0.5; c < cross; c += sp) {
+        if (Math.random() < 0.35) continue;
+        const aa = Math.max(1.5, Math.min(span - 1.5, a + (Math.random() - 0.5) * sp * 0.7));
+        const cc = Math.max(1.5, Math.min(cross - 1.5, c + (Math.random() - 0.5) * sp * 0.7)) / cross;
+        const q = this.edge(rect, dx, dz, cc, aa);
+        if (blocked(q.x, q.z)) continue;
+        const r = Math.random();
+        const t = r < 0.6 ? drift : r < 0.85 ? heap : rock;
+        const width = t === drift ? 3.4 + Math.random() * 1.6 : t === heap ? 2.0 + Math.random() * 0.9 : 1.2 + Math.random() * 0.6;
+        t.items.push({ u: cc, a: aa, s: width / t.w, sy: 0.7 + Math.random() * 0.3, rot: Math.random() * Math.PI * 2, sink: 0.12 + Math.random() * 0.12, melt: Math.random() * 0.5, roll: null });
+      }
+    }
+    const nRock = Math.max(3, Math.round(cross / 3));
+    const nHeap = Math.max(2, Math.round(cross / 3.6));
+    for (const [t, n, w0, w1] of [[rock, nRock, 1.2, 1.8], [heap, nHeap, 1.8, 2.5]] as [PieceSet, number, number, number][]) {
+      for (let j = 0; j < n; j++) {
+        const width = w0 + Math.random() * (w1 - w0);
+        t.items.push({ u: (j + 0.2 + Math.random() * 0.6) / n, a: span - 0.6 - Math.random() * 3.2, s: width / t.w, sy: 1, rot: Math.random() * Math.PI * 2, sink: 0.18, melt: 0.3 + Math.random() * 0.5, roll: { lag: Math.random() * 2.2 - 0.4, r: (width / 2) * 0.85, phase: Math.random() * 6, tilt: new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6)) } });
+      }
+    }
+    for (const s of sets) {
+      if (!s.items.length) continue;
+      const im = new THREE.InstancedMesh(s.geo, s.mat, s.items.length);
+      im.castShadow = s.fallback === 2;
+      im.receiveShadow = true;
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      s.mesh = im;
+      group.add(im);
+    }
+    this.root.add(group);
+    const ava: Ava = { rect, dx, dz, span, start, sweep, until: Infinity, group, blanket, uni, sets, acc: 0, settled: false, hAt };
+    this.avas.push(ava);
+    this.poseAva(ava, start);
+    return ava;
+  }
+
+  private poseAva(v: Ava, time: number): void {
+    const w = this.world;
+    const k = Math.min(1, (time - v.start) / v.sweep);
+    const front = k * (v.span + 4) - 2;
+    const meltK = v.until === Infinity ? 0 : Math.max(0, Math.min(1, (time - (v.until - MELT)) / MELT));
+    v.uni.uFront.value = front;
+    v.uni.uMelt.value = meltK;
+    const axis = new THREE.Vector3(v.dz, 0, -v.dx);
+    const q = new THREE.Quaternion();
+    const mtx = new THREE.Matrix4();
+    const sc = new THREE.Vector3();
+    const pv = new THREE.Vector3();
+    const cv = new THREE.Vector3();
+    for (const s of v.sets) {
+      const im = s.mesh;
+      if (!im) continue;
+      s.items.forEach((it, i) => {
+        let a = it.a;
+        let g = 1;
+        let lift = 0;
+        if (it.roll) {
+          a = Math.min(it.a, front - it.roll.lag);
+          const moving = a < it.a;
+          q.setFromAxisAngle(axis, (a + 2) / it.roll.r).multiply(it.roll.tilt);
+          lift = moving ? Math.abs(Math.sin(it.roll.phase + a * 1.1)) * 0.5 * (1 - k * 0.5) : 0;
+          g = a < -1 ? 0 : 1;
+        } else {
+          const f = Math.max(0, Math.min(1, (front - it.a) / 2.5));
+          g = f * (1 + 0.5 * Math.sin(f * Math.PI));
+          q.setFromAxisAngle(UP, it.rot);
+        }
+        const mk = Math.max(0, Math.min(1, meltK * 1.7 - it.melt));
+        const p = this.edge(v.rect, v.dx, v.dz, it.u, a);
+        const gy = w.groundY(p.x, p.z) + Math.max(0, v.hAt(p.x, p.z)) * 0.7 * Math.max(0, Math.min(1, (front - a) / 3));
+        const hs = s.h * it.s * it.sy;
+        const sy = Math.max(0.001, g * (1 - mk * 0.85));
+        sc.set(it.s * Math.max(0.001, g) * (1 - mk * 0.3), it.s * it.sy * sy, it.s * Math.max(0.001, g) * (1 - mk * 0.3));
+        if (it.roll) {
+          const rest = a >= it.a ? hs * it.sink : 0;
+          cv.set(0, (s.y0 + s.h / 2) * sc.y, 0).applyQuaternion(q);
+          pv.set(p.x - cv.x, gy + it.roll.r * 0.85 + lift - rest - mk * hs * 0.4 - cv.y, p.z - cv.z);
+        } else pv.set(p.x, gy - s.y0 * sc.y - hs * it.sink - mk * hs * 0.35, p.z);
+        mtx.compose(pv, q, sc);
+        im.setMatrixAt(i, mtx);
+      });
+      im.instanceMatrix.needsUpdate = true;
+      im.computeBoundingSphere();
+    }
+  }
+
+  private syncAvas(time: number, dt: number): void {
+    const fx = this.fx;
+    const w = this.world;
+    for (let i = this.avas.length - 1; i >= 0; i--) {
+      const v = this.avas[i];
+      if (time >= v.until) {
+        this.freeAva(v);
+        this.avas.splice(i, 1);
+        continue;
+      }
+      const k = (time - v.start) / v.sweep;
+      const melting = v.until !== Infinity && time > v.until - MELT;
+      if (!v.settled || melting) this.poseAva(v, time);
+      if (k > 1.2 && !melting) v.settled = true;
+      if (!fx) continue;
+      v.acc += dt;
+      if (k < 1.05) {
+        if (v.acc < 0.05) continue;
+        v.acc = 0;
+        fx.shake = Math.max(fx.shake, 0.5);
+        const cross = v.dx !== 0 ? v.rect.h : v.rect.w;
+        const along = Math.min(1, k) * (v.span + 4) - 2;
+        const n = Math.ceil(cross / 2.6);
+        for (let j = 0; j < n; j++) {
+          const p = this.edge(v.rect, v.dx, v.dz, (j + Math.random()) / n, along);
+          const y = w.groundY(p.x, p.z);
+          emit(fx, { tex: PUFF, n: 1, x: p.x, y: y + 1.6, z: p.z, size: [2.2, 3.4], grow: 1.7, life: [0.6, 1.0], speed: [3, 6], dir: { x: v.dx, y: 0.5, z: v.dz }, cone: 0.5, opacity: 0.6, color: 0xf8fbff });
+          emit(fx, { tex: PUFF, n: 1, x: p.x, y: y + 0.3, z: p.z, size: [1.2, 2.0], grow: 1.5, life: [0.4, 0.8], speed: [5, 8], dir: { x: v.dx, y: 0.7, z: v.dz }, cone: 0.7, opacity: 0.85, color: 0xf0f6ff, gravity: 6 });
+          if (Math.random() < 0.4) emit(fx, { tex: PUFF, n: 2, x: p.x, y: y + 0.8, z: p.z, size: [0.35, 0.6], life: [0.6, 0.9], speed: [4, 7], dir: { x: v.dx, y: 0.8, z: v.dz }, cone: 0.6, gravity: 14, opacity: 0.95, color: 0xffffff });
+        }
+      } else if (melting) {
+        if (v.acc < 0.12) continue;
+        v.acc = 0;
+        const p = this.edge(v.rect, v.dx, v.dz, Math.random(), Math.random() * v.span);
+        emit(fx, { tex: PUFF, n: 1, x: p.x, y: w.groundY(p.x, p.z) + 0.4, z: p.z, size: [1.2, 2.0], grow: 1.5, life: [1.0, 1.6], speed: [0.1, 0.3], up: [0.4, 0.8], opacity: 0.25, color: 0xeef6ff });
+      } else {
+        if (v.acc < 0.2) continue;
+        v.acc = 0;
+        const p = this.edge(v.rect, v.dx, v.dz, Math.random(), Math.random() * v.span);
+        emit(fx, { tex: FX.twinkle, n: 1, x: p.x, y: w.groundY(p.x, p.z) + 0.5, z: p.z, size: [0.2, 0.35], life: [0.3, 0.5], speed: [0, 0.1], additive: true, color: 0xd8f0ff });
       }
     }
   }
 
-  private drift(r: Rect, seconds: number): void {
-    const w = this.world;
-    const geos: THREE.BufferGeometry[] = [];
-    const base = new THREE.IcosahedronGeometry(1, 1);
-    base.deleteAttribute("uv");
-    for (let z = r.z; z < r.z + r.h; z += 1.6) {
-      for (let x = r.x; x < r.x + r.w; x += 1.6) {
-        const px = x + Math.random() * 1.6;
-        const pz = z + Math.random() * 1.6;
-        const g = base.clone();
-        const s = 0.8 + Math.random() * 0.5;
-        g.scale(s * 1.25, 0.22 + Math.random() * 0.22, s * 1.25);
-        g.rotateY(Math.random() * 6);
-        g.translate(px, w.groundY(px, pz), pz);
-        const n = g.getAttribute("position").count;
-        const col = new Float32Array(n * 3);
-        for (let q = 0; q < n; q++) {
-          const top = g.getAttribute("position").getY(q) > w.groundY(px, pz) + 0.05 ? 1 : 0.72;
-          col.set([top, top, top * 1.04], q * 3);
-        }
-        g.setAttribute("color", new THREE.BufferAttribute(col, 3));
-        geos.push(g);
-      }
-    }
-    base.dispose();
-    if (!geos.length) return;
-    const merged = mergeGeometries(geos, false);
-    for (const g of geos) g.dispose();
-    if (!merged) return;
-    const mesh = new THREE.Mesh(merged, SNOW);
-    mesh.position.y = -0.6;
-    this.root.add(mesh);
-    this.drifts.push({ mesh, start: this.now, until: this.now + seconds });
+  private freeAva(v: Ava): void {
+    this.root.remove(v.group);
+    v.blanket.geometry.dispose();
+    (v.blanket.material as THREE.Material).dispose();
+    for (const s of v.sets) s.mesh?.dispose();
   }
 
   dispose(): void {
-    for (const d of this.drifts) d.mesh.geometry.dispose();
-    this.drifts = [];
+    for (const v of this.avas) this.freeAva(v);
+    this.avas = [];
     this.root.clear();
   }
 }

@@ -25,6 +25,11 @@ PROPS = {
     "wallstone": {"static": True, "size": (1.0, 0.95, 2.5), "tex": 256},
     "palisade": {"static": True, "size": (1.05, 0.5, 2.5), "tex": 256},
     "tomb": {"static": True, "height": 1.05, "tex": 256},
+    "event_lantern": {"static": True, "height": 1.6, "tex": 256},
+    "event_horn": {"static": True, "height": 3.0, "tex": 256},
+    "event_boulder": {"static": True, "height": 1.0, "tex": 256},
+    "event_drift": {"static": True, "height": 1.0, "tex": 256},
+    "event_heap": {"static": True, "height": 1.0, "tex": 256},
 }
 
 
