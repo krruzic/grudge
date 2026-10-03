@@ -154,7 +154,27 @@ def duelist_fix_rapier(w):
     w.data.transform(Matrix.Scale(0.6, 4) @ R.to_4x4() @ Matrix.Translation(-Vector(hold)))
 
 
+def fix_scabbard_tip(name):
+    import bmesh
+    body = bpy.data.objects.get(name)
+    if not body:
+        return
+    bm = bmesh.new()
+    bm.from_mesh(body.data)
+    tip = [f for f in bm.faces if f.calc_center_median().y > 0.55 and f.calc_center_median().z < 0.75 and f.calc_center_median().x > -0.1]
+    bmesh.ops.recalc_face_normals(bm, faces=tip)
+    for f in list(tip):
+        if f.calc_area() < 1e-7:
+            tip.remove(f)
+    edges = [e for e in bm.edges if e.is_boundary and all(f in tip for f in e.link_faces)]
+    if edges:
+        bmesh.ops.holes_fill(bm, edges=edges, sides=8)
+    bm.to_mesh(body.data)
+    bm.free()
+
+
 def attach_rapier(name, arm, src_path):
+    fix_scabbard_tip(name)
     w = th.import_prop(name + "_rapier", src_path, tex=512)
     duelist_fix_rapier(w)
     duelist_decimate(w, 0.35)
@@ -169,6 +189,6 @@ def attach_baguette(name, arm, src_path):
     co = [v.co.copy() for v in w.data.vertices]
     mid = Vector([(min(c[k] for c in co) + max(c[k] for c in co)) / 2 for k in range(3)])
     th.place_on_bone(w, arm, "chest", tuple(mid), (-0.55, 0.0, 1.0), 0.62, at=0.0, side=(0, -1, 0))
-    w.data.transform(Matrix.Translation((0.0, 0.34, -0.02)))
+    w.data.transform(Matrix.Translation((0.0, 0.27, -0.02)))
     w.name = name + "_baguette"
     return w

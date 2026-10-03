@@ -213,6 +213,7 @@ export class HeroModels {
             c = toLambert(m);
             const ct = costumeTexture(type, costume, m.name);
             if (ct) (c as THREE.MeshLambertMaterial).map = ct;
+            if (type === "duelist" && !m.name.startsWith("face")) c.side = THREE.DoubleSide;
             if (m.name.startsWith("team")) (c as THREE.MeshLambertMaterial).color.copy(dyeColor(dye));
             teamMat.set(m, c);
           }
