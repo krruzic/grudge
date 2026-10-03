@@ -7,7 +7,7 @@ import { prop, propParts } from "./props";
 import { costumeOfPlayer } from "./costumes";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
-import { cm, composite, cv, ENGINEER, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD, withCostume } from "./fxKit";
+import { cm, composite, cv, ENGINEER, hd, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD, withCostume } from "./fxKit";
 import { CACTUS, SPINE, isDesert } from "./desertKit";
 import type { FxHost } from "./fxParts";
 import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
@@ -752,7 +752,7 @@ export class HazardViews {
         ring(Math.round(r * 4), [0, 1], (x, z) => sprite(RAIDER.smoke, 1.6 + Math.random() * 1.2, x, z, 0.1, false, "smoke"));
         ring(4, [0.2, 0.8], (x, z) => sprite(RAIDER.shadow, 1.2, x, z, 0.6, false, "smoke"));
       } else if (style === "ale" || style === "aletrail") {
-        decal.material = new THREE.MeshBasicMaterial({ map: cv(ZONE_DECALS.ale), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.material = new THREE.MeshBasicMaterial({ map: hd(ZONE_DECALS.ale), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
         decal.visible = true;
         ring(style === "ale" ? Math.round(r * 3) : 1, [0.05, 0.85], (x, z) => sprite(BUBBLE, 0.22 + Math.random() * 0.16, x, z, -0.05, false, "bubble"));
         if (style === "ale") ring(Math.round(r * 1.5), [0.75, 0.98], (x, z) => sprite(FOAM, 0.45 + Math.random() * 0.3, x, z, -0.2, false, "foam"));
@@ -763,7 +763,7 @@ export class HazardViews {
         ring(Math.round(r * 1.5), [0.1, 0.9], (x, z) => sprite(WARLORD.ember, 0.3, x, z, 0.1, true, "ember"));
         ring(Math.round(r * 1.2), [0.1, 0.9], (x, z) => sprite(FX.fire, 0.6 + Math.random() * 0.3, x, z, -0.1, true, "glow"));
       } else if (style === "brewfest") {
-        decal.material = new THREE.MeshBasicMaterial({ map: cv(ZONE_DECALS.brewfest), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.material = new THREE.MeshBasicMaterial({ map: hd(ZONE_DECALS.brewfest), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
         decal.visible = true;
         ring(Math.round(r * 2.2), [0.25, 0.95], (x, z) => sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"));
         ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));

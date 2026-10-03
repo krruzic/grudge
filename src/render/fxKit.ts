@@ -15,6 +15,8 @@ const COLS = 4;
 
 const variantUrls = import.meta.glob("../../assets/fx/*@*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
 const VARIANT_URL = new Map(Object.entries(variantUrls).map(([p, u]) => [p.split("/").pop()!.replace(".png", ""), u]));
+const hqUrls = import.meta.glob("../../assets/fx/hq/*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const HQ_URL = new Map(Object.entries(hqUrls).map(([p, u]) => [p.split("/").pop()!.replace(".png", ""), u]));
 
 const waits: Promise<void>[] = [];
 function cells(): THREE.CanvasTexture[] {
@@ -81,6 +83,7 @@ function variant(a: Atlas, c: string): THREE.CanvasTexture[] | null {
 function atlas<K extends string>(name: string, url: string, keys: readonly K[]): Record<K, THREE.CanvasTexture> {
   const a: Atlas = { name, base: sheet(url), vars: new Map() };
   a.base.forEach((t, i) => CELL_OF.set(t, { a, i }));
+  keys.forEach((k, i) => HQ_URL.has(`${name}.${k}`) && HQ_ID.set(a.base[i], { atlas: name, id: `${name}.${k}` }));
   const o = {} as Record<K, THREE.CanvasTexture>;
   keys.forEach((k, i) => Object.defineProperty(o, k, { enumerable: true, get: () => (active && variant(a, active)?.[i]) || a.base[i] }));
   return o;
@@ -107,18 +110,51 @@ export function activeCostume(): string {
 
 export function preloadCostumeFx(list: string[]): void {
   for (const c of list) if (c) for (const t of CELL_OF.keys()) cv(t, c);
+  for (const { id } of HQ_ID.values()) for (const c of list) if (c) hqTex(`${id}@${c}`);
+}
+
+const HQ_ID = new Map<THREE.Texture, { atlas: string; id: string }>();
+const HQ = new Map<string, { t: THREE.Texture; ready: boolean } | null>();
+function hqTex(id: string): THREE.Texture | null {
+  let h = HQ.get(id);
+  if (h === undefined) {
+    const url = HQ_URL.get(id);
+    h = null;
+    if (url) {
+      const e = { t: new THREE.Texture(), ready: false };
+      e.t = new THREE.TextureLoader().load(url, () => (e.ready = true));
+      e.t.colorSpace = THREE.SRGBColorSpace;
+      e.t.anisotropy = 4;
+      e.t.userData.keep = true;
+      h = e;
+    }
+    HQ.set(id, h);
+  }
+  return h?.ready ? h.t : null;
+}
+
+export function hd<T extends THREE.Texture>(t: T, c = active): T {
+  const base = baseTex(t);
+  const v = cv(base as T, c);
+  const hq = HQ_ID.get(base);
+  if (!hq) return v;
+  const themed = !!c && VARIANT_URL.has(`${hq.atlas}@${c}`);
+  const out = themed ? hqTex(`${hq.id}@${c}`) : hqTex(hq.id);
+  if (!out) return v;
+  BASE_OF.set(out, base);
+  return out as T;
 }
 
 export function baseTex(t: THREE.Texture): THREE.Texture {
   return BASE_OF.get(t) ?? t;
 }
 
-interface Comp { size: number; draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void; repeat: boolean; vars: Map<string, THREE.CanvasTexture | null> }
+interface Comp { size: number; draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void; repeat: boolean; res: number; vars: Map<string, THREE.CanvasTexture | null> }
 const COMPS = new Map<THREE.Texture, Comp>();
 let baseReady = false;
 
-function paint(size: number, repeat: boolean): { t: THREE.CanvasTexture; g: CanvasRenderingContext2D } {
-  const k = Math.max(1, Math.round(256 / size));
+function paint(size: number, repeat: boolean, res = 256): { t: THREE.CanvasTexture; g: CanvasRenderingContext2D } {
+  const k = Math.max(1, Math.round(res / size));
   const c = document.createElement("canvas");
   c.width = c.height = size * k;
   const t = new THREE.CanvasTexture(c);
@@ -135,7 +171,7 @@ function compVariant(base: THREE.Texture, comp: Comp, c: string): THREE.Texture 
   if (!baseReady) return base;
   const st = [touched, missed];
   touched = missed = false;
-  const { t, g } = paint(comp.size, comp.repeat);
+  const { t, g } = paint(comp.size, comp.repeat, comp.res);
   const prev = useCostume(c);
   comp.draw(g, (x) => cv(x).image as CanvasImageSource);
   active = prev;
@@ -153,17 +189,8 @@ function compVariant(base: THREE.Texture, comp: Comp, c: string): THREE.Texture 
   return base;
 }
 
-const ALIAS = new Map<THREE.Texture, Map<string, THREE.Texture>>();
-export function setCostumeTex(base: THREE.Texture, c: string, t: THREE.Texture): void {
-  if (!ALIAS.has(base)) ALIAS.set(base, new Map());
-  ALIAS.get(base)!.set(c, t);
-  BASE_OF.set(t, base);
-}
-
 export function cv<T extends THREE.Texture>(t: T, c = active): T {
   if (!c) return t;
-  const al = ALIAS.get(t)?.get(c);
-  if (al) return cv(al as T, c);
   const cell = CELL_OF.get(t);
   if (cell) return ((variant(cell.a, c)?.[cell.i] as unknown as T) ?? t);
   const comp = COMPS.get(t);
@@ -209,9 +236,9 @@ export function trailOf(c: string | undefined, slot = "trail"): number | undefin
 
 const C = sheet(commonUrl);
 
-export function composite(size: number, draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void, repeat = false): THREE.CanvasTexture {
-  const { t, g } = paint(size, repeat);
-  COMPS.set(t, { size, draw, repeat, vars: new Map() });
+export function composite(size: number, draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void, repeat = false, res = 256): THREE.CanvasTexture {
+  const { t, g } = paint(size, repeat, res);
+  COMPS.set(t, { size, draw, repeat, res, vars: new Map() });
   void fxReady.then(() => {
     const prev = useCostume("");
     draw(g, (x) => x.image as CanvasImageSource);
@@ -260,4 +287,5 @@ export const FRIAR = atlas("friar", friarUrl, ["foam", "bubble", "drop", "splash
 
 export const fxReady = Promise.all(waits).then(() => {
   baseReady = true;
+  for (const { id } of HQ_ID.values()) hqTex(id);
 });

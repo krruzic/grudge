@@ -61,8 +61,8 @@ ironMat.map = ironTex;
 const ballGeo = new THREE.IcosahedronGeometry(0.5, 1);
 const ballMat = new THREE.MeshLambertMaterial({ map: ironTex, color: 0x6a6660, flatShading: true });
 
-function canvasTex(size: number, draw: (ctx: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
-  const k = Math.max(1, Math.round(256 / size));
+function canvasTex(size: number, draw: (ctx: CanvasRenderingContext2D, s: number) => void, res = 256): THREE.CanvasTexture {
+  const k = Math.max(1, Math.round(res / size));
   const c = document.createElement("canvas");
   c.width = c.height = size * k;
   const ctx = c.getContext("2d")!;
@@ -387,7 +387,7 @@ export const targetTex = canvasTex(64, (ctx, s) => {
   ctx.fillStyle = "#ff3a1a";
   ctx.fillRect(c - 1, c - 7, 2, 14);
   ctx.fillRect(c - 7, c - 1, 14, 2);
-});
+}, 512);
 
 const fillTex = canvasTex(32, (ctx, s) => {
   ctx.fillStyle = "#ff4a1a";
@@ -463,7 +463,7 @@ const gearTex = canvasTex(128, (ctx, s) => {
   ctx.lineWidth = 2;
   ctx.strokeStyle = "rgba(240,200,96,0.6)";
   ctx.stroke();
-});
+}, 512);
 
 const runeTex = canvasTex(128, (ctx, s) => {
   const c = s / 2;
@@ -498,7 +498,7 @@ const runeTex = canvasTex(128, (ctx, s) => {
   ctx.fill();
   ctx.fillRect(c - 4, c + 6, 2, 6);
   ctx.fillRect(c + 2, c + 6, 2, 6);
-});
+}, 512);
 
 const crackTex = canvasTex(128, (ctx, s) => {
   const c = s / 2;
@@ -527,7 +527,7 @@ const crackTex = canvasTex(128, (ctx, s) => {
   ctx.beginPath();
   ctx.arc(c, c, 9, 0, Math.PI * 2);
   ctx.fill();
-});
+}, 512);
 
 const frostTex = canvasTex(128, (ctx, s) => {
   const c = s / 2;
@@ -559,7 +559,7 @@ const frostTex = canvasTex(128, (ctx, s) => {
     ctx.stroke();
     ctx.restore();
   }
-});
+}, 512);
 
 const emblemTex = canvasTex(128, (ctx, s) => {
   const c = s / 2;
@@ -580,7 +580,7 @@ const emblemTex = canvasTex(128, (ctx, s) => {
   ctx.fillStyle = "#40c040";
   ctx.fillRect(c - 4, c - 16, 8, 30);
   ctx.fillRect(c - 15, c - 5, 30, 8);
-});
+}, 512);
 
 const swirlTex = canvasTex(128, (ctx, s) => {
   const c = s / 2;
@@ -602,7 +602,7 @@ const swirlTex = canvasTex(128, (ctx, s) => {
     ctx.strokeStyle = "rgba(220,200,160,0.85)";
     ctx.stroke();
   }
-});
+}, 512);
 
 const pillarTex = canvasTex(64, (ctx, s) => {
   const g = ctx.createLinearGradient(0, 0, 0, s);

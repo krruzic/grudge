@@ -5,7 +5,7 @@ import stoneUrl from "../../assets/textures/stone.png?url";
 import lavaUrl from "../../assets/fx/lava.png?url";
 import { FxBatch, fxBatch, FxInst } from "./fxInstances";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { activeCostume, baseTex, cv, tint } from "./fxKit";
+import { activeCostume, baseTex, cv, hd, tint } from "./fxKit";
 
 export interface FxHost {
   root: THREE.Group;
@@ -588,7 +588,7 @@ function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: num
 }
 
 export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): FxInst | null {
-  tex = cv(tex);
+  tex = hd(tex);
   opts = { ...opts, color: tint(opts.color) };
   const fis = FISSURE_TEX.get(baseTex(tex));
   if (fis) {

@@ -1,6 +1,6 @@
 import { teslaCoil } from "./hazardViews";
 import { costumeOfPlayer } from "./costumes";
-import { cv, FX, SUMMONER, trailOf, withCostume } from "./fxKit";
+import { FX, hd, SUMMONER, trailOf, withCostume } from "./fxKit";
 import { KITS } from "./kits";
 import * as THREE from "three";
 import { builderRate, canSpec, padNear } from "../sim/structures";
@@ -1336,7 +1336,7 @@ export class EntityViews {
     }
     const grave = !!st && !!st.graveUntil && w.time < st.graveUntil && e.alive;
     if (grave && !v.graveRing) {
-      v.graveRing = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: cv(SUMMONER.circle, costumeOfPlayer(e.hero?.player)), color: trailOf(costumeOfPlayer(e.hero?.player), "grave") ?? 0xb070ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      v.graveRing = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: hd(SUMMONER.circle, costumeOfPlayer(e.hero?.player)), color: trailOf(costumeOfPlayer(e.hero?.player), "grave") ?? 0xb070ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       v.graveRing.rotation.x = -Math.PI / 2;
       v.graveRing.renderOrder = 4;
       v.graveRing.userData.noSil = true;
