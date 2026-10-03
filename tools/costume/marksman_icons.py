@@ -17,16 +17,14 @@ for i, n in enumerate(names):
     ImageDraw.floodfill(pad, (0, 0), 128)
     mask = (np.asarray(pad)[1:-1, 1:-1] != 128).astype(np.float32)
     ys, xs = np.where(mask > 0)
-    by0, bx0, bx1 = ys.min(), xs.min(), xs.max() + 1
-    side = (bx1 - bx0) + 16
-    by1 = min(ys.max() + 1, by0 + side - 8)
+    by0, by1, bx0, bx1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
     soft = np.asarray(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.0))).astype(np.float32)
-    fade = np.clip((by1 - np.arange(H)) / 40.0, 0, 1)[:, None]
-    soft = soft * fade
+    hh, ww = by1 - by0, bx1 - bx0
+    side = int(max(ww * 1.06, hh * 0.84))
+    hh = min(hh, side - 3)
+    by1 = by0 + hh
     sq = np.zeros((side, side, 4), np.float32)
-    ox = (side - (bx1 - bx0)) // 2
-    oy = 8
-    hh = by1 - by0
-    sq[oy:oy + hh, ox:ox + bx1 - bx0, :3] = a[by0:by1, x0 + bx0:x0 + bx1]
-    sq[oy:oy + hh, ox:ox + bx1 - bx0, 3] = soft[by0:by1, bx0:bx1]
+    ox, oy = (side - ww) // 2, 3
+    sq[oy:oy + hh, ox:ox + ww, :3] = a[by0:by1, x0 + bx0:x0 + bx1]
+    sq[oy:oy + hh, ox:ox + ww, 3] = soft[by0:by1, bx0:bx1]
     Image.fromarray(np.clip(sq, 0, 255).astype(np.uint8), "RGBA").resize((96, 96), Image.LANCZOS).save(os.path.join(out, n + ".png"))
