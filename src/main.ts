@@ -31,6 +31,7 @@ import { HeroModels } from "./render/heroModels";
 import { StructureModels } from "./render/structureModels";
 import { loadProps } from "./render/props";
 import { chasmIce } from "./render/chasmIce";
+import { beachDebris } from "./render/beachDebris";
 import { UnitModels } from "./render/unitModels";
 import { Hud, UiCanvas } from "./ui/hud";
 import { loadFont } from "./ui/font";
@@ -121,8 +122,11 @@ async function start(): Promise<void> {
   ]);
 
   mapViews.forEach((mv, i) => {
-    const ice = chasmIce(new Terrain(maps[i].data));
+    const tr = new Terrain(maps[i].data);
+    const ice = chasmIce(tr);
     if (ice) mv.root.add(ice);
+    const beach = beachDebris(tr);
+    if (beach) mv.root.add(beach);
   });
 
   const dbgZoom = params.get("zoom");
