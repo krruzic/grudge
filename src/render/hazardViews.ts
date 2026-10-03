@@ -4,6 +4,7 @@ import blockUrl from "../../assets/textures/wallblock.png?url";
 import barkUrl from "../../assets/textures/moss_bark.png?url";
 import * as THREE from "three";
 import { prop, propParts } from "./props";
+import { costumeOfPlayer } from "./costumes";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
 import { composite, ENGINEER, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
@@ -541,7 +542,7 @@ export class HazardViews {
     return g;
   }
 
-  private zoneMesh(team: number, r: number, style = "bramble"): THREE.Object3D {
+  private zoneMesh(team: number, r: number, style = "bramble", costume?: string): THREE.Object3D {
     const g = new THREE.Group();
     const decal = new THREE.Mesh(
       new THREE.PlaneGeometry(r * 2.1, r * 2.1),
@@ -699,7 +700,7 @@ export class HazardViews {
         }
         ring(3, [0.2, 0.7], (x, z) => sprite(SUMMONER.ghost, 0.8, x, z, 0.6, true, "wisp"));
       } else if (style === "tesla") {
-        const coil = teslaCoil(0.8);
+        const coil = teslaCoil(0.8, costume);
         coil.position.y = gy(0, 0);
         g.add(coil);
         mergeInto(coil, meshesOf(coil).map((mesh) => ({ mesh })));
@@ -962,7 +963,7 @@ export class HazardViews {
         this.cx = z.x;
         this.cz = z.z;
         this.cy = w.groundY(z.x, z.z);
-        o = this.zoneMesh(z.team, z.radius, z.style);
+        o = this.zoneMesh(z.team, z.radius, z.style, costumeOfPlayer(w.getAny(z.ownerId)?.hero?.player));
         o.position.set(z.x, this.cy, z.z);
         o.userData.born = time;
         o.userData.bramble = (z.style ?? "bramble") === "bramble";

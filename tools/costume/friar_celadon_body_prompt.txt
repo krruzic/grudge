@@ -1,0 +1,19 @@
+The image is the turnaround sheet of BROTHER MADDOCK, a jolly friar hero from a stylised fantasy action game. Use it ONLY for the art style (hand-painted textures, chunky readable shapes, level of detail), the four-view layout, the camera, the overall size on the sheet and the A-pose. Do NOT copy his body shape, proportions, clothing or colours.
+
+Design a completely NEW alternate costume called "BROTHER CELADON": Maddock reimagined as a LIVING GLAZED PORCELAIN FIGURINE of a tea-house monk, like a chubby antique Chinese/Delft blue-and-white porcelain statuette that has come to life. REDESIGN THE BODY SHAPE DRASTICALLY so the silhouette is totally different from the reference:
+- Much ROUNDER and SQUATTER, like a ceramic figurine or a laughing-Buddha statuette: an ENORMOUS perfectly round ball-shaped BELLY that is the widest part of the whole figure, a pear/egg-shaped body, narrow sloping shoulders, almost no neck.
+- A big perfectly ROUND HEAD (like a smooth ball), a little large for the body, with round chubby cheeks.
+- SHORT stubby legs: the glazed habit is a short bell shape ending at mid-shin, then thick short legs and big round rounded feet in red lacquer slippers. Feet set wide apart with a clear gap between the legs.
+- Short chubby arms with round sleeves and smooth rounded porcelain hands, open and relaxed, EMPTY.
+- Same total height on the sheet as the reference, but noticeably wider.
+
+Materials and colours (sky blue + white + red lacquer only):
+- Everything is SMOOTH GLOSSY GLAZED PORCELAIN with crisp painted highlights: no cloth folds, no fabric texture, sculpted simplified shapes like a figurine.
+- The habit is bright WHITE porcelain painted with COBALT / SKY BLUE WILLOW-PATTERN scenes: little pagodas, willow trees, arched bridges, birds and clouds wrapping around the belly, back and sleeves, with blue scalloped bands at the hem and cuffs.
+- Thick RED LACQUER trim (glossy vermilion) along the hem, cuffs and collar, and a thick red lacquer CORD tied around the belly in a big knot with tassels.
+- GOLD KINTSUGI CRACKS: thin bright gold repaired-crack lines running across the belly, one arm, the back and the head, like mended porcelain.
+- Face of pale white porcelain with rosy pink painted cheeks, closed laughing crescent eyes, big round nose, a wide happy open grin.
+- His hair and beard are sculpted GLAZED RED PORCELAIN (bright saturated red, glossy, carved in big smooth curls): a big round curly red beard on his chest and bushy red eyebrows, and a monk's TONSURE: a bald shiny white porcelain crown ringed by a band of sculpted red curls.
+- TEAM COLOUR: a wide glossy DEEP JADE-GREEN celadon-glazed STOLE (scapular) hanging from the shoulders straight down the front of the belly and down the back, edged with thin gold. This stole is the ONLY green on the whole figure: no green anywhere else.
+
+Output: a clean character turnaround sheet in exactly four full-body views left to right: front, left side, back, right side. Neutral A-pose with BOTH ARMS held clearly away from the body at about 40 degrees, a wide gap of empty background between each arm and the belly, hands empty. All four views the same size, standing on the same baseline, evenly spaced, not overlapping. Plain flat light grey background, soft even lighting, no cast shadows, no ground line, no pedestal or base under the feet, no text, no labels, no frames, no effects.

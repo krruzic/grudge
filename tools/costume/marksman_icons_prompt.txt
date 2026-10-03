@@ -1,11 +1,12 @@
-The FIRST image shows four renders of the same young huntress, WREN, in four costumes (left to right). The SECOND image is a finished set of costume stock icons for another character from the same game, showing the EXACT icon style to match. Paint a set of FOUR COSTUME SELECT ICONS for Wren in exactly the style of the second image (Super Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon HEAD only, front-facing, thick dark outline, strong colours), in the same four positions left to right, same size and spacing as the second image.
+The FIRST image is the existing set of costume select icons of WREN, a hooded huntress hero, left to right: CLASSIC, WINTER HUNT, RAVEN, SUNFIRE. The SECOND image is her new costume STARFALL (a celestial elf huntress of the night sky), for reference only.
 
-All four icons must be ONE perfectly consistent set: IDENTICAL head shape, face, friendly confident half-smile, hood silhouette, framing, size and outline thickness. Her face is shown framed by a deep pointed hood ending just below the chin, a side-swept fringe, and one thick braid falling forward over her left shoulder (our right), ending at the bottom edge of the icon. Only the colours change. No bird, no bow, no arrows, no shoulders, nothing else in the icon.
+Paint ONE consistent set of FIVE COSTUME SELECT ICONS in a single row, evenly spaced with clear empty space between them, all the same size, in EXACTLY the style of the first image (Super Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon head in a hood, front-facing, thick dark outline around the whole silhouette, strong colours). All five share the same framing, head size, outline thickness and friendly confident half-smile. The WHOLE hood, including its pointed top and both sides, fits fully inside its cell with empty space around it; the hair below the chin may hang down to the bottom edge.
 
-Colours, left to right:
-1. CLASSIC: moss-green hood, auburn/copper hair and braid, bright green eyes, light freckles.
-2. WINTER HUNT: deep midnight-blue hood with a red, cream and teal folk-knit zigzag band along the hood edge and a thick creamy fur lining framing the face, bright strawberry-blonde/ginger hair and braid with a small blue ribbon, frost-blue eyes, rosy cold cheeks and nose.
-3. RAVEN: glossy black hood with a blue-violet sheen, jet-black hair and braid with blue highlights, violet eyes, pale skin.
-4. SUNFIRE: crimson-red hood with a gold trim line, bright golden-copper hair and braid, amber eyes.
+Left to right:
+1. CLASSIC: exactly like the first icon of the first image: moss-green hood, auburn hair, green eyes, freckles, auburn braid falling on the right side of the picture tied with a green cord.
+2. WINTER HUNT: exactly like the second icon: midnight-blue hood with a red, cream and teal folk-knit zigzag band and a thick cream fur trim around the face, rosy cheeks, pale blue eyes, auburn braid with a small blue bow.
+3. RAVEN: exactly like the third icon: glossy black hood, black hair with blue sheen, pale skin, violet eyes, black braid.
+4. SUNFIRE: exactly like the fourth icon: crimson hood with a gold trim line, copper-gold hair, amber eyes, golden braid.
+5. STARFALL: the same framing and size, but as the elf of the second image: a deep violet-magenta hood dusted with tiny silver stars, with a silver trim line around the face and a small silver crescent-moon clasp under the chin, a slimmer face with a pointed chin, pale cool lavender-tinted skin, two pointed elf ears poking out of the sides of the hood, glowing silver-white eyes, and long loose flowing hair like a nebula (deep indigo-violet fading to vivid magenta and pink with tiny white star specks) falling on the right side of the picture where the others have their braid (loose wavy hair, not a braid).
 
-Plain light grey background, no text, no frames, no borders.
+Plain light grey background, no text, no frames, no borders, no shoulders or bodies.

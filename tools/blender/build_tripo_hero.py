@@ -132,11 +132,11 @@ def fit_joint_depth(src, bones):
     return out
 
 
-def weld_copy(src):
+def weld_copy(src, dist=0.002):
     me = src.data.copy()
     bm = bmesh.new()
     bm.from_mesh(me)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.002)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist)
     bm.to_mesh(me)
     bm.free()
     obj = bpy.data.objects.new(src.name + "_weld", me)
@@ -144,8 +144,8 @@ def weld_copy(src):
     return obj
 
 
-def auto_weights(src, arm):
-    proxy = weld_copy(src)
+def auto_weights(src, arm, weld=0.002):
+    proxy = weld_copy(src, weld)
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
     proxy.select_set(True)
@@ -583,7 +583,7 @@ def build(key, preview=None):
     arm = make_armature(name, bones)
     if preview:
         render(src, arm, os.path.join(preview, f"{name}_apose"), markers=bones)
-    empty = auto_weights(src, arm)
+    empty = auto_weights(src, arm, cfg.get("weld", 0.002))
     for o in list(bpy.context.scene.objects):
         if o.type == "MESH" and o is not src:
             bpy.data.objects.remove(o, do_unlink=True)

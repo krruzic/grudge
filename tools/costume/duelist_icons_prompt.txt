@@ -1,0 +1,12 @@
+The FIRST image shows, left to right, the existing costume select icons of FRANCOIS, a cavalier duellist hero with a big plumed musketeer hat, long brown hair, a curled moustache and a small goatee (CLASSIC, BLACK ROSE, MUSKETEER BLEU, CARNIVAL), followed by a close-up of his new costume THE DROWNED CAPTAIN (a ghostly drowned naval captain). The SECOND image is a finished costume icon set for another hero of the same game, showing the EXACT icon style and framing to match.
+
+Paint ONE consistent set of FIVE COSTUME SELECT ICONS in a single row, evenly spaced, same size, in the Super Smash Bros. Ultimate stock-icon style of the icons in the first image: simplified bold flat-shaded cartoon HEAD AND HAT only, front-facing, thick dark outline around the whole silhouette, strong colours. The first four must look EXACTLY like the first four icons in the first image (same hat shape tilted the same way, same plume, same face, same hair, same moustache, same smirking frown). The whole head including the chin, the hair and the full hat with its plume fits fully inside its cell with empty space around it.
+
+Left to right:
+1. CLASSIC: exactly like the first icon: cream wide-brimmed musketeer hat with a brown band and a big cream plume, long brown hair, tan skin, black curled moustache and goatee.
+2. BLACK ROSE: exactly like the second icon: the same hat in black with a black plume and brown band, same face.
+3. MUSKETEER BLEU: exactly like the third icon: the same hat in royal blue with a white plume and brown band, same face.
+4. CARNIVAL: exactly like the fourth icon: the same hat in gold with a rainbow plume, a gold carnival eye mask over the eyes, same face.
+5. THE DROWNED CAPTAIN: the same size, framing and outline, but a gaunt skull-like drowned ghost: a big dark indigo TRICORN hat with a tarnished gold band and edge, white barnacles on the brim and a few short dark green kelp strands hanging from the brim, under it a long narrow pale grey-green gaunt skull face with hollow cheeks, two small glowing pale cyan eyes in dark sockets, a thin grim mouth with a hint of teeth, a few stringy black wet strands of hair, and a small tuft of pink coral peeking up beside the jaw on his right side.
+
+Plain flat light grey background, no text, no labels, no names, no frames, no borders, no shoulders or bodies.
