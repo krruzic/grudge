@@ -3,6 +3,7 @@
   "maxTicksPerFrame": 5,
   "matchSeconds": 360,
   "suddenDeathSeconds": 60,
+  "lockdown": { "seconds": 30, "warnSeconds": 5 },
   "suddenDeath": {
     "productionMul": 1.6,
     "costMul": 0.6,

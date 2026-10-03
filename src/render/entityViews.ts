@@ -922,19 +922,19 @@ export class EntityViews {
         view.work = makeBar(2.6, new THREE.Color(0x9fe0ff), 0, 1.05);
         root.add(view.work.group);
       } else {
-        body = st.tesla ? teslaCoil(1.1) : st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
+        body = st.works !== undefined ? new THREE.Group() : st.tesla ? teslaCoil(1.1) : st.siege ? ballistaMesh(team) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
         body.traverse((o) => {
           if (!view.spin && o.name.startsWith("spin")) view.spin = o;
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
           if (o.name.startsWith("level3_") && o.parent && !o.parent.name.startsWith("level3_")) (view.level3 ??= new Map()).set(o.name.slice(7).replace(/[._]\d+$/, ""), o);
         });
         body.rotation.y = e.transform.facing;
-        bar = st.siege ? makeBar(1.2, team, 2.4) : makeBar(1.9, team, 0, 0.5);
-        if (!st.siege) {
+        bar = st.works !== undefined ? makeBar(2.2, team, 3.6) : st.siege ? makeBar(1.2, team, 2.4) : makeBar(1.9, team, 0, 0.5);
+        if (!st.siege && st.works === undefined) {
           view.work = makeBar(1.9, new THREE.Color(0xffd040), 0, 0.8);
           root.add(view.work.group);
         }
-        this.fx.buildFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
+        if (st.works === undefined) this.fx.buildFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
       }
       root.add(body);
     }

@@ -116,7 +116,7 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
       const f = 1 - k / 10;
       const x = p.x + (tx - p.x) * f;
       const z = p.z + (tz - p.z) * f;
-      if (Number.isFinite(w.terrain.heightAt(x, z)) && w.nav.open(w.nav.index(Math.floor(x), Math.floor(z)))) {
+      if (Number.isFinite(w.terrain.heightAt(x, z)) && w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) && !w.mapEvents.sealed(p.x, p.z, x, z)) {
         tx = x;
         tz = z;
         break;
@@ -212,7 +212,8 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   }
   if (!h.action && w.jumpPads.length && w.time >= (h.jumpReadyAt ?? 0) && !w.arena.carrying(e) && !h.bomb && h.morphAt === undefined) {
     const i = w.jumpPads.findIndex((p) => w.time >= p.readyAt && w.time - p.chargeAt > w.jumpCharge + 0.05 && Math.hypot(p.x - t.pos.x, p.z - t.pos.z) < 1.1);
-    if (i >= 0) {
+    if (i >= 0 && w.mapEvents.sealed(t.pos.x, t.pos.z, w.jumpPads[i].tx, w.jumpPads[i].tz)) w.mapEvents.shutNotice(e);
+    else if (i >= 0) {
       const p = w.jumpPads[i];
       const d = Math.hypot(p.tx - p.x, p.tz - p.z);
       const windup = w.jumpCharge;
@@ -517,7 +518,7 @@ function combo(w: World, e: Entity, cmd: Command): boolean {
       let best: Entity | null = null;
       let bd = 10;
       for (const o of w.entities) {
-        if (!o.alive || o.structure || o.team === e.team || o.status.hexOwner !== e.id || w.time >= o.status.hexUntil) continue;
+        if (!o.alive || o.structure || o.team === e.team || o.status.hexOwner !== e.id || w.time >= o.status.hexUntil || w.mapEvents.sealed(t.pos.x, t.pos.z, o.transform.pos.x, o.transform.pos.z)) continue;
         const d = w.dist(e, o) - (o.hero ? 3 : 0);
         if (d < bd) { bd = d; best = o; }
       }
@@ -1086,7 +1087,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         const f = 1 - k / 12;
         const x = t.pos.x + a.dirX * d * f;
         const z = t.pos.z + a.dirZ * d * f;
-        if (Number.isFinite(w.terrain.heightAt(x, z)) && w.nav.open(w.nav.index(Math.floor(x), Math.floor(z)))) {
+        if (Number.isFinite(w.terrain.heightAt(x, z)) && w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) && !w.mapEvents.sealed(t.pos.x, t.pos.z, x, z)) {
           bx = x;
           bz = z;
           break;
@@ -1275,11 +1276,19 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       }
       w.emit({ type: "mod", id: m.id });
       w.emit({ type: "slam", x: cx, y: top, z: cz, radius: 2, team: e.team, src: e.id });
+      const anchor = w.addEntity(e.team, "structure", half + 0.4, cx, cz, def.rampHp ?? 500);
+      anchor.structure = {
+        type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 9999,
+        range: 0, damage: 0, lastFireAt: -99, shielded: false, works: m.id, siege: { cooldown: 9999, vs: {}, modId: m.id },
+      };
+      anchor.transform.y = base;
+      anchor.owner = e.id;
+      w.emit({ type: "build", id: anchor.id, padIndex: -1, team: e.team, upgrade: false });
       if (def.fx?.tesla) {
         const s = w.addEntity(e.team, "structure", 0.8, cx, cz, def.hp ?? 400);
         s.structure = {
           type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 0.3,
-          range: 8, damage: def.damage ?? 45, lastFireAt: -99, shielded: false, tesla: true,
+          range: 8, damage: def.damage ?? 45, lastFireAt: -99, shielded: false, tesla: true, onMod: m.id,
         };
         s.expiresAt = m.until;
         s.owner = e.id;
@@ -1318,7 +1327,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         perch = mine.find((m) => topCell(m, i)) ?? null;
       }
       for (const old of w.entities) {
-        if (!old.alive || old.owner !== e.id || !old.structure?.siege) continue;
+        if (!old.alive || old.owner !== e.id || !old.structure?.siege || old.structure.works !== undefined) continue;
         old.expiresAt = w.time;
       }
       const s = w.addEntity(e.team, "structure", 0.7, sx, sz, def.hp ?? 180);

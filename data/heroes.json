@@ -165,7 +165,8 @@
       "hooks": {
         "costMul": 0.8,
         "upgradeCostMul": 0.6,
-        "wrenchDamage": 95,
+        "wrenchDamage": 38,
+        "heroStructureMul": 0.2,
         "wrenchRange": 10,
         "wrenchCooldown": 1.1,
         "overhaulHeal": 120,
@@ -216,6 +217,7 @@
           "kind": "works",
           "anim": "attack_a",
           "size": 3,
+          "rampHp": 500,
           "height": 2.6,
           "length": 5,
           "width": 2,

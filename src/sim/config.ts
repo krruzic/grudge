@@ -122,6 +122,7 @@ export interface AbilityDef {
   length?: number;
   width?: number;
   hp?: number;
+  rampHp?: number;
   range?: number;
   speed?: number;
   delay?: number;
@@ -332,6 +333,7 @@ export interface MatchData {
   matchSeconds: number;
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
+  lockdown?: { seconds: number; warnSeconds?: number };
   ffa?: { speedMul?: number; waveSeconds: number; spawnRateMul?: number; outpostBonus?: number; popCapMul: number; spawnCostMul: number; productionCostMul: number; guard: { count: number; respawnSeconds: number; hpMul: number } };
   economy: { start: number; income: number; grain?: { start: number; base: number; perLevel: number[]; unitBountyMul?: number; surplus?: number; surplusMul?: number; starvedMul?: number };
     padIncome?: Record<string, number>; respawnCooldownPenalty?: number; respawnBigMul?: number; loss: { heroDeath: number; tower: number }; rally: { seconds: number; damageMul: number; speedMul: number }; bounty: { hero: number; structure: number } };

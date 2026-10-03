@@ -145,7 +145,7 @@ export class World {
 
   readonly mapEvents: MapEvents;
 
-  readonly bases: { mask: Uint8Array; entrances: Vec2[] }[];
+  readonly bases: { mask: Uint8Array; entrances: Vec2[]; gates: number[][]; box: [number, number, number, number] }[];
   private posts = { tick: -1, of: new Map<number, [number, number]>() };
 
   inBase(team: number, x: number, z: number): boolean {
@@ -173,46 +173,49 @@ export class World {
     return { post: base.entrances[a[0]], rank: a[1] };
   }
 
-  private computeBase(team: number): { mask: Uint8Array; entrances: Vec2[] } {
+  private computeBase(team: number): World["bases"][number] {
     const nav = this.nav;
     const W = nav.w;
     const D = nav.d;
     const mask = new Uint8Array(W * D);
     const own = this.terrain.cores.find((k) => (k.team ?? 0) === team);
     const foe = this.terrain.cores.find((k) => (k.team ?? 0) !== team);
-    if (!own) return { mask, entrances: [] };
+    if (!own) return { mask, entrances: [], gates: [], box: [0, 0, -1, -1] };
     let x0 = Infinity;
     let z0 = Infinity;
     let x1 = -Infinity;
     let z1 = -Infinity;
     const castle = (i: number) => i >= 0 && this.terrain.styles[i] === "castle";
-    const visited = new Uint8Array(W * D);
-    for (let i = 0; i < W * D; i++) {
-      if (visited[i] || !castle(i)) continue;
-      const seg = [i];
-      visited[i] = 1;
-      let near = Infinity;
-      let mine = true;
-      for (let q = 0; q < seg.length; q++) {
-        const c = seg[q];
-        const cx = (c % W) + 0.5;
-        const cz = Math.floor(c / W) + 0.5;
-        const d = Math.hypot(cx - own.x, cz - own.z);
-        near = Math.min(near, d);
-        if (foe && Math.hypot(cx - foe.x, cz - foe.z) < d) mine = false;
-        for (const n of [nav.index(c % W + 1, Math.floor(c / W)), nav.index(c % W - 1, Math.floor(c / W)), nav.index(c % W, Math.floor(c / W) + 1), nav.index(c % W, Math.floor(c / W) - 1)]) {
-          if (castle(n) && !visited[n]) {
-            visited[n] = 1;
-            seg.push(n);
+    for (const reach of [14, 18]) {
+      if (x0 !== Infinity) break;
+      const visited = new Uint8Array(W * D);
+      for (let i = 0; i < W * D; i++) {
+        if (visited[i] || !castle(i)) continue;
+        const seg = [i];
+        visited[i] = 1;
+        let near = Infinity;
+        let mine = true;
+        for (let q = 0; q < seg.length; q++) {
+          const c = seg[q];
+          const cx = (c % W) + 0.5;
+          const cz = Math.floor(c / W) + 0.5;
+          const d = Math.hypot(cx - own.x, cz - own.z);
+          near = Math.min(near, d);
+          if (foe && Math.hypot(cx - foe.x, cz - foe.z) < d) mine = false;
+          for (const n of [nav.index(c % W + 1, Math.floor(c / W)), nav.index(c % W - 1, Math.floor(c / W)), nav.index(c % W, Math.floor(c / W) + 1), nav.index(c % W, Math.floor(c / W) - 1)]) {
+            if (castle(n) && !visited[n]) {
+              visited[n] = 1;
+              seg.push(n);
+            }
           }
         }
-      }
-      if (!mine || near > 14) continue;
-      for (const c of seg) {
-        x0 = Math.min(x0, c % W);
-        z0 = Math.min(z0, Math.floor(c / W));
-        x1 = Math.max(x1, c % W);
-        z1 = Math.max(z1, Math.floor(c / W));
+        if (!mine || near > reach) continue;
+        for (const c of seg) {
+          x0 = Math.min(x0, c % W);
+          z0 = Math.min(z0, Math.floor(c / W));
+          x1 = Math.max(x1, c % W);
+          z1 = Math.max(z1, Math.floor(c / W));
+        }
       }
     }
     if (x0 === Infinity) {
@@ -265,6 +268,7 @@ export class World {
     }
     const seen = new Uint8Array(W * D);
     const entrances: Vec2[] = [];
+    const gates: number[][] = [];
     const isEdge = new Uint8Array(W * D);
     for (const c of edge) isEdge[c] = 1;
     for (const c of edge) {
@@ -308,8 +312,9 @@ export class World {
         pz = Math.floor(best / W) + 0.5;
       }
       entrances.push({ x: px, z: pz });
+      gates.push(group);
     }
-    return { mask, entrances };
+    return { mask, entrances, gates, box: [x0, z0, x1, z1] };
   }
 
   readonly arena: Arena;
@@ -516,6 +521,7 @@ export class World {
     t.pos.x = t.prevPos.x = x;
     t.pos.z = t.prevPos.z = z;
     t.y = t.prevY = this.groundY(x, z);
+    this.mapEvents?.anchor(e);
   }
 
   classOf(e: Entity): TargetClass {
@@ -604,6 +610,7 @@ export class World {
     this.mapEvents.update();
     this.applyKnockback(dt);
     this.separate();
+    this.mapEvents.enforceLock();
     this.updateChasm();
     this.cleanup();
     this.tick++;
@@ -774,6 +781,10 @@ export class World {
     const x = (i % this.nav.w) + 0.5;
     const z = Math.floor(i / this.nav.w) + 0.5;
     const p = e.transform.pos;
+    if (this.mapEvents.sealed(p.x, p.z, x, z)) {
+      this.mapEvents.shutNotice(e);
+      return false;
+    }
     e.hero.action = null;
     e.hero.jump = { fx: p.x, fz: p.z, tx: x, tz: z, start: this.time, dur, peak, pad: -1, launched: true };
     e.transform.facing = e.transform.prevFacing = Math.atan2(x - p.x, z - p.z);
@@ -1265,6 +1276,7 @@ export class World {
       }
       if (hk.heroDamageMul && target.hero && src.hero) amount *= hk.heroDamageMul;
       if (hk.structureMul && target.structure && opts.structureDamage === undefined) amount *= hk.structureMul;
+      if (hk.heroStructureMul && target.structure && src.hero) amount *= hk.heroStructureMul;
       if (!target.structure) {
         const pos = this.data.match.positional;
         const dx = src.transform.pos.x - tp.pos.x;
@@ -1453,6 +1465,7 @@ export class World {
       const c = this.core(t);
       if (c) c.dummy = true;
     }
+    this.mapEvents.endLockdown(false);
   }
 
   private trainingStep(): void {
@@ -1616,6 +1629,14 @@ export class World {
       this.eliminate(target.team, killerTeam);
       return;
     }
+    if (st.works !== undefined) {
+      const m = this.mods.find((k) => k.id === st.works);
+      if (m && m.until > this.time) {
+        m.until = this.time;
+        this.emit({ type: "notice", team: target.team, text: "RAMP DESTROYED" });
+      }
+      return;
+    }
     if (st.padIndex < 0) {
       this.nav.setBlocked(tp.pos.x, tp.pos.z, target.radius, false);
       return;
@@ -1772,7 +1793,7 @@ export class World {
       if (d < 1.15 + e.radius * 0.8 && d < Math.hypot(ah.x - e.transform.pos.x, ah.z - e.transform.pos.z)) return true;
     }
     for (const s of this.entities) {
-      if (!s.alive || s.kind !== "structure" || s === e) continue;
+      if (!s.alive || s.kind !== "structure" || s === e || s.structure?.works !== undefined) continue;
       const d = Math.hypot(s.transform.pos.x - x, s.transform.pos.z - z);
       const min = s.radius + e.radius * 0.8;
       if (d < min) {
@@ -2093,6 +2114,11 @@ export class World {
 
   applyMod(m: TerrainMod): void {
     const tr = this.terrain;
+    if (this.mapEvents.locked) {
+      const keep = m.cells.map((c) => tr.styles[c] !== "lockgate");
+      m.cells = m.cells.filter((_, k) => keep[k]);
+      m.deck = m.deck.filter((_, k) => keep[k]);
+    }
     m.prevKind = m.cells.map((c) => tr.kinds[c]);
     m.prevDeck = m.cells.map((c) => tr.deck[c]);
     m.prevStyle = m.cells.map((c) => tr.styles[c]);
@@ -2114,7 +2140,9 @@ export class World {
     this.applyMod(m);
     const a = this.spawnPoint(0);
     let open = true;
-    for (let t = 1; t < this.teamCount && open; t++) if (!this.nav.findPath(a, this.spawnPoint(t))) open = false;
+    this.mapEvents.withGatesOpen(() => {
+      for (let t = 1; t < this.teamCount && open; t++) if (!this.nav.findPath(a, this.spawnPoint(t))) open = false;
+    });
     if (open) return true;
     this.mods.splice(this.mods.indexOf(m), 1);
     const tr = this.terrain;
@@ -2130,7 +2158,7 @@ export class World {
   private revertMod(m: TerrainMod): void {
     const tr = this.terrain;
     for (const e of this.entities) {
-      if (e.alive && e.structure?.siege?.modId === m.id) this.kill(e, null);
+      if (e.alive && (e.structure?.siege?.modId === m.id || e.structure?.onMod === m.id || e.structure?.works === m.id)) this.kill(e, null);
     }
     m.cells.forEach((c, k) => {
       tr.kinds[c] = m.prevKind[k];

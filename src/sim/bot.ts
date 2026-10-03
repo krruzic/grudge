@@ -114,7 +114,7 @@ export class Bot {
       let best: Vec2 | null = null;
       let bestCost = walled ? Infinity : direct - 12;
       for (const jp of w.jumpPads) {
-        if (w.time < jp.readyAt - 1) continue;
+        if (w.time < jp.readyAt - 1 || w.mapEvents.sealed(jp.x, jp.z, jp.tx, jp.tz)) continue;
         const toPad = Math.hypot(jp.x - p.x, jp.z - p.z);
         if (toPad > (walled ? 60 : 26)) continue;
         const cost = toPad + Math.hypot(g.x - jp.tx, g.z - jp.tz) + 4;
@@ -535,7 +535,7 @@ export class Bot {
       fight = nearby.find((o) => (o.kind !== "structure" || w.dist(me, o) < 5) && w.canSee(me, o) && this.ok(w, me, o)) ?? undefined;
     }
     if (fight) {
-      const towerThreat = w.enemiesNear(me, 12, (o) => o.structure?.type === "damage" && o.structure.ready).length;
+      const towerThreat = w.enemiesNear(me, 12, (o) => o.structure?.type === "damage" && o.structure.ready && o.structure.works === undefined).length;
       if (towerThreat && me.hp < me.maxHp * 0.6 && fight.hero && !lowHp) {
         this.goal = w.spawnPoint(me.team);
         return;

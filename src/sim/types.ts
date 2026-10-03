@@ -195,6 +195,8 @@ export interface StructureState {
   hasteMul?: number;
   siege?: { cooldown: number; vs: Partial<Record<string, number>>; modId: number };
   tesla?: boolean;
+  works?: number;
+  onMod?: number;
   spec?: string;
   specPending?: string;
   aim?: number;
@@ -434,7 +436,7 @@ export type SimEvent =
   | { type: "morph"; stage: "start" | "done"; id: number; to: string; back: boolean; x: number; y: number; z: number; team: number; seconds: number }
   | { type: "mist"; stage: "warn" | "in" | "out"; seconds: number }
   | { type: "lantern"; stage: "rise" | "taken" | "fade"; x: number; y: number; z: number; id: number; hero: number }
-  | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number }
+  | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number; lock?: boolean }
   | { type: "avalanche"; stage: "warn" | "slide" | "settle"; arm: number; rect: { x: number; z: number; w: number; h: number }; dx: number; dz: number; seconds: number }
   | { type: "spawn"; id: number }
   | { type: "rankUp"; id: number; rank: number; x: number; y: number; z: number; team: number }

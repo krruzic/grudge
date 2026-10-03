@@ -4,10 +4,12 @@ import type { World } from "../sim/world";
 import blockUrl from "../../assets/textures/wallblock.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
 import ironUrl from "../../assets/textures/iron.png?url";
+import planksUrl from "../../assets/textures/planks.png?url";
 import cobbleUrl from "../../assets/textures/cobble.png?url";
 import snowUrl from "../../assets/textures/snow.png?url";
 import { FX, SUMMONER } from "./fxKit";
-import { gateSlots, type FountainDef, type GatesDef, type GateSlot } from "../sim/mapEvents";
+import { gateSlots, type FountainDef, type GatesDef, type GateSlot, type LockGate } from "../sim/mapEvents";
+import { Kind } from "../sim/terrain";
 import { chunks, emit, type FxHost } from "./fxParts";
 import { propParts } from "./props";
 import { SimplifyModifier } from "three/examples/jsm/modifiers/SimplifyModifier.js";
@@ -83,6 +85,22 @@ SOUL.userData.keep = true;
 const IRON = new THREE.MeshLambertMaterial({ color: 0x3a3a40 });
 IRON.userData.keep = true;
 const BAR_H = 2.7;
+
+const LOCK_H = 2.75;
+const LOCK_SINK = LOCK_H + 1.2;
+
+function planarUv(g: THREE.BufferGeometry, tile: number): void {
+  const pos = g.getAttribute("position");
+  const nrm = g.getAttribute("normal");
+  const uv = g.getAttribute("uv");
+  for (let i = 0; i < pos.count; i++) {
+    const nx = Math.abs(nrm.getX(i));
+    const nz = Math.abs(nrm.getZ(i));
+    const u = nz > 0.5 ? pos.getX(i) : nx > 0.5 ? pos.getZ(i) : pos.getX(i);
+    const v = nz > 0.5 || nx > 0.5 ? pos.getY(i) : pos.getZ(i);
+    uv.setXY(i, u / tile, v / tile);
+  }
+}
 
 const SNOW = new THREE.MeshLambertMaterial({ color: 0xdfe6f2, vertexColors: true });
 SNOW.userData.keep = true;
@@ -249,6 +267,7 @@ export class MapFx {
   private now = 0;
 
   private gates: Gate[] = [];
+  private lock: { root: THREE.Group; posts: [number, number, number][]; mids: [number, number, number, number, number][]; warn: number; done: boolean; acc: number } | null = null;
   private fountain?: FountainDef;
   private sprayAcc = 0;
   private ring = 0;
@@ -496,6 +515,7 @@ export class MapFx {
   constructor(private world: World, private fx?: FxHost) {
     const gd = world.terrain.gates as GatesDef | undefined;
     if (gd) this.buildGates(gateSlots(world, gd));
+    if (world.mapEvents.lockGates.length) this.buildLockGates(world.mapEvents.lockGates);
     this.fountain = world.terrain.fountain as FountainDef | undefined;
     this.buildJumpPads();
     this.buildHorns();
@@ -808,6 +828,146 @@ export class MapFx {
     }
   }
 
+  private buildLockGates(list: LockGate[]): void {
+    const w = this.world;
+    const t = w.terrain;
+    const wood = new THREE.MeshLambertMaterial({ map: this.texture(planksUrl, 1), color: 0xd8b494 });
+    const dark = new THREE.MeshLambertMaterial({ map: this.texture(planksUrl, 1), color: 0x8a6448 });
+    const iron = new THREE.MeshLambertMaterial({ map: this.texture(ironUrl, 1), color: 0x6a6a78 });
+    const blockTex = this.texture(blockUrl, 1);
+    const stone = new THREE.MeshLambertMaterial({ map: blockTex, color: 0xd8d0c0 });
+    const woodG: THREE.BufferGeometry[] = [];
+    const darkG: THREE.BufferGeometry[] = [];
+    const ironG: THREE.BufferGeometry[] = [];
+    const stoneG: THREE.BufferGeometry[] = [];
+    const posts: [number, number, number][] = [];
+    const mids: [number, number, number, number, number][] = [];
+    const put = (out: THREE.BufferGeometry[], g: THREE.BufferGeometry, m: THREE.Matrix4, tile = 0) => {
+      if (tile) planarUv(g, tile);
+      g.applyMatrix4(m);
+      out.push(g.index ? g.toNonIndexed() : g);
+    };
+    const box = (sx: number, sy: number, sz: number, x: number, y: number, z: number, rz = 0) => {
+      const g = new THREE.BoxGeometry(sx, sy, sz);
+      if (rz) g.rotateZ(rz);
+      g.translate(x, y, z);
+      return g;
+    };
+    for (const lg of list) {
+      const floor = (x: number, z: number) => {
+        const c = t.index(Math.floor(x), Math.floor(z));
+        const k = lg.cells.indexOf(c);
+        if (k >= 0 && lg.prev[k] === Kind.Bridge) return t.deck[c];
+        return t.groundHeight(x, z);
+      };
+      for (const [x0, z0, x1, z1] of lg.segs) {
+        const len = Math.hypot(x1 - x0, z1 - z0);
+        const n = Math.max(1, Math.round(len));
+        let y0 = -Infinity;
+        for (let i = 0; i < n; i++) {
+          const f = (i + 0.5) / n;
+          y0 = Math.max(y0, floor(x0 + (x1 - x0) * f, z0 + (z1 - z0) * f));
+        }
+        const cx = (x0 + x1) / 2;
+        const cz = (z0 + z1) / 2;
+        const ang = -Math.atan2(z1 - z0, x1 - x0);
+        const m = new THREE.Matrix4().makeRotationY(ang).setPosition(cx, y0, cz);
+        const half = len / 2;
+        const leaves = len > 2.2 ? 2 : 1;
+        const lw = len / leaves;
+        for (let l = 0; l < leaves; l++) {
+          const lx = -half + lw * (l + 0.5);
+          put(woodG, box(lw - 0.05, LOCK_H, 0.26, lx, LOCK_H / 2 - 0.05, 0), m, 1.1);
+          for (const side of [-1, 1]) {
+            const bl = Math.hypot(lw - 0.5, 1.5);
+            const br = box(bl, 0.2, 0.06, lx, 1.15, side * 0.16, Math.atan2(1.5, lw - 0.5) * (l % 2 ? -1 : 1));
+            put(darkG, br, m, 1.1);
+            for (const y of [0.4, 1.95]) put(darkG, box(lw - 0.3, 0.2, 0.06, lx, y, side * 0.16), m, 1.1);
+            for (const y of [0.18, 1.18, 2.3]) {
+              put(ironG, box(lw - 0.04, 0.13, 0.05, lx, y, side * 0.185), m, 0.6);
+              const nr = Math.max(2, Math.round((lw - 0.2) / 0.32));
+              for (let r = 0; r < nr; r++) put(ironG, box(0.07, 0.07, 0.04, lx - (lw - 0.25) / 2 + ((lw - 0.25) * r) / (nr - 1), y, side * 0.215), m);
+            }
+            for (const e of [-1, 1]) put(ironG, box(0.12, LOCK_H - 0.1, 0.05, lx + e * (lw / 2 - 0.1), LOCK_H / 2 - 0.05, side * 0.185), m, 0.6);
+            const ring = new THREE.TorusGeometry(0.13, 0.028, 4, 10);
+            ring.translate(lx + (leaves === 2 ? (l ? -1 : 1) * (lw / 2 - 0.35) : 0), 1.05, side * 0.24);
+            put(ironG, ring, m);
+          }
+        }
+        const nsp = Math.max(2, Math.round(len / 0.42));
+        for (let i = 0; i < nsp; i++) {
+          const sp = new THREE.ConeGeometry(0.065, 0.32, 4);
+          sp.translate(-half + 0.15 + ((len - 0.3) * i) / (nsp - 1), LOCK_H + 0.1, 0);
+          put(ironG, sp, m);
+        }
+        put(ironG, box(len, 0.12, 0.3, 0, LOCK_H - 0.05, 0), m, 0.6);
+        for (const e of [-1, 1]) {
+          put(stoneG, box(0.62, LOCK_H + 0.55, 0.62, e * half, (LOCK_H + 0.55) / 2 - 0.1, 0), m, 1);
+          put(stoneG, box(0.8, 0.22, 0.8, e * half, LOCK_H + 0.48, 0), m, 1);
+          const p = new THREE.Vector3(e * half, LOCK_H + 0.7, 0).applyMatrix4(m);
+          posts.push([p.x, p.y, p.z]);
+        }
+        mids.push([cx, y0, cz, x1 - x0, z1 - z0]);
+      }
+    }
+    const root = new THREE.Group();
+    const add = (gs: THREE.BufferGeometry[], mat: THREE.Material) => {
+      if (!gs.length) return;
+      const merged = mergeGeometries(gs, false)!;
+      gs.forEach((g) => g.dispose());
+      const mesh = new THREE.Mesh(merged, mat);
+      mesh.castShadow = true;
+      root.add(mesh);
+    };
+    add(woodG, wood);
+    add(darkG, dark);
+    add(ironG, iron);
+    add(stoneG, stone);
+    this.root.add(root);
+    this.lock = { root, posts, mids, warn: -1, done: false, acc: 0 };
+  }
+
+  private syncLockGates(dt: number): void {
+    const L = this.lock;
+    if (!L || L.done) return;
+    const w = this.world;
+    const ev = w.mapEvents;
+    if (ev.locked) {
+      const left = ev.lockUntil - w.time;
+      L.root.position.set(0, 0, 0);
+      if (left < 5 && this.fx) {
+        L.acc += dt;
+        const jig = Math.max(0, 1 - left / 5);
+        L.root.position.x = Math.sin(w.time * 47) * 0.012 * jig;
+        if (L.acc > 0.5 - jig * 0.3) {
+          L.acc = 0;
+          for (const [x, y, z] of L.mids) emit(this.fx, { tex: FX.dust, n: 1, x: x + (Math.random() - 0.5) * 1.5, y: y + 0.15, z: z + (Math.random() - 0.5) * 1.5, size: [0.5, 0.9], grow: 1.4, life: [0.4, 0.7], speed: [0.3, 0.8], up: [0.2, 0.6], opacity: 0.45 });
+        }
+      }
+      return;
+    }
+    const k = w.time - ev.lockUntil;
+    if (k > 3.2 || k < 0) {
+      L.root.visible = false;
+      L.done = true;
+      return;
+    }
+    const q = Math.max(0, (k - 0.35) / 2.4);
+    const e = q * q * (3 - 2 * q);
+    L.root.position.y = -LOCK_SINK * e;
+    L.root.position.x = k < 0.35 ? Math.sin(k * 90) * 0.05 : Math.sin(k * 60) * 0.02 * (1 - q);
+    if (!this.fx) return;
+    this.fx.shake = Math.max(this.fx.shake, 0.25 * (1 - q));
+    L.acc += dt;
+    if (L.acc < 0.06 || q >= 1) return;
+    L.acc = 0;
+    for (const [x, y, z, dx, dz] of L.mids) {
+      const u = Math.random() - 0.5;
+      emit(this.fx, { tex: FX.dust, n: 1, x: x + u * dx, y: y + 0.2, z: z + u * dz, size: [0.9, 1.5], grow: 1.6, life: [0.6, 1.0], speed: [0.6, 1.4], up: [0.4, 1.0], opacity: 0.65 });
+      if (Math.random() < 0.3) chunks(this.fx, 1, x + u * dx, y + 0.3, z + u * dz, { size: [0.06, 0.12], speed: [1, 2.5], up: [2, 3.5] });
+    }
+  }
+
   private syncGates(dt: number): void {
     const w = this.world;
     for (const g of this.gates) {
@@ -893,6 +1053,14 @@ export class MapFx {
       }
       return;
     }
+    if (ev.type === "gates" && ev.lock) {
+      const g = ev as unknown as { stage: "warn" | "shift" };
+      if (this.lock && this.fx) {
+        for (const p of this.lock.posts) emit(this.fx, { tex: FX.twinkle, n: g.stage === "shift" ? 4 : 2, x: p[0], y: p[1], z: p[2], size: [0.5, 0.9], life: [0.6, 1.1], speed: [0.6, 1.8], up: [0.6, 1.4], additive: true, color: 0xffe080 });
+        if (g.stage === "shift") for (const [x, y, z] of this.lock.mids) emit(this.fx, { tex: FX.dust, n: 6, x, y: y + 0.3, z, size: [1.2, 2.0], grow: 1.6, life: [0.6, 1.0], speed: [2, 4], flatSpread: true, opacity: 0.7 });
+      }
+      return;
+    }
     if (ev.type === "gates") {
       const g = ev as unknown as { stage: "warn" | "shift" };
       if (g.stage === "warn" && this.fx) {
@@ -926,6 +1094,7 @@ export class MapFx {
     this.now = time;
     const w = this.world;
     this.syncGates(dt);
+    this.syncLockGates(dt);
     this.syncJumpPads();
     this.syncHorns(time);
     this.syncMorphs(dt);

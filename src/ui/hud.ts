@@ -674,6 +674,7 @@ export class Hud {
   mapIndex: (() => number) | null = null;
   minimap = true;
   zoomOut = 0;
+  private lockCard: World | null = null;
   private card: { title: string; sub: string; glyph: string; color: string; at: number; until: number; count: number } | null = null;
   private overlays = new Map<string, HTMLCanvasElement | null>();
 
@@ -687,6 +688,9 @@ export class Hud {
       const arm = w.ffa ? ["WEST", "NORTH", "EAST", "SOUTH"][ev.arm] + " ARM" : "";
       if (ev.stage === "warn") this.showCard("AVALANCHE!", `THE ${arm} RUMBLES · GET OUT OF THE LANE`, "peak", now, "#8a1810", ev.seconds);
       else if (ev.stage === "slide") this.showCard("AVALANCHE!", `SNOW COMING DOWN THE ${arm}`, "peak", now, "#8a1810", 0, 2.5);
+    } else if (ev.type === "gates" && ev.lock) {
+      if (ev.stage === "warn") this.showCard("THE GATES OPEN IN", "THE BELLS RING · MUSTER AT THE GATES", "bell", now, "#8a5a10", ev.seconds);
+      else this.showCard("THE GATES OPEN", "EVERY KEEP IS OPEN · TO WAR!", "bell", now, "#8a5a10", 0, 3.5);
     } else if (ev.type === "gates") {
       const court = ev.pattern === 1;
       if (ev.stage === "warn") this.showCard("THE BELLS RING", court ? "THE COURT OPENS · THE OUTER GATES SEAL" : "THE COURT SEALS · THE OUTER GATES OPEN", "bell", now, "#8a5a10", ev.seconds);
@@ -743,6 +747,10 @@ export class Hud {
       const cut = w.time - 5;
       while (this.trainer.log.length && this.trainer.log[0][0] < cut) this.trainer.log.shift();
     }
+    if (w.mapEvents.locked && this.lockCard !== w && w.time < 3) {
+      this.lockCard = w;
+      this.showCard("THE GATES ARE SHUT", `NO ONE GETS IN OR OUT FOR ${Math.ceil(w.mapEvents.lockUntil - w.time)}S · BUILD UP`, "bell", now, "#8a5a10", 0, 4.5);
+    }
     for (const ev of w.events) {
       if (ev.type === "hit" && ev.id !== undefined) {
         const tg = w.getAny(ev.id);
@@ -777,7 +785,7 @@ export class Hud {
       }
     }
     const bannerOn = !!this.banner && now < this.bannerUntil;
-    this.bannerLineY = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
+    this.bannerLineY = MARGIN_Y + (w.match.phase === "sudden" || (w.mapEvents.locked && !w.training) ? 27 : 19);
     if (bannerOn && (this.bannerBig || !this.visible)) this.drawBanner(ctx, W, now);
     if (!this.visible) return;
     if (w.training) this.drawTraining(ctx, W, w);
@@ -1055,7 +1063,7 @@ export class Hud {
     const bw = Math.round(Math.max(textWidth(title, ts), textWidth(c.sub, ss)) + 34);
     const bh = c.sub ? 25 : 17;
     const x = Math.round(W / 2 - bw / 2);
-    const y = Math.round(MARGIN_Y + (w.match.phase === "sudden" ? 52 : 46) + drop);
+    const y = Math.round(MARGIN_Y + (w.match.phase === "sudden" || w.mapEvents.locked ? 52 : 46) + drop);
     ctx.save();
     ctx.globalAlpha = Math.min(1, left * 4, age * 8);
     ctx.fillStyle = INK;
@@ -1200,6 +1208,15 @@ export class Hud {
         g.beginPath();
         g.arc(ax, ay, 0.95, 0, Math.PI * 2);
         g.fill();
+      }
+      if (w.mapEvents.locked) {
+        for (const lg of w.mapEvents.lockGates) for (const c of lg.cells) {
+          const [gx, gy] = P(c % t.width, Math.floor(c / t.width));
+          g.fillStyle = INK;
+          g.fillRect(gx - 0.4, gy - 0.4, s + 0.8, s + 0.8);
+          g.fillStyle = "#c08a40";
+          g.fillRect(gx, gy, s, s);
+        }
       }
       for (const gt of w.mapEvents.gateList) {
         if (!gt.shut) continue;
@@ -1431,7 +1448,7 @@ export class Hud {
       const left = Math.max(0, Math.ceil(cfg.returnSeconds - (w.time - r.since)));
       text = `GRUDGE LOOSE · ${left}`;
     }
-    const y = MARGIN_Y + (w.match.phase === "sudden" ? 27 : 19);
+    const y = MARGIN_Y + (w.match.phase === "sudden" || (w.mapEvents.locked && !w.training) ? 35 : 19);
     const flash = r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0) ? Math.floor(now * 3) % 2 === 0 : false;
     if (!hideLine && !w.training) drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
     if (r.state === "waiting" || !this.locate) return;
@@ -1516,6 +1533,9 @@ export class Hud {
     if (sudden) {
       const lab = "SUDDEN DEATH";
       drawText(ctx, lab, Math.round((W - textWidth(lab, 0.8)) / 2), MARGIN_Y + 17, "#ff9a7a", 0.8);
+    } else if (w.mapEvents.locked) {
+      const lab = `GATES OPEN IN ${Math.max(0, Math.ceil(w.mapEvents.lockUntil - w.time))}`;
+      drawText(ctx, lab, Math.round((W - textWidth(lab, 0.8)) / 2), MARGIN_Y + 17, "#ffd040", 0.8);
     }
   }
 

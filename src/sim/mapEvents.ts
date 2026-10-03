@@ -65,6 +65,40 @@ export function gateSlots(w: World, def: GatesDef): GateSlot[] {
   return out;
 }
 
+export interface LockGate {
+  team: number;
+  cells: number[];
+  prev: number[];
+  prevStyle: string[];
+  segs: [number, number, number, number][];
+}
+
+function gateSegs(cells: number[], W: number, box: [number, number, number, number]): [number, number, number, number][] {
+  const [x0, z0, x1, z1] = box;
+  const rows = new Map<number, number[]>();
+  const cols = new Map<number, number[]>();
+  for (const c of cells) {
+    const x = c % W;
+    const z = Math.floor(c / W);
+    if (z === z0 || z === z1) rows.set(z, [...(rows.get(z) ?? []), x]);
+    else if (x === x0 || x === x1) cols.set(x, [...(cols.get(x) ?? []), z]);
+    else rows.set(z, [...(rows.get(z) ?? []), x]);
+  }
+  const out: [number, number, number, number][] = [];
+  const runs = (vals: number[], fn: (a: number, b: number) => void) => {
+    vals.sort((a, b) => a - b);
+    let a = vals[0];
+    for (let k = 1; k <= vals.length; k++) {
+      if (k < vals.length && vals[k] === vals[k - 1] + 1) continue;
+      fn(a, vals[k - 1] + 1);
+      a = vals[k];
+    }
+  };
+  for (const [z, xs] of rows) runs(xs, (a, b) => out.push([a, z + 0.5, b, z + 0.5]));
+  for (const [x, zs] of cols) runs(zs, (a, b) => out.push([x + 0.5, a, x + 0.5, b]));
+  return out;
+}
+
 export interface MistDef {
   firstSeconds: number;
   everySeconds: number;
@@ -144,8 +178,139 @@ export class MapEvents {
   horns: { x: number; z: number; arms: number[]; team: number; progress: number; readyAt: number }[] = [];
   readonly hornCapture = 3;
   readonly hornCooldown = 75;
+  lockGates: LockGate[] = [];
+  lockUntil = 0;
+  private lockWarn = 0;
+  private lockWarned = false;
+  private lockZone: Int8Array | null = null;
+  private anchors = new Map<number, [number, number]>();
+  private shutNoticeAt = new Map<number, number>();
+
+  get locked(): boolean {
+    return this.lockZone !== null;
+  }
+
+  zoneAt(x: number, z: number): number {
+    const m = this.lockZone;
+    if (!m) return -1;
+    const i = this.w.terrain.index(Math.floor(x), Math.floor(z));
+    return i < 0 ? -1 : m[i];
+  }
+
+  sealed(ax: number, az: number, bx: number, bz: number): boolean {
+    return this.lockZone !== null && this.zoneAt(ax, az) !== this.zoneAt(bx, bz);
+  }
+
+  anchor(e: Entity): void {
+    if (this.lockZone) this.anchors.set(e.id, [e.transform.pos.x, e.transform.pos.z]);
+  }
+
+  shutNotice(e: Entity): void {
+    if (!e.hero || this.w.time < (this.shutNoticeAt.get(e.id) ?? -99)) return;
+    this.shutNoticeAt.set(e.id, this.w.time + 2.5);
+    this.w.emit({ type: "notice", team: e.team, text: `THE GATES ARE SHUT · ${Math.ceil(this.lockUntil - this.w.time)}S` });
+  }
+
+  private buildLock(seconds: number, warn: number): void {
+    const w = this.w;
+    const t = w.terrain;
+    const W = t.width;
+    const zone = new Int8Array(W * t.depth).fill(-1);
+    const all: number[] = [];
+    w.bases.forEach((b, team) => {
+      if (!b.gates.length) return;
+      const [x0, z0, x1, z1] = b.box;
+      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) zone[z * W + x] = team;
+      for (const g of b.gates) {
+        for (const c of g) zone[c] = -1;
+        this.lockGates.push({ team, cells: g.slice(), prev: g.map((c) => t.kinds[c]), prevStyle: g.map((c) => t.styles[c]), segs: gateSegs(g, W, b.box) });
+        all.push(...g);
+      }
+    });
+    if (!this.lockGates.length) return;
+    for (const c of all) {
+      t.kinds[c] = Kind.Wall;
+      t.styles[c] = "lockgate";
+    }
+    w.nav.recompute(all);
+    this.lockZone = zone;
+    this.lockUntil = seconds;
+    this.lockWarn = warn;
+  }
+
+  endLockdown(announce: boolean): void {
+    if (!this.lockZone) return;
+    const w = this.w;
+    const t = w.terrain;
+    const all: number[] = [];
+    for (const g of this.lockGates) {
+      g.cells.forEach((c, k) => {
+        if (t.styles[c] !== "lockgate") return;
+        t.kinds[c] = g.prev[k];
+        t.styles[c] = g.prevStyle[k];
+        all.push(c);
+      });
+    }
+    w.nav.recompute(all);
+    this.lockZone = null;
+    this.anchors.clear();
+    this.lockUntil = Math.min(this.lockUntil, w.time);
+    for (const e of w.entities) if (e.unit) e.unit.repathAt = 0;
+    if (announce) {
+      w.emit({ type: "gates", stage: "shift", pattern: this.pattern, seconds: 0, lock: true });
+      w.emit({ type: "notice", team: -1, text: "THE GATES OPEN" });
+    }
+  }
+
+  withGatesOpen<T>(fn: () => T): T {
+    if (!this.lockZone) return fn();
+    const t = this.w.terrain;
+    const all: number[] = [];
+    for (const g of this.lockGates) g.cells.forEach((c, k) => {
+      t.kinds[c] = g.prev[k];
+      all.push(c);
+    });
+    this.w.nav.recompute(all);
+    try {
+      return fn();
+    } finally {
+      for (const c of all) t.kinds[c] = Kind.Wall;
+      this.w.nav.recompute(all);
+    }
+  }
+
+  private updateLock(): void {
+    const w = this.w;
+    if (!this.lockWarned && w.time >= this.lockUntil - this.lockWarn) {
+      this.lockWarned = true;
+      w.emit({ type: "gates", stage: "warn", pattern: this.pattern, seconds: Math.max(0, this.lockUntil - w.time), lock: true });
+    }
+    if (w.time >= this.lockUntil) this.endLockdown(true);
+  }
+
+  enforceLock(): void {
+    if (!this.lockZone) return;
+    const w = this.w;
+    for (const e of w.entities) {
+      if (!e.alive || e.structure) continue;
+      const p = e.transform.pos;
+      const a = this.anchors.get(e.id);
+      if (a && this.zoneAt(a[0], a[1]) !== this.zoneAt(p.x, p.z)) {
+        if (e.hero) {
+          e.hero.jump = undefined;
+          if (e.hero.action?.kind === "leap") e.hero.action.toX = e.hero.action.toZ = undefined;
+        }
+        w.teleport(e, a[0], a[1]);
+        this.shutNotice(e);
+        continue;
+      }
+      this.anchors.set(e.id, [p.x, p.z]);
+    }
+  }
 
   constructor(private w: World) {
+    const ld = w.data.match.lockdown;
+    if (ld && ld.seconds > 0) this.buildLock(ld.seconds, ld.warnSeconds ?? 5);
     this.mist = w.terrain.mist as MistDef | undefined;
     if (this.mist) {
       const t = w.terrain;
@@ -411,6 +576,7 @@ export class MapEvents {
   }
 
   update(): void {
+    if (this.lockZone) this.updateLock();
     if (this.av && this.horns.length) this.updateHorns(this.av);
     if (this.mist) this.updateMist(this.mist);
     if (this.lanternDef) this.updateLantern(this.lanternDef);

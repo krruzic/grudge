@@ -47,7 +47,7 @@ export function specCost(w: World, type: StructureType, team = -1): number {
 
 export function canSpec(w: World, e: Entity | undefined): boolean {
   const st = e?.structure;
-  if (!st || st.type === "core" || st.siege || st.tesla) return false;
+  if (!st || st.type === "core" || st.siege || st.tesla || st.works !== undefined) return false;
   return !!w.data.structures.types[st.type].specs?.length && st.level === 2;
 }
 
@@ -79,7 +79,7 @@ export function trySpec(w: World, hero: Entity, idx: number): boolean {
 
 export function applySpec(w: World, e: Entity, id: string): void {
   const st = e.structure!;
-  if (st.type === "core") return;
+  if (st.type === "core" || st.works !== undefined) return;
   const spec = w.data.structures.types[st.type].specs?.find((s) => s.id === id);
   if (!spec) return;
   st.level = 3;
@@ -297,7 +297,7 @@ export function updateStructure(w: World, e: Entity): void {
     const cands: { o: Entity; score: number }[] = [];
     for (const o of w.entities) {
       if (!o.alive || o.team === e.team || (!w.visibleTo(e.team, o) && !spec?.reveal)) continue;
-      if (o.structure && !siege && !o.structure.siege) continue;
+      if (o.structure && !siege && !o.structure.siege && o.structure.works === undefined) continue;
       const d = w.dist(e, o) - o.radius;
       if (d > st.range * boost.range * w.rangeMul(e, o)) continue;
       const score = d + (o.hero ? (siege || exposed(w, e, o, st.range) ? -100 : 100) : 0) - (o.structure?.siege ? 60 : 0) - (siege && o.structure ? 40 : 0);
