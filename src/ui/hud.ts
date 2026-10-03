@@ -42,7 +42,7 @@ export class UiCanvas {
   begin(): CanvasRenderingContext2D {
     const h = 240;
     const w = Math.round((h * window.innerWidth) / window.innerHeight);
-    const scale = Math.min(4, Math.max(2, (window.innerHeight * (window.devicePixelRatio || 1)) / h));
+    const scale = Math.min(8, Math.max(2, (window.innerHeight * (window.devicePixelRatio || 1)) / h));
     const pw = Math.round(w * scale);
     const ph = Math.round(h * scale);
     if (w !== this.w || this.canvas.width !== pw || this.canvas.height !== ph) {
@@ -54,7 +54,7 @@ export class UiCanvas {
     this.ctx.setTransform(pw / w, 0, 0, ph / h, 0, 0);
     this.ctx.imageSmoothingEnabled = true;
     this.ctx.clearRect(0, 0, this.w, this.h);
-    const hk = Math.min(4, Math.max(1, (window.innerHeight * (window.devicePixelRatio || 1)) / h));
+    const hk = Math.min(8, Math.max(1, (window.innerHeight * (window.devicePixelRatio || 1)) / h));
     const hw = Math.round(w * hk);
     const hh = Math.round(h * hk);
     if (this.hiCanvas.width !== hw || this.hiCanvas.height !== hh) {

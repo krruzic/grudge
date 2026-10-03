@@ -5,7 +5,8 @@ import { drawNum, drawText, fontReady, onTextLost, textWidth } from "../ui/font"
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
-import { DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD } from "./fxKit";
+import { activeCostume, DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER, trailOf, useCostume, WARDEN, WARLORD, withCostume } from "./fxKit";
+import { costumeOfEntity } from "./costumes";
 import { spikeBatch } from "./warlordFx";
 import { wardenSlap } from "./wardenFx";
 import { towerProjectile, towerProjectileTick, towerPulse } from "./towerFx";
@@ -109,11 +110,14 @@ onTextLost(() => {
   calloutCache.clear();
 });
 
-const SLOT_W = 128;
-const SLOT_TEX_H = 32;
-const SLOT_H = 40;
-const SLOT_PAD = 4;
-const ATLAS_H = 4096;
+const TK = 3;
+const SLOT_LW = 128;
+const SLOT_LH = 32;
+const SLOT_W = SLOT_LW * TK;
+const SLOT_TEX_H = SLOT_LH * TK;
+const SLOT_H = 40 * TK;
+const SLOT_PAD = 4 * TK;
+const ATLAS_H = 8192;
 const SLOT_N = Math.floor(ATLAS_H / SLOT_H);
 
 const numText = (n: number): string => String(Math.max(1, Math.round(n)));
@@ -177,9 +181,11 @@ class TextAtlas {
   private draw(s: number): void {
     const src = this.spare.pop() ?? new THREE.Texture(Object.assign(document.createElement("canvas"), { width: SLOT_W, height: SLOT_TEX_H }));
     const ctx = (src.image as HTMLCanvasElement).getContext("2d")!;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, SLOT_W, SLOT_TEX_H);
+    ctx.setTransform(TK, 0, 0, TK, 0, 0);
     const [text, color, scale, y] = this.specs[s]!;
-    drawNum(ctx, text, (SLOT_W - textWidth(text, scale, true)) / 2, y, color, scale);
+    drawNum(ctx, text, (SLOT_LW - textWidth(text, scale, true)) / 2, y, color, scale);
     this.pending.push({ slot: s, src });
   }
 
@@ -411,15 +417,19 @@ function calloutTex(text: string, color: string): { tex: THREE.CanvasTexture; as
   if (hit) return hit;
   const s = 1.6;
   const c = document.createElement("canvas");
-  c.width = Math.ceil(textWidth(text, s) + 12);
-  c.height = 30;
+  const lw = Math.ceil(textWidth(text, s) + 12);
+  c.width = lw * TK;
+  c.height = 30 * TK;
   const ctx = c.getContext("2d")!;
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
   const draw = () => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, c.width, c.height);
+    ctx.setTransform(TK, 0, 0, TK, 0, 0);
     ctx.fillStyle = "rgba(14,10,8,0.72)";
-    ctx.fillRect(0, 4, c.width, 22);
+    ctx.fillRect(0, 4, lw, 22);
     drawText(ctx, text, 6, 6, color, s);
     t.needsUpdate = true;
   };
@@ -646,6 +656,7 @@ interface Fx {
   t: number;
   dur: number;
   tick: (k: number, dt: number) => void;
+  c?: string;
 }
 
 export class CombatFx implements FxHost {
@@ -687,7 +698,7 @@ export class CombatFx implements FxHost {
 
   add(obj: THREE.Object3D, dur: number, tick: (k: number, dt: number) => void): void {
     if (!obj.parent) this.root.add(obj);
-    this.items.push({ obj, t: 0, dur, tick });
+    this.items.push({ obj, t: 0, dur, tick, c: activeCostume() });
   }
 
   private ribbons = new Map<string, Ribbon>();
@@ -889,7 +900,7 @@ export class CombatFx implements FxHost {
   }
 
 
-  private pending: { at: number; run: () => void }[] = [];
+  private pending: { at: number; run: () => void; c?: string }[] = [];
   private clock = 0;
 
   slash(x: number, y: number, z: number, facing: number, team: number, combo: number, reach: number, delay = 0): void {
@@ -1002,11 +1013,16 @@ export class CombatFx implements FxHost {
 
   handle(ev: SimEvent): void {
     const sid = "src" in ev ? ev.src : undefined;
+    withCostume(costumeOfEntity(this.world, sid !== undefined ? this.world?.getAny(sid) : undefined), () => this.handleEv(ev));
+  }
+
+  private handleEv(ev: SimEvent): void {
+    const sid = "src" in ev ? ev.src : undefined;
     const se = sid !== undefined ? this.world?.getAny(sid) : undefined;
     const sk = se?.hero ? KITS[se.hero.type] : undefined;
     if (ev.type === "act") {
       const pw = se?.hero?.action?.power ?? 1;
-      if (se && ev.phase === "fire" && pw > 1.25) this.chargeRelease(ev.x, ev.y, ev.z, ev.dirX, ev.dirZ, pw, sk?.trail ?? 0xfff0b0);
+      if (se && ev.phase === "fire" && pw > 1.25) this.chargeRelease(ev.x, ev.y, ev.z, ev.dirX, ev.dirZ, pw, trailOf(activeCostume()) ?? sk?.trail ?? 0xfff0b0);
       if (se && sk?.act) sk.act(this, ev, se);
       return;
     }
@@ -1398,7 +1414,7 @@ export class CombatFx implements FxHost {
         const sx = x + Math.cos(a) * d;
         const sz = z + Math.sin(a) * d;
         const h = 0.8 + Math.random() * 1.1;
-        const rock = spikeBatch(this.root).spawn();
+        const rock = spikeBatch(this.root, activeCostume()).spawn();
         const rr = 0.35 + Math.random() * 0.2;
         rock.scale.set(rr * 1.6, h / 1.6, rr * 1.6);
         rock.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * 3, (Math.random() - 0.5) * 0.5);
@@ -1570,8 +1586,10 @@ export class CombatFx implements FxHost {
 
   syncMissiles(world: World): void {
     const seen = new Set<number>();
+    const prevC = activeCostume();
     for (const m of world.missiles) {
       seen.add(m.id);
+      useCostume(costumeOfEntity(world, world.getAny(m.ownerId)));
       let v = this.missileViews.get(m.id);
       if (!v) {
         const obj = new THREE.Group();
@@ -1626,7 +1644,7 @@ export class CombatFx implements FxHost {
         const gx = m.x + (Math.random() - 0.5) * 0.6;
         const gz = m.z + (Math.random() - 0.5) * 0.6;
         const gy = world.groundY(gx, gz);
-        const rock = spikeBatch(this.root).spawn();
+        const rock = spikeBatch(this.root, activeCostume()).spawn();
         const sc = 0.55 + Math.random() * 0.35;
         rock.scale.set(sc, sc * (0.9 + Math.random() * 0.5), sc);
         rock.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * 3, (Math.random() - 0.5) * 0.5);
@@ -1643,6 +1661,7 @@ export class CombatFx implements FxHost {
         chunks(this, 1, gx, gy + 0.4, gz, { size: [0.1, 0.18], speed: [1, 2.5], up: [3, 5] });
       }
     }
+    useCostume(prevC);
     for (const [id, v] of this.missileViews) {
       if (seen.has(id)) continue;
       emit(this, { tex: FX.dust, n: 3, x: v.obj.position.x, y: v.obj.position.y, z: v.obj.position.z, size: [0.6, 0.9], grow: 1.6, life: [0.3, 0.5], speed: [0.8, 1.6], opacity: 0.8 });
@@ -1657,7 +1676,7 @@ export class CombatFx implements FxHost {
   }
 
   after(seconds: number, run: () => void): void {
-    this.pending.push({ at: this.clock + Math.max(0, seconds), run });
+    this.pending.push({ at: this.clock + Math.max(0, seconds), run, c: activeCostume() });
   }
 
   private cannonHit(x: number, y: number, z: number, radius: number): void {
@@ -1784,14 +1803,15 @@ export class CombatFx implements FxHost {
       if (this.pending[i].at <= this.clock) {
         const p = this.pending[i];
         this.pending.splice(i, 1);
-        p.run();
+        withCostume(p.c, p.run);
       }
     }
     for (let i = this.items.length - 1; i >= 0; i--) {
       const f = this.items[i];
       f.t += dt;
       const k = Math.min(1, f.t / f.dur);
-      f.tick(k, dt);
+      if (f.c) withCostume(f.c, () => f.tick(k, dt));
+      else f.tick(k, dt);
       if (k >= 1) {
         if (f.obj instanceof FxInst) f.obj.removeFromParent();
         else this.root.remove(f.obj);
@@ -1830,10 +1850,12 @@ export class CombatFx implements FxHost {
         }
       }
       const pk = !s ? KITS[world.getAny(p.sourceId)?.hero?.type ?? ""] : undefined;
-      const custom = pk?.projectile?.(this, p.style) ?? null;
+      const pc = !s ? costumeOfEntity(world, world.getAny(p.sourceId)) : "";
+      const custom = withCostume(pc, () => pk?.projectile?.(this, p.style) ?? null);
       if (!s && custom) {
         s = custom as THREE.Sprite;
         s.userData.kit = pk;
+        s.userData.costume = pc;
         this.root.add(s);
         this.projViews.set(p.id, s);
       }
@@ -1861,7 +1883,7 @@ export class CombatFx implements FxHost {
       const kitOf = s.userData.kit as HeroKit | undefined;
       if (kitOf) {
         s.position.set(x, y, z);
-        kitOf.projectileTick?.(this, s, x, y, z, this.frameDt);
+        withCostume(s.userData.costume as string | undefined, () => kitOf.projectileTick?.(this, s, x, y, z, this.frameDt));
         continue;
       }
       s.position.set(x, y, z);
