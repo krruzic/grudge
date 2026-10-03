@@ -1548,7 +1548,7 @@ export class Hud {
   private drawClock(ctx: CanvasRenderingContext2D, W: number, w: World, now: number): void {
     const m = w.data.match;
     const sudden = w.match.phase === "sudden";
-    const remain = sudden ? m.matchSeconds + m.suddenDeathSeconds - w.time : m.matchSeconds - w.time;
+    const remain = sudden ? w.matchLength + m.suddenDeathSeconds - w.time : w.matchLength - w.time;
     const r = Math.max(0, Math.ceil(remain));
     const txt = `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
     const s = 1.7;

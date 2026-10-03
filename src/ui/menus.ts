@@ -187,7 +187,7 @@ export class Menus {
     const px = 14;
     const py = 26;
     const m = w.data.match;
-    const left = Math.max(0, m.matchSeconds - w.time);
+    const left = Math.max(0, w.matchLength - w.time);
     const sudden = w.match.phase === "sudden";
     const clock = sudden ? "SUDDEN DEATH" : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")}`;
     card(ctx, px, py, pw, ph, -0.012, null, () => {

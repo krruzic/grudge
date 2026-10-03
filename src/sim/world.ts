@@ -666,13 +666,17 @@ export class World {
     this.emit({ type: "directive", team, unitType: type, dir });
   }
 
+  get matchLength(): number {
+    return this.data.match.matchSeconds * (this.ffa ? this.data.match.ffa?.timeMul ?? 1 : 1);
+  }
+
   private updateMatch(): void {
     const m = this.data.match;
-    if (!this.training && this.match.phase === "play" && this.time >= m.matchSeconds) {
+    if (!this.training && this.match.phase === "play" && this.time >= this.matchLength) {
       this.match.phase = "sudden";
       this.emit({ type: "notice", team: -1, text: "SUDDEN DEATH" });
     }
-    if (!this.training && this.match.phase === "sudden" && this.time >= m.matchSeconds + m.suddenDeathSeconds) {
+    if (!this.training && this.match.phase === "sudden" && this.time >= this.matchLength + m.suddenDeathSeconds) {
       const keys: [(t: TeamState) => number, string][] = [
         [(t) => Math.round(t.coreDamageDealt), "core damage"],
         [(t) => -t.structuresLost, "structures destroyed"],
