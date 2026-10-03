@@ -991,7 +991,7 @@ export class EntityViews {
     return v;
   }
 
-  private play(v: View, name: string, timeScale = 1, restart = false): boolean {
+  private play(v: View, name: string, timeScale = 1, restart = false, fade = 0.1): boolean {
     const next = v.actions.get(name) ?? (name.startsWith("attack_") ? v.actions.get("attack_a") : undefined);
     if (!next) return false;
     next.timeScale = timeScale;
@@ -1001,7 +1001,7 @@ export class EntityViews {
     next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
     next.clampWhenFinished = once;
     next.reset().play();
-    if (prev && prev !== next) prev.crossFadeTo(next, name === "hit" ? 0.04 : 0.1, false);
+    if (prev && prev !== next) prev.crossFadeTo(next, name === "hit" ? 0.04 : fade, false);
     v.current = name;
     return true;
   }
@@ -1408,13 +1408,18 @@ export class EntityViews {
     const a = h.action;
     if (a && a !== v.lastAction) {
       let anim = "idle";
+      let swing = false;
       if (a.kind === "combo") {
-        anim = ["attack_a", "attack_b", "attack_c"][a.combo % 3];
-        const hit = (w.heroDef(h.type).abilities.a as { hits?: { range?: number; projectile?: unknown }[] }).hits?.[a.combo % 3];
-        if (hit && !hit.projectile) this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.5, a.combo % 3 === 1 ? 4 : 2, 1.6);
+        const hits = (w.heroDef(h.type).abilities.a as { hits?: { range?: number; projectile?: unknown }[] }).hits;
+        const n = hits?.length ?? 3;
+        const k = n > 3 ? (a.combo === n - 1 ? 2 : a.combo % 2) : a.combo % 3;
+        anim = ["attack_a", "attack_b", "attack_c"][k];
+        const hit = hits?.[a.combo];
+        swing = !!hit && !hit.projectile;
+        if (hit && !hit.projectile) this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.5, k === 1 ? 4 : 2, 1.6);
         if (hit && !hit.projectile && !KITS[h.type]?.trail) {
           const p = v.root.position;
-          this.fx.slash(p.x, p.y, p.z, facing, e.team, a.combo % 3, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
+          this.fx.slash(p.x, p.y, p.z, facing, e.team, k, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
         }
       }
       else if (a.name === "dodge") {
@@ -1425,7 +1430,7 @@ export class EntityViews {
       else anim = KIND_ANIM[a.kind] ?? "cast";
       const len = this.clipLen(v, anim);
       const scale = anim === "block" || anim === "idle" ? 1 : len / Math.max(0.15, Math.min(a.dur, 1.2));
-      this.play(v, anim, scale, true);
+      this.play(v, anim, swing ? Math.min(scale, 2) : scale, true, swing && scale > 2 ? 0.04 : 0.1);
     }
     v.lastAction = a;
     if (a && (a.name === "dodge" || a.kind === "dash" || a.kind === "leap" || a.kind === "flurry" || a.kind === "blink" || a.kind === "charge")) {
@@ -1440,7 +1445,7 @@ export class EntityViews {
       const speed = Math.hypot(h.vel.x, h.vel.z);
       if (h.blocking) this.play(v, "block");
       else if (speed > 0.8) this.play(v, "run", Math.max(0.6, speed / h.speed) * 1.2);
-      else this.play(v, "idle");
+      else if (!(v.current?.startsWith("attack_") && v.actions.get(v.current)?.isRunning())) this.play(v, "idle");
     }
     v.body.rotation.x = 0;
     let lift = 0;
