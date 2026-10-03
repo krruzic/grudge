@@ -296,7 +296,7 @@ KITS.herald = {
       for (let k = 0; k < 2; k++) h.after(k * 0.18, () => decal(h, HERALD.halo, ev.x, gy + 0.02 * k, ev.z, ev.radius, 0.7, { grow: 0.55, spin: k ? -0.8 : 0.8, additive: true, color: 0xffd870, opacity: 0.75 }));
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
-        emit(h, { tex: HERALD.blast, n: 1, x: ev.x, y: gy + 1.6, z: ev.z, size: [1, 1], grow: 2.2, life: [0.5, 0.5], speed: [ev.radius * 0.9, ev.radius * 0.9], dir: { x: Math.cos(a), y: 0, z: Math.sin(a) }, cone: 0.01, additive: true });
+        emit(h, { tex: HERALD.blast, n: 1, x: ev.x, y: gy + 1.6, z: ev.z, size: [1, 1], grow: 2.2, life: [0.5, 0.5], speed: [ev.radius * 0.9, ev.radius * 0.9], dir: { x: Math.cos(a), y: 0, z: Math.sin(a) }, cone: 0.01, additive: true, opacity: 0.55 });
       }
       return true;
     }

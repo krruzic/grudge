@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { World } from "../sim/world";
 import type { Particles } from "./particles";
 import stoneUrl from "../../assets/textures/stone.png?url";
+import lavaUrl from "../../assets/fx/lava.png?url";
 import { FxBatch, fxBatch, FxInst } from "./fxInstances";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
@@ -248,7 +249,11 @@ const FIS_MAT: Record<FissureStyle, THREE.Material> = {
   lava: new THREE.MeshLambertMaterial({ color: 0x24140a, flatShading: true }),
   moss: new THREE.MeshLambertMaterial({ color: 0x1e2a10, flatShading: true }),
 };
-const LAVA_CORE = new THREE.MeshBasicMaterial({ color: 0xff7a1c });
+const lavaTex = new THREE.TextureLoader().load(lavaUrl);
+lavaTex.colorSpace = THREE.SRGBColorSpace;
+const crackPlane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+crackPlane.userData.model = true;
+const LAVA_CORE = new THREE.MeshBasicMaterial({ map: lavaTex, alphaTest: 0.4, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 });
 const LIP_MAT = new THREE.MeshLambertMaterial({ color: 0x6a5238, flatShading: true });
 const MOSS_LIP = new THREE.MeshLambertMaterial({ color: 0x3a5a1c, flatShading: true });
 for (const m of [...Object.values(FIS_MAT), LAVA_CORE, LIP_MAT, MOSS_LIP]) m.userData.keep = true;
@@ -279,15 +284,17 @@ export function buildFissures(gy: (x: number, z: number) => number, r: number, s
       const seg = new THREE.Group();
       seg.position.set(mx, gy(mx, mz), mz);
       seg.rotation.y = yaw;
-      const cut = new THREE.Mesh(boxGeo, FIS_MAT[style]);
-      cut.scale.set(len + w * 0.6, 0.08, w);
-      cut.position.y = 0.01;
-      seg.add(cut);
+      seg.rotation.z = Math.atan2(gy(nx, nz) - gy(px, pz), len);
       if (style === "lava") {
-        const core = new THREE.Mesh(boxGeo, LAVA_CORE);
-        core.scale.set(len + w * 0.4, 0.09, w * 0.45);
-        core.position.y = 0.015;
+        const core = new THREE.Mesh(crackPlane, LAVA_CORE);
+        core.scale.set(len + w * 1.4, 1, w * 2.6 * (rnd() < 0.5 ? -1 : 1));
+        core.position.y = 0.05;
         seg.add(core);
+      } else {
+        const cut = new THREE.Mesh(boxGeo, FIS_MAT[style]);
+        cut.scale.set(len + w * 0.6, 0.08, w);
+        cut.position.y = 0.01;
+        seg.add(cut);
       }
       for (const side of [-1, 1]) {
         if (rnd() < 0.45) continue;
@@ -321,7 +328,7 @@ export function fissures(h: FxHost, x: number, y: number, z: number, r: number, 
       if (!(o instanceof THREE.Mesh)) continue;
       const mat = o.material as THREE.Material;
       const key = FIS_KEYS.get(mat) ?? "fx";
-      const inst = fxBatch(h.root, key, () => new FxBatch(boxGeo, mat.clone())).spawn();
+      const inst = fxBatch(h.root, key, () => new FxBatch(o.geometry, mat.clone())).spawn();
       const sc = new THREE.Vector3();
       o.matrixWorld.decompose(inst.position, inst.quaternion, sc);
       inst.scale.set(0, 0, 0);

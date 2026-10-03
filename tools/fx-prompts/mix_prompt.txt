@@ -1,0 +1,16 @@
+Images 1 and 2 are finished visual-effect sprite sheets from a 1998 Nintendo 64 fantasy action game: soft hand-painted game textures like Legend of Zelda Ocarina of Time, Banjo-Kazooie and Conker, painted shading with a few saturated colours, chunky slightly low-resolution brushwork, no black outlines, no pixel art.
+
+Paint a NEW sprite sheet of 12 separate effect sprites in EXACTLY that art style. Strict grid of 4 columns and 3 rows with wide empty gaps, each sprite centred in its own cell, filling most of the cell, never touching another. Reading order left to right, top to bottom:
+1. a splash of molten lava: a few chunky blobs and droplets of glowing yellow-orange magma flying up from a small splash, dark red cooling edges, irregular silhouette (not a round cloud)
+2. a single small chunky ember: a jagged glowing coal fragment, white-yellow hot core, orange then deep red rim, no halo around it
+3. a horizontal river of molten lava flowing along a crack, spanning the ENTIRE cell width edge to edge, about one third of the cell tall: bright yellow-orange molten centre line, deep red and dark crusted edges, a few black cooled crust islands floating in it, painted brushy texture
+4. a horned iron viking helmet emblem, painted dark iron with bone-white horns, no glow
+5. a chunky rounded green plus symbol (a simple medical cross, four equal arms) with a thin brass rim, painted
+6. a slender silver rapier blade with a gold cup hilt, diagonal, with a bright white four-point flash star painted on the blade
+7. a gold four-point sparkle star with two tiny sparks beside it, painted
+8. a white four-pointed twinkle spark with a pale yellow centre, soft painted edges
+9. a single chunky grey-brown rock fragment, faceted, painted
+10. a small cluster of three brown rock chips
+11. a horizontal crack in the ground filled with molten lava, spanning the ENTIRE cell width edge to edge, jagged edges, one short side branch, yellow-orange core and deep red edges
+12. a small cluster of three tiny glowing embers of different sizes, yellow-orange, no halo
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, no soft outer glow halos. Plain flat pure magenta background (#FF00FF) everywhere: one single uniform colour across the whole image, no cell tiles, no checkerboard.

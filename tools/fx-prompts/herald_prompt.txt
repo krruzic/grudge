@@ -1,0 +1,20 @@
+Image 1 is a sprite sheet of 16 visual-effect sprites for the Herald, a plate-armoured knight commander in a 1998 Nintendo 64 fantasy action game. Its art style is WRONG: it looks like modern pixel-art / emoji icons with thick black outlines. Images 2 and 3 are finished effect sprite sheets from the same game in the CORRECT style: soft hand-painted game textures like Legend of Zelda Ocarina of Time, Banjo-Kazooie and Conker, painted shading with a few saturated colours, chunky slightly low-resolution brushwork, no black outlines, no pixels.
+
+Repaint EVERY sprite of image 1 in EXACTLY the art style of images 2 and 3. Keep the same 4 columns x 4 rows grid, the same subject in the same cell, roughly the same silhouette and size, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Reading order left to right, top to bottom:
+1. a burst of golden light beams radiating from the centre (painted gold and cream rays, no pixels)
+2. a gold fleur-de-lis emblem, painted burnished gold metal
+3. curved golden sound-wave arcs of a trumpet blast, like (((
+4. a small royal blue cloth banner with a painted gold fleur-de-lis, swallowtail bottom
+5. a golden ring seen at a slight angle, painted gold metal band, soft warm highlight
+6. a gold coin, painted, with a small sparkle
+7. pale white-gold light rays spreading upward from the bottom like a sunrise fan
+8. a green heal plus symbol: a chunky rounded green cross with a pale green highlight, painted (no black outline)
+9. a blue kite shield with gold trim, painted metal
+10. a golden laurel wreath of two leafy branches
+11. a thick golden ring shockwave of a horn blast seen face-on, brushy painted edges
+12. a steel-tipped arrow with white fletching, diagonal
+13. a yellow-gold feather plume
+14. a gold five-point star, painted, soft bevel-free shading
+15. a golden-tan dust puff, lumpy
+16. a small royal gold crown with red gems
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, no outer glow halos. Plain flat pure magenta background (#FF00FF) everywhere: one single uniform colour across the whole image, no cell tiles, no checkerboard.

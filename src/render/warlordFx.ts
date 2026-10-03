@@ -123,7 +123,7 @@ function slamFx(h: FxHost, x: number, z: number, r: number, heavy: boolean): voi
   chunks(h, heavy ? 10 : 5, x, gy + 0.4, z, { size: [0.16, 0.32], speed: [2, 5], up: [5, 9] });
   if (heavy) {
     spikes(h, x, z, r, Math.round(r * 2.2), 1.8);
-    emit(h, { tex: WARLORD.lavaGlow, n: 6, x, y: gy + 0.3, z, size: [0.9, 1.4], grow: 1.5, life: [0.6, 1.1], speed: [0, 0.5], up: [0.2, 0.6], additive: true, jitter: r * 1.2, opacity: 0.8 });
+    emit(h, { tex: WARLORD.splash, n: 5, x, y: gy + 0.3, z, size: [0.7, 1.1], grow: 1.2, life: [0.4, 0.7], speed: [0, 0.4], up: [1.5, 3], gravity: 6, jitter: r * 0.9 });
   } else slabs(h, x, z, r, Math.round(r * 2.4), 0.45, 1.3);
   h.shake = Math.max(h.shake, heavy ? 0.75 : 0.4);
 }

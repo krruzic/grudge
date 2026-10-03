@@ -101,7 +101,7 @@ export const WARDEN = {
 };
 
 export const WARLORD = {
-  rage: WL[0], slab: WL[1], lavaCrack: WL[2], shout: WL[3], helm: WL[4], dust: WL[5], ember: WL[6], spike: WL[7],
+  rage: WL[0], slab: WL[1], lavaCrack: WL[2], shout: WL[3], helm: WL[4], dust: WL[5], ember: WL[6], splash: WL[7],
   ring: WL[8], swoosh: WL[9], pebbles: WL[10], impact: WL[11], horn: WL[12], lavaGlow: WL[13], crackRing: WL[14], rune: WL[15],
 };
 
