@@ -24,60 +24,25 @@ import texgen  # noqa: E402
 importlib.reload(anims)
 importlib.reload(charkit)
 
-HEROES = {
-    "marksman": {
-        "yaw": -90,
-        "height": 1.9,
-        "weight": 0.85,
-        "tex": 1024,
-        "joints": {
-            "hip": 0.95,
-            "chest": 1.2,
-            "neck": 1.42,
-            "head_top": 1.85,
-            "head_y": -0.03,
-            "shoulder": (0.2, 1.28),
-            "elbow": (0.42, 1.09),
-            "wrist": (0.545, 0.97),
-            "finger": (0.64, 0.815),
-            "leg_x": 0.165,
-            "knee": 0.43,
-            "ankle": 0.12,
-        },
-        "rigid": [
-            {"bone": "chest", "box": ((0.13, -0.2, 1.42), (0.42, 0.25, 1.95)), "hue": (330, 20), "sat": 0.4},
-            {"bone": "chest", "box": ((0.23, -0.2, 1.45), (0.45, 0.25, 1.95))},
-            {"bone": "chest", "box": ((-0.6, -0.05, 1.35), (-0.21, 0.5, 2.0))},
-        ],
-        "team_hue": (195, 250),
-        "extras": "marksman_extras",
-    },
-    "engineer": {
-        "yaw": -90,
-        "height": 1.68,
-        "weight": 1.0,
-        "tex": 1024,
-        "joints": {
-            "hip": 0.7,
-            "chest": 1.0,
-            "neck": 1.33,
-            "head_top": 1.68,
-            "head_y": -0.03,
-            "shoulder": (0.25, 1.21),
-            "elbow": (0.39, 1.04),
-            "wrist": (0.45, 0.84),
-            "finger": (0.52, 0.57),
-            "leg_x": 0.23,
-            "knee": 0.34,
-            "ankle": 0.1,
-        },
-        "rigid": [{"bone": "chest", "box": ((-0.36, 0.2, 0.75), (0.36, 0.7, 1.8))}],
-        "team_hue": (195, 250),
-        "team_box": ((-0.6, -0.6, 0.9), (0.6, 0.6, 1.42)),
-        "attach": [("attach_wrench", "wrench_tripo.glb")],
-        "clips": "engineer_clips",
-    },
-}
+HEROES = {}
+HERO_DIR = os.path.join(ROOT, "tools", "blender", "tripo_heroes")
+
+
+def load_configs():
+    """Each tools/blender/tripo_heroes/<hero>.py defines CFG plus any functions CFG names (extras, clips, attach)."""
+    import build_tripo_hero as th_mod
+    for f in sorted(os.listdir(HERO_DIR)):
+        if not f.endswith(".py") or f.startswith("_"):
+            continue
+        ns = {"__name__": "tripo_" + f[:-3], "th": th_mod, "bpy": bpy, "math": math, "np": np, "Vector": Vector, "Matrix": Matrix, "os": os, "ROOT": ROOT}
+        exec(open(os.path.join(HERO_DIR, f)).read(), ns)
+        cfg = dict(ns["CFG"])
+        cfg["ns"] = ns
+        HEROES[f[:-3]] = cfg
+
+
+def fn(cfg, name):
+    return cfg["ns"].get(name) or globals()[name]
 
 
 def clear_scene():
@@ -411,40 +376,6 @@ def bake_material(name, src, cfg, img, px, cols):
         p.use_smooth = True
 
 
-def marksman_extras(name, arm, images):
-    B = {b.name: (tuple(b.head_local), tuple(b.tail_local), b.parent.name if b.parent else None) for b in arm.data.bones}
-    c = charkit.Char(name + "_gear", images)
-    import build_heroes as bh
-    WOOD = (0.75, 0.5, 0.3)
-    LTH_DK = (0.36, 0.24, 0.16)
-    CREAM = (1.15, 1.05, 0.88)
-    h0, h1, _ = B["hand_L"]
-    g = Vector(h0) + (Vector(h1) - Vector(h0)) * 0.45
-    gx, gy, gz = g.x, g.y, g.z
-    n = 24
-    pts, rad = [], []
-    for k in range(n + 1):
-        t = k / n * 2 - 1
-        bulge = 0.2 * (1 - t * t)
-        recurve = 0.07 * max(0.0, abs(t) - 0.78) / 0.22
-        pts.append((gx, gy - 0.02 - bulge + recurve * 2.2 + 0.2, gz + 0.16 + 0.86 * t))
-        rad.append(0.026 - 0.016 * abs(t) ** 1.3 + (0.008 if abs(t) < 0.1 else 0.0))
-    bh.tube(c, pts, rad, "wood", "hand_L", segs=7, shade=WOOD, cap=True)
-    for t in (-0.09, -0.03, 0.03, 0.09):
-        bh.ring(c, 0.032, 0.006, (gx, gy, gz + 0.16 + 0.86 * t), "leather", "hand_L", segs=8, shade=LTH_DK)
-    for sgn in (-1, 1):
-        tp = Vector(pts[0 if sgn < 0 else -1])
-        c.cone(0.014, 0.0, 0.07, tuple(tp + Vector((0, -0.01, 0.03 * sgn))), "bone", "hand_L", segs=5, rot=(0 if sgn > 0 else math.pi, 0, 0), shade=CREAM)
-        bh.ring(c, 0.016, 0.005, tuple(Vector(pts[2 if sgn < 0 else -3])), "gold", "hand_L", segs=8)
-    c.limb(tuple(Vector(pts[1])), tuple(Vector(pts[-2])), 0.0035, 0.0035, "plain", "hand_L", segs=4, shade=(1.1, 1.05, 0.95))
-    q0, q1 = Vector((-0.19, 0.2, 1.36)), Vector((-0.31, 0.165, 1.63))
-    for k in range(5):
-        a = k / 5 * math.tau
-        off = Vector((math.cos(a) * 0.022, math.sin(a) * 0.022, math.sin(a) * 0.015))
-        c.limb(tuple(q0 + off), tuple(q1 + off * 1.3 + Vector((0, 0, 0.01 * (k % 2)))), 0.008, 0.008, "wood", "chest", segs=4, shade=WOOD)
-    return c
-
-
 def bridge(obj, a, b, r, px, uv_pick):
     me = obj.data
     bm = bmesh.new()
@@ -500,6 +431,40 @@ def load_wrench(name, src_path, tex=512):
 WRENCH_LEN = 1.25
 
 
+def import_prop(name, src_path, tex=512, team_hue=None):
+    """Import a Tripo prop mesh in its own coordinates with a baked material, ready for place_on_bone."""
+    bpy.ops.import_scene.gltf(filepath=src_path)
+    w = [o for o in bpy.context.selected_objects if o.type == "MESH"][0]
+    for o in list(bpy.context.selected_objects):
+        if o is not w:
+            bpy.data.objects.remove(o, do_unlink=True)
+    w.parent = None
+    w.data.transform(w.matrix_world)
+    w.matrix_world = Matrix.Identity(4)
+    img, px = tex_lookup(w)
+    bake_material(name, w, {"tex": tex, "team_hue": team_hue}, img, px, face_colors(w, px))
+    return w
+
+
+def place_on_bone(w, arm, bone, grip, axis, length, at=0.55, side=(1, 0, 0)):
+    """Rigidly bind prop w to bone. grip: point on the prop (source coords) held at `at` along the bone.
+    The prop's long axis is source -X (from grip end to business end) and is pointed along `axis` (armature space);
+    source -Y goes toward `side`. length: scale factor applied to the source (Tripo props are ~1 unit long)."""
+    hb = arm.data.bones[bone]
+    g = hb.head_local + (hb.tail_local - hb.head_local) * at
+    d = Vector(axis).normalized()
+    sx = Vector(side)
+    sx = (sx - d * sx.dot(d)).normalized()
+    R = Matrix((-d, -sx, (-d).cross(-sx))).transposed().to_4x4()
+    w.data.transform(Matrix.Translation(g) @ R @ Matrix.Scale(length, 4) @ Matrix.Translation(-Vector(grip)))
+    vg = w.vertex_groups.new(name=bone)
+    vg.add(list(range(len(w.data.vertices))), 1.0, "REPLACE")
+    w.parent = arm
+    m = w.modifiers.new("Armature", "ARMATURE")
+    m.object = arm
+    return w
+
+
 def attach_wrench(name, arm, src_path):
     w = load_wrench(name + "_wrench", src_path)
     hb = arm.data.bones["hand_R"]
@@ -518,24 +483,6 @@ def attach_wrench(name, arm, src_path):
     m = w.modifiers.new("Armature", "ARMATURE")
     m.object = arm
     return w
-
-
-def engineer_clips(clips):
-    clips["attack_b"] = {
-        "bones": {
-            "arm_R": [(0, (-40, 0, 60)), (3, (-70, 0, 85)), (5, (-85, 0, -45)), (6, (-80, 0, -60)), (9, (-60, 0, -40)), (14, (0, 0, 6))],
-            "forearm_R": [(0, (-50, -70, 0)), (3, (-60, -80, 0)), (5, (-10, 0, 0)), (9, (-20, 0, 0)), (14, (-22, 0, 0))],
-            "hand_R": [(0, (20, 0, 0)), (3, (30, 0, 0)), (5, (40, 0, 0)), (7, (45, 0, 0)), (9, (35, 0, 0)), (14, (0, 0, 0))],
-            "spine": [(0, (5, -30, 0)), (3, (5, -50, 0)), (5, (12, 45, 0)), (6, (12, 52, 0)), (14, (0, 0, 0))],
-            "head": [(0, (0, 20, 0)), (3, (0, 30, 0)), (5, (0, -25, 0)), (14, (0, 0, 0))],
-            "arm_L": [(0, (-20, 0, -30)), (3, (-30, 0, -45)), (5, (20, 0, -10)), (14, (0, 0, -6))],
-            "thigh_R": [(0, (-20, 0, 0)), (5, (20, 0, 0)), (14, (0, 0, 0))],
-            "thigh_L": [(0, (0, 0, 0)), (5, (-30, 0, 0)), (14, (0, 0, 0))],
-            "shin_L": [(0, (0, 0, 0)), (5, (30, 0, 0)), (14, (0, 0, 0))],
-        },
-        "loc": {"hips": [(0, (0, 0, 0)), (3, (0, 0.03, 0.02)), (5, (0, -0.08, -0.06)), (14, (0, 0, 0))]},
-    }
-    return clips
 
 
 def preview_clip(src, arm, path, clip, frames, extra=(), angles=(0, 45, 90)):
@@ -578,7 +525,7 @@ def build(name, preview=None):
     objs = [src, arm]
     if cfg.get("extras"):
         images = texgen.build_all(os.path.join(ROOT, "assets", "textures"))
-        gear = globals()[cfg["extras"]](name, arm, images)
+        gear = fn(cfg, cfg["extras"])(name, arm, images)
         coll = bpy.context.scene.collection
         B = {bn.name: (tuple(bn.head_local), tuple(bn.tail_local), bn.parent.name if bn.parent else None) for bn in arm.data.bones}
         gobj, garm = gear.build(B, coll)
@@ -590,11 +537,11 @@ def build(name, preview=None):
         m.object = arm
         charkit.bake_ao([gobj], samples=16)
         objs.append(gobj)
-    for fn, srcf in cfg.get("attach", []):
-        objs.append(globals()[fn](name, arm, os.path.join(ROOT, "assets", "source", srcf)))
+    for f, srcf in cfg.get("attach", []):
+        objs.append(fn(cfg, f)(name, arm, os.path.join(ROOT, "assets", "source", srcf)))
     clips = anims.hero_clips(cfg.get("weight", 1.0))
     if cfg.get("clips"):
-        clips = globals()[cfg["clips"]](clips)
+        clips = fn(cfg, cfg["clips"])(clips)
     charkit.animate(arm, clips)
     if preview and os.environ.get("CLIP"):
         for c in os.environ["CLIP"].split(","):
@@ -665,6 +612,7 @@ def render(src, arm, path, markers=None, extra=(), angles=(0, 90, 180, 270)):
 
 
 if __name__ == "__main__":
+    load_configs()
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     who = argv[0] if argv else "marksman"
     prev = argv[1] if len(argv) > 1 else None
