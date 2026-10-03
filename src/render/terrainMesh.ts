@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import heroesData from "../../data/heroes.json";
-import { FLAG_DIRT, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../sim/terrain";
+import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../sim/terrain";
 import type { Surround } from "../sim/surround";
 
 export interface TerrainTextures {
@@ -10,6 +10,7 @@ export interface TerrainTextures {
   cobble: THREE.Texture;
   water: THREE.Texture;
   sand?: THREE.Texture;
+  ruin?: { id: THREE.Texture; crack: THREE.Texture };
 }
 
 const MARGIN = 48;
@@ -51,6 +52,52 @@ function prepare(tex: THREE.Texture): THREE.Texture {
   tex.needsUpdate = true;
   return tex;
 }
+
+function rawData(tex: THREE.Texture): THREE.Texture {
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+const RUIN_HEAD = `
+uniform sampler2D tPavId; uniform sampler2D tCrack; varying vec4 vRuin;
+float rHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float rNoise(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(rHash(i), rHash(i + vec2(1.0, 0.0)), f.x), mix(rHash(i + vec2(0.0, 1.0)), rHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}`;
+
+const RUIN_PAVING = `if (sw.w > 0.0) {
+  vec2 pu = wuv / 4.0;
+  vec2 pdx = dpx.xz / 4.0; vec2 pdy = dpy.xz / 4.0;
+  vec4 pid = textureLod(tPavId, pu, 0.0);
+  float code = floor(pid.b * 8.0 + 0.5);
+  vec2 cell = floor(pu) + vec2(floor(code / 3.0) - 1.0, mod(code, 3.0) - 1.0);
+  float r1 = fract(sin(dot(cell, vec2(12.9898, 78.233)) + pid.r * 91.7) * 43758.5453);
+  float r2 = fract(r1 * 13.37 + pid.r * 7.13);
+  float r3 = fract(r1 * 31.71 + pid.r * 3.3);
+  float sm = pid.g;
+  float fn = rNoise(wuv * 1.3) * 0.6 + rNoise(wuv * 3.1 + 7.0) * 0.4;
+  vec3 cs = r2 < 0.1 + vRuin.x * 0.3 ? textureGrad(tCrack, pu, pdx, pdy).rgb : textureGrad(tCobble, pu, pdx, pdy).rgb;
+  vec3 stoneTint = mix(vec3(0.84, 0.88, 0.94), vec3(1.07, 1.0, 0.86), r3) * (0.8 + 0.32 * r2);
+  cs = mix(cs, cs * stoneTint, sm);
+  vec3 mossC = textureGrad(tGrass, wuv / 2.5, dpx.xz / 2.5, dpy.xz / 2.5).rgb * vec3(0.6, 0.62, 0.36) * (0.72 + fn * 0.5);
+  vec3 dirtC = vec3(dot(textureGrad(tDirt, wuv / 3.0, dpx.xz / 3.0, dpy.xz / 3.0).rgb, vec3(0.4, 0.4, 0.2))) * vec3(0.62, 0.52, 0.4) * (0.75 + fn * 0.5);
+  float gm = clamp(vRuin.y * 1.1 + (fn - 0.5) * 0.9, 0.0, 1.0) * (1.0 - sm);
+  cs = mix(cs, mossC * 0.8, gm * 0.75);
+  float mo = smoothstep(0.66, 0.8, vRuin.y + (fn - 0.5) * 0.6 - sm * 0.12 + (r3 - 0.5) * 0.14);
+  cs = mix(cs, mossC, mo);
+  float gone = max(step(r1, vRuin.x * 1.15 - 0.06), smoothstep(0.8, 0.92, vRuin.x + (fn - 0.5) * 0.35));
+  vec3 holeC = mix(dirtC, mossC * 0.75, smoothstep(0.55, 0.9, vRuin.y + (fn - 0.5) * 0.4)) * mix(0.5, 1.0, smoothstep(0.0, 0.8, sm));
+  cs = mix(cs, holeC, gone);
+  float pd = smoothstep(0.5, 0.58, vRuin.z + (fn - 0.5) * 0.16);
+  cs = mix(cs, vec3(dot(cs, vec3(0.3, 0.4, 0.3))) * vec3(0.5, 0.58, 0.66) + vec3(0.02, 0.03, 0.05), pd * 0.8);
+  tsum += cs * sw.w;
+}`;
 
 export interface TerrainLight {
   sunDir: [number, number, number];
@@ -163,6 +210,21 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
       if (i >= 0 && t.kinds[i] === Kind.Wall && t.styles[i] === "pit") return true;
     }
     return false;
+  };
+
+  const ruined = !!tex.ruin;
+  const ruinW = ruined ? new Float32Array(count * 4) : null;
+  const fbm = (x: number, z: number) => vnoise(x, z) * 0.65 + vnoise(x * 2.3 + 17, z * 2.3 - 5) * 0.35;
+  const wallDist = (x: number, z: number) => {
+    let best = 3;
+    for (let cz = Math.floor(z) - 3; cz <= Math.floor(z) + 2; cz++) {
+      for (let cx = Math.floor(x) - 3; cx <= Math.floor(x) + 2; cx++) {
+        const i = t.index(cx, cz);
+        if (i < 0 || t.kinds[i] !== Kind.Wall || t.styles[i] === "pit") continue;
+        best = Math.min(best, Math.hypot(Math.max(cx - x, 0, x - cx - 1), Math.max(cz - z, 0, z - cz - 1)));
+      }
+    }
+    return best;
   };
 
   const dirs: [number, number][] = [];
@@ -341,6 +403,25 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
       r *= tint[0];
       g *= tint[1];
       b *= tint[2];
+      if (ruinW && inside(x, z)) {
+        const wd = wallDist(x, z);
+        const near = THREE.MathUtils.clamp(1 - wd / 1.8, 0, 1);
+        let grassy = 0;
+        for (const [cx, cz] of [[x - 1, z - 1], [x, z - 1], [x - 1, z], [x, z]]) grassy += cellFlag(cx, cz, FLAG_GRASS) / 4;
+        const gone = THREE.MathUtils.smoothstep(fbm(x * 0.17 + 3.1, z * 0.17 - 8.4) + dirt * 0.35 + near * 0.1, 0.5, 0.82);
+        const moss = THREE.MathUtils.clamp(THREE.MathUtils.smoothstep(fbm(x * 0.13 - 11, z * 0.13 + 4), 0.42, 0.85) + near * 0.3 + grassy * 0.5, 0, 1);
+        const pud = THREE.MathUtils.smoothstep(fbm(x * 0.21 + 40, z * 0.21 + 9), 0.52, 0.76) * (1 - gone * 0.6) * (1 - near);
+        ruinW[k * 4] = gone;
+        ruinW[k * 4 + 1] = moss;
+        ruinW[k * 4 + 2] = pud;
+        const grime = near * (0.55 + 0.45 * vnoise(x * 0.9 + 3, z * 0.9));
+        const v = vnoise(x * 0.05 + 21, z * 0.05 - 7);
+        const vv = 0.88 + vnoise(x * 0.23 - 4, z * 0.23 + 13) * 0.2;
+        const tw: [number, number, number] = v < 0.5 ? [0.9 + v * 0.16, 0.95 + v * 0.1, 1.0 - v * 0.24] : [0.98 + (v - 0.5) * 0.08, 1.0 - (v - 0.5) * 0.08, 0.88 - (v - 0.5) * 0.04];
+        r *= tw[0] * vv * (1 - grime * 0.36);
+        g *= tw[1] * vv * (1 - grime * 0.3);
+        b *= tw[2] * vv * (1 - grime * 0.42);
+      }
       if (wet > 0) {
         r *= 1 - wet * 0.22;
         g *= 1 - wet * 0.16;
@@ -360,6 +441,7 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   geo.setAttribute("splat", new THREE.BufferAttribute(splat, 4));
   const hasSand = !!tex.sand && sandW.some((v) => v > 0);
   if (hasSand) geo.setAttribute("aSand", new THREE.BufferAttribute(sandW, 1));
+  if (ruinW) geo.setAttribute("aRuin", new THREE.BufferAttribute(ruinW, 4));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
   const mat = light ? new THREE.MeshBasicMaterial({ vertexColors: true }) : new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -369,24 +451,26 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
     tRock: { value: prepare(tex.rock) },
     tCobble: { value: prepare(tex.cobble) },
     tSand: { value: hasSand ? prepare(tex.sand!) : null },
+    tPavId: { value: tex.ruin ? rawData(tex.ruin.id) : null },
+    tCrack: { value: tex.ruin ? prepare(tex.ruin.crack) : null },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
-        `#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;${hasSand ? "\nattribute float aSand;\nvarying float vSand;" : ""}`,
+        `#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;${hasSand ? "\nattribute float aSand;\nvarying float vSand;" : ""}${ruined ? "\nattribute vec4 aRuin;\nvarying vec4 vRuin;" : ""}`,
       )
       .replace(
         "#include <worldpos_vertex>",
-        `#include <worldpos_vertex>${hasSand ? "\nvSand = aSand;" : ""}\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);`,
+        `#include <worldpos_vertex>${hasSand ? "\nvSand = aSand;" : ""}${ruined ? "\nvRuin = aRuin;" : ""}\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
 uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tRock; uniform sampler2D tCobble;
-varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}`,
+varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}`,
       )
       .replace(
         "#include <map_fragment>",
@@ -409,12 +493,12 @@ if (sw.z > 0.0) {
   if (an.z > 0.0) cr += textureGrad(tRock, vWPos.xy / 5.0, dpx.xy / 5.0, dpy.xy / 5.0).rgb * an.z;
   tsum += cr * sw.z;
 }
-if (sw.w > 0.0) tsum += textureGrad(tCobble, wuv / 4.0, dpx.xz / 4.0, dpy.xz / 4.0).rgb * sw.w;
+${ruined ? RUIN_PAVING : "if (sw.w > 0.0) tsum += textureGrad(tCobble, wuv / 4.0, dpx.xz / 4.0, dpy.xz / 4.0).rgb * sw.w;"}
 diffuseColor.rgb *= tsum;`,
       );
   };
 
-  mat.customProgramCacheKey = () => (hasSand ? "terrain-sand" : "terrain");
+  mat.customProgramCacheKey = () => `terrain${hasSand ? "-sand" : ""}${ruined ? "-ruin" : ""}`;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = "Terrain";
   mesh.receiveShadow = true;

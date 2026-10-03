@@ -721,6 +721,94 @@ class MapBuilder:
                  @ Matrix.Rotation(r.uniform(-0.35, 0.35), 4, "X") @ Matrix.Diagonal((0.5, 0.4, 0.34, 1)))
             self.props.add_bm(bm, self.ruin_sect(px, pz), matrix=m, col_fn=lambda p: tuple(a * 0.85 for a in tint))
 
+    def floor_masks(self, x, z):
+        def h2(a, b):
+            s = math.sin(a * 127.1 + b * 311.7) * 43758.5453
+            return s - math.floor(s)
+
+        def vn(a, b):
+            a0, b0 = math.floor(a), math.floor(b)
+            fa, fb = a - a0, b - b0
+            sa, sb = fa * fa * (3 - 2 * fa), fb * fb * (3 - 2 * fb)
+            p, q = h2(a0, b0), h2(a0 + 1, b0)
+            u, v = h2(a0, b0 + 1), h2(a0 + 1, b0 + 1)
+            return (p + (q - p) * sa) * (1 - sb) + (u + (v - u) * sa) * sb
+
+        def fbm(a, b):
+            return vn(a, b) * 0.65 + vn(a * 2.3 + 17, b * 2.3 - 5) * 0.35
+
+        def sstep(v, a, b):
+            t = min(1.0, max(0.0, (v - a) / (b - a)))
+            return t * t * (3 - 2 * t)
+
+        wd = 3.0
+        for cz in range(int(math.floor(z)) - 3, int(math.floor(z)) + 3):
+            for cx in range(int(math.floor(x)) - 3, int(math.floor(x)) + 3):
+                if self.idx(cx, cz) < 0 or self.kind(cx, cz) != WALL or self.style(cx, cz) == "pit":
+                    continue
+                wd = min(wd, math.hypot(max(cx - x, 0, x - cx - 1), max(cz - z, 0, z - cz - 1)))
+        near = min(1.0, max(0.0, 1 - wd / 1.8))
+        dirt = 1.0 if self.flag(int(x), int(z), FLAG_DIRT) else 0.0
+        grassy = 1.0 if self.flag(int(x), int(z), FLAG_GRASS) else 0.0
+        gone = sstep(fbm(x * 0.17 + 3.1, z * 0.17 - 8.4) + dirt * 0.35 + near * 0.1, 0.5, 0.82)
+        moss = min(1.0, sstep(fbm(x * 0.13 - 11, z * 0.13 + 4), 0.42, 0.85) + near * 0.3 + grassy * 0.5)
+        return gone, moss, near
+
+    def floor_rubble(self):
+        self.fx.append(("ground_ruined", (0.0, -20.0, 0.0)))
+        r = random.Random(29)
+        keep = [(p["x"], p["z"], 2.4) for p in self.g["pads"]] + [(c["x"], c["z"], 3.2) for c in self.g["cores"]]
+        keep += [(p["x"], p["z"], 1.3) for p in self.g["props"]]
+        n = {"slab": 0, "pebble": 0, "tuft": 0}
+        for z in range(self.D):
+            for x in range(self.W):
+                if self.kind(x, z) != GROUND or not self.flag(x, z, FLAG_PAVING):
+                    continue
+                c = self.corners(x, z)
+                if max(c) - min(c) > 0.5:
+                    continue
+                px, pz = x + r.uniform(0.15, 0.85), z + r.uniform(0.15, 0.85)
+                if any(math.hypot(px - kx, pz - kz) < kr for kx, kz, kr in keep):
+                    continue
+                gone, moss, near = self.floor_masks(px, pz)
+                roll = r.random()
+                if roll < 0.025 + gone * 0.16 + near * 0.05:
+                    y = self.ground_h(px, pz)
+                    w, d, t = r.uniform(0.26, 0.46), r.uniform(0.18, 0.32), r.uniform(0.06, 0.1)
+                    bm = bmesh.new()
+                    bmesh.ops.create_cube(bm, size=1.0)
+                    for v in bm.verts:
+                        v.co.x += r.uniform(-0.12, 0.12)
+                        v.co.y += r.uniform(-0.12, 0.12)
+                    m = (Matrix.Translation(G(px, y + t * 0.2, pz)) @ Matrix.Rotation(r.uniform(0, math.tau), 4, "Z")
+                         @ Matrix.Rotation(r.uniform(-0.25, 0.25), 4, "X") @ Matrix.Rotation(r.uniform(-0.2, 0.2), 4, "Y")
+                         @ Matrix.Diagonal((w, d, t, 1)))
+                    tint = tuple(a * r.uniform(0.78, 0.92) for a in self.ruin_tint(px, pz))
+                    self.props.add_bm(bm, "ruinstone", matrix=m, col_fn=lambda p, tint=tint, y=y: tuple(
+                        a * (0.7 + 0.3 * min(1.0, max(0.0, (p.z - y) / 0.12))) for a in tint))
+                    n["slab"] += 1
+                elif roll < 0.06 + gone * 0.26:
+                    for k in range(1 + int(r.random() * (1.2 + gone * 1.5))):
+                        qx, qz = px + r.uniform(-0.3, 0.3), pz + r.uniform(-0.3, 0.3)
+                        s = r.uniform(0.07, 0.13) * (1 + gone * 0.4)
+                        y = self.ground_h(qx, qz)
+                        bm = bmesh.new()
+                        bmesh.ops.create_icosphere(bm, subdivisions=0, radius=1.0)
+                        for v in bm.verts:
+                            v.co *= 1.0 + r.uniform(-0.2, 0.2)
+                        m = (Matrix.Translation(G(qx, y + s * 0.15, qz)) @ Matrix.Rotation(r.uniform(0, math.tau), 4, "Z")
+                             @ Matrix.Diagonal((s * r.uniform(1.0, 1.5), s, s * r.uniform(0.45, 0.7), 1)))
+                        tint = tuple(a * r.uniform(0.8, 1.0) for a in self.ruin_tint(qx, qz))
+                        self.props.add_bm(bm, "rubble", matrix=m, col_fn=lambda p, tint=tint, y=y, s=s: tuple(
+                            a * (0.6 + 0.4 * min(1.0, max(0.0, (p.z - y) / (s * 0.7)))) for a in tint))
+                        n["pebble"] += 1
+                if gone > 0.45 and moss > 0.5 and not self.flag(x, z, FLAG_GRASS) and r.random() < 0.3:
+                    qx, qz = x + r.uniform(0.2, 0.8), z + r.uniform(0.2, 0.8)
+                    if not any(math.hypot(qx - kx, qz - kz) < kr for kx, kz, kr in keep):
+                        self.clump(self.grass, qx, qz, r.uniform(0.35, 0.5), r.uniform(0.28, 0.4), r.uniform(0, 3.14), variant=r.randrange(3))
+                        n["tuft"] += 1
+        print("floor rubble", n)
+
     def is_hedge(self, x, z):
         return 0 <= x < self.W and 0 <= z < self.D and self.kind(x, z) == WALL and self.style(x, z) == "hedge"
 
@@ -1448,6 +1536,8 @@ def main():
     else:
         mb.rim_forest()
     mb.vegetation()
+    if mb.ruined:
+        mb.floor_rubble()
 
     objs = {b.name: b.build(coll) for b in (mb.props, mb.grass, mb.tufts) if b.faces}
     for (name, pos) in mb.fx:

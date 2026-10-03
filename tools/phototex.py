@@ -397,7 +397,144 @@ def main_painted(names: list) -> None:
     json.dump(prev, open(manifest, "w"), indent=1, sort_keys=True)
 
 
+def nb_or(m: np.ndarray, r: int = 1) -> np.ndarray:
+    out = m.copy()
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            out |= np.roll(m, (dy, dx), (0, 1))
+    return out
+
+
+def nb_and(m: np.ndarray, r: int = 1) -> np.ndarray:
+    return ~nb_or(~m, r)
+
+
+def stone_labels(m: np.ndarray) -> tuple:
+    h, w = m.shape
+    lab = np.full((h, w), -1, np.int32)
+    unw = np.zeros((h, w, 2), np.int32)
+    comps = []
+    for y0 in range(h):
+        for x0 in range(w):
+            if not m[y0, x0] or lab[y0, x0] >= 0:
+                continue
+            k = len(comps)
+            lab[y0, x0] = k
+            unw[y0, x0] = (y0, x0)
+            stack, pts = [(y0, x0)], []
+            while stack:
+                uy, ux = stack.pop()
+                pts.append((uy, ux))
+                for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    vy, vx = uy + dy, ux + dx
+                    py, px = vy % h, vx % w
+                    if m[py, px] and lab[py, px] < 0:
+                        lab[py, px] = k
+                        unw[py, px] = (vy, vx)
+                        stack.append((vy, vx))
+            comps.append(np.array(pts))
+    return lab, unw, comps
+
+
+def paving_maps() -> None:
+    src = Image.open(os.path.join(OUT, "cobble.png")).convert("RGBA")
+    rgba = np.asarray(src, np.float32) / 255
+    a = rgba[..., :3] * 255
+    h, w = a.shape[:2]
+    s = a.mean(-1) - (a[..., 0] - a[..., 2]) * 2.5
+    m = nb_and(nb_or(s > 95, 1), 1)
+    lab, unw, comps = stone_labels(nb_and(nb_or(((s - wrap_blur(s, 4)) > 6) & (s > 95), 1), 1))
+    rng = np.random.default_rng(7)
+    vals = rng.permutation(len(comps)) / max(1, len(comps) - 1) * 0.94 + 0.04
+    shift = np.zeros((len(comps), 2), np.int32)
+    for k, pts in enumerate(comps):
+        if len(pts) < 14:
+            for uy, ux in pts:
+                lab[uy % h, ux % w] = -1
+            continue
+        c = pts.mean(0)
+        shift[k] = np.floor(c / (h, w)).astype(np.int32)
+    tile = np.floor_divide(unw, (h, w))
+    grow = lab.copy()
+    gt = tile.copy()
+    while (grow < 0).any():
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nl = np.roll(grow, (dy, dx), (0, 1))
+            ntile = np.roll(gt, (dy, dx), (0, 1))
+            fill = (grow < 0) & (nl >= 0)
+            grow[fill] = nl[fill]
+            gt[fill] = ntile[fill]
+    edge = np.zeros((h, w), bool)
+    for dy, dx in ((1, 0), (0, 1)):
+        edge |= grow != np.roll(grow, (dy, dx), (0, 1))
+        edge |= grow != np.roll(grow, (-dy, -dx), (0, 1))
+    stone = m & ~edge
+    dist = np.zeros((h, w), np.float32)
+    cur = stone.copy()
+    for d in range(1, 6):
+        dist[cur] = d
+        cur = nb_and(cur, 1)
+    sh = shift[grow] - gt
+    sx = np.clip(sh[..., 1], -1, 1)
+    sz = np.clip(-sh[..., 0], -1, 1)
+    out = np.zeros((h, w, 3), np.uint8)
+    out[..., 0] = (vals[grow] * 255 + 0.5).astype(np.uint8)
+    out[..., 1] = (np.clip(dist / 3.0, 0, 1) * 255 + 0.5).astype(np.uint8)
+    out[..., 2] = (((sx + 1) * 3 + (sz + 1)) / 8 * 255 + 0.5).astype(np.uint8)
+    Image.fromarray(out, "RGB").save(os.path.join(OUT, "cobble_id.png"))
+
+    crack = rgba.copy()
+    grout = np.median(rgba[~nb_or(stone, 1)][:, :3], 0)
+    yy, xx = np.mgrid[0:h, 0:w]
+    full = np.stack([gt[..., 0] * h + yy, gt[..., 1] * w + xx], -1)
+    for k in range(len(comps)):
+        pts = full[(grow == k) & stone]
+        if len(pts) < 40:
+            continue
+        r = np.random.default_rng(100 + k)
+        y0, x0 = pts.min(0)
+        y1, x1 = pts.max(0)
+        cy, cx = pts.mean(0)
+        horiz = (x1 - x0) >= (y1 - y0)
+        n = 5
+        line = []
+        for i in range(n + 1):
+            t = i / n
+            if horiz:
+                px, py = x0 + 1 + t * (x1 - x0 - 2), cy + (r.random() - 0.5) * (y1 - y0) * 0.3
+            else:
+                py, px = y0 + 1 + t * (y1 - y0 - 2), cx + (r.random() - 0.5) * (x1 - x0) * 0.3
+            line.append((py, px))
+        cut = int(r.integers(1, n))
+        line = line[cut - 1:] if r.random() < 0.5 else line[:cut + 2]
+        inside = set(map(tuple, pts))
+        for (ay, ax), (by, bx) in zip(line, line[1:]):
+            for f in np.linspace(0, 1, 40):
+                py, px = ay + (by - ay) * f, ax + (bx - ax) * f
+                iy, ix = int(round(py)), int(round(px))
+                if (iy, ix) not in inside:
+                    continue
+                crack[iy % h, ix % w, :3] *= 0.62
+                if (iy + 1, ix) in inside:
+                    hy = (iy + 1) % h
+                    crack[hy, ix % w, :3] = np.minimum(1, crack[hy, ix % w, :3] * 1.12)
+        if r.random() < 0.6:
+            corner = pts[np.argmax(pts @ r.normal(size=2))]
+            rad = r.uniform(2.5, 4.5)
+            d = np.hypot(*(pts - corner).T)
+            for (uy, ux), dd in zip(pts, d):
+                if dd < rad:
+                    crack[uy % h, ux % w, :3] = grout * (0.8 + 0.2 * dd / rad)
+                elif dd < rad + 1.2:
+                    crack[uy % h, ux % w, :3] *= 0.7
+    Image.fromarray((np.clip(crack, 0, 1) * 255 + 0.5).astype(np.uint8), "RGBA").save(os.path.join(OUT, "cobble_crack.png"))
+    print("stones", len(set(grow.ravel().tolist())), "-> assets/textures/cobble_id.png, cobble_crack.png")
+
+
 def main() -> None:
+    if sys.argv[1:2] == ["--paving"]:
+        paving_maps()
+        return
     if sys.argv[1:2] == ["--painted"]:
         main_painted(sys.argv[2:])
         return
