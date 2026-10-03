@@ -490,7 +490,7 @@ vec3 tsum = vec3(0.0);
 if (sw.x > 0.0) tsum += textureGrad(tGrass, wuv / 7.0, dpx.xz / 7.0, dpy.xz / 7.0).rgb * sw.x;
 if (sw.y > 0.0) {
   vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}
-${hasLake ? "  if (vLake > 0.0) {\n    vec3 lk = textureGrad(tLake, wuv / 3.5, dpx.xz / 3.5, dpy.xz / 3.5).rgb;\n    float salt = textureGrad(tLake, wuv / 29.0 + 0.37, dpx.xz / 29.0, dpy.xz / 29.0).r;\n    lk *= 0.82 + salt * 0.38;\n    cd = mix(cd, lk * 1.12, vLake);\n  }" : ""}
+${hasLake ? "  if (vLake > 0.0) {\n    vec3 lk = textureGrad(tLake, wuv / 3.5, dpx.xz / 3.5, dpy.xz / 3.5).rgb;\n    float salt = textureGrad(tLake, wuv / 29.0 + 0.37, dpx.xz / 29.0, dpy.xz / 29.0).r;\n    lk *= 0.82 + salt * 0.38;\n    cd = mix(cd, lk * vec3(1.24, 1.0, 0.72), vLake);\n  }" : ""}
   tsum += cd * sw.y;
 }
 if (sw.z > 0.0) {
