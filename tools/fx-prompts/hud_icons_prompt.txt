@@ -1,0 +1,14 @@
+The FIRST image shows painted ability icons from our fantasy game, showing the exact painting style (rich hand-painted fantasy game art, chunky readable shapes, warm lighting, visible brush strokes). Paint a sheet of 12 small HUD ICON SPRITES in that same painted style, as a 4 columns x 3 rows grid, each sprite centred in its own cell and filling most of it, wide empty gaps, never touching. They must read clearly at tiny sizes (16-24 px): bold simple silhouettes, strong contrast, a thin dark outline around each sprite. Left to right, top to bottom:
+1. a single thick gold coin seen slightly from the front, shiny embossed rim, a small crown stamped on it
+2. a plump burlap grain sack tied with twine at the top, golden wheat ears sticking out
+3. a round steel soldier's helmet (kettle hat) seen from the front, with a riveted brim, NO plume
+4. a tall upright horsehair helmet crest / plume, pure WHITE, nothing else
+5. a hexagonal stone building plot seen from slightly above, pale WHITE-GREY marble with a carved raised rim
+6. a round red enamel badge with a polished gold rim and a bold white double chevron arrow pointing right (attack)
+7. a round blue enamel badge with a gold rim and a bold white curved arrow looping back (follow)
+8. a round green enamel badge with a gold rim and a white heater shield on it (defend)
+9. a round golden-yellow enamel badge with a gold rim and a white raised open palm (hold)
+10. a round orange enamel badge with a gold rim and a white crosshair target (hunt)
+11. a round purple enamel badge with a gold rim and a white castle tower (siege)
+12. a round dark brown leather badge with a gold rim, blank
+No text, no letters, no numbers, no frames, no grid lines, no drop shadows. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour.

@@ -238,104 +238,9 @@ function relicIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: numbe
   ctx.restore();
 }
 
-function coinIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.ellipse(x, y, r * 0.8 + 0.8, r + 0.8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#f0b820";
-  ctx.beginPath();
-  ctx.ellipse(x, y, r * 0.8, r, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#ffe890";
-  ctx.beginPath();
-  ctx.ellipse(x - r * 0.2, y - r * 0.1, r * 0.35, r * 0.6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#b07810";
-  ctx.fillRect(x - 0.5, y - r * 0.5, 1, r);
-  ctx.restore();
-}
 
-function grainIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  ctx.save();
-  const sack = (k: number) => {
-    ctx.beginPath();
-    ctx.moveTo(x - r * 0.45 - k, y - r * 0.35);
-    ctx.quadraticCurveTo(x - r * 1.05 - k, y + r * 0.2, x - r * 0.8 - k, y + r * 0.95 + k);
-    ctx.lineTo(x + r * 0.8 + k, y + r * 0.95 + k);
-    ctx.quadraticCurveTo(x + r * 1.05 + k, y + r * 0.2, x + r * 0.45 + k, y - r * 0.35);
-    ctx.closePath();
-  };
-  ctx.fillStyle = INK;
-  sack(0.9);
-  ctx.fill();
-  ctx.fillRect(x - r * 0.6 - 0.9, y - r * 1.05 - 0.9, r * 1.2 + 1.8, r * 0.75 + 1.8);
-  ctx.fillStyle = "#c89858";
-  sack(0);
-  ctx.fill();
-  ctx.fillStyle = "#e8cc70";
-  ctx.beginPath();
-  ctx.ellipse(x, y - r * 0.7, r * 0.6, r * 0.38, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#6a4020";
-  ctx.fillRect(x - r * 0.5, y - r * 0.42, r, r * 0.2);
-  ctx.fillStyle = "rgba(255,240,200,0.4)";
-  ctx.fillRect(x - r * 0.5, y, r * 0.3, r * 0.6);
-  ctx.restore();
-}
 
-function armyIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string): void {
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.moveTo(x - r - 0.8, y + r * 0.7 + 0.8);
-  ctx.lineTo(x - r - 0.8, y - r * 0.1);
-  ctx.arc(x, y - r * 0.1, r + 0.8, Math.PI, 0);
-  ctx.lineTo(x + r + 0.8, y + r * 0.7 + 0.8);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = "#c8ccd4";
-  ctx.beginPath();
-  ctx.moveTo(x - r, y + r * 0.7);
-  ctx.lineTo(x - r, y - r * 0.1);
-  ctx.arc(x, y - r * 0.1, r, Math.PI, 0);
-  ctx.lineTo(x + r, y + r * 0.7);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = team;
-  ctx.fillRect(x - r * 0.3, y - r * 1.1, r * 0.6, r * 1.2);
-  ctx.fillStyle = INK;
-  ctx.fillRect(x - r * 0.75, y + r * 0.05, r * 1.5, r * 0.25);
-  ctx.restore();
-}
 
-function padIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hot: boolean): void {
-  const hex = (k: number) => {
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
-      const px = x + Math.cos(a) * (r + k);
-      const py = y + Math.sin(a) * (r + k) * 0.75;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-  };
-  ctx.save();
-  ctx.fillStyle = INK;
-  hex(1.1);
-  ctx.fill();
-  ctx.fillStyle = hot ? "#ff5040" : team;
-  hex(0);
-  ctx.fill();
-  ctx.fillStyle = "#d8b048";
-  hex(-1.4);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  ctx.fillRect(x - r * 0.4, y - r * 0.45, r * 0.5, r * 0.25);
-  ctx.restore();
-}
 
 function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hp: number, ward: number, now: number): void {
   const gem = (k: number) => {
@@ -396,6 +301,97 @@ function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.restore();
 }
 
+const hudIconUrls = import.meta.glob("../../assets/ui/hud/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const hudIcons = new Map<string, HTMLImageElement>();
+let hudIconGen = 0;
+for (const [p, url] of Object.entries(hudIconUrls)) {
+  const im = new Image();
+  im.onload = () => hudIconGen++;
+  im.src = url;
+  hudIcons.set(p.split("/").pop()!.replace(".png", ""), im);
+}
+
+function hudIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number, flip = false): void {
+  const im = hudIcons.get(id);
+  if (!im?.complete || !im.naturalWidth) return;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.translate(x, y);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(im, -size / 2, -size / 2, size, size);
+  ctx.restore();
+}
+
+const tinted = new Map<string, HTMLCanvasElement>();
+function tintedIcon(id: string, color: string): HTMLCanvasElement | null {
+  const im = hudIcons.get(id);
+  if (!im?.complete || !im.naturalWidth) return null;
+  const key = `${id}|${color}`;
+  let c = tinted.get(key);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = im.naturalWidth;
+    c.height = im.naturalHeight;
+    const g = c.getContext("2d")!;
+    g.drawImage(im, 0, 0);
+    g.globalCompositeOperation = "multiply";
+    g.fillStyle = color;
+    g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = "destination-in";
+    g.drawImage(im, 0, 0);
+    tinted.set(key, c);
+  }
+  return c;
+}
+
+function coinIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  hudIcon(ctx, "coin", x, y, r * 2.6);
+}
+
+function grainIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  hudIcon(ctx, "grain", x, y - r * 0.15, r * 2.9);
+}
+
+function armyIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string): void {
+  const pl = tintedIcon("plume", team);
+  if (pl) {
+    const s = r * 1.9;
+    ctx.save();
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(pl, x - s * 0.42, y - r * 1.75, s, s);
+    ctx.restore();
+  }
+  hudIcon(ctx, "helmet", x, y + r * 0.1, r * 2.7);
+}
+
+function padIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hot: boolean): void {
+  const c = tintedIcon("pad", hot ? "#ff5040" : team);
+  if (!c) return;
+  const s = r * 2.6;
+  ctx.save();
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(c, x - s / 2, y - s / 2, s, s);
+  ctx.restore();
+}
+
+function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Directive, flip: boolean, tint?: string): void {
+  const r = 4.6;
+  if (tint) {
+    ctx.save();
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = tint;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  hudIcon(ctx, hudIcons.has(`order_${d}`) ? `order_${d}` : "order_blank", x, y, r * 2.2, flip && (d === "push" || d === "follow"));
+}
+
 const ORDER_COL: Record<Directive, string> = { push: "#d83a28", follow: "#3a78e0", defend: "#3aa04a", hold: "#d8a020", nearest: "#e07020", focus: "#8a4ad0" };
 
 function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: string): void {
@@ -428,69 +424,6 @@ function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: 
   ctx.restore();
 }
 
-function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Directive, flip: boolean, tint?: string): void {
-  const r = 4.4;
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.arc(x, y, r + 0.9, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = tint ?? ORDER_COL[d] ?? "#888";
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.28)";
-  ctx.beginPath();
-  ctx.ellipse(x - r * 0.15, y - r * 0.45, r * 0.6, r * 0.3, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#fff8e8";
-  ctx.strokeStyle = "#fff8e8";
-  ctx.lineWidth = 0.9;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  const f = flip ? -1 : 1;
-  ctx.beginPath();
-  if (d === "push") {
-    for (const o of [-1.3, 0.6]) {
-      ctx.moveTo(x + (o - 0.9) * f, y - 1.9);
-      ctx.lineTo(x + (o + 0.9) * f, y);
-      ctx.lineTo(x + (o - 0.9) * f, y + 1.9);
-    }
-    ctx.stroke();
-  } else if (d === "follow") {
-    ctx.arc(x - 0.6 * f, y + 0.6, 1.9, Math.PI * 0.9, Math.PI * 1.9);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + 1.9 * f, y - 1.2);
-    ctx.lineTo(x + 0.6 * f, y - 2.2);
-    ctx.lineTo(x + 2.2 * f, y + 0.6);
-    ctx.closePath();
-    ctx.fill();
-  } else if (d === "defend") {
-    ctx.moveTo(x - 2, y - 2.1);
-    ctx.lineTo(x + 2, y - 2.1);
-    ctx.lineTo(x + 2, y + 0.2);
-    ctx.quadraticCurveTo(x + 1.6, y + 1.8, x, y + 2.5);
-    ctx.quadraticCurveTo(x - 1.6, y + 1.8, x - 2, y + 0.2);
-    ctx.closePath();
-    ctx.fill();
-  } else if (d === "hold") {
-    ctx.fillRect(x - 2.2, y - 0.8, 4.4, 1.6);
-  } else if (d === "nearest") {
-    ctx.arc(x, y, 1.9, 0, Math.PI * 2);
-    ctx.moveTo(x - 3, y);
-    ctx.lineTo(x + 3, y);
-    ctx.moveTo(x, y - 3);
-    ctx.lineTo(x, y + 3);
-    ctx.stroke();
-  } else {
-    ctx.fillRect(x - 1.6, y - 1, 3.2, 3.2);
-    ctx.fillRect(x - 2.1, y - 2.2, 1.1, 1.4);
-    ctx.fillRect(x - 0.55, y - 2.2, 1.1, 1.4);
-    ctx.fillRect(x + 1, y - 2.2, 1.1, 1.4);
-  }
-  ctx.restore();
-}
 
 function ringMeter(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, frac: number, color: string): void {
   ctx.save();
@@ -1623,7 +1556,7 @@ export class Hud {
       if (s2?.alive && s2.team === t) pads++;
     }
     const padHot = now - (this.padHitAt[t] ?? -99) < 0.7;
-    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, grain, army, capped, out, rate, kx, ky, px2, py2, pads, padHot].join("|");
+    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, grain, army, capped, out, rate, kx, ky, px2, py2, pads, padHot, hudIconGen].join("|");
     let y = this.memo(ctx, `head${t}`, headKey, x0 - 48, y00 - 6, blockW + 96, 40, (c) => {
       const y = y00;
       const gx = ax(8);
