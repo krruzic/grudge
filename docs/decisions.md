@@ -818,3 +818,4 @@
 - Francois carries the baguette strapped diagonally across his back instead of in his left hand.
 - Stig's portrait icon hides his wrench so it doesn't cover his face (in-match wrench unchanged); icons now frame every hero's head the same way.
 - New painted plank texture (`assets/textures/planks.png`, Nano Banana, tileable, 128 px) for Stig's siege ramp and works bridges (one material, no more checkerboard of light/dark planks); map bridges are switched over in the map build.
+- Production outposts (barracks, range, foundry, outpost) and the keep rebuilt from Tripo bodies (`tools/blender/build_tripo_outposts.py`): same footprint (plinth radius 1.55) and heights, team texels dyed, flags/foundry gear (`spin_*`) kept procedural on new masts, new procedural level-2 trims fitted to the new bodies, keep crystal procedural on a gold cradle (Tripo fused it into the claws). 5.5-9.5k tris, 0.47-0.69 MB each.
