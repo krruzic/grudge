@@ -29,7 +29,7 @@ export function canBuildOn(pad: Pad, team: number): boolean {
 export function buildCost(w: World, type: StructureType, upgrade: boolean, team = -1): number {
   const def = w.data.structures.types[type];
   const hk = team >= 0 ? w.teamHooks(team) : {};
-  const heroMul = upgrade ? hk.upgradeCostMul ?? 1 : hk.costMul ?? 1;
+  const heroMul = upgrade ? (w.ffa ? hk.ffaUpgradeCostMul : undefined) ?? hk.upgradeCostMul ?? 1 : (w.ffa ? hk.ffaCostMul : undefined) ?? hk.costMul ?? 1;
   const ffa = def.class === "production" ? w.ffaCfg?.productionCostMul ?? 1 : 1;
   return Math.round((upgrade ? def.upgradeCost : def.cost) * w.costMul() * heroMul * ffa);
 }
@@ -42,7 +42,7 @@ export function specOf(w: World, st: StructureState): TowerSpec | null {
 export function specCost(w: World, type: StructureType, team = -1): number {
   const def = w.data.structures.types[type];
   const hk = team >= 0 ? w.teamHooks(team) : {};
-  return Math.round((def.specCost ?? 250) * w.costMul() * (hk.upgradeCostMul ?? 1));
+  return Math.round((def.specCost ?? 250) * w.costMul() * ((w.ffa ? hk.ffaUpgradeCostMul : undefined) ?? hk.upgradeCostMul ?? 1));
 }
 
 export function canSpec(w: World, e: Entity | undefined): boolean {

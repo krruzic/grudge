@@ -165,6 +165,8 @@
       "hooks": {
         "costMul": 0.8,
         "upgradeCostMul": 0.6,
+        "ffaCostMul": 0.92,
+        "ffaUpgradeCostMul": 0.8,
         "wrenchDamage": 38,
         "heroStructureMul": 0.2,
         "wrenchRange": 10,
