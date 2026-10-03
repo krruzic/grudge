@@ -83,13 +83,14 @@ function centerNum(ctx: CanvasRenderingContext2D, W: number, s: string, y: numbe
   drawNum(ctx, s, Math.round((W - textWidth(s, scale, true)) / 2), y, color, scale);
 }
 
-export function prompt(ctx: CanvasRenderingContext2D, x: number, y: number, items: [string, string][], scale = 0.85): void {
+export function prompt(ctx: CanvasRenderingContext2D, x: number, y: number, items: [string, string][], scale = 0.85, ink?: string): void {
   let cx = x;
   for (const [btn, label] of items) {
     const color = btn === "A" ? PAD.a : btn === "B" ? PAD.b : btn === "S" ? PAD.start : PAD.c;
     padButton(ctx, cx + 5, y + 4.5, 5, color, btn);
     cx += 13;
-    drawText(ctx, label, cx, y, "#ffffff", scale);
+    if (ink) drawPlain(ctx, label, cx, y, ink, scale);
+    else drawText(ctx, label, cx, y, "#ffffff", scale);
     cx += textWidth(label, scale) + 12;
   }
 }
@@ -304,7 +305,7 @@ export class Screens {
         drawPlain(ctx, t, cw / 2 - textWidth(t, 0.7) / 2, ih + 20, "#4a3018", 0.7);
         if (blink) {
           const it: [string, string][] = [["S", "PRESS START"]];
-          prompt(ctx, Math.round(cw / 2 - promptWidth(it, 1) / 2), ih + 36, it, 1);
+          prompt(ctx, Math.round(cw / 2 - promptWidth(it, 1) / 2), ih + 36, it, 1, "#4a3018");
         }
         waxSeal(ctx, cw - 18, ch - 18, 11, "#a8141a", "combo");
       });

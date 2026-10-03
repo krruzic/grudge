@@ -129,6 +129,7 @@ async function start(): Promise<void> {
     if (beach) mv.root.add(beach);
   });
 
+  const splitAll = params.has("split4") || import.meta.env.VITE_SPLIT4 === "1";
   const dbgZoom = params.get("zoom");
   if (dbgZoom) Object.assign(renderData, { minViewWidth: Number(dbgZoom), viewMargin: 0 });
 
@@ -444,7 +445,7 @@ async function start(): Promise<void> {
     bots = humans.map((h, i) => (h || remote[i] || !botsToo ? null : new Bot(i, [0.5, 0.75, 0.95][(levels[i] ?? 2) - 1] ?? 0.75, seed + i)));
     people = humans.map((h, i) => h || !!remote[i]);
     linkMates();
-    view.setHumans(humans);
+    view.setHumans(splitAll ? humans.map(() => true) : humans);
   };
   const buildWorld = (spec: MatchSpec): World => {
     const mi = maps.findIndex((m) => m.id === spec.map);
