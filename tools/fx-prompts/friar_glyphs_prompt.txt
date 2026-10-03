@@ -1,0 +1,7 @@
+The image shows the existing ability glyph set of a fantasy game (white vector glyphs on black). Design FOUR more minimal ICON GLYPHS in EXACTLY this clean flat VECTOR style: SOLID FILLED pure WHITE silhouettes on a pure BLACK background, like the club, fist, cloud and tombstone in the reference: big solid white shapes with only a few thin black cut lines for key details, NOT outline drawings, no gradients, no shading, no texture, like a polished icon font. Arrange them as a single horizontal row of 4 equal SQUARE cells on one continuous pure black background (no white gaps, no borders, no grid lines), each glyph centred in its cell with generous padding. NO TEXT, NO LETTERS, NO NUMBERS.
+
+Left to right:
+1. a big solid beer tankard with a hinged lid and a chunky handle, tilted mid-swing, with foam bulging over the rim, two curved motion swoosh lines behind it and a few flying foam drops.
+2. a small solid keg lying on its SIDE (barrel seen from the side, thin black hoop cuts), a big bold solid PLUS sign above it, and splash droplets bursting out from both sides (a healing keg).
+3. a solid upright powder keg (barrel, thin black hoop cuts) with a small black skull cut out of its belly, a short curly fuse on top ending in a big sparkling starburst spark.
+4. a giant solid cask lying on its side on an X-shaped trestle stand, seen from the front end, with a tap spigot sticking out of the centre of its round end and a small hop cone above it.

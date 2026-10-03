@@ -1,0 +1,8 @@
+The FIRST image is a 2 x 2 reference grid of the same fantasy game character, BROTHER MADDOCK, a jolly bald friar with a monk's tonsure, a ring of bright red hair, bushy bright red eyebrows and a huge bushy bright red beard, rosy cheeks and a big laughing grin, in four costume variants. The SECOND image is the finished costume-icon set for the game's other characters, showing the exact icon style to match. Paint a 2 x 2 grid of four COSTUME SELECT ICONS of Brother Maddock in EXACTLY the style of the second image (Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon HEAD only, front-facing, same head shape, size and framing in all four, thick dark outline around the whole silhouette, strong flat colours, a sliver of collar at the bottom at most), one per cell, in the same order and positions as the first image, each centred in its cell with lots of empty space around it:
+
+top left: CLASSIC: bald shiny crown, bright red hair ring and beard, a deep teal-green hood collar.
+top right: ABBOT: same face, an ivory-white collar with gold trim, a small gold cross pendant on the beard braid.
+bottom left: HOPMASTER: same face, a crown of green hop leaves around his bald head, a golden-yellow collar.
+bottom right: GROG PIRATE: same face with a red polka-dot bandana over the head, a black eyepatch over his left eye, a gold hoop earring, braided beard with gold rings, a black coat collar.
+
+The four heads must be identical in shape, size and pose, only the costume details differ. Plain flat light grey background, no text, no borders, no frames, no circles behind the heads.

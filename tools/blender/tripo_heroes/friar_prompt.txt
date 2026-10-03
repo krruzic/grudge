@@ -1,0 +1,14 @@
+The FIRST and SECOND images are finished character turnaround sheets of two heroes (STIG the dwarf engineer and WREN the huntress) from a stylised fantasy action game. The THIRD image shows painted portraits of all the game's heroes. Design a NEW hero for the same game, in EXACTLY the same art style, rendering, proportion language, hand-painted texture style and level of detail as Stig and Wren, so he clearly belongs in the same game:
+
+BROTHER MADDOCK, "THE ALEMONK" — a big, jolly, round brewer-friar, a healer who fights with a huge tankard and throws kegs.
+- Tall and very round: a big barrel belly, broad shoulders, thick arms, sturdy short legs. About 1.5 times as wide as Wren and a head taller than Stig. Head a little large for the body like the other heroes.
+- Face: hearty, warm, laughing open-mouthed grin, twinkling eyes, big round red nose, very ROSY red cheeks. Friendly and lovable.
+- Hair: a monk's TONSURE (a bald shiny crown) ringed by thick BRIGHT RED / ginger-orange hair, and a big bushy BRIGHT RED beard, full and round, reaching his upper chest. Bushy red eyebrows. The red must be vivid and saturated.
+- Habit: a long ankle-length monk's habit in a rich DEEP TEAL-GREEN wool (dark viridian / jade green, clearly green-leaning, NOT blue and NOT brown), with wide sleeves rolled back to the elbow showing a CREAM linen undertunic on his forearms, and a short cream hem showing below. Gold-yellow HOP-VINE embroidery (hop cones and leaves) running along the hem and the sleeve cuffs.
+- A thick WINE-RED rope cord tied around his belly as a belt, with knotted tassel ends hanging down the front, a small leather pouch and a wooden rosary of little barrel beads.
+- A wide BLUE cloth scapular/stole hanging from his shoulders down the front and back to his knees, with a gold trim edge and a small embroidered gold hop-cone emblem on the chest (blue is the team colour and must stay a clear saturated royal BLUE, distinct from the teal habit).
+- A brown leather strap diagonally across his chest from his left shoulder to his right hip (it will hold a keg on his back later; draw NO keg).
+- Bare feet in simple brown leather sandals, chunky toes.
+- Hands EMPTY, open and relaxed, nothing held, no tankard, no weapon, no keg, nothing on his back.
+
+Output: a clean character turnaround sheet of Brother Maddock in exactly four full-body views left to right: front, left side, back, right side. Neutral relaxed A-pose with BOTH ARMS held clearly away from the body at about 35 degrees, hands well clear of the belly, same pose as Wren's front view. All four views the same size, standing on the same baseline, evenly spaced, not overlapping. Plain flat light grey background, soft even lighting, no cast shadows, no ground line, no text, no labels, no frames, no smoke, no glow, no effects.
