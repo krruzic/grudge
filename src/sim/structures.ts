@@ -276,6 +276,7 @@ export function updateStructure(w: World, e: Entity): void {
 
   const boost = w.arena.towerBoost(e);
   let haste = st.hasteUntil && w.time < st.hasteUntil ? st.hasteMul ?? 1 : 1;
+  if (st.graveUntil && w.time < st.graveUntil) haste *= st.graveHaste ?? 1;
   const spec = specOf(w, st);
   const shotCost = st.siege || st.tesla || st.padIndex < 0 ? 0 : spec?.grainPerShot ?? def.grainPerShot ?? 0;
   const grainCfg = w.data.match.economy.grain;

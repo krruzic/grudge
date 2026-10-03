@@ -31,18 +31,18 @@ function ringTex(): THREE.CanvasTexture {
   return t;
 }
 
-function areaTex(): THREE.CanvasTexture {
+function areaTex(fill = "255,220,120", rim = "#ffe070", dark = "#3a1a00", mark = "#ffd23a"): THREE.CanvasTexture {
   const c = document.createElement("canvas");
   c.width = c.height = 128;
   const g = c.getContext("2d")!;
   const gr = g.createRadialGradient(64, 64, 20, 64, 64, 62);
-  gr.addColorStop(0, "rgba(255,230,140,0.12)");
-  gr.addColorStop(0.85, "rgba(255,220,120,0.3)");
-  gr.addColorStop(1, "rgba(255,220,120,0)");
+  gr.addColorStop(0, `rgba(${fill},0.12)`);
+  gr.addColorStop(0.85, `rgba(${fill},0.3)`);
+  gr.addColorStop(1, `rgba(${fill},0)`);
   g.fillStyle = gr;
   g.fillRect(0, 0, 128, 128);
   g.lineWidth = 5;
-  g.strokeStyle = "#ffe070";
+  g.strokeStyle = rim;
   g.beginPath();
   g.arc(64, 64, 58, 0, Math.PI * 2);
   g.stroke();
@@ -51,13 +51,13 @@ function areaTex(): THREE.CanvasTexture {
     g.save();
     g.translate(64 + Math.cos(a) * 46, 64 + Math.sin(a) * 46);
     g.rotate(a + Math.PI / 2);
-    g.fillStyle = "#3a1a00";
+    g.fillStyle = dark;
     g.beginPath();
     g.moveTo(-8, -6);
     g.lineTo(8, -6);
     g.lineTo(0, 6);
     g.fill();
-    g.fillStyle = "#ffd23a";
+    g.fillStyle = mark;
     g.beginPath();
     g.moveTo(-5, -4);
     g.lineTo(5, -4);
@@ -72,6 +72,7 @@ function areaTex(): THREE.CanvasTexture {
 
 const RANGE_TEX = ringTex();
 const AREA_TEX = areaTex();
+const GRAVE_TEX = areaTex("200,140,255", "#d8a8ff", "#1a0830", "#c890ff");
 
 export class Reticles {
   readonly root = new THREE.Group();
@@ -110,6 +111,37 @@ export class Reticles {
       const tx = hx + q.dx;
       const tz = hz + q.dz;
       const gy = world.groundY(tx, tz);
+      const def0 = abilities(world, e)[q.slot];
+      const areaMat = p.area.material as THREE.MeshBasicMaterial;
+      const dots = p.wall.children as THREE.Mesh[];
+      if (def0.kind === "gravewalk") {
+        const d = Math.hypot(q.dx, q.dz) || 1;
+        const ux = q.dx / d;
+        const uz = q.dz / d;
+        const len = Math.min(16, d - 3);
+        p.wall.visible = len > 1.5;
+        dots.forEach((b, k) => {
+          const s = 1.5 + ((k + (time * 2.5) % 1) / dots.length) * Math.max(0, len - 1.5);
+          const x = hx + ux * s;
+          const z = hz + uz * s;
+          b.position.set(x, world.groundY(x, z) + 0.15, z);
+          b.rotation.y = Math.atan2(ux, uz) + Math.PI / 4;
+          b.scale.setScalar(0.55);
+          (b.material as THREE.MeshBasicMaterial).color.setHex(0xc890ff);
+        });
+        p.area.visible = true;
+        areaMat.map = GRAVE_TEX;
+        p.area.position.set(tx, gy + 0.12, tz);
+        p.area.scale.setScalar(((def0.radius ?? 6) + 1.5) * (1 + Math.sin(time * 6) * 0.05));
+        p.area.rotation.z = -time * 0.8;
+        return;
+      }
+      areaMat.map = AREA_TEX;
+      for (const b of dots) {
+        b.rotation.y = 0;
+        b.scale.setScalar(1);
+        (b.material as THREE.MeshBasicMaterial).color.setHex(0xffe070);
+      }
       p.range.visible = true;
       p.range.position.set(hx, world.groundY(hx, hz) + 0.1, hz);
       p.range.scale.setScalar(q.range);

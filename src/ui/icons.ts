@@ -178,6 +178,10 @@ const FILLS: Record<string, Draw> = {
       c.moveTo(ox - 0.32, 0.75); c.lineTo(ox - 0.25, -0.12); c.lineTo(ox + 0.25, -0.12); c.lineTo(ox + 0.32, 0.75); c.closePath();
     }
   },
+  gravewalk: (c) => {
+    c.moveTo(-0.45, 0.7); c.lineTo(-0.45, -0.35); c.arc(0, -0.35, 0.45, Math.PI, 0); c.lineTo(0.45, 0.7); c.closePath();
+    c.rect(-0.85, 0.62, 1.7, 0.26);
+  },
   turret: (c) => {
     c.rect(-0.6, 0.1, 1.2, 0.75);
     c.moveTo(-0.4, 0.1); c.arc(0, 0.1, 0.4, Math.PI, 0); c.closePath();
@@ -214,7 +218,7 @@ const FILLS: Record<string, Draw> = {
 };
 
 const TINT: Record<string, string> = {
-  shoot: "#ffe04a", hex: "#d68cff", stealth: "#d8dce8", summon: "#ffd08a", turret: "#c8ccd8", ramp: "#e0b070", parry: "#8cd0ff",
+  shoot: "#ffe04a", hex: "#d68cff", stealth: "#d8dce8", summon: "#ffd08a", gravewalk: "#c890ff", turret: "#c8ccd8", ramp: "#e0b070", parry: "#8cd0ff",
   pad: "#f0b830", size: "#e8e0c8",
 };
 

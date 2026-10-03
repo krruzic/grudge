@@ -458,18 +458,18 @@
           "variance": 0.2
         },
         "r": {
-          "kind": "summon",
+          "kind": "gravewalk",
           "anim": "attack_a",
-          "units": {
-            "grunt": 2
-          },
-          "seconds": 15,
-          "dur": 0.6,
-          "hitAt": 0.4,
-          "cooldown": 24,
-          "bot": "fight",
-          "botRange": 10,
-          "callout": "SUMMON GRUNTS"
+          "dur": 1.15,
+          "hitAt": 1.0,
+          "cooldown": 20,
+          "interruptCooldown": 5,
+          "radius": 6,
+          "seconds": 10,
+          "spawnMul": 0.6,
+          "towerHaste": 1.5,
+          "bot": "gravewalk",
+          "callout": "GRAVEWALK"
         },
         "z": {
           "kind": "summon",

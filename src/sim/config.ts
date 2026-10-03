@@ -60,6 +60,8 @@ export interface TalentFx {
   meterOnKill?: number;
   parryMark?: boolean;
   tesla?: boolean;
+  graveRank?: number;
+  graveBurst?: { radius: number; damage: number; slowMul: number; slowSeconds: number; shield: number };
 }
 
 export interface TalentWith {
@@ -116,7 +118,7 @@ export interface AbilityDef {
   comboCooldown?: number;
   seconds?: number;
   stunSeconds?: number;
-  bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "never";
+  bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "gravewalk" | "never";
   botRange?: number;
   heal?: number;
   length?: number;
@@ -159,6 +161,9 @@ export interface AbilityDef {
   vs?: Partial<Record<string, number>>;
   guardMul?: number;
   structureMul?: number;
+  interruptCooldown?: number;
+  spawnMul?: number;
+  towerHaste?: number;
 }
 
 export interface BotPlan {

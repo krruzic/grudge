@@ -153,6 +153,7 @@ export class Arena {
     if (w.ffaCfg) t /= w.ffaCfg.spawnRateMul ?? 1;
     if (this.relic.state === "shrined" && this.relic.shrineId === o.id) t /= 1 + w.data.match.arena.relic.outpostExtra;
     if (w.isSudden()) t /= w.data.match.suddenDeath.productionMul;
+    if (st.graveUntil && w.time < st.graveUntil) t *= st.graveMul ?? 1;
     const g = w.data.match.economy.grain;
     if (g?.surplus !== undefined && w.teams[o.team].grain >= g.surplus) t *= g.surplusMul ?? 0.7;
     return t;
@@ -229,6 +230,10 @@ export class Arena {
       const p = this.frontOf(o, o.team, st.spawnN);
       const u = spawnUnit(w, o.team, type, p.x, p.z, grow * up * (blessed ? rc.outpostStatMul : 1));
       if (u?.unit) u.unit.from = o.id;
+      if (u?.unit && st.graveRank && st.graveUntil && w.time < st.graveUntil) {
+        const vet = w.data.units.veterancy;
+        w.promote(u, vet.killsForRank[Math.min(vet.killsForRank.length, st.graveRank) - 1]);
+      }
       st.spawnAt = w.time + this.spawnInterval(o);
     }
   }

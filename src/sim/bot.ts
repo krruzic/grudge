@@ -2,6 +2,7 @@ import type { World } from "./world.ts";
 import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./types.ts";
 import { buildCost, canBuildOn, canSpec, specCost } from "./structures.ts";
 import { learned as learnedOf, options } from "./talents.ts";
+import { graveSpots } from "./heroes.ts";
 
 interface PlanItem {
   zone: Pad["zone"] | "front";
@@ -326,6 +327,34 @@ export class Bot {
     return best && this.ok(w, me, best) ? best : null;
   }
 
+  private graveTarget(w: World, me: Entity): Vec2 | null {
+    const p = me.transform.pos;
+    let best: Vec2 | null = null;
+    let bs = 0;
+    for (const s of graveSpots(w, me)) {
+      if (s.keep || Math.hypot(s.x - p.x, s.z - p.z) < 28) continue;
+      const st = w.get(s.id)?.structure;
+      if (!st || st.type === "core") continue;
+      let foes = 0;
+      let heroes = 0;
+      let mine = 0;
+      for (const o of w.entities) {
+        if (!o.alive || o.structure || o.neutral || Math.hypot(o.transform.pos.x - s.x, o.transform.pos.z - s.z) > 14) continue;
+        if (o.team === me.team) mine += o.unit ? 1 : 0;
+        else if (o.hero) heroes++;
+        else if (o.unit) foes++;
+      }
+      if (heroes > 1 || foes + heroes * 3 < 2) continue;
+      const prod = w.data.structures.types[st.type].class === "production";
+      const score = foes + heroes * 3 + (prod ? mine * 0.5 : 0);
+      if (score >= 3 && score > bs) {
+        bs = score;
+        best = { x: s.x, z: s.z };
+      }
+    }
+    return best;
+  }
+
   private ok(w: World, me: Entity, g: Vec2 | { transform: { pos: Vec2 } }): boolean {
     const q = "transform" in g ? g.transform.pos : g;
     return w.nav.reachable(me.transform.pos, q);
@@ -404,10 +433,19 @@ export class Bot {
       return;
     }
     const swarm = w.enemiesNear(me, 6, (o) => !!o.unit).length;
+    const graveDef = w.heroDef(h.type).abilities.r;
+    const graveReady = graveDef.kind === "gravewalk" && (h.cooldowns.r ?? 0) <= w.time && !h.action;
     if (lowHp) {
       const sp = w.spawnPoint(me.team);
       this.goal = sp;
       if (h.recallAt !== undefined) {
+        this.goal = null;
+        return;
+      }
+      const home = graveReady ? graveSpots(w, me).find((s) => s.keep) : undefined;
+      if (home && !(ehAlive && dHero < 2.5)) {
+        this.wantR = true;
+        this.wantPlace = { x: home.x - p.x, z: home.z - p.z };
         this.goal = null;
         return;
       }
@@ -574,6 +612,27 @@ export class Bot {
       return;
     }
     this.fightId = 0;
+
+    const gv = h.grave ? w.get(h.grave.id) : undefined;
+    if (gv?.alive && h.grave && w.time < h.grave.until && !(ehAlive && dHero < 12)) {
+      const gx = gv.transform.pos.x;
+      const gz = gv.transform.pos.z;
+      const dx = p.x - gx;
+      const dz = p.z - gz;
+      const dl = Math.hypot(dx, dz) || 1;
+      if (dl > gv.radius + 3.5) this.goal = { x: gx + (dx / dl) * (gv.radius + 2), z: gz + (dz / dl) * (gv.radius + 2) };
+      else this.goal = null;
+      return;
+    }
+    if (graveReady && (!ehAlive || dHero > 14)) {
+      const dest = this.graveTarget(w, me);
+      if (dest) {
+        this.wantR = true;
+        this.wantPlace = { x: dest.x - p.x, z: dest.z - p.z };
+        this.goal = null;
+        return;
+      }
+    }
 
     if (plan.raid && !lowHp && (!ehAlive || dHero > 20)) {
       let best: Entity | undefined;

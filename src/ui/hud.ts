@@ -793,7 +793,7 @@ export class Hud {
     this.drawRelic(ctx, W, H, w, now, bannerOn && !this.bannerBig);
     if (bannerOn && !this.bannerBig) this.drawBanner(ctx, W, now);
     this.mini = null;
-    if (this.minimap) this.drawMinimap(ctx, W, H, w, now);
+    if (this.minimap) this.drawMinimap(ctx, W, H, w, now, ui);
     if (this.card && now < this.card.until) this.drawCard(ctx, W, w, now);
     if (w.ffa) {
       this.drawFfa(ctx, W, H, w, ui, now);
@@ -1090,7 +1090,7 @@ export class Hud {
     return ok ? c : null;
   }
 
-  private drawMinimap(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number): void {
+  private drawMinimap(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number, ui: (MapperUi | null)[] = []): void {
     const t = w.terrain;
     const idx = this.mapIndex?.() ?? -1;
     const solo = this.split < 2;
@@ -1414,6 +1414,31 @@ export class Hud {
         tri(0.72);
         g.fillStyle = tc(e.team);
         g.fill();
+      }
+      for (const u of ui) {
+        const rt = u?.reticle;
+        if (!rt?.at) continue;
+        const [sx, sy] = P(rt.at.x, rt.at.z);
+        const [fx, fy] = P(rt.at.x - rt.dx, rt.at.z - rt.dz);
+        g.save();
+        g.setLineDash([1.4, 1]);
+        g.lineDashOffset = -now * 6;
+        g.lineWidth = 0.7;
+        g.strokeStyle = "rgba(216,160,255,0.95)";
+        g.beginPath();
+        g.moveTo(fx, fy);
+        g.lineTo(sx, sy);
+        g.stroke();
+        g.restore();
+        const pr = 3.6 + Math.sin(now * 8) * 0.5;
+        g.lineWidth = 1.4;
+        g.strokeStyle = INK;
+        g.beginPath();
+        g.arc(sx, sy, pr, 0, Math.PI * 2);
+        g.stroke();
+        g.lineWidth = 0.8;
+        g.strokeStyle = Math.floor(now * 6) % 2 ? "#e0b0ff" : "#ffffff";
+        g.stroke();
       }
       g.restore();
       g.strokeStyle = "rgba(255,216,112,0.55)";

@@ -30,7 +30,7 @@ function drawTree(ctx: CanvasRenderingContext2D, hero: string, side: "a" | "b", 
 
 const KIND_LABEL: Record<string, string> = {
   combo: "3-HIT COMBO", slam: "GROUND SLAM", quake: "EARTHQUAKE", warcry: "WAR CRY", shoot: "MAGIC BOLT",
-  hex: "HEX BLAST", leap: "CLIFF LEAP", dash: "PIERCING DASH", stealth: "SMOKE AMBUSH", summon: "SUMMON TROOPS",
+  hex: "HEX BLAST", leap: "CLIFF LEAP", dash: "PIERCING DASH", stealth: "SMOKE AMBUSH", summon: "SUMMON TROOPS", gravewalk: "GRAVEWALK",
   repair: "REPAIR PULSE", turret: "DROP TURRET", ramp: "BUILD RAMP", wall: "STONE WALL", trap: "THROW TRAP", reach: "LONG ARM SLAP",
   zone: "BRAMBLE FIELD", flurry: "BLADE FLURRY", parry: "PARRY", none: "-",
 };

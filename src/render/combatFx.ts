@@ -1661,7 +1661,17 @@ export class CombatFx implements FxHost {
     this.shake = Math.max(this.shake, 0.7);
   }
 
-  aura(kind: "flame" | "spark" | "drip" | "steam", x: number, y: number, z: number): void {
+  aura(kind: "flame" | "spark" | "drip" | "steam" | "grave", x: number, y: number, z: number, r = 1): void {
+    if (kind === "grave") {
+      const a = Math.random() * Math.PI * 2;
+      const d = r * (0.7 + Math.random() * 0.4);
+      const gx = x + Math.cos(a) * d;
+      const gz = z + Math.sin(a) * d;
+      const gy = this.world ? this.world.groundY(gx, gz) : y;
+      emit(this, { tex: Math.random() < 0.55 ? SUMMONER.ghost : SUMMONER.soulFlame, n: 1, x: gx, y: gy + 0.4, z: gz, size: [0.6, 0.95], grow: 1.2, life: [0.9, 1.4], speed: [0.1, 0.4], up: [1.2, 2.2], additive: true, color: 0xc890ff, opacity: 0.85 });
+      if (Math.random() < 0.35) emit(this, { tex: SUMMONER.skull, n: 1, x, y: y + 5 + Math.random(), z, size: [0.5, 0.7], life: [0.6, 0.8], speed: [0, 0.2], up: [0.6, 1], opacity: 0.7, jitter: r * 0.5 });
+      return;
+    }
     if (kind === "flame") this.burst(x + (Math.random() - 0.5) * 0.8, y + 0.4 + Math.random() * 1.2, z + (Math.random() - 0.5) * 0.8, starTex, 0xff7a20, 1, 0.45, 0.45, 0.2, true, 1.6);
     else if (kind === "spark") this.burst(x + (Math.random() - 0.5) * 0.9, y + 1 + Math.random() * 1.2, z + (Math.random() - 0.5) * 0.9, starTex, 0xfff0a0, 1, 0.35, 0.35, 0.3, true, 0.6);
     else if (kind === "steam") this.burst(x, y, z, puffTex, 0xe8e8f0, 1, 0.8, 0.8, 0.3, false, 1.2);

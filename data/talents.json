@@ -441,27 +441,33 @@
   "summoner": {
    "r": [
     {
-     "id": "bonegolem",
-     "name": "BONE GOLEM",
-     "desc": "SUMMON RAISES ONE HULKING BONE BRUTE INSTEAD OF TWO GRUNTS. IT STAYS 22S.",
-     "set": {
-      "units": {
-       "heavy": 1
-      },
-      "seconds": 22,
-      "callout": "BONE GOLEM"
+     "id": "risenranks",
+     "name": "RISEN RANKS",
+     "desc": "SOLDIERS FROM AN OUTPOST YOU EMPOWER COME OUT AS VETERANS. THE EMPOWER LASTS 4S LONGER.",
+     "add": {
+      "seconds": 4
+     },
+     "fx": {
+      "graveRank": 1
      }
     },
     {
-     "id": "wraiths",
-     "name": "WRAITH ARCHERS",
-     "desc": "SUMMON RAISES THREE SKELETAL ARCHERS INSTEAD OF TWO GRUNTS. THEY STAY 14S.",
+     "id": "wraithgate",
+     "name": "WRAITH GATE",
+     "desc": "GRAVEWALK CHANNELS IN 0.6S. YOU ARRIVE IN A BURST OF WRAITHS: FOES IN 5M TAKE 60, ARE HEXED AND SLOWED 50% FOR 2S. YOU GAIN A 120 SHIELD.",
      "set": {
-      "units": {
-       "ranged": 3
-      },
-      "seconds": 14,
-      "callout": "WRAITH ARCHERS"
+      "dur": 0.75,
+      "hitAt": 0.6,
+      "callout": "WRAITH GATE"
+     },
+     "fx": {
+      "graveBurst": {
+       "radius": 5,
+       "damage": 60,
+       "slowMul": 0.5,
+       "slowSeconds": 2,
+       "shield": 120
+      }
      }
     }
    ],
@@ -470,7 +476,7 @@
      "id": "gravepull",
      "name": "GRAVE PULL",
      "desc": "HEX DRAGS FOES INTO ITS CENTER AND LEAVES BONE SPIKES FOR 3S (SLOW 40%, 25/S).",
-     "combo": "WITH BONE GOLEM: HEXED FOES ARE ALSO STUNNED 1S.",
+     "combo": "WITH WRAITH GATE: HEXED FOES ARE ALSO STUNNED 1S.",
      "fx": {
       "pull": true,
       "zoneAfter": {
@@ -482,7 +488,7 @@
      },
      "with": [
       {
-       "id": "bonegolem",
+       "id": "wraithgate",
        "set": {
         "stunSeconds": 1.0
        }
@@ -493,7 +499,7 @@
      "id": "cascade",
      "name": "CASCADE",
      "desc": "HEX FALLS THREE TIMES, MARCHING FORWARD 3M EACH TIME.",
-     "combo": "WITH WRAITH ARCHERS: EVERY HEX RAISES A GRUNT FOR 12S.",
+     "combo": "WITH RISEN RANKS: EVERY HEX RAISES A GRUNT FOR 12S.",
      "fx": {
       "echo": {
        "count": 2,
@@ -504,7 +510,7 @@
      },
      "with": [
       {
-       "id": "wraiths",
+       "id": "risenranks",
        "fx": {
         "summon": {
          "type": "grunt",

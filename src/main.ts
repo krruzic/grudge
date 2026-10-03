@@ -1465,7 +1465,7 @@ async function start(): Promise<void> {
   let demoLoop = 0;
   let demo: { key: string; w: World; t: number; acc: number; loop: number; len: number; presses: number[]; dist: number; btn: keyof Command; mapShown: boolean; kind: string } | null = null;
   const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner"]);
-  const BIG = new Set(["quake", "zone", "summon", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth", "teslatower", "palisade", "wall", "repair"]);
+  const BIG = new Set(["quake", "zone", "summon", "gravewalk", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth", "teslatower", "palisade", "wall", "repair"]);
   const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry"]);
   const DEMO_SPOT = { x: 23.5, z: 7 };
   function runDemo(dt: number): number | null {
@@ -1634,6 +1634,7 @@ async function start(): Promise<void> {
       foe.status.stunUntil = 1e9;
       foe.status.invulnUntil = 1e9;
       const kind = (me.hero?.ab ?? w.heroDef(spec.hero).abilities)[spec.slot].kind;
+      if (kind === "gravewalk") w.pads.push({ index: w.pads.length, x: DEMO_SPOT.x + 10, z: DEMO_SPOT.z, zone: "forward", side: 0, structureId: 0, rubbleUntil: 0, rubbleTeam: -1 } as unknown as Parameters<typeof createStructure>[2]);
       const big = BIG.has(kind);
       const far = FAR.has(kind) || (spec.slot === "a" && kind === "shoot");
       const dist = kind === "works" ? 8 : big ? 4.5 : far ? 6.5 : 2.8;
@@ -1683,6 +1684,17 @@ async function start(): Promise<void> {
         ad.grunt = ad.ranged = ad.heavy = "hold";
         ad.holdPoint.grunt = { x: DEMO_SPOT.x - 1.4, z: DEMO_SPOT.z };
       }
+      const gravePad = d.kind === "gravewalk" ? w.pads.find((q) => q.x === DEMO_SPOT.x + 10 && q.z === DEMO_SPOT.z) : undefined;
+      if (gravePad) {
+        const pad = gravePad;
+        const old = pad.structureId ? w.get(pad.structureId) : undefined;
+        if (!old?.alive) {
+          const tw = createStructure(w, 0, pad, "damage");
+          tw.structure!.ready = true;
+          tw.structure!.progress = 1;
+          tw.hp = tw.maxHp;
+        }
+      }
       if (d.kind === "repair") {
         const st = w.addEntity(0, "structure", 1.2, DEMO_SPOT.x - 1, DEMO_SPOT.z + 3.2, 620);
         st.structure = { type: "damage", padIndex: -1, level: 1, builtAt: 0, ready: true, nextAction: 1e9, range: 0, damage: 0, lastFireAt: -99, shielded: false };
@@ -1714,6 +1726,7 @@ async function start(): Promise<void> {
       if (d.presses.some((p) => t < p && d.t >= p)) {
         (cmd as unknown as Record<string, unknown>)[d.btn] = true;
         cmd.moveX = 1;
+        if (d.kind === "gravewalk") cmd.place = { dx: DEMO_SPOT.x + 10 - me.transform.pos.x, dz: 0 };
       }
       w.step([cmd, { moveX: 0, moveZ: 0 }]);
       if (d.t >= d.len) {

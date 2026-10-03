@@ -92,6 +92,7 @@ export interface HeroAction {
   fromZ2?: number;
   pinned?: Record<number, [number, number]>;
   chargeRange?: number;
+  targetId?: number;
 }
 
 export interface HeroState {
@@ -120,6 +121,7 @@ export interface HeroState {
   recallUsed?: boolean;
   recallAt?: number;
   recallFrom?: number;
+  grave?: { id: number; until: number };
   lastTargetId: number;
   lastTargetAt: number;
   anim: string;
@@ -202,6 +204,10 @@ export interface StructureState {
   aim?: number;
   spawnAt?: number;
   spawnN?: number;
+  graveUntil?: number;
+  graveMul?: number;
+  graveHaste?: number;
+  graveRank?: number;
 }
 
 export interface Entity {

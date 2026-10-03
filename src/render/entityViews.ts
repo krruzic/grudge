@@ -1,5 +1,5 @@
 import { teslaCoil } from "./hazardViews";
-import { FX } from "./fxKit";
+import { FX, SUMMONER } from "./fxKit";
 import { KITS } from "./kits";
 import * as THREE from "three";
 import { builderRate, canSpec, padNear } from "../sim/structures";
@@ -141,6 +141,7 @@ interface View {
   rings?: THREE.Mesh[];
   dome?: THREE.Mesh;
   gear?: THREE.Sprite;
+  graveRing?: THREE.Mesh;
   auraT?: number;
   kind: Entity["kind"];
   root: THREE.Group;
@@ -197,7 +198,7 @@ const red = new THREE.Color(1, 0.15, 0.1);
 const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "shoot", "hit", "death", "dodge", "attack"]);
 
 const KIND_ANIM: Record<string, string> = {
-  slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", hex: "cast", repair: "cast",
+  slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", gravewalk: "cast", hex: "cast", repair: "cast",
   turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
   banner: "cast", rally: "cast", works: "cast", ballista: "cast", whirl: "attack_c",
   shove: "attack_a", throw: "attack_b", wrench: "attack_b", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
@@ -1315,6 +1316,23 @@ export class EntityViews {
       v.gear.position.y = 6.2;
       v.gear.material.rotation = time * 4;
     }
+    const grave = !!st && !!st.graveUntil && w.time < st.graveUntil && e.alive;
+    if (grave && !v.graveRing) {
+      v.graveRing = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: SUMMONER.circle, color: 0xb070ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      v.graveRing.rotation.x = -Math.PI / 2;
+      v.graveRing.renderOrder = 4;
+      v.graveRing.userData.noSil = true;
+      v.root.add(v.graveRing);
+    }
+    if (v.graveRing) {
+      v.graveRing.visible = grave;
+      if (grave) {
+        v.graveRing.position.y = 0.12;
+        v.graveRing.scale.setScalar(e.radius * 2.3 * (1 + Math.sin(time * 4) * 0.05));
+        v.graveRing.rotation.z = time * 0.8;
+        (v.graveRing.material as THREE.MeshBasicMaterial).opacity = 0.75 + Math.sin(time * 6) * 0.15;
+      }
+    }
     if (!e.alive) return;
     v.auraT = (v.auraT ?? 0) - dt;
     if (v.auraT > 0) return;
@@ -1325,6 +1343,7 @@ export class EntityViews {
     if (h && w.time < h.empowerUntil) this.fx.aura("spark", p.x, p.y, p.z);
     if (w.time < s.bleedUntil && s.bleedStacks > 0 && Math.random() < 0.3 * s.bleedStacks) this.fx.aura("drip", p.x, p.y, p.z);
     if (haste) this.fx.aura("steam", p.x + (Math.random() - 0.5), p.y + 4.5, p.z + (Math.random() - 0.5));
+    if (grave) for (let k = 0; k < 2; k++) this.fx.aura("grave", p.x, p.y, p.z, e.radius * 1.7);
   }
 
   private syncMark(e: Entity, v: View, time: number): void {
