@@ -2,6 +2,14 @@ import * as THREE from "three";
 import type { HeroModels } from "../render/heroModels";
 import type { UnitModels } from "../render/unitModels";
 
+const paintedUrls = import.meta.glob("../../assets/ui/portraits/*.jpg", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const painted = new Map<string, HTMLImageElement>();
+for (const [path, url] of Object.entries(paintedUrls)) {
+  const im = new Image();
+  im.src = url;
+  painted.set(path.split("/").pop()!.replace(".jpg", ""), im);
+}
+
 interface Stage {
   key: string;
   root: THREE.Group;
@@ -141,6 +149,18 @@ export class Portraits {
   icon(type: string): HTMLCanvasElement {
     let c = this.icons.get(type);
     if (c) return c;
+    const art = painted.get(type);
+    if (art?.complete && art.naturalWidth) {
+      c = document.createElement("canvas");
+      c.width = c.height = art.naturalWidth;
+      c.getContext("2d")!.drawImage(art, 0, 0);
+      this.icons.set(type, c);
+      return c;
+    }
+    if (art && !art.complete) {
+      const tmp = this.icons.get(`3d:${type}`);
+      if (tmp) return tmp;
+    }
     c = document.createElement("canvas");
     const p = this.pose(type, NEUTRAL);
     p.body.traverse((o) => {
@@ -165,7 +185,7 @@ export class Portraits {
     this.camera.lookAt(cx, headY - p.height * 0.03, cz);
     this.camera.fov = 30;
     this.shoot(p.root, ICON, ICON, c);
-    this.icons.set(type, c);
+    this.icons.set(art ? `3d:${type}` : type, c);
     return c;
   }
 
