@@ -193,8 +193,9 @@ const LANTERN_GLOW = { value: 1 };
 
 function glowTexture(): THREE.Texture {
   const c = document.createElement("canvas");
-  c.width = c.height = 64;
+  c.width = c.height = 256;
   const g = c.getContext("2d")!;
+  g.scale(4, 4);
   const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   r.addColorStop(0, "rgba(255,255,255,1)");
   r.addColorStop(0.25, "rgba(255,255,255,0.55)");
@@ -401,7 +402,7 @@ export class MapFx {
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(rep, rep);
     t.colorSpace = THREE.SRGBColorSpace;
-    t.magFilter = THREE.NearestFilter;
+    t.magFilter = THREE.LinearFilter;
     return t;
   }
 
@@ -768,7 +769,7 @@ export class MapFx {
     const tex = new THREE.TextureLoader().load(blockUrl);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.magFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.LinearFilter;
     const stone = new THREE.MeshLambertMaterial({ map: tex, color: 0xd8d0c0 });
     const postGeos: THREE.BufferGeometry[] = [];
     for (const slot of slots) {

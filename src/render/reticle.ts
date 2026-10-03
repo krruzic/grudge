@@ -13,8 +13,9 @@ export interface ReticleReq {
 
 function ringTex(): THREE.CanvasTexture {
   const c = document.createElement("canvas");
-  c.width = c.height = 128;
+  c.width = c.height = 512;
   const g = c.getContext("2d")!;
+  g.scale(4, 4);
   const m = 64;
   g.lineWidth = 7;
   g.strokeStyle = "rgba(20,10,0,0.7)";
@@ -34,8 +35,9 @@ function ringTex(): THREE.CanvasTexture {
 
 function areaTex(fill = "255,220,120", rim = "#ffe070", dark = "#3a1a00", mark = "#ffd23a"): THREE.CanvasTexture {
   const c = document.createElement("canvas");
-  c.width = c.height = 128;
+  c.width = c.height = 512;
   const g = c.getContext("2d")!;
+  g.scale(4, 4);
   const gr = g.createRadialGradient(64, 64, 20, 64, 64, 62);
   gr.addColorStop(0, `rgba(${fill},0.12)`);
   gr.addColorStop(0.85, `rgba(${fill},0.3)`);

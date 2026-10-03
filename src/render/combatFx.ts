@@ -61,9 +61,11 @@ const ballGeo = new THREE.IcosahedronGeometry(0.5, 1);
 const ballMat = new THREE.MeshLambertMaterial({ map: ironTex, color: 0x6a6660, flatShading: true });
 
 function canvasTex(size: number, draw: (ctx: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
+  const k = Math.max(1, Math.round(256 / size));
   const c = document.createElement("canvas");
-  c.width = c.height = size;
+  c.width = c.height = size * k;
   const ctx = c.getContext("2d")!;
+  ctx.scale(k, k);
   draw(ctx, size);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;

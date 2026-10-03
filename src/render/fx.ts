@@ -2,8 +2,9 @@ import * as THREE from "three";
 
 function radialTexture(inner: string, outer: string): THREE.CanvasTexture {
   const c = document.createElement("canvas");
-  c.width = c.height = 32;
+  c.width = c.height = 128;
   const ctx = c.getContext("2d")!;
+  ctx.scale(4, 4);
   const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
   g.addColorStop(0, inner);
   g.addColorStop(0.4, outer);

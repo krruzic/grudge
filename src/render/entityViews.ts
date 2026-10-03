@@ -278,8 +278,9 @@ export function disposeTree(root: THREE.Object3D, shared: Set<THREE.Material> = 
 
 function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const cv = document.createElement("canvas");
-  cv.width = cv.height = 32;
+  cv.width = cv.height = 128;
   const c = cv.getContext("2d")!;
+  c.scale(4, 4);
   c.lineJoin = c.lineCap = "round";
   draw(c);
   const t = new THREE.CanvasTexture(cv);
@@ -316,8 +317,9 @@ const domeGeo = new THREE.IcosahedronGeometry(1, 1);
 domeGeo.userData.model = true;
 const gearMat = new THREE.SpriteMaterial({ depthTest: false, map: (() => {
   const cv = document.createElement("canvas");
-  cv.width = cv.height = 32;
+  cv.width = cv.height = 128;
   const c = cv.getContext("2d")!;
+  c.scale(4, 4);
   c.beginPath();
   for (let k = 0; k < 16; k++) {
     const a = (k / 16) * Math.PI * 2;
@@ -420,8 +422,9 @@ for (const m of [...Object.values(MARKS), gearMat]) SHARED_VIEW_MATS.add(m);
 
 function rankTex(rank: number): THREE.CanvasTexture {
   const c = document.createElement("canvas");
-  c.width = c.height = 32;
+  c.width = c.height = 128;
   const ctx = c.getContext("2d")!;
+  ctx.scale(4, 4);
   ctx.lineJoin = "miter";
   const chevron = (y: number) => {
     ctx.beginPath();
@@ -460,7 +463,7 @@ function rankTex(rank: number): THREE.CanvasTexture {
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
-  t.magFilter = THREE.NearestFilter;
+  t.magFilter = THREE.LinearFilter;
   return t;
 }
 const rankTexes = [1, 2, 3].map(rankTex);

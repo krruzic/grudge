@@ -220,8 +220,9 @@ const COPPER = new THREE.MeshLambertMaterial({ color: 0xd07a3a, flatShading: tru
 
 function groundTex(draw: (c: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
   const cv = document.createElement("canvas");
-  cv.width = cv.height = 128;
+  cv.width = cv.height = 512;
   const c = cv.getContext("2d")!;
+  c.scale(4, 4);
   draw(c, 128);
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;

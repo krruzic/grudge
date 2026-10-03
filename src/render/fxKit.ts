@@ -50,13 +50,16 @@ const HE = sheet(heraldUrl, 16);
 export const fxReady = Promise.all(waits).then(() => undefined);
 
 export function composite(size: number, draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void, repeat = false): THREE.CanvasTexture {
+  const k = Math.max(1, Math.round(256 / size));
   const c = document.createElement("canvas");
-  c.width = c.height = size;
+  c.width = c.height = size * k;
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   void fxReady.then(() => {
-    draw(c.getContext("2d")!, (x) => x.image as CanvasImageSource);
+    const g = c.getContext("2d")!;
+    g.scale(k, k);
+    draw(g, (x) => x.image as CanvasImageSource);
     t.needsUpdate = true;
   });
   return t;
