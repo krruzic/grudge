@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background. They are for the hero costume CALLIOPE STIG: a jolly carnival calliope steam-organ engineer in violet and gold with brass organ pipes, steam, music and carnival confetti shown in image 2. Repaint this sheet as a new 4x4 sheet in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Cells marked KEEP must stay the same sprite as image 1. Cells marked NEW must be replaced by the new object described: a genuinely different subject, not a recolour of the old sprite, painted in the costume's colours, at the same size and position inside its cell as the old sprite. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. NEW: a spinning carnival pinwheel with violet and gold striped vanes on a brass pin, seen face-on
+2. NEW: a small brass music-box winding key with a violet bow
+3. NEW: a sparkler firework burst of gold and violet little stars
+4. NEW: a white steam puff with three gold music notes floating out of it
+5. NEW: three pieces of fluffy buttery popcorn
+6. NEW: a curled paper party streamer ribbon in violet and gold
+7. KEEP
+8. NEW: a short board painted with violet and gold circus stripes and little stars, with a brass bulb light at one end
+9. NEW: a round glowing carnival marquee light bulb in a brass socket
+10. NEW: a zig-zag streamer of electric violet glitter with gold sparkles
+11. NEW: a dark violet cloud of party smoke with colourful confetti pieces and a curly ribbon flying out
+12. NEW: a comic starburst with a brass cymbal at its centre
+13. NEW: a circle of glowing gold carnival marquee light bulbs on a thin violet band
+14. KEEP
+15. NEW: a big burst of carnival confetti pieces and curly streamers in violet, gold, pink and teal
+16. NEW: a plus sign made of glowing marquee light bulbs on a violet panel with gold trim
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.

@@ -1,0 +1,6 @@
+The FIRST image is a 2x2 grid of four small, low-resolution, blurry visual-effect sprites from our hand-painted stylised fantasy action game. Repaint the image as a crisp HIGH-RESOLUTION version with the SAME 2x2 layout: each of the four sprites stays centred in its own quadrant and keeps exactly its shape, silhouette, colours and design, but is redrawn with sharp clean edges and rich painted detail, filling about 88% of its quadrant with an even margin, never touching or crossing into another quadrant. Same soft hand-painted style. No text, no borders, no drop shadows, no black outlines.
+Top-left: an explosive blast of white steam bursting out of a cracked brass pressure valve, with a few magenta-hot rivets flying out.
+Top-right: torn bent riveted gunmetal plate fragments with magenta enamel flying outward around a white-pink hot flash.
+Bottom-left: a splash of black ink with radiating droplets and a few gold-leaf flecks.
+Bottom-right: an explosion of shattering blue willow-pattern porcelain shards around a warm golden flash.
+Plain flat pure green background (#00FF00) everywhere outside the sprites.

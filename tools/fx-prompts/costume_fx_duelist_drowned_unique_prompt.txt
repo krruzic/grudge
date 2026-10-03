@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background. They are for the hero costume DROWNED FRANCOIS: a ghostly drowned deep-sea cavalier in indigo with kelp, barnacles, coral and glowing jellyfish light shown in image 2. Repaint this sheet as a new 4x4 sheet in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Cells marked KEEP must stay the same sprite as image 1. Cells marked NEW must be replaced by the new object described: a genuinely different subject, not a recolour of the old sprite, painted in the costume's colours, at the same size and position inside its cell as the old sprite. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. NEW: a glowing anglerfish lure: a bright cyan orb of light on a curved dark stalk
+2. NEW: a puff of churning white seawater foam with bubbles
+3. KEEP
+4. KEEP
+5. KEEP
+6. NEW: a burst of white sea spray with shattered barnacle-shell fragments
+7. KEEP
+8. KEEP
+9. NEW: a glowing indigo eel curling like a ribbon
+10. NEW: a small glowing cyan starfish
+11. KEEP
+12. KEEP
+13. NEW: a swirling whirlpool waterspout with bubbles
+14. NEW: a ring made of pale pink coral branches and barnacles
+15. NEW: a spiny purple sea urchin with glowing cyan spine tips
+16. KEEP
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.

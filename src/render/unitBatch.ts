@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { useLod } from "./lod";
 
 const MAX = 128;
 
@@ -88,6 +89,7 @@ class Batch {
     this.mesh.frustumCulled = false;
     this.mesh.matrixAutoUpdate = false;
     this.mesh.visible = false;
+    useLod(this.mesh, 0.4);
     if (silMaterial) {
       skinned(silMaterial, false, this.uniforms, "sil");
       this.sil = new THREE.Mesh(g, silMaterial);
@@ -95,6 +97,7 @@ class Batch {
       this.sil.renderOrder = 1000;
       this.sil.matrixAutoUpdate = false;
       this.sil.visible = false;
+      useLod(this.sil, 0.4);
     } else this.sil = null;
   }
 

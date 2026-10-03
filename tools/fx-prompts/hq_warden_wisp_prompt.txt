@@ -1,0 +1,6 @@
+The FIRST image is a 2x2 grid of four small, low-resolution, blurry visual-effect sprites from our hand-painted stylised fantasy action game. Repaint the image as a crisp HIGH-RESOLUTION version with the SAME 2x2 layout: each of the four sprites stays centred in its own quadrant and keeps exactly its shape, silhouette, colours and design, but is redrawn with sharp clean edges and rich painted detail, filling about 88% of its quadrant with an even margin, never touching or crossing into another quadrant. Same soft hand-painted style. No text, no borders, no drop shadows, no black outlines.
+Top-left: a soft glowing green spirit-wisp orb with a pale centre and a soft violet-green halo.
+Top-right: a pale green spiky nature burst with a few small green leaves flying out.
+Bottom-left: a glowing sun orb - a turquoise gem in a gold ring with a soft golden-pink sun glow.
+Bottom-right: a blazing golden sun disc with long pointed rays.
+Plain flat pure magenta background (#FF00FF) everywhere outside the sprites.

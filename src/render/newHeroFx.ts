@@ -5,6 +5,8 @@ import { activeCostume, composite, cv, FRIAR, FX, tint, useCostume, withCostume,
 import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
 import { KITS, type HitEvent } from "./kits";
 import { prop } from "./props";
+import { FxBatch, fxBatch } from "./fxInstances";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { costumeOfPlayer } from "./costumes";
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -608,8 +610,25 @@ function flyingArrow(h: FxHost, x0: number, y0: number, z0: number, x1: number, 
   h.add(a, dur, (k) => a.position.set(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k, z0 + (z1 - z0) * k));
 }
 
+let rainGeo: THREE.BufferGeometry | null = null;
+function rainArrowGeo(): THREE.BufferGeometry {
+  if (rainGeo) return rainGeo;
+  const parts: [THREE.BufferGeometry, THREE.MeshLambertMaterial][] = [[shaftGeo, WOOD], [tipGeo, IRON], [fletchGeo, FEATHER_MAT], [fletch2, FEATHER_MAT]];
+  const geos = parts.map(([g, m]) => {
+    const c = g.clone();
+    const n = c.getAttribute("position").count;
+    const col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) m.color.toArray(col, i * 3);
+    c.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    return c;
+  });
+  rainGeo = model(mergeGeometries(geos, false)!);
+  return rainGeo;
+}
+
 function rainArrow(h: FxHost, x: number, gy: number, z: number, lean: number): void {
-  const a = arrowMesh(1.05);
+  const a: THREE.Object3D = activeCostume() === "starfall" ? arrowMesh(1.05) : fxBatch(h.root, "rainArrow", () => new FxBatch(rainArrowGeo(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }))).spawn();
+  a.scale.setScalar(1.05);
   const top = new THREE.Vector3(x + lean * 3, gy + 11, z + lean * 1.5);
   const end = new THREE.Vector3(x, gy + 0.35, z);
   const dir = end.clone().sub(top).normalize();

@@ -1,0 +1,6 @@
+The FIRST image is a 2x2 grid of four small, low-resolution, blurry visual-effect sprites from our hand-painted stylised fantasy action game. Repaint the image as a crisp HIGH-RESOLUTION version with the SAME 2x2 layout: each of the four sprites stays centred in its own quadrant and keeps exactly its shape, silhouette, colours and design, but is redrawn with sharp clean edges and rich painted detail, filling about 88% of its quadrant with an even margin, never touching or crossing into another quadrant. Same soft hand-painted style. No text, no borders, no drop shadows, no black outlines.
+Top-left: a bright white-cream spiky impact starburst with a glowing white core.
+Top-right: an orange-red spiky rage blast starburst.
+Bottom-left: a jagged dark-red spiky impact star.
+Bottom-right: an arcane burst - a dark navy-and-teal splash with radiating spikes and a pale glowing centre.
+Plain flat pure green background (#00FF00) everywhere outside the sprites.

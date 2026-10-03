@@ -1,0 +1,6 @@
+The FIRST image is a 2x2 grid of four small, low-resolution, blurry visual-effect sprites from our hand-painted stylised fantasy action game. Repaint the image as a crisp HIGH-RESOLUTION version with the SAME 2x2 layout: each of the four sprites stays centred in its own quadrant and keeps exactly its shape, silhouette, colours and design, but is redrawn with sharp clean edges and rich painted detail, filling about 88% of its quadrant with an even margin, never touching or crossing into another quadrant. Same soft hand-painted style. No text, no borders, no drop shadows, no black outlines.
+Top-left: a billowing thick dark charcoal-grey smoke cloud.
+Top-right: a billowing cream puffball spore cloud with soft moss-green shading.
+Bottom-left: a billowing soft grey smoke cloud.
+Bottom-right: a thin glowing white shockwave ring with a few faint motion streaks around it, open centre.
+Plain flat pure magenta background (#FF00FF) everywhere outside the sprites.

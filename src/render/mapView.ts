@@ -10,6 +10,7 @@ import gravelUrl from "../../assets/textures/gravel.png?url";
 import pavIdUrl from "../../assets/textures/cobble_id.png?url";
 import crackUrl from "../../assets/textures/cobble_crack.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
+import { stripMesh } from "./stripMesh";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./terrainMesh";
 
 export interface MapView {
@@ -178,6 +179,25 @@ function mergeProps(scene: THREE.Object3D): void {
   }
 }
 
+function stripMap(root: THREE.Object3D, t: Terrain): void {
+  const field = new THREE.Box3(new THREE.Vector3(-6, -1e3, -6), new THREE.Vector3(t.width + 6, 1e3, t.depth + 6));
+  const list: THREE.Mesh[] = [];
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) || o instanceof THREE.InstancedMesh || o instanceof THREE.SkinnedMesh || Array.isArray(o.material)) return;
+    if (o.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender || Object.keys(o.geometry.morphAttributes).length || o.material.transparent) return;
+    list.push(o);
+  });
+  root.updateMatrixWorld(true);
+  for (const m of list) {
+    const parent = m.parent!;
+    const box = field.clone().applyMatrix4(parent.matrixWorld.clone().invert());
+    const out = stripMesh(m, 12, 48, box);
+    if (out === m) continue;
+    parent.add(out);
+    m.removeFromParent();
+  }
+}
+
 export async function loadMap(url: string, terrain: Terrain, textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake">, string>, light?: TerrainLight): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
   const [gltf, ...texs] = await Promise.all([
@@ -223,6 +243,7 @@ export async function loadMap(url: string, terrain: Terrain, textureUrls: Record
   });
 
   mergeProps(gltf.scene);
+  stripMap(root, terrain);
 
   return {
     root,

@@ -83,7 +83,7 @@ function variant(a: Atlas, c: string): THREE.CanvasTexture[] | null {
 function atlas<K extends string>(name: string, url: string, keys: readonly K[]): Record<K, THREE.CanvasTexture> {
   const a: Atlas = { name, base: sheet(url), vars: new Map() };
   a.base.forEach((t, i) => CELL_OF.set(t, { a, i }));
-  keys.forEach((k, i) => HQ_URL.has(`${name}.${k}`) && HQ_ID.set(a.base[i], { atlas: name, id: `${name}.${k}` }));
+  keys.forEach((k, i) => hdAlias(a.base[i], name, `${name}.${k}`));
   const o = {} as Record<K, THREE.CanvasTexture>;
   keys.forEach((k, i) => Object.defineProperty(o, k, { enumerable: true, get: () => (active && variant(a, active)?.[i]) || a.base[i] }));
   return o;
@@ -114,6 +114,9 @@ export function preloadCostumeFx(list: string[]): void {
 }
 
 const HQ_ID = new Map<THREE.Texture, { atlas: string; id: string }>();
+export function hdAlias(t: THREE.Texture, atlas: string, id: string): void {
+  for (const k of HQ_URL.keys()) if (k === id || k.startsWith(`${id}@`)) return void HQ_ID.set(t, { atlas, id });
+}
 const HQ = new Map<string, { t: THREE.Texture; ready: boolean } | null>();
 function hqTex(id: string): THREE.Texture | null {
   let h = HQ.get(id);
@@ -136,6 +139,8 @@ function hqTex(id: string): THREE.Texture | null {
 export function hd<T extends THREE.Texture>(t: T, c = active): T {
   const base = baseTex(t);
   const v = cv(base as T, c);
+  const vb = baseTex(v);
+  if (vb !== base) return hd(vb as T, c);
   const hq = HQ_ID.get(base);
   if (!hq) return v;
   const themed = !!c && VARIANT_URL.has(`${hq.atlas}@${c}`);
@@ -189,8 +194,18 @@ function compVariant(base: THREE.Texture, comp: Comp, c: string): THREE.Texture 
   return base;
 }
 
+const SWAPS: Record<string, Map<THREE.Texture, THREE.Texture>> = {};
+export function setCostumeSwap(c: string, from: THREE.Texture, to: THREE.Texture): void {
+  (SWAPS[c] ??= new Map()).set(from, to);
+}
+
 export function cv<T extends THREE.Texture>(t: T, c = active): T {
   if (!c) return t;
+  const s = SWAPS[c]?.get(t);
+  if (s && s !== t) {
+    const v = cv(s, c);
+    if (v !== s) return v as unknown as T;
+  }
   const cell = CELL_OF.get(t);
   if (cell) return ((variant(cell.a, c)?.[cell.i] as unknown as T) ?? t);
   const comp = COMPS.get(t);
@@ -266,6 +281,7 @@ export const FX = {
   zap: C[14],
   splash: C[15],
 };
+for (const [k, t] of Object.entries(FX)) hdAlias(t, "common", `common.${k}`);
 
 export const WARDEN = atlas("warden", wardenUrl, ["leaf", "leafAutumn", "bark", "moss", "wisp", "vine", "wreath", "roots", "splinters", "natureBurst", "stone", "pebbleDust", "mossCrack", "thorn", "flower", "rune"] as const);
 

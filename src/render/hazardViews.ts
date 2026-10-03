@@ -7,11 +7,11 @@ import { prop, propParts } from "./props";
 import { costumeOfPlayer } from "./costumes";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
-import { cm, composite, cv, ENGINEER, hd, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD, withCostume } from "./fxKit";
+import { cm, composite, cv, ENGINEER, hd, hdAlias, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD, withCostume } from "./fxKit";
 import { CACTUS, SPINE, isDesert } from "./desertKit";
 import type { FxHost } from "./fxParts";
 import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
-import { buildFissures } from "./fxParts";
+import { zoneFissures } from "./fxParts";
 import { SpriteBatches } from "./spriteBatch";
 import { MapFx } from "./mapFx";
 import { BUBBLE, FOAM, ZONE_DECALS } from "./newHeroFx";
@@ -140,6 +140,8 @@ const ZONE_DECAL: Record<string, THREE.Texture> = {
     g.drawImage(img(WARDEN.rune), 0, 0, 256, 256);
   }),
 };
+
+hdAlias(BRAMBLE_DECAL, "warden", "zone.bramble");
 
 const stakeGeo = (() => {
   const g = new THREE.CylinderGeometry(0.17, 0.2, 2.4, 6);
@@ -483,7 +485,7 @@ export class HazardViews {
   private snareMesh(team: number, r: number, costume?: string): THREE.Object3D {
     const desert = isDesert(costume);
     const g = new THREE.Group();
-    const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.15, r * 1.02, 24), new THREE.MeshBasicMaterial({ map: cv(BRAMBLE_DECAL), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.15, r * 1.02, 24), new THREE.MeshBasicMaterial({ map: hd(BRAMBLE_DECAL), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.06;
     g.add(ring);
@@ -557,7 +559,7 @@ export class HazardViews {
     g.add(decal);
     const gy = (x: number, z: number) => this.world.groundY(this.cx + x, this.cz + z) - this.cy;
     if (style === "lava" || style === "crater" || style === "sinkhole") {
-      const fis = buildFissures(gy, r * 0.9, style === "lava" ? "lava" : "crack").group;
+      const fis = zoneFissures(gy, r * 0.9, style === "lava" ? "lava" : "crack", costume);
       g.add(fis);
       mergeInto(fis, meshesOf(fis).map((mesh) => ({ mesh })));
       for (const s of [...fis.children]) if (!(s as THREE.Mesh).isMesh) fis.remove(s);
@@ -575,7 +577,7 @@ export class HazardViews {
       }
     };
     if (style === "bramble") {
-      decal.material = new THREE.MeshBasicMaterial({ map: cv(BRAMBLE_DECAL), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+      decal.material = new THREE.MeshBasicMaterial({ map: hd(BRAMBLE_DECAL), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
       const grow = (o: THREE.Object3D, x: number, z: number) => {
         grows.push({ o, d: (Math.hypot(x, z) / r) * 0.55 + Math.random() * 0.1 });
         g.add(o);

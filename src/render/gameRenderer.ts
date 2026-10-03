@@ -13,6 +13,8 @@ import { HazardViews } from "./hazardViews";
 import { Reticles, type ReticleReq } from "./reticle";
 import type { UnitModels } from "./unitModels";
 import type { StructureModels } from "./structureModels";
+import { perf } from "../perf";
+import { LOD } from "./lod";
 
 Object.defineProperty(THREE.Material.prototype, "forceSinglePass", {
   get: () => true,
@@ -120,6 +122,13 @@ void main() {
 }
 `;
 
+function weakGpu(r: THREE.WebGLRenderer): boolean {
+  const gl = r.getContext();
+  const ext = gl.getExtension("WEBGL_debug_renderer_info");
+  const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+  return /vega (3|6|8|9|10|11)\b|radeon(\(tm\))? (\d+m )?graphics|mali|adreno|powervr|swiftshader|llvmpipe/i.test(name) || (/intel/i.test(name) && !/\barc\b/i.test(name));
+}
+
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -158,6 +167,7 @@ export class GameRenderer {
     THREE.Material.prototype.dispose = function () {};
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", stencil: true, depth: true });
     this.renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
+    this.weakGpu = weakGpu(this.renderer);
     this.renderer.setPixelRatio(1);
     this.renderer.shadowMap.enabled = cfg.shadows;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -209,6 +219,7 @@ export class GameRenderer {
 
     this.scene.fog = new THREE.Fog(new THREE.Color(cfg.fogColor), 30, 80);
     this.sky = makeSky(cfg.skyZenith, cfg.skyHorizon);
+    this.renderer.setClearColor(cfg.skyHorizon, 1);
     this.scene.add(this.sky);
 
     this.sun = new THREE.DirectionalLight(cfg.sunColor, cfg.sunIntensity);
@@ -232,8 +243,7 @@ export class GameRenderer {
     this.setWorld(world);
 
 
-    window.addEventListener("resize", () => this.resize());
-    this.resize();
+    this.fitTargets();
   }
 
   setMap(map: MapView, t: Terrain): void {
@@ -323,11 +333,60 @@ export class GameRenderer {
 
   private fullSize = new THREE.Vector2();
 
-  private resize(): void {
+  quality = 0;
+  weakGpu = false;
+  private slowFrames = 0;
+  private sampled = 0;
+  private measuredSlow = false;
+
+  get low(): boolean {
+    return this.quality === 2 || (this.quality === 0 && (this.weakGpu || this.measuredSlow));
+  }
+
+  get throttleHud(): boolean {
+    return this.low && this.splitViews.length >= 3;
+  }
+
+  private dropRes = false;
+
+  private watchFrames(dt: number): void {
+    const low = this.low;
+    if (this.quality === 1 || (low && this.dropRes) || this.splitViews.length < 3 || dt <= 0 || dt > 0.1) return;
+    this.sampled++;
+    if (dt > 1 / 50) this.slowFrames++;
+    if (this.sampled < 240) return;
+    if (this.slowFrames > this.sampled * 0.25) {
+      if (low) this.dropRes = true;
+      else this.measuredSlow = true;
+    }
+    this.sampled = 0;
+    this.slowFrames = 0;
+  }
+
+  private sizeKey = "";
+
+  private fitTargets(): void {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const low = this.low;
+    const cap = low ? (this.splitViews.length >= 3 && this.dropRes ? 900 : 1080) : this.cfg.lowResHeight;
+    const key = `${w}x${h}|${cap}|${low}`;
+    if (key === this.sizeKey) return;
+    this.sizeKey = key;
+    const type = low ? THREE.UnsignedByteType : THREE.HalfFloatType;
+    if (this.target.texture.type !== type) {
+      this.target.dispose();
+      this.target.texture.type = type;
+      this.target.texture.colorSpace = low ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+    }
+    this.resize(cap);
+  }
+
+  private resize(cap = this.cfg.lowResHeight): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.renderer.setSize(w, h, false);
-    const lowH = Math.min(this.cfg.lowResHeight, h);
+    const lowH = Math.min(cap, h);
     const lowW = Math.round((lowH * w) / h);
     this.target.setSize(lowW, lowH);
     this.lowTarget.setSize(lowW, lowH);
@@ -596,13 +655,27 @@ export class GameRenderer {
     return teams.size === 1 ? [...teams][0] : null;
   }
 
+  private viewNo = 0;
+  private corner = new THREE.Vector3();
+
+  private skySeen(cam: THREE.PerspectiveCamera): boolean {
+    for (let i = 0; i < 4; i++) {
+      this.corner.set(i & 1 ? 1 : -1, i & 2 ? 1 : -1, 1).unproject(cam);
+      if (this.corner.y - cam.position.y > -1e-3 * cam.far) return true;
+    }
+    return false;
+  }
+
   private drawScene(cam: THREE.PerspectiveCamera, viewer: number | null = this.sharedViewer()): void {
+    let t0 = perf.now();
+    const key = "v" + this.viewNo++;
     this.entityViews.setViewer(viewer);
     const fog = this.scene.fog as THREE.Fog;
     fog.near = cam.userData.fogNear ?? fog.near;
     fog.far = cam.userData.fogFar ?? fog.far;
     this.sky.position.copy(cam.position);
     cam.updateMatrixWorld();
+    this.sky.visible = this.skySeen(cam);
     this.cullMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.cullMat);
     if (this.matrixFrame !== FRAME.id) {
@@ -616,7 +689,18 @@ export class GameRenderer {
     this.hazards?.fillView(cam);
     if (silScene.parent !== this.scene) this.scene.add(silScene);
     syncSilhouettes(this.scene);
+    t0 = perf.cpu(key + ".prep", t0);
+    const info = this.renderer.info.render;
+    const c0 = info.calls;
+    const tr0 = info.triangles;
+    LOD.on = this.low && this.splitViews.length >= 2;
+    perf.gpuBegin(key);
     this.renderer.render(this.scene, cam);
+    perf.gpuEnd();
+    LOD.on = false;
+    perf.stat(key + ".calls", info.calls - c0);
+    perf.stat(key + ".ktris", (info.triangles - tr0) / 1000);
+    t0 = perf.cpu(key + ".draw", t0);
     this.entityViews.uncull();
   }
 
@@ -629,6 +713,8 @@ export class GameRenderer {
 
   render(alpha: number, dt: number): void {
     FRAME.id++;
+    this.viewNo = 0;
+    let pt = perf.now();
     this.combatFx.quiet = this.quiet;
     this.entityViews.quiet = this.quiet || !!this.demoCam;
     this.scene.matrixWorldAutoUpdate = false;
@@ -644,7 +730,9 @@ export class GameRenderer {
       this.combatFx.handle(ev);
     }
     this.world.events.length = 0;
+    pt = perf.cpu("r.events", pt);
     this.entityViews.sync(alpha, dt, this.time);
+    pt = perf.cpu("r.entities", pt);
     this.relicView?.sync(alpha, dt);
     this.heroProps?.sync(alpha, dt);
     this.combatFx.syncProjectiles(this.world, alpha);
@@ -654,7 +742,10 @@ export class GameRenderer {
     this.hazards.sync(this.time, dt);
     if (!this.reticles.root.parent) this.scene.add(this.reticles.root);
     this.reticles.sync(this.world, this.reticleReqs, this.time);
+    pt = perf.cpu("r.fx", pt);
     this.syncSplit();
+    this.watchFrames(dt);
+    this.fitTargets();
     const shake = (cam: THREE.PerspectiveCamera) => {
       if (this.combatFx.shake <= 0) return;
       const k = this.combatFx.shake * 0.5 * this.shakeMul;
@@ -765,10 +856,19 @@ export class GameRenderer {
     const full = this.renderer.getSize(this.fullSize);
     this.renderer.setViewport(0, 0, full.x, full.y);
     this.renderer.setScissor(0, 0, full.x, full.y);
-    this.renderer.setRenderTarget(this.lowTarget);
-    this.renderer.render(this.postScene, this.postCam);
-    this.renderer.setRenderTarget(null);
-    this.renderer.render(this.viScene, this.postCam);
+    pt = perf.now();
+    perf.gpuBegin("post");
+    if (this.cfg.viBlur === 0 && this.lowTarget.width === full.x && this.lowTarget.height === full.y) {
+      this.renderer.setRenderTarget(null);
+      this.renderer.render(this.postScene, this.postCam);
+    } else {
+      this.renderer.setRenderTarget(this.lowTarget);
+      this.renderer.render(this.postScene, this.postCam);
+      this.renderer.setRenderTarget(null);
+      this.renderer.render(this.viScene, this.postCam);
+    }
+    perf.gpuEnd();
+    perf.cpu("r.post", pt);
   }
 
   worldToScreen(x: number, y: number, z: number): { x: number; y: number } {

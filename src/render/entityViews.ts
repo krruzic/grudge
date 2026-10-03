@@ -1,4 +1,5 @@
 import { teslaCoil } from "./hazardViews";
+import { hasLod, useLod } from "./lod";
 import { costumeOfPlayer } from "./costumes";
 import { FX, hd, SUMMONER, trailOf, withCostume } from "./fxKit";
 import { KITS } from "./kits";
@@ -579,6 +580,7 @@ export function markSilhouette(obj: THREE.Object3D, team: number): void {
     proxy.frustumCulled = o.frustumCulled;
     proxy.matrixAutoUpdate = false;
     proxy.renderOrder = SIL_ORDER;
+    if (hasLod(o.geometry)) useLod(proxy);
     silScene.add(proxy);
     silList.push({ proxy, src: o });
     const mats = Array.isArray(o.material) ? o.material : [o.material];

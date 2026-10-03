@@ -9,6 +9,7 @@ import type { MapperUi } from "../input/commands";
 import { costumeOfPlayer } from "../render/costumes";
 import { buildCost, canSpec, padNear, specCost } from "../sim/structures";
 import { drawNum, drawPlain, drawText, textWidth } from "./font";
+import { perf } from "../perf";
 
 export const INK = "#0b0806";
 export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828", z: "#8a8a94", r: "#8a8a94" };
@@ -868,6 +869,7 @@ export class Hud {
       this.memos.set(id, c);
     }
     if (c.key !== full) {
+      perf.stat("hud.memo", 1);
       if (c.low.width !== lw || c.low.height !== lh) {
         c.low.width = lw;
         c.low.height = lh;
@@ -909,13 +911,16 @@ export class Hud {
     const frac = h.meter / w.data.heroes.baseline.superMax;
     const cfgXp = w.data.talents?.xp;
     const commander = !!w.players.find((p) => p.heroId === e.id)?.commander;
+    const nx = cfgXp?.levels[h.level];
+    const pv = cfgXp?.levels[h.level - 1] ?? 0;
+    const xq = nx === undefined ? 240 : Math.floor(((h.xp - pv) / (nx - pv)) * 240);
     const talents = (["r", "b", "a", "z"] as const).map((slot) => {
       const id = learned(w, e, slot)[0]?.id ?? "";
       return id + (talentImgs.get(id)?.complete ? "+" : "-");
     }).join(",");
     return [
-      x0, y0, blockW, right, local, tag, h.dead, h.dead ? Math.ceil(h.respawnAt - w.time) : 0, cd("b"), cd("r"), frac, frac >= 1 ? Math.floor(now * 5) % 2 : 0,
-      !!cfgXp, commander, h.level, h.xp, talents, local && h.picks.length ? Math.floor(now * 3) % 3 : -1, h.pip ? 1 : 0, this.vantageOn(w, e) ? 1 : 0,
+      x0, y0, blockW, right, local, tag, h.dead, h.dead ? Math.ceil(h.respawnAt - w.time) : 0, cd("b"), cd("r"), frac >= 1 ? 240 : Math.floor(frac * 240), frac >= 1 ? Math.floor(now * 5) % 2 : 0,
+      !!cfgXp, commander, h.level, xq, talents, local && h.picks.length ? Math.floor(now * 3) % 3 : -1, h.pip ? 1 : 0, this.vantageOn(w, e) ? 1 : 0,
     ].join("|");
   }
 
@@ -1078,7 +1083,7 @@ export class Hud {
 
   private drawStocks(ctx: CanvasRenderingContext2D, w: World): void {
     const m = this.mini!;
-    const list = w.players.filter((p) => !p.commander || w.players.every((q) => q.team !== p.team || q.commander));
+    const list = [...w.players].sort((a, b) => a.team - b.team || a.player - b.player);
     if (!list.length) return;
     const sz = this.split >= 2 ? 11 : 12;
     const gap = 2;
@@ -1104,10 +1109,14 @@ export class Hud {
           g.drawImage(im, x, y, sz, sz);
         }
         g.globalAlpha = 1;
+        const he = w.getAny(p.heroId);
+        const hp = dead[i] || !he ? 0 : Math.max(0, Math.min(1, he.hp / he.maxHp));
         g.fillStyle = INK;
         g.fillRect(x + 0.5, y + sz + 0.6, sz - 1, 2.2);
-        g.fillStyle = this.teamColors[p.team] ?? "#9a9068";
+        g.fillStyle = "rgba(60,50,40,0.9)";
         g.fillRect(x + 1, y + sz + 1, sz - 2, 1.4);
+        g.fillStyle = this.teamColors[p.team] ?? "#9a9068";
+        g.fillRect(x + 1, y + sz + 1, (sz - 2) * hp, 1.4);
         if (dead[i]) {
           g.lineCap = "round";
           for (const [lw, col] of [[2.6, INK], [1.5, "#e02818"]] as const) {
@@ -1733,8 +1742,9 @@ export class Hud {
     if (bxc > 0) y += 14;
     if (out) return;
     const anyLocal = ui.some(Boolean);
-    const teamHeroes = w.players.filter((p) => p.team === t && (!p.commander || !!ui[p.player]));
-    const shown = teamHeroes.filter((p, k) => !!ui[p.player] || (!anyLocal && k === 0));
+    const viewed = (pl: number) => this.split >= 2 && !F && !!this.rectOf?.(pl);
+    const teamHeroes = w.players.filter((p) => p.team === t && (!p.commander || !!ui[p.player] || viewed(p.player)));
+    const shown = teamHeroes.filter((p, k) => !!ui[p.player] || viewed(p.player) || (!anyLocal && k === 0));
     const rectPx = (pl: number) => {
       const r = F ? null : this.rectOf?.(pl);
       return r ? { x: r.x * W, y: r.y * H, w: r.w * W, h: r.h * H } : null;
@@ -1886,11 +1896,21 @@ export class Hud {
     const form = ts.formation ?? "mass";
     const showForm = form !== "mass" || w.players.some((q) => q.team === t && q.commander);
     const key = [x0, y0, right, selected, flash, o.type, showForm ? form : "", ts.attackTeam ?? -1, ts.lane ?? -1, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
+    const s = this.split >= 3 ? 0.5 : 1;
+    const ax = right ? x0 + pw : x0;
+    const ay = y0 + ph;
+    ctx.save();
+    if (s !== 1) {
+      ctx.translate(ax, ay);
+      ctx.scale(s, s);
+      ctx.translate(-ax, -ay);
+    }
     this.memo(ctx, `orders${t}`, key, x0 - 24, y0 - 6, pw + 48, ph + 12, (c) => {
       this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash, right);
       if (showForm) formationBadge(c, right ? x0 - 9 : x0 + pw + 9, y0 + 10.5, form);
       return 0;
     });
+    ctx.restore();
   }
 
   private drawOrdersBody(ctx: CanvasRenderingContext2D, x0: number, y0: number, pw: number, ph: number, cw: number, t: number, ts: World["teams"][number], o: { type: UnitType | "all"; until: number }, counts: Record<UnitType, number>, selected: UnitType | "all" | null, flash: boolean, right = false): void {

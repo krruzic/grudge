@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background. They are for the hero costume SPOREBLIGHT GRIM: a fungal goblin assassin covered in crimson mushroom caps, moss and glowing spores shown in image 2. Repaint this sheet as a new 4x4 sheet in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Cells marked KEEP must stay the same sprite as image 1. Cells marked NEW must be replaced by the new object described: a genuinely different subject, not a recolour of the old sprite, painted in the costume's colours, at the same size and position inside its cell as the old sprite. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. KEEP
+2. KEEP
+3. NEW: a cluster of glowing moss-green spore pods bursting open with a puff of spores
+4. NEW: a crescent slash trail made of glowing moss-green spores and fine white mycelium threads
+5. NEW: an X-shaped slash of torn crimson mushroom gills with drifting spores
+6. NEW: a single small glowing bioluminescent mushroom with a sparkle
+7. KEEP
+8. NEW: a drip of thick crimson fungal sap with a tiny mushroom sprouting on top
+9. NEW: a crescent slash shaped like the dark crimson underside of a mushroom cap, with gill lines
+10. NEW: a horizontal streak of drifting golden-green spore dust
+11. NEW: a bursting puffball mushroom releasing a big cloud of glowing green spores
+12. KEEP
+13. KEEP
+14. NEW: a horizontal ghostly afterimage streak made of falling pale spores and tiny mushroom caps
+15. NEW: a low cloud of moss-green spores with tiny torn puffball fragments
+16. NEW: a fairy ring of tiny crimson mushrooms spiralling inward with mycelium threads, seen from directly above
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.

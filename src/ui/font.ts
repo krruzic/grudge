@@ -1,5 +1,6 @@
 import atlasUrl from "../../assets/fonts/n64font_hi.png?url";
 import meta from "../../assets/fonts/n64font.json";
+import { perf } from "../perf";
 
 type Glyph = { x: number; y: number; w: number; adv: number; ox: number };
 const GLYPHS = meta.glyphs as Record<string, Glyph>;
@@ -142,6 +143,7 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
     cache.set(key, hit);
     return hit;
   }
+  perf.stat("hud.text", 1);
   const w = (Math.ceil(rawWidth(s)) + PADX * 2 + 3) * HK;
   const h = (meta.h + PADY * 2 + 2) * HK;
   const g = scratchCtx(0, w, h);

@@ -67,7 +67,8 @@ function randomDir(dir: THREE.Vector3 | null, cone: number, flat: boolean): THRE
 }
 
 export function emit(h: FxHost, o: EmitOpts): void {
-  if (activeCostume()) o = { ...o, tex: cv(o.tex), color: tint(o.color) };
+  if (activeCostume()) o = { ...o, tex: hd(o.tex), color: tint(o.color) };
+  else if (hd(o.tex) !== o.tex) o = { ...o, tex: hd(o.tex) };
   const dir = o.dir ? new THREE.Vector3(o.dir.x, o.dir.y, o.dir.z).normalize() : null;
   if (h.particles) {
     const P = h.particles;
@@ -188,12 +189,24 @@ const chunkGeos = [0, 1, 2].map((s) => {
   return g;
 });
 export const SHARED_CHUNK_GEOS = new Set<THREE.BufferGeometry>(chunkGeos);
+
+export type Decal3D = "laurel" | "crown" | "crest" | "ring" | "gear" | "smoke";
+export interface CostumeSkin {
+  chunk?: { geos: THREE.BufferGeometry[]; colors: number[]; tex?: THREE.Texture | null };
+  fissure?: Partial<Record<FissureStyle, FissureStyle>>;
+  fisMat?: Partial<Record<"cut" | "lip" | "core", () => THREE.Material>>;
+  lipFlat?: number;
+  decal?: Map<THREE.Texture, Decal3D | "flat">;
+}
+export const COSTUME_SKIN: Record<string, CostumeSkin> = {};
+
 export function chunks(h: FxHost, n: number, x: number, y: number, z: number, opts: { size: Range; speed: Range; up: Range; color?: THREE.ColorRepresentation; life?: number; dir?: { x: number; z: number }; spread?: number; tex?: THREE.Texture }): void {
+  const sk = COSTUME_SKIN[activeCostume()]?.chunk;
   for (let i = 0; i < n; i++) {
-    const map = opts.tex ?? stoneTex;
-    const geo = chunkGeos[i % 3];
-    const m = fxBatch(h.root, `chunk|${map.uuid}|${i % 3}`, () => new FxBatch(geo, new THREE.MeshLambertMaterial({ map, flatShading: true, transparent: true }))).spawn();
-    m.color.set(opts.color ?? 0xb8ab98);
+    const map = opts.tex ?? (sk && sk.tex !== undefined ? sk.tex : stoneTex);
+    const geo = sk ? sk.geos[i % sk.geos.length] : chunkGeos[i % 3];
+    const m = fxBatch(h.root, `chunk|${map?.uuid ?? "-"}|${geo.uuid}`, () => new FxBatch(geo, new THREE.MeshLambertMaterial({ map, flatShading: true, transparent: true }))).spawn();
+    m.color.set(sk ? sk.colors[i % sk.colors.length] : opts.color ?? 0xb8ab98);
     const sz = rr(opts.size);
     m.scale.setScalar(sz);
     m.position.set(x, y, z);
@@ -316,6 +329,25 @@ export function buildFissures(gy: (x: number, z: number) => number, r: number, s
   return { group, parts };
 }
 
+const SKIN_MATS = new Map<string, THREE.Material>();
+export function zoneFissures(gy: (x: number, z: number) => number, r: number, style: FissureStyle, costume = ""): THREE.Group {
+  const sk = COSTUME_SKIN[costume];
+  const group = buildFissures(gy, r, sk?.fissure?.[style] ?? style).group;
+  if (!sk?.fisMat) return group;
+  group.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const role = o.material === LAVA_CORE ? "core" : o.material === LIP_MAT || o.material === MOSS_LIP ? "lip" : "cut";
+    const make = sk.fisMat?.[role];
+    if (!make) return;
+    const key = `${costume}|${role}`;
+    let m = SKIN_MATS.get(key);
+    if (!m) SKIN_MATS.set(key, (m = make()));
+    o.material = m;
+    if (role === "lip" && sk.lipFlat) o.scale.set(o.scale.x * 1.5, o.scale.y * sk.lipFlat, o.scale.z * 1.5);
+  });
+  return group;
+}
+
 const FIS_KEYS = new Map<THREE.Material, string>([[FIS_MAT.crack, "fc"], [FIS_MAT.lava, "fl"], [FIS_MAT.moss, "fm"], [LAVA_CORE, "fk"], [LIP_MAT, "fp"], [MOSS_LIP, "fq"]]);
 
 export function fissures(h: FxHost, x: number, y: number, z: number, r: number, style: FissureStyle, life: number, grow = 0.25): void {
@@ -330,13 +362,18 @@ export function fissures(h: FxHost, x: number, y: number, z: number, r: number, 
       if (!(o instanceof THREE.Mesh)) continue;
       const mat = o.material as THREE.Material;
       const key = `${FIS_KEYS.get(mat) ?? "fx"}${activeCostume()}`;
+      const role = mat === LAVA_CORE ? "core" : mat === LIP_MAT || mat === MOSS_LIP ? "lip" : "cut";
+      const sk = COSTUME_SKIN[activeCostume()];
       const inst = fxBatch(h.root, key, () => {
+        const alt = sk?.fisMat?.[role]?.();
+        if (alt) return new FxBatch(o.geometry, alt);
         const mc = mat.clone() as THREE.MeshLambertMaterial;
         if (mc.color) mc.color.setHex(tint(mc.color.getHex()));
         return new FxBatch(o.geometry, mc);
       }).spawn();
       const sc = new THREE.Vector3();
       o.matrixWorld.decompose(inst.position, inst.quaternion, sc);
+      if (role === "lip" && sk?.lipFlat) sc.set(sc.x * 1.5, sc.y * sk.lipFlat, sc.z * 1.5);
       inst.scale.set(0, 0, 0);
       pieces.push({ inst, s: sc, y: inst.position.y, at: reveal * p.d });
     }
@@ -590,12 +627,15 @@ function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: num
 export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): FxInst | null {
   tex = hd(tex);
   opts = { ...opts, color: tint(opts.color) };
-  const fis = FISSURE_TEX.get(baseTex(tex));
+  const sk = COSTUME_SKIN[activeCostume()];
+  const over = sk?.decal?.get(baseTex(tex));
+  const fis0 = over ? undefined : FISSURE_TEX.get(baseTex(tex));
+  const fis = fis0 && (sk?.fissure?.[fis0] ?? fis0);
   if (fis) {
     fissures(h, x, y, z, radius, fis, Math.max(dur, 1.2), opts.grow ?? 0.25);
     return null;
   }
-  const d3 = DECAL_3D.get(baseTex(tex));
+  const d3 = over ?? DECAL_3D.get(baseTex(tex));
   if (d3 === "laurel" || d3 === "crown" || d3 === "crest") {
     model3d(h, d3, x, y, z, radius, dur, opts.color ?? 0xffe0a0, d3 === "laurel" ? 0 : (opts.spin ?? 1) * 0.5, opts.grow ?? 0.2, opts.opacity ?? 1);
     return null;

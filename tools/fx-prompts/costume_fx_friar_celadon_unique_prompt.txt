@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background. They are for the hero costume CELADON TUCK: a porcelain tea-master friar in celadon green, blue willow-pattern porcelain, red lacquer and gold kintsugi, with tea and steam shown in image 2. Repaint this sheet as a new 4x4 sheet in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Cells marked KEEP must stay the same sprite as image 1. Cells marked NEW must be replaced by the new object described: a genuinely different subject, not a recolour of the old sprite, painted in the costume's colours, at the same size and position inside its cell as the old sprite. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. NEW: curling wisps of white steam rising from hot tea
+2. NEW: a small pink plum blossom flower
+3. NEW: a falling drop of golden-amber tea
+4. NEW: a crown splash of golden-amber tea with two floating tea leaves
+5. KEEP
+6. KEEP
+7. NEW: a soft puff of pale fragrant tea steam
+8. KEEP
+9. NEW: a flickering flame-like burst of glowing molten gold kintsugi lacquer
+10. KEEP
+11. KEEP
+12. NEW: two blue willow-pattern porcelain teacups clinking together with a gold sparkle and a splash of tea
+13. NEW: a billowing cloud of pale steam with faint blue willow-pattern swirls inside
+14. NEW: a tiny glinting flake of gold leaf
+15. KEEP
+16. KEEP
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.
