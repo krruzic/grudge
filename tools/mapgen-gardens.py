@@ -5,7 +5,7 @@ import random
 SEED = "9978ed11198d3fd830818e401e804b8258c963b4936880bea2c829b40df4a3e2"
 rng = random.Random(int(SEED[:16], 16))
 
-W = D = 104
+W = D = 72
 C = W / 2
 ops = []
 props = []
@@ -45,35 +45,38 @@ shape("rect", x=-12, z=-12, w=W + 24, h=D + 24, y=1.0, mode="set")
 shape("circle", x=C, z=C, r=4.0, y=0.42, edge=0.45, mode="set")
 shape("circle", x=C, z=C, r=2.3, y=1.35, edge=0.35, mode="set")
 
-rect(1, 1, 21, 21, "paving")
-for x0, z0, w, h in [(22, 1, 1, 5), (22, 11, 1, 5)]:
+# Keep: 15x15 paved yard; east wall with a side gate (z 4-7) and the open corner mouth onto the avenue (z 12-15).
+rect(1, 1, 15, 15, "paving")
+for x0, z0, w, h in [(16, 1, 1, 3), (16, 8, 1, 4)]:
     rect(x0, z0, w, h, "castle")
 
-for z in range(0, 52):
-    for x in range(0, 52):
-        if abs(x - z) <= 4 and 16 <= x + 0.5 <= 46 and 16 <= z + 0.5 <= 46:
+# Gravel: the diagonal avenue from the keep mouth to the court, with a roundabout half way.
+for z in range(0, 36):
+    for x in range(0, 36):
+        if abs(x - z) <= 3 and 12 <= x + 0.5 <= 32 and 12 <= z + 0.5 <= 32:
             mark(x, z, "dirt")
-        if math.hypot(x + 0.5 - 32.5, z + 0.5 - 32.5) <= 5.2:
+        if math.hypot(x + 0.5 - 22.5, z + 0.5 - 22.5) <= 3.6:
             mark(x, z, "dirt")
 
-rect(23, 5, 28, 7, "dirt")
-rect(40, 12, 6, 13, "dirt")
-rect(36, 25, 15, 7, "dirt")
-rect(23, 12, 3, 6, "dirt")
+rect(17, 3, 19, 5, "dirt")
+rect(28, 8, 4, 9, "dirt")
+rect(25, 17, 11, 5, "dirt")
+rect(17, 8, 2, 5, "dirt")
 
-for z in range(40, 52):
-    for x in range(40, 52):
-        if x + z >= 86:
+# Inner court (octagon of paving around the fountain) and its hedge wing.
+for z in range(28, 36):
+    for x in range(28, 36):
+        if x + z >= 60:
             mark(x, z, "paving")
         if math.hypot(x + 0.5 - C, z + 0.5 - C) <= 2.6:
             mark(x, z, "paving")
-rect(40, 46, 1, 6, "hedge")
+rect(28, 32, 1, 4, "hedge")
 
 beds = [
-    [(x, z) for z in range(12, 25) for x in range(26, 40) if x - z >= 6],
-    [(x, z) for z in range(12, 25) for x in range(46, 51)],
-    [(x, z) for z in range(32, 40) for x in range(39, 51) if x - z >= 6],
-    [(x, z) for z in range(1, 5) for x in range(23, 51)],
+    [(x, z) for z in range(8, 17) for x in range(18, 28) if x - z >= 4],
+    [(x, z) for z in range(8, 17) for x in range(32, 36)],
+    [(x, z) for z in range(22, 28) for x in range(27, 36) if x - z >= 4],
+    [(x, z) for z in range(1, 3) for x in range(17, 36)],
 ]
 for bed in beds:
     s = set(bed)
@@ -93,14 +96,15 @@ for (x, z), what in sorted(grid.items()):
         cell("grass", x=x, z=z, w=1, h=1)
 
 cell("wall", style="rim", x=0, z=0, w=W, h=1)
-cell("paving", x=51, z=6, w=2, h=5)
-cell("paving", x=51, z=26, w=2, h=5)
-cell("wall", style="hedge", x=51, z=1, w=2, h=5)
-cell("wall", style="hedge", x=51, z=11, w=2, h=15)
-cell("wall", style="hedge", x=51, z=31, w=2, h=9)
+# Border between neighbouring gardens: gate a (z 3-7) on the lane, gate b (z 17-21) on the inner lane.
+cell("paving", x=35, z=3, w=2, h=5)
+cell("paving", x=35, z=17, w=2, h=5)
+cell("wall", style="hedge", x=35, z=1, w=2, h=2)
+cell("wall", style="hedge", x=35, z=8, w=2, h=9)
+cell("wall", style="hedge", x=35, z=22, w=2, h=6)
 
-for z in range(49, 56):
-    for x in range(49, 56):
+for z in range(31, 41):
+    for x in range(31, 41):
         d = math.hypot(x + 0.5 - C, z + 0.5 - C)
         if 2.4 < d <= 4.2:
             cell("ford", x=x, z=z, w=1, h=1)
@@ -113,42 +117,42 @@ for bed in beds[:3]:
         col = palette[rng.randrange(len(palette))]
         prop("flowers", x + 0.5, z + 0.5, color=col)
         prop("flowers", z + 0.5, x + 0.5, color=col)
-for x, z in [(26.5, 12.5), (39.5, 12.5), (46.5, 12.5), (50.5, 12.5), (46.5, 24.5), (50.5, 24.5), (39.5, 33.5), (50.5, 33.5)]:
+for x, z in [(18.5, 8.5), (27.5, 8.5), (32.5, 8.5), (35.5, 8.5), (32.5, 16.5), (35.5, 16.5), (27.5, 22.5), (35.5, 22.5)]:
     prop("topiary", x, z)
     prop("topiary", z, x)
-for x, z in [(28.5, 28.5), (36.5, 36.5)]:
+for x, z in [(19.5, 19.5), (25.5, 25.5)]:
     prop("urn", x, z)
-for x, z in [(28.6, 36.4), (36.4, 28.6)]:
+for x, z in [(19.8, 25.2), (25.2, 19.8)]:
     prop("urn", x, z)
 prop("fountain", C, C)
 prop("banner", 2.5, 2.5)
-prop("tower", 2.5, 20.5, solid=True)
-prop("torch", 23.5, 4.5)
-prop("torch", 23.5, 11.5)
-prop("torch", 4.5, 23.5)
-prop("torch", 11.5, 23.5)
-prop("crate", 19.5, 2.5)
-prop("statue", 23.5, 23.5)
-prop("tree", 33.5, 46.5, scale=1.2)
-prop("tree", 46.5, 33.5, scale=1.2)
+prop("tower", 2.5, 14.5, solid=True)
+prop("torch", 17.3, 3.4)
+prop("torch", 17.3, 8.5)
+prop("torch", 3.4, 17.3)
+prop("torch", 8.5, 17.3)
+prop("crate", 13.5, 2.5)
+prop("statue", 16.5, 16.5)
+prop("tree", 23.5, 32.5, scale=1.2)
+prop("tree", 32.5, 23.5, scale=1.2)
 
 pads = [
-    {"zone": "home", "x": 5, "z": 16},
-    {"zone": "home", "x": 16, "z": 5},
-    {"zone": "home", "x": 15, "z": 15},
-    {"zone": "neutral", "x": 32.5, "z": 32.5},
-    {"zone": "neutral", "x": 37.5, "z": 8.5},
-    {"zone": "neutral", "x": 8.5, "z": 37.5},
-    {"zone": "neutral", "x": 41.5, "z": 28.5},
-    {"zone": "neutral", "x": 28.5, "z": 41.5},
+    {"zone": "home", "x": 3.5, "z": 12.5},
+    {"zone": "home", "x": 12.5, "z": 3.5},
+    {"zone": "home", "x": 12, "z": 12},
+    {"zone": "neutral", "x": 22.5, "z": 22.5},
+    {"zone": "neutral", "x": 26, "z": 5.5},
+    {"zone": "neutral", "x": 5.5, "z": 26},
+    {"zone": "neutral", "x": 29.5, "z": 19.5},
+    {"zone": "neutral", "x": 19.5, "z": 29.5},
 ]
 
 slots = [
-    {"set": "a", "x": 51, "z": 6, "w": 2, "h": 5},
-    {"set": "b", "x": 51, "z": 26, "w": 2, "h": 5},
-    {"set": "b", "x": 40, "z": 40, "w": 6, "h": 6,
-     "cells": [[x, 85 - x] for x in range(40, 46)] + [[x, 86 - x] for x in range(41, 46)],
-     "line": [40.15, 45.85, 45.85, 40.15]},
+    {"set": "a", "x": 35, "z": 3, "w": 2, "h": 5},
+    {"set": "b", "x": 35, "z": 17, "w": 2, "h": 5},
+    {"set": "b", "x": 28, "z": 28, "w": 4, "h": 4,
+     "cells": [[x, 59 - x] for x in range(28, 32)] + [[x, 60 - x] for x in range(29, 32)],
+     "line": [28.15, 31.85, 31.85, 28.15]},
 ]
 
 data = {
@@ -165,15 +169,15 @@ data = {
     "waterLevel": 0.75,
     "gates": {"firstSeconds": 45, "everySeconds": 40, "warnSeconds": 5, "slots": slots},
     "fountain": {"x": C, "z": C, "r": 5.0, "heal": 32},
-    "notes": "Generated by tools/mapgen-gardens.py. Four-fold rotation (mirror quad); the north-west quadrant is authored and mirrored across its diagonal, so the whole map has eight-fold symmetry. Keeps sit in the corners, a gravel avenue with a roundabout runs from each keep mouth to the octagonal inner court. Hedge parterres (hedge outline, blocked flower bed inside) split the quadrants into corridors. Gate set a (outer border gates near the keeps) and set b (mid border gates and the diagonal court gates across each avenue mouth) swap every 40 s; when set b is up the court is sealed. The fountain heals heroes standing in its basin.",
+    "notes": "Generated by tools/mapgen-gardens.py. Four-fold rotation (mirror quad); the north-west quadrant is authored and mirrored across its diagonal, so the whole map has eight-fold symmetry. 72x72 (cut down from 104 for tighter fights). Keeps sit in the corners, a gravel avenue with a roundabout runs from each keep mouth to the octagonal inner court. Hedge parterres (hedge outline, blocked flower bed inside) split the quadrants into corridors. Gate set a (outer border gates near the keeps) and set b (mid border gates and the diagonal court gates across each avenue mouth) swap every 40 s; when set b is up the court is sealed. The fountain heals heroes standing in its basin.",
     "ops": ops,
     "props": props,
     "cores": [{"team": 0, "x": 6.5, "z": 6.5}],
     "pads": pads,
-    "spawns": [{"team": 0, "x": 10.5, "z": 10.5}],
-    "jumppads": [{"a": {"x": 45, "z": 49}, "b": {"x": 8, "z": 13}}, {"a": {"x": 3.5, "z": 10.5}, "b": {"x": 40, "z": 40}}, {"a": {"x": 28, "z": 8.5}, "b": {"x": 78, "z": 26}}],
-    "patrols": [{"a": {"x": 42.5, "z": 8.5}, "b": {"x": 42.5, "z": 28.5}}],
-    "dens": [{"x": 43, "z": 18.5}],
+    "spawns": [{"team": 0, "x": 9, "z": 9}],
+    "jumppads": [{"a": {"x": 31, "z": 34}, "b": {"x": 6, "z": 10.5}}, {"a": {"x": 2.5, "z": 8}, "b": {"x": 28, "z": 28}}, {"a": {"x": 19.5, "z": 5.5}, "b": {"x": 54, "z": 18}}],
+    "patrols": [{"a": {"x": 29.5, "z": 5.5}, "b": {"x": 29.5, "z": 19.5}}],
+    "dens": [{"x": 30, "z": 12.5}],
 }
 
 with open("data/maps/gardens.json", "w") as f:
