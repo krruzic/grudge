@@ -7,7 +7,7 @@ import { type FxHost, emit } from "../fx/parts";
 import { shockwave } from "../fx/shockwave";
 import type { HitEvent } from "./registry";
 
-export const UP = new THREE.Vector3(0, 1, 0);
+export { UP } from "../fx/parts";
 export const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);
 export function dirOf(dx: number, dz: number): THREE.Vector3 {
   const n = new THREE.Vector3(dx, 0, dz);

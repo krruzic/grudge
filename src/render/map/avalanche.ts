@@ -5,12 +5,12 @@
 // Props in the lane are re-drawn as instanced pieces from simplified copies of their geometry (prepLods); when a
 // prop has no usable geometry a snowball (FALLBACK_GEO) stands in.
 import * as THREE from "three";
+import { UP, emit } from "../fx/parts";
 import { snowUrl } from "./textures";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 import { SimplifyModifier } from "three/examples/jsm/modifiers/SimplifyModifier.js";
 import { propParts } from "../props";
 import type { MapFx } from "./mapFx";
-import { emit } from "../fx/parts";
 import { FX } from "../fx/atlas";
 
 export interface Rect {
@@ -66,7 +66,6 @@ export interface Ava {
 }
 export const SNOW = new THREE.MeshLambertMaterial({ color: 0xdfe6f2, vertexColors: true });
 SNOW.userData.keep = true;
-export const UP = new THREE.Vector3(0, 1, 0);
 const MELT = 3.5;
 const FALLBACK_GEO = new THREE.IcosahedronGeometry(0.5, 1);
 FALLBACK_GEO.translate(0, 0.5, 0);

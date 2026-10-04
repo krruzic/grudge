@@ -13,15 +13,7 @@ import { FxBatch, fxBatch } from "../fx/instances";
 import { KITS } from "./registry";
 import { hasCostumeProp, propParts } from "../props";
 import { costumeOfPlayer } from "../costumes";
-
-const UP = new THREE.Vector3(0, 1, 0);
-const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);
-
-function dirOf(dx: number, dz: number): THREE.Vector3 {
-  const n = new THREE.Vector3(dx, 0, dz);
-  if (n.lengthSq() < 1e-4) n.set(Math.random() - 0.5, 0, Math.random() - 0.5);
-  return n.normalize();
-}
+import { dirOf, ground, UP } from "./shared";
 
 const slabGeo = new THREE.BoxGeometry(1, 0.35, 0.8);
 slabGeo.userData.model = true;

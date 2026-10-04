@@ -211,6 +211,21 @@ function unitParts(ents: EntityViews, e: Entity, team: THREE.Color, root: THREE.
   return { body, bar, mixer, actions };
 }
 
+/** Body mesh for a non-core structure: works site (empty), hero-built specials, the model, or a placeholder. */
+function structureBody(
+  ents: EntityViews,
+  st: NonNullable<Entity["structure"]>,
+  team: THREE.Color,
+  ownerCostume: string,
+): THREE.Object3D {
+  if (st.works !== undefined) return new THREE.Group();
+  if (st.cask) return caskMesh(team, ownerCostume);
+  if (st.tesla) return teslaCoil(1.1, ownerCostume);
+  if (st.siege) return ballistaMesh(team, ownerCostume);
+  if (ents.structures.has(st.type)) return ents.structures.create(st.type, team);
+  return structurePlaceholder(st.type, team);
+}
+
 /**
  * Core (with its shield bubble and spinning crystal) or a built structure: works sites, Maddock's cask, Stig's
  * tesla coil and ballista use their own meshes in the owner's costume. Named nodes "spin*", "level2*" and
@@ -247,18 +262,7 @@ function structureParts(
     root.add(view.work.group);
   } else {
     const oc = costumeOfPlayer(ents.world.getAny(e.owner ?? -1)?.hero?.player);
-    body =
-      st.works !== undefined
-        ? new THREE.Group()
-        : st.cask
-          ? caskMesh(team, oc)
-          : st.tesla
-            ? teslaCoil(1.1, oc)
-            : st.siege
-              ? ballistaMesh(team, oc)
-              : ents.structures.has(st.type)
-                ? ents.structures.create(st.type, team)
-                : structurePlaceholder(st.type, team);
+    body = structureBody(ents, st, team, oc);
     body.traverse((o) => {
       if (!view.spin && o.name.startsWith("spin")) view.spin = o;
       if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
