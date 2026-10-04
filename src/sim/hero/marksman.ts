@@ -423,7 +423,8 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
       speed: 42,
       range,
       width: 0.8,
-      damage: (def.damage ?? 40) * mul * (0.9 + pw * 0.7),
+      // `mul` already includes the hero-wide charge bonus (action power); the power shot only adds a small premium.
+      damage: (def.damage ?? 40) * mul * 1.15,
       pierce: true,
       style: "powershot",
       arrow: true,
