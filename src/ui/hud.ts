@@ -41,6 +41,14 @@ export class UiCanvas {
     this.hi = this.hiCanvas.getContext("2d")!;
   }
 
+  realloc(): void {
+    for (const c of [this.canvas, this.hiCanvas]) {
+      const w = c.width;
+      c.width = 1;
+      c.width = w;
+    }
+  }
+
   begin(): CanvasRenderingContext2D {
     const h = 240;
     const w = Math.round((h * window.innerWidth) / window.innerHeight);
@@ -734,14 +742,17 @@ export class Hud {
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
     this.crossN = 0;
     if (this.split >= 2) {
-      const t = 3;
-      ctx.fillStyle = INK;
-      ctx.fillRect(Math.round(W / 2 - t / 2) - 1, 0, t + 2, H);
-      texturedRect(ctx, "stone", Math.round(W / 2 - t / 2), 0, t, H, "#8a8070", 0, 0.5);
-      if (this.split >= 3) {
-        ctx.fillRect(0, Math.round(H / 2 - t / 2) - 1, W, t + 2);
-        texturedRect(ctx, "stone", 0, Math.round(H / 2 - t / 2), W, t, "#8a8070", 0, 0.5);
-      }
+      onHiLayer(ctx, (g) => {
+        const m = g.getTransform();
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.fillStyle = INK;
+        const pw = Math.round(W * m.a);
+        const ph = Math.round(H * m.d);
+        g.fillRect(Math.floor(pw / 2), 0, 1, ph);
+        if (this.split >= 3) g.fillRect(0, Math.floor(ph / 2), pw, 1);
+        g.restore();
+      });
     }
     const bannerOn = !!this.banner && now < this.bannerUntil;
     this.bannerLineY = MARGIN_Y + (w.match.phase === "sudden" || (w.mapEvents.locked && !w.training) ? 27 : 19);

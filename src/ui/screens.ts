@@ -673,6 +673,7 @@ export class Screens {
     const tagHot = !s.cpu && !commander && !!this.cursors?.cursors.some((c) => c.active && c.hover === `tag:${i}`);
     const iy = 30;
     const ih = h - iy - 34;
+    const blank = human && !commander && !s.ready && !naming;
     card(ctx, x, y, w, h, 0, s.ready ? "#c8a020" : TEAM_BRIGHT[team], () => {
       const ls = tagged ? Math.min(0.95, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 0.95;
       drawPlain(ctx, label, w / 2 - textWidth(label, ls, true) / 2, 7, tagHot ? "#c81818" : ink, ls, true);
@@ -680,6 +681,12 @@ export class Screens {
       texturedRect(ctx, "cloth", 5, iy, w - 10, ih, TEAM_CLOTH[team], 0, 0.7);
       band(ctx, 5, iy + ih - 10, w - 10, 10, "#000000", 0.25);
       if (naming) return;
+      if (blank) {
+        band(ctx, 5, iy, w - 10, ih, "#000000", 0.35);
+        const lines = ["PICK A", "CHAMPION"];
+        lines.forEach((l, k) => drawPlain(ctx, l, w / 2 - textWidth(l, 0.62, true) / 2, iy + ih / 2 - 9 + k * 10, "#e8d8b8", 0.62, true));
+        return;
+      }
       const name = (def?.name ?? s.hero).toUpperCase();
       const ns = Math.min(0.8, (w - 10) / Math.max(1, textWidth(name, 1, true)));
       drawPlain(ctx, name, w / 2 - textWidth(name, ns, true) / 2, iy + ih + 5, BROWN_S, ns, true);
@@ -715,6 +722,10 @@ export class Screens {
       return;
     }
     this.kindPlaque(ctx, i, x + w / 2, y + 17, s);
+    if (blank) {
+      this.portraits?.drop(i);
+      return;
+    }
     const fx = x + 5;
     const fy = y + iy;
     const fw = w - 10;

@@ -194,10 +194,10 @@ async function start(): Promise<void> {
   menus.releaseSeat = (i) => pads.release(i);
   menus.requestDevice = () => void pads.requestHid();
   const navRep = Array.from({ length: MAX_PLAYERS }, () => ({ dir: "", t: 0 }));
-  const readNav = (now: number): Nav => {
+  const readNav = (now: number, only = -1): Nav => {
     const n: Nav = { dx: 0, dy: 0, a: false, b: false, y: false };
     pads.players.forEach((p, i) => {
-      if (!p.connected) return;
+      if (!p.connected || (only >= 0 && i !== only)) return;
       const sx = p.stickX + (p.held.right ? 1 : 0) - (p.held.left ? 1 : 0);
       const sy = p.stickY + (p.held.down ? 1 : 0) - (p.held.up ? 1 : 0);
       const dir = Math.max(Math.abs(sx), Math.abs(sy)) < 0.5 ? "" : Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? "r" : "l") : sy > 0 ? "d" : "u";
@@ -414,7 +414,8 @@ async function start(): Promise<void> {
       beginAttractWorldOnly();
     }
   };
-  const enterSelect = () => {
+  const enterSelect = (keep = false) => {
+    const prev = slots.map((sl) => (keep && sl.ready && !sl.cpu && !sl.open && roster.includes(sl.hero) ? { hero: sl.hero, costume: sl.costume } : null));
     const here = [0, 1, 2, 3].filter(present).length;
     const keptCpu = (i: number) => netMode === "host" && slots[i].cpu && slots[i].autoCpu === false && !slots[i].open;
     if (here >= 3) { if (mode === "1v1") mode = "2v2"; }
@@ -424,7 +425,18 @@ async function start(): Promise<void> {
     slots.forEach((sl, i) => {
       const keep = keptCpu(i);
       sl.ready = false;
-      if (present(i)) { sl.autoCpu = false; makeHuman(i); }
+      if (present(i)) {
+        sl.autoCpu = false;
+        makeHuman(i);
+        const pv = prev[i];
+        if (pv && !commanderSlot(i)) {
+          sl.hero = pv.hero;
+          sl.costume = pv.costume;
+          sl.ready = true;
+          if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
+          cursors.placeChip(i, pv.hero);
+        }
+      }
       else if (keep) {
         makeCpu(i);
         sl.autoCpu = false;
@@ -864,7 +876,9 @@ async function start(): Promise<void> {
       setPaused(state === "match");
     }
   };
+  let pauser = -1;
   const setPaused = (on: boolean) => {
+    if (!on) pauser = -1;
     if (on) {
       menus.openPause();
       menus.currentMap = maps[mapIndex]?.data.name ?? "";
@@ -1085,6 +1099,7 @@ async function start(): Promise<void> {
   let fpsAt = 0;
   let fpsShown = 0;
   let frameTicks = 0;
+  let shownMode = "";
   let hudSkipped = false;
   const frame = (nowMs: number): void => {
     const pf0 = perf.now();
@@ -1239,7 +1254,7 @@ async function start(): Promise<void> {
           } else if (id === "seatopen") {
             makeOpen(i);
             audio.ui("back");
-          } else if (id === "cam" && remoteAt(i) >= 0) {
+          } else if (id === "cam" && (remoteAt(i) >= 0 || (act.by !== i && !slots[i].cpu))) {
             audio.ui("back");
           } else if (id === "cam") {
             const z = save.data.options.zoom ?? [0, 0, 0, 0];
@@ -1265,7 +1280,7 @@ async function start(): Promise<void> {
           } else if (id === "tag" && !slots[i].cpu && !commanderSlot(i) && act.by === i && !screens.naming.has(i)) {
             screens.naming.set(i, tagEditor(i, slots[i].tag));
             audio.ui("ok");
-          } else if (id === "go" && selectReady()) {
+          } else if (id === "go" && selectReady() && !screens.naming.size) {
             toMap();
           }
         } else if (act.type === "back") {
@@ -1293,7 +1308,7 @@ async function start(): Promise<void> {
       const allReady = selectReady();
       if (allReady && readySince < 0) readySince = now;
       if (!allReady) readySince = -1;
-      screens.readyBanner = allReady;
+      screens.readyBanner = allReady && !screens.naming.size;
       screens.openHint = !allReady && slots.some((sl, i) => slotActive(i) && sl.open) && slots.every((sl, i) => !slotActive(i) || sl.open || (sl.ready && heldBy(i) < 0));
       if (allReady && now - readySince > 0.25 && anyPressed("start") && !namingAte && !screens.naming.size) toMap();
     } else if (state === "map") {
@@ -1403,7 +1418,7 @@ async function start(): Promise<void> {
           } else if (act.type === "button") {
             const [id, arg] = act.id.split(":");
             const i = Number(arg);
-            if (id === "cam" && [...mySlots.values()].includes(i)) {
+            if (id === "cam" && mySlots.get(act.by) === i) {
               const z = save.data.options.zoom ?? [0, 0, 0, 0];
               z[i] = z[i] ? 0 : 1;
               save.data.options.zoom = z;
@@ -1455,6 +1470,7 @@ async function start(): Promise<void> {
       }
     } else if (state === "match") {
       if (anyPressed("start")) {
+        pauser = pads.players.findIndex((p) => p.pressed.start);
         if (netMode === "peer") net.toHost({ t: "pause" });
         else setPaused(true);
       }
@@ -1484,8 +1500,11 @@ async function start(): Promise<void> {
       }));
       if (netMode === "peer") for (const [k, slot] of mySlots) if (mappers[slot]) net.toHost({ t: "cmd", k, c: packCommand(mappers[slot]!.take()) });
     } else if (state === "paused") {
-      const r = menus.updatePause(readNav(now), cursors.takeMouse(), (k) => audio.ui(k));
-      if (anyPressed("start") || r === "resume") {
+      const own = pauser >= 0 && pads.players[pauser]?.connected ? pauser : -1;
+      const mouse = cursors.takeMouse();
+      if (own >= 0 && own !== pads.keyboardSlot()) mouse.click = mouse.right = mouse.moved = false;
+      const r = menus.updatePause(readNav(now, own), mouse, (k) => audio.ui(k));
+      if ((own >= 0 ? pads.players[own].pressed.start : anyPressed("start")) || r === "resume") {
         if (netMode === "peer") net.toHost({ t: "pause" });
         else setPaused(false);
       } else if (r === "quit") toMenu();
@@ -1512,7 +1531,7 @@ async function start(): Promise<void> {
         menus.training = false;
         world.match.phase = "over";
         state = "select";
-        enterSelect();
+        enterSelect(true);
         screens.set("select");
         hud.show(false);
         beginAttractWorldOnly();
@@ -1528,7 +1547,7 @@ async function start(): Promise<void> {
     } else if (state === "results") {
       if (anyPressed("a") || anyPressed("start")) {
         state = "select";
-        enterSelect();
+        enterSelect(true);
         screens.set("select");
         beginAttractWorldOnly();
       }
@@ -1611,6 +1630,14 @@ async function start(): Promise<void> {
     liveWindow.rect = null;
     const skipHud = state === "match" && view.throttleHud && frameTicks > 0 && !hudSkipped;
     hudSkipped = skipHud;
+    const mode2 = state === "match" ? "m" : state === "paused" ? "p" : "o";
+    if (mode2 !== shownMode) {
+      if (shownMode && mode2 === "m") {
+        pixel.realloc();
+        view.refreshTargets();
+      }
+      shownMode = mode2;
+    }
     const ctx = skipHud ? pixel.ctx : pixel.begin();
     const uiList = mappers.map((m) => m?.ui ?? null);
     hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);

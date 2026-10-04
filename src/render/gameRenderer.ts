@@ -365,6 +365,10 @@ export class GameRenderer {
 
   private sizeKey = "";
 
+  refreshTargets(): void {
+    this.sizeKey = "";
+  }
+
   private fitTargets(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -513,7 +517,6 @@ export class GameRenderer {
 
   camMode = 1;
   manualZoom: boolean[] = [];
-  private merged = false;
   private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90, 120, 150];
   private zoomIndex = new Map<number, number>();
   private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroIds: number[]; player: number }[] = [];
@@ -547,15 +550,7 @@ export class GameRenderer {
     const humans = this.camMode ? this.world.players.filter((p) => this.humanList[p.player]) : [];
     humans.sort((a, b) => (humans.length === 2 ? a.team - b.team : 0) || a.player - b.player);
     const ids = humans.map((p) => p.heroId);
-    const pts = ids.map((id) => this.entityViews.heroPoint(id));
-    let spread = 0;
-    for (const a of pts) for (const b of pts) if (a && b) spread = Math.max(spread, a.distanceTo(b));
-    if (spread > this.cfg.splitNear + 2) this.merged = false;
-    else if (spread < this.cfg.splitNear - 3 && pts.every(Boolean)) this.merged = true;
-    const w = this.world;
-    const teamsInView = new Set(humans.map((p) => p.team));
-    if (teamsInView.size > 1 && w.players.some((p) => { const e = w.getAny(p.heroId); return !!e && e.alive && [...teamsInView].some((t) => !w.visibleTo(t, e)); })) this.merged = false;
-    const groups: { ids: number[]; player: number }[] = !ids.length ? [] : ids.length === 1 || this.merged ? [{ ids, player: humans[0].player }] : humans.map((p) => ({ ids: [p.heroId], player: p.player }));
+    const groups: { ids: number[]; player: number }[] = !ids.length ? [] : ids.length === 1 ? [{ ids, player: humans[0].player }] : humans.map((p) => ({ ids: [p.heroId], player: p.player }));
     const same = groups.length === this.splitViews.length && groups.every((g, i) => g.ids.join() === this.splitViews[i].heroIds.join());
     if (same) return;
     const prev = this.splitViews;
