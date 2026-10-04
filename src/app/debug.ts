@@ -14,7 +14,7 @@ import type { Page } from "../ui/menus";
 import type { App } from "./app";
 import { houses, roster } from "./assets";
 import { enterSelect } from "./select";
-import { beginAttract, fastForward, setPaused, setupControl, toMenu } from "./match";
+import { beginAttract, fastForward, resetAttractWorld, setPaused, setupControl, toMenu } from "./match";
 
 const MENU_PAGES: Page[] = ["players", "network", "rules", "options", "records", "controls", "codex"];
 
@@ -134,6 +134,11 @@ export function installDebugApi(app: App): void {
   const net = app.net;
   (window as unknown as { grudge: unknown }).grudge = {
     Bot,
+    /** Swap the menu backdrop to map index i (what hovering a field card does). */
+    backdrop: (i: number) => {
+      app.mapIndex = i;
+      resetAttractWorld(app);
+    },
     dbg: app.dbg,
     hud: app.hud,
     screens: app.screens,

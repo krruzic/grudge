@@ -34,7 +34,17 @@ interface Shared {
   index: number;
 }
 
+/** The texture array and remapped part geometries depend only on the models, so every batch shares them. */
+const sharedCache = new WeakMap<StructureModels, Shared | null>();
+
 function buildShared(models: StructureModels): Shared | null {
+  if (sharedCache.has(models)) return sharedCache.get(models)!;
+  const sh = makeShared(models);
+  sharedCache.set(models, sh);
+  return sh;
+}
+
+function makeShared(models: StructureModels): Shared | null {
   const kinds = models.bakedKinds();
   if (!kinds.length) return null;
   const maps: (THREE.Texture | null)[] = [];
@@ -60,10 +70,18 @@ function buildShared(models: StructureModels): Shared | null {
   return { tex: layerTexture(maps), parts, geos, verts, index };
 }
 
+type TeamBatch = { mesh: THREE.BatchedMesh; ids: Map<THREE.BufferGeometry, number>; color: string };
+
+/**
+ * Emptied team batches from disposed StructureBatches, by models and team colour: building one copies every
+ * structure part into a BatchedMesh, so a new world (e.g. the menu backdrop swapping fields) reuses them.
+ */
+const pool = new WeakMap<StructureModels, Map<string, TeamBatch[]>>();
+
 export class StructureBatch {
   readonly root = new THREE.Group();
   private shared: Shared | null | undefined;
-  private teams = new Map<number, { mesh: THREE.BatchedMesh; ids: Map<THREE.BufferGeometry, number> }>();
+  private teams = new Map<number, TeamBatch>();
   private members: Member[] = [];
   private tmp = new THREE.Color();
 
@@ -72,9 +90,15 @@ export class StructureBatch {
     private teamColor: (team: number) => THREE.Color,
   ) {}
 
-  private team(t: number): { mesh: THREE.BatchedMesh; ids: Map<THREE.BufferGeometry, number> } | null {
+  private team(t: number): TeamBatch | null {
     let b = this.teams.get(t);
     if (b) return b;
+    const reuse = pool.get(this.models)?.get(this.teamColor(t).getHexString())?.pop();
+    if (reuse) {
+      this.teams.set(t, reuse);
+      this.root.add(reuse.mesh);
+      return reuse;
+    }
     if (this.shared === undefined) this.shared = buildShared(this.models);
     const sh = this.shared;
     if (!sh) return null;
@@ -97,7 +121,7 @@ export class StructureBatch {
     mesh.matrixAutoUpdate = false;
     const ids = new Map<THREE.BufferGeometry, number>();
     for (const [src, g] of sh.geos) ids.set(src, mesh.addGeometry(g));
-    b = { mesh, ids };
+    b = { mesh, ids, color: this.teamColor(t).getHexString() };
     this.teams.set(t, b);
     this.root.add(mesh);
     return b;
@@ -147,13 +171,16 @@ export class StructureBatch {
   }
 
   dispose(): void {
+    for (const m of this.members) this.teams.get(m.mesh.userData.batchTeam as number)?.mesh.deleteInstance(m.id);
+    let byColor = pool.get(this.models);
+    if (!byColor) pool.set(this.models, (byColor = new Map()));
     for (const b of this.teams.values()) {
-      b.mesh.dispose();
-      (b.mesh.material as THREE.Material).dispose();
+      const list = byColor.get(b.color) ?? [];
+      list.push(b);
+      byColor.set(b.color, list);
     }
     this.teams.clear();
     this.members.length = 0;
-    this.shared?.tex.dispose();
     this.shared = undefined;
     this.root.clear();
   }

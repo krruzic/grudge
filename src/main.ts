@@ -22,6 +22,7 @@ function endBoot(): void {
 
 async function start(): Promise<void> {
   const app = new App(await loadAssets());
+  app.rehearse();
   installKeyboardNaming(app);
   startFromUrl(app);
   installDebugApi(app);

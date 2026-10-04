@@ -14,8 +14,8 @@
  "atmosphere": {
   "sunColor": "#c4d4ff",
   "sunIntensity": 2.1,
-  "ambientSky": "#6a7cc8",
-  "ambientGround": "#5a4636",
+  "ambientSky": "#7c84c4",
+  "ambientGround": "#6e5240",
   "ambientIntensity": 1.8,
   "fogColor": "#30406e",
   "skyZenith": "#0c1434",

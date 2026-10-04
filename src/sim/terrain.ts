@@ -411,46 +411,67 @@ export class Terrain {
     }
   }
 
-  private eachVertex(fn: (vx: number, vz: number, i: number) => void): void {
-    for (let vz = 0; vz <= this.depth; vz++) {
-      for (let vx = 0; vx <= this.width; vx++) fn(vx, vz, vz * (this.width + 1) + vx);
+  /** Visits every height vertex, or just those inside the box [x0, x1] x [z0, z1] when given. */
+  private eachVertex(
+    fn: (vx: number, vz: number, i: number) => void,
+    x0 = 0,
+    z0 = 0,
+    x1 = this.width,
+    z1 = this.depth,
+  ): void {
+    const ax = Math.max(0, Math.ceil(x0));
+    const bx = Math.min(this.width, Math.floor(x1));
+    for (let vz = Math.max(0, Math.ceil(z0)); vz <= Math.min(this.depth, Math.floor(z1)); vz++) {
+      for (let vx = ax; vx <= bx; vx++) fn(vx, vz, vz * (this.width + 1) + vx);
     }
   }
 
   private applyShape(op: ShapeOp): void {
-    this.eachVertex((vx, vz, i) => {
-      let d: number;
-      if (op.shape === "circle") {
-        d = Math.hypot(vx - op.x, vz - op.z) - (op.r ?? 1);
-      } else {
-        const x1 = op.x + (op.w ?? 1);
-        const z1 = op.z + (op.h ?? 1);
-        const dx = Math.max(op.x - vx, 0, vx - x1);
-        const dz = Math.max(op.z - vz, 0, vz - z1);
-        d = dx > 0 || dz > 0 ? Math.hypot(dx, dz) : -Math.min(vx - op.x, x1 - vx, vz - op.z, z1 - vz);
-      }
-      if (op.wobble) {
-        const [mx, mz] = this.canon(vx, vz);
-        d += (valueNoise(mx * 0.28, mz * 0.28, 17) - 0.5) * 2 * op.wobble;
-      }
-      const t = op.edge > 0 ? 1 - smooth(d / op.edge) : d <= 1e-6 ? 1 : 0;
-      if (t <= 0) return;
-      const h = this.heights[i];
-      switch (op.mode) {
-        case "add":
-          this.heights[i] = h + (op.dy ?? 0) * t;
-          break;
-        case "set":
-          this.heights[i] = h + ((op.y ?? 0) - h) * t;
-          break;
-        case "max":
-          this.heights[i] = Math.max(h, h + ((op.y ?? 0) - h) * t);
-          break;
-        case "min":
-          this.heights[i] = Math.min(h, h + ((op.y ?? 0) - h) * t);
-          break;
-      }
-    });
+    // Only vertices within the shape's reach (size + edge + wobble) can change, so visit just that box.
+    const reach = Math.max(0, op.edge ?? 0) + (op.wobble ?? 0) + 1;
+    const x0 = op.x - (op.shape === "circle" ? (op.r ?? 1) : 0) - reach;
+    const z0 = op.z - (op.shape === "circle" ? (op.r ?? 1) : 0) - reach;
+    const x1 = op.x + (op.shape === "circle" ? (op.r ?? 1) : (op.w ?? 1)) + reach;
+    const z1 = op.z + (op.shape === "circle" ? (op.r ?? 1) : (op.h ?? 1)) + reach;
+    this.eachVertex(
+      (vx, vz, i) => {
+        let d: number;
+        if (op.shape === "circle") {
+          d = Math.hypot(vx - op.x, vz - op.z) - (op.r ?? 1);
+        } else {
+          const x1 = op.x + (op.w ?? 1);
+          const z1 = op.z + (op.h ?? 1);
+          const dx = Math.max(op.x - vx, 0, vx - x1);
+          const dz = Math.max(op.z - vz, 0, vz - z1);
+          d = dx > 0 || dz > 0 ? Math.hypot(dx, dz) : -Math.min(vx - op.x, x1 - vx, vz - op.z, z1 - vz);
+        }
+        if (op.wobble) {
+          const [mx, mz] = this.canon(vx, vz);
+          d += (valueNoise(mx * 0.28, mz * 0.28, 17) - 0.5) * 2 * op.wobble;
+        }
+        const t = op.edge > 0 ? 1 - smooth(d / op.edge) : d <= 1e-6 ? 1 : 0;
+        if (t <= 0) return;
+        const h = this.heights[i];
+        switch (op.mode) {
+          case "add":
+            this.heights[i] = h + (op.dy ?? 0) * t;
+            break;
+          case "set":
+            this.heights[i] = h + ((op.y ?? 0) - h) * t;
+            break;
+          case "max":
+            this.heights[i] = Math.max(h, h + ((op.y ?? 0) - h) * t);
+            break;
+          case "min":
+            this.heights[i] = Math.min(h, h + ((op.y ?? 0) - h) * t);
+            break;
+        }
+      },
+      x0,
+      z0,
+      x1,
+      z1,
+    );
   }
 
   private fill(r: Rect, fn: (i: number) => void): void {

@@ -109,9 +109,23 @@ export function buildGates(mf: MapFx, slots: GateSlot[]): void {
     mf.root.add(new THREE.Mesh(m, stone));
   }
 }
+/** Built lockdown barricades per map layout: they only depend on the map, so swapping worlds reuses them. */
+const lockCache = new Map<
+  string,
+  { root: THREE.Group; posts: [number, number, number][]; mids: [number, number, number, number, number][] }
+>();
+
 export function buildLockGates(mf: MapFx, list: LockGate[]): void {
   const w = mf.world;
   const t = w.terrain;
+  const key = `${t.width}x${t.depth}:${JSON.stringify(list.map((l) => l.segs))}`;
+  const hit = lockCache.get(key);
+  if (hit) {
+    const root = hit.root.clone();
+    mf.root.add(root);
+    mf.lock = { root, posts: hit.posts, mids: hit.mids, warn: -1, done: false, acc: 0 };
+    return;
+  }
   const wood = new THREE.MeshLambertMaterial({ map: texture(planksUrl, 1), color: 0xd8b494 });
   const dark = new THREE.MeshLambertMaterial({ map: texture(planksUrl, 1), color: 0x8a6448 });
   const iron = new THREE.MeshLambertMaterial({ map: texture(ironUrl, 1), color: 0x6a6a78 });
@@ -210,6 +224,7 @@ export function buildLockGates(mf: MapFx, list: LockGate[]): void {
   add(darkG, dark);
   add(ironG, iron);
   add(stoneG, stone);
+  lockCache.set(key, { root: root.clone(), posts, mids });
   mf.root.add(root);
   mf.lock = { root, posts, mids, warn: -1, done: false, acc: 0 };
 }

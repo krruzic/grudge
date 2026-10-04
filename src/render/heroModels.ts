@@ -185,6 +185,22 @@ export function buildHulls(root: THREE.Object3D, mat: THREE.Material, order: num
   });
 }
 
+/**
+ * Culling sphere for a skinned hero mesh: the bind-pose bounds, padded for animation, shared per geometry.
+ * (Left unset, three.js skins every vertex on the CPU to compute it the first time a new hero is drawn.)
+ */
+const skinSpheres = new WeakMap<THREE.BufferGeometry, THREE.Sphere>();
+function skinnedBounds(g: THREE.BufferGeometry): THREE.Sphere {
+  let s = skinSpheres.get(g);
+  if (!s) {
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    s = g.boundingSphere!.clone();
+    s.radius *= 1.6;
+    skinSpheres.set(g, s);
+  }
+  return s;
+}
+
 export class HeroModels {
   private gltfs = new Map<string, GLTF>();
 
@@ -255,6 +271,9 @@ export class HeroModels {
       });
     }
     addOutline(body);
+    body.traverse((o) => {
+      if (o instanceof THREE.SkinnedMesh && !o.boundingSphere) o.boundingSphere = skinnedBounds(o.geometry);
+    });
     root.add(blobShadow(), body, footRing(mark), playerTag(label, mark));
     return { root, body, mixer, actions };
   }

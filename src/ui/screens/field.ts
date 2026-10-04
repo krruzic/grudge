@@ -22,8 +22,8 @@ import {
 import type { Screens } from "../screens";
 import { BROWN, MODE_NAME, shortMapName } from "./common";
 
-/** Tower pads per map name (needs a Terrain parse, so computed once). */
-const padCounts = new Map<string, number>();
+/** Tower pads per map name (needs a Terrain parse; primed at load by the app so picking a field never parses). */
+export const padCounts = new Map<string, number>();
 
 export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, H: number): void {
   boardBg(ctx, W, H);
@@ -115,8 +115,18 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
     ctx.fillStyle = "#2a1a0a";
     ctx.fillRect(4, 4, tw + 2, th + 2);
     if (k < pool.length) {
-      const t = s.portraits?.mapThumb(pool[k], tw * 4, th * 4);
-      if (t) smoothImage(ctx, t, 5, 5, tw, th);
+      const t = s.portraits?.mapCard(pool[k]);
+      if (t) {
+        // Cover-crop the fixed-size thumb to this card's aspect.
+        const a = tw / th;
+        const sw = Math.min(t.width, t.height * a);
+        const sh = sw / a;
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(t, (t.width - sw) / 2, (t.height - sh) / 2, sw, sh, 5, 5, tw, th);
+        ctx.restore();
+      }
     } else {
       texturedRect(ctx, "parch", 5, 5, tw, th, "#c8a878", 0, 1);
       drawPlain(ctx, "?", 5 + tw / 2 - textWidth("?", 2.4, true) / 2, 5 + th / 2 - 13, "#5a3a18", 2.4, true);

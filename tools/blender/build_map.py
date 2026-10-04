@@ -74,7 +74,7 @@ TRIPO = {
 }
 # Emberdune Spires (moonlit desert canyon).
 TRIPO.update({
-    "spire": {"size": (2.4, 2.4, 6.2), "faces": 700, "lo": 260, "maps": ("spires",)},
+    "spire": {"size": (2.4, 2.4, 6.2), "faces": 700, "lo": 260, "maps": ("spires",), "grade": (0.55, (0.86, 0.8, 0.82))},
     "ribcage": {"size": (4.6, 6.5, 3.4), "faces": 900, "maps": ("spires",)},
     "colossus": {"size": (4.2, 3.6, 3.4), "faces": 1000, "maps": ("spires",)},
     "obelisk": {"size": (1.4, 1.4, 4.4), "faces": 500, "maps": ("spires",)},
@@ -211,7 +211,7 @@ DESERT = MAP_NAME == "spires"
 
 
 def autumn_image(name, img):
-    if DESERT and img is not None and name in ("ruinstone", "brick", "ruin_a", "ruin_b", "ruin_c", "ruin_d", "ruintop", "rubble"):
+    if DESERT and img is not None and name in ("ruinstone", "brick", "cobble", "ruin_a", "ruin_b", "ruin_c", "ruin_d", "ruintop", "rubble"):
         # Grey castle stone -> warm banded sandstone for the canyon ruins.
         px = list(img.pixels)
         for i in range(0, len(px), 4):
@@ -447,6 +447,16 @@ def load_tripo(name, cfg):
     me.transform(Matrix.Diagonal((sx, sy, sz, 1.0)) @ Matrix.Translation((-cx, -cy, -lo.z)))
     mname = cfg.get("mat", "mp_" + name)
     img = tripo_image(src, mname, cfg.get("gain", 1.0))
+    if cfg.get("grade"):
+        # Pull a too-saturated prop toward the map palette: desaturate by `sat`, then multiply by `mul`.
+        sat, mul = cfg["grade"]
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            lum = 0.3 * px[i] + 0.55 * px[i + 1] + 0.15 * px[i + 2]
+            for k in range(3):
+                px[i + k] = min(1.0, (lum + (px[i + k] - lum) * sat) * mul[k])
+        img.pixels.foreach_set(px)
+        img.pack()
     tpl = {"mat": mname, "hi": tripo_tris(src)}
     if cfg.get("inlay"):
         tpl["inlay"] = cfg["inlay"]

@@ -37,6 +37,20 @@ const STAGE_W = 224;
 const STAGE_H = 288;
 const NEUTRAL = new THREE.Color("#c8a040");
 
+/** Size of the field-select card thumbs (pre-shot in setMaps). */
+const CARD_W = 640;
+const CARD_H = 360;
+
+/** Per-map preview lighting (from the map's atmosphere, relative to the default render config). */
+export interface MapLight {
+  sunColor: string;
+  sunScale: number;
+  ambientSky: string;
+  ambientGround: string;
+  ambientScale: number;
+  sky: string;
+}
+
 export class Portraits {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -44,7 +58,7 @@ export class Portraits {
   private icons = new Map<string, HTMLCanvasElement>();
   private stages = new Map<number, Stage>();
   private last = performance.now() / 1000;
-  private maps: { root: THREE.Object3D; w: number; d: number }[] = [];
+  private maps: { root: THREE.Object3D; w: number; d: number; light?: MapLight }[] = [];
   private thumbs = new Map<number, HTMLCanvasElement>();
   // Live previews are rewritten from WebGL every frame, so they stay GPU-backed (no readback); the static
   // shots below are cacheCanvas (CPU) since they are painted once.
@@ -58,10 +72,12 @@ export class Portraits {
     this.renderer.setPixelRatio(1);
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    const sun = new THREE.DirectionalLight("#fff0d0", 2.6);
-    sun.position.set(-2, 4, 5);
-    this.scene.add(sun, new THREE.HemisphereLight("#b8d4ff", "#6a5a3a", 1.6));
+    this.sun.position.set(-2, 4, 5);
+    this.scene.add(this.sun, this.hemi);
   }
+
+  private sun = new THREE.DirectionalLight("#fff0d0", 2.6);
+  private hemi = new THREE.HemisphereLight("#b8d4ff", "#6a5a3a", 1.6);
 
   private pose(
     type: string,
@@ -300,10 +316,32 @@ export class Portraits {
     }
   }
 
-  setMaps(list: { root: THREE.Object3D; width: number; depth: number }[]): void {
-    this.maps = list.map((m) => ({ root: m.root.clone(true), w: m.width, d: m.depth }));
+  setMaps(list: { root: THREE.Object3D; width: number; depth: number; light?: MapLight }[]): void {
+    this.maps = list.map((m) => ({ root: m.root.clone(true), w: m.width, d: m.depth, light: m.light }));
     this.thumbs.clear();
     this.tops?.clear();
+    // Warm-up: render every map once now (while loading) so shader compiles and texture uploads don't land as a
+    // hitch the first time the field screen shows a map.
+    // The field-select card thumbs are shot here too (fixed size), so switching modes never reads back pixels.
+    const scratch = document.createElement("canvas");
+    for (let i = 0; i < this.maps.length; i++) {
+      this.shootMap(i, 16, 16, 0, 60, 1.05, scratch);
+      this.mapThumb(i, CARD_W, CARD_H);
+    }
+  }
+
+  /** Field-select card thumb: one fixed-size shot per map (cropped to the card by the caller). */
+  mapCard(i: number): HTMLCanvasElement {
+    return this.mapThumb(i, CARD_W, CARD_H);
+  }
+
+  /** Light a map preview like the match (night, dusk...): the map's own sun/sky colours, at portrait strength. */
+  private lightFor(l: MapLight | undefined): void {
+    this.sun.color.set(l?.sunColor ?? "#fff0d0");
+    this.sun.intensity = 2.6 * (l?.sunScale ?? 1);
+    this.hemi.color.set(l?.ambientSky ?? "#b8d4ff");
+    this.hemi.groundColor.set(l?.ambientGround ?? "#6a5a3a");
+    this.hemi.intensity = 1.6 * (l?.ambientScale ?? 1);
   }
 
   private shootMap(
@@ -330,8 +368,10 @@ export class Portraits {
     this.camera.lookAt(c.x, 0, c.z);
     this.camera.near = dist * 0.1;
     this.camera.far = dist * 4;
-    this.renderer.setClearColor("#9cc4ec", 1);
+    this.renderer.setClearColor(m.light?.sky ?? "#9cc4ec", 1);
+    this.lightFor(m.light);
     this.shoot(m.root, w, h, out);
+    this.lightFor(undefined);
     this.renderer.setClearColor(0x000000, 0);
     this.camera.near = 0.1;
     this.camera.far = 50;

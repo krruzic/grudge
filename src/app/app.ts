@@ -4,6 +4,7 @@
 // long-lived subsystem: renderer, UI canvas + HUD + screens + menus, input, audio, save data and the net session.
 // Controllers are plain functions over this object (select.ts, lobby.ts, match.ts, states.ts, net.ts, loop.ts)
 // so that state which used to be closure `let`s inside one giant start() lives in exactly one place.
+import { padCounts } from "../ui/screens/field";
 import * as THREE from "three";
 import { World } from "../sim/world";
 import { MapFx } from "../render/map/mapFx";
@@ -165,10 +166,23 @@ export class App {
       assets.mapViews.map((mv, i) => {
         const g = new THREE.Group();
         g.add(mv.root.clone(true));
-        const mf = new MapFx(new World(maps[i].data, data, 1));
+        const mw = new World(maps[i].data, data, 1);
+        padCounts.set(maps[i].data.name ?? "", mw.terrain.pads.length);
+        const mf = new MapFx(mw);
         mf.sync(0, 1);
         g.add(mf.root);
-        return { root: g, width: maps[i].data.width, depth: maps[i].data.depth };
+        const a = maps[i].data.atmosphere as Record<string, string | number> | undefined;
+        const rc = renderConfig as unknown as Record<string, string | number>;
+        const pick = (k: string) => (a?.[k] ?? rc[k]) as string;
+        const light = a && {
+          sunColor: pick("sunColor"),
+          sunScale: Number(pick("sunIntensity")) / Number(rc.sunIntensity),
+          ambientSky: pick("ambientSky"),
+          ambientGround: pick("ambientGround"),
+          ambientScale: Number(pick("ambientIntensity")) / Number(rc.ambientIntensity),
+          sky: pick("skyHorizon"),
+        };
+        return { root: g, width: maps[i].data.width, depth: maps[i].data.depth, light };
       }),
     );
     this.screens.portraits = portraits;
@@ -241,6 +255,35 @@ export class App {
   }
 
   // ── Worlds ──
+
+  /**
+   * Boot rehearsal (behind the loading overlay): shows every field once with champions cycling through the whole
+   * roster and draws a frame of each, so shader compiles, texture/geometry uploads and the reusable view caches
+   * happen now instead of as a hitch the first time the menu backdrop swaps to a field.
+   */
+  rehearse(): void {
+    const keep = { map: this.mapIndex, seed: this.seed, world: this.world };
+    let h = 0;
+    for (let k = 1; k <= maps.length; k++) {
+      this.mapIndex = (keep.map + k) % maps.length;
+      const n = houses(this.mapIndex) === 4 ? 4 : 2;
+      const w = this.newWorld(
+        Array.from({ length: n }, () => roster[h++ % roster.length]),
+        n,
+        false,
+        true,
+      );
+      this.show(w);
+      this.view.render(0, 1 / 60);
+    }
+    while (h < roster.length) {
+      this.show(this.newWorld([roster[h++ % roster.length], roster[h++ % roster.length]]));
+      this.view.render(0, 1 / 60);
+    }
+    this.mapIndex = keep.map;
+    this.seed = keep.seed;
+    this.show(keep.world);
+  }
 
   /**
    * Builds a world on the current map (attract mode / `?bots` debug matches). Slots past the first two play the

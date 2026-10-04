@@ -82,7 +82,11 @@ export function markSilhouette(obj: THREE.Object3D, team: number): void {
     const proxy = skinned
       ? new THREE.SkinnedMesh(o.geometry, silMat(team, true))
       : new THREE.Mesh(o.geometry, silMat(team, false));
-    if (proxy instanceof THREE.SkinnedMesh && o instanceof THREE.SkinnedMesh) proxy.bind(o.skeleton, o.bindMatrix);
+    if (proxy instanceof THREE.SkinnedMesh && o instanceof THREE.SkinnedMesh) {
+      proxy.bind(o.skeleton, o.bindMatrix);
+      // Share the source's culling sphere (else three.js skins every vertex on the CPU to compute one).
+      if (o.boundingSphere) proxy.boundingSphere = o.boundingSphere;
+    }
     proxy.userData.silProxy = true;
     proxy.frustumCulled = o.frustumCulled;
     proxy.matrixAutoUpdate = false;
