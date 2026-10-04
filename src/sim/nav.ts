@@ -1,3 +1,7 @@
+// NavGrid: walkability and A* pathfinding on the terrain cell grid (one node per cell, 8-connected). A cell is
+// walkable when its ground isn't solid/deep and its local slope is gentle; `blocked` is a reference count of
+// structures standing on it. Paths are cached per (start, goal) cell pair and simplified with line-of-walk checks;
+// every terrain/blocking change clears the caches, so results only depend on current world state (deterministic).
 import { Kind, type Terrain } from "./terrain.ts";
 import type { Vec2 } from "./types.ts";
 
@@ -26,6 +30,7 @@ const SLOPE_SAMPLES: [number, number][] = [
   [0.42, -0.42],
   [-0.42, -0.42],
 ];
+/** Max sampled slope for a cell to be walkable for path planning / straight-line checks. */
 const PLAN_SLOPE = 0.9;
 const LINE_SLOPE = 0.95;
 
@@ -95,6 +100,7 @@ export class NavGrid {
     this.cost[i] = t.kinds[i] === Kind.Ford ? 1.8 : t.kinds[i] === Kind.Water ? 3.5 : 1;
   }
 
+  /** Re-evaluate walkability of changed cells (and their neighbours) after a terrain edit; clears caches. */
   recompute(cells: number[]): void {
     this.region = null;
     this.cache.clear();
@@ -123,12 +129,14 @@ export class NavGrid {
     return i >= 0 && this.walk[i] === 1 && this.blocked[i] === 0;
   }
 
+  /** Step between two open cells is allowed (height difference within step/slope limits). */
   passable(a: number, b: number): boolean {
     if (!this.open(a) || !this.open(b)) return false;
     const flat = this.t.kinds[a] === Kind.Bridge || this.t.kinds[b] === Kind.Bridge;
     return Math.abs(this.h[a] - this.h[b]) <= (flat ? this.maxStep * 0.85 : this.maxSlope + 0.1);
   }
 
+  /** Add/remove a structure footprint (blocked counts stack so overlapping footprints release correctly). */
   setBlocked(x: number, z: number, r: number, on: boolean): void {
     for (let cz = Math.floor(z - r); cz <= Math.floor(z + r); cz++) {
       for (let cx = Math.floor(x - r); cx <= Math.floor(x + r); cx++) {
@@ -143,6 +151,7 @@ export class NavGrid {
     }
   }
 
+  /** Nearest open cell index within maxR (optionally preferring cells near height y), or -1. */
   nearestOpen(x: number, z: number, maxR = 8, y?: number): number {
     const cx0 = Math.floor(x);
     const cz0 = Math.floor(z);
@@ -167,6 +176,7 @@ export class NavGrid {
     return -1;
   }
 
+  /** Straight walk from a to b stays on open, passable cells (memoised). */
   lineClear(a: Vec2, b: Vec2): boolean {
     if (
       a.x - Math.floor(a.x) === 0.5 &&
@@ -271,6 +281,7 @@ export class NavGrid {
     return top;
   }
 
+  /** Whether the last findPath reached its goal (false = partial path toward it / no path). */
   lastFound = true;
 
   private region: Int32Array | null = null;
@@ -307,6 +318,7 @@ export class NavGrid {
     return r;
   }
 
+  /** Same connected region (flood-filled lazily, cached until the grid changes). */
   reachable(from: Vec2, to: Vec2): boolean {
     const a = this.nearestOpen(from.x, from.z, 3);
     const b = this.nearestOpen(to.x, to.z, 3);
@@ -315,6 +327,7 @@ export class NavGrid {
     return r[a] === r[b];
   }
 
+  /** lineClear for a body of radius r (centre line plus both offset edges). */
   wideClear(a: Vec2, b: Vec2, r: number): boolean {
     if (!this.lineClear(a, b)) return false;
     const dx = b.x - a.x;
@@ -328,6 +341,10 @@ export class NavGrid {
     );
   }
 
+  /**
+   * A* from `from` to `to` (both snapped to open cells; start prefers cells near fromY). Returns waypoints
+   * shortened by skipping ahead up to 12 cells while the straight line (or wide line for radius > 0) is clear.
+   */
   findPath(from: Vec2, to: Vec2, fromY?: number, radius = 0): Vec2[] | null {
     this.lastFound = false;
     let start = this.index(Math.floor(from.x), Math.floor(from.z));

@@ -1,3 +1,6 @@
+// GameData: the static balance/config tables loaded from data/*.json (heroes, units, structures, match, talents).
+// The sim treats it as read-only; abilities are data-driven (AbilityDef.kind selects code in hero/kinds/*, other
+// fields are tunables, `fx` carries talent-added behaviour flags, `bot` hints drive bot usage).
 import type { StructureType, TargetClass, UnitType } from "./types.ts";
 
 export interface HitDef {

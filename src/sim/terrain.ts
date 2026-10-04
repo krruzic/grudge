@@ -1,3 +1,8 @@
+// Terrain: the playable map built from MapData (data/maps/*.json). Heights live on a (width+1) x (depth+1) vertex
+// grid; each cell has a Kind (ground/wall/water/ford/bridge/prop), flag bits (grass, dirt, paving, deep water,
+// tide) and a style string used by rendering and some rules ("castle", "gate", "lockgate", "works", "pit"...).
+// Map ops (shapes, noise, cell rects) are applied in order and mirrored by the map's symmetry. Terrain is shared
+// by sim and renderer; the sim mutates kinds/deck/styles for temporary mods (walls, ramps, gates, tide).
 export interface Rect {
   x: number;
   z: number;
@@ -157,6 +162,7 @@ export class Terrain {
   readonly outposts: boolean;
   readonly lantern?: unknown;
 
+  /** How the map is mirrored (used to mirror map ops, surround scenery and gate/lane layouts). */
   get symmetry(): "x" | "diag" | "rot" | "quad" | "none" {
     return this.mirror;
   }
@@ -459,6 +465,7 @@ export class Terrain {
     return this.heights[vz * (this.width + 1) + vx];
   }
 
+  /** Bilinear-on-triangles interpolation of the vertex grid (ignores kinds). */
   groundHeight(x: number, z: number): number {
     const cx = Math.min(this.width - 1, Math.max(0, Math.floor(x)));
     const cz = Math.min(this.depth - 1, Math.max(0, Math.floor(z)));
@@ -472,6 +479,7 @@ export class Terrain {
     return h11 + (h01 - h11) * (1 - fx) + (h10 - h11) * (1 - fz);
   }
 
+  /** Standable height at a point: +Infinity for walls/props/deep water, deck for bridges, water surface floor. */
   heightAt(x: number, z: number): number {
     const cx = Math.floor(x);
     const cz = Math.floor(z);
@@ -483,6 +491,7 @@ export class Terrain {
     return this.groundHeight(x, z);
   }
 
+  /** Local slope of heightAt; siege-works edges are ignored so platform rims don't count as cliffs. */
   slopeAt(x: number, z: number, r = 0.35): number {
     const c = this.heightAt(x, z);
     if (!Number.isFinite(c)) return Number.POSITIVE_INFINITY;

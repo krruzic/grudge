@@ -23,18 +23,17 @@ export {
 export { fireMissile, updateMissiles } from "./talents/missiles.ts";
 export { afterMelee, afterShot, bCooldown, frenzySpeed, meleeMods, onBUse, onKill } from "./talents/triggers.ts";
 
-type Slot = "a" | "b" | "r" | "z";
-
+/** Ability slots: basic attack, secondary, special, super. */
 export type TSlot = "a" | "b" | "r" | "z";
-
-export const TSLOTS: TSlot[] = ["r", "b", "a", "z"];
+/** Order talents are applied in (R, B, A, then super). */
+const TSLOTS: TSlot[] = ["r", "b", "a", "z"];
 
 function treeOf(w: World, type: string): Partial<Record<TSlot, TalentDef[]>> | undefined {
   return w.data.talents?.heroes[type];
 }
 
 /** The hero's effective abilities: base definitions with learned talents applied (cached in hero.ab). */
-export function abilities(w: World, e: Entity): Record<Slot, AbilityDef> {
+export function abilities(w: World, e: Entity): Record<TSlot, AbilityDef> {
   return e.hero!.ab ?? w.heroDef(e.hero!.type).abilities;
 }
 
@@ -87,7 +86,7 @@ function apply(
 export function recompute(w: World, e: Entity): void {
   const h = e.hero!;
   const base = w.heroDef(h.type).abilities;
-  const out = { ...base } as Record<Slot, AbilityDef>;
+  const out = { ...base } as Record<TSlot, AbilityDef>;
   const got = new Set(allLearned(w, e).map((t) => t.id));
   for (const s of TSLOTS) for (const t of learned(w, e, s)) out[s] = apply(out[s], t);
   for (const s of TSLOTS) {

@@ -147,7 +147,6 @@ export class World {
         resource: data.match.economy.start,
         grain: data.match.economy.grain?.start ?? 0,
         coreId: 0,
-        homeLost: false,
         directives: {
           grunt: "push",
           ranged: "push",
@@ -164,7 +163,6 @@ export class World {
         unitCount: 0,
         commanderOrderAt: -99,
         banner: null,
-        callReadyAt: 0,
         wardReadyAt: 0,
       });
     }
@@ -392,8 +390,6 @@ export class World {
       respawnAt: 0,
       lastTargetId: 0,
       lastTargetAt: -99,
-      anim: "idle",
-      animStart: 0,
       stepHeight: def.hooks.stepHeight ?? b.stepHeight,
       maxSlope: def.hooks.maxSlope ?? b.maxSlope,
     };

@@ -1,3 +1,7 @@
+// Core simulation data types: entities (hero/unit/structure share one Entity shape with optional parts), their
+// per-entity Status, transient world objects (projectiles, missiles, traps, zones, terrain mods), team state,
+// player Commands (the only sim input) and SimEvents (the only sim output besides state, consumed by fx/audio).
+// All times are absolute sim seconds (World.time); "...Until" fields are expiry times.
 import type { AbilityDef } from "./config.ts";
 export interface Vec2 {
   x: number;
@@ -7,19 +11,11 @@ export interface Vec2 {
 export type UnitType = "grunt" | "ranged" | "heavy";
 export const UNIT_TYPES: UnitType[] = ["grunt", "ranged", "heavy"];
 export type StructureType = "damage" | "control" | "support" | "barracks" | "range" | "foundry" | "outpost";
-export const STRUCTURE_TYPES: StructureType[] = [
-  "damage",
-  "control",
-  "support",
-  "barracks",
-  "range",
-  "foundry",
-  "outpost",
-];
 export type Directive = "push" | "hold" | "follow" | "nearest" | "focus" | "defend";
 export type TargetClass = UnitType | "hero" | "structure";
 export type PadZone = "home" | "forward" | "neutral";
 
+/** Position on the ground plane (x, z) plus height y; prev* are last tick's values for render interpolation. */
 export interface Transform {
   pos: Vec2;
   prevPos: Vec2;
@@ -29,6 +25,7 @@ export interface Transform {
   prevFacing: number;
 }
 
+/** Timed effects and per-tick derived flags (see world/status.ts for defaults). kvx/kvz = knockback velocity. */
 export interface Status {
   slowUntil: number;
   slowMul: number;
@@ -47,6 +44,7 @@ export interface Status {
   hurtAt?: number;
   lastHitX: number;
   lastHitZ: number;
+  /** Recomputed every tick by world/vision.ts; seenBy is a bitmask of teams that can still see a hidden entity. */
   hidden: boolean;
   seenBy: number;
   supportDamageMul: number;
@@ -84,6 +82,7 @@ export interface Status {
   brewMul?: number;
 }
 
+/** Marksman's hawk (hero/marksman.ts). */
 export interface PipState {
   target: number;
   phase: "out" | "on" | "back";
@@ -99,6 +98,7 @@ export interface PipState {
   intAt: number;
 }
 
+/** Friar keg in flight / fused on the ground (hero/friar.ts). */
 export interface Keg {
   id: number;
   ownerId: number;
@@ -117,6 +117,11 @@ export interface Keg {
   mul: number;
 }
 
+/**
+ * The hero's current timed action (attack swing, ability, dodge, flinch...). `t` advances each tick; the effect
+ * fires once when t >= hitAt (hero/fire.ts) and the action ends at dur. `kind` selects the behaviour; `name` is
+ * the input slot that started it. Optional fields are kind-specific scratch state.
+ */
 export interface HeroAction {
   name: "a" | "b" | "r" | "z" | "dodge" | "hit" | "shove";
   t: number;
@@ -143,6 +148,7 @@ export interface HeroAction {
   stick?: boolean;
 }
 
+/** Hero-only state: input/action machine, cooldowns (absolute ready times), progression and per-hero mechanics. */
 export interface HeroState {
   type: string;
   player: number;
@@ -193,8 +199,6 @@ export interface HeroState {
   grave?: { id: number; until: number };
   lastTargetId: number;
   lastTargetAt: number;
-  anim: string;
-  animStart: number;
   stepHeight: number;
   maxSlope: number;
   openingUntil: number;
@@ -284,6 +288,7 @@ export interface StructureState {
   cask?: boolean;
 }
 
+/** Anything with a body: exactly one of hero / unit / structure is set (matching `kind`). */
 export interface Entity {
   id: number;
   dummy?: boolean;
@@ -349,6 +354,7 @@ export interface Delayed {
   hexSeconds?: number;
 }
 
+/** Temporary terrain edit (wall/ramp/works); prev* hold the replaced cell data for reverting. */
 export interface TerrainMod {
   id: number;
   kind: "ramp" | "wall" | "works";
@@ -366,6 +372,7 @@ export interface TerrainMod {
   until: number;
 }
 
+/** Straight-line missile (talents/missiles.ts). */
 export interface Missile {
   id: number;
   ownerId: number;
@@ -410,6 +417,7 @@ export interface Boomerang {
   range: number;
 }
 
+/** Homing or point-targeted projectile with flight time `dur`; t goes 0..1 (world/projectiles.ts). */
 export interface Projectile {
   id: number;
   team: number;
@@ -456,6 +464,7 @@ export const FORMATIONS: Formation[] = ["mass", "column", "line", "wedge"];
 
 export const TEAM_NAMES = ["BLUE", "RED", "YELLOW", "GREEN"];
 
+/** Per-team economy, directives, stats and timers. */
 export interface TeamState {
   out?: boolean;
   resource: number;
@@ -464,7 +473,6 @@ export interface TeamState {
   idleAt?: number;
   spawnHalt?: boolean;
   coreId: number;
-  homeLost: boolean;
   directives: TeamDirectives;
   attackTeam?: number;
   lane?: number;
@@ -479,13 +487,13 @@ export interface TeamState {
   commanderOrderAt: number;
   banner: { x: number; z: number; until: number } | null;
   formation?: Formation;
-  callReadyAt: number;
   wardReadyAt: number;
   bombReadyAt?: number;
 }
 
 export type ShopItem = "bomb" | "ward" | "cannon";
 
+/** One player's input for one tick. Must be plain, serialisable data: lockstep peers exchange these. */
 export interface Command {
   moveX: number;
   moveZ: number;
@@ -510,6 +518,7 @@ export interface Command {
   formation?: boolean;
 }
 
+/** Events emitted during a tick for presentation (fx, audio, notices). The sim never reads them back. */
 export type SimEvent =
   | {
       type: "hit";
