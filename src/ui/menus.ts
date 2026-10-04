@@ -1,7 +1,7 @@
-import { drawPlain, drawText, onHiLayer, textWidth } from "./font";
+import { drawPlain, drawText, textWidth } from "./font";
 import {
   artTitle,
-  hiImage,
+  smoothImage,
   boardBg,
   band,
   banner,
@@ -23,7 +23,7 @@ import {
   windowCut,
   woodDisc,
   woodFloor,
-} from "./n64ui";
+} from "./uiPaint";
 import { padButton, PAD, talentIcon } from "./hud";
 import { learned } from "../sim/talents";
 import { buildCodex, type CodexArt, type CodexEntry } from "./codex";
@@ -136,10 +136,10 @@ function artWord(
     return textWidth(fallback, 1.1, true);
   }
   const w = (im.width / im.height) * h;
-  onHiLayer(ctx, (t) => {
-    t.imageSmoothingEnabled = true;
-    t.drawImage(im, cx - w / 2, y, w, h);
-  });
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(im, cx - w / 2, y, w, h);
+  ctx.restore();
   ctx.globalAlpha = 1;
   return w;
 }
@@ -296,7 +296,7 @@ export class Menus {
           if (!e?.hero) continue;
           inset(ctx, x + 1, y, 20, 20, "#3a2a1c");
           const icon = this.portraits?.icon(p.heroType);
-          if (icon) hiImage(ctx, icon, x + 1, y, 20, 20);
+          if (icon) smoothImage(ctx, icon, x + 1, y, 20, 20);
           const nm = `P${p.player + 1} ${(this.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
           drawPlain(ctx, nm, x + 25, y, BROWN, 0.55, true);
           const lv = `LV ${e.hero.level ?? 1}`;
@@ -389,7 +389,7 @@ export class Menus {
         if (!e?.hero) continue;
         inset(ctx, x + 1, y, 18, 18, "#3a2a1c");
         const icon = this.portraits?.icon(p.heroType);
-        if (icon) hiImage(ctx, icon, x + 1, y, 18, 18);
+        if (icon) smoothImage(ctx, icon, x + 1, y, 18, 18);
         const nm = `P${p.player + 1} ${(this.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
         drawPlain(ctx, nm, x + 23, y, BROWN, 0.52, true);
         const lv = `LV ${e.hero.level ?? 1}`;
@@ -717,10 +717,10 @@ export class Menus {
       if (nm) {
         const h = 16;
         const w = (nm.width / nm.height) * h;
-        onHiLayer(ctx, (t) => {
-          t.imageSmoothingEnabled = true;
-          t.drawImage(nm, 14, ih + 20, w, h);
-        });
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(nm, 14, ih + 20, w, h);
+        ctx.restore();
       } else drawPlain(ctx, it.label, 14, ih + 20, BROWN, 1.3, true);
       wrap(it.blurb, pw - 70, 0.6)
         .slice(0, 3)
@@ -814,11 +814,11 @@ export class Menus {
           const h = hot ? 13 : 11;
           const w = Math.min(cw - 16, (nm.width / nm.height) * h);
           const hh = (w / nm.width) * nm.height;
-          onHiLayer(ctx, (t) => {
-            t.imageSmoothingEnabled = true;
-            t.globalAlpha = hot ? 1 : 0.75;
-            t.drawImage(nm, cw / 2 - w / 2, 84, w, hh);
-          });
+          ctx.save();
+          ctx.imageSmoothingEnabled = true;
+          ctx.globalAlpha = hot ? 1 : 0.75;
+          ctx.drawImage(nm, cw / 2 - w / 2, 84, w, hh);
+          ctx.restore();
         } else drawPlain(ctx, label, cw / 2 - textWidth(label, 0.8, true) / 2, 84, BROWN, 0.8, true);
         wrap(blurb, cw - 20, 0.5)
           .slice(0, 4)
@@ -1240,7 +1240,7 @@ export class Menus {
     if (this.focus >= this.scrollTop + vis) this.scrollTop = this.focus - vis + 1;
     const icon = (type: string, x: number, y: number, sz = 13) => {
       const im = this.portraits?.icon(type);
-      if (im) hiImage(ctx, im, x, y, sz, sz);
+      if (im) smoothImage(ctx, im, x, y, sz, sz);
     };
     const rowAt = (k: number, draw: (y: number, sel: boolean) => void) => {
       if (k < this.scrollTop || k >= this.scrollTop + vis) return;
@@ -1446,13 +1446,13 @@ export class Menus {
     if (art.kind !== "map") texturedRect(ctx, "cloth", x, y, w, h, bg, 0, 0.7);
     const P = this.portraits;
     if (art.kind === "portrait" && P) {
-      hiImage(ctx, P.actionShot(art.hero, "idle", 0.3, w * 4, h * 4), x, y, w, h);
+      smoothImage(ctx, P.actionShot(art.hero, "idle", 0.3, w * 4, h * 4), x, y, w, h);
     } else if (art.kind === "map" && P) {
       const im = P.mapThumb(art.index, w * 2, h * 2);
-      if (im) hiImage(ctx, im, x, y, w, h);
+      if (im) smoothImage(ctx, im, x, y, w, h);
     } else if (art.kind === "unit" && P) {
       const im = P.unitShot(art.type, w * 4, h * 4);
-      if (im) hiImage(ctx, im, x, y, w, h);
+      if (im) smoothImage(ctx, im, x, y, w, h);
     } else if (art.kind === "seal") waxSeal(ctx, x + w / 2, y + h / 2, Math.min(w, h) * 0.32, "#c8a020", art.glyph);
   }
 
@@ -1576,7 +1576,7 @@ export class Menus {
         const id =
           e2.cat === "HERALD" ? "herald" : this.roster.find((h) => (this.heroNames[h] ?? h).toUpperCase() === e2.title);
         const im = id ? this.portraits.icon(id) : null;
-        if (im) hiImage(ctx, im, x + 1, y, th, th);
+        if (im) smoothImage(ctx, im, x + 1, y, th, th);
       } else waxSeal(ctx, x + 7, y + th / 2, 4.5, sel ? "#a8141a" : "#6a3a2a", e2.glyph);
       drawPlain(ctx, r.label, x + 16, y + 2.5, sel ? "#8a1810" : BROWN, 0.55, true);
       y += th + gap;

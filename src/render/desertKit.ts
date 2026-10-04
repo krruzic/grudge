@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 export const DESERT_COSTUMES = new Set(["suntotem"]);
 
@@ -8,7 +9,7 @@ export function isDesert(costume: string | undefined): boolean {
 
 function cactusTexture(): THREE.CanvasTexture {
   const S = 128;
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = S;
   const g = c.getContext("2d")!;
   const ribs = 8;

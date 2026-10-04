@@ -1,15 +1,17 @@
+// HUD: the in-match overlay (clock, team panels, army orders, build cross, minimap, cards and banners), plus
+// UiCanvas, the single 2D canvas every screen, menu and HUD element is painted into.
 import type { World } from "../sim/world";
-import { fontLoaded, setTextLayer, textLayer } from "./font";
+import { fontLoaded } from "./font";
 import { TEAM_NAMES, UNIT_TYPES, type Directive, type Entity, type UnitType } from "../sim/types";
 import type { Portraits } from "./portraits";
-import { parchment, texturedRect, uiImagesReady, waxSeal } from "./n64ui";
-import { onHiLayer } from "./font";
+import { parchment, texturedRect, uiImagesReady, waxSeal } from "./uiPaint";
 import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
 import { costumeOfPlayer } from "../render/costumes";
 import { buildCost, canSpec, padNear, specCost } from "../sim/structures";
 import { drawNum, drawPlain, drawText, textWidth } from "./font";
 import { perf } from "../perf";
+import { cacheCanvas } from "./cacheCanvas";
 
 export const INK = "#0b0806";
 export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828", z: "#8a8a94", r: "#8a8a94" };
@@ -34,61 +36,54 @@ const MARGIN_Y = 10;
 
 type Frame = { x: number; y: number; w: number; h: number; right: boolean };
 
+// ── UI canvas ──
+// One canvas over the WebGL view at native resolution (CSS size × DPR, capped). All layout code works in a
+// logical space LOGICAL_H units tall (width follows the window aspect); begin() sets the context transform that
+// maps those units to device pixels, so shapes, images and text all rasterise at full resolution.
+// The backing store is re-fitted from the window size on every begin() (no resize events, nothing stale), and
+// nothing ever reads pixels back from it, so the browser keeps it GPU-accelerated.
+
+/** Logical UI height in layout units. */
+export const LOGICAL_H = 240;
+/** Highest backing-store height in device pixels (4K); beyond that the extra fill cost buys nothing visible. */
+const MAX_UI_PX = 2160;
+
 export class UiCanvas {
   readonly canvas: HTMLCanvasElement;
   readonly ctx: CanvasRenderingContext2D;
-  readonly hiCanvas: HTMLCanvasElement;
-  readonly hi: CanvasRenderingContext2D;
+  /** Logical size in layout units. */
   w = 427;
-  h = 240;
+  h = LOGICAL_H;
 
   constructor(parent: HTMLElement) {
     this.canvas = document.createElement("canvas");
     this.canvas.className = "hudui";
     parent.appendChild(this.canvas);
     this.ctx = this.canvas.getContext("2d")!;
-    this.hiCanvas = document.createElement("canvas");
-    this.hiCanvas.className = "hudui";
-    parent.appendChild(this.hiCanvas);
-    this.hi = this.hiCanvas.getContext("2d")!;
   }
 
-  realloc(): void {
-    for (const c of [this.canvas, this.hiCanvas]) {
-      const w = c.width;
-      c.width = 1;
-      c.width = w;
-    }
-  }
-
+  /** Fits the backing store to the window, clears it and returns the context in layout units. */
   begin(): CanvasRenderingContext2D {
-    const h = 240;
-    const w = Math.round((h * window.innerWidth) / window.innerHeight);
-    const scale = Math.min(4, Math.max(2, (window.innerHeight * (window.devicePixelRatio || 1)) / h));
-    const pw = Math.round(w * scale);
-    const ph = Math.round(h * scale);
-    if (w !== this.w || this.canvas.width !== pw || this.canvas.height !== ph) {
-      this.w = w;
-      this.h = h;
+    const dpr = window.devicePixelRatio || 1;
+    const ph = Math.max(1, Math.min(MAX_UI_PX, Math.round(window.innerHeight * dpr)));
+    const pw = Math.max(1, Math.round((ph * window.innerWidth) / window.innerHeight));
+    this.h = LOGICAL_H;
+    this.w = Math.round((LOGICAL_H * window.innerWidth) / window.innerHeight);
+    if (this.canvas.width !== pw || this.canvas.height !== ph) {
       this.canvas.width = pw;
       this.canvas.height = ph;
     }
-    this.ctx.setTransform(pw / w, 0, 0, ph / h, 0, 0);
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.globalAlpha = 1;
+    this.ctx.globalCompositeOperation = "source-over";
+    this.ctx.clearRect(0, 0, pw, ph);
+    this.ctx.setTransform(pw / this.w, 0, 0, ph / this.h, 0, 0);
     this.ctx.imageSmoothingEnabled = true;
-    this.ctx.clearRect(0, 0, this.w, this.h);
-    const hk = Math.min(8, Math.max(1, (window.innerHeight * (window.devicePixelRatio || 1)) / h));
-    const hw = Math.round(w * hk);
-    const hh = Math.round(h * hk);
-    if (this.hiCanvas.width !== hw || this.hiCanvas.height !== hh) {
-      this.hiCanvas.width = hw;
-      this.hiCanvas.height = hh;
-    }
-    this.hi.setTransform(1, 0, 0, 1, 0, 0);
-    this.hi.clearRect(0, 0, hw, hh);
-    setTextLayer(this.ctx, this.hi, hw / w, pw / w);
     return this.ctx;
   }
 }
+
+// ── Shared HUD primitives: boxes, meters, controller buttons ──
 
 export function box(
   ctx: CanvasRenderingContext2D,
@@ -194,6 +189,8 @@ export function padButton(
     drawText(ctx, label, x - textWidth(label, s) / 2, y - r * 0.68, dim ? "#a8a8b0" : "#ffffff", s);
   }
 }
+
+// ── Icons ──
 
 function cArrow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, ang: number, lit: boolean): void {
   ctx.save();
@@ -378,7 +375,7 @@ function stockIcon(hero: string, costume: string, grey = false): HTMLImageElemen
   if (!grey) return im;
   let c = stockGrey.get(im);
   if (!c) {
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     c.width = im.naturalWidth;
     c.height = im.naturalHeight;
     const g = c.getContext("2d")!;
@@ -422,7 +419,7 @@ function tintedIcon(id: string, color: string): HTMLCanvasElement | null {
   const key = `${id}|${color}`;
   let c = tinted.get(key);
   if (!c) {
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     c.width = im.naturalWidth;
     c.height = im.naturalHeight;
     const g = c.getContext("2d")!;
@@ -668,7 +665,7 @@ function scaledIcon(id: string, im: HTMLImageElement, px: number): HTMLCanvasEle
   const key = `${id}|${px}`;
   let c = iconBakes.get(key);
   if (!c) {
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     c.width = c.height = px;
     const g = c.getContext("2d")!;
     g.imageSmoothingEnabled = true;
@@ -691,7 +688,6 @@ export function talentIcon(
   y: number,
   size: number,
   dim = false,
-  low = false,
 ): void {
   const im = talentImgs.get(id);
   ctx.save();
@@ -699,20 +695,12 @@ export function talentIcon(
   ctx.fillRect(x - 1, y - 1, size + 2, size + 2);
   texturedRect(ctx, "stone", x, y, size, size, dim ? "#5a5048" : "#b8a888", 0, 0.5);
   if (im?.complete && im.naturalWidth) {
-    const a = dim ? 0.35 : 1;
-    const draw = low
-      ? (f: (c: CanvasRenderingContext2D) => void) => f(ctx)
-      : (f: (c: CanvasRenderingContext2D) => void) => onHiLayer(ctx, f);
-    draw((c) => {
-      c.save();
-      c.globalAlpha *= a;
-      c.imageSmoothingEnabled = true;
-      c.imageSmoothingQuality = "high";
-      const m = c.getTransform();
-      const px = Math.round(size * Math.hypot(m.a, m.b));
-      c.drawImage(px > 0 && !m.b && !m.c ? scaledIcon(id, im, px) : im, x, y, size, size);
-      c.restore();
-    });
+    ctx.globalAlpha *= dim ? 0.35 : 1;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    const m = ctx.getTransform();
+    const px = Math.round(size * Math.hypot(m.a, m.b));
+    ctx.drawImage(px > 0 && !m.b && !m.c ? scaledIcon(id, im, px) : im, x, y, size, size);
   } else {
     ctx.fillStyle = dim ? "#6a6058" : "#ffe890";
     ctx.beginPath();
@@ -735,6 +723,9 @@ function hudWrap(s: string, width: number, scale: number): string[] {
   if (line) out.push(line);
   return out;
 }
+
+// ── Hud ──
+// update() digests sim events into banners/cards/notices; draw() paints the whole overlay each frame.
 
 export class Hud {
   private visible = false;
@@ -929,17 +920,16 @@ export class Hud {
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
     this.crossN = 0;
     if (this.split >= 2) {
-      onHiLayer(ctx, (g) => {
-        const m = g.getTransform();
-        g.save();
-        g.setTransform(1, 0, 0, 1, 0, 0);
-        g.fillStyle = INK;
-        const pw = Math.round(W * m.a);
-        const ph = Math.round(H * m.d);
-        g.fillRect(Math.floor(pw / 2), 0, 1, ph);
-        if (this.split >= 3) g.fillRect(0, Math.floor(ph / 2), pw, 1);
-        g.restore();
-      });
+      // Split dividers: exactly one device pixel wide.
+      const m = ctx.getTransform();
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = INK;
+      const pw = Math.round(W * m.a);
+      const ph = Math.round(H * m.d);
+      ctx.fillRect(Math.floor(pw / 2), 0, 1, ph);
+      if (this.split >= 3) ctx.fillRect(0, Math.floor(ph / 2), pw, 1);
+      ctx.restore();
     }
     const bannerOn = !!this.banner && now < this.bannerUntil;
     this.bannerLineY = MARGIN_Y + (w.match.phase === "sudden" || (w.mapEvents.locked && !w.training) ? 27 : 19);
@@ -1048,6 +1038,8 @@ export class Hud {
     }
   }
 
+  // ── Panels: standings, player panels, banners, cards, stocks ──
+
   private drawStandings(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -1088,10 +1080,11 @@ export class Hud {
   private dense = false;
   rectOf: ((player: number) => { x: number; y: number; w: number; h: number } | null) | null = null;
 
-  private memos = new Map<
-    string,
-    { low: HTMLCanvasElement; hi: HTMLCanvasElement; key: string; out: number; at: number[] }
-  >();
+  // ── Memo ──
+  // Panels whose content changes rarely (team panels, standings) are painted once into their own canvas at the
+  // UI canvas's device scale and blitted 1:1 until their key changes. Skipped when the context is rotated or
+  // faded, where a 1:1 blit would not line up.
+  private memos = new Map<string, { c: HTMLCanvasElement; key: string; out: number }>();
 
   private memo(
     ctx: CanvasRenderingContext2D,
@@ -1103,58 +1096,36 @@ export class Hud {
     h: number,
     draw: (c: CanvasRenderingContext2D) => number,
   ): number {
-    const L = textLayer();
     const m = ctx.getTransform();
-    if (ctx !== L.low || !L.hi || m.b || m.c || ctx.globalAlpha !== 1) return draw(ctx);
-    const r = L.hk / L.lk;
-    const lx = Math.floor(m.a * x + m.e);
-    const ly = Math.floor(m.d * y + m.f);
-    const hx = Math.floor((m.a * x + m.e) * r);
-    const hy = Math.floor((m.d * y + m.f) * r);
-    const lw = Math.ceil(m.a * w) + 2;
-    const lh = Math.ceil(m.d * h) + 2;
-    const hw = Math.ceil(m.a * w * r) + 2;
-    const hh = Math.ceil(m.d * h * r) + 2;
-    const full = `${key}|${m.a},${m.d},${m.e},${m.f},${r},${x},${y}|${fontLoaded()}|${uiImagesReady()}`;
+    if (m.b || m.c || ctx.globalAlpha !== 1) return draw(ctx);
+    const px = Math.floor(m.a * x + m.e);
+    const py = Math.floor(m.d * y + m.f);
+    const pw = Math.ceil(m.a * w) + 2;
+    const ph = Math.ceil(m.d * h) + 2;
+    const full = `${key}|${m.a},${m.d},${m.e},${m.f},${x},${y}|${fontLoaded()}|${uiImagesReady()}`;
     let c = this.memos.get(id);
     if (!c) {
-      c = { low: document.createElement("canvas"), hi: document.createElement("canvas"), key: "", out: 0, at: [] };
+      c = { c: document.createElement("canvas"), key: "", out: 0 };
       this.memos.set(id, c);
     }
     if (c.key !== full) {
       perf.stat("hud.memo", 1);
-      if (c.low.width !== lw || c.low.height !== lh) {
-        c.low.width = lw;
-        c.low.height = lh;
+      if (c.c.width !== pw || c.c.height !== ph) {
+        c.c.width = pw;
+        c.c.height = ph;
       }
-      if (c.hi.width !== hw || c.hi.height !== hh) {
-        c.hi.width = hw;
-        c.hi.height = hh;
-      }
-      const lc = c.low.getContext("2d")!;
-      const hc = c.hi.getContext("2d")!;
-      lc.setTransform(1, 0, 0, 1, 0, 0);
-      lc.clearRect(0, 0, lw, lh);
-      hc.setTransform(1, 0, 0, 1, 0, 0);
-      hc.clearRect(0, 0, hw, hh);
-      lc.imageSmoothingEnabled = ctx.imageSmoothingEnabled;
-      lc.setTransform(m.a, 0, 0, m.d, m.e - lx, m.f - ly);
-      setTextLayer(lc, hc, L.hk, L.lk, lx * r - hx, ly * r - hy);
-      try {
-        c.out = draw(lc);
-      } finally {
-        setTextLayer(L.low!, L.hi, L.hk, L.lk, L.dx, L.dy);
-      }
+      const g = c.c.getContext("2d")!;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, pw, ph);
+      g.imageSmoothingEnabled = ctx.imageSmoothingEnabled;
+      g.setTransform(m.a, 0, 0, m.d, m.e - px, m.f - py);
+      c.out = draw(g);
       c.key = full;
     }
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(c.low, lx, ly);
+    ctx.drawImage(c.c, px, py);
     ctx.restore();
-    L.hi.save();
-    L.hi.setTransform(1, 0, 0, 1, 0, 0);
-    L.hi.drawImage(c.hi, hx, hy);
-    L.hi.restore();
     return c.out;
   }
 
@@ -1382,7 +1353,7 @@ export class Hud {
   ): HTMLCanvasElement | null {
     if (this.overlays.has(key)) return this.overlays.get(key)!;
     const t = w.terrain;
-    const c = document.createElement("canvas");
+    const c = cacheCanvas();
     c.width = t.width;
     c.height = t.depth;
     const ok = make(c.getContext("2d")!, t.width, t.depth);
@@ -1403,50 +1374,52 @@ export class Hud {
       const e = w.getAny(p.heroId);
       return !e || !e.alive || !!e.hero?.dead;
     });
-    onHiLayer(ctx, (g) => {
-      list.forEach((p, i) => {
-        const im = stockIcon(p.heroType, costumeOfPlayer(p.player), dead[i]);
-        g.save();
-        g.fillStyle = "rgba(12,8,6,0.55)";
-        g.beginPath();
-        g.arc(x + sz / 2, y + sz / 2, sz / 2 + 0.6, 0, Math.PI * 2);
-        g.fill();
-        if (im) {
-          g.imageSmoothingEnabled = true;
-          g.imageSmoothingQuality = "high";
-          if (dead[i]) g.globalAlpha *= 0.85;
-          g.drawImage(im, x, y, sz, sz);
+    ctx.save();
+    list.forEach((p, i) => {
+      const im = stockIcon(p.heroType, costumeOfPlayer(p.player), dead[i]);
+      ctx.save();
+      ctx.fillStyle = "rgba(12,8,6,0.55)";
+      ctx.beginPath();
+      ctx.arc(x + sz / 2, y + sz / 2, sz / 2 + 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      if (im) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        if (dead[i]) ctx.globalAlpha *= 0.85;
+        ctx.drawImage(im, x, y, sz, sz);
+      }
+      ctx.globalAlpha = 1;
+      const he = w.getAny(p.heroId);
+      const hp = dead[i] || !he ? 0 : Math.max(0, Math.min(1, he.hp / he.maxHp));
+      ctx.fillStyle = INK;
+      ctx.fillRect(x + 0.5, y + sz + 0.6, sz - 1, 2.2);
+      ctx.fillStyle = "rgba(60,50,40,0.9)";
+      ctx.fillRect(x + 1, y + sz + 1, sz - 2, 1.4);
+      ctx.fillStyle = this.teamColors[p.team] ?? "#9a9068";
+      ctx.fillRect(x + 1, y + sz + 1, (sz - 2) * hp, 1.4);
+      if (dead[i]) {
+        ctx.lineCap = "round";
+        for (const [lw, col] of [
+          [2.6, INK],
+          [1.5, "#e02818"],
+        ] as const) {
+          ctx.lineWidth = lw;
+          ctx.strokeStyle = col;
+          ctx.beginPath();
+          ctx.moveTo(x + 2, y + 2);
+          ctx.lineTo(x + sz - 2, y + sz - 2);
+          ctx.moveTo(x + sz - 2, y + 2);
+          ctx.lineTo(x + 2, y + sz - 2);
+          ctx.stroke();
         }
-        g.globalAlpha = 1;
-        const he = w.getAny(p.heroId);
-        const hp = dead[i] || !he ? 0 : Math.max(0, Math.min(1, he.hp / he.maxHp));
-        g.fillStyle = INK;
-        g.fillRect(x + 0.5, y + sz + 0.6, sz - 1, 2.2);
-        g.fillStyle = "rgba(60,50,40,0.9)";
-        g.fillRect(x + 1, y + sz + 1, sz - 2, 1.4);
-        g.fillStyle = this.teamColors[p.team] ?? "#9a9068";
-        g.fillRect(x + 1, y + sz + 1, (sz - 2) * hp, 1.4);
-        if (dead[i]) {
-          g.lineCap = "round";
-          for (const [lw, col] of [
-            [2.6, INK],
-            [1.5, "#e02818"],
-          ] as const) {
-            g.lineWidth = lw;
-            g.strokeStyle = col;
-            g.beginPath();
-            g.moveTo(x + 2, y + 2);
-            g.lineTo(x + sz - 2, y + sz - 2);
-            g.moveTo(x + sz - 2, y + 2);
-            g.lineTo(x + 2, y + sz - 2);
-            g.stroke();
-          }
-        }
-        g.restore();
-        x += sz + gap;
-      });
+      }
+      ctx.restore();
+      x += sz + gap;
     });
+    ctx.restore();
   }
+
+  // ── Minimap ──
 
   private drawMinimap(
     ctx: CanvasRenderingContext2D,
@@ -1482,336 +1455,334 @@ export class Hud {
       for (let i = 0; i < m.length; i++) if (m[i]) g.fillRect(i % Wd, Math.floor(i / Wd), 1, 1);
       return true;
     });
-    onHiLayer(ctx, (g) => {
-      g.save();
-      g.globalAlpha *= solo ? 0.36 : 0.5;
-      g.fillStyle = INK;
-      g.fillRect(x0 - 3.5, y0 - 3.5, mw + 7, mh + 7);
-      texturedRect(g, "wood", x0 - 2.5, y0 - 2.5, mw + 5, mh + 5, "#7a5636", 0, 0.5);
-      g.fillStyle = INK;
-      g.fillRect(x0 - 0.8, y0 - 0.8, mw + 1.6, mh + 1.6);
-      if (img) {
-        g.imageSmoothingEnabled = true;
-        g.drawImage(img, x0, y0, mw, mh);
+    ctx.save();
+    ctx.globalAlpha *= solo ? 0.36 : 0.5;
+    ctx.fillStyle = INK;
+    ctx.fillRect(x0 - 3.5, y0 - 3.5, mw + 7, mh + 7);
+    texturedRect(ctx, "wood", x0 - 2.5, y0 - 2.5, mw + 5, mh + 5, "#7a5636", 0, 0.5);
+    ctx.fillStyle = INK;
+    ctx.fillRect(x0 - 0.8, y0 - 0.8, mw + 1.6, mh + 1.6);
+    if (img) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(img, x0, y0, mw, mh);
+    } else {
+      ctx.fillStyle = "#4a6a3a";
+      ctx.fillRect(x0, y0, mw, mh);
+    }
+    ctx.fillStyle = "rgba(10,8,6,0.06)";
+    ctx.fillRect(x0, y0, mw, mh);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x0, y0, mw, mh);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    if (tide && w.tideHigh) {
+      ctx.globalAlpha *= 0.75;
+      ctx.drawImage(tide, x0, y0, mw, mh);
+      ctx.globalAlpha /= 0.75;
+    }
+    if (mist) {
+      const [tail, front] = w.mapEvents.mistBand(w.time);
+      if (front > tail) {
+        const z0 = Math.max(0, tail);
+        const z1 = Math.min(t.depth, front);
+        if (z1 > z0) ctx.drawImage(mist, 0, z0, t.width, z1 - z0, x0, y0 + z0 * s, mw, (z1 - z0) * s);
+      }
+    }
+    const av = w.mapEvents.avalancheNow;
+    if (av) {
+      const r = av.lane.rect;
+      const [ax, ay] = P(r.x, r.z);
+      if (av.stage === "warn") {
+        ctx.strokeStyle = Math.floor(now * 5) % 2 ? "#ff4030" : "#ffffff";
+        ctx.lineWidth = 0.9;
+        ctx.strokeRect(ax, ay, r.w * s, r.h * s);
       } else {
-        g.fillStyle = "#4a6a3a";
-        g.fillRect(x0, y0, mw, mh);
+        ctx.fillStyle = "rgba(240,248,255,0.85)";
+        const k = av.k;
+        const { dx, dz } = av.lane;
+        if (dx > 0) ctx.fillRect(ax, ay, r.w * s * k, r.h * s);
+        else if (dx < 0) ctx.fillRect(ax + r.w * s * (1 - k), ay, r.w * s * k, r.h * s);
+        else if (dz > 0) ctx.fillRect(ax, ay, r.w * s, r.h * s * k);
+        else ctx.fillRect(ax, ay + r.h * s * (1 - k), r.w * s, r.h * s * k);
       }
-      g.fillStyle = "rgba(10,8,6,0.06)";
-      g.fillRect(x0, y0, mw, mh);
-      g.save();
-      g.beginPath();
-      g.rect(x0, y0, mw, mh);
-      g.clip();
-      g.imageSmoothingEnabled = false;
-      if (tide && w.tideHigh) {
-        g.globalAlpha *= 0.75;
-        g.drawImage(tide, x0, y0, mw, mh);
-        g.globalAlpha /= 0.75;
-      }
-      if (mist) {
-        const [tail, front] = w.mapEvents.mistBand(w.time);
-        if (front > tail) {
-          const z0 = Math.max(0, tail);
-          const z1 = Math.min(t.depth, front);
-          if (z1 > z0) g.drawImage(mist, 0, z0, t.width, z1 - z0, x0, y0 + z0 * s, mw, (z1 - z0) * s);
+    }
+    for (const hn of w.mapEvents.horns) {
+      const [hx, hy] = P(hn.x, hn.z);
+      const ready = w.time >= hn.readyAt;
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy - 2.6);
+      ctx.lineTo(hx + 2.3, hy + 1.6);
+      ctx.lineTo(hx - 2.3, hy + 1.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = ready ? (Math.floor(now * 2) % 2 ? "#f4f8ff" : "#c8d8ff") : "#6a7080";
+      ctx.beginPath();
+      ctx.moveTo(hx, hy - 1.7);
+      ctx.lineTo(hx + 1.5, hy + 1.0);
+      ctx.lineTo(hx - 1.5, hy + 1.0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    for (const jp of w.jumpPads) {
+      const [ax, ay] = P(jp.x, jp.z);
+      const [bx, by] = P(jp.tx, jp.tz);
+      ctx.save();
+      ctx.setLineDash([1.2, 1.2]);
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = "rgba(255,232,150,0.75)";
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = w.time < jp.readyAt ? "#6a6458" : "#e8b830";
+      ctx.beginPath();
+      ctx.arc(ax, ay, 0.95, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (w.mapEvents.locked) {
+      for (const lg of w.mapEvents.lockGates)
+        for (const c of lg.cells) {
+          const [gx, gy] = P(c % t.width, Math.floor(c / t.width));
+          ctx.fillStyle = INK;
+          ctx.fillRect(gx - 0.4, gy - 0.4, s + 0.8, s + 0.8);
+          ctx.fillStyle = "#c08a40";
+          ctx.fillRect(gx, gy, s, s);
         }
+    }
+    for (const gt of w.mapEvents.gateList) {
+      if (!gt.shut) continue;
+      const [gx, gy] = P(gt.slot.x, gt.slot.z);
+      ctx.fillStyle = INK;
+      ctx.fillRect(gx - 0.4, gy - 0.4, gt.slot.w * s + 0.8, gt.slot.h * s + 0.8);
+      ctx.fillStyle = "#9aa0b0";
+      ctx.fillRect(gx, gy, gt.slot.w * s, gt.slot.h * s);
+    }
+    for (const sh of w.arena.shots) {
+      const [cx, cy] = P(sh.x, sh.z);
+      ctx.strokeStyle = Math.floor(now * 6) % 2 ? "#ff3020" : "#ffd040";
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(1.2, sh.radius * s), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const dot = (cx: number, cy: number, r: number, fill: string, ring = INK, lw = 0.5) => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = ring;
+      ctx.stroke();
+    };
+    for (const e of w.entities) {
+      if (!e.alive || !e.unit || e.neutral || !w.spottedByAll(e)) continue;
+      const [ux, uy] = P(e.transform.pos.x, e.transform.pos.z);
+      ctx.fillStyle = tc(e.team);
+      ctx.fillRect(ux - 0.45, uy - 0.45, 0.9, 0.9);
+    }
+    for (const pad of w.pads) {
+      const [px, py] = P(pad.x, pad.z);
+      const st = pad.structureId ? w.get(pad.structureId) : undefined;
+      if (!st?.alive || !st.structure) {
+        const rubble = w.time < pad.rubbleUntil;
+        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = INK;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 0.45;
+        ctx.strokeStyle = rubble ? "#7a7064" : pad.zone === "neutral" ? "#f4ecd8" : tc(pad.side);
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+        continue;
       }
-      const av = w.mapEvents.avalancheNow;
-      if (av) {
-        const r = av.lane.rect;
-        const [ax, ay] = P(r.x, r.z);
-        if (av.stage === "warn") {
-          g.strokeStyle = Math.floor(now * 5) % 2 ? "#ff4030" : "#ffffff";
-          g.lineWidth = 0.9;
-          g.strokeRect(ax, ay, r.w * s, r.h * s);
-        } else {
-          g.fillStyle = "rgba(240,248,255,0.85)";
-          const k = av.k;
-          const { dx, dz } = av.lane;
-          if (dx > 0) g.fillRect(ax, ay, r.w * s * k, r.h * s);
-          else if (dx < 0) g.fillRect(ax + r.w * s * (1 - k), ay, r.w * s * k, r.h * s);
-          else if (dz > 0) g.fillRect(ax, ay, r.w * s, r.h * s * k);
-          else g.fillRect(ax, ay + r.h * s * (1 - k), r.w * s, r.h * s * k);
+      if (st.structure.type === "core") continue;
+      const def = w.data.structures.types[st.structure.type];
+      const col = tc(st.team);
+      ctx.save();
+      if (!st.structure.ready) ctx.globalAlpha *= 0.55;
+      const gold = st.structure.level > 1;
+      if (def.class === "production") {
+        ctx.fillStyle = INK;
+        ctx.fillRect(px - 1.9, py - 1.9, 3.8, 3.8);
+        ctx.fillStyle = gold ? "#ffd040" : col;
+        ctx.fillRect(px - 1.45, py - 1.45, 2.9, 2.9);
+        if (gold) {
+          ctx.fillStyle = col;
+          ctx.fillRect(px - 0.95, py - 0.95, 1.9, 1.9);
         }
+      } else {
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.moveTo(px, py - 2.4);
+        ctx.lineTo(px + 2.1, py + 1.5);
+        ctx.lineTo(px - 2.1, py + 1.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = gold ? "#ffd040" : col;
+        ctx.beginPath();
+        ctx.moveTo(px, py - 1.6);
+        ctx.lineTo(px + 1.45, py + 1.05);
+        ctx.lineTo(px - 1.45, py + 1.05);
+        ctx.closePath();
+        ctx.fill();
+        if (gold) dot(px, py, 0.55, col, col, 0.1);
       }
-      for (const hn of w.mapEvents.horns) {
-        const [hx, hy] = P(hn.x, hn.z);
-        const ready = w.time >= hn.readyAt;
-        g.fillStyle = INK;
-        g.beginPath();
-        g.moveTo(hx, hy - 2.6);
-        g.lineTo(hx + 2.3, hy + 1.6);
-        g.lineTo(hx - 2.3, hy + 1.6);
-        g.closePath();
-        g.fill();
-        g.fillStyle = ready ? (Math.floor(now * 2) % 2 ? "#f4f8ff" : "#c8d8ff") : "#6a7080";
-        g.beginPath();
-        g.moveTo(hx, hy - 1.7);
-        g.lineTo(hx + 1.5, hy + 1.0);
-        g.lineTo(hx - 1.5, hy + 1.0);
-        g.closePath();
-        g.fill();
+      ctx.restore();
+    }
+    for (let team = 0; team < w.teamCount; team++) {
+      const c = w.core(team);
+      const co = t.cores.find((k) => (k.team ?? 0) === team);
+      if (!co) continue;
+      const [kx, ky] = P(co.x, co.z);
+      const out = !c?.alive || w.teams[team].out;
+      ctx.fillStyle = INK;
+      ctx.fillRect(kx - 3, ky - 3, 6, 6);
+      ctx.fillStyle = out ? "#3a3430" : "#ffd040";
+      ctx.fillRect(kx - 2.5, ky - 2.5, 5, 5);
+      ctx.fillStyle = out ? "#5a524a" : tc(team);
+      ctx.fillRect(kx - 1.9, ky - 1.9, 3.8, 3.8);
+      if (out) {
+        ctx.strokeStyle = "#ff4030";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(kx - 2, ky - 2);
+        ctx.lineTo(kx + 2, ky + 2);
+        ctx.moveTo(kx + 2, ky - 2);
+        ctx.lineTo(kx - 2, ky + 2);
+        ctx.stroke();
+      } else if (c) {
+        const f = Math.max(0, c.hp / c.maxHp);
+        ctx.fillStyle = INK;
+        ctx.fillRect(kx - 3, ky + 3.4, 6, 1.4);
+        ctx.fillStyle = f > 0.5 ? "#6ae04a" : f > 0.25 ? "#ffd040" : "#ff4030";
+        ctx.fillRect(kx - 2.6, ky + 3.7, 5.2 * f, 0.8);
       }
-      for (const jp of w.jumpPads) {
-        const [ax, ay] = P(jp.x, jp.z);
-        const [bx, by] = P(jp.tx, jp.tz);
-        g.save();
-        g.setLineDash([1.2, 1.2]);
-        g.lineWidth = 0.5;
-        g.strokeStyle = "rgba(255,232,150,0.75)";
-        g.beginPath();
-        g.moveTo(ax, ay);
-        g.lineTo(bx, by);
-        g.stroke();
-        g.restore();
-        g.fillStyle = INK;
-        g.beginPath();
-        g.arc(ax, ay, 1.4, 0, Math.PI * 2);
-        g.fill();
-        g.fillStyle = w.time < jp.readyAt ? "#6a6458" : "#e8b830";
-        g.beginPath();
-        g.arc(ax, ay, 0.95, 0, Math.PI * 2);
-        g.fill();
-      }
-      if (w.mapEvents.locked) {
-        for (const lg of w.mapEvents.lockGates)
-          for (const c of lg.cells) {
-            const [gx, gy] = P(c % t.width, Math.floor(c / t.width));
-            g.fillStyle = INK;
-            g.fillRect(gx - 0.4, gy - 0.4, s + 0.8, s + 0.8);
-            g.fillStyle = "#c08a40";
-            g.fillRect(gx, gy, s, s);
-          }
-      }
-      for (const gt of w.mapEvents.gateList) {
-        if (!gt.shut) continue;
-        const [gx, gy] = P(gt.slot.x, gt.slot.z);
-        g.fillStyle = INK;
-        g.fillRect(gx - 0.4, gy - 0.4, gt.slot.w * s + 0.8, gt.slot.h * s + 0.8);
-        g.fillStyle = "#9aa0b0";
-        g.fillRect(gx, gy, gt.slot.w * s, gt.slot.h * s);
-      }
-      for (const sh of w.arena.shots) {
-        const [cx, cy] = P(sh.x, sh.z);
-        g.strokeStyle = Math.floor(now * 6) % 2 ? "#ff3020" : "#ffd040";
-        g.lineWidth = 0.7;
-        g.beginPath();
-        g.arc(cx, cy, Math.max(1.2, sh.radius * s), 0, Math.PI * 2);
-        g.stroke();
-      }
-      const dot = (cx: number, cy: number, r: number, fill: string, ring = INK, lw = 0.5) => {
-        g.beginPath();
-        g.arc(cx, cy, r, 0, Math.PI * 2);
-        g.fillStyle = fill;
-        g.fill();
-        g.lineWidth = lw;
-        g.strokeStyle = ring;
-        g.stroke();
+    }
+    const lan = w.mapEvents.lantern;
+    if (lan) {
+      const [lx, ly] = P(lan.x, lan.z);
+      const pulse = 1.4 + Math.sin(now * 6) * 0.35;
+      dot(lx, ly, pulse + 0.9, "rgba(90,255,110,0.35)", "rgba(0,0,0,0)", 0);
+      dot(lx, ly, 1.3, "#7aff8a", INK, 0.5);
+    }
+    const og = w.arena.ogreId ? w.get(w.arena.ogreId) : undefined;
+    if (og?.alive) {
+      const [ox, oy] = P(og.transform.pos.x, og.transform.pos.z);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.moveTo(ox - 2.4, oy - 2.6);
+      ctx.lineTo(ox - 1.2, oy - 1.4);
+      ctx.lineTo(ox + 1.2, oy - 1.4);
+      ctx.lineTo(ox + 2.4, oy - 2.6);
+      ctx.lineTo(ox + 2.1, oy + 0.4);
+      ctx.arc(ox, oy + 0.4, 2.1, 0, Math.PI);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#8a9a4a";
+      ctx.beginPath();
+      ctx.arc(ox, oy + 0.2, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f4ecd8";
+      ctx.fillRect(ox - 1.9, oy - 2.1, 0.7, 0.9);
+      ctx.fillRect(ox + 1.2, oy - 2.1, 0.7, 0.9);
+    }
+    const r = w.arena.relic;
+    if (r.state !== "waiting") {
+      const carrier = r.state === "carried" ? w.getAny(r.carrier) : undefined;
+      const [rx, ry] = carrier ? P(carrier.transform.pos.x, carrier.transform.pos.z) : P(r.x, r.z);
+      const ry2 = carrier ? ry - 3.2 : ry;
+      const k = 1.9 + (r.state === "carried" || r.state === "dropped" ? Math.sin(now * 8) * 0.35 : 0);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry2 - k - 0.7);
+      ctx.lineTo(rx + k + 0.6, ry2);
+      ctx.lineTo(rx, ry2 + k + 0.7);
+      ctx.lineTo(rx - k - 0.6, ry2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = r.state === "shrined" ? tc(r.team) : "#ffd040";
+      ctx.beginPath();
+      ctx.moveTo(rx, ry2 - k);
+      ctx.lineTo(rx + k, ry2);
+      ctx.lineTo(rx, ry2 + k);
+      ctx.lineTo(rx - k, ry2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#fff4c8";
+      ctx.fillRect(rx - 0.35, ry2 - k * 0.55, 0.7, 0.7);
+    } else {
+      const [rx, ry] = P(w.arena.home.x, w.arena.home.z);
+      ctx.strokeStyle = "rgba(255,216,112,0.6)";
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 1.6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (const e of w.entities) {
+      if (!e.alive || !e.hero || e.hero.dead || !w.spottedByAll(e)) continue;
+      const [hx, hy] = P(e.transform.pos.x, e.transform.pos.z);
+      const a = e.transform.facing;
+      const fx = Math.sin(a);
+      const fz = Math.cos(a);
+      const R = 2.5;
+      if (w.time < (e.status.hauntUntil ?? 0)) dot(hx, hy, R + 0.9, "rgba(90,255,110,0.4)", "rgba(0,0,0,0)", 0);
+      const tri = (k: number) => {
+        ctx.beginPath();
+        ctx.moveTo(hx + fx * R * k, hy + fz * R * k);
+        ctx.lineTo(hx - fx * R * 0.7 * k - fz * R * 0.75 * k, hy - fz * R * 0.7 * k + fx * R * 0.75 * k);
+        ctx.lineTo(hx - fx * R * 0.3 * k, hy - fz * R * 0.3 * k);
+        ctx.lineTo(hx - fx * R * 0.7 * k + fz * R * 0.75 * k, hy - fz * R * 0.7 * k - fx * R * 0.75 * k);
+        ctx.closePath();
       };
-      for (const e of w.entities) {
-        if (!e.alive || !e.unit || e.neutral || !w.spottedByAll(e)) continue;
-        const [ux, uy] = P(e.transform.pos.x, e.transform.pos.z);
-        g.fillStyle = tc(e.team);
-        g.fillRect(ux - 0.45, uy - 0.45, 0.9, 0.9);
-      }
-      for (const pad of w.pads) {
-        const [px, py] = P(pad.x, pad.z);
-        const st = pad.structureId ? w.get(pad.structureId) : undefined;
-        if (!st?.alive || !st.structure) {
-          const rubble = w.time < pad.rubbleUntil;
-          g.lineWidth = 0.6;
-          g.strokeStyle = INK;
-          g.beginPath();
-          g.arc(px, py, 1.5, 0, Math.PI * 2);
-          g.stroke();
-          g.lineWidth = 0.45;
-          g.strokeStyle = rubble ? "#7a7064" : pad.zone === "neutral" ? "#f4ecd8" : tc(pad.side);
-          g.beginPath();
-          g.arc(px, py, 1.5, 0, Math.PI * 2);
-          g.stroke();
-          continue;
-        }
-        if (st.structure.type === "core") continue;
-        const def = w.data.structures.types[st.structure.type];
-        const col = tc(st.team);
-        g.save();
-        if (!st.structure.ready) g.globalAlpha *= 0.55;
-        const gold = st.structure.level > 1;
-        if (def.class === "production") {
-          g.fillStyle = INK;
-          g.fillRect(px - 1.9, py - 1.9, 3.8, 3.8);
-          g.fillStyle = gold ? "#ffd040" : col;
-          g.fillRect(px - 1.45, py - 1.45, 2.9, 2.9);
-          if (gold) {
-            g.fillStyle = col;
-            g.fillRect(px - 0.95, py - 0.95, 1.9, 1.9);
-          }
-        } else {
-          g.fillStyle = INK;
-          g.beginPath();
-          g.moveTo(px, py - 2.4);
-          g.lineTo(px + 2.1, py + 1.5);
-          g.lineTo(px - 2.1, py + 1.5);
-          g.closePath();
-          g.fill();
-          g.fillStyle = gold ? "#ffd040" : col;
-          g.beginPath();
-          g.moveTo(px, py - 1.6);
-          g.lineTo(px + 1.45, py + 1.05);
-          g.lineTo(px - 1.45, py + 1.05);
-          g.closePath();
-          g.fill();
-          if (gold) dot(px, py, 0.55, col, col, 0.1);
-        }
-        g.restore();
-      }
-      for (let team = 0; team < w.teamCount; team++) {
-        const c = w.core(team);
-        const co = t.cores.find((k) => (k.team ?? 0) === team);
-        if (!co) continue;
-        const [kx, ky] = P(co.x, co.z);
-        const out = !c?.alive || w.teams[team].out;
-        g.fillStyle = INK;
-        g.fillRect(kx - 3, ky - 3, 6, 6);
-        g.fillStyle = out ? "#3a3430" : "#ffd040";
-        g.fillRect(kx - 2.5, ky - 2.5, 5, 5);
-        g.fillStyle = out ? "#5a524a" : tc(team);
-        g.fillRect(kx - 1.9, ky - 1.9, 3.8, 3.8);
-        if (out) {
-          g.strokeStyle = "#ff4030";
-          g.lineWidth = 0.8;
-          g.beginPath();
-          g.moveTo(kx - 2, ky - 2);
-          g.lineTo(kx + 2, ky + 2);
-          g.moveTo(kx + 2, ky - 2);
-          g.lineTo(kx - 2, ky + 2);
-          g.stroke();
-        } else if (c) {
-          const f = Math.max(0, c.hp / c.maxHp);
-          g.fillStyle = INK;
-          g.fillRect(kx - 3, ky + 3.4, 6, 1.4);
-          g.fillStyle = f > 0.5 ? "#6ae04a" : f > 0.25 ? "#ffd040" : "#ff4030";
-          g.fillRect(kx - 2.6, ky + 3.7, 5.2 * f, 0.8);
-        }
-      }
-      const lan = w.mapEvents.lantern;
-      if (lan) {
-        const [lx, ly] = P(lan.x, lan.z);
-        const pulse = 1.4 + Math.sin(now * 6) * 0.35;
-        dot(lx, ly, pulse + 0.9, "rgba(90,255,110,0.35)", "rgba(0,0,0,0)", 0);
-        dot(lx, ly, 1.3, "#7aff8a", INK, 0.5);
-      }
-      const og = w.arena.ogreId ? w.get(w.arena.ogreId) : undefined;
-      if (og?.alive) {
-        const [ox, oy] = P(og.transform.pos.x, og.transform.pos.z);
-        g.fillStyle = INK;
-        g.beginPath();
-        g.moveTo(ox - 2.4, oy - 2.6);
-        g.lineTo(ox - 1.2, oy - 1.4);
-        g.lineTo(ox + 1.2, oy - 1.4);
-        g.lineTo(ox + 2.4, oy - 2.6);
-        g.lineTo(ox + 2.1, oy + 0.4);
-        g.arc(ox, oy + 0.4, 2.1, 0, Math.PI);
-        g.closePath();
-        g.fill();
-        g.fillStyle = "#8a9a4a";
-        g.beginPath();
-        g.arc(ox, oy + 0.2, 1.6, 0, Math.PI * 2);
-        g.fill();
-        g.fillStyle = "#f4ecd8";
-        g.fillRect(ox - 1.9, oy - 2.1, 0.7, 0.9);
-        g.fillRect(ox + 1.2, oy - 2.1, 0.7, 0.9);
-      }
-      const r = w.arena.relic;
-      if (r.state !== "waiting") {
-        const carrier = r.state === "carried" ? w.getAny(r.carrier) : undefined;
-        const [rx, ry] = carrier ? P(carrier.transform.pos.x, carrier.transform.pos.z) : P(r.x, r.z);
-        const ry2 = carrier ? ry - 3.2 : ry;
-        const k = 1.9 + (r.state === "carried" || r.state === "dropped" ? Math.sin(now * 8) * 0.35 : 0);
-        g.fillStyle = INK;
-        g.beginPath();
-        g.moveTo(rx, ry2 - k - 0.7);
-        g.lineTo(rx + k + 0.6, ry2);
-        g.lineTo(rx, ry2 + k + 0.7);
-        g.lineTo(rx - k - 0.6, ry2);
-        g.closePath();
-        g.fill();
-        g.fillStyle = r.state === "shrined" ? tc(r.team) : "#ffd040";
-        g.beginPath();
-        g.moveTo(rx, ry2 - k);
-        g.lineTo(rx + k, ry2);
-        g.lineTo(rx, ry2 + k);
-        g.lineTo(rx - k, ry2);
-        g.closePath();
-        g.fill();
-        g.fillStyle = "#fff4c8";
-        g.fillRect(rx - 0.35, ry2 - k * 0.55, 0.7, 0.7);
-      } else {
-        const [rx, ry] = P(w.arena.home.x, w.arena.home.z);
-        g.strokeStyle = "rgba(255,216,112,0.6)";
-        g.lineWidth = 0.6;
-        g.beginPath();
-        g.arc(rx, ry, 1.6, 0, Math.PI * 2);
-        g.stroke();
-      }
-      for (const e of w.entities) {
-        if (!e.alive || !e.hero || e.hero.dead || !w.spottedByAll(e)) continue;
-        const [hx, hy] = P(e.transform.pos.x, e.transform.pos.z);
-        const a = e.transform.facing;
-        const fx = Math.sin(a);
-        const fz = Math.cos(a);
-        const R = 2.5;
-        if (w.time < (e.status.hauntUntil ?? 0)) dot(hx, hy, R + 0.9, "rgba(90,255,110,0.4)", "rgba(0,0,0,0)", 0);
-        const tri = (k: number) => {
-          g.beginPath();
-          g.moveTo(hx + fx * R * k, hy + fz * R * k);
-          g.lineTo(hx - fx * R * 0.7 * k - fz * R * 0.75 * k, hy - fz * R * 0.7 * k + fx * R * 0.75 * k);
-          g.lineTo(hx - fx * R * 0.3 * k, hy - fz * R * 0.3 * k);
-          g.lineTo(hx - fx * R * 0.7 * k + fz * R * 0.75 * k, hy - fz * R * 0.7 * k - fx * R * 0.75 * k);
-          g.closePath();
-        };
-        tri(1.35);
-        g.fillStyle = INK;
-        g.fill();
-        tri(1.05);
-        g.fillStyle = "#ffffff";
-        g.fill();
-        tri(0.72);
-        g.fillStyle = tc(e.team);
-        g.fill();
-      }
-      for (const u of ui) {
-        const rt = u?.reticle;
-        if (!rt?.at) continue;
-        const [sx, sy] = P(rt.at.x, rt.at.z);
-        const [fx, fy] = P(rt.at.x - rt.dx, rt.at.z - rt.dz);
-        g.save();
-        g.setLineDash([1.4, 1]);
-        g.lineDashOffset = -now * 6;
-        g.lineWidth = 0.7;
-        g.strokeStyle = "rgba(216,160,255,0.95)";
-        g.beginPath();
-        g.moveTo(fx, fy);
-        g.lineTo(sx, sy);
-        g.stroke();
-        g.restore();
-        const pr = 3.6 + Math.sin(now * 8) * 0.5;
-        g.lineWidth = 1.4;
-        g.strokeStyle = INK;
-        g.beginPath();
-        g.arc(sx, sy, pr, 0, Math.PI * 2);
-        g.stroke();
-        g.lineWidth = 0.8;
-        g.strokeStyle = Math.floor(now * 6) % 2 ? "#e0b0ff" : "#ffffff";
-        g.stroke();
-      }
-      g.restore();
-      g.strokeStyle = "rgba(255,216,112,0.55)";
-      g.lineWidth = 0.4;
-      g.strokeRect(x0 + 0.2, y0 + 0.2, mw - 0.4, mh - 0.4);
-      g.restore();
-    });
+      tri(1.35);
+      ctx.fillStyle = INK;
+      ctx.fill();
+      tri(1.05);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      tri(0.72);
+      ctx.fillStyle = tc(e.team);
+      ctx.fill();
+    }
+    for (const u of ui) {
+      const rt = u?.reticle;
+      if (!rt?.at) continue;
+      const [sx, sy] = P(rt.at.x, rt.at.z);
+      const [fx, fy] = P(rt.at.x - rt.dx, rt.at.z - rt.dz);
+      ctx.save();
+      ctx.setLineDash([1.4, 1]);
+      ctx.lineDashOffset = -now * 6;
+      ctx.lineWidth = 0.7;
+      ctx.strokeStyle = "rgba(216,160,255,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+      ctx.restore();
+      const pr = 3.6 + Math.sin(now * 8) * 0.5;
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = INK;
+      ctx.beginPath();
+      ctx.arc(sx, sy, pr, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = Math.floor(now * 6) % 2 ? "#e0b0ff" : "#ffffff";
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.strokeStyle = "rgba(255,216,112,0.55)";
+    ctx.lineWidth = 0.4;
+    ctx.strokeRect(x0 + 0.2, y0 + 0.2, mw - 0.4, mh - 0.4);
+    ctx.restore();
   }
 
   private bannerLineY = MARGIN_Y + 19;
@@ -1999,6 +1970,8 @@ export class Hud {
     );
     ctx.restore();
   }
+
+  // ── Team block: resources, player panels, army orders, build cross, talent picks ──
 
   private drawTeam(
     ctx: CanvasRenderingContext2D,
@@ -2251,9 +2224,9 @@ export class Hud {
         ui[pl.player]!.morphBack ? "#6a4a2a" : col,
         ui[pl.player]!.morphBack ? "combo" : "banner",
       );
-      onHiLayer(ctx, (c) => {
-        padButton(c, x + r * 0.72, yy + r * 0.72, 3.6, "#5a5a66", "X");
-      });
+      ctx.save();
+      padButton(ctx, x + r * 0.72, yy + r * 0.72, 3.6, "#5a5a66", "X");
+      ctx.restore();
     }
     for (const learner of w.players.filter(
       (p) => p.team === t && ui[p.player]?.learnReady && ui[p.player]!.buildMenu === "closed",
@@ -2502,29 +2475,27 @@ export class Hud {
       const im = talentImgs.get(o.id);
       if (im?.complete && im.naturalWidth) {
         const sz = r * 1.45;
-        onHiLayer(ctx, (c) => {
-          c.save();
-          c.beginPath();
-          c.arc(x, y, r - 1.6, 0, Math.PI * 2);
-          c.clip();
-          c.imageSmoothingEnabled = true;
-          c.drawImage(im, x - sz / 2, y - sz / 2, sz, sz);
-          c.restore();
-        });
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r - 1.6, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(im, x - sz / 2, y - sz / 2, sz, sz);
+        ctx.restore();
       }
       const bx = x + (k ? r * 0.72 : -r * 0.72);
       const by = y + r * 0.72;
-      onHiLayer(ctx, (c) => {
-        padButton(c, bx, by, 3.6, "#e8c030", "");
-        c.fillStyle = INK;
-        c.beginPath();
-        const d = k ? 1 : -1;
-        c.moveTo(bx + d * 1.9, by);
-        c.lineTo(bx - d * 1.2, by - 1.7);
-        c.lineTo(bx - d * 1.2, by + 1.7);
-        c.closePath();
-        c.fill();
-      });
+      ctx.save();
+      padButton(ctx, bx, by, 3.6, "#e8c030", "");
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      const d = k ? 1 : -1;
+      ctx.moveTo(bx + d * 1.9, by);
+      ctx.lineTo(bx - d * 1.2, by - 1.7);
+      ctx.lineTo(bx - d * 1.2, by + 1.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     });
     if (hero.hero.pickSince !== undefined) {
       const left = Math.max(0, Math.ceil(w.autoPickSeconds - (w.time - hero.hero.pickSince)));

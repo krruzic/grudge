@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 function part(
   geo: THREE.BufferGeometry,
@@ -123,7 +124,7 @@ export function footRingBatch(max: number): THREE.InstancedMesh {
 }
 
 export function playerTag(label: string, teamColor: THREE.Color): THREE.Sprite {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = 128;
   c.height = 64;
   const ctx = c.getContext("2d")!;

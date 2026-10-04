@@ -1,5 +1,5 @@
-import { onHiLayer } from "./font";
 import type { PadState } from "../input/gamepads";
+import { cacheCanvas } from "./cacheCanvas";
 const spriteUrls = import.meta.glob("../../assets/ui/{chip,glove,tag}_*.png", {
   eager: true,
   query: "?url",
@@ -285,11 +285,7 @@ export class MenuCursors {
     c.y = p.y + (slot >= 2 ? 10 : 0);
   }
 
-  drawChips(low: CanvasRenderingContext2D, labels: string[], colors: string[]): void {
-    onHiLayer(low, (ctx) => this.drawChipsOn(ctx, labels, colors));
-  }
-
-  private drawChipsOn(ctx: CanvasRenderingContext2D, labels: string[], colors: string[]): void {
+  drawChips(ctx: CanvasRenderingContext2D, labels: string[], colors: string[]): void {
     this.chipLabels = labels;
     this.chipCpu = labels.map((l, s) => l === "CPU" || colors[s] === "#8a8a90");
     this.chips.forEach((c, s) => {
@@ -304,11 +300,7 @@ export class MenuCursors {
   private chipLabels: string[] = [];
   private chipCpu: boolean[] = [];
 
-  drawCursors(low: CanvasRenderingContext2D, now: number): void {
-    onHiLayer(low, (ctx) => this.drawCursorsOn(ctx, now));
-  }
-
-  private drawCursorsOn(ctx: CanvasRenderingContext2D, now: number): void {
+  drawCursors(ctx: CanvasRenderingContext2D, now: number): void {
     this.placeGhosts(now);
     for (const g of this.ghosts) {
       const hold = g.wire[5];
@@ -353,7 +345,7 @@ function tint(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
   const key = `${im.src}|${color}`;
   let c = tinted.get(key);
   if (c) return c;
-  c = document.createElement("canvas");
+  c = cacheCanvas();
   c.width = im.naturalWidth;
   c.height = im.naturalHeight;
   const g = c.getContext("2d")!;

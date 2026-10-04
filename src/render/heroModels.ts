@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { mergedMaterial, mergeParts } from "./mergedModel";
-import { lodReady, useLod } from "./lod";
 import { costumeModel, costumeTexture } from "./costumes";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -188,7 +187,6 @@ export class HeroModels {
 
   async load(urls: Record<string, string>): Promise<void> {
     const loader = new GLTFLoader();
-    await lodReady;
     await Promise.all(
       Object.entries(urls).map(async ([type, url]) => {
         try {
@@ -253,9 +251,6 @@ export class HeroModels {
         if (o instanceof THREE.Mesh) o.castShadow = true;
       });
     }
-    body.traverse((o) => {
-      if (o instanceof THREE.SkinnedMesh) useLod(o);
-    });
     addOutline(body);
     root.add(blobShadow(), body, footRing(mark), playerTag(label, mark));
     return { root, body, mixer, actions };

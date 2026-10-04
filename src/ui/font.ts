@@ -1,6 +1,12 @@
-import atlasUrl from "../../assets/fonts/n64font_hi.png?url";
-import meta from "../../assets/fonts/n64font.json";
+// Game font: the hand-drawn bitmap face used for all UI text.
+// The atlas (gameFont.png) holds each glyph at HK× its layout size, with fill in the red channel and a dilated
+// outline in green. A string is stamped once into a scratch canvas at atlas resolution, tinted (gradient fill,
+// ink outline, drop shadow), then downsampled with high-quality smoothing to the exact device-pixel size it will
+// be drawn at, and cached. Drawing is a single drawImage into the caller's context, in layout units.
+import atlasUrl from "../../assets/fonts/gameFont.png?url";
+import meta from "../../assets/fonts/gameFont.json";
 import { perf } from "../perf";
+import { cacheCanvas } from "./cacheCanvas";
 
 type Glyph = { x: number; y: number; w: number; adv: number; ox: number };
 const GLYPHS = meta.glyphs as Record<string, Glyph>;
@@ -8,19 +14,19 @@ const BASE = 10;
 const INK = "#0b0806";
 const TRACK = 0;
 const MIN_SCALE = 0.64;
+/** Atlas pixels per font pixel. */
 const HK = 6;
-const SOFT = 2.2;
 const eff = (scale: number) => Math.max(MIN_SCALE, scale);
 
 let markReady: () => void = () => {};
 export const fontReady = new Promise<void>((r) => (markReady = r));
 let fillMask: HTMLCanvasElement | null = null;
 let lineMask: HTMLCanvasElement | null = null;
-const cache = new Map<string, { c: HTMLCanvasElement; w: number; h: number; sized?: Map<number, HTMLCanvasElement> }>();
+const cache = new Map<string, Baked>();
 const widths = new Map<string, number>();
 
 function mask(src: ImageData, channel: number): HTMLCanvasElement {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = src.width;
   c.height = src.height;
   const out = new ImageData(src.width, src.height);
@@ -32,11 +38,13 @@ function mask(src: ImageData, channel: number): HTMLCanvasElement {
   return c;
 }
 
+// ── Atlas ──
+
 export async function loadFont(): Promise<void> {
   const im = new Image();
   im.src = atlasUrl;
   await im.decode();
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = im.naturalWidth;
   c.height = im.naturalHeight;
   const g = c.getContext("2d", { willReadFrequently: true })!;
@@ -70,7 +78,7 @@ export function textWidth(s: string, scale = 1, _num = false): number {
   return rawWidth(s) * ((BASE * eff(scale)) / meta.px);
 }
 
-const parseCtx = document.createElement("canvas").getContext("2d")!;
+const parseCtx = cacheCanvas().getContext("2d")!;
 function rgba(color: string): [number, number, number, number] {
   parseCtx.fillStyle = "#000";
   parseCtx.fillStyle = color;
@@ -105,7 +113,7 @@ function stamp(g: CanvasRenderingContext2D, src: HTMLCanvasElement, s: string, d
   }
 }
 
-const scratch = [document.createElement("canvas"), document.createElement("canvas")];
+const scratch = [cacheCanvas(), cacheCanvas()];
 function scratchCtx(i: number, w: number, h: number): CanvasRenderingContext2D {
   const c = scratch[i];
   if (c.width < w || c.height < h) {
@@ -141,7 +149,13 @@ function layer(
 const PADX = 2;
 const PADY = 1;
 
-type Baked = { c: HTMLCanvasElement; w: number; h: number; sized?: Map<number, HTMLCanvasElement> };
+// ── Baking ──
+
+/** A tinted string, rasterised at `c.width / (w / HK)` device pixels per font pixel. `w`/`h` are atlas-scale size. */
+type Baked = { c: HTMLCanvasElement; w: number; h: number };
+const CACHE_MAX = 500;
+
+// A lost 2D context empties every canvas; drop the cache and let text-texture owners repaint.
 const flushers: (() => void)[] = [];
 export function onTextLost(fn: () => void): void {
   flushers.push(fn);
@@ -150,11 +164,13 @@ function flushText(): void {
   cache.clear();
   for (const f of flushers) f();
 }
-const CACHE_MAX = 500;
-function render(s: string, color: string, edge: boolean, shadow: boolean, k: number): Baked {
+
+/** `k` = font pixels → layout units; `ppu` = device pixels per layout unit of the target context. */
+function render(s: string, color: string, edge: boolean, shadow: boolean, k: number, ppu: number): Baked {
   const kk = Math.round(k * 20);
-  const dens = Math.max(SOFT, Math.min(HK, Math.ceil(hiK * 2) / 2));
-  const key = `${edge ? 1 : 0}${shadow ? 1 : 0}|${kk}|${dens}|${color}|${s}`;
+  // Bake at the device size it will be drawn at (never above atlas resolution; larger draws upscale smoothly).
+  const px = Math.min(HK, Math.round(k * ppu * 8) / 8);
+  const key = `${edge ? 1 : 0}${shadow ? 1 : 0}|${kk}|${px}|${color}|${s}`;
   const soft = !edge && !shadow;
   const hit = cache.get(key);
   if (hit) {
@@ -189,9 +205,9 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
   grad.addColorStop(0.55, shade(col, 0));
   grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
   g.drawImage(layer(w, h, fillMask!, s, PADX, PADY, grad), 0, 0, w, h, 0, 0, w, h);
-  const o = document.createElement("canvas");
-  o.width = Math.max(1, Math.round((w / HK) * k * dens));
-  o.height = Math.max(1, Math.round((h / HK) * k * dens));
+  const o = cacheCanvas();
+  o.width = Math.max(1, Math.round((w / HK) * px));
+  o.height = Math.max(1, Math.round((h / HK) * px));
   const og = o.getContext("2d")!;
   og.imageSmoothingEnabled = true;
   og.imageSmoothingQuality = "high";
@@ -201,88 +217,17 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
   cache.set(key, baked);
   if (cache.size > CACHE_MAX) {
     const oldest = cache.keys().next().value!;
-    const ev = cache.get(oldest)!;
-    ev.c.width = ev.c.height = 0;
-    if (ev.sized) for (const c of ev.sized.values()) c.width = c.height = 0;
+    cache.get(oldest)!.c.width = 0;
     cache.delete(oldest);
   }
   return baked;
-}
-
-let lowCtx: CanvasRenderingContext2D | null = null;
-let hiCtx: CanvasRenderingContext2D | null = null;
-let hiK = 1;
-let lowK = 1;
-let hiDx = 0;
-let hiDy = 0;
-
-export function setTextLayer(
-  low: CanvasRenderingContext2D,
-  hi: CanvasRenderingContext2D,
-  hk: number,
-  lk: number,
-  dx = 0,
-  dy = 0,
-): void {
-  lowCtx = low;
-  hiCtx = hi;
-  hiK = hk;
-  lowK = lk;
-  hiDx = dx;
-  hiDy = dy;
 }
 
 export function fontLoaded(): boolean {
   return !!fillMask;
 }
 
-export function textLayer(): {
-  low: CanvasRenderingContext2D | null;
-  hi: CanvasRenderingContext2D | null;
-  hk: number;
-  lk: number;
-  dx: number;
-  dy: number;
-} {
-  return { low: lowCtx, hi: hiCtx, hk: hiK, lk: lowK, dx: hiDx, dy: hiDy };
-}
-
-export function onHiLayer(ctx: CanvasRenderingContext2D, fn: (c: CanvasRenderingContext2D) => void): void {
-  if (ctx !== lowCtx || !hiCtx) {
-    fn(ctx);
-    return;
-  }
-  const m = ctx.getTransform();
-  const r = hiK / lowK;
-  hiCtx.save();
-  hiCtx.setTransform(m.a * r, m.b * r, m.c * r, m.d * r, m.e * r + hiDx, m.f * r + hiDy);
-  hiCtx.globalAlpha = ctx.globalAlpha;
-  fn(hiCtx);
-  hiCtx.restore();
-}
-
-function sized(b: Baked, pw: number, ph: number): HTMLCanvasElement {
-  if (pw <= 0 || ph <= 0 || pw >= b.c.width || ph >= b.c.height) return b.c;
-  const key = pw * 4096 + ph;
-  b.sized ??= new Map();
-  let c = b.sized.get(key);
-  if (!c) {
-    c = document.createElement("canvas");
-    c.width = pw;
-    c.height = ph;
-    const g = c.getContext("2d")!;
-    g.imageSmoothingEnabled = true;
-    g.imageSmoothingQuality = "high";
-    g.drawImage(b.c, 0, 0, pw, ph);
-    if (b.sized.size > 4) {
-      const old = b.sized.keys().next().value!;
-      b.sized.get(old)!.width = 0;
-      b.sized.delete(old);
-    }
-    b.sized.set(key, c);
-  }
-  return c;
-}
+// ── Drawing ──
 
 function blit(
   ctx: CanvasRenderingContext2D,
@@ -297,25 +242,15 @@ function blit(
   if (!fillMask || !s) return;
   scale = eff(scale);
   const k = (BASE * scale) / meta.px;
-  const b = render(s, color, edge, shadow, k);
-  onHiLayer(ctx, (t) => {
-    const smooth = t.imageSmoothingEnabled;
-    const q = t.imageSmoothingQuality;
-    t.imageSmoothingEnabled = true;
-    t.imageSmoothingQuality = "high";
-    const dw = (b.w / HK) * k;
-    const dh = (b.h / HK) * k;
-    const m = t.getTransform();
-    t.drawImage(
-      m.b || m.c ? b.c : sized(b, Math.round(dw * m.a), Math.round(dh * m.d)),
-      x - PADX * k,
-      y - PADY * k - 0.5 * scale,
-      dw,
-      dh,
-    );
-    t.imageSmoothingEnabled = smooth;
-    t.imageSmoothingQuality = q;
-  });
+  const m = ctx.getTransform();
+  const b = render(s, color, edge, shadow, k, Math.hypot(m.a, m.b));
+  const smooth = ctx.imageSmoothingEnabled;
+  const q = ctx.imageSmoothingQuality;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(b.c, x - PADX * k, y - PADY * k - 0.5 * scale, (b.w / HK) * k, (b.h / HK) * k);
+  ctx.imageSmoothingEnabled = smooth;
+  ctx.imageSmoothingQuality = q;
 }
 
 export function drawText(
@@ -351,17 +286,4 @@ export function drawPlain(
   _num = false,
 ): void {
   blit(ctx, s, x, y, color, scale, false, false);
-}
-
-export function occlude(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, dim = 0): void {
-  onHiLayer(ctx, (t) => {
-    if (dim > 0) {
-      t.globalCompositeOperation = "source-atop";
-      t.fillStyle = `rgba(0,0,0,${dim})`;
-      t.fillRect(-1e4, -1e4, 2e4, 2e4);
-    }
-    t.globalCompositeOperation = "destination-out";
-    t.fillStyle = "#000";
-    t.fillRect(x - 4, y - 4, w + 10, h + 10);
-  });
 }

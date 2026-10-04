@@ -1,5 +1,5 @@
 import { drawPlain, textWidth } from "./font";
-import { band, texturedRect, waxSeal } from "./n64ui";
+import { band, texturedRect, waxSeal } from "./uiPaint";
 import type { PadState } from "../input/gamepads";
 import type { TagRef } from "../game/save";
 

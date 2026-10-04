@@ -1,14 +1,14 @@
 import type { World } from "../sim/world";
 import { CAMERA_NAMES, RULE_ROWS, type Row, type Rules } from "../game/save";
 import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from "../sim/terrain";
-import { drawNum, drawPlain, drawText, occlude, textWidth, onHiLayer } from "./font";
+import { drawNum, drawPlain, drawText, textWidth } from "./font";
 import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
 import { costumesOf } from "../render/costumes";
 import glyphUrl from "../../assets/ui/abilities.png?url";
 import {
   artTitle,
-  hiImage,
+  smoothImage,
   boardBg,
   band,
   card,
@@ -34,7 +34,7 @@ import {
   waxSeal,
   woodFloor,
   markWindow,
-} from "./n64ui";
+} from "./uiPaint";
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
@@ -42,6 +42,7 @@ import { drawSigning, type NameEntry } from "./nameEntry";
 import type { MatchMode } from "../game/save";
 import heroJson from "../../data/heroes.json";
 import talentData from "../../data/talents.json";
+import { cacheCanvas } from "./cacheCanvas";
 
 type TNode = { id: string; next?: TNode[] };
 const TREES = (talentData as unknown as { heroes: Record<string, Partial<Record<"a" | "b" | "r" | "z", TNode[]>>> })
@@ -63,9 +64,7 @@ function drawTree(
   slots.forEach((slot, row) => {
     const list = tree[slot] ?? [];
     const yy = y + row * (big + 4);
-    list.forEach((t, j) =>
-      talentIcon(ctx, t.id, right ? x + (1 - j) * (big + 1) : x + j * (big + 1), yy, big, false, true),
-    );
+    list.forEach((t, j) => talentIcon(ctx, t.id, right ? x + (1 - j) * (big + 1) : x + j * (big + 1), yy, big));
   });
 }
 
@@ -210,7 +209,7 @@ function heroGlyph(hero: string, row: number): { dark: HTMLCanvasElement; light:
   if (hit) return hit;
   const C = strip.naturalHeight;
   const tint = (color: string) => {
-    const c = document.createElement("canvas");
+    const c = cacheCanvas();
     c.width = c.height = C;
     const g = c.getContext("2d")!;
     g.drawImage(strip, row * C, 0, C, C, 0, 0, C, C);
@@ -231,7 +230,7 @@ function abilityGlyph(col: number, row: number): { dark: HTMLCanvasElement; ligh
   if (hit) return hit;
   const C = 96;
   const tint = (color: string) => {
-    const c = document.createElement("canvas");
+    const c = cacheCanvas();
     c.width = c.height = C;
     const g = c.getContext("2d")!;
     g.drawImage(glyphSheet, col * C, row * C, C, C, 0, 0, C, C);
@@ -273,7 +272,7 @@ const BTN = { a: PAD.a, b: PAD.b, r: PAD.z, z: PAD.z };
 function mapPreview(d: MapData): HTMLCanvasElement {
   const t = new Terrain(d);
   const S = 4;
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = t.width * S;
   c.height = t.depth * S;
   const ctx = c.getContext("2d")!;
@@ -547,7 +546,7 @@ export class Screens {
           ctx.fillStyle = "#2a1a0a";
           ctx.fillRect(2, 6, iw + 4, iw + 4);
           texturedRect(ctx, "cloth", 4, 8, iw, iw, on.length ? TEAM_FIELD[on[0]] : "#7a2a1c", 0, 0.7);
-          if (icon) hiImage(ctx, icon, 4, 8, iw, iw);
+          if (icon) smoothImage(ctx, icon, 4, 8, iw, iw);
           const name = (this.heroes[type]?.name ?? type).toUpperCase();
           const ns = Math.min(0.62, (sw - 4) / Math.max(1, textWidth(name, 1, true)));
           drawPlain(
@@ -613,16 +612,14 @@ export class Screens {
 
     if (this.openHint && !this.peer) {
       const sw2 = Math.min(300, W - 60);
-      onHiLayer(ctx, (t) => {
-        card(t, W / 2 - sw2 / 2, 124, sw2, 32, 0.01, "#c81818", () => {
-          const t1 = "SEATS STILL OPEN";
-          drawPlain(t, t1, sw2 / 2 - textWidth(t1, 1.05, true) / 2, 5, "#3a2410", 1.05, true);
-          const t2 = this.twoVtwo
-            ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1"
-            : "WAIT FOR A PLAYER OR + ADD CPU";
-          drawPlain(t, t2, sw2 / 2 - textWidth(t2, 0.55, true) / 2, 20, "#8a1810", 0.55, true);
-        });
+      ctx.save();
+      card(ctx, W / 2 - sw2 / 2, 124, sw2, 32, 0.01, "#c81818", () => {
+        const t1 = "SEATS STILL OPEN";
+        drawPlain(ctx, t1, sw2 / 2 - textWidth(t1, 1.05, true) / 2, 5, "#3a2410", 1.05, true);
+        const t2 = this.twoVtwo ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1" : "WAIT FOR A PLAYER OR + ADD CPU";
+        drawPlain(ctx, t2, sw2 / 2 - textWidth(t2, 0.55, true) / 2, 20, "#8a1810", 0.55, true);
       });
+      ctx.restore();
     }
     if (this.readyBanner) {
       const sw2 = Math.min(250, W - 70);
@@ -630,73 +627,71 @@ export class Screens {
       const by = 118;
       const bh = 46;
       this.hit("go", bx, by, sw2, bh);
-      onHiLayer(ctx, (t) => {
-        t.save();
-        t.fillStyle = "rgba(10, 6, 2, 0.32)";
-        t.fillRect(0, 0, W, H);
-        const cloth = () => {
-          t.beginPath();
-          t.moveTo(bx, by);
-          t.lineTo(bx + sw2, by);
-          t.lineTo(bx + sw2, by + bh);
-          t.lineTo(bx + sw2 * 0.75, by + bh - 7);
-          t.lineTo(bx + sw2 / 2, by + bh + 2);
-          t.lineTo(bx + sw2 * 0.25, by + bh - 7);
-          t.lineTo(bx, by + bh);
-          t.closePath();
-        };
-        t.shadowColor = "rgba(0, 0, 0, 0.6)";
-        t.shadowBlur = 8;
-        t.shadowOffsetY = 4;
-        cloth();
-        t.fillStyle = "#5a0e0c";
-        t.fill();
-        t.shadowColor = "transparent";
-        t.save();
-        cloth();
-        t.clip();
-        texturedRect(t, "banner", bx, by, sw2, bh + 4, "#8a1a16", 0, 0.6);
-        const gr = t.createLinearGradient(0, by, 0, by + bh);
-        gr.addColorStop(0, "rgba(255, 220, 160, 0.12)");
-        gr.addColorStop(1, "rgba(0, 0, 0, 0.35)");
-        t.fillStyle = gr;
-        t.fillRect(bx, by, sw2, bh + 4);
-        t.restore();
-        t.save();
-        t.translate(0, 0);
-        t.beginPath();
-        t.moveTo(bx + 3, by + 4);
-        t.lineTo(bx + sw2 - 3, by + 4);
-        t.lineTo(bx + sw2 - 3, by + bh - 4);
-        t.lineTo(bx + sw2 * 0.75, by + bh - 10);
-        t.lineTo(bx + sw2 / 2, by + bh - 1.5);
-        t.lineTo(bx + sw2 * 0.25, by + bh - 10);
-        t.lineTo(bx + 3, by + bh - 4);
-        t.closePath();
-        t.strokeStyle = "#d8a840";
-        t.lineWidth = 1.2;
-        t.stroke();
-        t.restore();
-        t.fillStyle = "#3a2410";
-        t.fillRect(bx - 8, by - 4, sw2 + 16, 5);
-        t.fillStyle = "#7a5430";
-        t.fillRect(bx - 8, by - 4, sw2 + 16, 2);
-        for (const fx of [bx - 10, bx + sw2 + 10]) {
-          t.beginPath();
-          t.arc(fx, by - 1.5, 3.2, 0, Math.PI * 2);
-          t.fillStyle = "#e0b850";
-          t.fill();
-          t.strokeStyle = "#5a3a10";
-          t.lineWidth = 0.8;
-          t.stroke();
-        }
-        t.restore();
-        artTitle(t, "!THE GRUDGE IS SWORN!", "THE GRUDGE IS SWORN!", W / 2, by + 5, 17);
-        if (blink) {
-          const p = "PRESS START";
-          drawPlain(t, p, W / 2 - textWidth(p, 0.7, true) / 2, by + 27, "#f4e2b0", 0.7, true);
-        }
-      });
+      ctx.save();
+      ctx.fillStyle = "rgba(10, 6, 2, 0.32)";
+      ctx.fillRect(0, 0, W, H);
+      const cloth = () => {
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + sw2, by);
+        ctx.lineTo(bx + sw2, by + bh);
+        ctx.lineTo(bx + sw2 * 0.75, by + bh - 7);
+        ctx.lineTo(bx + sw2 / 2, by + bh + 2);
+        ctx.lineTo(bx + sw2 * 0.25, by + bh - 7);
+        ctx.lineTo(bx, by + bh);
+        ctx.closePath();
+      };
+      ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 4;
+      cloth();
+      ctx.fillStyle = "#5a0e0c";
+      ctx.fill();
+      ctx.shadowColor = "transparent";
+      ctx.save();
+      cloth();
+      ctx.clip();
+      texturedRect(ctx, "banner", bx, by, sw2, bh + 4, "#8a1a16", 0, 0.6);
+      const gr = ctx.createLinearGradient(0, by, 0, by + bh);
+      gr.addColorStop(0, "rgba(255, 220, 160, 0.12)");
+      gr.addColorStop(1, "rgba(0, 0, 0, 0.35)");
+      ctx.fillStyle = gr;
+      ctx.fillRect(bx, by, sw2, bh + 4);
+      ctx.restore();
+      ctx.save();
+      ctx.translate(0, 0);
+      ctx.beginPath();
+      ctx.moveTo(bx + 3, by + 4);
+      ctx.lineTo(bx + sw2 - 3, by + 4);
+      ctx.lineTo(bx + sw2 - 3, by + bh - 4);
+      ctx.lineTo(bx + sw2 * 0.75, by + bh - 10);
+      ctx.lineTo(bx + sw2 / 2, by + bh - 1.5);
+      ctx.lineTo(bx + sw2 * 0.25, by + bh - 10);
+      ctx.lineTo(bx + 3, by + bh - 4);
+      ctx.closePath();
+      ctx.strokeStyle = "#d8a840";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#3a2410";
+      ctx.fillRect(bx - 8, by - 4, sw2 + 16, 5);
+      ctx.fillStyle = "#7a5430";
+      ctx.fillRect(bx - 8, by - 4, sw2 + 16, 2);
+      for (const fx of [bx - 10, bx + sw2 + 10]) {
+        ctx.beginPath();
+        ctx.arc(fx, by - 1.5, 3.2, 0, Math.PI * 2);
+        ctx.fillStyle = "#e0b850";
+        ctx.fill();
+        ctx.strokeStyle = "#5a3a10";
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      ctx.restore();
+      artTitle(ctx, "!THE GRUDGE IS SWORN!", "THE GRUDGE IS SWORN!", W / 2, by + 5, 17);
+      if (blink) {
+        const p = "PRESS START";
+        drawPlain(ctx, p, W / 2 - textWidth(p, 0.7, true) / 2, by + 27, "#f4e2b0", 0.7, true);
+      }
     }
   }
 
@@ -927,54 +922,52 @@ export class Screens {
       const dw = cv.width * k;
       const dh = cv.height * k;
       const bg = stageArt.get(s.hero);
-      onHiLayer(ctx, (t) => {
-        t.save();
-        t.beginPath();
-        t.rect(fx, fy, fw, ih);
-        t.clip();
-        t.imageSmoothingEnabled = true;
-        t.imageSmoothingQuality = "high";
-        if (bg?.complete && bg.naturalWidth) {
-          const bk = Math.max(fw / bg.naturalWidth, ih / bg.naturalHeight);
-          const bw = bg.naturalWidth * bk;
-          const bh = bg.naturalHeight * bk;
-          t.drawImage(bg, fx + (fw - bw) / 2, fy + (ih - bh) / 2, bw, bh);
-          const tc = TEAM_CLOTH[team] ?? "#444444";
-          const gr = t.createLinearGradient(0, fy + ih, 0, fy + ih * 0.45);
-          gr.addColorStop(0, tc + "a0");
-          gr.addColorStop(0.35, tc + "55");
-          gr.addColorStop(1, tc + "00");
-          t.fillStyle = gr;
-          t.fillRect(fx, fy, fw, ih);
-          t.strokeStyle = tc;
-          t.lineWidth = 2;
-          t.strokeRect(fx + 1, fy + 1, fw - 2, ih - 2);
-        }
-        t.drawImage(cv, fx + (fw - dw) / 2, fy + ih - dh + 3, dw, dh);
-        t.restore();
-      });
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(fx, fy, fw, ih);
+      ctx.clip();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      if (bg?.complete && bg.naturalWidth) {
+        const bk = Math.max(fw / bg.naturalWidth, ih / bg.naturalHeight);
+        const bw = bg.naturalWidth * bk;
+        const bh = bg.naturalHeight * bk;
+        ctx.drawImage(bg, fx + (fw - bw) / 2, fy + (ih - bh) / 2, bw, bh);
+        const tc = TEAM_CLOTH[team] ?? "#444444";
+        const gr = ctx.createLinearGradient(0, fy + ih, 0, fy + ih * 0.45);
+        gr.addColorStop(0, tc + "a0");
+        gr.addColorStop(0.35, tc + "55");
+        gr.addColorStop(1, tc + "00");
+        ctx.fillStyle = gr;
+        ctx.fillRect(fx, fy, fw, ih);
+        ctx.strokeStyle = tc;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(fx + 1, fy + 1, fw - 2, ih - 2);
+      }
+      ctx.drawImage(cv, fx + (fw - dw) / 2, fy + ih - dh + 3, dw, dh);
+      ctx.restore();
     }
     const hasTree = !commander && !!TREES[s.hero];
     if (hasTree) {
       const tw = w >= 100 ? 1 : 0.7;
-      onHiLayer(ctx, (t) => {
-        drawTree(t, s.hero, "a", fx + 2, fy + 3, false, tw);
-        drawTree(t, s.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
-      });
+      ctx.save();
+      drawTree(ctx, s.hero, "a", fx + 2, fy + 3, false, tw);
+      drawTree(ctx, s.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
+      ctx.restore();
     }
     (["a", "b", "r", "z"] as const).forEach((a, j) => {
       const cx = x + (w / 4) * (j + 0.5);
       const g = heroGlyph(s.hero, j);
-      if (g)
-        onHiLayer(ctx, (t) => {
-          t.imageSmoothingEnabled = true;
-          t.imageSmoothingQuality = "high";
-          t.globalAlpha = 0.5;
-          t.drawImage(g.light, cx - 7, y + h - 17 + 0.8, 14, 14);
-          t.globalAlpha = 1;
-          t.drawImage(g.dark, cx - 7, y + h - 17, 14, 14);
-        });
-      else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
+      if (g) {
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(g.light, cx - 7, y + h - 17 + 0.8, 14, 14);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(g.dark, cx - 7, y + h - 17, 14, 14);
+        ctx.restore();
+      } else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
     });
     const cl = costumesOf(s.hero);
     if (!commander && cl.length > 1 && performance.now() / 1000 < (this.costumeShownUntil[i] ?? 0)) {
@@ -984,35 +977,35 @@ export class Screens {
       const rowW = cl.length * sz + (cl.length - 1) * gap;
       const rx = fx + fw / 2 - rowW / 2;
       const ry = fy + ih - sz - 4;
-      onHiLayer(ctx, (t) => {
-        cl.forEach((c, k) => {
-          const ic = costumeIcon(s.hero, c);
-          const ix = rx + k * (sz + gap);
-          const on = k === cur;
-          if (on) {
-            t.fillStyle = "rgba(10, 6, 2, 0.75)";
-            t.fillRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
-            t.strokeStyle = "#f4e2b0";
-            t.lineWidth = 1.2;
-            t.strokeRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
-          }
-          if (ic) {
-            t.globalAlpha = on ? 1 : 0.8;
-            t.imageSmoothingEnabled = true;
-            t.imageSmoothingQuality = "high";
-            t.drawImage(ic, ix, ry, sz, sz);
-            t.globalAlpha = 1;
-          }
-        });
+      ctx.save();
+      cl.forEach((c, k) => {
+        const ic = costumeIcon(s.hero, c);
+        const ix = rx + k * (sz + gap);
+        const on = k === cur;
+        if (on) {
+          ctx.fillStyle = "rgba(10, 6, 2, 0.75)";
+          ctx.fillRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
+          ctx.strokeStyle = "#f4e2b0";
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
+        }
+        if (ic) {
+          ctx.globalAlpha = on ? 1 : 0.8;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(ic, ix, ry, sz, sz);
+          ctx.globalAlpha = 1;
+        }
       });
+      ctx.restore();
     }
-    if (sitHere) onHiLayer(ctx, (t) => this.woodButton(t, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16));
+    if (sitHere) this.woodButton(ctx, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
     if (s.ready && !commander && human) {
-      onHiLayer(ctx, (t) => {
-        waxSeal(t, fx + fw - 12, fy + 13, 10, "#a8141a", "combo");
-        const tt = "SWORN";
-        shadowText(t, tt, fx + fw - 12 - textWidth(tt, 0.5) / 2, fy + 25, "#f4ecd8", 0.5);
-      });
+      ctx.save();
+      waxSeal(ctx, fx + fw - 12, fy + 13, 10, "#a8141a", "combo");
+      const tt = "SWORN";
+      shadowText(ctx, tt, fx + fw - 12 - textWidth(tt, 0.5) / 2, fy + 25, "#f4ecd8", 0.5);
+      ctx.restore();
     }
     void blink;
   }
@@ -1056,9 +1049,18 @@ export class Screens {
     const ih = Math.round(iw * 0.48);
     ctx.fillStyle = "#2a1a0a";
     ctx.fillRect(10, 10, iw + 4, ih + 4);
-    if (!random && this.portraits)
-      hiImage(ctx, this.portraits.mapLive(pool[this.mapIndex], iw * 4, ih * 4), 12, 12, iw, ih);
-    else {
+    if (!random && this.portraits) {
+      // Live preview rendered at the card's device-pixel size (capped) so it stays sharp at high DPI.
+      const k = Math.min(6, Math.hypot(ctx.getTransform().a, ctx.getTransform().b));
+      smoothImage(
+        ctx,
+        this.portraits.mapLive(pool[this.mapIndex], Math.round(iw * k), Math.round(ih * k)),
+        12,
+        12,
+        iw,
+        ih,
+      );
+    } else {
       texturedRect(ctx, "parch", 12, 12, iw, ih, "#c8a878", 0, 1);
       drawPlain(ctx, "?", 12 + iw / 2 - textWidth("?", 5, true) / 2, 12 + ih / 2 - 26, "#5a3a18", 5, true);
     }
@@ -1108,7 +1110,7 @@ export class Screens {
       ctx.fillRect(4, 4, tw + 2, th + 2);
       if (k < pool.length) {
         const t = this.portraits?.mapThumb(pool[k], tw * 4, th * 4);
-        if (t) hiImage(ctx, t, 5, 5, tw, th);
+        if (t) smoothImage(ctx, t, 5, 5, tw, th);
       } else {
         texturedRect(ctx, "parch", 5, 5, tw, th, "#c8a878", 0, 1);
         drawPlain(ctx, "?", 5 + tw / 2 - textWidth("?", 2.4, true) / 2, 5 + th / 2 - 13, "#5a3a18", 2.4, true);
@@ -1295,7 +1297,7 @@ export class Screens {
       ctx.fillRect(4, 4, chh - 6, chh - 6);
       texturedRect(ctx, "cloth", 5, 5, chh - 8, chh - 8, TEAM_CLOTH[p.team], 0, 0.7);
       const icon = this.portraits?.icon(p.hero);
-      if (icon) hiImage(ctx, icon, 5, 5, chh - 8, chh - 8);
+      if (icon) smoothImage(ctx, icon, 5, 5, chh - 8, chh - 8);
       const nm = p.cpu ? "CPU" : (p.tag ?? `P${p.slot + 1}`);
       drawPlain(ctx, nm, chh + 2, chh / 2 - 9, TEAM_TEXT_R[p.team], 0.72, true);
       const hero = (this.heroes[p.hero]?.name ?? p.hero).toUpperCase();

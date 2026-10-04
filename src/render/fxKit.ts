@@ -9,6 +9,7 @@ import duelistUrl from "../../assets/fx/duelist.png?url";
 import heraldUrl from "../../assets/fx/herald.png?url";
 import wrenUrl from "../../assets/fx/wren.png?url";
 import friarUrl from "../../assets/fx/friar.png?url";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 const CELL = 128;
 const COLS = 4;
@@ -30,7 +31,7 @@ const waits: Promise<void>[] = [];
 function cells(): THREE.CanvasTexture[] {
   const out: THREE.CanvasTexture[] = [];
   for (let i = 0; i < 16; i++) {
-    const c = document.createElement("canvas");
+    const c = cacheCanvas();
     c.width = c.height = CELL;
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
@@ -180,7 +181,7 @@ let baseReady = false;
 
 function paint(size: number, repeat: boolean, res = 256): { t: THREE.CanvasTexture; g: CanvasRenderingContext2D } {
   const k = Math.max(1, Math.round(res / size));
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = size * k;
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;

@@ -1,5 +1,5 @@
 import heroData from "../data/heroes.json";
-import { liveWindow } from "./ui/n64ui";
+import { liveWindow } from "./ui/uiPaint";
 import talentData from "../data/talents.json";
 import unitData from "../data/units.json";
 import structureData from "../data/structures.json";
@@ -192,7 +192,7 @@ async function start(): Promise<void> {
   };
   const teamCss = (renderData as RenderConfig).teamColors;
   const uiRoot = document.getElementById("ui")!;
-  const pixel = new UiCanvas(uiRoot);
+  const uiCanvas = new UiCanvas(uiRoot);
   const hud = new Hud(teamCss);
   const screens = new Screens(teamCss);
   screens.portraits = new Portraits(heroes, view.teamColorList);
@@ -223,8 +223,7 @@ async function start(): Promise<void> {
     screens.zoomModes = [0, 1, 2, 3].map((k) => o.zoom?.[k] ?? 0);
     view.setHints(!!o.hints);
     pads.kbmEnabled = o.kbm !== 0;
-    const q = params.get("quality");
-    view.quality = q === "low" ? 2 : q === "high" ? 1 : (o.quality ?? 0);
+    view.renderScale = o.renderScale === 75 ? 0.75 : 1;
   };
   applyOptions();
   menus.devices = () =>
@@ -513,7 +512,7 @@ async function start(): Promise<void> {
     if (here >= 3) {
       if (mode === "1v1") mode = "2v2";
     } else if (netMode === "host" && mode !== "ffa" && !(mode === "2v2" && [2, 3].some(keptCpu))) mode = "1v1";
-    cursors.setScale(pixel.w, pixel.h);
+    cursors.setScale(uiCanvas.w, uiCanvas.h);
     cursors.reset(mode === "ffa" ? [0, 1, 2, 3] : mode === "2v2" ? [0, 2, 1, 3] : [0, 1]);
     slots.forEach((sl, i) => {
       const keep = keptCpu(i);
@@ -589,15 +588,13 @@ async function start(): Promise<void> {
     hud.resetTrainer();
     menus.training = !!spec.training;
     show(buildWorld(spec));
-    matchPlayers = spec.heroes
-      .slice(0, spec.players)
-      .map((hero, i) => ({
-        tag: spec.names[i] ?? null,
-        tagId: spec.tagIds?.[i] ?? null,
-        hero,
-        team: mode === "ffa" ? i : i % 2,
-        cpu: !spec.humans[i],
-      }));
+    matchPlayers = spec.heroes.slice(0, spec.players).map((hero, i) => ({
+      tag: spec.names[i] ?? null,
+      tagId: spec.tagIds?.[i] ?? null,
+      hero,
+      team: mode === "ffa" ? i : i % 2,
+      cpu: !spec.humans[i],
+    }));
     recorded = false;
     fallen = [];
     state = "match";
@@ -1376,12 +1373,8 @@ async function start(): Promise<void> {
   let fpsFrames = 0;
   let fpsAt = 0;
   let fpsShown = 0;
-  let frameTicks = 0;
-  let shownMode = "";
-  let hudSkipped = false;
   const frame = (nowMs: number): void => {
     const pf0 = perf.now();
-    frameTicks = 0;
     let now = nowMs / 1000;
     let dt = Math.max(0, Math.min(0.25, (nowMs - last) / 1000));
     last = nowMs;
@@ -1456,7 +1449,7 @@ async function start(): Promise<void> {
         screens.set("select");
       } else if (r === "title") beginAttract();
     } else if (state === "select") {
-      cursors.setScale(pixel.w, pixel.h);
+      cursors.setScale(uiCanvas.w, uiCanvas.h);
       if (mode === "1v1" && [0, 1, 2, 3].filter(present).length >= 3) setMode("2v2");
       slots.forEach((sl, i) => {
         sl.local = pads.players[i].connected;
@@ -1623,7 +1616,7 @@ async function start(): Promise<void> {
         slots.every((sl, i) => !slotActive(i) || sl.open || (sl.ready && heldBy(i) < 0));
       if (allReady && now - readySince > 0.25 && anyPressed("start") && !namingAte && !screens.naming.size) toMap();
     } else if (state === "map") {
-      cursors.setScale(pixel.w, pixel.h);
+      cursors.setScale(uiCanvas.w, uiCanvas.h);
       let back = false;
       let go = anyPressed("start");
       for (const act of cursors.update(padsForCursors(), dt, now, () => false)) {
@@ -1667,7 +1660,7 @@ async function start(): Promise<void> {
       }
     } else if (state === "lobby") {
       const lb = screens.lobby;
-      cursors.setScale(pixel.w, pixel.h);
+      cursors.setScale(uiCanvas.w, uiCanvas.h);
       cursors.tagOf = (k) => mySlots.get(k) ?? -1;
       screens.set(guestField && lb ? "map" : "lobby");
       if (guestField) for (const c of cursors.cursors) c.holding = -1;
@@ -1931,7 +1924,6 @@ async function start(): Promise<void> {
         ticks++;
       }
       if (ticks === matchData.maxTicksPerFrame) acc = 0;
-      frameTicks = ticks;
       perf.cpu("sim", pfs);
       perf.stat("ticks", ticks);
       if (hosting && outFrames.length) {
@@ -2019,23 +2011,13 @@ async function start(): Promise<void> {
     pft = perf.cpu("render", pft);
     view.windowRect = liveWindow.rect;
     liveWindow.rect = null;
-    const skipHud = state === "match" && view.throttleHud && frameTicks > 0 && !hudSkipped;
-    hudSkipped = skipHud;
-    const mode2 = state === "match" ? "m" : state === "paused" ? "p" : "o";
-    if (mode2 !== shownMode) {
-      if (shownMode && mode2 === "m") {
-        pixel.realloc();
-        view.refreshTargets();
-      }
-      shownMode = mode2;
-    }
-    const ctx = skipHud ? pixel.ctx : pixel.begin();
+    const ctx = uiCanvas.begin();
     const uiList = mappers.map((m) => m?.ui ?? null);
     hud.locate = view.splitCount ? null : (x, y, z) => view.worldToScreen(x, y, z);
     hud.split = view.splitCount;
     hud.zoomOut = view.zoomOut();
     hud.rectOf = (pl) => view.viewRectOf(pl);
-    if (!skipHud) hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
+    hud.draw(ctx, uiCanvas.w, uiCanvas.h, world, uiList, now);
     pft = perf.cpu("hudDraw", pft);
     const watchLb = state === "lobby" && guestField ? screens.lobby : null;
     if (watchLb && guestField)
@@ -2078,12 +2060,12 @@ async function start(): Promise<void> {
     screens.adapterStatus =
       [gcText, proText].filter(Boolean).join(" · ") || "G: GAMECUBE ADAPTER · P: WAKE A SWITCH 2 PRO CONTROLLER";
     screens.adapterDebug = pads.gc.debug();
-    if (!skipHud) screens.draw(ctx, pixel.w, pixel.h, now);
-    if (state === "menu") menus.draw(ctx, pixel.w, pixel.h, now);
-    if (state === "paused") menus.drawPause(ctx, pixel.w, pixel.h, now, world);
-    if (netMode !== "off" && !skipHud && (state === "match" || state === "paused")) {
+    screens.draw(ctx, uiCanvas.w, uiCanvas.h, now);
+    if (state === "menu") menus.draw(ctx, uiCanvas.w, uiCanvas.h, now);
+    if (state === "paused") menus.drawPause(ctx, uiCanvas.w, uiCanvas.h, now, world);
+    if (netMode !== "off" && (state === "match" || state === "paused")) {
       const t = desync ? "OUT OF SYNC" : netMode === "host" ? "HOSTING" : "ONLINE";
-      drawText(ctx, t, 4, pixel.h - 9, desync ? "#ff6040" : "#c8c0a8", 0.55);
+      drawText(ctx, t, 4, uiCanvas.h - 9, desync ? "#ff6040" : "#c8c0a8", 0.55);
     }
     fpsFrames++;
     if (nowMs - fpsAt >= 500) {
@@ -2091,10 +2073,10 @@ async function start(): Promise<void> {
       fpsAt = nowMs;
       fpsFrames = 0;
     }
-    if (save.data.options.fps && !skipHud) {
+    if (save.data.options.fps) {
       const t = `${fpsShown} FPS`;
       const col = fpsShown >= 55 ? "#a0ff80" : fpsShown >= 30 ? "#ffe060" : "#ff6050";
-      drawText(ctx, t, pixel.w - 4 - textWidth(t, 0.7), pixel.h - 10, col, 0.7);
+      drawText(ctx, t, uiCanvas.w - 4 - textWidth(t, 0.7), uiCanvas.h - 10, col, 0.7);
     }
     padsEl.textContent = showPads ? pads.debugText() : "";
     perf.cpu("screens", pft);

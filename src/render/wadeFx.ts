@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { FxBatch, fxBatch } from "./fxInstances";
 import { emit, type FxHost } from "./fxParts";
 import { FX } from "./fxKit";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 export const WATER_TIDE_RISE = 0.42;
 
@@ -31,7 +32,7 @@ export function clipBelowWater<T extends THREE.Material>(mat: T): T {
 }
 
 function ringTexture(size: number, ring: number, width: number, fill: number, broken: number): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = size;
   const g = c.getContext("2d")!;
   const img = g.createImageData(size, size);

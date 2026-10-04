@@ -12,6 +12,7 @@ import crackUrl from "../../assets/textures/cobble_crack.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
 import { stripMesh } from "./stripMesh";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./terrainMesh";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 export interface MapView {
   root: THREE.Group;
@@ -92,13 +93,13 @@ function upscaled(map: THREE.Texture, size: number): THREE.Texture {
   const w = img.width,
     h = img.height;
   if (w === size && h === size) return map;
-  const src = document.createElement("canvas");
+  const src = cacheCanvas();
   src.width = w;
   src.height = h;
   const sctx = src.getContext("2d", { willReadFrequently: true })!;
   sctx.drawImage(img, 0, 0);
   const sp = sctx.getImageData(0, 0, w, h).data;
-  const out = document.createElement("canvas");
+  const out = cacheCanvas();
   out.width = out.height = size;
   const octx = out.getContext("2d")!;
   const od = octx.createImageData(size, size);

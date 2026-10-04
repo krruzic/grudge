@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 interface Part {
   name: string;
@@ -25,7 +26,7 @@ export function layerTexture(maps: (THREE.Texture | null)[]): THREE.DataArrayTex
     if (img?.width) size = Math.max(size, img.width);
   }
   size = Math.min(256, size);
-  const cv = document.createElement("canvas");
+  const cv = cacheCanvas();
   cv.width = cv.height = size;
   const ctx = cv.getContext("2d", { willReadFrequently: true })!;
   const data = new Uint8Array(size * size * 4 * maps.length);

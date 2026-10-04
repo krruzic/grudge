@@ -21,7 +21,8 @@ export interface Options {
   zoom?: number[];
   kbm: number;
   fps: number;
-  quality: number;
+  /** 3D render resolution in percent of native (100 or 75). */
+  renderScale: number;
 }
 
 export interface Record3 {
@@ -189,12 +190,11 @@ export const OPTION_ROWS: Row<Options>[] = [
     blurb: "OFF: KEYS AND MOUSE NEVER TAKE A SEAT. CLICK HERE TO TURN BACK ON.",
   },
   {
-    key: "quality",
-    label: "GRAPHICS",
-    values: [0, 1, 2],
-    fmt: (v) => ["AUTO", "HIGH", "FAST"][v] ?? "AUTO",
-    blurb:
-      "FAST RENDERS 3 AND 4 PLAYER SPLIT SCREEN A LITTLE SOFTER FOR WEAK OR BUILT-IN GRAPHICS. AUTO PICKS FAST ON THOSE OR WHEN FRAMES DROP.",
+    key: "renderScale",
+    label: "RENDER SCALE",
+    values: [100, 75],
+    fmt: (v) => `${v}%`,
+    blurb: "75% DRAWS THE 3D VIEW AT LOWER RESOLUTION FOR WEAK OR BUILT-IN GRAPHICS. THE MENUS AND HUD STAY SHARP.",
   },
   {
     key: "fps",
@@ -225,7 +225,7 @@ export const DEFAULT_OPTIONS: Options = {
   split: 1,
   kbm: 1,
   fps: 1,
-  quality: 0,
+  renderScale: 100,
 };
 
 const KEY = "grudge.save.v1";

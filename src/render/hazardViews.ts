@@ -29,6 +29,7 @@ import { zoneFissures } from "./fxParts";
 import { SpriteBatches } from "./spriteBatch";
 import { MapFx } from "./mapFx";
 import { BUBBLE, FOAM, ZONE_DECALS } from "./newHeroFx";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {
@@ -287,7 +288,7 @@ const IRON = new THREE.MeshLambertMaterial({ color: 0x5a5a64, flatShading: true 
 const COPPER = new THREE.MeshLambertMaterial({ color: 0xd07a3a, flatShading: true, emissive: 0x301000 });
 
 function groundTex(draw: (c: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
-  const cv = document.createElement("canvas");
+  const cv = cacheCanvas();
   cv.width = cv.height = 512;
   const c = cv.getContext("2d")!;
   c.scale(4, 4);

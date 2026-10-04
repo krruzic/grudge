@@ -1,5 +1,4 @@
 import { teslaCoil } from "./hazardViews";
-import { hasLod, useLod } from "./lod";
 import { costumeOfPlayer } from "./costumes";
 import { FX, hd, SUMMONER, trailOf, withCostume } from "./fxKit";
 import { KITS } from "./kits";
@@ -28,6 +27,7 @@ import outpostIcon from "../../assets/ui/talents/p_outpost.png?url";
 import towerIcon from "../../assets/ui/talents/p_tower.png?url";
 import upgradeIcon from "../../assets/ui/talents/p_upgrade.png?url";
 import shopIcon from "../../assets/ui/talents/p_shop.png?url";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 interface Bar {
   group: THREE.Group;
@@ -274,7 +274,7 @@ const KIND_ANIM: Record<string, string> = {
 const white = new THREE.Color(1, 1, 1);
 
 function hintTex(cells: [string, string][]): THREE.CanvasTexture {
-  const cv = document.createElement("canvas");
+  const cv = cacheCanvas();
   cv.width = 128 * cells.length;
   cv.height = 128;
   const t = new THREE.CanvasTexture(cv);
@@ -350,7 +350,7 @@ export function disposeTree(root: THREE.Object3D, shared: Set<THREE.Material> = 
 }
 
 function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
-  const cv = document.createElement("canvas");
+  const cv = cacheCanvas();
   cv.width = cv.height = 128;
   const c = cv.getContext("2d")!;
   c.scale(4, 4);
@@ -361,7 +361,7 @@ function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTextu
   return t;
 }
 const hexShieldTex = (() => {
-  const cv = document.createElement("canvas");
+  const cv = cacheCanvas();
   cv.width = cv.height = 128;
   const c = cv.getContext("2d")!;
   c.strokeStyle = "rgba(255,255,255,0.95)";
@@ -391,7 +391,7 @@ domeGeo.userData.model = true;
 const gearMat = new THREE.SpriteMaterial({
   depthTest: false,
   map: (() => {
-    const cv = document.createElement("canvas");
+    const cv = cacheCanvas();
     cv.width = cv.height = 128;
     const c = cv.getContext("2d")!;
     c.scale(4, 4);
@@ -652,7 +652,7 @@ const MARKS: Record<string, THREE.SpriteMaterial> = {
 for (const m of [...Object.values(MARKS), gearMat]) SHARED_VIEW_MATS.add(m);
 
 function rankTex(rank: number): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = 128;
   const ctx = c.getContext("2d")!;
   ctx.scale(4, 4);
@@ -819,7 +819,6 @@ export function markSilhouette(obj: THREE.Object3D, team: number): void {
     proxy.frustumCulled = o.frustumCulled;
     proxy.matrixAutoUpdate = false;
     proxy.renderOrder = SIL_ORDER;
-    if (hasLod(o.geometry)) useLod(proxy);
     silScene.add(proxy);
     silList.push({ proxy, src: o });
     const mats = Array.isArray(o.material) ? o.material : [o.material];

@@ -13,6 +13,7 @@ import { Kind } from "../sim/terrain";
 import { chunks, emit, type FxHost } from "./fxParts";
 import { propParts } from "./props";
 import { SimplifyModifier } from "three/examples/jsm/modifiers/SimplifyModifier.js";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 interface Rect {
   x: number;
@@ -148,7 +149,7 @@ function blanketMat(uni: { uFront: { value: number }; uMelt: { value: number } }
 }
 
 function puffTexture(): THREE.Texture {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = 128;
   const g = c.getContext("2d")!;
   const blobs = [
@@ -212,7 +213,7 @@ const LANTERN_SCALE = 1.45;
 const LANTERN_GLOW = { value: 1 };
 
 function glowTexture(): THREE.Texture {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = 256;
   const g = c.getContext("2d")!;
   g.scale(4, 4);

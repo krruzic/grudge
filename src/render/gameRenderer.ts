@@ -1,3 +1,7 @@
+// GameRenderer: owns the WebGL renderer and draws the 3D arena each frame.
+// Pipeline: sync views from the sim → pick cameras (single, framed window, demo, or split-screen scissor
+// viewports) → render the scene into a native-resolution linear target → one grade pass to the canvas.
+// The 2D UI is a separate canvas on top (see UiCanvas in src/ui/hud.ts).
 import * as THREE from "three";
 import { RelicView } from "./relicView";
 import { HeroPropViews } from "./newHeroFx";
@@ -14,7 +18,6 @@ import { Reticles, type ReticleReq } from "./reticle";
 import type { UnitModels } from "./unitModels";
 import type { StructureModels } from "./structureModels";
 import { perf } from "../perf";
-import { LOD } from "./lod";
 
 Object.defineProperty(THREE.Material.prototype, "forceSinglePass", {
   get: () => true,
@@ -23,14 +26,10 @@ Object.defineProperty(THREE.Material.prototype, "forceSinglePass", {
 });
 
 export interface RenderConfig {
-  lowResHeight: number;
-  colorBits: number;
-  dither: number;
   pitchDeg: number;
   fovDeg: number;
   minViewWidth: number;
   splitViewWidth: number;
-  splitNear: number;
   commanderViewWidth: number;
   viewMargin: number;
   skyZenith: string;
@@ -50,32 +49,23 @@ export interface RenderConfig {
   saturation: number;
   heroScale: number;
   vignette: number;
-  viBlur: number;
   shadows: boolean;
   outlines: boolean;
 }
 
-const postVert = /* glsl */ `
+// ── Grade pass ──
+// The scene renders into a linear half-float target at drawing-buffer size; this single full-screen pass
+// encodes it to sRGB and applies the colour grade from data/render.json (saturation, vignette).
+const gradeVert = /* glsl */ `
 varying vec2 vUv;
 void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 `;
 
-const quantFrag = /* glsl */ `
+const gradeFrag = /* glsl */ `
 uniform sampler2D tScene;
-uniform vec2 lowRes;
-uniform float levels;
-uniform float dither;
 uniform float saturation;
 uniform float vignette;
 varying vec2 vUv;
-
-float magic4(vec2 p) {
-  int x = int(mod(p.x, 4.0));
-  int y = int(mod(p.y, 4.0));
-  int i = x + y * 4;
-  int m[16] = int[16](0, 6, 1, 7, 4, 2, 5, 3, 3, 5, 2, 4, 7, 1, 6, 0);
-  return (float(m[i]) + 0.5) / 8.0 - 0.5;
-}
 
 vec3 toSRGB(vec3 c) {
   c = max(c, vec3(0.0));
@@ -88,61 +78,20 @@ void main() {
   c = mix(vec3(l), c, saturation);
   vec2 d = vUv - 0.5;
   c *= 1.0 - dot(d, d) * vignette;
-  c += magic4(floor(vUv * lowRes)) * dither / levels;
-  c = floor(c * levels + 0.5) / levels;
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }
 `;
 
-const viFrag = /* glsl */ `
-uniform sampler2D tLow;
-uniform vec2 lowRes;
-uniform vec2 outRes;
-uniform float viBlur;
-varying vec2 vUv;
-
-vec2 sharpUv(vec2 uv) {
-  vec2 p = uv * lowRes;
-  vec2 i = floor(p);
-  vec2 f = p - i;
-  vec2 k = outRes / lowRes;
-  f = clamp((f - 0.5) * k + 0.5, 0.0, 1.0);
-  return (i + f) / lowRes;
-}
-
-void main() {
-  vec2 px = 1.0 / lowRes;
-  vec2 uv = sharpUv(vUv);
-  vec3 c = texture2D(tLow, uv).rgb;
-  vec3 l = texture2D(tLow, uv - vec2(px.x, 0.0)).rgb;
-  vec3 r = texture2D(tLow, uv + vec2(px.x, 0.0)).rgb;
-  vec3 blur = (c * 2.0 + l + r) / 4.0;
-  vec3 dedither = clamp(blur, min(min(l, r), c), max(max(l, r), c));
-  gl_FragColor = vec4(mix(c, dedither, viBlur), 1.0);
-}
-`;
-
-function weakGpu(r: THREE.WebGLRenderer): boolean {
-  const gl = r.getContext();
-  const ext = gl.getExtension("WEBGL_debug_renderer_info");
-  const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-  return (
-    /vega (3|6|8|9|10|11)\b|radeon(\(tm\))? (\d+m )?graphics|mali|adreno|powervr|swiftshader|llvmpipe/i.test(name) ||
-    (/intel/i.test(name) && !/\barc\b/i.test(name))
-  );
-}
+/** Highest devicePixelRatio the 3D view honours; beyond 2x the extra pixels are not visible at game distance. */
+const MAX_DPR = 2;
 
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   private target: THREE.WebGLRenderTarget;
-  private postScene = new THREE.Scene();
-  private postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  private postMat: THREE.ShaderMaterial;
-  private lowTarget: THREE.WebGLRenderTarget;
-  private viScene = new THREE.Scene();
-  private viMat: THREE.ShaderMaterial;
+  private gradeScene = new THREE.Scene();
+  private gradeCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private entityViews: EntityViews;
   combatFx: CombatFx;
   private hazards!: HazardViews;
@@ -175,7 +124,8 @@ export class GameRenderer {
       depth: true,
     });
     this.renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
-    this.weakGpu = weakGpu(this.renderer);
+    // Pixel ratio stays 1: fitTargets sizes the canvas in device pixels itself, so every viewport,
+    // scissor and target rect below is in drawing-buffer pixels.
     this.renderer.setPixelRatio(1);
     this.renderer.shadowMap.enabled = cfg.shadows;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -191,39 +141,18 @@ export class GameRenderer {
       type: THREE.HalfFloatType,
       stencilBuffer: true,
     });
-    this.postMat = new THREE.ShaderMaterial({
-      vertexShader: postVert,
-      fragmentShader: quantFrag,
+    const gradeMat = new THREE.ShaderMaterial({
+      vertexShader: gradeVert,
+      fragmentShader: gradeFrag,
       uniforms: {
         tScene: { value: this.target.texture },
-        lowRes: { value: new THREE.Vector2() },
-        levels: { value: Math.pow(2, cfg.colorBits) - 1 },
-        dither: { value: cfg.dither },
         saturation: { value: cfg.saturation },
         vignette: { value: cfg.vignette },
       },
       depthTest: false,
       depthWrite: false,
     });
-    this.postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.postMat));
-    this.lowTarget = new THREE.WebGLRenderTarget(4, 4, {
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-      depthBuffer: false,
-    });
-    this.viMat = new THREE.ShaderMaterial({
-      vertexShader: postVert,
-      fragmentShader: viFrag,
-      uniforms: {
-        tLow: { value: this.lowTarget.texture },
-        lowRes: { value: this.postMat.uniforms.lowRes.value },
-        outRes: { value: new THREE.Vector2(1, 1) },
-        viBlur: { value: cfg.viBlur },
-      },
-      depthTest: false,
-      depthWrite: false,
-    });
-    this.viScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.viMat));
+    this.gradeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), gradeMat));
 
     this.scene.fog = new THREE.Fog(new THREE.Color(cfg.fogColor), 30, 80);
     this.sky = makeSky(cfg.skyZenith, cfg.skyHorizon);
@@ -356,71 +285,24 @@ export class GameRenderer {
     return this.teamColors;
   }
 
-  private fullSize = new THREE.Vector2();
+  // ── Output size ──
+  // Checked every frame (cheap string compare), never from resize events, so the canvas and target always
+  // match the window: CSS size × min(DPR, 2) × renderScale, in device pixels.
 
-  quality = 0;
-  weakGpu = false;
-  private slowFrames = 0;
-  private sampled = 0;
-  private measuredSlow = false;
-
-  get low(): boolean {
-    return this.quality === 2 || (this.quality === 0 && (this.weakGpu || this.measuredSlow));
-  }
-
-  get throttleHud(): boolean {
-    return this.low && this.splitViews.length >= 3;
-  }
-
-  private dropRes = false;
-
-  private watchFrames(dt: number): void {
-    const low = this.low;
-    if (this.quality === 1 || (low && this.dropRes) || this.splitViews.length < 3 || dt <= 0 || dt > 0.1) return;
-    this.sampled++;
-    if (dt > 1 / 50) this.slowFrames++;
-    if (this.sampled < 240) return;
-    if (this.slowFrames > this.sampled * 0.25) {
-      if (low) this.dropRes = true;
-      else this.measuredSlow = true;
-    }
-    this.sampled = 0;
-    this.slowFrames = 0;
-  }
-
+  /** 1 = native; 0.75 for weak GPUs (Options → Graphics → Render scale). */
+  renderScale = 1;
   private sizeKey = "";
 
-  refreshTargets(): void {
-    this.sizeKey = "";
-  }
-
   private fitTargets(): void {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const low = this.low;
-    const cap = low ? (this.splitViews.length >= 3 && this.dropRes ? 900 : 1080) : this.cfg.lowResHeight;
-    const key = `${w}x${h}|${cap}|${low}`;
+    const ratio = Math.min(window.devicePixelRatio || 1, MAX_DPR) * this.renderScale;
+    const max = this.renderer.capabilities.maxTextureSize;
+    const w = Math.max(1, Math.min(max, Math.round(window.innerWidth * ratio)));
+    const h = Math.max(1, Math.min(max, Math.round(window.innerHeight * ratio)));
+    const key = `${w}x${h}`;
     if (key === this.sizeKey) return;
     this.sizeKey = key;
-    const type = low ? THREE.UnsignedByteType : THREE.HalfFloatType;
-    if (this.target.texture.type !== type) {
-      this.target.dispose();
-      this.target.texture.type = type;
-      this.target.texture.colorSpace = low ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-    }
-    this.resize(cap);
-  }
-
-  private resize(cap = this.cfg.lowResHeight): void {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
     this.renderer.setSize(w, h, false);
-    const lowH = Math.min(cap, h);
-    const lowW = Math.round((lowH * w) / h);
-    this.target.setSize(lowW, lowH);
-    this.lowTarget.setSize(lowW, lowH);
-    this.viMat.uniforms.outRes.value.set(w, h);
-    this.postMat.uniforms.lowRes.value.set(lowW, lowH);
+    this.target.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
@@ -428,6 +310,9 @@ export class GameRenderer {
   cinematic = false;
   windowRect: [number, number, number, number] | null = null;
   private cineT = 0;
+
+  // ── Cameras ──
+  // Framing for the shared camera, cinematic orbit, and per-player split cameras.
 
   private updateCamera(points: THREE.Vector3[], dt: number): void {
     if (this.cinematic && !this.splitViews.length) {
@@ -604,6 +489,9 @@ export class GameRenderer {
     this.zoomIndex.set(player, Math.max(0, Math.min(this.zoomSteps.length - 1, i + dir)));
   }
 
+  // ── Split screen ──
+  // One view per local human; each gets its own camera and a scissor rect in the shared target.
+
   private syncSplit(): void {
     const humans = this.camMode ? this.world.players.filter((p) => this.humanList[p.player]) : [];
     humans.sort((a, b) => (humans.length === 2 ? a.team - b.team : 0) || a.player - b.player);
@@ -759,6 +647,9 @@ export class GameRenderer {
     return false;
   }
 
+  // ── Frame ──
+
+  /** Draws the scene once for `cam` into whatever viewport/scissor is current. */
   private drawScene(cam: THREE.PerspectiveCamera, viewer: number | null = this.sharedViewer()): void {
     let t0 = perf.now();
     const key = "v" + this.viewNo++;
@@ -786,11 +677,9 @@ export class GameRenderer {
     const info = this.renderer.info.render;
     const c0 = info.calls;
     const tr0 = info.triangles;
-    LOD.on = this.low && this.splitViews.length >= 2;
     perf.gpuBegin(key);
     this.renderer.render(this.scene, cam);
     perf.gpuEnd();
-    LOD.on = false;
     perf.stat(key + ".calls", info.calls - c0);
     perf.stat(key + ".ktris", (info.triangles - tr0) / 1000);
     t0 = perf.cpu(key + ".draw", t0);
@@ -854,7 +743,6 @@ export class GameRenderer {
     this.reticles.sync(this.world, this.reticleReqs, this.time);
     pt = perf.cpu("r.fx", pt);
     this.syncSplit();
-    this.watchFrames(dt);
     this.fitTargets();
     const shake = (cam: THREE.PerspectiveCamera) => {
       if (this.combatFx.shake <= 0) return;
@@ -967,20 +855,13 @@ export class GameRenderer {
       });
       this.renderer.setScissorTest(false);
     }
-    const full = this.renderer.getSize(this.fullSize);
-    this.renderer.setViewport(0, 0, full.x, full.y);
-    this.renderer.setScissor(0, 0, full.x, full.y);
+    // Grade pass: target → canvas, 1:1 pixels.
+    this.renderer.setRenderTarget(null);
+    this.renderer.setViewport(0, 0, this.target.width, this.target.height);
+    this.renderer.setScissor(0, 0, this.target.width, this.target.height);
     pt = perf.now();
     perf.gpuBegin("post");
-    if (this.cfg.viBlur === 0 && this.lowTarget.width === full.x && this.lowTarget.height === full.y) {
-      this.renderer.setRenderTarget(null);
-      this.renderer.render(this.postScene, this.postCam);
-    } else {
-      this.renderer.setRenderTarget(this.lowTarget);
-      this.renderer.render(this.postScene, this.postCam);
-      this.renderer.setRenderTarget(null);
-      this.renderer.render(this.viScene, this.postCam);
-    }
+    this.renderer.render(this.gradeScene, this.gradeCam);
     perf.gpuEnd();
     perf.cpu("r.post", pt);
   }

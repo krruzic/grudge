@@ -1,7 +1,4 @@
 {
-  "lowResHeight": 1440,
-  "colorBits": 8,
-  "dither": 0,
   "pitchDeg": 42,
   "fovDeg": 46,
   "minViewWidth": 28,
@@ -33,10 +30,8 @@
   "saturation": 1.12,
   "heroScale": 1.5,
   "vignette": 0.1,
-  "viBlur": 0,
   "shadows": false,
   "outlines": false,
   "splitViewWidth": 22,
-  "splitNear": 12,
   "commanderViewWidth": 58
 }

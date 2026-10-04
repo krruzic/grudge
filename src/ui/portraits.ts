@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { HeroModels } from "../render/heroModels";
 import type { UnitModels } from "../render/unitModels";
+import { cacheCanvas } from "./cacheCanvas";
 
 const paintedUrls = import.meta.glob("../../assets/ui/portraits/*.jpg", {
   query: "?url",
@@ -41,6 +42,8 @@ export class Portraits {
   private last = performance.now() / 1000;
   private maps: { root: THREE.Object3D; w: number; d: number }[] = [];
   private thumbs = new Map<number, HTMLCanvasElement>();
+  // Live previews are rewritten from WebGL every frame, so they stay GPU-backed (no readback); the static
+  // shots below are cacheCanvas (CPU) since they are painted once.
   private liveCanvas = document.createElement("canvas");
 
   constructor(
@@ -107,8 +110,10 @@ export class Portraits {
     this.camera.updateProjectionMatrix();
     this.renderer.render(this.scene, this.camera);
     this.scene.remove(root);
-    out.width = w;
-    out.height = h;
+    if (out.width !== w || out.height !== h) {
+      out.width = w;
+      out.height = h;
+    }
     const ctx = out.getContext("2d")!;
     ctx.clearRect(0, 0, w, h);
     ctx.drawImage(this.renderer.domElement, 0, 0);
@@ -122,7 +127,7 @@ export class Portraits {
     if (c) return c;
     const inst = this.units?.create(type, this.teamColors[0], 0);
     if (!inst) return null;
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     const root = new THREE.Group();
     root.add(inst.body);
     const act = inst.actions.get("attack") ?? inst.actions.get("idle");
@@ -153,7 +158,7 @@ export class Portraits {
     if (c) return c;
     const inst = this.units?.create(type, this.teamColors[team], team);
     if (!inst) return null;
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     const root = new THREE.Group();
     root.add(inst.body);
     inst.actions.get("idle")?.play();
@@ -178,7 +183,7 @@ export class Portraits {
     if (c) return c;
     const art = painted.get(type);
     if (art?.complete && art.naturalWidth) {
-      c = document.createElement("canvas");
+      c = cacheCanvas();
       c.width = c.height = art.naturalWidth;
       c.getContext("2d")!.drawImage(art, 0, 0);
       this.icons.set(type, c);
@@ -188,7 +193,7 @@ export class Portraits {
       const tmp = this.icons.get(`3d:${type}`);
       if (tmp) return tmp;
     }
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     const p = this.pose(type, NEUTRAL);
     p.body.traverse((o) => {
       if (o.name.startsWith(`${type}_wrench`)) o.visible = false;
@@ -222,7 +227,7 @@ export class Portraits {
     const key = `${type}|${clip}|${frac.toFixed(2)}|${w}x${h}|${yaw}`;
     const hit = this.shots.get(key);
     if (hit) return hit;
-    const c = document.createElement("canvas");
+    const c = cacheCanvas();
     const p = this.pose(type, this.teamColors[0] ?? NEUTRAL);
     const act = p.actions.get(clip) ?? p.actions.get("attack_a");
     if (act && p.mixer) {
@@ -333,7 +338,7 @@ export class Portraits {
     const key = i * 1e6 + w * 1e3 + h;
     let c = this.thumbs.get(key);
     if (c) return c;
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     this.shootMap(i, w, h, 0, 60, 1.05, c);
     this.thumbs.set(key, c);
     return c;
@@ -358,7 +363,7 @@ export class Portraits {
     this.renderer.render(this.scene, cam);
     this.renderer.setClearColor(0x000000, 0);
     this.scene.remove(m.root);
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     c.width = w;
     c.height = h;
     c.getContext("2d")!.drawImage(this.renderer.domElement, 0, 0);

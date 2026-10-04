@@ -1,7 +1,8 @@
 import * as THREE from "three";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 function radialTexture(inner: string, outer: string): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = 128;
   const ctx = c.getContext("2d")!;
   ctx.scale(4, 4);

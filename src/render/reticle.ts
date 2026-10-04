@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { World } from "../sim/world";
 import { abilities } from "../sim/talents";
 import { graveSpots } from "../sim/heroes";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 export interface ReticleReq {
   heroId: number;
@@ -12,7 +13,7 @@ export interface ReticleReq {
 }
 
 function ringTex(): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = 512;
   const g = c.getContext("2d")!;
   g.scale(4, 4);
@@ -34,7 +35,7 @@ function ringTex(): THREE.CanvasTexture {
 }
 
 function areaTex(fill = "255,220,120", rim = "#ffe070", dark = "#3a1a00", mark = "#ffd23a"): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = 512;
   const g = c.getContext("2d")!;
   g.scale(4, 4);

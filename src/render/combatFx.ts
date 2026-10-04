@@ -39,6 +39,7 @@ import {
   type FxHost,
 } from "./fxParts";
 import { FxBatch, fxBatch, flushFxBatches, FxInst } from "./fxInstances";
+import { cacheCanvas } from "../ui/cacheCanvas";
 
 FISSURE_TEX.set(FX.crack, "crack");
 FISSURE_TEX.set(WARLORD.crackRing, "crack");
@@ -100,7 +101,7 @@ function canvasTex(
   res = 256,
 ): THREE.CanvasTexture {
   const k = Math.max(1, Math.round(res / size));
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = c.height = size * k;
   const ctx = c.getContext("2d")!;
   ctx.scale(k, k);
@@ -217,8 +218,7 @@ class TextAtlas {
 
   private draw(s: number): void {
     const src =
-      this.spare.pop() ??
-      new THREE.Texture(Object.assign(document.createElement("canvas"), { width: SLOT_W, height: SLOT_TEX_H }));
+      this.spare.pop() ?? new THREE.Texture(Object.assign(cacheCanvas(), { width: SLOT_W, height: SLOT_TEX_H }));
     const ctx = (src.image as HTMLCanvasElement).getContext("2d")!;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, SLOT_W, SLOT_TEX_H);
@@ -464,7 +464,7 @@ function calloutTex(text: string, color: string): { tex: THREE.CanvasTexture; as
   const hit = calloutCache.get(key);
   if (hit) return hit;
   const s = 1.6;
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   const lw = Math.ceil(textWidth(text, s) + 12);
   c.width = lw * TK;
   c.height = 30 * TK;

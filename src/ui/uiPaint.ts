@@ -1,3 +1,7 @@
+// UI paint kit: the shared hand-painted building blocks every menu, screen and HUD panel is made of
+// (textured rects, parchment cards, wood beams and buttons, wax seals, ribbons, shields, banners, painted titles
+// from the title font, framed windows onto the live 3D view). Everything draws in UI layout units into the one
+// UI canvas (see UiCanvas in hud.ts); expensive plates are baked once per device scale and cached.
 import stoneUrl from "../../assets/textures/ui_stone.png?url";
 import ridgeUrl from "../../assets/textures/ui_ridge.png?url";
 import goldUrl from "../../assets/textures/gold.png?url";
@@ -11,6 +15,9 @@ import bannerUrl from "../../assets/textures/banner.png?url";
 import { engravedIcon } from "./icons";
 
 import titleFontUrl from "../../assets/fonts/PirataOne.ttf?url";
+
+// ── Painted titles ──
+// Screen titles and menu words composed at runtime from the carved title font (PirataOne + gold leaf).
 
 const KEY_TEXT: Record<string, string> = {
   t_champion: "CHOOSE YOUR CHAMPION",
@@ -54,13 +61,13 @@ export function titleArt(text: string): HTMLCanvasElement | null {
   const cap = 96;
   const font = `400 ${Math.round(cap / 0.66)}px GrudgeTitle`;
   const track = cap * 0.035;
-  const m = document.createElement("canvas").getContext("2d")!;
+  const m = cacheCanvas().getContext("2d")!;
   m.font = font;
   let w = 0;
   for (const ch of s) w += m.measureText(ch).width + track;
   w -= track;
   const pad = Math.round(cap * 0.16);
-  const c = document.createElement("canvas");
+  const c = cacheCanvas();
   c.width = Math.ceil(w + pad * 2);
   c.height = Math.ceil(cap * 1.32 + pad * 2);
   const g = c.getContext("2d")!;
@@ -72,7 +79,7 @@ export function titleArt(text: string): HTMLCanvasElement | null {
       x += ctx.measureText(ch).width + track;
     }
   };
-  const ink = document.createElement("canvas");
+  const ink = cacheCanvas();
   ink.width = c.width;
   ink.height = c.height;
   const k = ink.getContext("2d")!;
@@ -123,7 +130,10 @@ export function nameImage(key: string): HTMLCanvasElement | null {
   if (key.startsWith("!")) return titleArt(key.slice(1));
   return titleArt(KEY_TEXT[key] ?? key.replace(/^[tm]_/, "").replace(/_/g, " "));
 }
-import { drawPlain, onHiLayer, textWidth } from "./font";
+import { drawPlain, textWidth } from "./font";
+import { cacheCanvas } from "./cacheCanvas";
+
+// ── Textures and textured rects ──
 
 const INK = "#0b0806";
 const imgs: Record<string, HTMLImageElement> = {};
@@ -144,6 +154,9 @@ for (const [k, u] of Object.entries({
   imgs[k] = im;
 }
 
+// Image patterns are CPU-backed. Chrome permanently drops a GPU canvas to software raster the first time it
+// fillRects with one, so pattern() is only ever used inside bake callbacks (texturedRect, bakedPlate), which
+// paint into CPU cache canvases. Never set a pattern fill on the UI canvas directly.
 function pattern(ctx: CanvasRenderingContext2D, key: string, scale = 1, ox = 0, oy = 0): CanvasPattern | string {
   const im = imgs[key];
   if (!im || !im.complete || !im.naturalWidth) return "#303030";
@@ -162,8 +175,11 @@ function withClip(ctx: CanvasRenderingContext2D, path: () => void, body: () => v
 }
 
 export function stoneBg(ctx: CanvasRenderingContext2D, W: number, H: number): void {
-  ctx.fillStyle = pattern(ctx, "stone", 1.5);
-  ctx.fillRect(0, 0, W, H);
+  bakedPlate(ctx, "stone", 0, 0, W, H, (g) => {
+    g.imageSmoothingEnabled = true;
+    g.fillStyle = pattern(g, "stone", 1.5);
+    g.fillRect(0, 0, W, H);
+  });
 }
 
 const bakes = new Map<string, HTMLCanvasElement>();
@@ -196,7 +212,7 @@ export function texturedRect(
   const id = `${key}|${pw}|${ph}|${tint}|${r}|${scale}|${k.toFixed(2)}`;
   let c = bakes.get(id);
   if (!c) {
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     c.width = pw;
     c.height = ph;
     const g = c.getContext("2d")!;
@@ -291,13 +307,16 @@ export function woodDisc(ctx: CanvasRenderingContext2D, cx: number, cy: number, 
   ctx.beginPath();
   ctx.arc(cx, cy, r + 1.5, 0, Math.PI * 2);
   ctx.fill();
-  withClip(
-    ctx,
-    () => ctx.arc(cx, cy, r, 0, Math.PI * 2),
-    () => {
-      ctx.fillStyle = pattern(ctx, "wood", r / 40, cx - r, cy - r);
-      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-    },
+  bakedPlate(ctx, `disc|${r}`, cx - r, cy - r, r * 2, r * 2, (g) =>
+    withClip(
+      g,
+      () => g.arc(r, r, r, 0, Math.PI * 2),
+      () => {
+        g.imageSmoothingEnabled = true;
+        g.fillStyle = pattern(g, "wood", r / 40, 0, 0);
+        g.fillRect(0, 0, r * 2, r * 2);
+      },
+    ),
   );
   ctx.strokeStyle = "rgba(20,10,4,0.55)";
   ctx.lineWidth = 2;
@@ -363,18 +382,22 @@ export function goldArrow(ctx: CanvasRenderingContext2D, x: number, y: number, d
   ctx.lineTo(x - dir * 1.5, y + s + 1.5);
   ctx.closePath();
   ctx.fill();
-  withClip(
-    ctx,
-    () => {
-      ctx.moveTo(x + dir * s, y);
-      ctx.lineTo(x, y - s);
-      ctx.lineTo(x, y + s);
-      ctx.closePath();
-    },
-    () => {
-      ctx.fillStyle = pattern(ctx, "gold", 0.3, x - s, y - s);
-      ctx.fillRect(x - s - 2, y - s - 2, s * 2 + 4, s * 2 + 4);
-    },
+  const e = s + 2;
+  bakedPlate(ctx, `arrow|${dir}|${s}`, x - e, y - e, e * 2, e * 2, (g) =>
+    withClip(
+      g,
+      () => {
+        g.moveTo(e + dir * s, e);
+        g.lineTo(e, e - s);
+        g.lineTo(e, e + s);
+        g.closePath();
+      },
+      () => {
+        g.imageSmoothingEnabled = true;
+        g.fillStyle = pattern(g, "gold", 0.3, 2, 2);
+        g.fillRect(0, 0, e * 2, e * 2);
+      },
+    ),
   );
 }
 
@@ -405,12 +428,15 @@ export function portraitBack(
 }
 
 export function wall(ctx: CanvasRenderingContext2D, W: number, H: number): void {
-  ctx.fillStyle = pattern(ctx, "brick", 1.4);
-  ctx.fillRect(0, 0, W, H);
-  ctx.globalCompositeOperation = "multiply";
-  ctx.fillStyle = "#6a6070";
-  ctx.fillRect(0, 0, W, H);
-  ctx.globalCompositeOperation = "source-over";
+  bakedPlate(ctx, "wall", 0, 0, W, H, (g) => {
+    g.imageSmoothingEnabled = true;
+    g.fillStyle = pattern(g, "brick", 1.4);
+    g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = "multiply";
+    g.fillStyle = "#6a6070";
+    g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = "source-over";
+  });
 }
 
 export function boardBg(ctx: CanvasRenderingContext2D, W: number, H: number): void {
@@ -493,6 +519,8 @@ export function beam(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   }
 }
 
+// ── Titles, shields, ribbons, banners, seals ──
+
 export function artTitle(
   ctx: CanvasRenderingContext2D,
   key: string,
@@ -507,11 +535,11 @@ export function artTitle(
     return;
   }
   const w = (im.width / im.height) * h;
-  onHiLayer(ctx, (t) => {
-    t.imageSmoothingEnabled = true;
-    t.imageSmoothingQuality = "high";
-    t.drawImage(im, cx - w / 2, y, w, h);
-  });
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(im, cx - w / 2, y, w, h);
+  ctx.restore();
 }
 
 export function paintedText(
@@ -633,7 +661,7 @@ function bakedPlate(
   const key = `${id}|${w.toFixed(2)}|${h.toFixed(2)}|${k.toFixed(2)}`;
   let c = plates.get(key);
   if (!c) {
-    c = document.createElement("canvas");
+    c = cacheCanvas();
     c.width = Math.max(1, Math.ceil(w * k));
     c.height = Math.max(1, Math.ceil(h * k));
     const g = c.getContext("2d")!;
@@ -667,10 +695,10 @@ export function ribbon(
     const ah = h + 3;
     const aw = Math.min(w - 2, (art.width / art.height) * ah);
     const dh = aw * (art.height / art.width);
-    onHiLayer(ctx, (t) => {
-      t.imageSmoothingEnabled = true;
-      t.drawImage(art, cx - aw / 2, y + (h - dh) / 2, aw, dh);
-    });
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(art, cx - aw / 2, y + (h - dh) / 2, aw, dh);
+    ctx.restore();
     return;
   }
   const tw = textWidth(text, scale, true);
@@ -736,10 +764,13 @@ function pole(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): v
     ctx.beginPath();
     ctx.arc(kx, y - 0.5, 3.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = pattern(ctx, "gold", 0.2, kx, y);
-    ctx.beginPath();
-    ctx.arc(kx, y - 0.5, 2.4, 0, Math.PI * 2);
-    ctx.fill();
+    bakedPlate(ctx, "knob", kx - 2.4, y - 2.9, 4.8, 4.8, (g) => {
+      g.imageSmoothingEnabled = true;
+      g.fillStyle = pattern(g, "gold", 0.2, 2.4, 2.9);
+      g.beginPath();
+      g.arc(2.4, 2.4, 2.4, 0, Math.PI * 2);
+      g.fill();
+    });
   }
   ctx.strokeStyle = "#5a4020";
   ctx.lineWidth = 1;
@@ -889,22 +920,25 @@ export function pennant(ctx: CanvasRenderingContext2D, x: number, y: number, col
   ctx.lineTo(x, y - 7.5);
   ctx.closePath();
   ctx.fill();
-  withClip(
-    ctx,
-    () => {
-      ctx.moveTo(x + 0.8, y - 16.8);
-      ctx.lineTo(x + 14.5, y - 13);
-      ctx.lineTo(x + 0.8, y - 9);
-      ctx.closePath();
-    },
-    () => {
-      ctx.fillStyle = pattern(ctx, "cloth", 0.5, x, y);
-      ctx.fillRect(x, y - 18, 16, 12);
-      ctx.globalCompositeOperation = "multiply";
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y - 18, 16, 12);
-      ctx.globalCompositeOperation = "source-over";
-    },
+  bakedPlate(ctx, `pennant|${color}`, x, y - 18, 16, 12, (g) =>
+    withClip(
+      g,
+      () => {
+        g.moveTo(0.8, 1.2);
+        g.lineTo(14.5, 5);
+        g.lineTo(0.8, 9);
+        g.closePath();
+      },
+      () => {
+        g.imageSmoothingEnabled = true;
+        g.fillStyle = pattern(g, "cloth", 0.5, 0, 18);
+        g.fillRect(0, 0, 16, 12);
+        g.globalCompositeOperation = "multiply";
+        g.fillStyle = color;
+        g.fillRect(0, 0, 16, 12);
+        g.globalCompositeOperation = "source-over";
+      },
+    ),
   );
   drawPlain(ctx, label, x + 2.5, y - 16.3, "#ffffff", 0.55, true);
 }
@@ -932,6 +966,8 @@ export function parchment(ctx: CanvasRenderingContext2D, x: number, y: number, w
   ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
 }
 
+// ── Board pieces: logo, cards, insets, live windows, tags ──
+
 const logo = new Image();
 logo.src = `${import.meta.env.BASE_URL}loading/logo.png`;
 
@@ -941,7 +977,7 @@ export function drawLogo(ctx: CanvasRenderingContext2D, cx: number, y: number, h
     return;
   }
   const w = (logo.naturalWidth / logo.naturalHeight) * h;
-  hiImage(ctx, logo, cx - w / 2, y, w, h);
+  smoothImage(ctx, logo, cx - w / 2, y, w, h);
 }
 
 export function card(
@@ -982,6 +1018,7 @@ export function inset(
 
 export const liveWindow: { rect: [number, number, number, number] | null } = { rect: null };
 
+/** Records a framed rect (in layout units) where the 3D scene should render this frame; read by main.ts. */
 export function markWindow(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
   const m = ctx.getTransform();
   const cw = ctx.canvas.width;
@@ -1026,7 +1063,8 @@ export function tag(
   if (sel) goldArrow(ctx, x - 14, y + h / 2, -1, 6);
 }
 
-export function hiImage(
+/** Draws an image with high-quality smoothing (for art downscaled from a larger source). */
+export function smoothImage(
   ctx: CanvasRenderingContext2D,
   im: CanvasImageSource,
   x: number,
@@ -1034,9 +1072,9 @@ export function hiImage(
   w: number,
   h: number,
 ): void {
-  onHiLayer(ctx, (t) => {
-    t.imageSmoothingEnabled = true;
-    t.imageSmoothingQuality = "high";
-    t.drawImage(im, x, y, w, h);
-  });
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(im, x, y, w, h);
+  ctx.restore();
 }
