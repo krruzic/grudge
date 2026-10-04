@@ -5,5 +5,6 @@ import "./duelist";
 import "./summoner";
 import "./engineer";
 import "./herald";
-import "../heroProps/heroPropViews";
+import "./marksman";
+import "./friar";
 import "../fx/costumeSkins";
