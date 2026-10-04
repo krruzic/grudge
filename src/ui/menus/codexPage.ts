@@ -18,6 +18,7 @@ import {
 import type { CodexArt, CodexEntry } from "../codex";
 import type { Portraits } from "../portraits";
 import { BROWN, INK } from "./common";
+import { stageArt } from "../screens/selectArt";
 import { hintPrompt } from "./pages";
 import type { Menus } from "../menus";
 
@@ -34,6 +35,18 @@ function codexArt(
   const bg = art.kind === "seal" ? (art.color ?? "#7a1a14") : "#7a1a14";
   if (art.kind !== "map") texturedRect(ctx, "cloth", x, y, w, h, bg, 0, 0.7);
   if (art.kind === "portrait" && P) {
+    // The champion's character-select backdrop behind the model (cover-fit, cropped to the frame).
+    const st = stageArt.get(art.hero);
+    if (st?.complete && st.naturalWidth) {
+      const k = Math.max(w / st.naturalWidth, h / st.naturalHeight);
+      const sw = w / k;
+      const sh = h / k;
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(st, (st.naturalWidth - sw) / 2, (st.naturalHeight - sh) / 2, sw, sh, x, y, w, h);
+      ctx.restore();
+    }
     smoothImage(ctx, P.actionShot(art.hero, "idle", 0.3, w * 4, h * 4), x, y, w, h);
   } else if (art.kind === "map" && P) {
     const im = P.mapThumb(art.index, w * 2, h * 2);
