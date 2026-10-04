@@ -126,35 +126,54 @@ export function drawTeamHead(
     const cw = 8 + tx + textWidth(coin, 1.15, true);
     const gw = grainy ? 6 + 9 + tx + textWidth(grain, 1.15, true) + 3 + textWidth(rate, 0.6) : 4 + textWidth(rate, 0.6);
     const aw = 9 + tx + textWidth(army, 1.15, true);
-    let cx = right ? ax(20, cw + gw) : ax(20);
-    coinIcon(c, cx + 3, y + 5, 3.8);
-    cx += 8;
-    cx += times(c, cx, y + 1);
-    drawNum(c, coin, cx, y, "#ffd848", 1.15);
-    cx += textWidth(coin, 1.15, true);
-    if (grainy) {
-      cx += 6;
-      grainIcon(c, cx + 4, y + 5, 3.6);
-      cx += 9;
-      cx += times(c, cx, y + 1);
-      drawNum(c, grain, cx, y, "#f0d8a0", 1.15);
-      cx += textWidth(grain, 1.15, true) + 3;
-    } else cx += 4;
-    drawText(c, rate, Math.round(cx), y + 3, "#c8b070", 0.6);
+    // Mirrored for right-side teams: gem, gold, grain, rate reading outward from the gem.
+    const drawCoin = (x: number) => {
+      coinIcon(c, x + 3, y + 5, 3.8);
+      x += 8;
+      x += times(c, x, y + 1);
+      drawNum(c, coin, x, y, "#ffd848", 1.15);
+    };
+    const drawGrain = (x: number) => {
+      grainIcon(c, x + 4, y + 5, 3.6);
+      x += 9;
+      x += times(c, x, y + 1);
+      drawNum(c, grain, x, y, "#f0d8a0", 1.15);
+    };
+    const grainW = 9 + tx + textWidth(grain, 1.15, true);
+    if (!right) {
+      let cx = ax(20);
+      drawCoin(cx);
+      cx += cw;
+      if (grainy) {
+        cx += 6;
+        drawGrain(cx);
+        cx += grainW + 3;
+      } else cx += 4;
+      drawText(c, rate, Math.round(cx), y + 3, "#c8b070", 0.6);
+    } else {
+      let cx = ax(20, cw + gw);
+      drawText(c, rate, Math.round(cx), y + 3, "#c8b070", 0.6);
+      cx += textWidth(rate, 0.6) + (grainy ? 3 : 4);
+      if (grainy) {
+        drawGrain(cx);
+        cx += grainW + 6;
+      }
+      drawCoin(cx);
+    }
     // Row 2: army count, then owned pads (red and shaking while one is attacked).
     let bx = right ? ax(20, aw) : ax(20);
-    armyIcon(c, bx + 3.5, y + 15, 3.6, col);
+    armyIcon(c, bx + 3.5, y + 18, 3.6, col);
     bx += 9;
-    bx += times(c, bx, y + 11);
-    drawNum(c, army, bx, y + 10, capped ? "#ff8a6a" : "#ffffff", 1.15);
+    bx += times(c, bx, y + 14);
+    drawNum(c, army, bx, y + 13, capped ? "#ff8a6a" : "#ffffff", 1.15);
     const ps = String(pads);
     const pw2 = 10 + tx + textWidth(ps, 1.15, true);
     let qx = (right ? bx - 9 - tx - 8 - pw2 : bx + textWidth(army, 1.15, true) + 8) + px2;
-    padIcon(c, qx + 4, y + 15 + py2, 4, col, padHot && Math.floor(now * 10) % 2 === 0);
+    padIcon(c, qx + 4, y + 18 + py2, 4, col, padHot && Math.floor(now * 10) % 2 === 0);
     qx += 10;
-    qx += times(c, qx, y + 11 + py2);
-    drawNum(c, ps, qx, y + 10 + py2, padHot ? "#ff9070" : "#f0e4c8", 1.15);
-    return y + 24;
+    qx += times(c, qx, y + 14 + py2);
+    drawNum(c, ps, qx, y + 13 + py2, padHot ? "#ff9070" : "#f0e4c8", 1.15);
+    return y + 27;
   });
 }
 
