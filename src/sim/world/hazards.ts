@@ -3,7 +3,7 @@
 import type { World } from "../world.ts";
 import type { TerrainMod } from "../types.ts";
 import { Kind } from "../terrain.ts";
-import { healFrom, onZoneEnd } from "../friar.ts";
+import { healFrom, onZoneEnd } from "../hero/friar.ts";
 
 /** Step phase 5: expire timed entities, then traps, zones, delayed blasts and terrain mods (in that order). */
 export function updateHazards(w: World): void {

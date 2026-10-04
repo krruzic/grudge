@@ -3,7 +3,7 @@ import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./typ
 import { buildCost, canBuildOn, canSpec, specCost } from "./structures.ts";
 import { learned as learnedOf, options } from "./talents.ts";
 import { graveSpots } from "./heroes.ts";
-import { clumpScore, healSpotScore } from "./friar.ts";
+import { clumpScore, healSpotScore } from "./hero/friar.ts";
 
 interface PlanItem {
   zone: Pad["zone"] | "front";

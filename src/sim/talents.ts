@@ -2,7 +2,7 @@ import type { World } from "./world.ts";
 import type { AbilityDef, TalentDef, TalentFx } from "./config.ts";
 import type { Entity, Missile } from "./types.ts";
 import { spawnUnit } from "./structures.ts";
-import { onArrowHit } from "./marksman.ts";
+import { onArrowHit } from "./hero/marksman.ts";
 
 type Slot = "a" | "b" | "r" | "z";
 

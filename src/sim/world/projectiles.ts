@@ -3,7 +3,7 @@
 import type { World } from "../world.ts";
 import type { Entity, Projectile } from "../types.ts";
 import { afterShot } from "../talents.ts";
-import { onArrowHit } from "../marksman.ts";
+import { onArrowHit } from "../hero/marksman.ts";
 
 /** Homing projectile at a target entity; flight time = distance / speed (min 0.15s). */
 export function fireProjectile(

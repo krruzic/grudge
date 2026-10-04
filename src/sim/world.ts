@@ -36,7 +36,7 @@ import { updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
 import { MapEvents } from "./mapEvents.ts";
 import { tickStatus, updateMissiles } from "./talents.ts";
-import { updateKegs } from "./friar.ts";
+import { updateKegs } from "./hero/friar.ts";
 import { mulberry32 } from "./world/rng.ts";
 import { newStatus } from "./world/status.ts";
 import { applyPlayerCommand } from "./world/commands.ts";

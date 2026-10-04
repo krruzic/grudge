@@ -5,7 +5,7 @@
 import type { World } from "../world.ts";
 import type { Entity } from "../types.ts";
 import { abilities, addShield, allFx, mark as markOne, xpForDamage } from "../talents.ts";
-import { pipMarkMul, vantageMul } from "../marksman.ts";
+import { pipMarkMul, vantageMul } from "../hero/marksman.ts";
 
 export interface DamageOpts {
   knockback?: number;

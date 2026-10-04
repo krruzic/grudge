@@ -1,7 +1,11 @@
-import type { World } from "./world.ts";
-import type { AbilityDef } from "./config.ts";
-import type { Command, Entity, HeroAction, Keg, Zone } from "./types.ts";
-import { abilities, addShield, zoneAt } from "./talents.ts";
+// Friar: healing kegs (B, lands as a heal splash + ale puddle), powder kegs (R, fused explosive), Brewfest (Z,
+// cask structure with a brew zone that heals, slows foes and buffs allies; "last call" talent burst when it ends),
+// passive Plenty aura heal, and Keg Rocket (dodge while standing in his own ale puddle). Kegs are tracked in
+// w.kegs and resolved by updateKegs each tick.
+import type { World } from "../world.ts";
+import type { AbilityDef } from "../config.ts";
+import type { Command, Entity, HeroAction, Keg, Zone } from "../types.ts";
+import { abilities, addShield, zoneAt } from "../talents.ts";
 
 const fx = (
   w: World,
@@ -14,6 +18,7 @@ const fx = (
   extra: { radius?: number; tx?: number; tz?: number; seconds?: number; id?: number } = {},
 ) => w.emit({ type: "heroFx", name, src, team, x, y, z, ...extra });
 
+/** Heal applied by the friar (lowHealMul bonus on badly hurt allies). Returns hp actually restored. */
 export function healFrom(w: World, src: Entity | null | undefined, o: Entity, amount: number): number {
   if (!o.alive || o.structure || o.hp >= o.maxHp || amount <= 0) return 0;
   const hk = src?.hero ? w.heroDef(src.hero.type).hooks : undefined;
@@ -23,6 +28,7 @@ export function healFrom(w: World, src: Entity | null | undefined, o: Entity, am
   return o.hp - before;
 }
 
+/** Passive aura: every 15 ticks heal nearby hurt allies by a fraction of their max hp. */
 export function plentyTick(w: World, e: Entity): void {
   const hk = w.heroDef(e.hero!.type).hooks;
   const r = hk.plentyRadius;
@@ -38,6 +44,7 @@ export function plentyTick(w: World, e: Entity): void {
     fx(w, "plenty", e.id, e.team, e.transform.pos.x, e.transform.y, e.transform.pos.z, { radius: r });
 }
 
+/** Best keg landing spot for healing: the hurt ally position (within range) covering the most missing hp. */
 function allySpot(w: World, e: Entity, range: number, radius: number): { x: number; z: number; score: number } | null {
   const p = e.transform.pos;
   const allies = w.entities.filter(
@@ -67,11 +74,13 @@ function allySpot(w: World, e: Entity, range: number, radius: number): { x: numb
   return best;
 }
 
+/** Bot helper: how much a heal keg could restore right now. */
 export function healSpotScore(w: World, e: Entity): number {
   const b = abilities(w, e).b;
   return allySpot(w, e, b.range ?? 8, b.radius ?? 3)?.score ?? 0;
 }
 
+/** Best powder keg landing spot: the enemy position covering the most enemies (heroes weighted). */
 function foeSpot(w: World, e: Entity, range: number, radius: number): { x: number; z: number; score: number } | null {
   const p = e.transform.pos;
   const foes = w.entities.filter(
@@ -100,11 +109,13 @@ function foeSpot(w: World, e: Entity, range: number, radius: number): { x: numbe
   return best;
 }
 
+/** Bot helper: how good a powder keg throw is right now. */
 export function clumpScore(w: World, e: Entity): number {
   const r = abilities(w, e).r;
   return foeSpot(w, e, r.range ?? 8, r.radius ?? 3.2)?.score ?? 0;
 }
 
+/** B/R: throw a keg at the placed point, the best auto spot, or straight ahead. Flight time grows with distance. */
 export function throwKeg(
   w: World,
   e: Entity,
@@ -182,6 +193,7 @@ function spawnKeg(
   });
 }
 
+/** Cluster talent: a landed keg scatters `count` mini kegs in a ring. */
 function scatter(
   w: World,
   owner: Entity,
@@ -199,6 +211,7 @@ function scatter(
   }
 }
 
+/** Heal keg landing: heal allies in radius, optional shield; full kegs also leave an ale puddle and scatter. */
 function splash(w: World, owner: Entity, k: Keg, radius: number, heal: number, mini: boolean): void {
   const b = abilities(w, owner).b;
   fx(w, mini ? "kegSplashSmall" : "kegSplash", owner.id, owner.team, k.toX, k.toY, k.toZ, { radius });
@@ -241,6 +254,7 @@ function splash(w: World, owner: Entity, k: Keg, radius: number, heal: number, m
   scatter(w, owner, k, "miniheal", b.fx?.cluster);
 }
 
+/** Powder keg explosion (full or mini): damage enemies in radius, extra vs units, fixed structure damage. */
 function boom(w: World, owner: Entity, k: Keg, mini: boolean): void {
   const r = abilities(w, owner).r;
   const c = r.fx?.cluster;
@@ -264,6 +278,7 @@ function boom(w: World, owner: Entity, k: Keg, mini: boolean): void {
   scatter(w, owner, k, "minipowder", c);
 }
 
+/** Step phase 5: land kegs when their flight ends; powder kegs then wait for their fuse (instant on a direct hero hit). */
 export function updateKegs(w: World): void {
   for (let i = w.kegs.length - 1; i >= 0; i--) {
     const k = w.kegs[i];
@@ -313,6 +328,7 @@ export function updateKegs(w: World): void {
   }
 }
 
+/** Z: plant a cask (one per friar) with an anchored brew zone that lasts as long as the cask. */
 export function brewfest(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   const t = e.transform;
   let x = t.pos.x + a.dirX * 1.9;
@@ -364,6 +380,7 @@ export function brewfest(w: World, e: Entity, a: HeroAction, def: AbilityDef): v
   });
 }
 
+/** Called when any zone ends: a brewfest zone triggers the last-call talent (heal allies / blast enemies). */
 export function onZoneEnd(w: World, z: Zone): void {
   if (z.style !== "brewfest") return;
   const owner = w.getAny(z.ownerId);
@@ -387,7 +404,7 @@ export function onZoneEnd(w: World, z: Zone): void {
   }
 }
 
-export function inOwnPuddle(w: World, e: Entity): boolean {
+function inOwnPuddle(w: World, e: Entity): boolean {
   return w.zones.some(
     (z) =>
       z.ownerId === e.id &&
@@ -397,6 +414,7 @@ export function inOwnPuddle(w: World, e: Entity): boolean {
   );
 }
 
+/** Dodge replacement while in his own ale puddle: a fast cc-immune rocket dash that hits enemies on the way. */
 export function startKegRocket(w: World, e: Entity, cmd: Command): boolean {
   if (!inOwnPuddle(w, e)) return false;
   const h = e.hero!;

@@ -1,8 +1,13 @@
-import type { World } from "./world.ts";
-import type { AbilityDef } from "./config.ts";
-import type { Command, Entity, HeroAction } from "./types.ts";
-import { abilities, applyBleed, fireMissile, mark, zoneAt } from "./talents.ts";
-import { aimTarget } from "./heroes.ts";
+// Marksman (Wren): vantage (standing still or on high ground boosts damage and range), long-range arrows that
+// prefer heroes and Pip-marked targets, Pip the hawk (B: flies to a target, latches on, pecks, slows, interrupts
+// channels; rake while latched blinds), Volley (R: timed arrow waves on an area), Heartseeker (Z: piercing line
+// shot with ricochet/mark talents) and Skyshot (dodge while Pip is latched: hop back and fire a guaranteed crit).
+// Visual-only "heroFx" events are emitted through the local fx() helper.
+import type { World } from "../world.ts";
+import type { AbilityDef } from "../config.ts";
+import type { Command, Entity, HeroAction } from "../types.ts";
+import { abilities, applyBleed, fireMissile, mark, zoneAt } from "../talents.ts";
+import { aimTarget } from "./common.ts";
 
 const fx = (
   w: World,
@@ -18,6 +23,7 @@ export function isMarksman(w: World, e: Entity): boolean {
   return !!e.hero && !!w.heroDef(e.hero.type).hooks.vantageMul;
 }
 
+/** Remember where/when the hero last stopped moving (vantage needs vantageStill seconds of standing still). */
 export function trackStill(w: World, e: Entity): void {
   const h = e.hero!;
   const p = e.transform.pos;
@@ -34,6 +40,7 @@ export function trackStill(w: World, e: Entity): void {
   }
 }
 
+/** In vantage: still long enough, or at least vantageHeight above the target. */
 export function vantage(w: World, src: Entity, target?: Entity | null): boolean {
   if (!src.hero) return false;
   const hk = w.heroDef(src.hero.type).hooks;
@@ -48,6 +55,7 @@ export function vantageMul(w: World, src: Entity, target: Entity): number {
   return hk.vantageMul && vantage(w, src, target) ? hk.vantageMul : 1;
 }
 
+/** Damage bonus against a Pip-latched target, for Wren or her summons. */
 export function pipMarkMul(w: World, src: Entity, target: Entity): number {
   const s = target.status;
   if (s.pipUntil === undefined || w.time >= s.pipUntil) return 1;
@@ -62,7 +70,8 @@ function shoulder(e: Entity): { x: number; y: number; z: number } {
   return { x: t.pos.x + Math.cos(t.facing) * 0.25, y: t.y + 2.0, z: t.pos.z - Math.sin(t.facing) * 0.25 };
 }
 
-export function interruptChannels(w: World, o: Entity): boolean {
+/** Break recall, jump-pad wind-up, unfired gravewalk, relic channels and horn captures. Returns true if any. */
+function interruptChannels(w: World, o: Entity): boolean {
   const h = o.hero;
   if (!h || !o.alive) return false;
   let any = false;
@@ -100,6 +109,7 @@ export function interruptChannels(w: World, o: Entity): boolean {
   return any;
 }
 
+/** Small DoT-flagged Pip hit (no crit/variance), with optional bleed. */
 export function peck(w: World, src: Entity, target: Entity): void {
   if (!target.alive || !src.hero) return;
   const b = abilities(w, src).b;
@@ -113,6 +123,7 @@ export function peck(w: World, src: Entity, target: Entity): void {
   fx(w, "pipPeck", src, target.transform.pos.x, target.transform.y, target.transform.pos.z, { id: target.id });
 }
 
+/** Arrow on-hit: cooldown-refund talent vs heroes, and a free peck on Pip's current target. */
 export function onArrowHit(w: World, src: Entity, target: Entity): void {
   if (!src.hero) return;
   const af = abilities(w, src).a.fx;
@@ -125,6 +136,7 @@ export function onArrowHit(w: World, src: Entity, target: Entity): void {
   if (target.alive && s.pipOwner === src.id && w.time < (s.pipUntil ?? 0)) peck(w, src, target);
 }
 
+/** Send Pip at a target; re-launching while latched releases the old target. Pip starts from where it is. */
 function launchPip(w: World, e: Entity, target: Entity): void {
   const h = e.hero!;
   const sp = shoulder(e);
@@ -153,6 +165,7 @@ function launchPip(w: World, e: Entity, target: Entity): void {
   fx(w, "pipLaunch", e, x, y, z, { id: target.id });
 }
 
+/** B: choose Pip's target - nearest to the placed point, else best enemy hero in front, else auto-aim. */
 export function sendPip(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   const h = e.hero!;
   const range = def.range ?? 14;
@@ -197,6 +210,7 @@ export function sendPip(w: World, e: Entity, a: HeroAction, def: AbilityDef): vo
   launchPip(w, e, target);
 }
 
+/** Pip state machine, once per tick from updateHero: out (fly to target) -> on (latched) -> back (return). */
 export function updatePip(w: World, e: Entity): void {
   const h = e.hero!;
   const p = h.pip;
@@ -313,6 +327,7 @@ export function canRake(e: Entity): boolean {
   return e.hero?.pip?.phase === "on";
 }
 
+/** B while Pip is latched: Pip rakes the target (damage + blind) and returns. */
 export function rake(w: World, e: Entity): void {
   const h = e.hero!;
   const p = h.pip;
@@ -336,12 +351,13 @@ export function rake(w: World, e: Entity): void {
   p.phase = "back";
 }
 
-export function pipTarget(w: World, e: Entity): Entity | null {
+function pipTarget(w: World, e: Entity): Entity | null {
   const p = e.hero?.pip;
   if (!p || p.phase !== "on") return null;
   return w.get(p.target) ?? null;
 }
 
+/** Wren's auto-aim score: favours heroes, Pip-marked targets and the stick direction; avoids structures. */
 export function wrenTarget(
   w: World,
   e: Entity,
@@ -372,6 +388,10 @@ export function wrenTarget(
   return best;
 }
 
+/**
+ * A: aimed arrow. Targets beyond base range are only taken in vantage. A fully charged shot (power >= 1.4) becomes
+ * a piercing missile; otherwise a homing arrow, or a straight missile when there is no target.
+ */
 export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
   const t = e.transform;
   const hk = w.heroDef(e.hero!.type).hooks;
@@ -439,6 +459,7 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
   }
 }
 
+/** R: `waves` arrow waves on an area after a short delay, repeated by echo talents. */
 export function volley(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
   const t = e.transform;
   const range = def.range ?? 9;
@@ -492,6 +513,7 @@ function volleyWave(w: World, e: Entity, x: number, z: number, r: number, def: A
   }
 }
 
+/** Z: piercing line shot that locks onto a hero within ~20 degrees; first hero hit takes heroDamage. */
 export function heartseeker(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
   const t = e.transform;
   const h = e.hero!;
@@ -600,6 +622,7 @@ export function heartseeker(w: World, e: Entity, a: HeroAction, def: AbilityDef,
   if (first && fz?.pipOnHit && first.alive && !h.pip) launchPip(w, e, first);
 }
 
+/** Dodge replacement while Pip is latched within 14: hop away from the target, then fire a crit arrow mid-air. */
 export function skyshot(w: World, e: Entity, cmd: Command): boolean {
   const h = e.hero!;
   const tgt = pipTarget(w, e);
