@@ -1,5 +1,6 @@
 // The Grudge relic status line under the clock ("THE GRUDGE AWAITS", "P1 CARRIES THE GRUDGE", ...) and, in a
 // shared (non-split) view, an arrow at the screen edge pointing at the relic when it is off screen.
+import { playerLabel } from "../../render/costumes";
 import type { World } from "../../sim/world";
 import { drawText, textWidth } from "../font";
 import { INK, MARGIN_Y } from "./paint";
@@ -30,7 +31,7 @@ export function drawRelic(
     text =
       r.channel > 0
         ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}`
-        : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
+        : `${playerLabel(c?.hero?.player ?? 0)} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
   } else if (r.state === "shrined") {
     const s = w.get(r.shrineId);
     const type = s?.structure?.type;

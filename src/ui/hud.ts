@@ -11,6 +11,7 @@
 // view rect (rectOf). FFA lays each local house out in its own frame and lists the others as standings.
 // Modules: hud/canvas (UiCanvas), paint (primitives), icons, memo, callouts, clock, relic, minimap, panels,
 // orders, buildMenu.
+import { playerLabel } from "../render/costumes";
 import type { World } from "../sim/world";
 import type { MapperUi } from "../input/commands";
 import type { Portraits } from "./portraits";
@@ -258,7 +259,7 @@ export class Hud {
       // Views on the top row share the team head's line; lower views start at their own top.
       const py0 = r ? (r.y < 2 ? y + 2 : r.y + MARGIN_Y + 2) : y + 2;
       const local = !!ui[p.player];
-      const tag = shown.length > 1 || teamHeroes.length > 1 ? `P${p.player + 1}` : "";
+      const tag = shown.length > 1 || teamHeroes.length > 1 ? playerLabel(p.player) : "";
       const h = drawPlayerPanel(ctx, this.memo, p.player, w, e, px0, py0, right, now, local, tag);
       this.panelAt[p.player] = { x: right ? px0 + BLOCK_W : px0, y: py0 + h, right };
       if (!r) y = py0 + h;

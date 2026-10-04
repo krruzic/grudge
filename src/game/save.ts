@@ -246,7 +246,7 @@ export const DEFAULT_OPTIONS: Options = {
 
 const KEY = "grudge.save.v1";
 const MAX_LOG = 30;
-export const MAX_TAG = 6;
+export const MAX_TAG = 8;
 
 function fresh(): SaveData {
   return { v: 1, rules: { ...DEFAULT_RULES }, options: { ...DEFAULT_OPTIONS }, tags: {}, heroes: {}, log: [] };

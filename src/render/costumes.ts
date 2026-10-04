@@ -90,6 +90,15 @@ export function setPlayerCostumes(list: string[]): void {
   playerCostumes = list.slice();
   preloadCostumeFx(playerCostumes);
 }
+let playerNames: (string | null)[] = [];
+/** Signed name tags for this match's seats (null = unsigned). Set at match start, before views are built. */
+export function setPlayerNames(list: (string | null | undefined)[]): void {
+  playerNames = list.map((n) => n || null);
+}
+/** A seat's display label: its signed tag, else "P1".."P4". */
+export function playerLabel(p: number): string {
+  return playerNames[p] ?? `P${p + 1}`;
+}
 export function costumeOfPlayer(p: number | undefined): string {
   return p === undefined ? "" : (playerCostumes[p] ?? "");
 }

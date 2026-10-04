@@ -9,7 +9,7 @@ import { Bot } from "../sim/bot";
 import type { Command } from "../sim/types";
 import inputData from "../../data/input.json";
 import { CommandMapper } from "../input/commands";
-import { costumesOf, setPlayerCostumes } from "../render/costumes";
+import { costumesOf, setPlayerCostumes, setPlayerNames } from "../render/costumes";
 import { applyRules } from "../game/save";
 import { mergeCommands, packCommand, type MatchSpec } from "../net/session";
 import { perf } from "../perf";
@@ -148,6 +148,7 @@ function buildWorld(app: App, spec: MatchSpec): World {
 export function startNetMatch(app: App, spec: MatchSpec, local: boolean[], remote: boolean[]): void {
   app.players = spec.players;
   setPlayerCostumes(spec.costumes ?? []);
+  setPlayerNames(spec.names ?? []);
   app.mode = spec.mode ?? (spec.players === 4 ? "2v2" : "1v1");
   setupControl(app, local, spec.levels, remote, app.net.mode !== "peer");
   if (spec.training) app.bots = app.bots.map(() => null);

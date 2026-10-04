@@ -2,6 +2,7 @@
 // option tags. In training the options are the trainer's (level up, reset cooldowns / meter, change champion).
 // Quitting a real match asks for a second A. Input ownership (only the pauser drives it) is enforced by the
 // caller (app/states.ts), which passes only that pad's nav and drops the mouse unless it belongs to it.
+import { playerLabel } from "../../render/costumes";
 import type { World } from "../../sim/world";
 import { learned } from "../../sim/talents";
 import { drawPlain, textWidth } from "../font";
@@ -214,7 +215,7 @@ export class PauseMenu {
     inset(ctx, x + 1, y, pic, pic, "#3a2a1c");
     const icon = this.host.portraits?.icon(p.heroType);
     if (icon) smoothImage(ctx, icon, x + 1, y, pic, pic);
-    const nm = `P${p.player + 1} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
+    const nm = `${playerLabel(p.player)} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
     drawPlain(ctx, nm, x + tx, y, BROWN, ffa ? 0.52 : 0.55, true);
     const lv = `LV ${e.hero.level ?? 1}`;
     const ls = ffa ? 0.48 : 0.5;

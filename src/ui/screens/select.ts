@@ -88,7 +88,6 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
     if (blink || !lb.status) center(ctx, W, t, floorY - 10, "#fff0c0", 0.55);
   }
   if (s.openHint && !s.peer) drawOpenHint(s, ctx, W);
-  if (s.readyBanner) drawReadyBanner(s, ctx, W, H, blink);
 }
 
 /** One card per champion; a card picked by a seat takes that team's colour (gold when picked by both). */
@@ -173,7 +172,13 @@ function drawOpenHint(s: Screens, ctx: CanvasRenderingContext2D, W: number): voi
 }
 
 /** "THE GRUDGE IS SWORN!" swallowtail banner hung from a rod over a dimmed screen; clicking it starts. */
-function drawReadyBanner(s: Screens, ctx: CanvasRenderingContext2D, W: number, _H: number, blink: boolean): void {
+export function drawReadyBanner(
+  s: Screens,
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  _H: number,
+  blink: boolean,
+): void {
   const bw = Math.min(250, W - 70);
   const bx = W / 2 - bw / 2;
   // Like Smash: the banner (and its dimming) covers only the champion row, so seat cards stay usable below it.
@@ -181,8 +186,13 @@ function drawReadyBanner(s: Screens, ctx: CanvasRenderingContext2D, W: number, _
   const bh = 46;
   s.hit("go", bx, by, bw, bh);
   ctx.save();
-  ctx.fillStyle = "rgba(10, 6, 2, 0.42)";
-  ctx.fillRect(0, 20, W, 72);
+  const dim = ctx.createLinearGradient(0, 8, 0, 104);
+  dim.addColorStop(0, "rgba(10, 6, 2, 0)");
+  dim.addColorStop(0.2, "rgba(10, 6, 2, 0.45)");
+  dim.addColorStop(0.75, "rgba(10, 6, 2, 0.45)");
+  dim.addColorStop(1, "rgba(10, 6, 2, 0)");
+  ctx.fillStyle = dim;
+  ctx.fillRect(0, 8, W, 96);
   const cloth = () => {
     ctx.beginPath();
     ctx.moveTo(bx, by);

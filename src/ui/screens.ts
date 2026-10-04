@@ -16,7 +16,7 @@ import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import type { NameEntry } from "./nameEntry";
 import { center } from "./screens/common";
-import { drawSelect } from "./screens/select";
+import { drawReadyBanner, drawSelect } from "./screens/select";
 import { drawField } from "./screens/field";
 import { drawResults, placing, type ResultPlayer } from "./screens/results";
 
@@ -185,6 +185,8 @@ export class Screens {
     else if (this.which === "map") drawField(this, ctx, W, H);
     if (cursors) {
       if (select) this.drawChips(cursors, ctx);
+      // The ready banner goes over the placed seals on the champion row, under the gloves.
+      if (select && this.readyBanner) drawReadyBanner(this, ctx, W, H, blink);
       cursors.drawCursors(ctx, now);
     }
     if (this.which === "results" && this.results) drawResults(this, ctx, W, this.results, blink);

@@ -12,7 +12,7 @@ import { unitPlaceholder, structurePlaceholder } from "../models/placeholders";
 import { blobShadow } from "../models/markers";
 import { caskMesh } from "../heroProps/friar";
 import { teslaCoil } from "../hazards/tesla";
-import { costumeOfPlayer } from "../costumes";
+import { costumeOfPlayer, playerLabel } from "../costumes";
 import type { Entity } from "../../sim/types";
 
 /** What each kind contributes to a View. */
@@ -135,7 +135,7 @@ function heroParts(ents: EntityViews, e: Entity, team: THREE.Color, root: THREE.
   const inst = ents.heroes.create(
     hero.type,
     team,
-    `P${player + 1}`,
+    playerLabel(player),
     pc,
     twin ? team.clone().lerp(pc, 0.7) : undefined,
     costumeOfPlayer(player),

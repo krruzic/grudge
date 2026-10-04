@@ -7,6 +7,7 @@
 //   morph ring    - the hold-X meter while turning into / out of the commander form (2v2).
 //   learn cards   - the two evolution choices offered on level-up, with the auto-pick countdown.
 //   standings     - FFA: keep HP of the houses that aren't on screen.
+import { playerLabel } from "../../render/costumes";
 import type { World } from "../../sim/world";
 import { TEAM_NAMES, type Entity } from "../../sim/types";
 import { learned, options } from "../../sim/talents";
@@ -196,7 +197,7 @@ export function drawCarriers(
     if (!relic && !e.hero.bomb) continue;
     const lab = relic ? "GRUDGE" : "A THROW";
     const lw = textWidth(lab, 0.7);
-    const tag = w.players.filter((q) => q.team === t).length > 1 ? `P${p.player + 1} ` : "";
+    const tag = w.players.filter((q) => q.team === t).length > 1 ? `${playerLabel(p.player)} ` : "";
     const tw = tag ? textWidth(tag, 0.7) : 0;
     const bw = 12 + tw + lw;
     const x = right ? ax(bxc, bw) : ax(bxc);

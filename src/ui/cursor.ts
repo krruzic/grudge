@@ -323,7 +323,8 @@ export class MenuCursors {
       glove(ctx, g.x, g.y, g.slot, POSES[g.wire[6]] ?? "glove_point", false);
     }
     this.cursors.forEach((c, i) => {
-      if (!c.active) return;
+      // A player signing a name has no glove on screen.
+      if (!c.active || this.frozen.has(i)) return;
       const press = now - c.pressedAt < 0.12;
       if (c.holding >= 0 && this.chipLabels[c.holding]) {
         const ch = this.chips[c.holding];
