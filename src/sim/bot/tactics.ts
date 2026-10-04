@@ -137,6 +137,35 @@ export function engineerFight(bot: Bot, w: World, me: Entity, target: Entity | u
   chargeB(bot, w, me, target, r * 0.75 + target.radius, r + 3);
 }
 
+/**
+ * Grim: Leap is always held to full power (x1.6; his swings are actions, so the hold is free mid-combo) and let go
+ * inside its 8 m reach. Execute Dash fires early when it lands the Smoke ambush (x2, consumed by the first hit), the
+ * target is below 40% (x1.4) or it kills; otherwise the generic Z rule. (Keeping Z only for those cut his Z use by
+ * two thirds and tested worse.) Returns false: the generic Z rule still applies.
+ */
+export function raiderFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): boolean {
+  const h = me.hero!;
+  const ab = abilities(w, me);
+  if (!target?.alive || !target.hero) return false;
+  const d = w.dist(me, target);
+  const smoked = w.time < me.status.stealthUntil;
+  const full = h.meter >= w.data.heroes.baseline.superMax && !h.action;
+  const zRange = (ab.z.range ?? 10) * 0.85;
+  if (full && d < zRange && w.canSee(me, target)) {
+    const exec = target.hp < target.maxHp * (ab.z.executeBelow ?? 0.4);
+    const kill = target.hp < (ab.z.damage ?? 180) * w.damageMulOf(me) * (smoked ? 2 : 1) * 0.9;
+    if (smoked || exec || kill) {
+      bot.wantZ = true;
+      aimAt(bot, me, target);
+    }
+  }
+  if (!bot.wantZ) {
+    const leap = ab.b.range ?? 8;
+    chargeB(bot, w, me, target, leap - 0.5, leap + 3.5);
+  }
+  return false;
+}
+
 /** Warlord HEAVE direction: into a friendly tower near the victim, else toward the own core. */
 export function heaveDir(w: World, me: Entity, victim: Entity): Vec2 {
   const ep = victim.transform.pos;

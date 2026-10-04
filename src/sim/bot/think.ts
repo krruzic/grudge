@@ -21,7 +21,7 @@ import {
   ok,
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
-import { engineerFight, heaveDir, warlordFight, wrenAbilities, wrenShoot } from "./tactics.ts";
+import { engineerFight, heaveDir, raiderFight, warlordFight, wrenAbilities, wrenShoot } from "./tactics.ts";
 
 /** What the bot knows about the fight this think. */
 interface Senses {
@@ -313,7 +313,11 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   const { nearby, ab, prefer, rdy, useHint } = k;
   // Marksman: expert Pip/SKYSHOT/RAKE/interrupt rules, and Heartseeker held for kills (bot/tactics.ts).
   const hk = w.heroDef(h.type).hooks;
-  const zDecided = ab.b.kind === "pip" && wrenAbilities(bot, w, me);
+  // Raider: ambush with the biggest hit, Execute Dash kept for the wounded.
+  const zDecided =
+    ab.b.kind === "pip"
+      ? wrenAbilities(bot, w, me)
+      : ab.b.kind === "leap" && ab.z.kind === "dash" && raiderFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Warlord: charged slam (bot/tactics.ts).
   if (hk.heaveRange) warlordFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Engineer: charged Repair as a fight nuke.
