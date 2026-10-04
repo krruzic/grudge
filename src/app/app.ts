@@ -1,0 +1,279 @@
+// App: the browser client's shared state and subsystems.
+// One instance is built at boot (src/main.ts) and passed to every controller in src/app/*. It owns the current
+// World, the screen state machine value, the champion-select slots and the per-match control setup, plus every
+// long-lived subsystem: renderer, UI canvas + HUD + screens + menus, input, audio, save data and the net session.
+// Controllers are plain functions over this object (select.ts, lobby.ts, match.ts, states.ts, net.ts, loop.ts)
+// so that state which used to be closure `let`s inside one giant start() lives in exactly one place.
+import { World } from "../sim/world";
+import type { Bot } from "../sim/bot";
+import type { Command } from "../sim/types";
+import inputData from "../../data/input.json";
+import { Gamepads, type InputConfig, type PadState } from "../input/gamepads";
+import type { CommandMapper } from "../input/commands";
+import { GameRenderer } from "../render/gameRenderer";
+import { Hud, UiCanvas } from "../ui/hud";
+import { Screens, type SelectSlot } from "../ui/screens";
+import { MenuCursors } from "../ui/cursor";
+import { Portraits } from "../ui/portraits";
+import { Menus } from "../ui/menus";
+import { Audio } from "../audio/sfx";
+import { applyRules, Save, type MatchMode, type MatchPlayer } from "../game/save";
+import { perf } from "../perf";
+import {
+  commanderType,
+  data,
+  heroNames,
+  houses,
+  maps,
+  MAX_PLAYERS,
+  renderConfig,
+  roster,
+  type Assets,
+  type MapView,
+} from "./assets";
+import { NetSession } from "./net";
+import { deviceName } from "./nav";
+
+/** Top-level screen state. "lobby" is a guest's view of an online host's select screen. */
+export type AppState = "title" | "menu" | "select" | "map" | "match" | "paused" | "results" | "lobby";
+
+export class App {
+  readonly params = new URLSearchParams(location.search);
+  /** `?join=N`: treat the first N seats as if a controller were plugged in (testing select without pads). */
+  readonly forceJoin: number;
+  /** `?split4` / VITE_SPLIT4: every seat gets its own view, even CPU ones. */
+  readonly splitAll: boolean;
+
+  state: AppState = "title";
+
+  // ── Match setup (what the next / current match is) ──
+  players = 2;
+  /** World seed; incremented every time a world is built so rematches differ. */
+  seed: number;
+  /** Index into `maps` of the field being shown / played. */
+  mapIndex: number;
+  mode: MatchMode;
+  training: boolean;
+  /** Field-select cursor: index into fields(), or fields().length for RANDOM. */
+  pickIndex: number;
+  /** Time everyone became ready on select (start is ignored for 0.25 s after), -1 when not all ready. */
+  readySince = -1;
+
+  // ── Current world and who drives each player slot ──
+  world: World;
+  /** Map index the renderer currently shows (lags mapIndex until show() swaps it). */
+  shownMap: number;
+  /** Local human input per player slot (null for CPU / remote / attract). */
+  mappers: (CommandMapper | null)[] = [];
+  bots: (Bot | null)[] = [];
+  /** Player slots driven by a person, local or remote (bots pair up with them as mates). */
+  people: boolean[] = [];
+  /** Champion-select seats (always MAX_PLAYERS; 1v1 only uses the first two). */
+  readonly slots: SelectSlot[];
+
+  // ── Match bookkeeping ──
+  /** Time the match ended (winner banner shown), -1 while running. Results follow 3 s later. */
+  overAt = -1;
+  matchPlayers: MatchPlayer[] = [];
+  /** Whether the finished match was already written to the records (and reported to the server). */
+  recorded = true;
+  /** FFA houses in the order they were eliminated (for the results placing). */
+  fallen: number[] = [];
+  /** Fixed-step accumulator in seconds (also the render interpolation alpha source). */
+  acc = 0;
+  /** Pad index that opened the pause menu; only that pad (and the mouse if it is the keyboard seat) drives it. */
+  pauser = -1;
+
+  // ── Select-screen input bookkeeping ──
+  /** A name entry was open at the start of this frame, so its keys must not also start the match. */
+  namingAte = false;
+  /** Pads whose name entry closed this frame (their cursor stays frozen one more frame). */
+  readonly closedNow = new Set<number>();
+  /** Last C-stick flick direction per pad, so one flick changes the costume once. */
+  readonly costumeFlick = [0, 0, 0, 0];
+  /** Last field each cursor hovered on field select ("*" = not yet seen, so the first hover doesn't count). */
+  readonly mapHover = ["*", "*", "*", "*"];
+  /** Toggled by Start+Z: shows the raw pad debug text. */
+  showPads = false;
+
+  /** Debug controls (window.grudge.dbg): frozen clock with manual advance, puppeted commands per slot. */
+  readonly dbg = { freeze: false, adv: 0, clock: 0, puppet: [] as (Command | null)[] };
+
+  // ── Subsystems ──
+  readonly save = new Save();
+  readonly mapViews: MapView[];
+  readonly pads: Gamepads;
+  readonly view: GameRenderer;
+  readonly uiCanvas: UiCanvas;
+  readonly hud: Hud;
+  readonly screens: Screens;
+  readonly menus: Menus;
+  readonly audio = new Audio();
+  readonly cursors = new MenuCursors(MAX_PLAYERS);
+  readonly net = new NetSession();
+  readonly padsEl: HTMLElement;
+
+  constructor(assets: Assets) {
+    const p = this.params;
+    this.seed = Number(p.get("seed") ?? Math.floor(Math.random() * 1e6));
+    this.mapIndex = Math.max(
+      0,
+      maps.findIndex((m) => m.id === p.get("map")),
+    );
+    this.forceJoin = Number(p.get("join") ?? 0);
+    this.mode = p.get("mode") === "2v2" ? "2v2" : p.get("mode") === "ffa" ? "ffa" : "1v1";
+    this.training = p.has("training");
+    this.pickIndex =
+      p.get("map") === "random" ? this.fields().length : Math.max(0, this.fields().indexOf(this.mapIndex));
+    this.world = this.newWorld([roster[0], roster[0]]);
+    this.mapViews = assets.mapViews;
+
+    this.splitAll = p.has("split4") || import.meta.env.VITE_SPLIT4 === "1";
+    const dbgZoom = p.get("zoom");
+    if (dbgZoom) Object.assign(renderConfig, { minViewWidth: Number(dbgZoom), viewMargin: 0 });
+
+    this.pads = new Gamepads(inputData as InputConfig, MAX_PLAYERS);
+    this.view = new GameRenderer(
+      renderConfig,
+      this.world,
+      assets.mapViews[this.mapIndex],
+      assets.heroes,
+      assets.structures,
+      assets.unitModels,
+    );
+    perf.init(this.view.renderer);
+    this.shownMap = this.mapIndex;
+
+    // UI: one canvas for HUD, screens and menus; portraits render 3D hero/unit/map art for all of them.
+    const teamCss = renderConfig.teamColors;
+    this.uiCanvas = new UiCanvas(document.getElementById("ui")!);
+    this.hud = new Hud(teamCss);
+    this.screens = new Screens(teamCss);
+    const portraits = new Portraits(assets.heroes, this.view.teamColorList);
+    portraits.units = assets.unitModels;
+    portraits.setMaps(
+      assets.mapViews.map((mv, i) => ({ root: mv.root, width: maps[i].data.width, depth: maps[i].data.depth })),
+    );
+    this.screens.portraits = portraits;
+    this.hud.portraits = portraits;
+    this.hud.mapIndex = () => this.shownMap;
+    this.padsEl = document.getElementById("pads")!;
+
+    this.menus = new Menus(this.save);
+    this.menus.portraits = portraits;
+    this.menus.roster = roster;
+    this.menus.heroNames = heroNames;
+    this.menus.mapNames = Object.fromEntries(maps.map((m) => [m.id, m.data.name ?? m.id]));
+    this.applyOptions();
+    this.menus.devices = () => this.pads.players.map(deviceName);
+    this.menus.releaseSeat = (i) => this.pads.release(i);
+    this.menus.requestDevice = () => void this.pads.requestHid();
+
+    this.slots = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
+      joined: false,
+      ready: false,
+      hero: i < 2 ? roster[0] : commanderType,
+      cpu: true,
+      level: 2,
+    }));
+    this.screens.cursors = this.cursors;
+  }
+
+  // ── Fields and seats ──
+
+  /** Map indices playable in a mode: 4-house maps for FFA, 2-house maps otherwise. */
+  fieldsFor(m: MatchMode): number[] {
+    return maps.map((_, i) => i).filter((i) => (houses(i) === 4) === (m === "ffa"));
+  }
+
+  fields(): number[] {
+    return this.fieldsFor(this.mode);
+  }
+
+  /** A person sits at seat i: a connected local pad, a `?join` test seat, or a remote guest. */
+  present(i: number): boolean {
+    return this.pads.players[i].connected || i < this.forceJoin || this.net.remoteAt(i) >= 0;
+  }
+
+  /** Seats 2/3 only exist outside 1v1. */
+  slotActive(i: number): boolean {
+    return i < 2 || this.mode !== "1v1";
+  }
+
+  /** Seats 2/3 in 2v2 play the commander (Herald) unless the "partners" rule gives them champions. */
+  commanderSlot(i: number): boolean {
+    return i >= 2 && this.mode !== "ffa" && this.save.data.rules.partners === 0;
+  }
+
+  /** Index of the cursor holding this seat's chip, or -1. */
+  heldBy(slot: number): number {
+    return this.cursors.cursors.findIndex((c) => c.active && c.holding === slot);
+  }
+
+  /** Pad states for menu cursors, with `?join` test seats forced connected. */
+  padsForCursors(): PadState[] {
+    return this.pads.players.map((p, i) => (i < this.forceJoin && !p.connected ? { ...p, connected: true } : p));
+  }
+
+  anyPressed(k: keyof PadState["pressed"]): boolean {
+    return this.pads.players.some((p) => p.pressed[k]);
+  }
+
+  randomHero(): string {
+    return roster[Math.floor(Math.random() * roster.length)];
+  }
+
+  // ── Worlds ──
+
+  /**
+   * Builds a world on the current map (attract mode / `?bots` debug matches). Slots past the first two play the
+   * commander in team modes unless `partners` (or the partners rule with `rules`) is set.
+   */
+  newWorld(heroes: string[], count = 2, rules = false, partners = false): World {
+    const w = new World(maps[this.mapIndex].data, rules ? applyRules(data, this.save.data.rules) : data, this.seed++);
+    const ffa = w.ffa;
+    const champions = (p: number) => ffa || p < 2 || partners || (rules && this.save.data.rules.partners === 1);
+    for (let p = 0; p < count; p++)
+      w.spawnHero(champions(p) ? (heroes[p] ?? roster[0]) : commanderType, p, ffa ? p : p % 2);
+    return w;
+  }
+
+  /** Makes `w` the current world and points the renderer at it (swapping map scenery if the map changed). */
+  show(w: World): void {
+    this.world = w;
+    if (this.shownMap !== this.mapIndex) {
+      this.view.setMap(this.mapViews[this.mapIndex], w.terrain);
+      this.shownMap = this.mapIndex;
+    }
+    this.view.setWorld(w);
+  }
+
+  /** Pushes saved options into audio, camera, select screen and input. */
+  applyOptions(): void {
+    const o = this.save.data.options;
+    this.audio.setLevels(o.music / 10, o.sound / 10);
+    this.view.shakeMul = o.shake;
+    // Old saves had a third camera mode (split = 2): it became split view with manual zoom for everyone.
+    if (o.split === 2) {
+      o.split = 1;
+      o.zoom = [1, 1, 1, 1];
+    }
+    this.view.camMode = o.split;
+    this.view.manualZoom = [0, 1, 2, 3].map((k) => !!o.zoom?.[k]);
+    this.screens.cameraMode = o.split;
+    this.screens.zoomModes = [0, 1, 2, 3].map((k) => o.zoom?.[k] ?? 0);
+    this.view.setHints(!!o.hints);
+    this.pads.kbmEnabled = o.kbm !== 0;
+    this.view.renderScale = o.renderScale === 75 ? 0.75 : 1;
+  }
+
+  /** Flips the manual-zoom camera flag of seat i in the save and applies it. Returns the new value. */
+  toggleZoom(i: number): number {
+    const z = this.save.data.options.zoom ?? [0, 0, 0, 0];
+    z[i] = z[i] ? 0 : 1;
+    this.save.data.options.zoom = z;
+    this.save.write();
+    this.applyOptions();
+    return z[i];
+  }
+}
