@@ -84,8 +84,8 @@
             },
             {
               "damage": 81,
-              "range": 2.8,
-              "arcDeg": 170,
+              "range": 3.4,
+              "arcDeg": 260,
               "dur": 0.82,
               "hitAt": 0.46,
               "lunge": 2.5,
@@ -808,7 +808,8 @@
         "plentyHero": 0.008,
         "plentyUnit": 0.012,
         "lowHealMul": 1.25,
-        "lowHealBelow": 0.5
+        "lowHealBelow": 0.5,
+        "selfRegen": 0.012
       },
       "abilities": {
         "a": {
@@ -856,6 +857,9 @@
           "flight": 0.35,
           "puddleSeconds": 5,
           "puddleHeal": 22,
+          "puddleLinger": 3,
+          "puddlePoison": 18,
+          "poisonSeconds": 3,
           "puddleRadius": 2.6,
           "dur": 0.5,
           "hitAt": 0.28,
@@ -876,7 +880,7 @@
           "flight": 0.35,
           "dur": 0.5,
           "hitAt": 0.28,
-          "cooldown": 11,
+          "cooldown": 6,
           "bot": "fight",
           "botRange": 8,
           "callout": "POWDER KEG",
@@ -888,14 +892,20 @@
           "hp": 600,
           "seconds": 10,
           "radius": 7,
-          "heal": 28,
-          "damageMul": 1.15,
-          "slowMul": 0.7,
+          "heal": 36,
+          "burstHeal": 140,
+          "damage": 60,
+          "knockback": 8,
+          "stunSeconds": 0.6,
+          "hasteMul": 1.15,
+          "vulnMul": 1.15,
+          "damageMul": 1.2,
+          "slowMul": 0.65,
           "dur": 0.9,
           "hitAt": 0.55,
           "bot": "allies",
           "botRange": 6,
-          "callout": "BREWFEST \u00b7 ALLIES HEAL AND HIT HARDER"
+          "callout": "BREWFEST \u00b7 HEAL, HIT HARDER, FOES TIPSY"
         }
       },
       "botPlan": {

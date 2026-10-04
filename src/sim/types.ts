@@ -62,6 +62,15 @@ export interface Status {
   bleedDps: number;
   bleedUntil: number;
   bleedOwner: number;
+  /** Lingering heal-over-time (friar ale): hp/s until hotUntil, paused while still standing in the zone. */
+  hotHps?: number;
+  hotUntil?: number;
+  hotOwner?: number;
+  hotInZoneUntil?: number;
+  /** Ale poison on enemies (friar puddle): dps until poisonUntil. */
+  poisonDps?: number;
+  poisonUntil?: number;
+  poisonOwner?: number;
   shield: number;
   shieldUntil: number;
   shieldBurst: number;
@@ -338,6 +347,13 @@ export interface Zone {
   haste?: number;
   anchor?: number;
   brew?: number;
+  /** Allies leaving keep healing at `heal` hp/s for this many seconds. */
+  lingerHeal?: number;
+  /** Enemies touching the zone are poisoned (dps, seconds). */
+  poison?: number;
+  poisonSeconds?: number;
+  /** Enemies inside take this damage multiplier from the zone's team (brewfest "tipsy"). */
+  vuln?: number;
 }
 
 export interface Delayed {

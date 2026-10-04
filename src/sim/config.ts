@@ -217,6 +217,12 @@ export interface AbilityDef {
   flight?: number;
   puddleSeconds?: number;
   puddleHeal?: number;
+  puddleLinger?: number;
+  puddlePoison?: number;
+  poisonSeconds?: number;
+  burstHeal?: number;
+  hasteMul?: number;
+  vulnMul?: number;
   puddleRadius?: number;
   heroDamage?: number;
   splash?: number;

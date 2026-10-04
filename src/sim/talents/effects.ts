@@ -4,6 +4,7 @@ import type { World } from "../world.ts";
 import type { TalentFx } from "../config.ts";
 import type { Entity } from "../types.ts";
 import { abilities } from "../talents.ts";
+import { healFrom } from "../hero/friar.ts";
 
 /** Add to a status shield (stacking only while the previous one is active), capped at max. */
 export function addShield(e: Entity, amount: number, max: number, seconds: number, time: number): void {
@@ -124,6 +125,30 @@ export function zoneAt(
   });
 }
 
+/**
+ * Home sanctuary: a hero standing inside its own castle walls with no enemy hero or soldier inside those walls heals
+ * to full in 3 s. Enemy presence is computed once per tick per team.
+ */
+const homeSafe = { tick: -1, safe: [] as boolean[] };
+function safeAtHome(w: World, e: Entity): boolean {
+  const base = w.bases[e.team];
+  if (!base || base.box[2] < base.box[0]) return false;
+  const W = w.terrain.width;
+  const cell = (o: Entity) => Math.floor(o.transform.pos.z) * W + Math.floor(o.transform.pos.x);
+  if (!base.mask[cell(e)]) return false;
+  if (homeSafe.tick !== w.tick) {
+    homeSafe.tick = w.tick;
+    homeSafe.safe = w.bases.map(() => true);
+    for (const o of w.entities) {
+      if (!o.alive || o.neutral || !(o.hero || o.unit) || o.hero?.dead) continue;
+      w.bases.forEach((b, team) => {
+        if (team !== o.team && b.mask[cell(o)]) homeSafe.safe[team] = false;
+      });
+    }
+  }
+  return homeSafe.safe[e.team];
+}
+
 export function tickStatus(w: World): void {
   const t = w.time;
   const tick = w.tick % 15 === 0;
@@ -139,8 +164,17 @@ export function tickStatus(w: World): void {
         tick: true,
       });
     }
+    if (tick && s.hotUntil !== undefined && t < s.hotUntil && t >= (s.hotInZoneUntil ?? 0) && e.hp < e.maxHp)
+      healFrom(w, w.getAny(s.hotOwner ?? 0), e, (s.hotHps ?? 0) * 0.5);
+    if (tick && s.poisonUntil !== undefined && t < s.poisonUntil)
+      w.damage(w.get(s.poisonOwner ?? 0) ?? null, e, (s.poisonDps ?? 0) * 0.5, {
+        fromX: e.transform.pos.x,
+        fromZ: e.transform.pos.z,
+        tick: true,
+      });
     const h = e.hero;
     if (!h) continue;
+    if (!h.dead && e.hp < e.maxHp && safeAtHome(w, e)) e.hp = Math.min(e.maxHp, e.hp + (e.maxHp / 3) * w.dt);
     if (h.recastUntil && t >= h.recastUntil) {
       h.recastUntil = 0;
       const cd = abilities(w, e).b.cooldown ?? 4;

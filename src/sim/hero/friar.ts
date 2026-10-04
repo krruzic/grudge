@@ -40,6 +40,7 @@ export function plentyTick(w: World, e: Entity): void {
     const frac = o.hero ? (hk.plentyHero ?? 0.006) : (hk.plentyUnit ?? 0.012);
     if (healFrom(w, e, o, o.maxHp * frac * 0.5) > 0) any = true;
   }
+  if (hk.selfRegen && e.hp < e.maxHp && !e.hero!.dead) healFrom(w, e, e, e.maxHp * hk.selfRegen * 0.5);
   if (any && w.tick % 60 === 0)
     fx(w, "plenty", e.id, e.team, e.transform.pos.x, e.transform.y, e.transform.pos.z, { radius: r });
 }
@@ -250,6 +251,9 @@ function splash(w: World, owner: Entity, k: Keg, radius: number, heal: number, m
     style: "ale",
     heal: b.puddleHeal ?? 22,
     haste: b.fx?.puddleHaste,
+    lingerHeal: b.puddleLinger ?? 3,
+    poison: b.puddlePoison ?? 18,
+    poisonSeconds: b.poisonSeconds ?? 3,
   });
   scatter(w, owner, k, "miniheal", b.fx?.cluster);
 }
@@ -372,7 +376,26 @@ export function brewfest(w: World, e: Entity, a: HeroAction, def: AbilityDef): v
     heal: def.heal ?? 24,
     anchor: s.id,
     brew: def.damageMul ?? 1.15,
+    haste: def.hasteMul,
+    vuln: def.vulnMul,
   });
+  const r = def.radius ?? 7;
+  for (const o of w.entities.slice()) {
+    if (!o.alive || o.structure) continue;
+    if (Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) - o.radius > r * 0.6) continue;
+    if (o.team === e.team) {
+      healFrom(w, e, o, def.burstHeal ?? 0);
+      if (o.status.slowUntil > w.time) o.status.slowUntil = 0;
+      if (o.status.stunUntil > w.time) o.status.stunUntil = w.time;
+    } else
+      w.damage(e, o, (def.damage ?? 0) * w.damageMulOf(e), {
+        fromX: x,
+        fromZ: z,
+        knockback: def.knockback ?? 8,
+        stun: def.stunSeconds,
+        big: true,
+      });
+  }
   fx(w, "brewfest", e.id, e.team, x, w.groundY(x, z), z, {
     radius: def.radius ?? 7,
     seconds: def.seconds ?? 10,

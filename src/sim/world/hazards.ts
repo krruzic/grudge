@@ -104,6 +104,12 @@ function updateZones(w: World): void {
         if (!o.alive || o.team !== z.team || o.kind === "structure" || o.hp >= o.maxHp) continue;
         if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
         healFrom(w, healer, o, z.heal * 0.5);
+        if (z.lingerHeal) {
+          o.status.hotHps = z.heal;
+          o.status.hotUntil = t + z.lingerHeal;
+          o.status.hotOwner = z.ownerId;
+          o.status.hotInZoneUntil = t + 0.6;
+        }
         if (w.tick % 30 === 0)
           w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: z.team });
       }
@@ -117,10 +123,22 @@ function updateZones(w: World): void {
         if (o.status.slowUntil > t && o.status.slowMul < 1) o.status.slowUntil = 0;
       }
     }
-    if (z.slowMul >= 1 && z.dps <= 0) continue;
+    if (z.slowMul >= 1 && z.dps <= 0 && !z.poison && !z.vuln) continue;
     for (const o of w.entities) {
       if (!o.alive || o.team === z.team || o.kind === "structure") continue;
       if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
+      if (z.poison) {
+        o.status.poisonDps = z.poison;
+        o.status.poisonUntil = t + (z.poisonSeconds ?? 3);
+        o.status.poisonOwner = z.ownerId;
+      }
+      if (z.vuln && !(o.status.markUntil > t && o.status.markMul >= z.vuln)) {
+        o.status.markUntil = t + 0.3;
+        o.status.markTeam = z.team;
+        o.status.markAll = true;
+        o.status.markMul = z.vuln;
+        o.status.markWeaken = 1;
+      }
       o.status.slowMul = Math.min(o.status.slowUntil > t ? o.status.slowMul : 1, z.slowMul);
       o.status.slowUntil = t + 0.3;
       if (tickDmg && z.dps > 0) w.damage(owner, o, z.dps * 0.5, { fromX: z.x, fromZ: z.z, tick: true });
