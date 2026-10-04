@@ -706,7 +706,8 @@ export class GameRenderer {
 
   /**
    * Button hint (local only, with hints on): when a local human's hero stands next to an enemy champion who keeps
-   * blocking, float "L+A · BREAK GUARD" over the blocker (at most every 6 s per blocker).
+   * blocking, float "L+A · BREAK GUARD" over the blocker (at most every 6 s per blocker); on a ready jump pad,
+   * "HOLD A · JUMP" (every 5 s).
    */
   private shoveHints(): void {
     const w = this.world;
@@ -715,6 +716,21 @@ export class GameRenderer {
       if (!this.humanList[p.player]) continue;
       const me = w.heroForPlayer(p.player);
       if (!me?.alive || me.hero?.dead) continue;
+      // Standing on a ready jump pad: launching takes a held A.
+      const t0 = me.transform;
+      const onPad = w.jumpPads.some((jp) => w.time >= jp.readyAt && Math.hypot(jp.x - t0.pos.x, jp.z - t0.pos.z) < 1.1);
+      if (onPad && !me.hero?.jump && this.time - (this.shoveHintAt.get(-me.id) ?? -99) > 5) {
+        this.shoveHintAt.set(-me.id, this.time);
+        this.combatFx.handle({
+          type: "callout",
+          x: t0.pos.x,
+          y: t0.y,
+          z: t0.pos.z,
+          team: me.team,
+          text: "HOLD A · JUMP",
+          owner: me.id,
+        });
+      }
       for (const o of w.entities) {
         if (!o.alive || !o.hero || o.hero.dead || o.team === me.team || !o.hero.blocking) continue;
         if (w.dist(me, o) > 3.2 || this.time - (this.shoveHintAt.get(o.id) ?? -99) < 6) continue;

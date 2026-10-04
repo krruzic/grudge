@@ -34,7 +34,14 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     tickJump(w, e);
     return;
   }
-  if (tryJumpPad(w, e)) return;
+  if (tryJumpPad(w, e, cmd)) return;
+  // The A held to launch from a jump pad must not fire a (charged) attack when it's finally released.
+  if (h.padHold) {
+    if (cmd.attack) {
+      cmd = { ...cmd, attack: false, charge: undefined };
+      h.padHold = false;
+    } else if (cmd.charging !== "a") h.padHold = false;
+  }
   if (h.morphAt !== undefined) {
     h.vel.x = h.vel.z = 0;
     h.blocking = false;
@@ -165,13 +172,15 @@ function tickJump(w: World, e: Entity): void {
 }
 
 /**
- * An idle hero stepping onto a ready jump pad snaps to it and starts the wind-up (hero.jump with a future start).
- * Flight time and arc height scale with distance. Returns true when a jump started this tick.
+ * An idle hero standing on a ready jump pad and holding A (cmd.charging "a", so it's never an accident) snaps to
+ * it and starts the wind-up (hero.jump with a future start). Flight time and arc height scale with distance.
+ * Returns true when a jump started this tick.
  */
-function tryJumpPad(w: World, e: Entity): boolean {
+function tryJumpPad(w: World, e: Entity, cmd: Command): boolean {
   const h = e.hero!;
   const t = e.transform;
   if (!(
+    cmd.charging === "a" &&
     !h.action &&
     w.jumpPads.length &&
     w.time >= (h.jumpReadyAt ?? 0) &&
@@ -197,6 +206,7 @@ function tryJumpPad(w: World, e: Entity): boolean {
   const dur = Math.min(2.6, Math.max(1.0, 0.5 + d / 22));
   h.jump = { fx: p.x, fz: p.z, tx: p.tx, tz: p.tz, start: w.time + windup, dur, peak: 3.5 + d * 0.14, pad: i };
   p.chargeAt = w.time;
+  h.padHold = true;
   w.teleport(e, p.x, p.z);
   e.transform.facing = Math.atan2(p.tx - p.x, p.tz - p.z);
   w.emit({ type: "jumppad", stage: "charge", pad: i, id: e.id, x: p.x, y: t.y, z: p.z, windup, dur });
@@ -204,8 +214,9 @@ function tryJumpPad(w: World, e: Entity): boolean {
 }
 
 /**
- * Recall (once per life): channel recallSeconds standing still, then teleport home. Any movement/attack input,
- * new combat, stun or carrying the relic breaks it. Returns true while channelling or on arrival.
+ * Recall (once per life): channel recallSeconds, then teleport home. The hero can still walk, slowly
+ * (recallWalkMul); any attack/ability/dodge input, new combat, stun or carrying the relic breaks it. Returns true
+ * on arrival (the rest of the tick is skipped).
  */
 function tickRecall(w: World, e: Entity, cmd: Command): boolean {
   const h = e.hero!;
@@ -213,7 +224,6 @@ function tickRecall(w: World, e: Entity, cmd: Command): boolean {
   const b = w.data.heroes.baseline;
   if (h.recallAt !== undefined) {
     const busy =
-      Math.hypot(cmd.moveX, cmd.moveZ) > 0.3 ||
       cmd.attack ||
       cmd.secondary ||
       cmd.special ||
@@ -235,8 +245,10 @@ function tickRecall(w: World, e: Entity, cmd: Command): boolean {
       w.emit({ type: "spawn", id: e.id });
       return true;
     } else {
-      h.vel.x = h.vel.z = 0;
-      return true;
+      const st = e.status;
+      st.slowMul = Math.min(st.slowUntil > w.time ? st.slowMul : 1, b.recallWalkMul);
+      st.slowUntil = Math.max(st.slowUntil, w.time + 0.1);
+      return false;
     }
   }
   if (cmd.recall && !h.action && !h.aim) {

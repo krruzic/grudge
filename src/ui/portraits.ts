@@ -380,11 +380,33 @@ export class Portraits {
   mapThumb(i: number, w = 128, h = 88): HTMLCanvasElement {
     const key = i * 1e6 + w * 1e3 + h;
     let c = this.thumbs.get(key);
-    if (c) return c;
-    c = cacheCanvas();
+    if (c && !this.pending.has(key)) return c;
+    c ??= cacheCanvas();
     this.shootMap(i, w, h, 0, 60, 1.05, c);
     this.thumbs.set(key, c);
+    // Set pieces (jump pads, gates) load their textures after the map: until they have, a still shot shows them
+    // black, so keep re-shooting it.
+    if (this.texturesReady(i)) this.pending.delete(key);
+    else this.pending.add(key);
     return c;
+  }
+
+  private pending = new Set<number>();
+  private readyMaps = new Set<number>();
+
+  private texturesReady(i: number): boolean {
+    if (this.readyMaps.has(i)) return true;
+    let ok = true;
+    this.maps[i]?.root.traverse((o) => {
+      const mats = (o as THREE.Mesh).material;
+      for (const m of Array.isArray(mats) ? mats : mats ? [mats] : []) {
+        const map = (m as THREE.MeshLambertMaterial).map;
+        const img = map?.image as { width?: number; complete?: boolean } | undefined;
+        if (map && (!img || !img.width)) ok = false;
+      }
+    });
+    if (ok) this.readyMaps.add(i);
+    return ok;
   }
 
   private tops = new Map<string, HTMLCanvasElement>();
@@ -410,7 +432,7 @@ export class Portraits {
     c.width = w;
     c.height = h;
     c.getContext("2d")!.drawImage(this.renderer.domElement, 0, 0);
-    this.tops.set(key, c);
+    if (this.texturesReady(i)) this.tops.set(key, c);
     return c;
   }
 

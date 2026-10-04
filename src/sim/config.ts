@@ -274,6 +274,8 @@ export interface HeroData {
     maxSlope: number;
     respawnSeconds: number;
     recallSeconds: number;
+    /** Walking speed multiplier while recalling. */
+    recallWalkMul: number;
     blockMoveMul: number;
     blockFrontalMul: number;
     dodgeSpeed: number;

@@ -206,6 +206,8 @@ export interface HeroState {
     maxSlope: number;
   };
   recallUsed?: boolean;
+  /** Launched from a jump pad with A held: swallow that A's release (see hero/update.ts). */
+  padHold?: boolean;
   recallAt?: number;
   recallFrom?: number;
   grave?: { id: number; until: number };

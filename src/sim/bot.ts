@@ -194,6 +194,10 @@ export class Bot {
     }
     if (w.heroDef(me.hero!.type).abilities.r.kind === "parry") duelistReflex(this, w, me);
     this.chargeInput(w, cmd);
+    // Standing on the jump pad it's heading for: hold A to launch (like a human must).
+    const g = this.goal;
+    if (g && w.jumpPads.some((jp) => Math.abs(jp.x - g.x) < 0.05 && Math.abs(jp.z - g.z) < 0.05))
+      if (Math.hypot(g.x - me.transform.pos.x, g.z - me.transform.pos.z) < 1.1) cmd.charging = "a";
     cmd.attack = this.wantAttack;
     cmd.secondary = this.wantB;
     cmd.special = this.wantR;
