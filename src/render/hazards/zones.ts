@@ -6,21 +6,7 @@
 // brewfest zones show it; for the others it stays hidden since they moved to 3D fissures and props (turning
 // those decals back on is a separate decision, see docs/decisions.md). animateZone() fades it via children[0].
 import * as THREE from "three";
-import {
-  composite,
-  FX,
-  ENGINEER,
-  hdAlias,
-  SUMMONER,
-  WARDEN,
-  WARLORD,
-  RAIDER,
-  HERALD,
-  hd,
-  cv,
-  cm,
-  withCostume,
-} from "../fx/atlas";
+import { composite, FX, ENGINEER, hdAlias, SUMMONER, WARDEN, WARLORD, RAIDER, HERALD, hd, cv, cm, withCostume } from "../fx/atlas";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 import { zoneFissures } from "../fx/parts";
 import { isDesert } from "../kits/desert";
@@ -29,19 +15,7 @@ import { propParts } from "../props";
 import type { HazardViews } from "./hazardViews";
 import type { Zone } from "../../sim/types";
 import { wardenSprout } from "../kits/wardenParts";
-import {
-  VINE,
-  LEAF_B,
-  LEAF_A,
-  thornGeo,
-  THORN,
-  thornBig,
-  crossQuad,
-  FLOWER,
-  chunkGeo,
-  STONE_CHUNK,
-  MOSS_TUFT,
-} from "./materials";
+import { VINE, LEAF_B, LEAF_A, thornGeo, THORN, thornBig, crossQuad, FLOWER, chunkGeo, STONE_CHUNK, MOSS_TUFT } from "./materials";
 import { meshesOf, mergeInto, Piece, GrowU } from "./grow";
 import { teslaCoil } from "./tesla";
 
