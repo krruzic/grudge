@@ -1,26 +1,26 @@
 import * as THREE from "three";
-import commonUrl from "../../assets/fx/common.png?url";
-import wardenUrl from "../../assets/fx/warden.png?url";
-import warlordUrl from "../../assets/fx/warlord.png?url";
-import engineerUrl from "../../assets/fx/engineer.png?url";
-import raiderUrl from "../../assets/fx/raider.png?url";
-import summonerUrl from "../../assets/fx/summoner.png?url";
-import duelistUrl from "../../assets/fx/duelist.png?url";
-import heraldUrl from "../../assets/fx/herald.png?url";
-import wrenUrl from "../../assets/fx/wren.png?url";
-import friarUrl from "../../assets/fx/friar.png?url";
-import { cacheCanvas } from "../ui/cacheCanvas";
+import commonUrl from "../../../assets/fx/common.png?url";
+import wardenUrl from "../../../assets/fx/warden.png?url";
+import warlordUrl from "../../../assets/fx/warlord.png?url";
+import engineerUrl from "../../../assets/fx/engineer.png?url";
+import raiderUrl from "../../../assets/fx/raider.png?url";
+import summonerUrl from "../../../assets/fx/summoner.png?url";
+import duelistUrl from "../../../assets/fx/duelist.png?url";
+import heraldUrl from "../../../assets/fx/herald.png?url";
+import wrenUrl from "../../../assets/fx/wren.png?url";
+import friarUrl from "../../../assets/fx/friar.png?url";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 const CELL = 128;
 const COLS = 4;
 
-const variantUrls = import.meta.glob("../../assets/fx/*@*.png", {
+const variantUrls = import.meta.glob("../../../assets/fx/*@*.png", {
   query: "?url",
   import: "default",
   eager: true,
 }) as Record<string, string>;
 const VARIANT_URL = new Map(Object.entries(variantUrls).map(([p, u]) => [p.split("/").pop()!.replace(".png", ""), u]));
-const hqUrls = import.meta.glob("../../assets/fx/hq/*.png", {
+const hqUrls = import.meta.glob("../../../assets/fx/hq/*.png", {
   query: "?url",
   import: "default",
   eager: true,

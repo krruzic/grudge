@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { cacheCanvas } from "../ui/cacheCanvas";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 function radialTexture(inner: string, outer: string): THREE.CanvasTexture {
   const c = cacheCanvas();

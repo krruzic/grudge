@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { cacheCanvas } from "../ui/cacheCanvas";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 export const DESERT_COSTUMES = new Set(["suntotem"]);
 

@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import heroesData from "../../data/heroes.json";
-import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../sim/terrain";
-import type { Surround } from "../sim/surround";
+import heroesData from "../../../data/heroes.json";
+import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../../sim/terrain";
+import type { Surround } from "../../sim/surround";
 
 export interface TerrainTextures {
   grass: THREE.Texture;

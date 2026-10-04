@@ -1,11 +1,11 @@
 import * as THREE from "three";
-import type { World } from "../sim/world";
-import type { StructureModels } from "./structureModels";
-import goldUrl from "../../assets/textures/gold.png?url";
-import ironUrl from "../../assets/textures/iron.png?url";
-import { starTex, targetTex, type CombatFx } from "./combatFx";
-import { prop } from "./props";
-import { costumeOfPlayer } from "./costumes";
+import type { World } from "../../sim/world";
+import type { StructureModels } from "../structureModels";
+import goldUrl from "../../../assets/textures/gold.png?url";
+import ironUrl from "../../../assets/textures/iron.png?url";
+import { starTex, targetTex, type CombatFx } from "../combat/combatFx";
+import { prop } from "../props";
+import { costumeOfPlayer } from "../costumes";
 
 const ironTex = new THREE.TextureLoader().load(ironUrl);
 ironTex.colorSpace = THREE.SRGBColorSpace;

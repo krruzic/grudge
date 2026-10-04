@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { layerTexture } from "./mergedModel";
+import { layerTexture } from "./models/mergedModel";
 import type { Terrain } from "../sim/terrain";
 import { surroundFor } from "../sim/surround";
 import sandUrl from "../../assets/textures/sand.png?url";
@@ -10,8 +10,8 @@ import gravelUrl from "../../assets/textures/gravel.png?url";
 import pavIdUrl from "../../assets/textures/cobble_id.png?url";
 import crackUrl from "../../assets/textures/cobble_crack.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
-import { stripMesh } from "./stripMesh";
-import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./terrainMesh";
+import { stripMesh } from "./map/stripMesh";
+import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./map/terrainMesh";
 import { cacheCanvas } from "../ui/cacheCanvas";
 
 export interface MapView {

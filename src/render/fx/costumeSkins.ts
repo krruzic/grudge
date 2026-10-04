@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import ironUrl from "../../assets/textures/iron.png?url";
-import seamUrl from "../../assets/fx/colossus_seam.png?url";
+import ironUrl from "../../../assets/textures/iron.png?url";
+import seamUrl from "../../../assets/fx/colossus_seam.png?url";
 import {
   cv,
   DUELIST,
@@ -15,8 +15,8 @@ import {
   WARDEN,
   WARLORD,
   WREN,
-} from "./fxKit";
-import { COSTUME_SKIN, SHARED_CHUNK_GEOS } from "./fxParts";
+} from "./atlas";
+import { COSTUME_SKIN, SHARED_CHUNK_GEOS } from "./parts";
 
 const TINTS: Record<string, Record<number, number>> = {
   colossus: {

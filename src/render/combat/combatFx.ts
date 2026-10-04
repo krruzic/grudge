@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import type { World } from "../sim/world";
-import type { SimEvent } from "../sim/types";
-import { drawNum, drawText, fontReady, onTextLost, textWidth } from "../ui/font";
-import { dyeColor } from "./heroModels";
-import ironUrl from "../../assets/textures/iron.png?url";
-import woodUrl from "../../assets/textures/wood.png?url";
+import type { World } from "../../sim/world";
+import type { SimEvent } from "../../sim/types";
+import { drawNum, drawText, fontReady, onTextLost, textWidth } from "../../ui/font";
+import { dyeColor } from "../heroModels";
+import ironUrl from "../../../assets/textures/iron.png?url";
+import woodUrl from "../../../assets/textures/wood.png?url";
 import {
   activeCostume,
   DUELIST,
@@ -18,14 +18,14 @@ import {
   WARDEN,
   WARLORD,
   withCostume,
-} from "./fxKit";
-import { costumeOfEntity } from "./costumes";
-import { spikeBatch } from "./warlordFx";
-import { wardenSlap } from "./wardenFx";
-import { towerProjectile, towerProjectileTick, towerPulse } from "./towerFx";
-import { KITS, type HeroKit } from "./kits";
-import { Particles } from "./particles";
-import "./heroFx";
+} from "../fx/atlas";
+import { costumeOfEntity } from "../costumes";
+import { spikeBatch } from "../kits/warlord";
+import { wardenSlap } from "../kits/warden";
+import { towerProjectile, towerProjectileTick, towerPulse } from "./towers";
+import { KITS, type HeroKit } from "../kits/registry";
+import { Particles } from "../fx/particles";
+import "../kits";
 import {
   chunks,
   decal,
@@ -37,9 +37,9 @@ import {
   SHARED_CHUNK_GEOS,
   SHARED_PLANE_GEOS,
   type FxHost,
-} from "./fxParts";
-import { FxBatch, fxBatch, flushFxBatches, FxInst } from "./fxInstances";
-import { cacheCanvas } from "../ui/cacheCanvas";
+} from "../fx/parts";
+import { FxBatch, fxBatch, flushFxBatches, FxInst } from "../fx/instances";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 FISSURE_TEX.set(FX.crack, "crack");
 FISSURE_TEX.set(WARLORD.crackRing, "crack");
@@ -700,7 +700,7 @@ const pillarTex = canvasTex(64, (ctx, s) => {
   }
 });
 
-const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", {
+const talentUrls = import.meta.glob("../../../assets/ui/talents/*.png", {
   eager: true,
   query: "?url",
   import: "default",

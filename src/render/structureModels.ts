@@ -1,9 +1,9 @@
-import { markModel } from "./placeholders";
+import { markModel } from "./models/markers";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { addOutline } from "./heroModels";
-import { layerTexture } from "./mergedModel";
+import { layerTexture } from "./models/mergedModel";
 
 function partLook(name: string, team: THREE.Color): { color: THREE.Color | null; emissive: THREE.Color | null } {
   return {

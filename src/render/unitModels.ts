@@ -1,9 +1,9 @@
-import { markModel } from "./placeholders";
+import { markModel } from "./models/markers";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { dyeColor, shareSkeletons, toLambert } from "./heroModels";
-import { mergedMaterial, mergeParts } from "./mergedModel";
+import { mergedMaterial, mergeParts } from "./models/mergedModel";
 
 export interface UnitInstance {
   body: THREE.Object3D;

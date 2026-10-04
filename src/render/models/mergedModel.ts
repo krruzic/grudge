@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { cacheCanvas } from "../ui/cacheCanvas";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 interface Part {
   name: string;

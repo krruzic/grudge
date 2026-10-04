@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { dyeColor, toLambert } from "./heroModels";
-import { markModel } from "./placeholders";
+import { markModel } from "./models/markers";
 import { costumeTexture } from "./costumes";
 
 const propUrls = import.meta.glob("../../assets/props/*.glb", {

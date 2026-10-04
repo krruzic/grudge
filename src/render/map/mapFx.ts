@@ -1,19 +1,19 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import type { World } from "../sim/world";
-import blockUrl from "../../assets/textures/wallblock.png?url";
-import woodUrl from "../../assets/textures/wood.png?url";
-import ironUrl from "../../assets/textures/iron.png?url";
-import planksUrl from "../../assets/textures/planks.png?url";
-import cobbleUrl from "../../assets/textures/cobble.png?url";
-import snowUrl from "../../assets/textures/snow.png?url";
-import { FX, SUMMONER } from "./fxKit";
-import { gateSlots, type FountainDef, type GatesDef, type GateSlot, type LockGate } from "../sim/mapEvents";
-import { Kind } from "../sim/terrain";
-import { chunks, emit, type FxHost } from "./fxParts";
-import { propParts } from "./props";
+import type { World } from "../../sim/world";
+import blockUrl from "../../../assets/textures/wallblock.png?url";
+import woodUrl from "../../../assets/textures/wood.png?url";
+import ironUrl from "../../../assets/textures/iron.png?url";
+import planksUrl from "../../../assets/textures/planks.png?url";
+import cobbleUrl from "../../../assets/textures/cobble.png?url";
+import snowUrl from "../../../assets/textures/snow.png?url";
+import { FX, SUMMONER } from "../fx/atlas";
+import { gateSlots, type FountainDef, type GatesDef, type GateSlot, type LockGate } from "../../sim/mapEvents";
+import { Kind } from "../../sim/terrain";
+import { chunks, emit, type FxHost } from "../fx/parts";
+import { propParts } from "../props";
 import { SimplifyModifier } from "three/examples/jsm/modifiers/SimplifyModifier.js";
-import { cacheCanvas } from "../ui/cacheCanvas";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 interface Rect {
   x: number;

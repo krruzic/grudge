@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { cacheCanvas } from "../ui/cacheCanvas";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 function part(
   geo: THREE.BufferGeometry,

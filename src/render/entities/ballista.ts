@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import woodUrl from "../../assets/textures/wood.png?url";
-import ironUrl from "../../assets/textures/iron.png?url";
+import woodUrl from "../../../assets/textures/wood.png?url";
+import ironUrl from "../../../assets/textures/iron.png?url";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { dyeColor } from "./heroModels";
-import { layerTexture } from "./mergedModel";
-import { prop } from "./props";
+import { dyeColor } from "../heroModels";
+import { layerTexture } from "../models/mergedModel";
+import { prop } from "../props";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {

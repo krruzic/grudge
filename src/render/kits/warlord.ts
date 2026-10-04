@@ -1,12 +1,12 @@
 import * as THREE from "three";
-import { activeCostume, cm, FX, RAIDER, WARLORD } from "./fxKit";
+import { activeCostume, cm, FX, RAIDER, WARLORD } from "../fx/atlas";
 
 const RAIDER_DROP = RAIDER.drop;
-import { chunks, decal, emit, shockwave, type FxHost } from "./fxParts";
-import { FxBatch, fxBatch } from "./fxInstances";
-import { KITS } from "./kits";
-import { hasCostumeProp, propParts } from "./props";
-import { costumeOfPlayer } from "./costumes";
+import { chunks, decal, emit, shockwave, type FxHost } from "../fx/parts";
+import { FxBatch, fxBatch } from "../fx/instances";
+import { KITS } from "./registry";
+import { hasCostumeProp, propParts } from "../props";
+import { costumeOfPlayer } from "../costumes";
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);

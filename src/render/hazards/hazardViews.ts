@@ -1,12 +1,12 @@
-import woodUrl from "../../assets/textures/wood.png?url";
-import planksUrl from "../../assets/textures/planks.png?url";
-import blockUrl from "../../assets/textures/wallblock.png?url";
-import barkUrl from "../../assets/textures/moss_bark.png?url";
+import woodUrl from "../../../assets/textures/wood.png?url";
+import planksUrl from "../../../assets/textures/planks.png?url";
+import blockUrl from "../../../assets/textures/wallblock.png?url";
+import barkUrl from "../../../assets/textures/moss_bark.png?url";
 import * as THREE from "three";
-import { prop, propParts } from "./props";
-import { costumeOfPlayer } from "./costumes";
+import { prop, propParts } from "../props";
+import { costumeOfPlayer } from "../costumes";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import type { World } from "../sim/world";
+import type { World } from "../../sim/world";
 import {
   cm,
   composite,
@@ -21,15 +21,15 @@ import {
   WARDEN,
   WARLORD,
   withCostume,
-} from "./fxKit";
-import { CACTUS, SPINE, isDesert } from "./desertKit";
-import type { FxHost } from "./fxParts";
-import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
-import { zoneFissures } from "./fxParts";
-import { SpriteBatches } from "./spriteBatch";
-import { MapFx } from "./mapFx";
-import { BUBBLE, FOAM, ZONE_DECALS } from "./newHeroFx";
-import { cacheCanvas } from "../ui/cacheCanvas";
+} from "../fx/atlas";
+import { CACTUS, SPINE, isDesert } from "../kits/desert";
+import type { FxHost } from "../fx/parts";
+import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "../kits/warden";
+import { zoneFissures } from "../fx/parts";
+import { SpriteBatches } from "../batch/spriteBatch";
+import { MapFx } from "../map/mapFx";
+import { BUBBLE, FOAM, ZONE_DECALS } from "../kits/newHeroes";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 const loader = new THREE.TextureLoader();
 function tex(url: string): THREE.Texture {

@@ -1,11 +1,11 @@
 import * as THREE from "three";
-import type { World } from "../sim/world";
+import type { World } from "../../sim/world";
 import type { Particles } from "./particles";
-import stoneUrl from "../../assets/textures/stone.png?url";
-import lavaUrl from "../../assets/fx/lava.png?url";
-import { FxBatch, fxBatch, FxInst } from "./fxInstances";
+import stoneUrl from "../../../assets/textures/stone.png?url";
+import lavaUrl from "../../../assets/fx/lava.png?url";
+import { FxBatch, fxBatch, FxInst } from "./instances";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { activeCostume, baseTex, cv, hd, tint } from "./fxKit";
+import { activeCostume, baseTex, cv, hd, tint } from "./atlas";
 
 export interface FxHost {
   root: THREE.Group;

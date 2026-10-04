@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { layerTexture } from "./mergedModel";
-import { partsMaterial, type StructureModels } from "./structureModels";
+import { layerTexture } from "../models/mergedModel";
+import { partsMaterial, type StructureModels } from "../structureModels";
 
 const FLASH = new THREE.Color(0.6, 0.58, 0.52);
 const BLACK = new THREE.Color(0, 0, 0);

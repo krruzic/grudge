@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { preloadCostumeFx } from "./fxKit";
+import { preloadCostumeFx } from "./fx/atlas";
 
 const urls = import.meta.glob("../../assets/costumes/*/*/*.jpg", {
   query: "?url",

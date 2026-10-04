@@ -1,13 +1,13 @@
 import * as THREE from "three";
-import type { World } from "../sim/world";
-import type { Entity, Keg } from "../sim/types";
-import { activeCostume, composite, cv, FRIAR, FX, tint, useCostume, withCostume, WREN } from "./fxKit";
-import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
-import { KITS, type HitEvent } from "./kits";
-import { prop } from "./props";
-import { FxBatch, fxBatch } from "./fxInstances";
+import type { World } from "../../sim/world";
+import type { Entity, Keg } from "../../sim/types";
+import { activeCostume, composite, cv, FRIAR, FX, tint, useCostume, withCostume, WREN } from "../fx/atlas";
+import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "../fx/parts";
+import { KITS, type HitEvent } from "./registry";
+import { prop } from "../props";
+import { FxBatch, fxBatch } from "../fx/instances";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { costumeOfPlayer } from "./costumes";
+import { costumeOfPlayer } from "../costumes";
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);

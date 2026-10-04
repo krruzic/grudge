@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import { mergedMaterial, mergeParts } from "./mergedModel";
+import { mergedMaterial, mergeParts } from "./models/mergedModel";
 import { costumeModel, costumeTexture } from "./costumes";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { blobShadow, footRing, markModel, playerTag, warlordPlaceholder } from "./placeholders";
+import { blobShadow, footRing, markModel, playerTag, warlordPlaceholder } from "./models/markers";
 
 export const outlineConfig = { enabled: true };
 

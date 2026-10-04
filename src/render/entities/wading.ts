@@ -1,8 +1,8 @@
 import * as THREE from "three";
-import { FxBatch, fxBatch } from "./fxInstances";
-import { emit, type FxHost } from "./fxParts";
-import { FX } from "./fxKit";
-import { cacheCanvas } from "../ui/cacheCanvas";
+import { FxBatch, fxBatch } from "../fx/instances";
+import { emit, type FxHost } from "../fx/parts";
+import { FX } from "../fx/atlas";
+import { cacheCanvas } from "../../ui/cacheCanvas";
 
 export const WATER_TIDE_RISE = 0.42;
 

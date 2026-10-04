@@ -3,17 +3,17 @@
 // viewports) → render the scene into a native-resolution linear target → one grade pass to the canvas.
 // The 2D UI is a separate canvas on top (see UiCanvas in src/ui/hud.ts).
 import * as THREE from "three";
-import { RelicView } from "./relicView";
-import { HeroPropViews } from "./newHeroFx";
+import { RelicView } from "./entities/relicView";
+import { HeroPropViews } from "./kits/newHeroes";
 import type { World } from "../sim/world";
 import type { Terrain } from "../sim/terrain";
 import type { MapView } from "./mapView";
-import { Effects, makeSky } from "./fx";
+import { Effects, makeSky } from "./map/ambience";
 import { FRAME, outlineConfig, type HeroModels } from "./heroModels";
-import { silScene, syncSilhouettes } from "./entityViews";
-import { EntityViews } from "./entityViews";
-import { CombatFx } from "./combatFx";
-import { HazardViews } from "./hazardViews";
+import { silScene, syncSilhouettes } from "./entities/entityViews";
+import { EntityViews } from "./entities/entityViews";
+import { CombatFx } from "./combat/combatFx";
+import { HazardViews } from "./hazards/hazardViews";
 import { Reticles, type ReticleReq } from "./reticle";
 import type { UnitModels } from "./unitModels";
 import type { StructureModels } from "./structureModels";

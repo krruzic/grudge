@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import barkUrl from "../../assets/textures/moss_bark.png?url";
-import { activeCostume, FX, WARDEN } from "./fxKit";
-import { cactusMat, isDesert } from "./desertKit";
-import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "./fxParts";
-import { KITS } from "./kits";
+import barkUrl from "../../../assets/textures/moss_bark.png?url";
+import { activeCostume, FX, WARDEN } from "../fx/atlas";
+import { cactusMat, isDesert } from "./desert";
+import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "../fx/parts";
+import { KITS } from "./registry";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const TUBE_MAX = 12;
