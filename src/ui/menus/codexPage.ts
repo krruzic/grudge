@@ -63,6 +63,9 @@ export function drawCodex(m: Menus, ctx: CanvasRenderingContext2D, W: number, H:
   ]);
 }
 
+let scrollKey = "";
+let scrollStart = 0;
+
 function drawCodexPage(
   m: Menus,
   ctx: CanvasRenderingContext2D,
@@ -88,47 +91,82 @@ function drawCodexPage(
     } else codexArt(ctx, m.portraits, page.art, 12, 12, aw, ah);
     const tx = wide ? 12 : 12 + aw + 10;
     const tw = pw - tx - 12;
-    let y = wide ? 12 + ah + 7 : 12;
-    const ts = Math.min(0.85, tw / Math.max(1, textWidth(page.title, 1, true)));
-    drawPlain(ctx, page.title, tx, y, "#8a1810", ts, true);
-    y += 12;
-    const body = wrap(page.text, tw, 0.55);
-    body.forEach((l, j) => drawPlain(ctx, l, tx, y + j * 8, BROWN, 0.55));
-    y += body.length * 8 + 3;
-    if (page.picks) {
-      // Evolution choices side by side; the one the demo is showing is highlighted.
-      const picks = page.picks;
-      const colW = (pw - 30) / 2;
-      picks.forEach((pk, k) => {
-        const cx = 12 + k * (colW + 6);
-        let py2 = y;
-        const on = picks.length > 1 && k === m.demoPick % picks.length;
-        if (on) {
-          ctx.fillStyle = "rgba(168,48,28,0.14)";
-          ctx.fillRect(cx - 3, py2 - 3, colW + 6, ph - py2 - 18);
-        }
-        talentIcon(ctx, pk.id, cx, py2, 18);
-        const ns = Math.min(0.66, (colW - 24) / Math.max(1, textWidth(pk.name, 1, true)));
-        drawPlain(ctx, pk.name, cx + 22, py2 + 4, on ? "#8a1810" : BROWN, ns, true);
-        py2 += 22;
-        // The combo line is shown separately in red, so strip "WITH X: ..." from the description.
-        const desc = pk.combo ? pk.desc.replace(/\s*WITH [A-Z' ]+:?[^.]*\.?/g, "").trim() : pk.desc;
-        const dl = wrap(desc, colW, 0.5).slice(0, 4);
-        dl.forEach((l, j) => drawPlain(ctx, l, cx, py2 + j * 7, "#4a3018", 0.5));
-        py2 += dl.length * 7 + 2;
-        if (pk.combo)
-          wrap(pk.combo, colW, 0.5)
-            .slice(0, 3)
-            .forEach((l, j) => drawPlain(ctx, l, cx, py2 + j * 7, "#a8141a", 0.5));
-      });
-      y = ph - 22;
+    const top = wide ? 12 + ah + 7 : 12;
+    const bottom = ph - 20;
+    // Text block (title, body, evolution picks, tip). Laid out once to measure, then drawn clipped to the space
+    // above the page arrows; if it's taller, it slowly auto-scrolls (pause, scroll down, pause, jump back).
+    const content = (y: number, draw: boolean): number => {
+      const text = (t: string, x: number, yy: number, col: string, sc: number, bold = false) => {
+        if (draw) drawPlain(ctx, t, x, yy, col, sc, bold);
+      };
+      const ts = Math.min(0.85, tw / Math.max(1, textWidth(page.title, 1, true)));
+      text(page.title, tx, y, "#8a1810", ts, true);
+      y += 12;
+      const body = wrap(page.text, tw, 0.55);
+      body.forEach((l, j) => text(l, tx, y + j * 8, BROWN, 0.55));
+      y += body.length * 8 + 3;
+      if (page.picks) {
+        // Evolution choices side by side; the one the demo is showing gets a red frame around its icon.
+        const picks = page.picks;
+        const colW = (pw - 30) / 2;
+        let colEnd = y;
+        picks.forEach((pk, k) => {
+          const cx = 12 + k * (colW + 6);
+          let py2 = y;
+          const on = picks.length > 1 && k === m.demoPick % picks.length;
+          if (draw) {
+            talentIcon(ctx, pk.id, cx, py2, 18);
+            if (on) {
+              ctx.strokeStyle = "#c81818";
+              ctx.lineWidth = 1.4;
+              ctx.strokeRect(cx - 1.2, py2 - 1.2, 20.4, 20.4);
+            }
+          }
+          const ns = Math.min(0.66, (colW - 24) / Math.max(1, textWidth(pk.name, 1, true)));
+          text(pk.name, cx + 22, py2 + 4, on ? "#8a1810" : BROWN, ns, true);
+          py2 += 22;
+          // The combo line is shown separately in red, so strip "WITH X: ..." from the description.
+          const desc = pk.combo ? pk.desc.replace(/\s*WITH [A-Z' ]+:?[^.]*\.?/g, "").trim() : pk.desc;
+          const dl = wrap(desc, colW, 0.5);
+          dl.forEach((l, j) => text(l, cx, py2 + j * 7, "#4a3018", 0.5));
+          py2 += dl.length * 7 + 2;
+          if (pk.combo) {
+            const cl = wrap(pk.combo, colW, 0.5);
+            cl.forEach((l, j) => text(l, cx, py2 + j * 7, "#a8141a", 0.5));
+            py2 += cl.length * 7;
+          }
+          colEnd = Math.max(colEnd, py2);
+        });
+        y = colEnd + 3;
+      }
+      if (page.tip && !page.picks) {
+        const tl = wrap(page.tip, pw - 40, 0.52);
+        y = Math.max(y + 3, wide ? 0 : 12 + ah + 6);
+        if (draw) waxSeal(ctx, 18, y + 4, 5, "#a8141a", "combo");
+        tl.forEach((l, j) => text(l, 28, y + j * 7.5, "#8a1810", 0.52));
+        y += tl.length * 7.5;
+      }
+      return y;
+    };
+    const overflow = Math.max(0, content(top, false) - bottom);
+    const key = `${entry.title}|${m.codexPage}`;
+    if (scrollKey !== key) {
+      scrollKey = key;
+      scrollStart = performance.now() / 1000;
     }
-    if (page.tip && !page.picks) {
-      const tl = wrap(page.tip, pw - 40, 0.52);
-      const ty = Math.max(y + 2, ph - 22 - tl.length * 7.5);
-      waxSeal(ctx, 18, ty + 4, 5, "#a8141a", "combo");
-      tl.forEach((l, j) => drawPlain(ctx, l, 28, ty + j * 7.5, "#8a1810", 0.52));
+    let off = 0;
+    if (overflow > 0) {
+      const hold = 2.5;
+      const run = overflow / 6;
+      const t = (performance.now() / 1000 - scrollStart) % (hold * 2 + run);
+      off = t < hold ? 0 : t < hold + run ? (t - hold) * 6 : overflow;
     }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, top - 2, pw, bottom - top + 2);
+    ctx.clip();
+    content(top - off, true);
+    ctx.restore();
     const n = entry.pages.length;
     const pg = `${m.codexPage + 1} / ${n}`;
     const cx = pw - 34;
