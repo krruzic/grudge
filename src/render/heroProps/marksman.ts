@@ -1,11 +1,10 @@
 import * as THREE from "three";
-import { model, RED, CREAM, BEAK, BLACK, RED_DARK, normalized } from "../kits/shared";
+import { model, RED, CREAM, BEAK, BLACK, RED_DARK, normalized, UP } from "../kits/shared";
 import { prop } from "../props";
 import type { Entity } from "../../sim/types";
 import { FX, WREN } from "../fx/atlas";
 import { shockwave, emit } from "../fx/parts";
 import type { HeroPropViews } from "./heroPropViews";
-import { UP } from "../kits/shared";
 import { costumeOfPlayer } from "../costumes";
 
 export function pipFallback(): THREE.Group {

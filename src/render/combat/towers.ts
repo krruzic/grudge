@@ -1,15 +1,17 @@
+// Tower visuals that aren't the tower model itself: pulse effects of the support/control towers (frost, storm,
+// well, pierce, fireburst), modelled tower projectiles (spears, bolts, clay pots) and idle ambience per tower spec.
 import * as THREE from "three";
 import { FX, RAIDER, SUMMONER, WARLORD } from "../fx/atlas";
 import { chunks, decal, emit, shockwave, type FxHost } from "../fx/parts";
 import { FxBatch, fxBatch } from "../fx/instances";
-
-const UP = new THREE.Vector3(0, 1, 0);
-const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);
+import { ground, UP } from "../kits/shared";
 
 const iceGeo = new THREE.ConeGeometry(0.28, 1.4, 5);
 iceGeo.userData.model = true;
 const iceMat = new THREE.MeshLambertMaterial({ color: 0xbfe6ff, emissive: 0x2a5a8a, flatShading: true });
 iceMat.userData.keep = true;
+
+// ── Pulse styles ──
 
 function iceShards(h: FxHost, x: number, z: number, r: number): void {
   const n = Math.round(8 + r * 1.2);
@@ -279,6 +281,9 @@ function fireburst(h: FxHost, x: number, y: number, z: number, r: number): void 
   chunks(h, 6, x, gy + 0.5, z, { size: [0.08, 0.16], speed: [2, 4], up: [3, 6], color: 0x9a5a30 });
 }
 
+// ── Pulses ──
+
+/** Effect for a tower "pulse" event by style; false when the style has no tower effect (generic pulse instead). */
 export function towerPulse(
   h: FxHost,
   ev: { x: number; y: number; z: number; radius: number; style?: string },
@@ -292,6 +297,8 @@ export function towerPulse(
   else return false;
   return true;
 }
+
+// ── Projectiles ──
 
 const shaftGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5);
 shaftGeo.rotateX(Math.PI / 2);
@@ -313,6 +320,10 @@ const featherMat = new THREE.MeshLambertMaterial({ color: 0xf0e8d8, flatShading:
 const clayMat = new THREE.MeshLambertMaterial({ color: 0x9a4a24, emissive: 0x3a1004, flatShading: true });
 for (const m of [woodMat, ironMat, featherMat, clayMat]) m.userData.keep = true;
 
+/**
+ * Modelled projectile for tower shots (spear/arrow/firepot), tagged with userData.towerProj so the projectile sync
+ * drives it with towerProjectileTick and never disposes the shared geometry/materials.
+ */
 export function towerProjectile(style: string): THREE.Object3D | null {
   if (style === "spear" || style === "arrow") {
     const g = new THREE.Group();
@@ -362,6 +373,9 @@ export function towerProjectileTick(h: FxHost, o: THREE.Object3D, x: number, y: 
   o.userData.prev = new THREE.Vector3(x, y, z);
 }
 
+// ── Idle ambience ──
+
+/** Called every frame per finished tower; `roll < dt * rate` spawns effects at a frame-rate independent rate. */
 export function towerIdle(h: FxHost, spec: string, x: number, y: number, z: number, facing: number, dt: number): void {
   const roll = Math.random();
   if (spec === "firepot") {

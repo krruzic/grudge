@@ -3,7 +3,8 @@ import type { World } from "../../sim/world";
 import type { StructureModels } from "../structureModels";
 import goldUrl from "../../../assets/textures/gold.png?url";
 import ironUrl from "../../../assets/textures/iron.png?url";
-import { starTex, targetTex, type CombatFx } from "../combat/combatFx";
+import { type CombatFx } from "../combat/combatFx";
+import { targetTex, starTex } from "../combat/textures";
 import { prop } from "../props";
 import { costumeOfPlayer } from "../costumes";
 
