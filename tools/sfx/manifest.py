@@ -96,7 +96,7 @@ S("respawn", FSX + "teleport/tele_00*.wav", max=5)
 S("levelup", FSX + "Power/PP_UP_0*.wav", max=5)
 S("learned", RPG + "bookFlip*.ogg", max=3)
 S("death.sting", O100 + "gong_0*.ogg", rate=0.8, maxdur=3.5, fout=0.8)
-S("jump", FSA + "misc/jump.wav", WOOSH + "Twirl [1-4].wav", max=5)
+S("jump", FSA + "misc/jump.wav", WOOSH + "Swish [1-3].wav", rate=0.85, max=4, maxdur=0.6)
 S("blink", FSX + "teleport/tele_00*.wav", rate=1.3, max=5)
 S("explode.small", BOOM + "explosion-0[1-6].wav", max=6, maxdur=1.5, fout=0.4)
 S("explode.big", BOOM + "explosion-1*.wav", FSX + "Explosion/explosion_big_*.wav", max=8, maxdur=2.5, fout=0.8)
@@ -146,7 +146,7 @@ S("cannon", BANG + "cannon_0*.ogg", max=5)
 S("bell.small", *bsb(292), split=True, max=2, maxdur=3, fout=1)
 S("bell.church", *bsb(135), maxdur=6, fout=2)
 S("gong", O100 + "gong_0*.ogg", maxdur=4, fout=1.5)
-S("bugle", *bsb(3263), dur=6)
+S("bugle", *bsb(3263), dur=6, fout=0.4)
 S("glass", IMP + "impactGlass_heavy_*.ogg", max=5)
 S("gate.open", *bsb(2355, 2357), max=2)
 S("latch", RPG + "metalLatch.ogg", RPG + "metalClick.ogg")
@@ -165,9 +165,9 @@ S("step.armor", ART + "inventory/chainmail*.wav", ART + "inventory/armor-light.w
 S("step.bark", WM + "wood_hit_*.ogg", rate=0.7, max=5, maxdur=0.3)
 
 # ── Voices: per champion attack / big / hurt / death / taunt (pitch-cast from shared CC0 packs) ──
-def voice(hero, pack, lines, rate):
+def voice(hero, pack, lines, rate, **kw):
     for line, pats in lines.items():
-        S(f"vo.{hero}.{line}", *[pack + p for p in pats], rate=rate, max=6)
+        S(f"vo.{hero}.{line}", *[pack + p for p in pats], rate=rate, max=6, **kw)
 
 
 ORC_L = {"attack": ["attack*.wav", "lightattack*.wav"], "big": ["heavyattack*.wav", "angry*.wav"],
@@ -177,7 +177,7 @@ WAR_L = {"attack": ["attack*.wav", "lightattack*.wav"], "big": ["heavyattack*.wa
 ADV_L = {"attack": ["attack[0-8].wav"], "big": ["attackbig*.wav"], "hurt": ["hurt*.wav"], "death": ["death*.wav"],
          "taunt": ["victory*.wav", "yes*.wav"]}
 voice("warlord", ORC, ORC_L, 0.84)
-voice("raider", ORC, ORC_L, 1.14)
+voice("raider", ORC, ORC_L, 1.5, hp=280)  # a wiry goblin, not a big orc
 voice("duelist", WAR, WAR_L, 1.08)
 voice("warden", WAR, WAR_L, 0.74)
 voice("herald", WAR, {**WAR_L, "order": ["yes*.wav", "yesconfirm*.wav", "here*.wav", "hut*.wav"]}, 0.95)
@@ -199,7 +199,7 @@ S("grim.smoke", P2 + "Shake_Wind_*.ogg", max=3)
 S("remnil.army", ZOM + "zombieYell*.wav", rate=0.75, max=6)
 S("francois.ring", IMP + "impactBell_heavy_*.ogg", rate=1.5, max=4, gain=-4)
 S("thorn.grow", WM + "wood_cracking_*.ogg", WM + "wood_squeak_*.ogg", rate=0.7, max=6)
-S("wren.draw", RPG + "creak*.ogg", rate=1.3, max=3, gain=-4)
+S("wren.draw", RPG + "handleSmallLeather*.ogg", RPG + "beltHandle*.ogg", rate=0.85, max=4, gain=-4)
 S("maddock.keg", IMP + "impactPlank_medium_*.ogg", WM + "wood_slam_*.ogg", rate=0.8, max=6)
 S("herald.flag", *bsb(1633), dur=20, split=True, gap=0.1, max=4, maxdur=1.0)
 

@@ -266,9 +266,9 @@ export class Tracker {
     if (!this.beds.length && BEDS[this.map]) this.startBeds(a, this.map);
     const t = w.terrain;
     const kinds: [string, number, { x: number; z: number }[]][] = [
-      ["bed.fire", 0.5, t.props.filter((p) => p.type === "torch")],
-      ["bed.stream", 0.6, w.mapEvents.fountain ? [w.mapEvents.fountain] : []],
-      ["bed.boil", 0.5, w.mapEvents.geyserWells],
+      ["bed.fire", 0.35, t.props.filter((p) => p.type === "torch")],
+      ["bed.stream", 0.25, w.mapEvents.fountain ? [w.mapEvents.fountain] : []],
+      ["bed.boil", 0.3, w.mapEvents.geyserWells],
     ];
     const sp = w.mapEvents.serpent;
     for (const [id, level, pts] of kinds) {

@@ -61,6 +61,7 @@ export function updateLobby(app: App, now: number, dt: number): void {
         lb.slots[act.slot].hero = act.hero;
         net.link.toHost({ t: "pick", k, hero: act.hero });
         app.audio.ui("move");
+        app.audio.heroCue(act.hero, false);
       }
     } else if (act.type === "place") {
       const k = net.padOfSlot(act.slot);
@@ -69,13 +70,14 @@ export function updateLobby(app: App, now: number, dt: number): void {
       lb.slots[act.slot].ready = true;
       net.link.toHost({ t: "pick", k, hero: act.hero });
       net.link.toHost({ t: "ready", k, on: true });
-      app.audio.ui("ok");
+      app.audio.ui("seal");
+      app.audio.heroCue(act.hero, true);
     } else if (act.type === "pick") {
       const k = net.padOfSlot(act.slot);
       if (k < 0) continue;
       lb.slots[act.slot].ready = false;
       net.link.toHost({ t: "ready", k, on: false });
-      app.audio.ui("move");
+      app.audio.ui("peel");
     } else if (act.type === "button") lobbyButton(app, act.id, act.by);
     else if (act.type === "back") {
       // B drops the chip in hand (remembered so it isn't re-grabbed); with nothing in hand it leaves.

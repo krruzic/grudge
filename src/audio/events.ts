@@ -65,9 +65,9 @@ export function playEvent(a: Audio, ev: SimEvent, w: World): void {
       }
       a.vocal(hero, "big", 1, { priority: true, id: ev.src, gap: 0.5 });
       if (ev.style === "blood") [0, 0.28, 0.56].forEach((t) => a.play("drum", 0.6, { at: t, rate: 0.8 }));
-      else if (ev.style === "challenge") a.play("bugle", 0.35, { rate: 0.6, at: 0.15 });
-      else if (hero === "herald") a.play("bugle", 0.5, { rate: 0.75 });
-      a.play("rock.rumble", 0.35, { rate: 1.2 });
+      else if (ev.style === "challenge") a.play("bugle", 0.35, { rate: 0.6, at: 0.15, dur: 1.4 });
+      else if (hero === "herald") a.play("bugle", 0.5, { rate: 0.75, dur: 1.6 });
+      a.play("rock.rumble", 0.35, { rate: 1.2, dur: 0.8 });
       return;
     }
     case "pulse":
@@ -90,7 +90,7 @@ export function playEvent(a: Audio, ev: SimEvent, w: World): void {
       a.vocal("herald", "order", 0.8, { id: ev.src });
       return;
     case "rally":
-      a.play("bugle", 0.7, { priority: true });
+      a.play("bugle", 0.7, { priority: true, dur: 2.2 });
       a.vocal("herald", "big", 0.8, { id: ev.src, at: 0.2 });
       return;
     case "build":
@@ -247,18 +247,18 @@ export function playEvent(a: Audio, ev: SimEvent, w: World): void {
       } else a.play("rock.break", 0.4, { rate: 0.8 });
       return;
     case "horn":
-      a.play("bugle", 0.8, { rate: 0.5, priority: true });
+      a.play("bugle", 0.8, { rate: 0.5, priority: true, dur: 3 });
       a.tone("sawtooth", 98, 92, 1.6, 0.08);
       return;
     case "gates":
       if (ev.lock) {
-        if (ev.stage === "warn") a.play("chain.rattle", 0.6);
+        if (ev.stage === "warn") bells(a);
         else {
           a.play("latch", 0.8);
           a.play("gate.open", 0.8, { at: 0.1 });
           a.play("chain.rattle", 0.6, { at: 0.2 });
         }
-      } else if (ev.stage === "warn") [0, 0.9, 1.8].forEach((t) => a.play("bell.small", 0.45, { at: t }));
+      } else if (ev.stage === "warn") bells(a);
       else {
         a.play("rock.rumble", 0.6, { rate: 1.2 });
         a.play("gate.open", 0.5);
@@ -290,6 +290,14 @@ export function playEvent(a: Audio, ev: SimEvent, w: World): void {
       } else if (a.allow("notice", 1)) a.tone("square", 220, 180, 0.15, 0.04, ev.team ? 0.6 : -0.6);
       return;
   }
+}
+
+/** The gate warning chime: three soft two-note bells. */
+function bells(a: Audio): void {
+  [0, 0.9, 1.8].forEach((t) => {
+    a.tone("sine", 392, 390, 1.2, 0.16, 0, t);
+    a.tone("sine", 988, 980, 0.8, 0.06, 0, t);
+  });
 }
 
 function hit(a: Audio, ev: Extract<SimEvent, { type: "hit" }>, w: World): void {
@@ -353,8 +361,12 @@ function slam(a: Audio, ev: Extract<SimEvent, { type: "slam" }>, w: World): void
 }
 
 function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
-  const hero = heroType(w, ev.src);
+  const e = ent(w, ev.src);
+  const hero = e?.hero?.type;
   if (!hero) return;
+  // What's left of the ability's animation (+ a short tail for its effect): start sounds end with it.
+  const ac = e.hero!.action;
+  const span = ac ? Math.max(0.35, ac.dur - ac.t) + 0.3 : 1;
   const wpn = WEAPON[hero];
   if (ev.phase === "fire") {
     if (ev.kind === "combo" && wpn) {
@@ -370,16 +382,16 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
     return;
   }
   // Ability start.
-  const shout = (g = 0.85) => a.vocal(hero, "big", g, { id: ev.src, gap: 0.8 });
+  const shout = (g = 0.85) => a.vocal(hero, "big", g, { id: ev.src, gap: 0.8, dur: Math.min(0.95, span) });
   switch (ev.kind) {
     case "slam":
     case "quake":
       shout();
-      a.play("jump", 0.4, { rate: 0.8 });
+      a.play("jump", 0.4, { rate: 0.8, dur: span });
       break;
     case "leap":
       shout(0.7);
-      a.play("jump", 0.6);
+      a.play("jump", 0.6, { dur: span });
       break;
     case "dash":
       a.play("swing.blade", 0.7, { rate: 0.8 });
@@ -394,11 +406,11 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
       for (let i = 0; i < 8; i++) a.play(i % 2 ? "knife" : "swing.blade", 0.45, { at: 0.08 + i * 0.14 });
       break;
     case "gravewalk":
-      a.play("magic.dark", 0.7, { rate: 0.8 });
-      a.vocal(hero, "taunt", 0.5, { id: ev.src });
+      a.play("magic.dark", 0.7, { rate: 0.8, dur: span });
+      a.vocal(hero, "taunt", 0.5, { id: ev.src, dur: Math.min(1.3, span) });
       break;
     case "heartseeker":
-      a.play("wren.draw", 0.7, { rate: 0.7 });
+      a.play("wren.draw", 0.7, { rate: 0.8, dur: span });
       shout(0.7);
       break;
     case "brewfest":
@@ -416,14 +428,14 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
     case "works":
     case "wall":
     case "ballista":
-      a.play("crank", 0.5);
+      a.play("crank", 0.5, { dur: span });
       break;
     case "summon":
       shout(0.8);
-      a.play("magic.dark", 0.6, { rate: 0.7 });
+      a.play("magic.dark", 0.6, { rate: 0.7, dur: span });
       break;
     case "hex":
-      a.play("magic.dark", 0.5);
+      a.play("magic.dark", 0.5, { dur: span });
       break;
     case "reach":
     case "zone":
@@ -527,13 +539,25 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       a.play("metal.clank", 0.5, { rate: 1.5 });
       return;
     case "volley":
-      a.vocal("marksman", "big", 0.6, { id: ev.src });
-      [0, 0.07, 0.14].forEach((t) => a.play("arrow.loose", 0.6, { at: t }));
+      // A ragged release of many bows, a rising whoosh of arrows overhead.
+      a.vocal("marksman", "big", 0.7, { id: ev.src });
+      for (let i = 0; i < 7; i++)
+        a.play("arrow.loose", 0.75 - i * 0.05, {
+          at: i * 0.045 + Math.random() * 0.03,
+          rate: 0.9 + Math.random() * 0.25,
+        });
+      a.play("twang", 0.6, { rate: 1.2 });
+      a.play("twang", 0.45, { rate: 0.9, at: 0.08 });
+      a.play("whoosh.big", 0.8, { rate: 1.3, at: 0.1, priority: true });
+      a.play("whoosh.big", 0.6, { rate: 1.6, at: 0.25 });
       return;
     case "volleyWave":
+      // Arrows raining down: a hiss and a scatter of thunks.
       if (a.allow("volleyWave", 1)) {
-        a.play("miss", 0.35, { rate: 1.2 });
-        a.play("arrow.hit", 0.35, { at: 0.15 });
+        a.play("miss", 0.6, { rate: 1.3 });
+        a.play("miss", 0.45, { rate: 1.6, at: 0.05 });
+        for (let i = 0; i < 4; i++)
+          a.play("arrow.hit", 0.55 - i * 0.07, { at: 0.12 + i * 0.06 + Math.random() * 0.04 });
       }
       return;
     case "skyshot":

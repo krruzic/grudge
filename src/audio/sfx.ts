@@ -37,6 +37,8 @@ const LOOP_SECONDS: Record<string, number> = {
 const GLOBAL = new Set(["gates", "horn", "avalanche", "tide", "mist", "notice", "directive", "eliminated"]);
 /** Global events that still lean toward where they happened. */
 const LEAN = new Set(["relic"]);
+/** Longest a voice line runs, per line. */
+const VOICE_DUR: Record<string, number> = { attack: 0.55, big: 0.95, hurt: 0.6, death: 1.7, taunt: 1.3, order: 0.9 };
 /** Most sample voices at once; past this only priority sounds start. */
 const MAX_VOICES = 56;
 
@@ -68,6 +70,8 @@ export interface PlayOpts {
   quiet?: boolean;
   loop?: boolean;
   bus?: AudioNode;
+  /** Cut the sound after this many seconds (short fade), e.g. to end with its animation. */
+  dur?: number;
 }
 
 export class Audio {
@@ -88,15 +92,16 @@ export class Audio {
   /** Per champion + voice line: earliest next line (voices would otherwise chatter). */
   private vocalAt = new Map<string, number>();
 
-  private musicLevel = 0.5;
+  private musicLevel = 0.2;
   private sfxLevel = 1;
 
   setLevels(music: number, sound: number): void {
-    this.musicLevel = 0.5 * music;
+    // Squared so the low end of the slider is actually quiet (level 1 of 10 is -40 dB below level 10).
+    this.musicLevel = 0.4 * music * music;
     this.sfxLevel = sound;
     if (this.musicBus) this.musicBus.gain.value = this.musicLevel;
     if (this.sfxBus) this.sfxBus.gain.value = this.sfxLevel;
-    if (this.ambBus) this.ambBus.gain.value = this.sfxLevel * 0.45;
+    if (this.ambBus) this.ambBus.gain.value = this.sfxLevel * 0.28;
   }
 
   constructor(private volume = 0.7) {
@@ -121,7 +126,7 @@ export class Audio {
       this.sfxBus.gain.value = this.sfxLevel;
       this.sfxBus.connect(this.master);
       this.ambBus = c.createGain();
-      this.ambBus.gain.value = this.sfxLevel * 0.45;
+      this.ambBus.gain.value = this.sfxLevel * 0.28;
       this.ambBus.connect(this.master);
       this.musicBus = c.createGain();
       this.musicBus.gain.value = this.musicLevel;
@@ -218,6 +223,13 @@ export class Audio {
     const g = this.out(0, gain, o.bus);
     src.connect(g);
     src.start(t);
+    const len = buf.duration / src.playbackRate.value;
+    if (o.dur !== undefined && o.dur < len) {
+      const fade = Math.min(0.15, o.dur * 0.4);
+      g.gain.setValueAtTime(gain, t + o.dur - fade);
+      g.gain.linearRampToValueAtTime(0, t + o.dur);
+      src.stop(t + o.dur + 0.02);
+    }
     this.voices++;
     src.onended = () => {
       this.voices--;
@@ -227,9 +239,13 @@ export class Audio {
     return src;
   }
 
-  /** A champion's voice line (attack / big / hurt / death / taunt / order), rate-limited per champion. */
+  /**
+   * A champion's voice line (attack / big / hurt / death / taunt / order), rate-limited per champion and cut to
+   * a short length per line (or `dur`, e.g. the rest of the ability's animation).
+   */
   vocal(hero: string | undefined, line: string, gain = 0.8, o: PlayOpts & { id?: number; gap?: number } = {}): void {
     if (!hero) return;
+    o = { dur: VOICE_DUR[line] ?? 1, ...o };
     const key = `${o.id ?? hero}:${line === "death" ? "d" : "v"}`;
     const now = this.now;
     if ((this.vocalAt.get(key) ?? 0) > now) return;
@@ -311,12 +327,39 @@ export class Audio {
       leave: "ui.leave",
       tick: "ui.tick",
     };
-    const gain = kind === "move" || kind === "key" ? 0.35 : kind === "start" ? 0.9 : 0.5;
+    // Menu navigation keeps its square-wave blips; the rest are samples.
+    if (kind === "move") return this.tone("square", 660, 660, 0.06, 0.08);
+    if (kind === "ok") {
+      this.tone("square", 520, 520, 0.08, 0.1);
+      return this.tone("square", 780, 780, 0.12, 0.1, 0, 0.08);
+    }
+    if (kind === "back") return this.tone("square", 400, 260, 0.12, 0.1);
+    const gain = kind === "key" ? 0.35 : kind === "start" ? 0.9 : 0.5;
     if (this.play(id[kind], gain, { jitter: 0.02, priority: true })) return;
-    // Samples still decoding: the old synth blips.
-    if (kind === "move") this.tone("square", 660, 660, 0.06, 0.08);
-    else if (kind === "back") this.tone("square", 400, 260, 0.12, 0.1);
+    if (kind === "start") [392, 523, 659, 784].forEach((f, i) => this.tone("square", f, f, 0.16, 0.12, 0, i * 0.09));
     else this.tone("square", 520, 780, 0.1, 0.1);
+  }
+
+  /**
+   * Character select: hovering a champion plays a short cue of their weapon; sealing one adds their voice.
+   */
+  heroCue(hero: string, sealed: boolean): void {
+    if (!this.ready) return;
+    this.dest = null;
+    const cue: Record<string, [string, number]> = {
+      warlord: ["swing.heavy", 0.9],
+      engineer: ["stig.wrench", 1.1],
+      raider: ["knife", 1.1],
+      summoner: ["magic.dark", 1.1],
+      duelist: ["francois.ring", 1],
+      warden: ["thorn.grow", 0.9],
+      marksman: ["arrow.loose", 1],
+      friar: ["maddock.keg", 1],
+      herald: ["cloth.flap", 1],
+    };
+    const [id, rate] = cue[hero] ?? ["swing.light", 1];
+    this.play(id, sealed ? 0.5 : 0.3, { rate, priority: true, dur: 0.6 });
+    if (sealed) this.vocal(hero, "taunt", 0.6, { priority: true, at: 0.05, gap: 0.3 });
   }
 
   /** An announcer line (global, centred). */
@@ -436,7 +479,7 @@ export class Audio {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     for (const b of [this.musicBus, this.ambBus]) {
-      const base = b === this.musicBus ? this.musicLevel : this.sfxLevel * 0.45;
+      const base = b === this.musicBus ? this.musicLevel : this.sfxLevel * 0.28;
       b.gain.cancelScheduledValues(now);
       b.gain.setValueAtTime(b.gain.value, now);
       b.gain.linearRampToValueAtTime(base * 0.6, now + 0.05);

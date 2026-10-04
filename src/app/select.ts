@@ -371,11 +371,13 @@ export function updateSelect(app: App, now: number, dt: number): void {
       if (!slots[act.slot].ready && slots[act.slot].hero !== act.hero) {
         slots[act.slot].hero = act.hero;
         app.audio.ui("move");
+        app.audio.heroCue(act.hero, false);
       }
     } else if (act.type === "place") {
       slots[act.slot].hero = act.hero;
       slots[act.slot].ready = true;
       app.audio.ui("seal");
+      app.audio.heroCue(act.hero, true);
     } else if (act.type === "pick") {
       slots[act.slot].ready = false;
       app.audio.ui("peel");
