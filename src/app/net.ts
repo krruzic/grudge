@@ -15,7 +15,7 @@
 // is a bot on the host, whose commands arrive in the frames like everyone else's.
 import { Bot } from "../sim/bot";
 import type { Command } from "../sim/types";
-import { costumesOf } from "../render/costumes";
+import { costumesOf, playerLabel } from "../render/costumes";
 import { cleanHand, type HandWire } from "../ui/cursor";
 import type { LobbySlot } from "../ui/screens";
 import { MAX_TAG, cleanTag } from "../game/save";
@@ -253,7 +253,13 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
   const r = n.rseats.find((q) => q.peer === id && q.k === Number(m.k ?? 0));
   if (!r) {
     // Unseated pads of a seated guest may still pause.
-    if (m.t === "pause" && inMatch(app) && n.rseats.some((q) => q.peer === id)) setPaused(app, app.state === "match");
+    if (
+      m.t === "pause" &&
+      inMatch(app) &&
+      n.rseats.some((q) => q.peer === id) &&
+      (app.pausing || app.state === "paused")
+    )
+      setPaused(app, app.state === "match", "");
     return;
   }
   const key = `${id}:${r.k}`;
@@ -326,8 +332,8 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
     if (!ready && c.holding < 0) c.holding = i;
     if (ready && c.holding === i) c.holding = -1;
     app.audio.ui(m.on ? "ok" : "back");
-  } else if (m.t === "pause" && inMatch(app)) {
-    setPaused(app, app.state === "match");
+  } else if (m.t === "pause" && inMatch(app) && (app.pausing || app.state === "paused")) {
+    setPaused(app, app.state === "match", r.slot >= 0 ? playerLabel(r.slot) : r.name);
   }
 }
 
@@ -519,6 +525,7 @@ export function pumpNet(app: App, now: number): void {
         for (const [k, v] of (m.h as [number, number][]) ?? []) n.netHashes.set(k, v);
       } else if (m.t === "pause") {
         if (inMatch(app)) {
+          if (m.on) app.menus.openPause(String(m.by ?? ""));
           app.state = m.on ? "paused" : "match";
           app.screens.set(m.on ? "pause" : "none");
         }

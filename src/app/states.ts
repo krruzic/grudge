@@ -80,9 +80,9 @@ function fetchRooms(app: App): void {
  */
 export function updateMatchInput(app: App, now: number): void {
   const { world: w, view, net } = app;
-  if (app.anyPressed("start")) {
+  if (app.anyPressed("start") && app.pausing) {
     app.pauser = app.pads.players.findIndex((p) => p.pressed.start);
-    if (net.mode === "peer") net.link.toHost({ t: "pause" });
+    if (net.mode === "peer") net.link.toHost({ t: "pause", k: app.pauser });
     else setPaused(app, true);
   }
   app.pads.players.forEach((p, pi) => {

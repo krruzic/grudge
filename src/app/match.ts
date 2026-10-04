@@ -149,6 +149,7 @@ export function startNetMatch(app: App, spec: MatchSpec, local: boolean[], remot
   app.players = spec.players;
   setPlayerCostumes(spec.costumes ?? []);
   setPlayerNames(spec.names ?? []);
+  app.pausing = spec.rules.pausing !== 0;
   app.mode = spec.mode ?? (spec.players === 4 ? "2v2" : "1v1");
   setupControl(app, local, spec.levels, remote, app.net.mode !== "peer");
   if (spec.training) app.bots = app.bots.map(() => null);
@@ -230,16 +231,17 @@ export function beginMatch(app: App): void {
  * Opens / closes the pause menu. The caller sets app.pauser first (the pad that pressed start); only that pad
  * drives the menu. An online host forwards the pause to guests; guests ask the host instead of calling this.
  */
-export function setPaused(app: App, on: boolean): void {
+export function setPaused(app: App, on: boolean, by?: string): void {
+  const label = by ?? (app.pauser >= 0 ? playerLabel(app.pauser) : "");
   if (!on) app.pauser = -1;
   if (on) {
-    app.menus.openPause(app.pauser >= 0 ? playerLabel(app.pauser) : "");
+    app.menus.openPause(label);
     app.menus.currentMap = maps[app.mapIndex]?.data.name ?? "";
   }
   app.state = on ? "paused" : "match";
   app.screens.set(on ? "pause" : "none");
   app.hud.show(!on);
-  if (app.net.mode === "host") app.net.link.toPeer("all", { t: "pause", on });
+  if (app.net.mode === "host") app.net.link.toPeer("all", { t: "pause", on, by: label });
 }
 
 // ── Per frame ──

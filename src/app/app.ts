@@ -83,6 +83,8 @@ export class App {
   acc = 0;
   /** Pad index that opened the pause menu; only that pad (and the mouse if it is the keyboard seat) drives it. */
   pauser = -1;
+  /** Whether the current match allows pausing (rule PAUSING, taken from the match spec). */
+  pausing = true;
 
   // ── Select-screen input bookkeeping ──
   /** A name entry was open at the start of this frame, so its keys must not also start the match. */

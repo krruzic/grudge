@@ -13,6 +13,7 @@ export interface Rules {
   respawn: number;
   mercy: number;
   partners: number;
+  pausing: number;
 }
 
 export interface Options {
@@ -160,6 +161,13 @@ export const RULE_ROWS: Row<Rules>[] = [
     blurb: "IN 2 VS 2, PLAYERS 3 AND 4 FIGHT AS CHAMPIONS OR LEAD AS COMMANDERS.",
   },
   { key: "mercy", label: "MERCY", values: [1, 0], fmt: onOff, blurb: "THE LOSING HOUSE EARNS AND BUILDS FASTER." },
+  {
+    key: "pausing",
+    label: "PAUSING",
+    values: [1, 0],
+    fmt: onOff,
+    blurb: "OFF: START DOES NOTHING DURING A MATCH. NOBODY CAN STOP THE FIGHT.",
+  },
 ];
 
 /** The screen's physical height in pixels (DPR capped at 2, like the renderer): the top of the resolution list. */
@@ -232,6 +240,7 @@ export const DEFAULT_RULES: Rules = {
   respawn: 6,
   mercy: 1,
   partners: 1,
+  pausing: 1,
 };
 export const DEFAULT_OPTIONS: Options = {
   music: 7,
