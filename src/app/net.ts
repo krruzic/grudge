@@ -197,7 +197,7 @@ function fieldName(app: App, random: string): string {
 }
 
 /** The host's select screen as guests see it (sent as "lobby" every LOBBY_DT). */
-export function lobbyView(app: App) {
+function lobbyView(app: App) {
   const n = app.net;
   return {
     build: __BUILD__,
@@ -225,7 +225,7 @@ export function lobbyView(app: App) {
     }),
   };
 }
-export type LobbyWire = ReturnType<typeof lobbyView>;
+type LobbyWire = ReturnType<typeof lobbyView>;
 
 // ── Host: messages from guests ──
 

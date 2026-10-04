@@ -33,7 +33,7 @@ import { INK, PAD, PLAYER_TAG, meter, padButton, ringMeter, times, timesWidth } 
 export const BLOCK_W = 104;
 
 /** Screen-shake offset for a panel hit at `at` (fades over 0.7 s), rounded to half units so memos repaint rarely. */
-export function shakeOf(at: number | undefined, now: number, amp: number): [number, number] {
+function shakeOf(at: number | undefined, now: number, amp: number): [number, number] {
   const age = now - (at ?? -99);
   if (age > 0.7) return [0, 0];
   const k = amp * (1 - age / 0.7);

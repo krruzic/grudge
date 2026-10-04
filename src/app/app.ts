@@ -148,7 +148,7 @@ export class App {
     const teamCss = renderConfig.teamColors;
     this.uiCanvas = new UiCanvas(document.getElementById("ui")!);
     this.hud = new Hud(teamCss);
-    this.screens = new Screens(teamCss);
+    this.screens = new Screens();
     const portraits = new Portraits(assets.heroes, this.view.teamColorList);
     portraits.units = assets.unitModels;
     portraits.setMaps(

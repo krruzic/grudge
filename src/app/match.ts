@@ -57,7 +57,7 @@ export function setupControl(
 }
 
 /** One command per player slot for the next tick. */
-export function commandsFor(app: App): Command[] {
+function commandsFor(app: App): Command[] {
   const { dbg, net } = app;
   return Array.from({ length: app.players }, (_, i) => {
     const puppet = dbg.puppet[i];

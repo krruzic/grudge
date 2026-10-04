@@ -79,7 +79,6 @@ export class Portraits {
     inst.mixer?.update(0.01);
     root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(inst.body);
-    const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     let top = box.max.y;
     const head = inst.body.getObjectByName("head");

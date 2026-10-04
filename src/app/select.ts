@@ -23,7 +23,7 @@ import { beginMatch, resetAttractWorld, toMenu } from "./match";
 // ── Seats ──
 
 /** Gives a CPU seat a hero: the commander, or a random champion + costume unless it already sealed one. */
-export function settleCpu(app: App, i: number): void {
+function settleCpu(app: App, i: number): void {
   const sl = app.slots[i];
   if (app.commanderSlot(i)) {
     sl.hero = commanderType;
@@ -80,7 +80,7 @@ export function makeOpen(app: App, i: number): void {
   app.cursors.placeChip(i, null);
 }
 
-export function makeCpu(app: App, i: number): void {
+function makeCpu(app: App, i: number): void {
   const sl = app.slots[i];
   const wasOpen = !!sl.open;
   sl.open = false;
@@ -92,7 +92,7 @@ export function makeCpu(app: App, i: number): void {
 }
 
 /** Nobody sits at seat i: an open seat when hosting online, otherwise an automatic CPU. */
-export function vacate(app: App, i: number): void {
+function vacate(app: App, i: number): void {
   if (app.net.mode === "host") makeOpen(app, i);
   else {
     makeCpu(app, i);
@@ -169,7 +169,7 @@ export function enterSelect(app: App, keep = false): void {
 }
 
 /** Every active seat is sealed (no OPEN seats, no chip in anyone's hand). */
-export function selectReady(app: App): boolean {
+function selectReady(app: App): boolean {
   return (
     app.slots.every((sl, i) => !app.slotActive(i) || (sl.ready && !sl.open && app.heldBy(i) < 0)) &&
     app.cursors.cursors.every((c) => !c.active || c.holding < 0 || !app.slotActive(c.holding))
@@ -177,7 +177,7 @@ export function selectReady(app: App): boolean {
 }
 
 /** Champion select -> field select. */
-export function toMap(app: App): void {
+function toMap(app: App): void {
   app.mapHover.fill("*");
   app.screens.readyBanner = false;
   app.readySince = -1;

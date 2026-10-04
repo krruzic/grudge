@@ -1,0 +1,598 @@
+// Champion select screen (also the online guest lobby, which draws the host's seats read-only where needed).
+//
+// Top: mode / camera ribbons and one card per champion; cursors drag their seat's chip (seal) onto a card to
+// pick it. Below: one seat card per active seat showing the seat's kind plaque (PLAYER / CPU with difficulty
+// gems / COMMANDER, camera toggle), name plate, the hero on its painted stage with the costume strip, the
+// evolution tree and ability glyphs. A human seat that hasn't placed its seal shows "PICK A CHAMPION" instead.
+// Mouse targets ("hero:<id>", "kind:<i>", "lvl:<i>", "cam:<i>", "tag:<i>", "sit:<i>", "go", ...) go into the
+// cursors' hit list; app/select.ts turns cursor actions on them into seat changes.
+import { CAMERA_NAMES } from "../../game/save";
+import { costumesOf } from "../../render/costumes";
+import { drawPlain, textWidth } from "../font";
+import { abilityIcon } from "../icons";
+import { drawSigning } from "../nameEntry";
+import { bottomPrompt } from "../prompts";
+import {
+  artTitle,
+  band,
+  beam,
+  boardBg,
+  card,
+  inset,
+  nameImage,
+  ribbon,
+  shadowText,
+  smoothImage,
+  texturedRect,
+  waxSeal,
+  woodFloor,
+} from "../uiPaint";
+import type { SelectSlot, Screens } from "../screens";
+import { BROWN, INK, MODE_NAME, TEAM_BRIGHT, TEAM_CLOTH, TEAM_FIELD, TEAM_TEXT, center } from "./common";
+import { costumeIcon, drawTree, hasTree, heroGlyph, stageArt } from "./selectArt";
+
+/** A cursor is hovering mouse target `id`. */
+const hovered = (s: Screens, id: string) => !!s.cursors?.cursors.some((c) => c.active && c.hover === id);
+
+export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number, H: number, blink: boolean): void {
+  boardBg(ctx, W, H);
+  const floorY = H - 20;
+  woodFloor(ctx, floorY, W, H);
+  beam(ctx, 4, 2, W - 8, 17);
+  artTitle(ctx, "t_champion", "CHOOSE YOUR CHAMPION", W / 2, 3, 14);
+  // Mode ribbon (click: cycle 1v1 / 2v2 / FFA) and camera ribbon (click: shared / split view).
+  const mw = s.mode === "ffa" ? 70 : 46;
+  const modeArt = s.training ? null : nameImage(`t_${s.mode}`);
+  ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, s.training ? "TRAINING" : MODE_NAME[s.mode], 0.55, undefined, modeArt);
+  s.hit("mode", W - 15 - mw / 2 - mw / 2 - 5, 1, mw + 10, 17);
+  const cam = CAMERA_NAMES[s.cameraMode] ?? CAMERA_NAMES[1];
+  const cw = Math.max(64, textWidth(cam, 0.5) + 18);
+  ribbon(ctx, 8 + cw / 2, 4, cw, 11, cam, 0.5);
+  s.hit("camera", 4, 1, cw + 8, 17);
+
+  drawRosterRow(s, ctx, W);
+
+  // Seat cards: 2v2 orders them blue, blue, red, red.
+  const order = s.mode === "ffa" ? [0, 1, 2, 3] : s.twoVtwo ? [0, 2, 1, 3] : [0, 1];
+  const n = order.length;
+  const bw = s.twoVtwo ? Math.min(72, Math.floor((W - 30) / n) - 14) : Math.min(118, Math.floor(W * 0.3));
+  const bgap = s.twoVtwo ? Math.floor((W - bw * n) / (n + 1)) : Math.floor((W - bw * 2) / 3);
+  const by = 96;
+  const bh = floorY - by - 6;
+  order.forEach((i, k) => drawSeatCard(s, ctx, i, bgap + k * (bw + bgap), by, bw, bh));
+  if (!s.twoVtwo) drawAddCpuCards(s, ctx, W, by);
+
+  bottomPrompt(
+    ctx,
+    W,
+    H,
+    s.peer
+      ? [
+          ["A", "TAKE / PLACE SEAL"],
+          ["B", "LEAVE"],
+        ]
+      : [
+          ["A", "TAKE / PLACE SEAL"],
+          ["B", "BACK"],
+          ["S", "START"],
+        ],
+  );
+  if (s.peer && s.lobby) {
+    const lb = s.lobby;
+    const r = lb.rules;
+    const t =
+      lb.status ||
+      (lb.phase === "match"
+        ? "A MATCH IS UNDER WAY · YOU'LL JOIN THE NEXT ONE"
+        : `${lb.map} · ${r.minutes} MIN · ${r.popCap} SOLDIERS · GOLD X${r.goldRate} · WAITING FOR THE HOST`);
+    if (blink || !lb.status) center(ctx, W, t, floorY - 10, "#fff0c0", 0.55);
+  }
+  if (s.openHint && !s.peer) drawOpenHint(s, ctx, W);
+  if (s.readyBanner) drawReadyBanner(s, ctx, W, H, blink);
+}
+
+/** One card per champion; a card picked by a seat takes that team's colour (gold when picked by both). */
+function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): void {
+  const n = s.roster.length;
+  // Cards shrink to fit the roster (42 px wide, never below 26).
+  const sw = Math.max(26, Math.min(42, Math.floor((W - 24 - (n - 1) * 6) / Math.max(1, n))));
+  const sh = Math.round((sw * 54) / 42);
+  const gap = Math.min(12, Math.floor((W - 24 - n * sw) / Math.max(1, n - 1)));
+  const gx = Math.round((W - (n * sw + (n - 1) * gap)) / 2);
+  const gy = 25;
+  s.roster.forEach((type, k) => {
+    const x = gx + k * (sw + gap);
+    const pickedBy = [0, 1, 2, 3]
+      .filter((i) => (i < 2 || (s.twoVtwo && s.championSeat(i))) && s.slots[i]?.ready && s.slots[i].hero === type)
+      .map((i) => s.teamOf(i));
+    const hot = hovered(s, `hero:${type}`);
+    s.hit(`hero:${type}`, x - 2, gy - 2, sw + 4, sh + 4);
+    // Chips placed on this hero sit around this point (see Screens.draw).
+    s.shieldAt.set(type, { x: x + sw / 2, y: gy + sh - 22 });
+    const icon = s.portraits?.icon(type);
+    const tilt = pickedBy.length || hot ? 0 : k % 2 ? 0.04 : -0.04;
+    const frame =
+      pickedBy.length === 1
+        ? TEAM_BRIGHT[pickedBy[0]]
+        : pickedBy.length === 2
+          ? "#f0c030"
+          : hot
+            ? "#c81818"
+            : "#8a8a90";
+    card(ctx, x, gy - (hot ? 2 : 0), sw, sh, tilt, frame, () => {
+      const iw = sw - 8;
+      ctx.fillStyle = "#2a1a0a";
+      ctx.fillRect(2, 6, iw + 4, iw + 4);
+      texturedRect(ctx, "cloth", 4, 8, iw, iw, pickedBy.length ? TEAM_FIELD[pickedBy[0]] : "#7a2a1c", 0, 0.7);
+      if (icon) smoothImage(ctx, icon, 4, 8, iw, iw);
+      const name = (s.heroes[type]?.name ?? type).toUpperCase();
+      const ns = Math.min(0.62, (sw - 4) / Math.max(1, textWidth(name, 1, true)));
+      drawPlain(
+        ctx,
+        name,
+        sw / 2 - textWidth(name, ns, true) / 2,
+        sh - 10,
+        pickedBy.length ? "#8a1810" : BROWN,
+        ns,
+        true,
+      );
+    });
+  });
+}
+
+/** 1v1: "+ ADD CPU" cards at the sides switch to 2v2 (not for online guests). */
+function drawAddCpuCards(s: Screens, ctx: CanvasRenderingContext2D, W: number, by: number): void {
+  for (const [i, bx] of [
+    [2, 12],
+    [3, W - 12 - 44],
+  ] as const) {
+    s.portraits?.drop(i);
+    if (s.peer) continue;
+    const hot = hovered(s, `add:${i}`);
+    card(ctx, bx, by + 4, 44, 34, hot ? 0 : i === 2 ? -0.04 : 0.04, hot ? "#c81818" : "#8a8a90", () => {
+      for (const [line, dy] of [
+        ["+ ADD", 10],
+        ["CPU", 19],
+      ] as const)
+        drawPlain(ctx, line, 22 - textWidth(line, 0.55, true) / 2, dy, hot ? "#8a1810" : "#6a4424", 0.55, true);
+    });
+    s.hit(`add:${i}`, bx - 2, by + 2, 48, 38);
+  }
+}
+
+function drawOpenHint(s: Screens, ctx: CanvasRenderingContext2D, W: number): void {
+  const sw = Math.min(300, W - 60);
+  ctx.save();
+  card(ctx, W / 2 - sw / 2, 124, sw, 32, 0.01, "#c81818", () => {
+    const t1 = "SEATS STILL OPEN";
+    drawPlain(ctx, t1, sw / 2 - textWidth(t1, 1.05, true) / 2, 5, BROWN, 1.05, true);
+    const t2 = s.twoVtwo ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1" : "WAIT FOR A PLAYER OR + ADD CPU";
+    drawPlain(ctx, t2, sw / 2 - textWidth(t2, 0.55, true) / 2, 20, "#8a1810", 0.55, true);
+  });
+  ctx.restore();
+}
+
+/** "THE GRUDGE IS SWORN!" swallowtail banner hung from a rod over a dimmed screen; clicking it starts. */
+function drawReadyBanner(s: Screens, ctx: CanvasRenderingContext2D, W: number, H: number, blink: boolean): void {
+  const bw = Math.min(250, W - 70);
+  const bx = W / 2 - bw / 2;
+  const by = 118;
+  const bh = 46;
+  s.hit("go", bx, by, bw, bh);
+  ctx.save();
+  ctx.fillStyle = "rgba(10, 6, 2, 0.32)";
+  ctx.fillRect(0, 0, W, H);
+  const cloth = () => {
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx + bw, by);
+    ctx.lineTo(bx + bw, by + bh);
+    ctx.lineTo(bx + bw * 0.75, by + bh - 7);
+    ctx.lineTo(bx + bw / 2, by + bh + 2);
+    ctx.lineTo(bx + bw * 0.25, by + bh - 7);
+    ctx.lineTo(bx, by + bh);
+    ctx.closePath();
+  };
+  ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 4;
+  cloth();
+  ctx.fillStyle = "#5a0e0c";
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.save();
+  cloth();
+  ctx.clip();
+  texturedRect(ctx, "banner", bx, by, bw, bh + 4, "#8a1a16", 0, 0.6);
+  const gr = ctx.createLinearGradient(0, by, 0, by + bh);
+  gr.addColorStop(0, "rgba(255, 220, 160, 0.12)");
+  gr.addColorStop(1, "rgba(0, 0, 0, 0.35)");
+  ctx.fillStyle = gr;
+  ctx.fillRect(bx, by, bw, bh + 4);
+  ctx.restore();
+  // Gold trim inset from the edge.
+  ctx.beginPath();
+  ctx.moveTo(bx + 3, by + 4);
+  ctx.lineTo(bx + bw - 3, by + 4);
+  ctx.lineTo(bx + bw - 3, by + bh - 4);
+  ctx.lineTo(bx + bw * 0.75, by + bh - 10);
+  ctx.lineTo(bx + bw / 2, by + bh - 1.5);
+  ctx.lineTo(bx + bw * 0.25, by + bh - 10);
+  ctx.lineTo(bx + 3, by + bh - 4);
+  ctx.closePath();
+  ctx.strokeStyle = "#d8a840";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Rod with brass knobs.
+  ctx.fillStyle = BROWN;
+  ctx.fillRect(bx - 8, by - 4, bw + 16, 5);
+  ctx.fillStyle = "#7a5430";
+  ctx.fillRect(bx - 8, by - 4, bw + 16, 2);
+  for (const fx of [bx - 10, bx + bw + 10]) {
+    ctx.beginPath();
+    ctx.arc(fx, by - 1.5, 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = "#e0b850";
+    ctx.fill();
+    ctx.strokeStyle = "#5a3a10";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+  ctx.restore();
+  artTitle(ctx, "!THE GRUDGE IS SWORN!", "THE GRUDGE IS SWORN!", W / 2, by + 5, 17);
+  if (blink) {
+    const p = "PRESS START";
+    drawPlain(ctx, p, W / 2 - textWidth(p, 0.7, true) / 2, by + 27, "#f4e2b0", 0.7, true);
+  }
+}
+
+/** Small wooden button centred at cx ("SIT HERE", "+ ADD CPU"). */
+function woodButton(s: Screens, ctx: CanvasRenderingContext2D, bid: string, t: string, cx: number, by: number): void {
+  const hot = hovered(s, bid);
+  ctx.fillStyle = INK;
+  ctx.fillRect(cx - 26, by - 1, 52, 13);
+  texturedRect(ctx, "wood", cx - 25, by, 50, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
+  shadowText(ctx, t, cx - textWidth(t, 0.55) / 2, by + 2, hot ? "#fff4b0" : "#e8d8b8", 0.55);
+  s.hit(bid, cx - 28, by - 3, 56, 17);
+}
+
+// ── Seat card ──
+
+function drawSeatCard(
+  s: Screens,
+  ctx: CanvasRenderingContext2D,
+  i: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const sl = s.slots[i];
+  const active = !!sl && (i < 2 || s.twoVtwo);
+  const team = s.teamOf(i);
+  const ink = TEAM_TEXT[team];
+  if (!sl || !active) {
+    s.portraits?.drop(i);
+    if (!sl) return;
+    const hot = hovered(s, `add:${i}`);
+    card(ctx, x, y, w, 32, hot ? 0 : team ? 0.03 : -0.03, hot ? "#c81818" : "#8a8a90", () => {
+      const t = "+ ADD CPU";
+      drawPlain(ctx, t, w / 2 - textWidth(t, 0.6, true) / 2, 13, hot ? "#8a1810" : "#6a4424", 0.6, true);
+    });
+    s.hit(`add:${i}`, x, y - 2, w, 34);
+    return;
+  }
+  if (sl.open) {
+    drawOpenSeat(s, ctx, i, team, ink, x, y, w, h);
+    return;
+  }
+  const commander = !s.championSeat(i);
+  const human = sl.joined && !sl.cpu;
+  const def = s.heroes[sl.hero];
+  const naming = s.naming.has(i);
+  const tagged = !sl.cpu && !commander && !!sl.tag;
+  const label = tagged ? sl.tag! : `P${i + 1}`;
+  const tagHot = !sl.cpu && !commander && hovered(s, `tag:${i}`);
+  const iy = 30;
+  const ih = h - iy - 34;
+  // A human who hasn't placed their seal yet sees an empty card.
+  const blank = human && !commander && !sl.ready && !naming;
+  card(ctx, x, y, w, h, 0, sl.ready ? "#c8a020" : TEAM_BRIGHT[team], () => {
+    const ls = tagged ? Math.min(0.95, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 0.95;
+    drawPlain(ctx, label, w / 2 - textWidth(label, ls, true) / 2, 7, tagHot ? "#c81818" : ink, ls, true);
+    inset(ctx, 5, iy, w - 10, ih, "#2a2018");
+    texturedRect(ctx, "cloth", 5, iy, w - 10, ih, TEAM_CLOTH[team], 0, 0.7);
+    band(ctx, 5, iy + ih - 10, w - 10, 10, "#000000", 0.25);
+    if (naming) return;
+    if (blank) {
+      band(ctx, 5, iy, w - 10, ih, "#000000", 0.35);
+      ["PICK A", "CHAMPION"].forEach((l, k) =>
+        drawPlain(ctx, l, w / 2 - textWidth(l, 0.62, true) / 2, iy + ih / 2 - 9 + k * 10, "#e8d8b8", 0.62, true),
+      );
+      return;
+    }
+    const name = (def?.name ?? sl.hero).toUpperCase();
+    const ns = Math.min(0.8, (w - 10) / Math.max(1, textWidth(name, 1, true)));
+    drawPlain(ctx, name, w / 2 - textWidth(name, ns, true) / 2, iy + ih + 5, BROWN, ns, true);
+  });
+  // Only humans' name plates are clickable (and only the owner's click opens it: app/select.ts).
+  if (!sl.cpu && !commander) {
+    s.hit(`tag:${i}`, x + 4, y + 3, w - 8, 13);
+    if (tagHot) shadowText(ctx, "SIGN NAME", x + w / 2 - textWidth("SIGN NAME", 0.42) / 2, y - 7, "#f8e8c0", 0.42);
+  }
+  const sitHere = sl.cpu && !s.peer && !commander && !!s.cursors?.cursors.some((c) => c.active);
+  /** Little X box in the card's corner. */
+  const xBox = (bid: string, tip: string) => {
+    const hot = hovered(s, bid);
+    const ux = x + w - 11;
+    const uy = y + 3;
+    ctx.fillStyle = "#1a120a";
+    ctx.fillRect(ux - 1, uy - 1, 9, 9);
+    ctx.fillStyle = hot ? "#b83020" : "#6a3a24";
+    ctx.fillRect(ux, uy, 7, 7);
+    shadowText(ctx, "X", ux + 3.5 - textWidth("X", 0.5) / 2, uy + 1, hot ? "#fff4b0" : "#e8d8b8", 0.5);
+    s.hit(bid, ux - 2, uy - 2, 11, 11);
+    if (hot) shadowText(ctx, tip, Math.max(2, x + w / 2 - textWidth(tip, 0.42) / 2), y - 7, "#f8e8c0", 0.42);
+  };
+  if (sl.cpu && s.hosting && !commander) xBox(`seatopen:${i}`, "OPEN THIS SEAT");
+  if (human && sl.local) xBox(`unplug:${i}`, "UNPLUG · ANY BUTTON REJOINS");
+  // Name entry (ours) or a mirrored remote one replaces the card body.
+  if (naming) {
+    s.portraits?.drop(i);
+    s.naming.get(i)!.draw(ctx, x + 3, y + 18, w - 6, h - 20, performance.now() / 1000);
+    return;
+  }
+  const sg = !sl.cpu && !commander ? s.signing.get(i) : undefined;
+  if (sg) {
+    s.portraits?.drop(i);
+    drawSigning(ctx, x + 3, y + 18, w - 6, h - 20, sg[0] === 1, sg[1], performance.now() / 1000);
+    return;
+  }
+  kindPlaque(s, ctx, i, x + w / 2, y + 17, sl);
+  if (blank) {
+    s.portraits?.drop(i);
+    return;
+  }
+  const fx = x + 5;
+  const fy = y + iy;
+  const fw = w - 10;
+  drawStage(s, ctx, i, sl, team, fx, fy, fw, ih);
+  if (!commander && hasTree(sl.hero)) {
+    const tw = w >= 100 ? 1 : 0.7;
+    ctx.save();
+    drawTree(ctx, sl.hero, "a", fx + 2, fy + 3, false, tw);
+    drawTree(ctx, sl.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
+    ctx.restore();
+  }
+  // Ability glyphs along the bottom edge (embossed), vector icons until the sheet has loaded.
+  (["a", "b", "r", "z"] as const).forEach((a, j) => {
+    const cx = x + (w / 4) * (j + 0.5);
+    const g = heroGlyph(sl.hero, j);
+    if (g) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(g.light, cx - 7, y + h - 17 + 0.8, 14, 14);
+      ctx.globalAlpha = 1;
+      ctx.drawImage(g.dark, cx - 7, y + h - 17, 14, 14);
+      ctx.restore();
+    } else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
+  });
+  if (!commander) drawCostumeStrip(s, ctx, i, sl, fx, fy, fw, ih);
+  if (sitHere) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
+  if (sl.ready && !commander && human) {
+    ctx.save();
+    waxSeal(ctx, fx + fw - 12, fy + 13, 10, "#a8141a", "combo");
+    const tt = "SWORN";
+    shadowText(ctx, tt, fx + fw - 12 - textWidth(tt, 0.5) / 2, fy + 25, "#f4ecd8", 0.5);
+    ctx.restore();
+  }
+}
+
+/** OPEN seat (online host): waiting card with SIT HERE / + ADD CPU (guests get SIT HERE only). */
+function drawOpenSeat(
+  s: Screens,
+  ctx: CanvasRenderingContext2D,
+  i: number,
+  team: number,
+  ink: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  s.portraits?.drop(i);
+  card(ctx, x, y, w, h, team ? 0.012 : -0.012, TEAM_BRIGHT[team], () => {
+    const t = `SEAT ${i + 1}`;
+    drawPlain(ctx, t, w / 2 - textWidth(t, 0.8, true) / 2, 8, ink, 0.8, true);
+    inset(ctx, 6, 24, w - 12, h - 92, "#2a2018");
+    texturedRect(ctx, "cloth", 6, 24, w - 12, h - 92, TEAM_CLOTH[team], 0, 0.7);
+    band(ctx, 6, 24, w - 12, h - 92, "#000000", 0.45);
+    waxSeal(ctx, w / 2, 24 + (h - 92) / 2, 14, "#5a4a3a", "none");
+    const lines = s.peer ? ["OPEN SEAT", "WAITING FOR", "A PLAYER"] : ["OPEN SEAT", "WAITING FOR A PLAYER"];
+    lines.forEach((l, k) => {
+      const sc = k ? 0.48 : 0.68;
+      drawPlain(ctx, l, w / 2 - textWidth(l, sc, true) / 2, h - 62 + k * 9, k ? "#6a4424" : BROWN, sc, true);
+    });
+  });
+  const btns: [string, string][] = s.peer
+    ? [[`take:${i}`, "SIT HERE"]]
+    : [
+        [`sit:${i}`, "SIT HERE"],
+        [`seatcpu:${i}`, "+ ADD CPU"],
+      ];
+  btns.forEach(([bid, t], k) => woodButton(s, ctx, bid, t, x + w / 2, y + h - 34 + k * 15 - (btns.length - 1) * 8));
+}
+
+/** The hero's live 3D stage render over its painted backdrop, with a team-colour fade and frame. */
+function drawStage(
+  s: Screens,
+  ctx: CanvasRenderingContext2D,
+  i: number,
+  sl: SelectSlot,
+  team: number,
+  fx: number,
+  fy: number,
+  fw: number,
+  ih: number,
+): void {
+  if (!s.portraits) return;
+  const cv = s.portraits.stage(i, sl.hero, team, sl.ready, sl.costume);
+  const k = Math.min(fw / cv.width, (ih + 4) / cv.height);
+  const dw = cv.width * k;
+  const dh = cv.height * k;
+  const bg = stageArt.get(sl.hero);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(fx, fy, fw, ih);
+  ctx.clip();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  if (bg?.complete && bg.naturalWidth) {
+    // Backdrop covers the frame.
+    const bk = Math.max(fw / bg.naturalWidth, ih / bg.naturalHeight);
+    const bw = bg.naturalWidth * bk;
+    const bh = bg.naturalHeight * bk;
+    ctx.drawImage(bg, fx + (fw - bw) / 2, fy + (ih - bh) / 2, bw, bh);
+    const tc = TEAM_CLOTH[team] ?? "#444444";
+    const gr = ctx.createLinearGradient(0, fy + ih, 0, fy + ih * 0.45);
+    gr.addColorStop(0, tc + "a0");
+    gr.addColorStop(0.35, tc + "55");
+    gr.addColorStop(1, tc + "00");
+    ctx.fillStyle = gr;
+    ctx.fillRect(fx, fy, fw, ih);
+    ctx.strokeStyle = tc;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(fx + 1, fy + 1, fw - 2, ih - 2);
+  }
+  ctx.drawImage(cv, fx + (fw - dw) / 2, fy + ih - dh + 3, dw, dh);
+  ctx.restore();
+}
+
+/** Costume icons along the stage's bottom for a few seconds after a C-stick flick; the current one framed. */
+function drawCostumeStrip(
+  s: Screens,
+  ctx: CanvasRenderingContext2D,
+  i: number,
+  sl: SelectSlot,
+  fx: number,
+  fy: number,
+  fw: number,
+  ih: number,
+): void {
+  const cl = costumesOf(sl.hero);
+  if (cl.length <= 1 || performance.now() / 1000 >= (s.costumeShownUntil[i] ?? 0)) return;
+  const cur = Math.max(0, cl.indexOf(sl.costume ?? ""));
+  const sz = Math.min(15, (fw - 6) / cl.length - 2);
+  const gap = 2;
+  const rowW = cl.length * sz + (cl.length - 1) * gap;
+  const rx = fx + fw / 2 - rowW / 2;
+  const ry = fy + ih - sz - 4;
+  ctx.save();
+  cl.forEach((c, k) => {
+    const ic = costumeIcon(sl.hero, c);
+    const ix = rx + k * (sz + gap);
+    const on = k === cur;
+    if (on) {
+      ctx.fillStyle = "rgba(10, 6, 2, 0.75)";
+      ctx.fillRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
+      ctx.strokeStyle = "#f4e2b0";
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(ix - 1.5, ry - 1.5, sz + 3, sz + 3);
+    }
+    if (ic) {
+      ctx.globalAlpha = on ? 1 : 0.8;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(ic, ix, ry, sz, sz);
+      ctx.globalAlpha = 1;
+    }
+  });
+  ctx.restore();
+}
+
+/** Seat kind plaque (PLAYER / CPU / DUMMY / COMMANDER), with CPU difficulty gems or the camera toggle. */
+function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: number, y: number, sl: SelectSlot) {
+  cx = Math.round(cx);
+  const dummy = s.training && sl.cpu;
+  const label = dummy ? "DUMMY" : sl.cpu ? "CPU" : !s.championSeat(i) ? "COMMANDER" : "PLAYER";
+  const pw = Math.max(26, textWidth(label, 0.5, true) + 10);
+  const camPl = !sl.cpu && s.cameraMode !== 0 && s.championSeat(i);
+  const lvW = 21;
+  const camW = 11;
+  const extra = sl.cpu && !dummy ? lvW + 3 : camPl ? camW + 3 : 0;
+  const x0 = Math.round(cx - (pw + extra) / 2);
+  const px = x0 + pw / 2;
+  ctx.fillStyle = INK;
+  ctx.fillRect(px - pw / 2 - 1, y - 1, pw + 2, 10);
+  texturedRect(ctx, "wood", px - pw / 2, y, pw, 8, hovered(s, `kind:${i}`) ? "#e0b060" : "#a07040", 0, 1);
+  drawPlain(ctx, label, px - textWidth(label, 0.5, true) / 2, y + 1.6, sl.cpu ? "#d8d8e0" : "#f8e8b0", 0.5, true);
+  s.hit(`kind:${i}`, px - pw / 2 - 2, y - 2, pw + 4, 12);
+  const tip = (t: string) => shadowText(ctx, t, cx - textWidth(t, 0.42) / 2, y - 24, "#f8e8c0", 0.42);
+  if (sl.cpu && !dummy) {
+    // Difficulty: 1-3 lit gems (yellow / orange / red).
+    const lx = x0 + pw + 3;
+    const hl = hovered(s, `lvl:${i}`);
+    ctx.fillStyle = INK;
+    ctx.fillRect(lx - 1, y - 1, lvW + 2, 10);
+    texturedRect(ctx, "wood", lx, y, lvW, 8, hl ? "#e0b060" : "#6a4428", 0, 1);
+    for (let k = 0; k < 3; k++) {
+      const gx = lx + 4 + k * 6.5;
+      const gy = y + 4;
+      const on = k < sl.level;
+      const gem = (r: number, col: string) => {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(gx, gy - r);
+        ctx.lineTo(gx + r * 0.8, gy);
+        ctx.lineTo(gx, gy + r);
+        ctx.lineTo(gx - r * 0.8, gy);
+        ctx.closePath();
+        ctx.fill();
+      };
+      gem(3.2, INK);
+      gem(2.3, on ? ["#e8c040", "#e07020", "#d81818"][sl.level - 1] : "#2a1c12");
+      if (on) {
+        ctx.fillStyle = "rgba(255,255,230,0.75)";
+        ctx.fillRect(gx - 0.8, gy - 1.6, 1, 1);
+      }
+    }
+    s.hit(`lvl:${i}`, lx - 2, y - 2, lvW + 4, 12);
+    if (hl) tip(`CPU ${["EASY", "NORMAL", "HARD"][sl.level - 1]}`);
+  }
+  if (camPl) {
+    // Camera: a cross (manual d-pad zoom) or an eye (auto zoom).
+    const zx = x0 + pw + 3;
+    const manual = !!s.zoomModes[i];
+    const hl = hovered(s, `cam:${i}`);
+    ctx.fillStyle = INK;
+    ctx.fillRect(zx - 1, y - 1, camW + 2, 10);
+    texturedRect(ctx, "parch", zx, y, camW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
+    const mx = zx + camW / 2;
+    const my = y + 4;
+    if (manual) {
+      ctx.fillStyle = BROWN;
+      ctx.fillRect(mx - 1, my - 3, 2, 6);
+      ctx.fillRect(mx - 3, my - 1, 6, 2);
+      ctx.fillStyle = "#c81818";
+      ctx.fillRect(mx - 0.5, my - 3, 1, 1.4);
+    } else {
+      ctx.fillStyle = BROWN;
+      ctx.beginPath();
+      ctx.moveTo(mx - 4, my);
+      ctx.quadraticCurveTo(mx, my - 4.2, mx + 4, my);
+      ctx.quadraticCurveTo(mx, my + 4.2, mx - 4, my);
+      ctx.fill();
+      ctx.fillStyle = "#f0e4c8";
+      ctx.beginPath();
+      ctx.arc(mx, my, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2a5ac8";
+      ctx.beginPath();
+      ctx.arc(mx, my, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    s.hit(`cam:${i}`, zx - 2, y - 2, camW + 4, 12);
+    if (hl) tip(manual ? "CAMERA: D-PAD ZOOM" : "CAMERA: AUTO ZOOM");
+  }
+}
