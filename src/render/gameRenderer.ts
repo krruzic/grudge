@@ -1,7 +1,8 @@
 // GameRenderer: owns the WebGL renderer and draws the 3D arena each frame.
 // Pipeline: sync views from the sim → pick cameras (single, framed window, demo, or split-screen scissor
 // viewports) → render the scene into a native-resolution linear target → one grade pass to the canvas.
-// The 2D UI is a separate canvas on top (see UiCanvas in src/ui/hud.ts).
+// The 2D UI is a separate canvas on top (see UiCanvas in src/ui/hud.ts). Camera framing math is in camera.ts;
+// src/render/README.md describes the whole frame.
 import * as THREE from "three";
 import { RelicView } from "./entities/relicView";
 import { HeroPropViews } from "./heroProps/heroPropViews";
@@ -18,13 +19,17 @@ import { Reticles, type ReticleReq } from "./reticle";
 import type { UnitModels } from "./unitModels";
 import type { StructureModels } from "./structureModels";
 import { perf } from "../perf";
+import { aimCamera, placeCam } from "./camera";
 
+// Draw double-sided transparent materials in one pass (three.js otherwise renders back and front faces
+// separately), halving draws for FX and silhouettes.
 Object.defineProperty(THREE.Material.prototype, "forceSinglePass", {
   get: () => true,
   set: () => {},
   configurable: true,
 });
 
+/** Render settings from data/render.json. */
 export interface RenderConfig {
   pitchDeg: number;
   fovDeg: number;
@@ -86,26 +91,80 @@ void main() {
 const MAX_DPR = 2;
 
 export class GameRenderer {
+  // ── Scene and render target ──
   readonly renderer: THREE.WebGLRenderer;
+
   private scene = new THREE.Scene();
-  private camera: THREE.PerspectiveCamera;
+
   private target: THREE.WebGLRenderTarget;
+
   private gradeScene = new THREE.Scene();
+
   private gradeCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+  private sky: THREE.Mesh;
+  private sun: THREE.DirectionalLight;
+  private effects: Effects;
+  private mapReady = false;
+
+  /** Render clock (seconds of frames drawn), drives animation; independent of the sim clock. */
+  private time = 0;
+
+  private viewNo = 0;
+
+  /** FRAME.id of the last scene.updateMatrixWorld (done once per frame, before the first view). */
+  private matrixFrame = -1;
+
+  private frustum = new THREE.Frustum();
+
+  private cullMat = new THREE.Matrix4();
+
+  // ── Views of the current world (rebuilt by setWorld) ──
   private entityViews: EntityViews;
   combatFx: CombatFx;
   private hazards!: HazardViews;
+  private relicView: RelicView | null = null;
+  private heroProps: HeroPropViews | null = null;
+
+  private reticles = new Reticles();
+
+  private reticleReqs: ReticleReq[] = [];
   private heroModels: HeroModels;
   private structureModels: StructureModels;
-  private camFocus = new THREE.Vector3();
-  private camWidth: number;
-  private camInit = false;
   private teamColors: THREE.Color[];
-  private effects: Effects;
-  private sun: THREE.DirectionalLight;
-  private mapReady = false;
-  private sky: THREE.Mesh;
-  private time = 0;
+
+  // ── Options set by the app ──
+
+  /** Menu backdrop: no damage numbers, callouts, bars. */
+  quiet = false;
+
+  /** Orbiting preview camera drawn into a screen sub-rect (fractions of the screen, top-left origin). */
+  demoCam: {
+    rect: [number, number, number, number];
+    target: { x: number; y: number; z: number };
+    yaw: number;
+    pitch: number;
+    dist: number;
+  } | null = null;
+
+  /** Slow automatic pan across the map (title screen) instead of following heroes. */
+  cinematic = false;
+
+  /** Draw the shared camera into this screen sub-rect only. */
+  windowRect: [number, number, number, number] | null = null;
+
+  shakeMul = 1;
+  hints = true;
+  private humanList: boolean[] = [];
+
+  /** 0 = one shared camera for everyone; otherwise each local human gets a split view. */
+  camMode = 1;
+
+  /** Per player: use the zoom step chosen with zoomStep() instead of automatic framing. */
+  manualZoom: boolean[] = [];
+
+  /** 1 = native; 0.75 for weak GPUs (Options → Graphics → Render scale). */
+  renderScale = 1;
 
   constructor(
     private cfg: RenderConfig,
@@ -116,6 +175,9 @@ export class GameRenderer {
     private unitModels: UnitModels,
   ) {
     outlineConfig.enabled = cfg.outlines;
+    // Material.dispose is a no-op: three.js frees a shader program when its last material is disposed, so every
+    // ended effect forced a recompile of the next one. Materials hold no GPU buffers; geometry and textures are
+    // still disposed normally.
     THREE.Material.prototype.dispose = function () {};
     this.renderer = new THREE.WebGLRenderer({
       antialias: false,
@@ -221,32 +283,6 @@ export class GameRenderer {
     this.camInit = false;
   }
 
-  private humanList: boolean[] = [];
-  shakeMul = 1;
-  hints = true;
-  setHumans(h: boolean[]): void {
-    this.humanList = h;
-    this.entityViews.humans = h;
-  }
-
-  setHints(on: boolean): void {
-    this.hints = on;
-    this.entityViews.hints = on;
-  }
-
-  private reticles = new Reticles();
-  private reticleReqs: ReticleReq[] = [];
-  setReticles(r: ReticleReq[]): void {
-    this.reticleReqs = r;
-  }
-
-  setMenus(open: boolean[]): void {
-    this.entityViews.menus = open;
-  }
-
-  private relicView: RelicView | null = null;
-  private heroProps: HeroPropViews | null = null;
-
   setWorld(world: World): void {
     this.scene.remove(this.entityViews.root, this.entityViews.extras, this.combatFx.root);
     this.entityViews.dispose();
@@ -281,6 +317,24 @@ export class GameRenderer {
     this.camInit = false;
   }
 
+  setHumans(h: boolean[]): void {
+    this.humanList = h;
+    this.entityViews.humans = h;
+  }
+
+  setHints(on: boolean): void {
+    this.hints = on;
+    this.entityViews.hints = on;
+  }
+
+  setReticles(r: ReticleReq[]): void {
+    this.reticleReqs = r;
+  }
+
+  setMenus(open: boolean[]): void {
+    this.entityViews.menus = open;
+  }
+
   get teamColorList(): THREE.Color[] {
     return this.teamColors;
   }
@@ -289,8 +343,6 @@ export class GameRenderer {
   // Checked every frame (cheap string compare), never from resize events, so the canvas and target always
   // match the window: CSS size × min(DPR, 2) × renderScale, in device pixels.
 
-  /** 1 = native; 0.75 for weak GPUs (Options → Graphics → Render scale). */
-  renderScale = 1;
   private sizeKey = "";
 
   private fitTargets(): void {
@@ -307,12 +359,16 @@ export class GameRenderer {
     this.camera.updateProjectionMatrix();
   }
 
-  cinematic = false;
-  windowRect: [number, number, number, number] | null = null;
+  // ── Shared camera ──
+  // Used when no split views are active: follows every hero (or pans across the map when cinematic).
+
+  private camera: THREE.PerspectiveCamera;
+  private camFocus = new THREE.Vector3();
+  private camWidth: number;
+  private camInit = false;
   private cineT = 0;
 
-  // ── Cameras ──
-  // Framing for the shared camera, cinematic orbit, and per-player split cameras.
+  private demoCamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
 
   private updateCamera(points: THREE.Vector3[], dt: number): void {
     if (this.cinematic && !this.splitViews.length) {
@@ -328,135 +384,18 @@ export class GameRenderer {
       this.camFocus.lerp(f, this.camInit ? Math.min(1, dt * 2) : 1);
       this.camInit = true;
       this.camWidth += (Math.min(t.width, 46) - this.camWidth) * Math.min(1, dt * 2);
-      this.placeCam(this.camera, this.camFocus, this.camWidth);
+      placeCam(this.cfg, this.camera, this.camFocus, this.camWidth);
       return;
     }
     const st = { focus: this.camFocus, width: this.camWidth, init: this.camInit };
-    this.aimCamera(this.camera, st, points, dt, this.cfg.minViewWidth);
+    aimCamera(this.cfg, this.world.terrain, this.camera, st, points, dt, this.cfg.minViewWidth);
     this.camWidth = st.width;
     this.camInit = st.init;
   }
 
-  private placeCam(cam: THREE.PerspectiveCamera, focus: THREE.Vector3, width: number): number {
-    const pitch = THREE.MathUtils.degToRad(this.cfg.pitchDeg);
-    const hHalf = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.cfg.fovDeg) / 2) * cam.aspect);
-    const dist = width / (2 * Math.tan(hHalf));
-    const look = new THREE.Vector3(focus.x, focus.y, focus.z - width * 0.06);
-    cam.position.set(look.x, look.y + Math.sin(pitch) * dist, look.z + Math.cos(pitch) * dist);
-    cam.lookAt(look);
-    cam.updateMatrixWorld(true);
-    return dist;
-  }
+  // ── Split screen ──
+  // One view per local human; each gets its own camera and a scissor rect in the shared target.
 
-  private keepInView(
-    cam: THREE.PerspectiveCamera,
-    focus: THREE.Vector3,
-    width: number,
-    keep: THREE.Vector3[],
-    tight = false,
-  ): void {
-    if (!keep.length) return;
-    const pitch = THREE.MathUtils.degToRad(this.cfg.pitchDeg);
-    const depthToWidth = (cam.aspect / Math.sin(pitch)) * 1.25;
-    const [X0, X1, Y0, Y1] = tight ? [-0.45, 0.45, -0.3, 0.3] : [-0.8, 0.8, -0.66, 0.5];
-    const v = new THREE.Vector3();
-    for (let it = 0; it < 4; it++) {
-      this.placeCam(cam, focus, width);
-      let dx = 0;
-      let dy = 0;
-      for (const p of keep) {
-        v.set(p.x, p.y + 1.5, p.z).project(cam);
-        if (v.x < X0) dx = Math.min(dx, v.x - X0);
-        if (v.x > X1) dx = Math.max(dx, v.x - X1);
-        if (v.y < Y0) dy = Math.min(dy, v.y - Y0);
-        if (v.y > Y1) dy = Math.max(dy, v.y - Y1);
-      }
-      if (!dx && !dy) return;
-      focus.x += dx * width * 0.55;
-      focus.z -= dy * (width / depthToWidth) * 0.6;
-    }
-  }
-
-  private aimCamera(
-    cam: THREE.PerspectiveCamera,
-    st: { focus: THREE.Vector3; width: number; init: boolean },
-    points: THREE.Vector3[],
-    dt: number,
-    minWidth: number,
-    maxWidth = Infinity,
-    margin = this.cfg.viewMargin,
-    keep: THREE.Vector3[] = points,
-    center = false,
-  ): void {
-    const cfg = this.cfg;
-    const t = this.world.terrain;
-    const pitch = THREE.MathUtils.degToRad(cfg.pitchDeg);
-    const aspect = cam.aspect;
-    const vHalf = THREE.MathUtils.degToRad(cfg.fovDeg) / 2;
-    const hHalf = Math.atan(Math.tan(vHalf) * aspect);
-
-    const min = new THREE.Vector3(Infinity, Infinity, Infinity);
-    const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
-    for (const p of points) {
-      min.min(p);
-      max.max(p);
-    }
-    if (points.length === 0) {
-      min.set(t.width / 2, 0, t.depth / 2);
-      max.copy(min);
-    }
-    const focus = min.clone().add(max).multiplyScalar(0.5);
-
-    const depthToWidth = (aspect / Math.sin(pitch)) * 1.25;
-    const need = Math.max(max.x - min.x, (max.z - min.z) * depthToWidth) + margin;
-    const fullMap = Math.max(t.width, t.depth * depthToWidth) * 1.3 + 12;
-    const lo = Math.min(minWidth, fullMap);
-    const cap = center ? Math.max(t.width, t.depth * depthToWidth) * 0.9 : fullMap;
-    const width = THREE.MathUtils.clamp(need, Math.min(lo, cap), Math.max(Math.min(lo, cap), Math.min(maxWidth, cap)));
-
-    if (center && keep.length) {
-      const c = new THREE.Vector3();
-      for (const p of keep) c.add(p);
-      c.multiplyScalar(1 / keep.length);
-      focus.lerp(c, 0.85);
-      this.keepInView(cam, focus, width, keep, true);
-      const k = st.init ? 1 - Math.exp(-dt * 6) : 1;
-      st.init = true;
-      st.focus.lerp(focus, k);
-      st.width += (width - st.width) * k;
-      const dist = this.placeCam(cam, st.focus, st.width);
-      cam.userData.fogNear = dist * cfg.fogNearFactor;
-      cam.userData.fogFar = dist * cfg.fogFarFactor;
-      return;
-    }
-
-    const slack = 6 + width * 0.15;
-    if (width < t.width + slack * 2)
-      focus.x = THREE.MathUtils.clamp(focus.x, width / 2 - slack, t.width - width / 2 + slack);
-    else focus.x = t.width / 2;
-    const viewDepth = width / depthToWidth;
-    const zs = 4 + viewDepth * 0.15;
-    if (viewDepth < t.depth + zs * 2)
-      focus.z = THREE.MathUtils.clamp(focus.z, viewDepth / 2 - zs, t.depth - viewDepth / 2 + zs);
-    else focus.z = t.depth / 2;
-
-    this.keepInView(cam, focus, width, keep);
-
-    const k = st.init ? 1 - Math.exp(-dt * 4) : 1;
-    st.init = true;
-    st.focus.lerp(focus, k);
-    st.width += (width - st.width) * k;
-
-    const dist = this.placeCam(cam, st.focus, st.width);
-    void hHalf;
-    cam.userData.fogNear = dist * cfg.fogNearFactor;
-    cam.userData.fogFar = dist * cfg.fogFarFactor;
-  }
-
-  camMode = 1;
-  manualZoom: boolean[] = [];
-  private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90, 120, 150];
-  private zoomIndex = new Map<number, number>();
   private splitViews: {
     cam: THREE.PerspectiveCamera;
     st: { focus: THREE.Vector3; width: number; init: boolean };
@@ -464,6 +403,14 @@ export class GameRenderer {
     player: number;
   }[] = [];
 
+  /** Manual zoom widths (metres across); players start at index 2. */
+  private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90, 120, 150];
+  private zoomIndex = new Map<number, number>();
+
+  /** Per player: who the spectator camera follows once the player's team is out. */
+  private watching = new Map<number, number>();
+
+  /** A player's split viewport as screen fractions (top-left origin), for the HUD; null without split screen. */
   viewRectOf(player: number): { x: number; y: number; w: number; h: number } | null {
     if (this.splitViews.length < 2) return null;
     const k = this.splitViews.findIndex((v) => v.player === player);
@@ -478,6 +425,7 @@ export class GameRenderer {
     return this.splitViews.length > 1 ? this.splitViews.length : 0;
   }
 
+  /** 0..1 how far the single local view is zoomed out (log scale between 14 m and 150 m). */
   zoomOut(): number {
     const sv = this.splitViews?.[0];
     if (!sv || this.splitViews.length !== 1) return 0;
@@ -489,9 +437,7 @@ export class GameRenderer {
     this.zoomIndex.set(player, Math.max(0, Math.min(this.zoomSteps.length - 1, i + dir)));
   }
 
-  // ── Split screen ──
-  // One view per local human; each gets its own camera and a scissor rect in the shared target.
-
+  /** Rebuilds the split view list when the set of local humans changes (cameras are reused per hero). */
   private syncSplit(): void {
     const humans = this.camMode ? this.world.players.filter((p) => this.humanList[p.player]) : [];
     humans.sort((a, b) => (humans.length === 2 ? a.team - b.team : 0) || a.player - b.player);
@@ -517,8 +463,11 @@ export class GameRenderer {
     });
   }
 
-  private watching = new Map<number, number>();
-
+  /**
+   * What a split view should frame: its hero (and aim point); once the team is out, the nearest standing hero;
+   * commanders frame all their units; with manual zoom a fixed width; otherwise nearby enemies and towers widen
+   * the shot (tighter in fights). `own` counts the leading points that must stay on screen.
+   */
   private frameView(sv: { heroIds: number[]; player: number }): {
     pts: THREE.Vector3[];
     min: number;
@@ -613,6 +562,7 @@ export class GameRenderer {
     };
   }
 
+  /** Viewports in target pixels (bottom-left origin): full, two halves, or quadrants. */
   private splitRects(w: number, h: number): [number, number, number, number][] {
     const n = this.splitViews.length;
     const hw = Math.floor(w / 2);
@@ -631,14 +581,88 @@ export class GameRenderer {
     ];
   }
 
+  /** The team whose fog of war a shared view uses: the local humans' team if they're all on one, else none. */
   private sharedViewer(): number | null {
     const teams = new Set(this.world.players.filter((p) => this.humanList[p.player]).map((p) => p.team));
     return teams.size === 1 ? [...teams][0] : null;
   }
 
-  private viewNo = 0;
-
   // ── Frame ──
+
+  /**
+   * One frame: route this tick's sim events to the views, sync every view, then draw each camera's viewport into
+   * the scene target and grade it to the canvas.
+   */
+  render(alpha: number, dt: number): void {
+    FRAME.id++;
+    this.viewNo = 0;
+    let pt = perf.now();
+    this.combatFx.quiet = this.quiet;
+    this.entityViews.quiet = this.quiet || !!this.demoCam;
+    this.scene.matrixWorldAutoUpdate = false;
+    this.time += dt;
+    this.drainEvents();
+    pt = perf.cpu("r.events", pt);
+    this.entityViews.sync(alpha, dt, this.time);
+    pt = perf.cpu("r.entities", pt);
+    this.relicView?.sync(alpha, dt);
+    this.heroProps?.sync(alpha, dt);
+    this.combatFx.syncProjectiles(this.world, alpha);
+    this.combatFx.syncMissiles(this.world);
+    this.combatFx.syncBanners(this.world, performance.now() / 1000);
+    this.combatFx.update(dt);
+    this.hazards.sync(this.time, dt);
+    if (!this.reticles.root.parent) this.scene.add(this.reticles.root);
+    this.reticles.sync(this.world, this.reticleReqs, this.time);
+    pt = perf.cpu("r.fx", pt);
+    this.syncSplit();
+    this.fitTargets();
+    this.map.update(this.time, this.world.tideLevel());
+    this.effects.update(this.time, dt);
+    this.renderer.setRenderTarget(this.target);
+    if (this.demoCam) this.drawDemo(this.demoCam);
+    else if (this.windowRect && !this.splitViews.length) this.drawWindow(this.windowRect, dt);
+    else if (!this.splitViews.length) this.drawFull(dt);
+    else this.drawSplit(dt);
+    // Grade pass: target → canvas, 1:1 pixels.
+    this.renderer.setRenderTarget(null);
+    this.renderer.setViewport(0, 0, this.target.width, this.target.height);
+    this.renderer.setScissor(0, 0, this.target.width, this.target.height);
+    pt = perf.now();
+    perf.gpuBegin("post");
+    this.renderer.render(this.gradeScene, this.gradeCam);
+    perf.gpuEnd();
+    perf.cpu("r.post", pt);
+  }
+
+  /**
+   * Map/hazard events go to HazardViews, hits and rank-ups also to EntityViews (flash, jolt, hit-stop), and
+   * everything except plain builds to CombatFx. The sim never reads events back, so they are cleared here.
+   */
+  private drainEvents(): void {
+    for (const ev of this.world.events) {
+      if (
+        ev.type === "mod" ||
+        ev.type === "modEnd" ||
+        ev.type === "avalanche" ||
+        ev.type === "gates" ||
+        ev.type === "lantern" ||
+        ev.type === "mist" ||
+        ev.type === "morph" ||
+        ev.type === "jumppad" ||
+        ev.type === "horn"
+      )
+        this.hazards.handle(ev);
+      if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {
+        this.entityViews.onHit(ev.id);
+        this.entityViews.onImpact(ev.id, ev.src, ev.fx, ev.fz, ev.big);
+      }
+      if (ev.type === "rankUp") this.entityViews.onRankUp(ev.id);
+      if (ev.type === "build" && !ev.upgrade) continue;
+      this.combatFx.handle(ev);
+    }
+    this.world.events.length = 0;
+  }
 
   /** Draws the scene once for `cam` into whatever viewport/scissor is current. */
   private drawScene(cam: THREE.PerspectiveCamera, viewer: number | null = this.sharedViewer()): void {
@@ -677,184 +701,133 @@ export class GameRenderer {
     this.entityViews.uncull();
   }
 
-  quiet = false;
-  demoCam: {
-    rect: [number, number, number, number];
-    target: { x: number; y: number; z: number };
-    yaw: number;
-    pitch: number;
-    dist: number;
-  } | null = null;
-  private demoCamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
-  private matrixFrame = -1;
-  private frustum = new THREE.Frustum();
-  private cullMat = new THREE.Matrix4();
+  /** Random camera jitter from CombatFx.shake (scaled by the shake option). */
+  private shake(cam: THREE.PerspectiveCamera): void {
+    if (this.combatFx.shake <= 0) return;
+    const k = this.combatFx.shake * 0.5 * this.shakeMul;
+    cam.position.x += (Math.random() - 0.5) * k;
+    cam.position.y += (Math.random() - 0.5) * k;
+  }
 
-  render(alpha: number, dt: number): void {
-    FRAME.id++;
-    this.viewNo = 0;
-    let pt = perf.now();
-    this.combatFx.quiet = this.quiet;
-    this.entityViews.quiet = this.quiet || !!this.demoCam;
-    this.scene.matrixWorldAutoUpdate = false;
-    this.time += dt;
-    for (const ev of this.world.events) {
-      if (
-        ev.type === "mod" ||
-        ev.type === "modEnd" ||
-        ev.type === "avalanche" ||
-        ev.type === "gates" ||
-        ev.type === "lantern" ||
-        ev.type === "mist" ||
-        ev.type === "morph" ||
-        ev.type === "jumppad" ||
-        ev.type === "horn"
-      )
-        this.hazards.handle(ev);
-      if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {
-        this.entityViews.onHit(ev.id);
-        this.entityViews.onImpact(ev.id, ev.src, ev.fx, ev.fz, ev.big);
-      }
-      if (ev.type === "rankUp") this.entityViews.onRankUp(ev.id);
-      if (ev.type === "build" && !ev.upgrade) continue;
-      this.combatFx.handle(ev);
+  /**
+   * Converts a [x, y, w, h] screen fraction (top-left origin) to target pixels (bottom-left origin), and clears
+   * the whole target first so the area around the rect is the clear colour.
+   */
+  private clearForRect([fx, fy, fw, fh]: [number, number, number, number]): [number, number, number, number] {
+    const tw = this.target.width;
+    const th = this.target.height;
+    this.renderer.setScissor(0, 0, tw, th);
+    this.renderer.setScissorTest(true);
+    this.renderer.clear();
+    const w = Math.max(1, Math.round(fw * tw));
+    const h = Math.max(1, Math.round(fh * th));
+    return [Math.round(fx * tw), Math.round(th - (fy + fh) * th), w, h];
+  }
+
+  /** Orbiting preview camera in a sub-rect (menu backdrops, codex). */
+  private drawDemo(d: NonNullable<GameRenderer["demoCam"]>): void {
+    const [x, y, w, h] = this.clearForRect(d.rect);
+    const cam = this.demoCamera;
+    cam.aspect = w / h;
+    cam.updateProjectionMatrix();
+    const cp = Math.cos(d.pitch);
+    cam.position.set(
+      d.target.x + Math.sin(d.yaw) * cp * d.dist,
+      d.target.y + Math.sin(d.pitch) * d.dist,
+      d.target.z + Math.cos(d.yaw) * cp * d.dist,
+    );
+    cam.lookAt(d.target.x, d.target.y, d.target.z);
+    cam.userData.fogNear = d.dist * 7;
+    cam.userData.fogFar = d.dist * 18;
+    this.shake(cam);
+    this.renderer.setViewport(x, y, w, h);
+    this.renderer.setScissor(x, y, w, h);
+    this.drawScene(cam, null);
+    this.renderer.setScissorTest(false);
+  }
+
+  /** The shared camera drawn into a sub-rect of the screen (windowed match view); FFA cycles between fights. */
+  private drawWindow(rect: [number, number, number, number], dt: number): void {
+    const [x, y, w, h] = this.clearForRect(rect);
+    if (Math.abs(this.camera.aspect - w / h) > 1e-3) {
+      this.camera.aspect = w / h;
+      this.camera.updateProjectionMatrix();
     }
-    this.world.events.length = 0;
-    pt = perf.cpu("r.events", pt);
-    this.entityViews.sync(alpha, dt, this.time);
-    pt = perf.cpu("r.entities", pt);
-    this.relicView?.sync(alpha, dt);
-    this.heroProps?.sync(alpha, dt);
-    this.combatFx.syncProjectiles(this.world, alpha);
-    this.combatFx.syncMissiles(this.world);
-    this.combatFx.syncBanners(this.world, performance.now() / 1000);
-    this.combatFx.update(dt);
-    this.hazards.sync(this.time, dt);
-    if (!this.reticles.root.parent) this.scene.add(this.reticles.root);
-    this.reticles.sync(this.world, this.reticleReqs, this.time);
-    pt = perf.cpu("r.fx", pt);
-    this.syncSplit();
-    this.fitTargets();
-    const shake = (cam: THREE.PerspectiveCamera) => {
-      if (this.combatFx.shake <= 0) return;
-      const k = this.combatFx.shake * 0.5 * this.shakeMul;
-      cam.position.x += (Math.random() - 0.5) * k;
-      cam.position.y += (Math.random() - 0.5) * k;
-    };
-    this.map.update(this.time, this.world.tideLevel());
-    this.effects.update(this.time, dt);
-    this.renderer.setRenderTarget(this.target);
-    if (this.demoCam) {
-      const d = this.demoCam;
-      const tw = this.target.width;
-      const th = this.target.height;
-      const [fx, fy, fw, fh] = d.rect;
-      const w = Math.max(1, Math.round(fw * tw));
-      const h = Math.max(1, Math.round(fh * th));
-      const x = Math.round(fx * tw);
-      const y = Math.round(th - (fy + fh) * th);
-      this.renderer.setScissor(0, 0, tw, th);
-      this.renderer.setScissorTest(true);
-      this.renderer.clear();
-      const cam = this.demoCamera;
-      cam.aspect = w / h;
-      cam.updateProjectionMatrix();
-      const cp = Math.cos(d.pitch);
-      cam.position.set(
-        d.target.x + Math.sin(d.yaw) * cp * d.dist,
-        d.target.y + Math.sin(d.pitch) * d.dist,
-        d.target.z + Math.cos(d.yaw) * cp * d.dist,
-      );
-      cam.lookAt(d.target.x, d.target.y, d.target.z);
-      cam.userData.fogNear = d.dist * 7;
-      cam.userData.fogFar = d.dist * 18;
-      shake(cam);
+    if (this.world.ffa && !this.cinematic) {
+      const pts = this.entityViews.heroPoints();
+      if (pts.length) {
+        const pick = pts[Math.floor(this.time / 12) % pts.length];
+        const near = pts.filter((q) => q.distanceTo(pick) < 18);
+        const st = { focus: this.camFocus, width: this.camWidth, init: this.camInit };
+        aimCamera(this.cfg, this.world.terrain, this.camera, st, near, dt, this.cfg.minViewWidth, 34);
+        this.camWidth = st.width;
+        this.camInit = st.init;
+      }
+    } else this.updateCamera(this.entityViews.heroPoints(), dt);
+    this.shake(this.camera);
+    this.renderer.setViewport(x, y, w, h);
+    this.renderer.setScissor(x, y, w, h);
+    this.drawScene(this.camera);
+    this.renderer.setScissorTest(false);
+  }
+
+  /** The shared camera over the whole target. */
+  private drawFull(dt: number): void {
+    const asp = this.target.width / this.target.height;
+    if (Math.abs(this.camera.aspect - asp) > 1e-3) {
+      this.camera.aspect = asp;
+      this.camera.updateProjectionMatrix();
+    }
+    this.updateCamera(this.entityViews.heroPoints(), dt);
+    this.shake(this.camera);
+    this.drawScene(this.camera);
+  }
+
+  /** One scissored viewport per local human (2 side by side, 3-4 in quadrants), each with its own fog-of-war. */
+  private drawSplit(dt: number): void {
+    const tw = this.target.width;
+    const th = this.target.height;
+    const rects = this.splitRects(tw, th);
+    const all = this.entityViews.heroPoints();
+    this.renderer.setScissor(0, 0, tw, th);
+    this.renderer.setScissorTest(true);
+    this.renderer.clear();
+    rects.forEach(([x, y, w, h], i) => {
+      const sv = this.splitViews[i];
+      let cam: THREE.PerspectiveCamera;
+      if (sv) {
+        cam = sv.cam;
+        cam.aspect = w / h;
+        cam.updateProjectionMatrix();
+        const f = this.frameView(sv);
+        const own = f.pts.slice(0, Math.max(sv.heroIds.length, f.own ?? 0));
+        aimCamera(
+          this.cfg,
+          this.world.terrain,
+          cam,
+          sv.st,
+          f.pts,
+          dt,
+          f.min,
+          f.max,
+          f.margin,
+          own,
+          sv.heroIds.length === 1,
+        );
+      } else {
+        cam = this.camera;
+        cam.aspect = w / h;
+        cam.updateProjectionMatrix();
+        this.updateCamera(all, dt);
+      }
+      this.shake(cam);
       this.renderer.setViewport(x, y, w, h);
       this.renderer.setScissor(x, y, w, h);
-      this.drawScene(cam, null);
-      this.renderer.setScissorTest(false);
-    } else if (this.windowRect && !this.splitViews.length) {
-      const tw = this.target.width;
-      const th = this.target.height;
-      const [fx, fy, fw, fh] = this.windowRect;
-      const w = Math.max(1, Math.round(fw * tw));
-      const h = Math.max(1, Math.round(fh * th));
-      const x = Math.round(fx * tw);
-      const y = Math.round(th - (fy + fh) * th);
-      this.renderer.setScissor(0, 0, tw, th);
-      this.renderer.setScissorTest(true);
-      this.renderer.clear();
-      if (Math.abs(this.camera.aspect - w / h) > 1e-3) {
-        this.camera.aspect = w / h;
-        this.camera.updateProjectionMatrix();
-      }
-      if (this.world.ffa && !this.cinematic) {
-        const pts = this.entityViews.heroPoints();
-        if (pts.length) {
-          const pick = pts[Math.floor(this.time / 12) % pts.length];
-          const near = pts.filter((q) => q.distanceTo(pick) < 18);
-          const st = { focus: this.camFocus, width: this.camWidth, init: this.camInit };
-          this.aimCamera(this.camera, st, near, dt, this.cfg.minViewWidth, 34);
-          this.camWidth = st.width;
-          this.camInit = st.init;
-        }
-      } else this.updateCamera(this.entityViews.heroPoints(), dt);
-      shake(this.camera);
-      this.renderer.setViewport(x, y, w, h);
-      this.renderer.setScissor(x, y, w, h);
-      this.drawScene(this.camera);
-      this.renderer.setScissorTest(false);
-    } else if (!this.splitViews.length) {
-      const asp = this.target.width / this.target.height;
-      if (Math.abs(this.camera.aspect - asp) > 1e-3) {
-        this.camera.aspect = asp;
-        this.camera.updateProjectionMatrix();
-      }
-      this.updateCamera(this.entityViews.heroPoints(), dt);
-      shake(this.camera);
-      this.drawScene(this.camera);
-    } else {
-      const tw = this.target.width;
-      const th = this.target.height;
-      const rects = this.splitRects(tw, th);
-      const all = this.entityViews.heroPoints();
-      this.renderer.setScissor(0, 0, tw, th);
-      this.renderer.setScissorTest(true);
-      this.renderer.clear();
-      rects.forEach(([x, y, w, h], i) => {
-        const sv = this.splitViews[i];
-        let cam: THREE.PerspectiveCamera;
-        if (sv) {
-          cam = sv.cam;
-          cam.aspect = w / h;
-          cam.updateProjectionMatrix();
-          const f = this.frameView(sv);
-          const own = f.pts.slice(0, Math.max(sv.heroIds.length, f.own ?? 0));
-          this.aimCamera(cam, sv.st, f.pts, dt, f.min, f.max, f.margin, own, sv.heroIds.length === 1);
-        } else {
-          cam = this.camera;
-          cam.aspect = w / h;
-          cam.updateProjectionMatrix();
-          this.updateCamera(all, dt);
-        }
-        shake(cam);
-        this.renderer.setViewport(x, y, w, h);
-        this.renderer.setScissor(x, y, w, h);
-        const vp = sv ? this.world.players.find((p) => p.player === sv.player) : undefined;
-        const viewer = sv && sv.heroIds.length === 1 && vp ? vp.team : this.sharedViewer();
-        this.drawScene(cam, viewer);
-      });
-      this.renderer.setScissorTest(false);
-    }
-    // Grade pass: target → canvas, 1:1 pixels.
-    this.renderer.setRenderTarget(null);
-    this.renderer.setViewport(0, 0, this.target.width, this.target.height);
-    this.renderer.setScissor(0, 0, this.target.width, this.target.height);
-    pt = perf.now();
-    perf.gpuBegin("post");
-    this.renderer.render(this.gradeScene, this.gradeCam);
-    perf.gpuEnd();
-    perf.cpu("r.post", pt);
+      const vp = sv ? this.world.players.find((p) => p.player === sv.player) : undefined;
+      const viewer = sv && sv.heroIds.length === 1 && vp ? vp.team : this.sharedViewer();
+      this.drawScene(cam, viewer);
+    });
+    this.renderer.setScissorTest(false);
   }
 
   worldToScreen(x: number, y: number, z: number): { x: number; y: number } {
