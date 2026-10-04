@@ -84,7 +84,8 @@ export class Menus {
     this.confirm = "";
   }
 
-  openPause(): void {
+  openPause(by = ""): void {
+    this.pause.pausedBy = by;
     this.pause.open();
   }
 

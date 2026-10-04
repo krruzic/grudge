@@ -57,6 +57,9 @@ export class PauseMenu {
   /** QUIT was pressed once; the next A quits. */
   private confirm = false;
 
+  /** Who paused (tag or P1..P4), shown in the header; empty when unknown (e.g. an online guest asked the host). */
+  pausedBy = "";
+
   constructor(private host: PauseHost) {}
 
   open(): void {
@@ -127,7 +130,8 @@ export class PauseMenu {
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, w: World): void {
     this.host.hits.clear();
     boardBg(ctx, W, H);
-    boardTitle(ctx, W, "!PAUSED", "PAUSED");
+    const t = this.pausedBy ? `PAUSED - ${this.pausedBy}` : "PAUSED";
+    boardTitle(ctx, W, "!" + t, t);
     woodFloor(ctx, H - 20, W, H);
     if (this.view === "controls") {
       drawControlSheet(ctx, 12, 26, W - 24, H - 52);

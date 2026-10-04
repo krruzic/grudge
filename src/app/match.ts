@@ -9,7 +9,7 @@ import { Bot } from "../sim/bot";
 import type { Command } from "../sim/types";
 import inputData from "../../data/input.json";
 import { CommandMapper } from "../input/commands";
-import { costumesOf, setPlayerCostumes, setPlayerNames } from "../render/costumes";
+import { costumesOf, setPlayerCostumes, setPlayerNames, playerLabel } from "../render/costumes";
 import { applyRules } from "../game/save";
 import { mergeCommands, packCommand, type MatchSpec } from "../net/session";
 import { perf } from "../perf";
@@ -233,7 +233,7 @@ export function beginMatch(app: App): void {
 export function setPaused(app: App, on: boolean): void {
   if (!on) app.pauser = -1;
   if (on) {
-    app.menus.openPause();
+    app.menus.openPause(app.pauser >= 0 ? playerLabel(app.pauser) : "");
     app.menus.currentMap = maps[app.mapIndex]?.data.name ?? "";
   }
   app.state = on ? "paused" : "match";
