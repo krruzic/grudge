@@ -162,6 +162,18 @@ export const RULE_ROWS: Row<Rules>[] = [
   { key: "mercy", label: "MERCY", values: [1, 0], fmt: onOff, blurb: "THE LOSING HOUSE EARNS AND BUILDS FASTER." },
 ];
 
+/** The screen's physical height in pixels (DPR capped at 2, like the renderer): the top of the resolution list. */
+export function nativeHeight(): number {
+  if (typeof window === "undefined") return 1080;
+  return Math.round(window.screen.height * Math.min(window.devicePixelRatio || 1, 2));
+}
+
+/** 3D resolution choices: 0 = native, then common heights below the screen's, down to 540p. */
+function renderHeights(): number[] {
+  const n = nativeHeight();
+  return [0, ...[2160, 1440, 1200, 1080, 900, 720, 540].filter((h) => h < n - 8)];
+}
+
 export const OPTION_ROWS: Row<Options>[] = [
   {
     key: "music",
@@ -194,10 +206,11 @@ export const OPTION_ROWS: Row<Options>[] = [
   },
   {
     key: "renderScale",
-    label: "RENDER SCALE",
-    values: [100, 75],
-    fmt: (v) => `${v}%`,
-    blurb: "75% DRAWS THE 3D VIEW AT LOWER RESOLUTION FOR WEAK OR BUILT-IN GRAPHICS. THE MENUS AND HUD STAY SHARP.",
+    label: "3D RESOLUTION",
+    values: renderHeights(),
+    fmt: (v) => (v === 0 || v > nativeHeight() ? `NATIVE ${nativeHeight()}P` : `${v}P`),
+    blurb:
+      "HEIGHT THE 3D VIEW IS DRAWN AT (FULL SCREEN). LOWER IT FOR WEAK OR BUILT-IN GRAPHICS. MENUS AND HUD STAY SHARP.",
   },
   {
     key: "fps",
@@ -228,7 +241,7 @@ export const DEFAULT_OPTIONS: Options = {
   split: 1,
   kbm: 1,
   fps: 1,
-  renderScale: 100,
+  renderScale: 0,
 };
 
 const KEY = "grudge.save.v1";

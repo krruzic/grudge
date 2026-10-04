@@ -17,7 +17,7 @@ import { MenuCursors } from "../ui/cursor";
 import { Portraits } from "../ui/portraits";
 import { Menus } from "../ui/menus";
 import { Audio } from "../audio/sfx";
-import { applyRules, Save, type MatchMode, type MatchPlayer } from "../game/save";
+import { applyRules, nativeHeight, Save, type MatchMode, type MatchPlayer } from "../game/save";
 import { perf } from "../perf";
 import {
   commanderType,
@@ -266,7 +266,9 @@ export class App {
     this.screens.zoomModes = [0, 1, 2, 3].map((k) => o.zoom?.[k] ?? 0);
     this.view.setHints(!!o.hints);
     this.pads.kbmEnabled = o.kbm !== 0;
-    this.view.renderScale = o.renderScale === 75 ? 0.75 : 1;
+    // renderScale holds a target height (0 = native); legacy saves stored 100 / 75 (%).
+    const rh = o.renderScale;
+    this.view.renderScale = rh === 75 ? 0.75 : rh > 0 && rh !== 100 ? Math.min(1, rh / nativeHeight()) : 1;
   }
 
   /** Flips the manual-zoom camera flag of seat i in the save and applies it. Returns the new value. */
