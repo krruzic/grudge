@@ -61,7 +61,6 @@ export function updateLobby(app: App, now: number, dt: number): void {
         lb.slots[act.slot].hero = act.hero;
         net.link.toHost({ t: "pick", k, hero: act.hero });
         app.audio.ui("move");
-        app.audio.heroCue(act.hero, false);
       }
     } else if (act.type === "place") {
       const k = net.padOfSlot(act.slot);

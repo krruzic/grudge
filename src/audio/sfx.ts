@@ -340,9 +340,7 @@ export class Audio {
     else this.tone("square", 520, 780, 0.1, 0.1);
   }
 
-  /**
-   * Character select: hovering a champion plays a short cue of their weapon; sealing one adds their voice.
-   */
+  /** Character select: sealing a champion plays a short cue of their weapon and their voice. */
   heroCue(hero: string, sealed: boolean): void {
     if (!this.ready) return;
     this.dest = null;
