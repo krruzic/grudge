@@ -63,7 +63,7 @@ const mapGlbs = import.meta.glob("../../assets/maps/*.glb", {
   eager: true,
 }) as Record<string, string>;
 /** Menu order; maps not listed here sort after these. */
-const MAP_ORDER = ["crossing", "ruins", "shoals"];
+const MAP_ORDER = ["crossing", "ruins", "shoals", "hollow"];
 const orderOf = (id: string) => (MAP_ORDER.indexOf(id) + 99) % 99;
 
 export const maps = Object.entries(mapJsons)
@@ -117,7 +117,12 @@ export async function loadAssets(): Promise<Assets> {
     sand: sandTex,
   };
   const [mapViews] = await Promise.all([
-    Promise.all(maps.map((m) => loadMap(m.url, new Terrain(m.data), textures, renderConfig))),
+    Promise.all(
+      maps.map((m) => {
+        const t = new Terrain(m.data);
+        return loadMap(m.url, t, textures, { ...renderConfig, ...(t.atmosphere ?? {}) } as typeof renderConfig);
+      }),
+    ),
     heroes.load(globUrls(heroUrls as Record<string, string>)),
     structures.load({ core: coreUrl, ...globUrls(structureUrls as Record<string, string>) }),
     loadProps(),

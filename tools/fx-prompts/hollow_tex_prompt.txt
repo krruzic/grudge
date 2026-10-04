@@ -1,0 +1,8 @@
+The FIRST image shows three tileable ground textures from our hand-painted fantasy game (grass, dirt path, cliff face), the exact painting style to match. The SECOND image is a sheet of other painted textures from the same game. Paint a NEW sheet of 6 SEAMLESS TILEABLE square textures, top-down (except the bank), in exactly that hand-painted style, for an AUTUMN CIDER ORCHARD at dusk, arranged as a 3 columns x 2 rows grid with thin black gutters, each texture filling its whole square edge to edge:
+1. ORCHARD GRASS: short golden-olive and amber grass with a few scattered small fallen leaves (russet, orange, red), soft, low contrast, no big features, no repeating shapes.
+2. LEAF LITTER DIRT PATH: packed warm brown earth with a light scatter of crushed autumn leaves and tiny pebbles, low contrast.
+3. EARTH BANK: a steep terrace bank face, warm russet clay and dark soil with tangled roots and a few stones (side view, tileable horizontally and vertically).
+4. CIDER MUD: wet sticky amber-brown mud with a glossy cider sheen, a few bubbles and squashed apple bits.
+5. APPLE PRESS FLAGSTONES: worn honey-coloured sandstone flagstones with moss and apple-stained edges.
+6. WINDFALL: a dense carpet of fallen red and golden apples and leaves on grass (a decorative ground patch).
+No text, no letters, no numbers, no frames other than the thin gutters, no perspective (flat top-down).

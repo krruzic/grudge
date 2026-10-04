@@ -23,6 +23,34 @@ const flameTex = radialTexture("rgba(255,255,220,1)", "rgba(255,140,30,0.8)");
 const glowTex = radialTexture("rgba(255,255,255,1)", "rgba(120,220,255,0.5)");
 const moteTex = radialTexture("rgba(255,255,230,1)", "rgba(255,230,140,0.4)");
 
+/** A small painted autumn leaf (white-ish, tinted per point by vertex colour) for falling-leaf maps. */
+const leafTex = (() => {
+  const c = cacheCanvas();
+  c.width = c.height = 64;
+  const g = c.getContext("2d")!;
+  g.translate(32, 32);
+  g.rotate(0.5);
+  const grad = g.createLinearGradient(-20, -20, 20, 20);
+  grad.addColorStop(0, "#fff4e0");
+  grad.addColorStop(1, "#c8b8a0");
+  g.fillStyle = grad;
+  g.beginPath();
+  g.moveTo(0, -26);
+  g.bezierCurveTo(18, -16, 20, 8, 0, 26);
+  g.bezierCurveTo(-20, 8, -18, -16, 0, -26);
+  g.fill();
+  g.strokeStyle = "rgba(90,50,20,0.55)";
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(0, -22);
+  g.lineTo(0, 24);
+  g.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+const LEAF_COLORS = [0xd8502a, 0xe8902c, 0xc83a24, 0xf0b840, 0xa8481c];
+
 interface Flicker {
   sprite: THREE.Sprite;
   light?: THREE.PointLight;
@@ -37,8 +65,12 @@ export class Effects {
   private moteVel: Float32Array;
   private bounds: THREE.Box3;
 
-  constructor(bounds: THREE.Box3) {
+  private leaves: THREE.Points | null = null;
+  private leafVel = new Float32Array(0);
+
+  constructor(bounds: THREE.Box3, leaves = false) {
     this.bounds = bounds;
+    if (leaves) this.makeLeaves();
     const count = 260;
     const pos = new Float32Array(count * 3);
     this.moteVel = new Float32Array(count * 3);
@@ -65,6 +97,41 @@ export class Effects {
       }),
     );
     this.root.add(this.motes);
+  }
+
+  /** Falling autumn leaves over the field: slow fall, sideways drift and flutter; recycled at the top. */
+  private makeLeaves(): void {
+    const b = this.bounds;
+    const count = 180;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    this.leafVel = new Float32Array(count * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = THREE.MathUtils.lerp(b.min.x, b.max.x, Math.random());
+      pos[i * 3 + 1] = Math.random() * 9;
+      pos[i * 3 + 2] = THREE.MathUtils.lerp(b.min.z, b.max.z, Math.random());
+      this.leafVel[i * 3] = 0.4 + Math.random() * 0.5;
+      this.leafVel[i * 3 + 1] = -(0.45 + Math.random() * 0.45);
+      this.leafVel[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+      c.setHex(LEAF_COLORS[i % LEAF_COLORS.length]);
+      col.set([c.r, c.g, c.b], i * 3);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    this.leaves = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        map: leafTex,
+        size: 0.42,
+        vertexColors: true,
+        transparent: true,
+        alphaTest: 0.3,
+        depthWrite: false,
+      }),
+    );
+    this.root.add(this.leaves);
   }
 
   addTorch(p: THREE.Vector3, withLight: boolean): void {
@@ -114,6 +181,23 @@ export class Effects {
       }
     }
     pos.needsUpdate = true;
+    if (this.leaves) {
+      const lp = this.leaves.geometry.getAttribute("position") as THREE.BufferAttribute;
+      const l = lp.array as Float32Array;
+      const v = this.leafVel;
+      for (let i = 0; i < l.length; i += 3) {
+        const flutter = Math.sin(time * 2.3 + i * 0.7);
+        l[i] += (v[i] + flutter * 0.5) * dt;
+        l[i + 1] += v[i + 1] * (1 + flutter * 0.3) * dt;
+        l[i + 2] += (v[i + 2] + Math.cos(time * 1.7 + i) * 0.3) * dt;
+        if (l[i + 1] < 0 || l[i] > b.max.x + 2) {
+          l[i + 1] = 7 + Math.random() * 3;
+          l[i] = THREE.MathUtils.lerp(b.min.x - 4, b.max.x, Math.random());
+          l[i + 2] = THREE.MathUtils.lerp(b.min.z, b.max.z, Math.random());
+        }
+      }
+      lp.needsUpdate = true;
+    }
   }
 }
 

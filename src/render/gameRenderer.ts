@@ -104,6 +104,7 @@ export class GameRenderer {
 
   private sky: THREE.Mesh;
   private sun: THREE.DirectionalLight;
+  private hemi!: THREE.HemisphereLight;
   private effects: Effects;
   private mapReady = false;
 
@@ -233,6 +234,7 @@ export class GameRenderer {
     hemi.layers.enableAll();
     this.sun.layers.enableAll();
     this.scene.add(hemi);
+    this.hemi = hemi;
     this.effects = new Effects(new THREE.Box3());
     this.setMap(map, world.terrain);
 
@@ -255,6 +257,24 @@ export class GameRenderer {
     this.fitTargets();
   }
 
+  /**
+   * Per-map lighting and sky (map JSON "atmosphere", e.g. Russet Hollow's dusk): any RenderConfig light/sky/fog key
+   * it sets overrides the global config; other maps get the global values back.
+   */
+  private applyAtmosphere(t: Terrain): void {
+    const a = { ...this.cfg, ...(t.atmosphere ?? {}) } as RenderConfig;
+    this.sun.color.set(a.sunColor);
+    this.sun.intensity = a.sunIntensity;
+    this.hemi?.color.set(a.ambientSky);
+    this.hemi?.groundColor.set(a.ambientGround);
+    if (this.hemi) this.hemi.intensity = a.ambientIntensity;
+    (this.scene.fog as THREE.Fog).color.set(a.fogColor);
+    const su = (this.sky.material as THREE.ShaderMaterial).uniforms;
+    su.zenith.value.set(a.skyZenith);
+    su.horizon.value.set(a.skyHorizon);
+    this.renderer.setClearColor(a.skyHorizon, 1);
+  }
+
   setMap(map: MapView, t: Terrain): void {
     if (this.mapReady) {
       this.scene.remove(this.map.root);
@@ -263,6 +283,7 @@ export class GameRenderer {
     this.mapReady = true;
     this.map = map;
     this.scene.add(map.root);
+    this.applyAtmosphere(t);
     map.root.updateMatrixWorld(true);
     map.root.traverse((o) => {
       o.matrixAutoUpdate = false;
@@ -276,7 +297,7 @@ export class GameRenderer {
     Object.assign(this.sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half, near: 1, far: 200 });
     this.sun.shadow.camera.updateProjectionMatrix();
     const bounds = new THREE.Box3(new THREE.Vector3(1, 0, 1), new THREE.Vector3(t.width - 1, 6, t.depth - 1));
-    this.effects = new Effects(bounds);
+    this.effects = new Effects(bounds, !!t.atmosphere?.leaves);
     this.scene.add(this.effects.root);
     for (const f of map.fx) {
       if (f.name === "fx_torch") this.effects.addTorch(f.position, true);
@@ -652,7 +673,8 @@ export class GameRenderer {
         ev.type === "mist" ||
         ev.type === "morph" ||
         ev.type === "jumppad" ||
-        ev.type === "horn"
+        ev.type === "horn" ||
+        ev.type === "geyser"
       )
         this.hazards.handle(ev);
       if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {

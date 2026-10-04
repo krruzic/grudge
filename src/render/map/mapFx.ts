@@ -9,6 +9,7 @@ import { Ava, freeAva, onAvalanche, prepLods, Run, syncAvas, syncRuns } from "./
 import { buildHorns, onHorn, syncHorns } from "./horns";
 import { buildJumpPads, onJumpPad, syncJumpPads } from "./jumpPads";
 import { onLantern, syncLantern } from "./lantern";
+import { onGeyser } from "./geysers";
 import { onMorph, syncMorphs } from "./morphs";
 import { syncMist } from "./mist";
 import { syncFountain } from "./fountain";
@@ -108,6 +109,7 @@ export class MapFx {
     if (ev.type === "gates" && ev.lock) return onLockGates(this, ev);
     if (ev.type === "gates") return onGates(this, ev);
     if (ev.type === "avalanche") onAvalanche(this, ev);
+    if (ev.type === "geyser") onGeyser(this, ev);
   }
 
   sync(time: number, dt: number): void {

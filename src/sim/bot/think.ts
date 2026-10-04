@@ -111,6 +111,24 @@ export function think(bot: Bot, w: World, me: Entity): void {
     bot.goal = { x: lan.x, z: lan.z };
     return;
   }
+  // Cider wells: when nearby wells are about to erupt, step onto one whose landing point is closer to the enemy
+  // keep than we are (a free flank), unless we're in a fight.
+  const ev = w.mapEvents;
+  if (ev.geysers && ev.geyserWarned && !(s.ehAlive && s.dHero < 6)) {
+    const foe = w.teams.findIndex((_, t) => t !== me.team && !!w.core(t));
+    const fc = foe >= 0 ? w.core(foe) : undefined;
+    if (fc) {
+      const fx = fc.transform.pos.x;
+      const fz = fc.transform.pos.z;
+      const mine = Math.hypot(s.p.x - fx, s.p.z - fz);
+      for (const wl of ev.geyserWells) {
+        if (wl.group !== ev.geyserGroup || Math.hypot(wl.x - s.p.x, wl.z - s.p.z) > 9) continue;
+        if (Math.hypot(wl.tx - fx, wl.tz - fz) > mine - 8) continue;
+        bot.goal = { x: wl.x, z: wl.z };
+        return;
+      }
+    }
+  }
   // Too many enemy units around the enemy hero (beyond the plan's tolerance): don't dive it.
   const heroCrowd = s.ehAlive ? crowdAt(w, me, s.enemyHero!) : 0;
   const crowded =

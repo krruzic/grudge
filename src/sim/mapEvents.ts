@@ -6,6 +6,7 @@
 //   lantern    a ghost lantern rising from a pit; the hero who grabs it is "haunted" (damage/speed buff)
 //   avalanche  horns that, when captured, send an avalanche down one of four rotated lanes (frostcross)
 //   fountain   a healing fountain
+//   geysers    cider wells that erupt in turn and fling whoever stands on them (russet hollow)
 // Implementation per feature lives in src/sim/mapEvents/*; this class holds the state and delegates.
 import { Kind } from "./terrain.ts";
 import type { World } from "./world.ts";
@@ -16,6 +17,7 @@ import { buildLock, updateLock, type LockGate } from "./mapEvents/lockdown.ts";
 import { applyGates, gateSlots, updateGates, type GateSlot, type GatesDef } from "./mapEvents/gates.ts";
 import { updateMist, type MistDef } from "./mapEvents/mist.ts";
 import { findPits, updateLantern, type Lantern, type LanternDef } from "./mapEvents/lantern.ts";
+import { geyserWells, updateGeysers, type GeyserWell, type GeysersDef } from "./mapEvents/geysers.ts";
 import {
   avalancheLanes,
   updateAvalanche,
@@ -39,7 +41,15 @@ export interface FountainDef {
   heal: number;
 }
 
+export type { GeysersDef, GeyserWell } from "./mapEvents/geysers.ts";
+
 export class MapEvents {
+  // Cider wells (mapEvents/geysers.ts): the group that erupts next and when
+  geysers?: GeysersDef;
+  geyserWells: GeyserWell[] = [];
+  geyserGroup: "a" | "b" = "a";
+  geyserAt = Infinity;
+  geyserWarned = false;
   // Avalanche + horns (mapEvents/avalanche.ts)
   av?: AvalancheDef;
   lanes: Lane[] = [];
@@ -173,6 +183,11 @@ export class MapEvents {
       this.pits = findPits(this);
     }
     this.fountain = w.terrain.fountain as FountainDef | undefined;
+    this.geysers = w.terrain.geysers as GeysersDef | undefined;
+    if (this.geysers) {
+      this.geyserWells = geyserWells(this, this.geysers);
+      this.geyserAt = this.geysers.firstSeconds;
+    }
     this.gates = w.terrain.gates as GatesDef | undefined;
     if (this.gates) {
       const t = w.terrain;
@@ -253,6 +268,7 @@ export class MapEvents {
     if (this.lanternDef) updateLantern(this, this.lanternDef);
     if (this.av) updateAvalanche(this, this.av);
     if (this.gates) updateGates(this, this.gates);
+    if (this.geysers) updateGeysers(this, this.geysers);
     if (this.fountain && this.w.tick % 6 === 0) this.updateFountain(this.fountain);
   }
 

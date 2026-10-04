@@ -12,6 +12,9 @@ import snowUrl from "../../assets/textures/snow.png?url";
 import gravelUrl from "../../assets/textures/gravel.png?url";
 import pavIdUrl from "../../assets/textures/paving_id.png?url";
 import crackUrl from "../../assets/textures/paving_crack.jpg?url";
+import autumnGrassUrl from "../../assets/textures/autumn_grass.png?url";
+import autumnPathUrl from "../../assets/textures/autumn_path.png?url";
+import autumnBankUrl from "../../assets/textures/autumn_bank.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./map/terrainMesh";
 import { cacheCanvas } from "../ui/cacheCanvas";
@@ -210,6 +213,10 @@ function mergeProps(scene: THREE.Object3D): void {
   }
 }
 
+const PALETTES: Record<string, Partial<Record<"grass" | "dirt" | "rock", string>>> = {
+  autumn: { grass: autumnGrassUrl, dirt: autumnPathUrl, rock: autumnBankUrl },
+};
+
 export async function loadMap(
   url: string,
   terrain: Terrain,
@@ -217,11 +224,12 @@ export async function loadMap(
   light?: TerrainLight,
 ): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
+  // A map palette swaps the ground textures (Russet Hollow: autumn grass, leaf-litter paths, russet clay banks).
+  const palette = terrain.palette ? PALETTES[terrain.palette] : undefined;
+  const urls = { ...textureUrls, ...palette };
   const [gltf, ...texs] = await Promise.all([
     new GLTFLoader().loadAsync(url),
-    ...(["grass", "dirt", "rock", "cobble", "water"] as const).map((k) =>
-      texLoader.loadAsync(textureUrls[k] as string),
-    ),
+    ...(["grass", "dirt", "rock", "cobble", "water"] as const).map((k) => texLoader.loadAsync(urls[k] as string)),
   ]);
   const [grass, dirt, rock, cobble, water] = texs;
   const altUrl = terrain.surround === "alpine" ? snowUrl : terrain.surround === "garden" ? gravelUrl : sandUrl;

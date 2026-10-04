@@ -64,7 +64,15 @@ TRIPO = {
     "topi_spiral": {"size": (1.05, 1.05, 3.5), "faces": 440, "lo": 160, "gain": 1.3, "maps": ("gardens",)},
     "topi_ball": {"size": (1.1, 1.1, 3.2), "faces": 600, "lo": 300, "gain": 1.3, "maps": ("gardens",)},
     "flowerbush": {"size": (1.3, 1.3, 0.5), "faces": 120, "lo": 60, "maps": ("gardens",), "planar": "flowerbed"},
+    # Russet Hollow (autumn cider orchard).
+    "appletree": {"size": (3.3, 3.3, 4.2), "trunk": True, "mirror": True, "faces": 1100, "lo": 300, "maps": ("hollow",)},
+    "press": {"size": (2.6, 2.0, 3.0), "faces": 900, "maps": ("hollow",)},
+    "ciderwell": {"size": (2.3, 2.3, 1.15), "faces": 700, "maps": ("hollow",)},
+    "barrels": {"size": (2.0, 1.5, 1.7), "faces": 600, "maps": ("hollow",)},
+    "pumpkins": {"size": (1.7, 1.7, 0.85), "faces": 600, "maps": ("hollow",)},
+    "haycart": {"size": (2.8, 1.7, 1.7), "faces": 700, "maps": ("hollow",)},
 }
+ORCHARD = ("appletree", "press", "ciderwell", "barrels", "pumpkins", "haycart")
 ROCKS = ("rock_a", "rock_b", "rock_c")
 
 
@@ -186,6 +194,36 @@ class Builder:
         return obj
 
 
+# Map palettes for the Blender-side materials: Russet Hollow swaps canopy leaves for autumn foliage and warms the
+# tall grass to golden windfall straw.
+AUTUMN = MAP_NAME == "hollow"
+
+
+def autumn_image(name, img):
+    if not AUTUMN:
+        return img
+    if name in ("leaves", "pine"):
+        fall = bpy.data.images.get("leaves_fall") or texgen.load_photo("leaves_fall", os.path.join(ROOT, "assets", "textures"))
+        if name == "leaves":
+            return fall
+        # Conifers: a darker bronze-olive copy so the rim forest has depth against the orchard trees.
+        img = fall.copy()
+        img.name = "pine_fall"
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            px[i], px[i + 1], px[i + 2] = px[i] * 0.5, px[i + 1] * 0.5, px[i + 2] * 0.3
+        img.pixels.foreach_set(px)
+        img.pack()
+        return img
+    if name == "tallgrass" and img is not None:
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            r, g, b = px[i], px[i + 1], px[i + 2]
+            px[i], px[i + 1], px[i + 2] = min(1.0, g * 1.18 + 0.06), g * 0.92, b * 0.45
+        img.pixels.foreach_set(px)
+    return img
+
+
 def make_materials(images):
     for name in MATS:
         mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
@@ -195,7 +233,7 @@ def make_materials(images):
         out = nt.nodes.new("ShaderNodeOutputMaterial")
         bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
         tex = nt.nodes.new("ShaderNodeTexImage")
-        tex.image = images.get(name) or texgen.load_photo(name, os.path.join(ROOT, "assets", "textures"))
+        tex.image = autumn_image(name, images.get(name) or texgen.load_photo(name, os.path.join(ROOT, "assets", "textures")))
         nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
         if name == "tallgrass":
             nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
@@ -1303,6 +1341,12 @@ class MapBuilder:
                 else:
                     name, s = "deadtree", p.get("scale", 1.0)
                 self.tripo_tree(name, x, z, s, seed)
+            elif t in ORCHARD and self.tpl and t in self.tpl:
+                r = random.Random(seed)
+                base = min(self.ground_h(x + dx, z + dz) for dx in (-0.6, 0.6) for dz in (-0.6, 0.6))
+                if t == "ciderwell":
+                    base = self.ground_h(x, z)
+                self.place_tripo(t, x, base - 0.08, z, s if t != "appletree" else s * r.uniform(0.9, 1.1), r)
             elif t == "tree":
                 self.tree(x, y, z, s, seed)
             elif t == "pine":

@@ -5,6 +5,7 @@
 // Every zone's first child is a flat decal disc (ZONE_TEX / ZONE_DECAL). Only Maddock's ale, aletrail, tar and
 // brewfest zones show it; for the others it stays hidden since they moved to 3D fissures and props (turning
 // those decals back on is a separate decision, see docs/decisions.md). animateZone() fades it via children[0].
+import ciderMudUrl from "../../../assets/textures/autumn_mud.png?url";
 import * as THREE from "three";
 import {
   composite,
@@ -69,6 +70,29 @@ export function disc(
     g.restore();
   });
 }
+/** Cider-well mud: the painted autumn mud tile masked to a soft-edged disc (filled in when the image loads). */
+const CIDER_MUD = (() => {
+  const c = cacheCanvas();
+  c.width = c.height = 512;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const im = new Image();
+  im.onload = () => {
+    const g = c.getContext("2d")!;
+    g.drawImage(im, 0, 0, 512, 512);
+    g.globalCompositeOperation = "destination-in";
+    const m = g.createRadialGradient(256, 256, 150, 256, 256, 252);
+    m.addColorStop(0, "rgba(0,0,0,0.92)");
+    m.addColorStop(0.8, "rgba(0,0,0,0.85)");
+    m.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = m;
+    g.fillRect(0, 0, 512, 512);
+    t.needsUpdate = true;
+  };
+  im.src = ciderMudUrl;
+  return t;
+})();
+
 const ZONE_DECAL: Record<string, THREE.Texture> = {
   sinkhole: disc((g, img) => {
     const gr = g.createRadialGradient(128, 128, 8, 128, 128, 126);
@@ -545,6 +569,16 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       ring(Math.round(r * 1.5), [0.75, 0.98], (x, z) =>
         sprite(FOAM, 0.45 + Math.random() * 0.3, x, z, -0.2, false, "foam"),
       );
+  } else if (style === "cider") {
+    // Russet Hollow well mud: a sticky amber puddle with a glossy rim.
+    decal.material = new THREE.MeshBasicMaterial({
+      map: CIDER_MUD,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+    decal.visible = true;
   } else if (style === "tar") {
     decal.material = new THREE.MeshBasicMaterial({
       map: cv(ZONE_DECALS.tar),

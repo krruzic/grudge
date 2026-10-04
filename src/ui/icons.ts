@@ -283,6 +283,23 @@ const STROKES: Record<string, Draw> = {
     c.lineTo(-0.12, -0.72);
     c.closePath();
   },
+  apple: (c) => {
+    c.moveTo(0, -0.42);
+    c.bezierCurveTo(0.35, -0.75, 0.95, -0.55, 0.85, 0.05);
+    c.bezierCurveTo(0.78, 0.6, 0.35, 0.95, 0, 0.78);
+    c.bezierCurveTo(-0.35, 0.95, -0.78, 0.6, -0.85, 0.05);
+    c.bezierCurveTo(-0.95, -0.55, -0.35, -0.75, 0, -0.42);
+    c.closePath();
+    c.moveTo(0.04, -0.45);
+    c.quadraticCurveTo(0.12, -0.75, 0.0, -0.98);
+    c.lineTo(0.1, -0.98);
+    c.quadraticCurveTo(0.25, -0.72, 0.14, -0.45);
+    c.closePath();
+    c.moveTo(0.14, -0.78);
+    c.quadraticCurveTo(0.55, -1.0, 0.72, -0.72);
+    c.quadraticCurveTo(0.42, -0.58, 0.14, -0.78);
+    c.closePath();
+  },
   bell: (c) => {
     c.moveTo(-0.7, 0.55);
     c.quadraticCurveTo(-0.45, 0.35, -0.45, -0.15);

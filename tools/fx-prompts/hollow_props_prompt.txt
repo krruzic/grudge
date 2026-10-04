@@ -1,0 +1,8 @@
+The FIRST image shows painted map props from our fantasy game (stylised, hand-painted, chunky readable shapes, soft rim light), exactly the style to match. Paint a NEW sheet of 6 map props for an AUTUMN CIDER ORCHARD at dusk, each shown alone, centred in its own cell of a 3 x 2 grid on a plain light grey background, three-quarter view from slightly above, same scale feel, full object visible, no cropping:
+1. APPLE TREE: a gnarled orchard apple tree with a round canopy of russet, orange and golden autumn leaves and plenty of red apples, a thick twisted trunk.
+2. CIDER PRESS: a big wooden screw cider press on a stone base, a huge oak screw and beam, a slatted basket full of crushed apples, cider dripping into a trough.
+3. CIDER WELL: a round fieldstone well-vent with copper barrel hoops around its rim and a cracked wooden lid, amber cider bubbling and steaming out of it, wet glossy stones.
+4. BARREL STACK: three oak cider barrels with iron hoops stacked in a pyramid, a little tap on the front one.
+5. PUMPKIN PILE: a pile of orange and green pumpkins and gourds with a few leaves.
+6. HAY CART: a small wooden farm cart with spoked wheels loaded with hay and a basket of apples.
+No text, no labels, no shadows on the ground plane beyond a soft contact shadow.

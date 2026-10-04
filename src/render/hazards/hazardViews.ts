@@ -70,7 +70,8 @@ export class HazardViews {
       ev.type === "mist" ||
       ev.type === "morph" ||
       ev.type === "jumppad" ||
-      ev.type === "horn"
+      ev.type === "horn" ||
+      ev.type === "geyser"
     ) {
       this.mapFx.handle(ev);
       return;
