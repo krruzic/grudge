@@ -27,6 +27,7 @@ import {
   heaveDir,
   raiderFight,
   summonerFight,
+  wardenFight,
   warlordFight,
   wrenAbilities,
   wrenShoot,
@@ -333,6 +334,8 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (ab.b.kind === "repair") engineerFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Duelist: parry reads, charged lunge, flurry on the stunned.
   if (ab.r.kind === "parry") duelistFight(bot, w, me, ehAlive ? enemyHero : undefined);
+  // Warden: charged slap in melee.
+  if (ab.r.kind === "wall") wardenFight(bot, w, me, ehAlive ? enemyHero : undefined);
   if (
     hk.heaveRange &&
     rdy("heave") &&

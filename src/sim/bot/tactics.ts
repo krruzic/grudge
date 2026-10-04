@@ -225,6 +225,16 @@ export function duelistReflex(bot: Bot, w: World, me: Entity): void {
   }
 }
 
+/**
+ * Thorn: Long Arm Slap held to full power (x1.6) during the melee exchange (his swings are actions, so the hold costs
+ * no speed) and let go while the target is still inside its 8.5 m reach. Holding it from range slowed his approach
+ * and tested worse; so did dropping Stone Wall behind fleeing champions instead of using it defensively.
+ */
+export function wardenFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  if (!target?.alive || !target.hero) return;
+  chargeB(bot, w, me, target, (abilities(w, me).b.range ?? 8.5) - 0.8, 3.5);
+}
+
 /** Warlord HEAVE direction: into a friendly tower near the victim, else toward the own core. */
 export function heaveDir(w: World, me: Entity, victim: Entity): Vec2 {
   const ep = victim.transform.pos;
