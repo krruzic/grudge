@@ -1,12 +1,18 @@
-import json, sys
+# Builds the 6x game font atlas (assets/fonts/gameFont.png) from the 1x bake (gameFont_lo.png + gameFont.json,
+# see tools/font-bake.py) in two steps:
+#   python3 tools/font-hires.py prep  -> assets/generated/font/lowres_sheet.png (every glyph upscaled, one per cell)
+#   (repaint that sheet at high resolution: tools/font-upscale.mjs -> assets/generated/font/hires_sheet.png)
+#   python3 tools/font-hires.py build -> assets/fonts/gameFont.png (same layout as the 1x atlas at 6x: fill in R,
+#                                       outline in G). The metrics json is shared, so it is not rewritten.
+import json, os, sys
 import numpy as np
 from PIL import Image, ImageFilter, ImageDraw
 
-ROOT = "/home/krruzic/Projects/grudge/"
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..") + "/"
 K = 6
 COLS, ROWS, CELL = 12, 7, 96
-meta = json.load(open(ROOT + "assets/fonts/n64font.json"))
-atlas = np.asarray(Image.open(ROOT + "assets/fonts/n64font.png").convert("RGBA")).astype(np.float32)
+meta = json.load(open(ROOT + "assets/fonts/gameFont.json"))
+atlas = np.asarray(Image.open(ROOT + "assets/fonts/gameFont_lo.png").convert("RGBA")).astype(np.float32)
 fill = atlas[..., 0] / 255
 H = meta["h"]
 chars = [c for c in meta["glyphs"] if c != " "]
@@ -33,7 +39,6 @@ else:
     cols = 16
     rows = (len(meta["glyphs"]) + cols - 1) // cols
     hi = np.zeros((rows * H * K, cols * W * K, 4), np.uint8)
-    newmeta = {}
     for i, ch in enumerate(chars):
         g = meta["glyphs"][ch]
         m = cell_of(ch)
@@ -49,12 +54,10 @@ else:
         glyph = np.asarray(Image.fromarray((crop * 255).astype(np.uint8)).resize((tw, th), Image.LANCZOS)).astype(np.float32) / 255
         cellhi = np.zeros((H * K, g["w"] * K), np.float32)
         cellhi[y0 * K:y0 * K + th, x0 * K:x0 * K + tw] = np.clip((glyph - 0.15) / 0.7, 0, 1)
-        gx, gy = (g["x"] // W if False else 0), 0
-        newmeta[ch] = g
         hi[g["y"] * K:g["y"] * K + H * K, g["x"] * K:g["x"] * K + g["w"] * K, 0] = (cellhi * 255).astype(np.uint8)
     fillim = Image.fromarray(hi[..., 0])
     line = fillim.filter(ImageFilter.MaxFilter(2 * K - 1)).filter(ImageFilter.GaussianBlur(0.8))
     hi[..., 1] = np.asarray(line)
     hi[..., 3] = 255
-    Image.fromarray(hi, "RGBA").save(ROOT + "assets/fonts/n64font_hi.png", optimize=True)
+    Image.fromarray(hi, "RGBA").save(ROOT + "assets/fonts/gameFont.png", optimize=True)
     print("hi atlas", hi.shape)

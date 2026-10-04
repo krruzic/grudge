@@ -1,3 +1,6 @@
+# Bakes the low-res game font atlas from the reference sheets in assets/fonts/src: writes
+# assets/fonts/gameFont_lo.png (fill in R, dilated outline in G, 1x) and assets/fonts/gameFont.json (metrics).
+# tools/font-hires.py then builds the 6x atlas the game loads (gameFont.png). Run from the repo root.
 import json
 import numpy as np
 from PIL import Image, ImageFilter
@@ -84,6 +87,6 @@ for i, (ch, cell, w) in enumerate(cells):
     atlas[y:y + h, x:x + cwid, 1] = q(o)
     atlas[y:y + h, x:x + cwid, 3] = 255
     meta[ch] = {"x": x, "y": y, "w": cwid, "adv": w + 1, "ox": PAD}
-Image.fromarray(atlas, "RGBA").save("assets/fonts/n64font.png", optimize=True)
-json.dump({"px": 14.5, "h": CELL_H, "base": BASE, "glyphs": meta}, open("assets/fonts/n64font.json", "w"))
+Image.fromarray(atlas, "RGBA").save("assets/fonts/gameFont_lo.png", optimize=True)
+json.dump({"px": 14.5, "h": CELL_H, "base": BASE, "glyphs": meta}, open("assets/fonts/gameFont.json", "w"))
 print("glyphs", len(meta), "atlas", atlas.shape)
