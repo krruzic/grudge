@@ -91,6 +91,8 @@ export class App {
   readonly closedNow = new Set<number>();
   /** Last C-stick flick direction per pad, so one flick changes the costume once. */
   readonly costumeFlick = [0, 0, 0, 0];
+  /** Seconds each pad has been holding B toward "back out" on the select / field screens. */
+  readonly backHold = [0, 0, 0, 0];
   /** Last field each cursor hovered on field select ("*" = not yet seen, so the first hover doesn't count). */
   readonly mapHover = ["*", "*", "*", "*"];
   /** Toggled by Start+Z: shows the raw pad debug text. */

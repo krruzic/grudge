@@ -9,7 +9,7 @@ import type { World } from "../sim/world";
 import type { MatchMode, Rules } from "../game/save";
 import type { MapData } from "../sim/terrain";
 import heroJson from "../../data/heroes.json";
-import { drawPlain, textWidth } from "./font";
+import { drawPlain, drawText, textWidth } from "./font";
 import { prompt, promptWidth } from "./prompts";
 import { boardBg, card, drawLogo, waxSeal, windowCut, woodFloor } from "./uiPaint";
 import type { Portraits } from "./portraits";
@@ -188,6 +188,35 @@ export class Screens {
       cursors.drawCursors(ctx, now);
     }
     if (this.which === "results" && this.results) drawResults(this, ctx, W, this.results, blink);
+    if ((select || this.which === "map") && this.backHold > 0) this.drawBackHold(ctx, H);
+  }
+
+  /** 0..1 progress of a held B on select / field select (bottom-left ring + label). */
+  backHold = 0;
+
+  private drawBackHold(ctx: CanvasRenderingContext2D, H: number): void {
+    const x = 16;
+    const y = H - 16;
+    const r = 7;
+    ctx.save();
+    ctx.fillStyle = "rgba(14,10,8,0.8)";
+    ctx.beginPath();
+    ctx.arc(x, y, r + 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineCap = "round";
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = "#5a4630";
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#e84830";
+    ctx.beginPath();
+    ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + this.backHold * Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    drawText(ctx, "B", x - textWidth("B", 0.7) / 2, y - 3.5, "#ffffff", 0.7);
+    const lab = this.which === "map" ? "HOLD B · BACK TO CHAMPIONS" : "HOLD B · LEAVE";
+    drawText(ctx, lab, x + r + 6, y - 3.5, "#ffd0b0", 0.7);
   }
 
   /** Placed chips sit on their hero's card: odd seats right of centre, seats 2/3 a row lower. */

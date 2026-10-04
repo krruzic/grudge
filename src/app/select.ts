@@ -380,6 +380,16 @@ export function updateSelect(app: App, now: number, dt: number): void {
     } else if (act.type === "button") selectButton(app, act.id, act.by);
     else if (act.type === "back") selectBack(app, act.by);
   }
+  // Holding B leaves for the menu, for whoever's seal is in their own hand (or who drives a CPU / commander seat).
+  const canLeave = (i: number) => {
+    const c = cursors.cursors[i];
+    return !!c?.active && !isNaming(app, i) && (c.holding === i || slots[i].cpu || app.commanderSlot(i));
+  };
+  if (holdToBack(app, dt, canLeave)) {
+    app.audio.ui("back");
+    toMenu(app);
+    return;
+  }
 
   screens.updateSelect(slots, data.heroes.heroes, roster, app.mode, app.save.data.rules.partners === 1);
   for (let i = 0; i < 4; i++)
@@ -501,10 +511,32 @@ function selectBack(app: App, by: number): void {
     cursors.placeChip(by, null);
     c.holding = by;
     app.audio.ui("back");
-  } else if (c.holding === by || slots[by].cpu || app.commanderSlot(by)) {
-    app.audio.ui("back");
-    toMenu(app);
   }
+  // Leaving the screen needs a held B instead: see holdToBack.
+}
+
+/** How long B must be held to back out of champion / field select. */
+const BACK_HOLD = 0.9;
+
+/**
+ * Hold-B-to-leave: advances each eligible pad's B hold timer, publishes the strongest one to the screen's progress
+ * ring (screens.backHold) and returns true once a pad reaches BACK_HOLD.
+ */
+function holdToBack(app: App, dt: number, eligible: (i: number) => boolean): boolean {
+  let best = 0;
+  let done = false;
+  app.pads.players.forEach((p, i) => {
+    const on = p.connected && p.held.b && eligible(i);
+    app.backHold[i] = on ? app.backHold[i] + dt : 0;
+    best = Math.max(best, app.backHold[i]);
+    if (app.backHold[i] >= BACK_HOLD) done = true;
+  });
+  app.screens.backHold = Math.min(1, best / BACK_HOLD);
+  if (done) {
+    app.backHold.fill(0);
+    app.screens.backHold = 0;
+  }
+  return done;
 }
 
 // ── Field select (state "map") ──
@@ -515,7 +547,6 @@ export function updateFieldSelect(app: App, now: number, dt: number): void {
   let back = false;
   let go = app.anyPressed("start");
   for (const act of cursors.update(app.padsForCursors(), dt, now, () => false)) {
-    if (act.type === "back") back = true;
     if (act.type === "button" && act.id.startsWith("map:")) {
       app.pickIndex = Number(act.id.slice(4));
       go = true;
@@ -538,6 +569,7 @@ export function updateFieldSelect(app: App, now: number, dt: number): void {
       }
     }
   }
+  back = holdToBack(app, dt, () => true);
   if (go) {
     app.audio.ui("ok");
     const pool = app.fields();
