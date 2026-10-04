@@ -181,6 +181,10 @@ export function beginMatch(app: App): void {
   app.players = players;
   const seats = app.slots.slice(0, players);
   const humans = seats.map((s) => s.joined && !s.cpu);
+  // Remember each human's sealed pick so champion select restores it after this match, however you get back there.
+  app.lastPicks = app.slots.map((s, i) =>
+    humans[i] && s.ready && roster.includes(s.hero) ? { hero: s.hero, costume: s.costume } : null,
+  );
   seats.forEach((sl, i) => {
     if (!sl.open) return;
     sl.open = false;

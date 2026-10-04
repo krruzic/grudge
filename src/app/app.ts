@@ -4,7 +4,9 @@
 // long-lived subsystem: renderer, UI canvas + HUD + screens + menus, input, audio, save data and the net session.
 // Controllers are plain functions over this object (select.ts, lobby.ts, match.ts, states.ts, net.ts, loop.ts)
 // so that state which used to be closure `let`s inside one giant start() lives in exactly one place.
+import * as THREE from "three";
 import { World } from "../sim/world";
+import { MapFx } from "../render/map/mapFx";
 import type { Bot } from "../sim/bot";
 import type { Command } from "../sim/types";
 import inputData from "../../data/input.json";
@@ -93,6 +95,8 @@ export class App {
   readonly closedNow = new Set<number>();
   /** Last C-stick flick direction per pad, so one flick changes the costume once. */
   readonly costumeFlick = [0, 0, 0, 0];
+  /** Each seat's sealed human pick from the last match started (restored on returning to champion select). */
+  lastPicks: ({ hero: string; costume?: string } | null)[] = [];
   /** Seconds each pad has been holding B toward "back out" on the select / field screens. */
   readonly backHold = [0, 0, 0, 0];
   /** Last field each cursor hovered on field select ("*" = not yet seen, so the first hover doesn't count). */
@@ -155,8 +159,17 @@ export class App {
     this.screens = new Screens();
     const portraits = new Portraits(assets.heroes, this.view.teamColorList);
     portraits.units = assets.unitModels;
+    // Map previews: the static map plus its runtime set pieces (jump pads, timed gates), built from a throwaway
+    // World of each map so the preview shows the field as it starts.
     portraits.setMaps(
-      assets.mapViews.map((mv, i) => ({ root: mv.root, width: maps[i].data.width, depth: maps[i].data.depth })),
+      assets.mapViews.map((mv, i) => {
+        const g = new THREE.Group();
+        g.add(mv.root.clone(true));
+        const mf = new MapFx(new World(maps[i].data, data, 1));
+        mf.sync(0, 1);
+        g.add(mf.root);
+        return { root: g, width: maps[i].data.width, depth: maps[i].data.depth };
+      }),
     );
     this.screens.portraits = portraits;
     this.hud.portraits = portraits;

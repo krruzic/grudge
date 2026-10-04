@@ -64,9 +64,23 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
   const nsc = Math.min(1.35, (pw - 60) / Math.max(1, textWidth(name, 1, true)));
   drawPlain(ctx, name, 14, ih + 18, BROWN, nsc, true);
   const blurb = random ? "LET FATE CHOOSE WHERE THE GRUDGE IS SETTLED." : (d!.blurb ?? "");
-  wrap(blurb, pw - 70, 0.6)
-    .slice(0, 3)
-    .forEach((l, j) => drawPlain(ctx, l, 14, ih + 35 + j * 8, "#4a3018", 0.6));
+  // The blurb gets three lines of room; longer ones scroll slowly (pause, scroll, pause, jump back).
+  const lines = wrap(blurb, pw - 70, 0.6);
+  const by = ih + 35;
+  const room = 3 * 8;
+  const over = Math.max(0, lines.length * 8 - room);
+  let off = 0;
+  if (over > 0) {
+    const run = over / 5;
+    const t = (performance.now() / 1000) % (5 + run);
+    off = t < 2.5 ? 0 : t < 2.5 + run ? (t - 2.5) * 5 : over;
+  }
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, by - 2, pw - 40, room + 2);
+  ctx.clip();
+  lines.forEach((l, j) => drawPlain(ctx, l, 14, by + j * 8 - off, "#4a3018", 0.6));
+  ctx.restore();
   if (d) {
     let padCount = padCounts.get(d.name);
     if (padCount === undefined) {

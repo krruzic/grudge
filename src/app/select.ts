@@ -133,8 +133,10 @@ export function setMode(app: App, v: MatchMode): void {
  */
 export function enterSelect(app: App, keep = false): void {
   const slots = app.slots;
-  const prev = slots.map((sl) =>
-    keep && sl.ready && !sl.cpu && !sl.open && roster.includes(sl.hero) ? { hero: sl.hero, costume: sl.costume } : null,
+  const prev = slots.map((sl, i) =>
+    keep && sl.ready && !sl.cpu && !sl.open && roster.includes(sl.hero)
+      ? { hero: sl.hero, costume: sl.costume }
+      : (app.lastPicks[i] ?? null),
   );
   const here = [0, 1, 2, 3].filter((i) => app.present(i)).length;
   // A host's CPUs added on purpose survive re-entering select.
