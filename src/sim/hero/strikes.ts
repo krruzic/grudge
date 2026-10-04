@@ -207,15 +207,23 @@ export function hexLand(w: World, e: Entity, x: number, z: number, def: AbilityD
       o.status.hexUntil = w.time + def.hexSeconds;
       o.status.hexOwner = e.id;
     }
-    w.damage(e, o, (def.damage ?? 80) * mul, {
+    const root = def.rootSeconds && o.kind !== "structure" ? def.rootSeconds : 0;
+    const hit = w.damage(e, o, (def.damage ?? 80) * mul, {
       fromX: x,
       fromZ: z,
-      slowMul: def.slowMul,
-      slowSeconds: def.slowSeconds,
+      slowMul: root ? 0 : def.slowMul,
+      slowSeconds: root ? root : def.slowSeconds,
       stun: def.stunSeconds,
-      knockback: fx?.pull ? 0 : 2,
+      knockback: fx?.pull || root ? 0 : 2,
       big: true,
     });
+    // Rooted (speed 0) first, then the normal hex slow takes over.
+    if (hit && root && def.slowMul !== undefined && def.slowSeconds)
+      w.later(root, () => {
+        if (!o.alive || w.time < o.status.slowUntil - 1e-6) return;
+        o.status.slowMul = def.slowMul!;
+        o.status.slowUntil = w.time + def.slowSeconds!;
+      });
   }
   if (fx?.zoneAfter) zoneAt(w, e, x, z, r, fx.zoneAfter);
   if (fx?.summon) {

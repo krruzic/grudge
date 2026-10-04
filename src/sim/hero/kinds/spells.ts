@@ -120,6 +120,22 @@ export function fireSummon(w: World, e: Entity, a: HeroAction, def: AbilityDef):
       o.status.hexOwner = e.id;
     }
   }
+  // Eruption: the dead burst out of the ground around him, knocking foes up (stun) as the army arrives.
+  if (def.eruptRadius) {
+    const r = def.eruptRadius;
+    w.emit({ type: "slam", x: t.pos.x, y: t.y, z: t.pos.z, radius: r, team: e.team, src: e.id });
+    for (const o of w.entities.slice()) {
+      if (!o.alive || o.team === e.team || o.kind === "structure" || o.neutral) continue;
+      if (Math.hypot(o.transform.pos.x - t.pos.x, o.transform.pos.z - t.pos.z) - o.radius > r) continue;
+      w.damage(e, o, (def.damage ?? 0) * w.damageMulOf(e), {
+        fromX: t.pos.x,
+        fromZ: t.pos.z,
+        stun: def.stunSeconds,
+        knockback: def.knockback ?? 4,
+        big: true,
+      });
+    }
+  }
 }
 
 /** Smoke: stealth (next hit ambushes) plus a speed buff. */

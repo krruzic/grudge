@@ -453,7 +453,8 @@
           "damage": 80,
           "radius": 2.6,
           "range": 8,
-          "delay": 0.9,
+          "delay": 0.55,
+          "rootSeconds": 0.6,
           "slowMul": 0.5,
           "slowSeconds": 1.5,
           "dur": 0.5,
@@ -492,6 +493,10 @@
           "bot": "fight",
           "botRange": 10,
           "hexRadius": 7,
+          "eruptRadius": 7,
+          "damage": 70,
+          "stunSeconds": 0.8,
+          "knockback": 4,
           "callout": "RAISE AN ARMY"
         }
       },
