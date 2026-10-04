@@ -113,6 +113,9 @@ export class Screens {
   fieldMode: MatchMode = "1v1";
   /** Guest watching the host pick. */
   fieldWatch = false;
+  /** Online field vote: [seat, card index] for every vote in, and whole seconds left (-1 before the first). */
+  votes: [number, number][] = [];
+  voteLeft = -1;
   fieldNote = "";
 
   // ── Title ──
@@ -184,9 +187,9 @@ export class Screens {
     else if (select) drawSelect(this, ctx, W, H, blink);
     else if (this.which === "map") drawField(this, ctx, W, H);
     if (cursors) {
-      if (select) this.drawChips(cursors, ctx);
-      // The ready banner goes over the placed seals on the champion row, under the gloves.
+      // The ready banner dims the champion row; the seals stay on top of it so they can still be picked up.
       if (select && this.readyBanner) drawReadyBanner(this, ctx, W, H, blink);
+      if (select) this.drawChips(cursors, ctx);
       cursors.drawCursors(ctx, now);
     }
     if (this.which === "results" && this.results) drawResults(this, ctx, W, this.results, blink);

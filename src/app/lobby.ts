@@ -115,6 +115,15 @@ function lobbyButton(app: App, buttonId: string, by: number): void {
   const lb = app.screens.lobby!;
   const [id, arg] = buttonId.split(":");
   const i = Number(arg);
+  if (id === "map" && net.guestField) {
+    // Watching the host's field select: a field card is this pad's vote.
+    const slot = net.mySlots.get(by);
+    if (slot === undefined) return;
+    net.link.toHost({ t: "vote", pick: i, k: by });
+    net.myVotes.set(slot, i);
+    app.audio.ui("seal");
+    return;
+  }
   if (id === "cam" && net.mySlots.get(by) === i) {
     const on = app.toggleZoom(i);
     lb.slots[i].cam = on;

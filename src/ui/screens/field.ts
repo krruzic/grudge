@@ -21,6 +21,7 @@ import {
 } from "../uiPaint";
 import type { Screens } from "../screens";
 import { BROWN, MODE_NAME, shortMapName } from "./common";
+import { handColor } from "../cursor";
 
 /** Tower pads per map name (needs a Terrain parse; primed at load by the app so picking a field never parses). */
 export const padCounts = new Map<string, number>();
@@ -133,7 +134,10 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
     }
     const label = k < pool.length ? shortMapName(s.maps[pool[k]].name) : "RANDOM";
     drawPlain(ctx, label, 6, th + 8, sel ? "#8a1810" : BROWN, 0.62, true);
-    pin(ctx, cw / 2, 3, sel ? "#c81818" : "#8a8a90");
+    // Pin: one wedge per seat voting for this card, else the colours of the hands pointing at it.
+    const voters = s.votes.filter(([, v]) => v === k).map(([seat]) => handColor(seat));
+    const hands = s.cursors?.handsOn(`map:${k}`) ?? [];
+    pin(ctx, cw / 2, 3, voters.length ? voters : hands.length ? hands : sel ? "#c81818" : "#8a8a90");
     ctx.restore();
     if (sel) goldArrow(ctx, cx - 6, cy + chh / 2, -1, 6);
   }
@@ -142,7 +146,10 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
     W,
     H,
     s.fieldWatch
-      ? [["B", "LEAVE"]]
+      ? [
+          ["A", "VOTE"],
+          ["B", "LEAVE"],
+        ]
       : [
           ["A", "TO BATTLE"],
           ["B", "BACK"],

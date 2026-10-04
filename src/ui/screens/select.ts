@@ -30,6 +30,7 @@ import {
 import type { SelectSlot, Screens } from "../screens";
 import { BROWN, INK, MODE_NAME, TEAM_BRIGHT, TEAM_CLOTH, TEAM_FIELD, TEAM_TEXT, center } from "./common";
 import { costumeIcon, drawTree, hasTree, heroGlyph, stageArt } from "./selectArt";
+import { chipColor } from "../cursor";
 
 /** A cursor is hovering mouse target `id`. */
 const hovered = (s: Screens, id: string) => !!s.cursors?.cursors.some((c) => c.active && c.hover === id);
@@ -110,14 +111,14 @@ function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): vo
     s.shieldAt.set(type, { x: x + sw / 2, y: gy + sh - 22 });
     const icon = s.portraits?.icon(type);
     const tilt = pickedBy.length || hot ? 0 : k % 2 ? 0.04 : -0.04;
-    const frame =
-      pickedBy.length === 1
-        ? TEAM_BRIGHT[pickedBy[0]]
-        : pickedBy.length === 2
-          ? "#f0c030"
-          : hot
-            ? "#c81818"
-            : "#8a8a90";
+    // The pin shows whose seals sit on this champion (one wedge each), else the hands pointing at it.
+    const sealed = s.slots.flatMap((sl, i) =>
+      sl?.ready && !sl.open && sl.hero === type && (i < 2 || (s.twoVtwo && s.championSeat(i)))
+        ? [chipColor(i, sl.cpu)]
+        : [],
+    );
+    const hands = s.cursors?.handsOn(`hero:${type}`) ?? [];
+    const frame = sealed.length ? sealed : hands.length ? hands : "#8a8a90";
     card(ctx, x, gy - (hot ? 2 : 0), sw, sh, tilt, frame, () => {
       const iw = sw - 8;
       ctx.fillStyle = "#2a1a0a";
@@ -311,7 +312,7 @@ function drawSeatCard(
   const preview =
     unsealed && !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:"));
   const blank = unsealed && !preview;
-  card(ctx, x, y, w, h, 0, sl.ready ? "#c8a020" : TEAM_BRIGHT[team], () => {
+  card(ctx, x, y, w, h, 0, sl.open ? TEAM_BRIGHT[team] : chipColor(i, sl.cpu), () => {
     const ls = tagged ? Math.min(0.95, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 0.95;
     drawPlain(ctx, label, w / 2 - textWidth(label, ls, true) / 2, 7, tagHot ? "#c81818" : ink, ls, true);
     inset(ctx, 5, iy, w - 10, ih, "#2a2018");
@@ -397,9 +398,7 @@ function drawSeatCard(
   if (sitHere) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
   if (sl.ready && !commander && human) {
     ctx.save();
-    waxSeal(ctx, fx + fw - 12, fy + 13, 10, "#a8141a", "combo");
-    const tt = "SWORN";
-    shadowText(ctx, tt, fx + fw - 12 - textWidth(tt, 0.5) / 2, fy + 25, "#f4ecd8", 0.5);
+    waxSeal(ctx, fx + fw - 12, fy + ih - 13, 10, "#a8141a", "combo");
     ctx.restore();
   }
 }

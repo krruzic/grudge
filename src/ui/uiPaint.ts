@@ -562,15 +562,22 @@ export function waxSeal(
   engravedIcon(ctx, glyph, cx, cy, r * 0.95, "rgba(40,0,0,0.75)");
 }
 
-export function pin(ctx: CanvasRenderingContext2D, x: number, y: number, color: string): void {
+/** A brass-headed pin; several colours split the head into equal wedges (e.g. everyone who picked a card). */
+export function pin(ctx: CanvasRenderingContext2D, x: number, y: number, color: string | string[]): void {
   ctx.fillStyle = INK;
   ctx.beginPath();
   ctx.arc(x, y, 3.6, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, 2.6, 0, Math.PI * 2);
-  ctx.fill();
+  const cols = Array.isArray(color) ? color : [color];
+  cols.forEach((c, i) => {
+    const a0 = -Math.PI / 2 + (i / cols.length) * Math.PI * 2;
+    const a1 = -Math.PI / 2 + ((i + 1) / cols.length) * Math.PI * 2;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    if (cols.length > 1) ctx.moveTo(x, y);
+    ctx.arc(x, y, 2.6, a0, a1);
+    ctx.fill();
+  });
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.fillRect(x - 1.5, y - 1.5, 1.2, 1.2);
 }
@@ -606,7 +613,7 @@ export function card(
   w: number,
   h: number,
   tilt: number,
-  pinColor: string | null,
+  pinColor: string | string[] | null,
   body: () => void,
 ): void {
   ctx.save();
@@ -615,7 +622,7 @@ export function card(
   ctx.translate(-w / 2, -h / 2);
   parchment(ctx, 0, 0, w, h);
   body();
-  if (pinColor) pin(ctx, w / 2, 3, pinColor);
+  if (pinColor && pinColor.length) pin(ctx, w / 2, 3, pinColor);
   ctx.restore();
 }
 

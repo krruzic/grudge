@@ -56,7 +56,8 @@ export type UiSound =
   | "close"
   | "join"
   | "leave"
-  | "tick";
+  | "tick"
+  | "sworn";
 
 export interface PlayOpts {
   rate?: number;
@@ -326,6 +327,7 @@ export class Audio {
       join: "ui.join",
       leave: "ui.leave",
       tick: "ui.tick",
+      sworn: "drum",
     };
     // Menu navigation keeps its square-wave blips; the rest are samples.
     if (kind === "move") return this.tone("square", 660, 660, 0.06, 0.08);
@@ -334,6 +336,12 @@ export class Audio {
       return this.tone("square", 780, 780, 0.12, 0.1, 0, 0.08);
     }
     if (kind === "back") return this.tone("square", 400, 260, 0.12, 0.1);
+    if (kind === "sworn") {
+      // Everyone's sealed: one short drum hit and a bright two-note sting.
+      this.play("drum", 0.55, { dur: 0.3, priority: true, jitter: 0 });
+      this.tone("square", 523, 523, 0.07, 0.07, 0, 0.02);
+      return this.tone("square", 784, 784, 0.12, 0.07, 0, 0.09);
+    }
     const gain = kind === "key" ? 0.35 : kind === "start" ? 0.9 : 0.5;
     if (this.play(id[kind], gain, { jitter: 0.02, priority: true })) return;
     if (kind === "start") [392, 523, 659, 784].forEach((f, i) => this.tone("square", f, f, 0.16, 0.12, 0, i * 0.09));

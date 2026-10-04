@@ -97,6 +97,17 @@ export class MenuCursors {
   mouseSlot = -1;
   frozen = new Set<number>();
   tagOf: ((i: number) => number) | null = null;
+
+  /** Tag colours of the active hands pointing at hit target `id` (for pins that show who's hovering). */
+  handsOn(id: string): string[] {
+    const out: string[] = [];
+    this.cursors.forEach((c, i) => {
+      if (!c.active || c.hover !== id) return;
+      const tg = this.tagOf?.(i) ?? i;
+      out.push(handColor(tg >= 0 ? tg : i));
+    });
+    return out;
+  }
   ghosts: Ghost[] = [];
   private ghostAt = 0;
   private scale = { w: 427, h: 240 };
@@ -341,6 +352,11 @@ export class MenuCursors {
       );
     });
   }
+}
+
+/** Colour of a glove's tag (the hand of seat `slot`). */
+export function handColor(slot: number): string {
+  return TAG_COLORS[slot] ?? TAG_COLORS[0];
 }
 
 export function chipColor(slot: number, cpu: boolean): string {

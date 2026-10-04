@@ -59,6 +59,9 @@ export class App {
   training: boolean;
   /** Field-select cursor: index into fields(), or fields().length for RANDOM. */
   pickIndex: number;
+  /** Online field vote (host): seat -> field card index (pool.length = RANDOM), and when the first vote came in. */
+  votes = new Map<number, number>();
+  voteAt = -1;
   /** Time everyone became ready on select (start is ignored for 0.25 s after), -1 when not all ready. */
   readySince = -1;
 

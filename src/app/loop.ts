@@ -214,12 +214,22 @@ function updateFieldScreen(app: App): void {
       app.mode,
     );
   screens.fieldWatch = !!watched;
-  const hostTag = watched?.slots.find((s) => s.remote === 0 && !s.cpu && !s.open && s.name)?.name;
-  screens.fieldNote = watched
-    ? `${hostTag ? `${hostTag} · THE HOST` : "THE HOST"} PICKS THE FIELD`
-    : net.mode === "host" && app.state === "map" && net.peerNames.size
-      ? "YOU PICK THE FIELD FOR EVERYONE"
-      : "";
+  // Online, the field is a vote (see updateFieldSelect): pins show who voted for what, the note counts down.
+  const voting = !!watched || (net.mode === "host" && app.state === "map" && net.peerNames.size > 0);
+  if (watched) {
+    const mine = new Map(net.guestVotes);
+    for (const [seat, k] of net.myVotes) mine.set(seat, k);
+    screens.votes = [...mine];
+    screens.voteLeft = net.voteLeft;
+  } else {
+    screens.votes = [...app.votes];
+    screens.voteLeft = app.voteAt < 0 ? -1 : Math.max(0, Math.ceil(5 - (performance.now() / 1000 - app.voteAt)));
+  }
+  screens.fieldNote = !voting
+    ? ""
+    : screens.voteLeft >= 0
+      ? `VOTING · ${screens.voteLeft}S LEFT`
+      : "EVERYONE VOTES · PICK A FIELD WITH A";
 }
 
 /** Title-screen line about GameCube adapters and Switch 2 Pro controllers. */

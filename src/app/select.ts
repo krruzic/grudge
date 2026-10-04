@@ -186,6 +186,8 @@ function toMap(app: App): void {
   app.audio.ui("ok");
   app.state = "map";
   app.screens.set("map");
+  app.votes.clear();
+  app.voteAt = -1;
   if (!app.fields().includes(app.mapIndex) && app.fields().length) {
     app.mapIndex = app.fields()[0];
     resetAttractWorld(app);
@@ -402,7 +404,9 @@ export function updateSelect(app: App, now: number, dt: number): void {
   if (allReady && app.readySince < 0) app.readySince = now;
   if (!allReady) app.readySince = -1;
   // No ready banner (and no start) while anyone is signing a name.
-  screens.readyBanner = allReady && !screens.naming.size;
+  const sworn = allReady && !screens.naming.size;
+  if (sworn && !screens.readyBanner) app.audio.ui("sworn");
+  screens.readyBanner = sworn;
   screens.openHint =
     !allReady &&
     slots.some((sl, i) => app.slotActive(i) && sl.open) &&
@@ -544,14 +548,50 @@ function holdToBack(app: App, dt: number, eligible: (i: number) => boolean): boo
 
 // ── Field select (state "map") ──
 
+/** Seconds after the first vote before an online field vote is settled with whatever's in. */
+const VOTE_SECONDS = 5;
+
+/** Online with guests: the field is a vote of every human seat (host's pads and guests'). */
+export function fieldVoting(app: App): boolean {
+  return app.net.mode === "host" && app.net.peerNames.size > 0;
+}
+
 export function updateFieldSelect(app: App, now: number, dt: number): void {
   const { cursors } = app;
   cursors.setScale(app.uiCanvas.w, app.uiCanvas.h);
   let back = false;
-  let go = app.anyPressed("start");
+  const voting = fieldVoting(app);
+  let go = !voting && app.anyPressed("start");
+  const vote = (slot: number, k: number) => {
+    if (app.votes.get(slot) === k) return;
+    app.votes.set(slot, k);
+    if (app.voteAt < 0) app.voteAt = now;
+    app.audio.ui("seal");
+  };
+  if (voting)
+    app.pads.players.forEach((p, i) => {
+      if (p.pressed.start) vote(i, app.pickIndex);
+    });
   for (const act of cursors.update(app.padsForCursors(), dt, now, () => false)) {
     if (act.type === "button" && act.id.startsWith("map:")) {
-      app.pickIndex = Number(act.id.slice(4));
+      if (voting) vote(act.by, Number(act.id.slice(4)));
+      else {
+        app.pickIndex = Number(act.id.slice(4));
+        go = true;
+      }
+    }
+  }
+  if (voting && app.votes.size) {
+    // Settle once every human seat has voted, or VOTE_SECONDS after the first vote: most votes wins, ties by lot.
+    const voters = app.slots.flatMap((s, i) => (app.slotActive(i) && !s.cpu && !s.open ? [i] : []));
+    if (voters.every((i) => app.votes.has(i)) || now - app.voteAt >= VOTE_SECONDS) {
+      const count = new Map<number, number>();
+      for (const k of app.votes.values()) count.set(k, (count.get(k) ?? 0) + 1);
+      const top = Math.max(...count.values());
+      const tied = [...count].filter(([, c]) => c === top).map(([k]) => k);
+      app.pickIndex = tied[Math.floor(Math.random() * tied.length)];
+      app.votes.clear();
+      app.voteAt = -1;
       go = true;
     }
   }

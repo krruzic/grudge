@@ -82,6 +82,11 @@ export class NetSession {
   readonly handSent = ["null", "null", "null", "null"];
   readonly handAt = [0, 0, 0, 0];
   readonly nmSent = ["null", "null", "null", "null"];
+  /** Field vote as the host last broadcast it: [seat, card index] pairs, and whole seconds left (-1: no vote yet). */
+  guestVotes: [number, number][] = [];
+  voteLeft = -1;
+  /** Guest: this machine's own votes (seat -> card), shown until the host's broadcast confirms them. */
+  readonly myVotes = new Map<number, number>();
   /** Host is on field select: [pickIndex, mapIndex] to mirror, else null. */
   guestField: [number, number] | null = null;
   netFrames: Frame[] = [];
@@ -332,6 +337,13 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
     if (!ready && c.holding < 0) c.holding = i;
     if (ready && c.holding === i) c.holding = -1;
     app.audio.ui(m.on ? "ok" : "back");
+  } else if (m.t === "vote" && i >= 0 && app.state === "map") {
+    const k = Number(m.pick);
+    if (Number.isInteger(k) && k >= 0 && k <= app.fields().length) {
+      if (app.voteAt < 0) app.voteAt = performance.now() / 1000;
+      app.votes.set(i, k);
+      app.audio.ui("seal");
+    }
   } else if (m.t === "pause" && inMatch(app) && (app.pausing || app.state === "paused")) {
     setPaused(app, app.state === "match", r.slot >= 0 ? playerLabel(r.slot) : r.name);
   }
@@ -422,8 +434,14 @@ function onPresence(app: App, m: NetMsg): void {
       .filter((e) => okSlot(Number(e?.[0])))
       .map((e): [number, [number, string]] => [Number(e[0]), [e[1] === 1 ? 1 : 0, cleanName(e[2])]]),
   );
-  const f = Array.isArray(m.f) ? (m.f as number[]).map(Number) : null;
+  const raw = Array.isArray(m.f) ? (m.f as unknown[]) : null;
+  const f = raw ? [Number(raw[0]), Number(raw[1])] : null;
   n.guestField = f && maps[f[1]] ? [f[0], f[1]] : null;
+  n.guestVotes = Array.isArray(raw?.[2])
+    ? (raw[2] as unknown[][]).filter((v) => Array.isArray(v)).map((v) => [Number(v[0]), Number(v[1])])
+    : [];
+  n.voteLeft = Number(raw?.[3] ?? -1);
+  if (!n.guestField) n.myVotes.clear();
   if (n.guestField && app.state === "lobby" && n.guestField[1] !== app.mapIndex) {
     app.mapIndex = n.guestField[1];
     resetAttractWorld(app);
@@ -601,7 +619,8 @@ function sendHostPresence(app: App, now: number): void {
   }
   app.cursors.setGhosts(ghosts);
   app.screens.signing = signing;
-  const field = app.state === "map" ? [app.pickIndex, app.mapIndex] : null;
+  const left = app.voteAt < 0 ? -1 : Math.max(0, Math.ceil(5 - (now - app.voteAt)));
+  const field = app.state === "map" ? [app.pickIndex, app.mapIndex, [...app.votes], left] : null;
   const s = JSON.stringify([hands, names, field]);
   if (n.peerNames.size && ((s !== n.presSent && now - n.presAt >= PRES_DT) || now - n.presAt > 1)) {
     n.presSent = s;
