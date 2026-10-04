@@ -13,6 +13,10 @@ import { pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
 
+/** Pad hold timing (mirrors src/input/commands.ts): a hold counts as charging after TAP, full power after +FULL. */
+const CHARGE_TAP = 0.2;
+const CHARGE_FULL = 0.8;
+
 export class Bot {
   // State below is shared with the src/sim/bot/* modules (treat as internal).
 
@@ -60,6 +64,14 @@ export class Bot {
   wantPlace: Vec2 | null = null;
   sayText: string | null = null;
 
+  // Hold-to-charge (same timing as a human on the pad: charging shows after 0.2s, full power after 1.0s)
+  /** Button think() wants held down; persists between thinks, cleared by think() to let go. */
+  wantCharge: "a" | "b" | null = null;
+  /** Entity the charged release should be aimed at. */
+  chargeAimId = 0;
+  holdSlot: "a" | "b" | null = null;
+  holdAt = -1;
+
   // Team play (bot/strategy.ts)
   /** Fixed talent pick order (overrides the hero's botPlan picks). */
   picks: number[] | null = null;
@@ -101,7 +113,10 @@ export class Bot {
       const syn = opt ? opt.list.findIndex((o) => (o.with ?? []).some((q) => owned.has(q.id))) : -1;
       cmd.learn = fixed ? fixed[k % fixed.length] : syn >= 0 ? syn : this.rand() < 0.5 ? 0 : 1;
     }
-    if (!me || !me.alive || w.teams[me.team]?.out || !w.core(me.team)) return cmd;
+    if (!me || !me.alive || w.teams[me.team]?.out || !w.core(me.team)) {
+      this.holdSlot = this.wantCharge = null;
+      return cmd;
+    }
     if (w.time >= this.thinkAt) {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;
       think(this, w, me);
@@ -172,6 +187,7 @@ export class Bot {
       cmd.place = { dx: this.wantPlace.x, dz: this.wantPlace.z };
       if (!this.wantB && !this.wantR) this.wantPlace = null;
     }
+    this.chargeInput(w, cmd);
     cmd.attack = this.wantAttack;
     cmd.secondary = this.wantB;
     cmd.special = this.wantR;
@@ -184,5 +200,44 @@ export class Bot {
     this.wantPlace = null;
     if (this.wantBlock && this.rand() < 0.1) this.wantBlock = false;
     return cmd;
+  }
+
+  /**
+   * Hold-to-charge: keep the wanted button down (cmd.charging, which also slows the hero like a human holding it),
+   * and let go once fully charged and the move is ready, or early when think() stops wanting the charge. The release
+   * press carries the real hold time as cmd.charge and is aimed at chargeAimId.
+   */
+  private chargeInput(w: World, cmd: Command): void {
+    const me = w.heroForPlayer(this.player)!;
+    const h = me.hero!;
+    const want = this.wantCharge;
+    if (!this.holdSlot && want && !h.action) {
+      this.holdSlot = want;
+      this.holdAt = w.time;
+    }
+    const slot = this.holdSlot;
+    if (!slot) return;
+    const held = w.time - this.holdAt;
+    const k = Math.min(1, Math.max(0, (held - CHARGE_TAP) / CHARGE_FULL));
+    const ready = (h.cooldowns[slot] ?? 0) <= w.time && !h.action;
+    // Holding a button means it can't be tapped meanwhile.
+    if (slot === "a") this.wantAttack = false;
+    else this.wantB = false;
+    if (want === slot && !(k >= 1 && ready)) {
+      if (held > CHARGE_TAP) cmd.charging = slot;
+      return;
+    }
+    this.holdSlot = null;
+    if (slot === "a") this.wantAttack = true;
+    else this.wantB = true;
+    if (held > CHARGE_TAP) cmd.charge = k;
+    const t = this.chargeAimId ? w.get(this.chargeAimId) : undefined;
+    if (t?.alive && !this.wantDodge) {
+      const dx = t.transform.pos.x - me.transform.pos.x;
+      const dz = t.transform.pos.z - me.transform.pos.z;
+      const l = Math.hypot(dx, dz) || 1;
+      cmd.moveX = dx / l;
+      cmd.moveZ = dz / l;
+    }
   }
 }

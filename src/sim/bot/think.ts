@@ -21,6 +21,7 @@ import {
   ok,
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
+import { wrenAbilities, wrenShoot } from "./tactics.ts";
 
 /** What the bot knows about the fight this think. */
 interface Senses {
@@ -54,6 +55,8 @@ interface Kit {
 }
 
 export function think(bot: Bot, w: World, me: Entity): void {
+  // A held charge is let go unless this think wants it held again.
+  bot.wantCharge = null;
   const s = sense(bot, w, me);
   if (shop(bot, w, me, !!s.ehAlive && s.dHero < 8)) return;
   if (objectives(bot, w, s)) return;
@@ -307,14 +310,8 @@ function kit(bot: Bot, w: World, s: Senses): Kit {
 function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   const { me, p, h, enemyHero, ehAlive, dHero, plan, lowHp } = s;
   const { nearby, ab, prefer, rdy, useHint } = k;
-  if (ab.b.kind === "pip") {
-    // Marksman: Pip a hero that just hit us up close, then skyshot away from it.
-    const hb = me.status.hurtBy !== undefined ? w.get(me.status.hurtBy) : undefined;
-    const diver = hb?.hero && hb.alive && w.time - (me.status.hurtAt ?? -99) < 0.8 && w.dist(me, hb) < 5 ? hb : null;
-    if (diver && rdy("b") && !h.action && !h.pip) bot.wantB = true;
-    if (diver && h.pip?.phase === "on" && h.pip.target === diver.id && rdy("dodge") && bot.rand() < 0.6 * bot.skill)
-      bot.wantDodge = true;
-  }
+  // Marksman: expert Pip/SKYSHOT/RAKE/interrupt rules, and Heartseeker held for kills (bot/tactics.ts).
+  const zDecided = ab.b.kind === "pip" && wrenAbilities(bot, w, me);
   const hk = w.heroDef(h.type).hooks;
   if (
     hk.heaveRange &&
@@ -338,13 +335,14 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   const siegeHero = ab.z.kind === "ballista";
   const zTarget = plan.zBelow === undefined || (ehAlive && enemyHero!.hp < enemyHero!.maxHp * plan.zBelow);
   if (
+    !zDecided &&
     full &&
     zTarget &&
     (!siegeHero || !rdy("r")) &&
     ((ehAlive && useHint("z", dHero)) || (plan.zBelow === undefined && nearby.length >= 4))
   )
     bot.wantZ = true;
-  if (bot.wantZ && ehAlive && prefer > 3 && w.canSee(me, enemyHero!)) {
+  if (!zDecided && bot.wantZ && ehAlive && prefer > 3 && w.canSee(me, enemyHero!)) {
     const zx = enemyHero!.transform.pos.x - p.x;
     const zz = enemyHero!.transform.pos.z - p.z;
     const zl = Math.hypot(zx, zz) || 1;
@@ -495,6 +493,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
       if (enemyAttacking && d < 3 && bot.rand() < 0.3 * bot.skill) bot.wantDodge = true;
     }
     if ((bot.wantAttack || bot.wantB || bot.wantR) && !bot.wantDodge) bot.wantFace = { x: tx / tl, z: tz / tl };
+    // Marksman: charged Vantage power shots instead of tapping A (bot/tactics.ts).
+    if (ab.b.kind === "pip") wrenShoot(bot, w, me, target);
   }
   if (plan.healer && ab.a.kind === "combo") {
     // Melee healer: keep swinging at whatever is in reach.
