@@ -126,7 +126,10 @@ function weakGpu(r: THREE.WebGLRenderer): boolean {
   const gl = r.getContext();
   const ext = gl.getExtension("WEBGL_debug_renderer_info");
   const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-  return /vega (3|6|8|9|10|11)\b|radeon(\(tm\))? (\d+m )?graphics|mali|adreno|powervr|swiftshader|llvmpipe/i.test(name) || (/intel/i.test(name) && !/\barc\b/i.test(name));
+  return (
+    /vega (3|6|8|9|10|11)\b|radeon(\(tm\))? (\d+m )?graphics|mali|adreno|powervr|swiftshader|llvmpipe/i.test(name) ||
+    (/intel/i.test(name) && !/\barc\b/i.test(name))
+  );
 }
 
 export class GameRenderer {
@@ -165,7 +168,12 @@ export class GameRenderer {
   ) {
     outlineConfig.enabled = cfg.outlines;
     THREE.Material.prototype.dispose = function () {};
-    this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", stencil: true, depth: true });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: false,
+      powerPreference: "high-performance",
+      stencil: true,
+      depth: true,
+    });
     this.renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
     this.weakGpu = weakGpu(this.renderer);
     this.renderer.setPixelRatio(1);
@@ -239,9 +247,17 @@ export class GameRenderer {
     this.structureModels = structures;
     this.combatFx = new CombatFx(this.teamColors);
     this.combatFx.world = world;
-    this.entityViews = new EntityViews(world, this.teamColors, heroes, structures, cfg.heroScale, this.combatFx, unitModels, cfg.playerColors.map((c) => new THREE.Color(c)));
+    this.entityViews = new EntityViews(
+      world,
+      this.teamColors,
+      heroes,
+      structures,
+      cfg.heroScale,
+      this.combatFx,
+      unitModels,
+      cfg.playerColors.map((c) => new THREE.Color(c)),
+    );
     this.setWorld(world);
-
 
     this.fitTargets();
   }
@@ -320,7 +336,16 @@ export class GameRenderer {
     this.heroProps = new HeroPropViews(world, this.cfg.heroScale);
     this.heroProps.fx = this.combatFx;
     this.scene.add(this.heroProps.root);
-    this.entityViews = new EntityViews(world, this.teamColors, this.heroModels, this.structureModels, this.cfg.heroScale, this.combatFx, this.unitModels, this.cfg.playerColors.map((c) => new THREE.Color(c)));
+    this.entityViews = new EntityViews(
+      world,
+      this.teamColors,
+      this.heroModels,
+      this.structureModels,
+      this.cfg.heroScale,
+      this.combatFx,
+      this.unitModels,
+      this.cfg.playerColors.map((c) => new THREE.Color(c)),
+    );
     this.entityViews.humans = this.humanList;
     this.entityViews.hints = this.hints;
     this.scene.add(this.entityViews.root, this.entityViews.extras, this.combatFx.root);
@@ -409,7 +434,11 @@ export class GameRenderer {
       this.cineT += dt;
       const t = this.world.terrain;
       const k = this.cineT * 0.045;
-      const f = new THREE.Vector3(t.width / 2 + Math.sin(k) * t.width * 0.28, 0, t.depth / 2 + Math.sin(k * 0.7 + 1) * t.depth * 0.12);
+      const f = new THREE.Vector3(
+        t.width / 2 + Math.sin(k) * t.width * 0.28,
+        0,
+        t.depth / 2 + Math.sin(k * 0.7 + 1) * t.depth * 0.12,
+      );
       f.y = this.world.groundY(f.x, f.z);
       this.camFocus.lerp(f, this.camInit ? Math.min(1, dt * 2) : 1);
       this.camInit = true;
@@ -434,7 +463,13 @@ export class GameRenderer {
     return dist;
   }
 
-  private keepInView(cam: THREE.PerspectiveCamera, focus: THREE.Vector3, width: number, keep: THREE.Vector3[], tight = false): void {
+  private keepInView(
+    cam: THREE.PerspectiveCamera,
+    focus: THREE.Vector3,
+    width: number,
+    keep: THREE.Vector3[],
+    tight = false,
+  ): void {
     if (!keep.length) return;
     const pitch = THREE.MathUtils.degToRad(this.cfg.pitchDeg);
     const depthToWidth = (cam.aspect / Math.sin(pitch)) * 1.25;
@@ -457,7 +492,17 @@ export class GameRenderer {
     }
   }
 
-  private aimCamera(cam: THREE.PerspectiveCamera, st: { focus: THREE.Vector3; width: number; init: boolean }, points: THREE.Vector3[], dt: number, minWidth: number, maxWidth = Infinity, margin = this.cfg.viewMargin, keep: THREE.Vector3[] = points, center = false): void {
+  private aimCamera(
+    cam: THREE.PerspectiveCamera,
+    st: { focus: THREE.Vector3; width: number; init: boolean },
+    points: THREE.Vector3[],
+    dt: number,
+    minWidth: number,
+    maxWidth = Infinity,
+    margin = this.cfg.viewMargin,
+    keep: THREE.Vector3[] = points,
+    center = false,
+  ): void {
     const cfg = this.cfg;
     const t = this.world.terrain;
     const pitch = THREE.MathUtils.degToRad(cfg.pitchDeg);
@@ -467,8 +512,14 @@ export class GameRenderer {
 
     const min = new THREE.Vector3(Infinity, Infinity, Infinity);
     const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
-    for (const p of points) { min.min(p); max.max(p); }
-    if (points.length === 0) { min.set(t.width / 2, 0, t.depth / 2); max.copy(min); }
+    for (const p of points) {
+      min.min(p);
+      max.max(p);
+    }
+    if (points.length === 0) {
+      min.set(t.width / 2, 0, t.depth / 2);
+      max.copy(min);
+    }
     const focus = min.clone().add(max).multiplyScalar(0.5);
 
     const depthToWidth = (aspect / Math.sin(pitch)) * 1.25;
@@ -495,11 +546,13 @@ export class GameRenderer {
     }
 
     const slack = 6 + width * 0.15;
-    if (width < t.width + slack * 2) focus.x = THREE.MathUtils.clamp(focus.x, width / 2 - slack, t.width - width / 2 + slack);
+    if (width < t.width + slack * 2)
+      focus.x = THREE.MathUtils.clamp(focus.x, width / 2 - slack, t.width - width / 2 + slack);
     else focus.x = t.width / 2;
     const viewDepth = width / depthToWidth;
     const zs = 4 + viewDepth * 0.15;
-    if (viewDepth < t.depth + zs * 2) focus.z = THREE.MathUtils.clamp(focus.z, viewDepth / 2 - zs, t.depth - viewDepth / 2 + zs);
+    if (viewDepth < t.depth + zs * 2)
+      focus.z = THREE.MathUtils.clamp(focus.z, viewDepth / 2 - zs, t.depth - viewDepth / 2 + zs);
     else focus.z = t.depth / 2;
 
     this.keepInView(cam, focus, width, keep);
@@ -519,7 +572,12 @@ export class GameRenderer {
   manualZoom: boolean[] = [];
   private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90, 120, 150];
   private zoomIndex = new Map<number, number>();
-  private splitViews: { cam: THREE.PerspectiveCamera; st: { focus: THREE.Vector3; width: number; init: boolean }; heroIds: number[]; player: number }[] = [];
+  private splitViews: {
+    cam: THREE.PerspectiveCamera;
+    st: { focus: THREE.Vector3; width: number; init: boolean };
+    heroIds: number[];
+    player: number;
+  }[] = [];
 
   viewRectOf(player: number): { x: number; y: number; w: number; h: number } | null {
     if (this.splitViews.length < 2) return null;
@@ -550,8 +608,14 @@ export class GameRenderer {
     const humans = this.camMode ? this.world.players.filter((p) => this.humanList[p.player]) : [];
     humans.sort((a, b) => (humans.length === 2 ? a.team - b.team : 0) || a.player - b.player);
     const ids = humans.map((p) => p.heroId);
-    const groups: { ids: number[]; player: number }[] = !ids.length ? [] : ids.length === 1 ? [{ ids, player: humans[0].player }] : humans.map((p) => ({ ids: [p.heroId], player: p.player }));
-    const same = groups.length === this.splitViews.length && groups.every((g, i) => g.ids.join() === this.splitViews[i].heroIds.join());
+    const groups: { ids: number[]; player: number }[] = !ids.length
+      ? []
+      : ids.length === 1
+        ? [{ ids, player: humans[0].player }]
+        : humans.map((p) => ({ ids: [p.heroId], player: p.player }));
+    const same =
+      groups.length === this.splitViews.length &&
+      groups.every((g, i) => g.ids.join() === this.splitViews[i].heroIds.join());
     if (same) return;
     const prev = this.splitViews;
     this.splitViews = groups.map((g) => {
@@ -567,7 +631,13 @@ export class GameRenderer {
 
   private watching = new Map<number, number>();
 
-  private frameView(sv: { heroIds: number[]; player: number }): { pts: THREE.Vector3[]; min: number; max: number; margin: number; own?: number } {
+  private frameView(sv: { heroIds: number[]; player: number }): {
+    pts: THREE.Vector3[];
+    min: number;
+    max: number;
+    margin: number;
+    own?: number;
+  } {
     const w = this.world;
     const pts: THREE.Vector3[] = [];
     const heroes = sv.heroIds.map((id) => w.getAny(id)).filter((e) => !!e);
@@ -585,7 +655,14 @@ export class GameRenderer {
       const ok = (e: { alive: boolean; team: number } | undefined) => !!e?.alive && w.standing(e.team);
       if (!ok(w.getAny(id))) {
         const sp = w.spawnPoint(heroes[0].team);
-        const near = w.players.map((p) => w.getAny(p.heroId)).filter(ok).sort((a, b) => Math.hypot(a!.transform.pos.x - sp.x, a!.transform.pos.z - sp.z) - Math.hypot(b!.transform.pos.x - sp.x, b!.transform.pos.z - sp.z))[0];
+        const near = w.players
+          .map((p) => w.getAny(p.heroId))
+          .filter(ok)
+          .sort(
+            (a, b) =>
+              Math.hypot(a!.transform.pos.x - sp.x, a!.transform.pos.z - sp.z) -
+              Math.hypot(b!.transform.pos.x - sp.x, b!.transform.pos.z - sp.z),
+          )[0];
         id = near?.id ?? 0;
         this.watching.set(sv.player, id);
       }
@@ -597,7 +674,12 @@ export class GameRenderer {
     }
     if (!pts.length) {
       const sp = w.spawnPoint(heroes[0]?.team ?? 0);
-      return { pts: [new THREE.Vector3(sp.x, 0, sp.z)], min: this.cfg.splitViewWidth, max: this.cfg.splitViewWidth, margin: 0 };
+      return {
+        pts: [new THREE.Vector3(sp.x, 0, sp.z)],
+        min: this.cfg.splitViewWidth,
+        max: this.cfg.splitViewWidth,
+        margin: 0,
+      };
     }
     const slot = w.players.find((p) => p.player === sv.player);
     if (slot?.commander && sv.heroIds.length === 1) {
@@ -632,8 +714,15 @@ export class GameRenderer {
     const zf = this.zoomSteps[this.zoomIndex.get(sv.player) ?? 2] / this.zoomSteps[2];
     const min = (fight ? 18 : towers ? 24 : 21) * zf;
     let reach = 0;
-    for (let i = sv.heroIds.length; i < ownN; i++) for (let j = 0; j < sv.heroIds.length; j++) if (pts[j]) reach = Math.max(reach, pts[i].distanceTo(pts[j]));
-    return { pts, min, max: Math.max(min, 34 * Math.max(1, zf), reach * 1.25 + 18), margin: (fight ? 6 : 8) * zf, own: ownN };
+    for (let i = sv.heroIds.length; i < ownN; i++)
+      for (let j = 0; j < sv.heroIds.length; j++) if (pts[j]) reach = Math.max(reach, pts[i].distanceTo(pts[j]));
+    return {
+      pts,
+      min,
+      max: Math.max(min, 34 * Math.max(1, zf), reach * 1.25 + 18),
+      margin: (fight ? 6 : 8) * zf,
+      own: ownN,
+    };
   }
 
   private splitRects(w: number, h: number): [number, number, number, number][] {
@@ -641,8 +730,17 @@ export class GameRenderer {
     const hw = Math.floor(w / 2);
     const hh = Math.floor(h / 2);
     if (n === 1) return [[0, 0, w, h]];
-    if (n === 2) return [[0, 0, hw, h], [hw, 0, w - hw, h]];
-    return [[0, hh, hw, h - hh], [hw, h - hh, w - hw, hh], [0, 0, hw, hh], [hw, 0, w - hw, hh]];
+    if (n === 2)
+      return [
+        [0, 0, hw, h],
+        [hw, 0, w - hw, h],
+      ];
+    return [
+      [0, hh, hw, h - hh],
+      [hw, h - hh, w - hw, hh],
+      [0, 0, hw, hh],
+      [hw, 0, w - hw, hh],
+    ];
   }
 
   private sharedViewer(): number | null {
@@ -700,7 +798,13 @@ export class GameRenderer {
   }
 
   quiet = false;
-  demoCam: { rect: [number, number, number, number]; target: { x: number; y: number; z: number }; yaw: number; pitch: number; dist: number } | null = null;
+  demoCam: {
+    rect: [number, number, number, number];
+    target: { x: number; y: number; z: number };
+    yaw: number;
+    pitch: number;
+    dist: number;
+  } | null = null;
   private demoCamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
   private matrixFrame = -1;
   private frustum = new THREE.Frustum();
@@ -715,7 +819,18 @@ export class GameRenderer {
     this.scene.matrixWorldAutoUpdate = false;
     this.time += dt;
     for (const ev of this.world.events) {
-      if (ev.type === "mod" || ev.type === "modEnd" || ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph" || ev.type === "jumppad" || ev.type === "horn") this.hazards.handle(ev);
+      if (
+        ev.type === "mod" ||
+        ev.type === "modEnd" ||
+        ev.type === "avalanche" ||
+        ev.type === "gates" ||
+        ev.type === "lantern" ||
+        ev.type === "mist" ||
+        ev.type === "morph" ||
+        ev.type === "jumppad" ||
+        ev.type === "horn"
+      )
+        this.hazards.handle(ev);
       if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {
         this.entityViews.onHit(ev.id);
         this.entityViews.onImpact(ev.id, ev.src, ev.fx, ev.fz, ev.big);
@@ -766,7 +881,11 @@ export class GameRenderer {
       cam.aspect = w / h;
       cam.updateProjectionMatrix();
       const cp = Math.cos(d.pitch);
-      cam.position.set(d.target.x + Math.sin(d.yaw) * cp * d.dist, d.target.y + Math.sin(d.pitch) * d.dist, d.target.z + Math.cos(d.yaw) * cp * d.dist);
+      cam.position.set(
+        d.target.x + Math.sin(d.yaw) * cp * d.dist,
+        d.target.y + Math.sin(d.pitch) * d.dist,
+        d.target.z + Math.cos(d.yaw) * cp * d.dist,
+      );
       cam.lookAt(d.target.x, d.target.y, d.target.z);
       cam.userData.fogNear = d.dist * 7;
       cam.userData.fogFar = d.dist * 18;

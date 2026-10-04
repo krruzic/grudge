@@ -8,7 +8,10 @@ export function padNear(w: World, e: Entity): Pad | null {
   let bestD = w.data.structures.padRadius;
   for (const p of w.pads) {
     const d = Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z);
-    if (d <= bestD) { bestD = d; best = p; }
+    if (d <= bestD) {
+      bestD = d;
+      best = p;
+    }
   }
   if (best || !w.inBanner(e)) return best;
   const b = w.teams[e.team].banner!;
@@ -17,7 +20,10 @@ export function padNear(w: World, e: Entity): Pad | null {
   for (const p of w.pads) {
     if (Math.hypot(p.x - b.x, p.z - b.z) > reach + 1.5) continue;
     const d = Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z);
-    if (d < bestD) { bestD = d; best = p; }
+    if (d < bestD) {
+      bestD = d;
+      best = p;
+    }
   }
   return best;
 }
@@ -29,8 +35,10 @@ export function canBuildOn(pad: Pad, team: number): boolean {
 export function buildCost(w: World, type: StructureType, upgrade: boolean, team = -1): number {
   const def = w.data.structures.types[type];
   const hk = team >= 0 ? w.teamHooks(team) : {};
-  const heroMul = upgrade ? (w.ffa ? hk.ffaUpgradeCostMul : undefined) ?? hk.upgradeCostMul ?? 1 : (w.ffa ? hk.ffaCostMul : undefined) ?? hk.costMul ?? 1;
-  const ffa = def.class === "production" ? w.ffaCfg?.productionCostMul ?? 1 : 1;
+  const heroMul = upgrade
+    ? ((w.ffa ? hk.ffaUpgradeCostMul : undefined) ?? hk.upgradeCostMul ?? 1)
+    : ((w.ffa ? hk.ffaCostMul : undefined) ?? hk.costMul ?? 1);
+  const ffa = def.class === "production" ? (w.ffaCfg?.productionCostMul ?? 1) : 1;
   return Math.round((upgrade ? def.upgradeCost : def.cost) * w.costMul() * heroMul * ffa);
 }
 
@@ -42,7 +50,9 @@ export function specOf(w: World, st: StructureState): TowerSpec | null {
 export function specCost(w: World, type: StructureType, team = -1): number {
   const def = w.data.structures.types[type];
   const hk = team >= 0 ? w.teamHooks(team) : {};
-  return Math.round((def.specCost ?? 250) * w.costMul() * ((w.ffa ? hk.ffaUpgradeCostMul : undefined) ?? hk.upgradeCostMul ?? 1));
+  return Math.round(
+    (def.specCost ?? 250) * w.costMul() * ((w.ffa ? hk.ffaUpgradeCostMul : undefined) ?? hk.upgradeCostMul ?? 1),
+  );
 }
 
 export function canSpec(w: World, e: Entity | undefined): boolean {
@@ -107,7 +117,11 @@ export function tryBuild(w: World, hero: Entity, kind: StructureType | "default"
       return false;
     }
     if (st.level >= 2 || !st.ready || st.upgrading || st.type === "core") {
-      w.emit({ type: "notice", team, text: st.upgrading || !st.ready ? "BUILDING..." : canSpec(w, existing) ? "PICK A LEVEL 3" : "MAX LEVEL" });
+      w.emit({
+        type: "notice",
+        team,
+        text: st.upgrading || !st.ready ? "BUILDING..." : canSpec(w, existing) ? "PICK A LEVEL 3" : "MAX LEVEL",
+      });
       return false;
     }
     const cost = buildCost(w, st.type, true, team);
@@ -151,10 +165,23 @@ export function createStructure(w: World, team: number, pad: Pad, type: Structur
   const e = w.addEntity(team, "structure", sd.structureRadius, pad.x, pad.z, hp);
   e.hp = hp * sd.buildStartHpFrac;
   const core = w.foeCore(team, pad.x, pad.z);
-  if (core) e.transform.facing = e.transform.prevFacing = Math.atan2(core.transform.pos.x - pad.x, core.transform.pos.z - pad.z);
+  if (core)
+    e.transform.facing = e.transform.prevFacing = Math.atan2(
+      core.transform.pos.x - pad.x,
+      core.transform.pos.z - pad.z,
+    );
   e.structure = {
-    type, padIndex: pad.index, level: 1, builtAt: w.time, ready: false, nextAction: w.time + sd.buildSeconds, progress: 0,
-    range: (sd.zoneRange[pad.zone] ?? 10) * (def.rangeMul ?? 1), damage: (def.damage ?? 0) * (lane?.damage ?? 1), lastFireAt: -99, shielded: false,
+    type,
+    padIndex: pad.index,
+    level: 1,
+    builtAt: w.time,
+    ready: false,
+    nextAction: w.time + sd.buildSeconds,
+    progress: 0,
+    range: (sd.zoneRange[pad.zone] ?? 10) * (def.rangeMul ?? 1),
+    damage: (def.damage ?? 0) * (lane?.damage ?? 1),
+    lastFireAt: -99,
+    shielded: false,
     heroSlow: lane?.heroSlow,
   };
   if (type === "control") e.structure.range *= 1 + ((w.teamHooks(team).controlTowerMul ?? 1) - 1) * 0.5;
@@ -194,7 +221,14 @@ export function upgrade(w: World, e: Entity): void {
   st.range *= up.range ?? 1;
 }
 
-export function spawnUnit(w: World, team: number, type: UnitType, x: number, z: number, statMul: number): Entity | null {
+export function spawnUnit(
+  w: World,
+  team: number,
+  type: UnitType,
+  x: number,
+  z: number,
+  statMul: number,
+): Entity | null {
   const def = w.data.units.types[type];
   const i = w.nav.nearestOpen(x, z, 5);
   if (i < 0) return null;
@@ -230,7 +264,11 @@ export function spawnUnit(w: World, team: number, type: UnitType, x: number, z: 
 
 function exposed(w: World, tower: Entity, hero: Entity, range: number): boolean {
   const h = hero.status;
-  if (w.time - h.lastHitAt < 2.5 && Math.hypot(h.lastHitX - tower.transform.pos.x, h.lastHitZ - tower.transform.pos.z) <= range + 2) return true;
+  if (
+    w.time - h.lastHitAt < 2.5 &&
+    Math.hypot(h.lastHitX - tower.transform.pos.x, h.lastHitZ - tower.transform.pos.z) <= range + 2
+  )
+    return true;
   for (const o of w.entities) {
     if (!o.alive || !o.unit || o.team !== hero.team || o.neutral) continue;
     if (w.dist(tower, o) - o.radius <= range) return false;
@@ -275,10 +313,10 @@ export function updateStructure(w: World, e: Entity): void {
   }
 
   const boost = w.arena.towerBoost(e);
-  let haste = st.hasteUntil && w.time < st.hasteUntil ? st.hasteMul ?? 1 : 1;
+  let haste = st.hasteUntil && w.time < st.hasteUntil ? (st.hasteMul ?? 1) : 1;
   if (st.graveUntil && w.time < st.graveUntil) haste *= st.graveHaste ?? 1;
   const spec = specOf(w, st);
-  const shotCost = st.siege || st.tesla || st.padIndex < 0 ? 0 : spec?.grainPerShot ?? def.grainPerShot ?? 0;
+  const shotCost = st.siege || st.tesla || st.padIndex < 0 ? 0 : (spec?.grainPerShot ?? def.grainPerShot ?? 0);
   const grainCfg = w.data.match.economy.grain;
   const feed = () => {
     if (!shotCost || !grainCfg) return;
@@ -301,7 +339,11 @@ export function updateStructure(w: World, e: Entity): void {
       if (o.structure && !siege && !o.structure.siege && o.structure.works === undefined) continue;
       const d = w.dist(e, o) - o.radius;
       if (d > st.range * boost.range * w.rangeMul(e, o)) continue;
-      const score = d + (o.hero ? (siege || exposed(w, e, o, st.range) ? -100 : 100) : 0) - (o.structure?.siege ? 60 : 0) - (siege && o.structure ? 40 : 0);
+      const score =
+        d +
+        (o.hero ? (siege || exposed(w, e, o, st.range) ? -100 : 100) : 0) -
+        (o.structure?.siege ? 60 : 0) -
+        (siege && o.structure ? 40 : 0);
       if (spec?.targets) cands.push({ o, score });
       if (score >= bestScore) continue;
       if (!w.los(e, o, def.projectile?.losTolerance ?? 0.3, 3.2)) continue;
@@ -322,23 +364,51 @@ export function updateStructure(w: World, e: Entity): void {
       st.nextAction = w.time + (spec.cooldown ?? def.cooldown ?? 1) / haste;
       return;
     }
-    if (siege) e.transform.facing = e.transform.prevFacing = Math.atan2(best.transform.pos.x - e.transform.pos.x, best.transform.pos.z - e.transform.pos.z);
+    if (siege)
+      e.transform.facing = e.transform.prevFacing = Math.atan2(
+        best.transform.pos.x - e.transform.pos.x,
+        best.transform.pos.z - e.transform.pos.z,
+      );
     const cls = best.structure?.siege ? "heavy" : w.classOf(best);
     const vs = (siege ? siege.vs[cls] : def.vs?.[cls]) ?? 1;
     if (st.tesla) {
-      const pts = [e.transform.pos.x, e.transform.y + 2.6, e.transform.pos.z, best.transform.pos.x, best.transform.y + 1.2, best.transform.pos.z];
+      const pts = [
+        e.transform.pos.x,
+        e.transform.y + 2.6,
+        e.transform.pos.z,
+        best.transform.pos.x,
+        best.transform.y + 1.2,
+        best.transform.pos.z,
+      ];
       w.emit({ type: "chain", pts, team: e.team });
-      const owner = e.owner ? w.get(e.owner) ?? e : e;
-      w.damage(owner, best, st.damage * boost.damage, { fromX: e.transform.pos.x, fromZ: e.transform.pos.z, knockback: 1, slowMul: 0.7, slowSeconds: 0.6 });
+      const owner = e.owner ? (w.get(e.owner) ?? e) : e;
+      w.damage(owner, best, st.damage * boost.damage, {
+        fromX: e.transform.pos.x,
+        fromZ: e.transform.pos.z,
+        knockback: 1,
+        slowMul: 0.7,
+        slowSeconds: 0.6,
+      });
       if (best.alive) chainLightning(w, owner, best, 2, st.damage * 0.6 * boost.damage);
       st.lastFireAt = w.time;
       st.nextAction = w.time + 1 / haste;
       return;
     }
-    w.fireProjectile(e, best, st.damage * boost.damage * vs, siege ? 30 : def.projectile?.speed ?? 20, false, siege ? "ballista" : "bolt", siege ? 1.2 : 3.2, true, undefined, best.hero && st.heroSlow ? { slowMul: st.heroSlow, slowSeconds: 1 } : undefined);
+    w.fireProjectile(
+      e,
+      best,
+      st.damage * boost.damage * vs,
+      siege ? 30 : (def.projectile?.speed ?? 20),
+      false,
+      siege ? "ballista" : "bolt",
+      siege ? 1.2 : 3.2,
+      true,
+      undefined,
+      best.hero && st.heroSlow ? { slowMul: st.heroSlow, slowSeconds: 1 } : undefined,
+    );
     st.lastFireAt = w.time;
     feed();
-    st.nextAction = w.time + (siege ? siege.cooldown : def.cooldown ?? 1) / haste;
+    st.nextAction = w.time + (siege ? siege.cooldown : (def.cooldown ?? 1)) / haste;
     return;
   }
 
@@ -349,21 +419,52 @@ export function updateStructure(w: World, e: Entity): void {
       st.nextAction = w.time + 0.2;
       return;
     }
-    w.emit({ type: "pulse", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, radius: st.range * boost.range, team: e.team, style: spec?.id });
+    w.emit({
+      type: "pulse",
+      x: e.transform.pos.x,
+      y: e.transform.y,
+      z: e.transform.pos.z,
+      radius: st.range * boost.range,
+      team: e.team,
+      style: spec?.id,
+    });
     const px = e.transform.pos.x;
     const pz = e.transform.pos.z;
     for (const o of targets) {
       const vs = def.vs?.[w.classOf(o)] ?? 1;
       const dmg = st.damage * boost.damage * vs * cm;
       if (spec?.id === "frost") {
-        w.damage(e, o, dmg, o.hero ? { slowMul: spec.heroSlow ?? 0.35, slowSeconds: spec.heroSlowSeconds ?? 1.5 } : { stun: spec.freeze ?? 1, slowMul: 0.5, slowSeconds: (spec.freeze ?? 1) + 1 });
+        w.damage(
+          e,
+          o,
+          dmg,
+          o.hero
+            ? { slowMul: spec.heroSlow ?? 0.35, slowSeconds: spec.heroSlowSeconds ?? 1.5 }
+            : { stun: spec.freeze ?? 1, slowMul: 0.5, slowSeconds: (spec.freeze ?? 1) + 1 },
+        );
       } else if (spec?.id === "storm") {
-        w.damage(e, o, dmg, { fromX: px, fromZ: pz, knockback: (spec.knockback ?? 5) * Math.min(1, vs), stun: spec.stun ?? 0.5, big: true });
+        w.damage(e, o, dmg, {
+          fromX: px,
+          fromZ: pz,
+          knockback: (spec.knockback ?? 5) * Math.min(1, vs),
+          stun: spec.stun ?? 0.5,
+          big: true,
+        });
       } else if (spec?.id === "well") {
-        w.damage(e, o, dmg, { fromX: px, fromZ: pz, pull: spec.pull ?? 5, slowMul: spec.slow ?? 0.35, slowSeconds: (spec.cooldown ?? 2) + 0.4 });
+        w.damage(e, o, dmg, {
+          fromX: px,
+          fromZ: pz,
+          pull: spec.pull ?? 5,
+          slowMul: spec.slow ?? 0.35,
+          slowSeconds: (spec.cooldown ?? 2) + 0.4,
+        });
       } else {
         const slow = 1 - Math.min(0.85, (1 - (def.slowMul ?? 0.5)) * Math.min(1, vs) * cm);
-        w.damage(e, o, dmg, { knockback: (def.knockback ?? 3) * Math.min(1, vs), slowMul: slow, slowSeconds: def.slowSeconds });
+        w.damage(e, o, dmg, {
+          knockback: (def.knockback ?? 3) * Math.min(1, vs),
+          slowMul: slow,
+          slowSeconds: def.slowSeconds,
+        });
       }
     }
     st.lastFireAt = w.time;
@@ -374,7 +475,7 @@ export function updateStructure(w: World, e: Entity): void {
 
   if (st.type === "support") {
     const cd = def.cooldown ?? 0.5;
-    const heal = (def.heal ?? 10) * (st.level > 1 ? def.upgrade.heal ?? 1 : 1) * cd;
+    const heal = (def.heal ?? 10) * (st.level > 1 ? (def.upgrade.heal ?? 1) : 1) * cd;
     let any = false;
     for (const o of w.entities) {
       if (!o.alive || o.team !== e.team || o.kind === "structure") continue;
@@ -384,13 +485,21 @@ export function updateStructure(w: World, e: Entity): void {
     }
     if (any) {
       st.lastFireAt = w.time;
-      if (w.tick % 30 < 15) w.emit({ type: "heal", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team });
+      if (w.tick % 30 < 15)
+        w.emit({ type: "heal", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team });
     }
     st.nextAction = w.time + cd;
   }
 }
 
-function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost: number, cands: { o: Entity; score: number }[]): boolean {
+function towerSpecFire(
+  w: World,
+  e: Entity,
+  best: Entity,
+  spec: TowerSpec,
+  boost: number,
+  cands: { o: Entity; score: number }[],
+): boolean {
   const def = w.data.structures.types[e.structure!.type as StructureType];
   const st = e.structure!;
   const vsOf = (o: Entity) => def.vs?.[w.classOf(o)] ?? 1;
@@ -421,12 +530,30 @@ function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost
       if (Math.abs(ox * uz - oz * ux) > (spec.pierceWidth ?? 1) + o.radius) continue;
       w.damage(e, o, st.damage * boost * Math.max(0.8, vsOf(o)) * 0.75, { fromX: sx, fromZ: sz, knockback: 2 });
     }
-    w.emit({ type: "pulse", x: sx + ux * reach, y: e.transform.y, z: sz + uz * reach, radius: 0, team: e.team, style: "pierce" });
+    w.emit({
+      type: "pulse",
+      x: sx + ux * reach,
+      y: e.transform.y,
+      z: sz + uz * reach,
+      radius: 0,
+      team: e.team,
+      style: "pierce",
+    });
     return true;
   }
   if (spec.id === "firepot") {
     const r = spec.splash ?? 2.5;
-    w.fireAtPoint(e, best.transform.pos.x, best.transform.pos.z, 14, "firepot", 3.4, { radius: r, damage: st.damage * boost * 1.1, slowMul: 0.8, slowSeconds: 0.8 }, true, { radius: spec.burnRadius ?? r, dps: spec.burnDps ?? 30, seconds: spec.burnSeconds ?? 3 });
+    w.fireAtPoint(
+      e,
+      best.transform.pos.x,
+      best.transform.pos.z,
+      14,
+      "firepot",
+      3.4,
+      { radius: r, damage: st.damage * boost * 1.1, slowMul: 0.8, slowSeconds: 0.8 },
+      true,
+      { radius: spec.burnRadius ?? r, dps: spec.burnDps ?? 30, seconds: spec.burnSeconds ?? 3 },
+    );
     return true;
   }
   if (spec.id === "volley") {
@@ -438,7 +565,8 @@ function towerSpecFire(w: World, e: Entity, best: Entity, spec: TowerSpec, boost
       picks.push(o);
     }
     while (picks.length < (spec.targets ?? 3)) picks.push(best);
-    for (const o of picks) w.fireProjectile(e, o, st.damage * boost * vsOf(o), 28, false, "arrow", 3.4, true, undefined, slow(o));
+    for (const o of picks)
+      w.fireProjectile(e, o, st.damage * boost * vsOf(o), 28, false, "arrow", 3.4, true, undefined, slow(o));
   }
   return true;
 }

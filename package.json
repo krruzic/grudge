@@ -13,7 +13,9 @@
     "sim": "node --experimental-transform-types --no-warnings tools/sim.ts",
     "release": "tsc --noEmit && vite build --outDir release --emptyOutDir && vite preview --outDir release --port 5200 --strictPort --host",
     "online": "node tools/online.mjs",
-    "serve": "node --no-warnings tools/server.ts"
+    "serve": "node --no-warnings tools/server.ts",
+    "determinism": "node --experimental-transform-types --no-warnings tools/determinism.ts",
+    "format": "prettier --write \"src/**/*.ts\" \"tools/**/*.{ts,mjs}\""
   },
   "dependencies": {
     "three": "^0.186.1",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@types/three": "^0.186.0",
     "@types/ws": "^8.18.2",
+    "prettier": "^3.9.9",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"
   }

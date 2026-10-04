@@ -11,7 +11,13 @@ const opt = (name: string, def: string) => {
   return i >= 0 ? args[i + 1] : def;
 };
 const json = (p: string) => JSON.parse(readFileSync(p, "utf8"));
-const data: GameData = { talents: json("data/talents.json"), heroes: json("data/heroes.json"), units: json("data/units.json"), structures: json("data/structures.json"), match: json("data/match.json") };
+const data: GameData = {
+  talents: json("data/talents.json"),
+  heroes: json("data/heroes.json"),
+  units: json("data/units.json"),
+  structures: json("data/structures.json"),
+  match: json("data/match.json"),
+};
 const map = json(`data/maps/${opt("map", "crossing")}.json`) as MapData;
 const human = opt("human", "bot");
 const linked = !args.includes("--unlinked");
@@ -31,15 +37,30 @@ for (let seed = 1; seed <= n; seed++) {
       const me = w.heroForPlayer(0)!;
       const c = w.core(0)!.transform.pos;
       const t = w.time % 20 < 10 ? { x: c.x + 6, z: c.z + 4 } : { x: c.x + 3, z: c.z - 5 };
-      const dx = t.x - me.transform.pos.x, dz = t.z - me.transform.pos.z, d = Math.hypot(dx, dz) || 1;
-      cmds[0] = { moveX: d > 1 ? dx / d : 0, moveZ: d > 1 ? dz / d : 0, attack: w.enemiesNear(me, 2.5).length > 0, build: cmds[0].build, call: cmds[0].call, learn: cmds[0].learn };
+      const dx = t.x - me.transform.pos.x,
+        dz = t.z - me.transform.pos.z,
+        d = Math.hypot(dx, dz) || 1;
+      cmds[0] = {
+        moveX: d > 1 ? dx / d : 0,
+        moveZ: d > 1 ? dz / d : 0,
+        attack: w.enemiesNear(me, 2.5).length > 0,
+        build: cmds[0].build,
+        call: cmds[0].call,
+        learn: cmds[0].learn,
+      };
     }
     w.step(cmds);
-    for (const e of w.events) if (e.type === "notice" && e.team === 0 && e.text.includes(":")) roles.push(`${Math.round(w.time)}s ${e.text}`);
+    for (const e of w.events)
+      if (e.type === "notice" && e.team === 0 && e.text.includes(":")) roles.push(`${Math.round(w.time)}s ${e.text}`);
     w.events.length = 0;
-    if (bots[2].role !== last) { last = bots[2].role; }
+    if (bots[2].role !== last) {
+      last = bots[2].role;
+    }
   }
   if (w.match.winner === 0) wins++;
-  console.log(`seed ${seed} winner ${w.match.winner} ${Math.round(w.time)}s role=${bots[2].role}`, roles.slice(0, 8).join(" | "));
+  console.log(
+    `seed ${seed} winner ${w.match.winner} ${Math.round(w.time)}s role=${bots[2].role}`,
+    roles.slice(0, 8).join(" | "),
+  );
 }
 console.log("team0 wins", wins, "/", n);

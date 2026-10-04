@@ -176,7 +176,11 @@ class Batch {
     this.geo.instanceCount = n;
     this.mesh.visible = n > 0;
     if (n === 0) return;
-    for (const [name, size] of [["iPos", 3], ["iSize", 4], ["iColor", 4]] as const) {
+    for (const [name, size] of [
+      ["iPos", 3],
+      ["iSize", 4],
+      ["iColor", 4],
+    ] as const) {
       const a = this.geo.getAttribute(name) as THREE.InstancedBufferAttribute;
       a.clearUpdateRanges();
       a.addUpdateRange(0, n * size);
@@ -222,12 +226,40 @@ export class Particles {
     return s;
   }
 
-  spawn(tex: THREE.Texture, color: THREE.ColorRepresentation, additive: boolean, depthTest = true, order = 0): Particle | null {
+  spawn(
+    tex: THREE.Texture,
+    color: THREE.ColorRepresentation,
+    additive: boolean,
+    depthTest = true,
+    order = 0,
+  ): Particle | null {
     if (this.count >= this.budget) return null;
     tmp.set(color);
     const p: Particle = {
-      x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, sx: 1, sy: 1, rot: 0, spin: 0, r: tmp.r, g: tmp.g, b: tmp.b, a: 1,
-      age: 0, life: 1, size0: 1, grow: 1, op: 1, fadeIn: 0, gravity: 0, drag: 0, floor: -1e9, stretch: 1,
+      x: 0,
+      y: 0,
+      z: 0,
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      sx: 1,
+      sy: 1,
+      rot: 0,
+      spin: 0,
+      r: tmp.r,
+      g: tmp.g,
+      b: tmp.b,
+      a: 1,
+      age: 0,
+      life: 1,
+      size0: 1,
+      grow: 1,
+      op: 1,
+      fadeIn: 0,
+      gravity: 0,
+      drag: 0,
+      floor: -1e9,
+      stretch: 1,
     };
     this.slot(tex, additive, depthTest, order).list.push(p);
     this.count++;

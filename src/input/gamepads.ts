@@ -2,8 +2,7 @@ import { GcAdapter } from "./gcadapter";
 import { PRO2_PRODUCT, PRO2_VENDOR, ProCon2 } from "./procon2";
 import { ProCon2Waker } from "./procon2wake";
 export type ButtonAction =
-  | "a" | "b" | "x" | "y" | "z" | "r" | "block" | "dodge" | "start"
-  | "up" | "down" | "left" | "right";
+  "a" | "b" | "x" | "y" | "z" | "r" | "block" | "dodge" | "start" | "up" | "down" | "left" | "right";
 
 interface AxisRef {
   axis: number;
@@ -55,7 +54,19 @@ export interface PadState {
 }
 
 const ACTIONS: ButtonAction[] = [
-  "a", "b", "x", "y", "z", "r", "block", "dodge", "start", "up", "down", "left", "right",
+  "a",
+  "b",
+  "x",
+  "y",
+  "z",
+  "r",
+  "block",
+  "dodge",
+  "start",
+  "up",
+  "down",
+  "left",
+  "right",
 ];
 
 function emptyButtons(): Record<ButtonAction, boolean> {
@@ -64,9 +75,15 @@ function emptyButtons(): Record<ButtonAction, boolean> {
 
 function emptyState(): PadState {
   return {
-    connected: false, profile: "", padId: "",
-    stickX: 0, stickY: 0, cX: 0, cY: 0,
-    held: emptyButtons(), pressed: emptyButtons(),
+    connected: false,
+    profile: "",
+    padId: "",
+    stickX: 0,
+    stickY: 0,
+    cX: 0,
+    cY: 0,
+    held: emptyButtons(),
+    pressed: emptyButtons(),
   };
 }
 
@@ -89,13 +106,18 @@ export class Gamepads {
   private keyTouched = false;
   private mouse = { left: false, right: false, x: 0, y: 0, ox: 0, oy: 0 };
 
-  constructor(private config: InputConfig, playerCount: number) {
+  constructor(
+    private config: InputConfig,
+    playerCount: number,
+  ) {
     this.players = Array.from({ length: playerCount }, emptyState);
     this.slots = Array.from({ length: playerCount }, () => null);
     const kb = config.keyboard;
     if (!kb) return;
     const mapped = new Set<string>([
-      ...Object.values(kb.stick).flat(), ...Object.values(kb.cstick).flat(), ...Object.values(kb.buttons).flat() as string[],
+      ...Object.values(kb.stick).flat(),
+      ...Object.values(kb.cstick).flat(),
+      ...(Object.values(kb.buttons).flat() as string[]),
     ]);
     window.addEventListener("keydown", (e) => {
       if (e.code === "KeyG") void this.requestHid();
@@ -120,8 +142,14 @@ export class Gamepads {
     window.addEventListener("mousedown", (e) => {
       this.mouse.x = this.mouse.ox = e.clientX;
       this.mouse.y = this.mouse.oy = e.clientY;
-      if (e.button === 0) { this.mouse.left = true; this.tapped.add("Mouse0"); }
-      if (e.button === 2) { this.mouse.right = true; this.tapped.add("Mouse2"); }
+      if (e.button === 0) {
+        this.mouse.left = true;
+        this.tapped.add("Mouse0");
+      }
+      if (e.button === 2) {
+        this.mouse.right = true;
+        this.tapped.add("Mouse2");
+      }
       if (this.mouseClaims || this.slots.includes(KEYBOARD)) {
         if (!this.slots.includes(KEYBOARD)) this.kbByMouse = true;
         this.keyTouched = true;
@@ -135,10 +163,19 @@ export class Gamepads {
   }
 
   async requestHid(): Promise<void> {
-    const hid = (navigator as unknown as { hid?: { requestDevice(o: unknown): Promise<{ vendorId: number; productId: number }[]> } }).hid;
+    const hid = (
+      navigator as unknown as {
+        hid?: { requestDevice(o: unknown): Promise<{ vendorId: number; productId: number }[]> };
+      }
+    ).hid;
     if (!hid) return;
     try {
-      const ds = await hid.requestDevice({ filters: [{ vendorId: 0x057e, productId: 0x0337 }, { vendorId: PRO2_VENDOR, productId: PRO2_PRODUCT }] });
+      const ds = await hid.requestDevice({
+        filters: [
+          { vendorId: 0x057e, productId: 0x0337 },
+          { vendorId: PRO2_VENDOR, productId: PRO2_PRODUCT },
+        ],
+      });
       for (const d of ds) {
         if (ProCon2.matches(d as never)) await this.pro.open(d as never);
         else if (!this.gc.connected) await this.gc.adopt(d as never);
@@ -209,7 +246,10 @@ export class Gamepads {
       let x = (this.keyDown(d.right) ? 1 : 0) - (this.keyDown(d.left) ? 1 : 0);
       let y = (this.keyDown(d.down) ? 1 : 0) - (this.keyDown(d.up) ? 1 : 0);
       const m = Math.hypot(x, y);
-      if (m > 1) { x /= m; y /= m; }
+      if (m > 1) {
+        x /= m;
+        y /= m;
+      }
       return [x, y];
     };
     [st.stickX, st.stickY] = axis(kb.stick);
@@ -302,7 +342,8 @@ export class Gamepads {
     const found =
       this.config.profiles.find((p) => p.match.some((m) => id.includes(m.toLowerCase()))) ??
       this.config.profiles[this.config.profiles.length - 1];
-    if (found.id === "gc_adapter_uinput" && pad.mapping === "standard") return this.config.profiles.find((p) => p.id === "standard") ?? found;
+    if (found.id === "gc_adapter_uinput" && pad.mapping === "standard")
+      return this.config.profiles.find((p) => p.id === "standard") ?? found;
     return found;
   }
 
@@ -418,7 +459,10 @@ export class Gamepads {
     for (const pad of pads) {
       if (!pad) continue;
       const axes = pad.axes.map((a, i) => `${i}:${a.toFixed(2)}`).join(" ");
-      const btns = pad.buttons.map((b, i) => (b.pressed ? i : null)).filter((b) => b !== null).join(",");
+      const btns = pad.buttons
+        .map((b, i) => (b.pressed ? i : null))
+        .filter((b) => b !== null)
+        .join(",");
       lines.push(`[${pad.index}] ${pad.mapping || "raw"}  axes ${axes}  btns ${btns}`);
     }
     return lines.join("\n");

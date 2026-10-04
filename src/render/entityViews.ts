@@ -94,7 +94,17 @@ void main() {
     this.n = 0;
   }
 
-  private quad(x: number, y: number, z: number, x0: number, w: number, h: number, c: THREE.Color, a: number, drop = 0): void {
+  private quad(
+    x: number,
+    y: number,
+    z: number,
+    x0: number,
+    w: number,
+    h: number,
+    c: THREE.Color,
+    a: number,
+    drop = 0,
+  ): void {
     if (this.n >= BAR_MAX) return;
     const i = this.n++;
     this.center.array[i * 3] = x;
@@ -199,16 +209,66 @@ interface View {
 
 const red = new THREE.Color(1, 0.15, 0.1);
 
-const ONE_SHOT = new Set(["attack_a", "attack_b", "attack_c", "slam", "cast", "shoot", "hit", "death", "dodge", "attack", "throw", "volley", "heartseeker"]);
+const ONE_SHOT = new Set([
+  "attack_a",
+  "attack_b",
+  "attack_c",
+  "slam",
+  "cast",
+  "shoot",
+  "hit",
+  "death",
+  "dodge",
+  "attack",
+  "throw",
+  "volley",
+  "heartseeker",
+]);
 
-const ANIM_FALLBACK: Record<string, string> = { throw: "attack_b", volley: "shoot", heartseeker: "shoot", shoot: "cast" };
+const ANIM_FALLBACK: Record<string, string> = {
+  throw: "attack_b",
+  volley: "shoot",
+  heartseeker: "shoot",
+  shoot: "cast",
+};
 
 const KIND_ANIM: Record<string, string> = {
-  pip: "cast", rake: "cast", volley: "volley", heartseeker: "heartseeker", keg: "throw", powderkeg: "throw", brewfest: "slam", kegrocket: "block",
-  slam: "slam", quake: "slam", leap: "slam", warcry: "cast", summon: "cast", gravewalk: "cast", hex: "cast", repair: "cast",
-  turret: "cast", ramp: "cast", wall: "cast", zone: "cast", stealth: "cast", trap: "shoot", reach: "attack_b", shoot: "shoot",
-  banner: "cast", rally: "cast", works: "cast", ballista: "cast", whirl: "attack_c",
-  shove: "attack_a", throw: "attack_b", wrench: "attack_b", dash: "attack_b", flurry: "attack_b", parry: "block", none: "idle",
+  pip: "cast",
+  rake: "cast",
+  volley: "volley",
+  heartseeker: "heartseeker",
+  keg: "throw",
+  powderkeg: "throw",
+  brewfest: "slam",
+  kegrocket: "block",
+  slam: "slam",
+  quake: "slam",
+  leap: "slam",
+  warcry: "cast",
+  summon: "cast",
+  gravewalk: "cast",
+  hex: "cast",
+  repair: "cast",
+  turret: "cast",
+  ramp: "cast",
+  wall: "cast",
+  zone: "cast",
+  stealth: "cast",
+  trap: "shoot",
+  reach: "attack_b",
+  shoot: "shoot",
+  banner: "cast",
+  rally: "cast",
+  works: "cast",
+  ballista: "cast",
+  whirl: "attack_c",
+  shove: "attack_a",
+  throw: "attack_b",
+  wrench: "attack_b",
+  dash: "attack_b",
+  flurry: "attack_b",
+  parry: "block",
+  none: "idle",
 };
 
 const white = new THREE.Color(1, 1, 1);
@@ -260,7 +320,14 @@ function hintTex(cells: [string, string][]): THREE.CanvasTexture {
   return t;
 }
 const HINTS = {
-  build: new THREE.SpriteMaterial({ map: hintTex([["X", outpostIcon], ["Y", towerIcon]]), depthTest: false, transparent: true }),
+  build: new THREE.SpriteMaterial({
+    map: hintTex([
+      ["X", outpostIcon],
+      ["Y", towerIcon],
+    ]),
+    depthTest: false,
+    transparent: true,
+  }),
   upgrade: new THREE.SpriteMaterial({ map: hintTex([["X", upgradeIcon]]), depthTest: false, transparent: true }),
   shop: new THREE.SpriteMaterial({ map: hintTex([["Y", shopIcon]]), depthTest: false, transparent: true }),
 };
@@ -321,108 +388,266 @@ const hexShieldTex = (() => {
 })();
 const domeGeo = new THREE.IcosahedronGeometry(1, 1);
 domeGeo.userData.model = true;
-const gearMat = new THREE.SpriteMaterial({ depthTest: false, map: (() => {
-  const cv = document.createElement("canvas");
-  cv.width = cv.height = 128;
-  const c = cv.getContext("2d")!;
-  c.scale(4, 4);
-  c.beginPath();
-  for (let k = 0; k < 16; k++) {
-    const a = (k / 16) * Math.PI * 2;
-    const r = k % 2 ? 11 : 15;
-    c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r);
-  }
-  c.closePath();
-  c.fillStyle = "#e8b840"; c.fill();
-  c.strokeStyle = "#3a2408"; c.lineWidth = 2; c.stroke();
-  c.beginPath(); c.arc(16, 16, 5, 0, Math.PI * 2); c.fillStyle = "#3a2408"; c.fill();
-  const t = new THREE.CanvasTexture(cv);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-})() });
-
-const MARKS: Record<string, THREE.SpriteMaterial> = {
-  bleed: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.moveTo(16, 3); c.quadraticCurveTo(27, 18, 16, 28); c.quadraticCurveTo(5, 18, 16, 3);
-    c.fillStyle = "#c01818"; c.fill();
-    c.strokeStyle = "#2a0404"; c.lineWidth = 2.5; c.stroke();
-    c.fillStyle = "#ff8080"; c.fillRect(12, 16, 3, 5);
-  }) }),
-  mark: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.arc(16, 16, 11, 0, Math.PI * 2);
-    c.strokeStyle = "#1a0404"; c.lineWidth = 5; c.stroke();
-    c.strokeStyle = "#ff3a2a"; c.lineWidth = 2.5; c.stroke();
-    c.beginPath(); c.moveTo(16, 1); c.lineTo(16, 9); c.moveTo(16, 23); c.lineTo(16, 31); c.moveTo(1, 16); c.lineTo(9, 16); c.moveTo(23, 16); c.lineTo(31, 16);
-    c.strokeStyle = "#1a0404"; c.lineWidth = 4; c.stroke();
-    c.strokeStyle = "#ffd0c0"; c.lineWidth = 2; c.stroke();
-    c.beginPath(); c.arc(16, 16, 3, 0, Math.PI * 2); c.fillStyle = "#ff3a2a"; c.fill();
-  }) }),
-  armor: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.moveTo(16, 3); c.lineTo(28, 8); c.lineTo(26, 20); c.lineTo(16, 29); c.lineTo(6, 20); c.lineTo(4, 8); c.closePath();
-    c.fillStyle = "#8a8478"; c.fill();
-    c.strokeStyle = "#1a1408"; c.lineWidth = 2.5; c.stroke();
-    c.beginPath(); c.moveTo(10, 11); c.lineTo(15, 17); c.lineTo(12, 22); c.moveTo(19, 9); c.lineTo(21, 15);
-    c.strokeStyle = "#3a3428"; c.lineWidth = 1.5; c.stroke();
-  }) }),
-  stun: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    for (const [x, y, r] of [[8, 14, 6], [24, 12, 6], [16, 24, 5]]) {
-      c.beginPath();
-      for (let k = 0; k < 10; k++) {
-        const a = (k / 10) * Math.PI * 2 - Math.PI / 2;
-        const rr = k % 2 ? r * 0.45 : r;
-        c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-      }
-      c.closePath();
-      c.fillStyle = "#ffe040"; c.fill();
-      c.strokeStyle = "#3a2408"; c.lineWidth = 2; c.stroke();
-    }
-  }) }),
-  buff: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.arc(16, 16, 13, 0, Math.PI * 2);
-    c.fillStyle = "#3a0806"; c.fill();
-    c.strokeStyle = "#ff6a2a"; c.lineWidth = 2.5; c.stroke();
-    c.beginPath(); c.moveTo(16, 5); c.lineTo(23, 14); c.lineTo(19, 14); c.lineTo(19, 26); c.lineTo(13, 26); c.lineTo(13, 14); c.lineTo(9, 14); c.closePath();
-    c.fillStyle = "#ffb040"; c.fill();
-    c.strokeStyle = "#3a0806"; c.lineWidth = 1.5; c.stroke();
-  }) }),
-  slow: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.arc(16, 16, 13, 0, Math.PI * 2);
-    c.fillStyle = "#081a2a"; c.fill();
-    c.strokeStyle = "#60c0ff"; c.lineWidth = 2.5; c.stroke();
-    c.beginPath(); c.moveTo(16, 26); c.lineTo(23, 17); c.lineTo(19, 17); c.lineTo(19, 6); c.lineTo(13, 6); c.lineTo(13, 17); c.lineTo(9, 17); c.closePath();
-    c.fillStyle = "#a8e0ff"; c.fill();
-    c.strokeStyle = "#081a2a"; c.lineWidth = 1.5; c.stroke();
-  }) }),
-  guard: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.moveTo(16, 3); c.lineTo(28, 8); c.lineTo(26, 20); c.lineTo(16, 29); c.lineTo(6, 20); c.lineTo(4, 8); c.closePath();
-    c.fillStyle = "#d8d0b8"; c.fill();
-    c.strokeStyle = "#1a1408"; c.lineWidth = 2.5; c.stroke();
-    c.beginPath(); c.moveTo(16, 7); c.lineTo(16, 25); c.moveTo(8, 12); c.lineTo(24, 12);
-    c.strokeStyle = "#b02010"; c.lineWidth = 3; c.stroke();
-  }) }),
-  hex: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.arc(16, 16, 12, 0, Math.PI * 2);
-    c.fillStyle = "#1a0822"; c.fill();
-    c.strokeStyle = "#c060ff"; c.lineWidth = 3; c.stroke();
-    c.beginPath(); c.moveTo(16, 7); c.lineTo(16, 25); c.moveTo(9, 12); c.lineTo(23, 20); c.moveTo(23, 12); c.lineTo(9, 20);
-    c.strokeStyle = "#e0a8ff"; c.lineWidth = 2.5; c.stroke();
-  }) }),
-  cowed: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
-    c.beginPath(); c.moveTo(6, 8); c.lineTo(26, 8); c.lineTo(16, 26); c.closePath();
-    c.fillStyle = "#9a9aa2"; c.fill();
-    c.strokeStyle = "#101014"; c.lineWidth = 3; c.stroke();
-  }) }),
-  opening: new THREE.SpriteMaterial({ depthTest: false, map: markTex((c) => {
+const gearMat = new THREE.SpriteMaterial({
+  depthTest: false,
+  map: (() => {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 128;
+    const c = cv.getContext("2d")!;
+    c.scale(4, 4);
     c.beginPath();
-    for (let k = 0; k < 8; k++) {
-      const a = (k / 8) * Math.PI * 2 - Math.PI / 2;
-      const r = k % 2 ? 5 : 13;
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2;
+      const r = k % 2 ? 11 : 15;
       c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r);
     }
     c.closePath();
-    c.fillStyle = "#ffd040"; c.fill();
-    c.strokeStyle = "#3a2008"; c.lineWidth = 2.5; c.stroke();
-  }) }),
+    c.fillStyle = "#e8b840";
+    c.fill();
+    c.strokeStyle = "#3a2408";
+    c.lineWidth = 2;
+    c.stroke();
+    c.beginPath();
+    c.arc(16, 16, 5, 0, Math.PI * 2);
+    c.fillStyle = "#3a2408";
+    c.fill();
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })(),
+});
+
+const MARKS: Record<string, THREE.SpriteMaterial> = {
+  bleed: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.moveTo(16, 3);
+      c.quadraticCurveTo(27, 18, 16, 28);
+      c.quadraticCurveTo(5, 18, 16, 3);
+      c.fillStyle = "#c01818";
+      c.fill();
+      c.strokeStyle = "#2a0404";
+      c.lineWidth = 2.5;
+      c.stroke();
+      c.fillStyle = "#ff8080";
+      c.fillRect(12, 16, 3, 5);
+    }),
+  }),
+  mark: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.arc(16, 16, 11, 0, Math.PI * 2);
+      c.strokeStyle = "#1a0404";
+      c.lineWidth = 5;
+      c.stroke();
+      c.strokeStyle = "#ff3a2a";
+      c.lineWidth = 2.5;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(16, 1);
+      c.lineTo(16, 9);
+      c.moveTo(16, 23);
+      c.lineTo(16, 31);
+      c.moveTo(1, 16);
+      c.lineTo(9, 16);
+      c.moveTo(23, 16);
+      c.lineTo(31, 16);
+      c.strokeStyle = "#1a0404";
+      c.lineWidth = 4;
+      c.stroke();
+      c.strokeStyle = "#ffd0c0";
+      c.lineWidth = 2;
+      c.stroke();
+      c.beginPath();
+      c.arc(16, 16, 3, 0, Math.PI * 2);
+      c.fillStyle = "#ff3a2a";
+      c.fill();
+    }),
+  }),
+  armor: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.moveTo(16, 3);
+      c.lineTo(28, 8);
+      c.lineTo(26, 20);
+      c.lineTo(16, 29);
+      c.lineTo(6, 20);
+      c.lineTo(4, 8);
+      c.closePath();
+      c.fillStyle = "#8a8478";
+      c.fill();
+      c.strokeStyle = "#1a1408";
+      c.lineWidth = 2.5;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(10, 11);
+      c.lineTo(15, 17);
+      c.lineTo(12, 22);
+      c.moveTo(19, 9);
+      c.lineTo(21, 15);
+      c.strokeStyle = "#3a3428";
+      c.lineWidth = 1.5;
+      c.stroke();
+    }),
+  }),
+  stun: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      for (const [x, y, r] of [
+        [8, 14, 6],
+        [24, 12, 6],
+        [16, 24, 5],
+      ]) {
+        c.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const a = (k / 10) * Math.PI * 2 - Math.PI / 2;
+          const rr = k % 2 ? r * 0.45 : r;
+          c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+        }
+        c.closePath();
+        c.fillStyle = "#ffe040";
+        c.fill();
+        c.strokeStyle = "#3a2408";
+        c.lineWidth = 2;
+        c.stroke();
+      }
+    }),
+  }),
+  buff: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.arc(16, 16, 13, 0, Math.PI * 2);
+      c.fillStyle = "#3a0806";
+      c.fill();
+      c.strokeStyle = "#ff6a2a";
+      c.lineWidth = 2.5;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(16, 5);
+      c.lineTo(23, 14);
+      c.lineTo(19, 14);
+      c.lineTo(19, 26);
+      c.lineTo(13, 26);
+      c.lineTo(13, 14);
+      c.lineTo(9, 14);
+      c.closePath();
+      c.fillStyle = "#ffb040";
+      c.fill();
+      c.strokeStyle = "#3a0806";
+      c.lineWidth = 1.5;
+      c.stroke();
+    }),
+  }),
+  slow: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.arc(16, 16, 13, 0, Math.PI * 2);
+      c.fillStyle = "#081a2a";
+      c.fill();
+      c.strokeStyle = "#60c0ff";
+      c.lineWidth = 2.5;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(16, 26);
+      c.lineTo(23, 17);
+      c.lineTo(19, 17);
+      c.lineTo(19, 6);
+      c.lineTo(13, 6);
+      c.lineTo(13, 17);
+      c.lineTo(9, 17);
+      c.closePath();
+      c.fillStyle = "#a8e0ff";
+      c.fill();
+      c.strokeStyle = "#081a2a";
+      c.lineWidth = 1.5;
+      c.stroke();
+    }),
+  }),
+  guard: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.moveTo(16, 3);
+      c.lineTo(28, 8);
+      c.lineTo(26, 20);
+      c.lineTo(16, 29);
+      c.lineTo(6, 20);
+      c.lineTo(4, 8);
+      c.closePath();
+      c.fillStyle = "#d8d0b8";
+      c.fill();
+      c.strokeStyle = "#1a1408";
+      c.lineWidth = 2.5;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(16, 7);
+      c.lineTo(16, 25);
+      c.moveTo(8, 12);
+      c.lineTo(24, 12);
+      c.strokeStyle = "#b02010";
+      c.lineWidth = 3;
+      c.stroke();
+    }),
+  }),
+  hex: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.arc(16, 16, 12, 0, Math.PI * 2);
+      c.fillStyle = "#1a0822";
+      c.fill();
+      c.strokeStyle = "#c060ff";
+      c.lineWidth = 3;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(16, 7);
+      c.lineTo(16, 25);
+      c.moveTo(9, 12);
+      c.lineTo(23, 20);
+      c.moveTo(23, 12);
+      c.lineTo(9, 20);
+      c.strokeStyle = "#e0a8ff";
+      c.lineWidth = 2.5;
+      c.stroke();
+    }),
+  }),
+  cowed: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      c.moveTo(6, 8);
+      c.lineTo(26, 8);
+      c.lineTo(16, 26);
+      c.closePath();
+      c.fillStyle = "#9a9aa2";
+      c.fill();
+      c.strokeStyle = "#101014";
+      c.lineWidth = 3;
+      c.stroke();
+    }),
+  }),
+  opening: new THREE.SpriteMaterial({
+    depthTest: false,
+    map: markTex((c) => {
+      c.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 - Math.PI / 2;
+        const r = k % 2 ? 5 : 13;
+        c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r);
+      }
+      c.closePath();
+      c.fillStyle = "#ffd040";
+      c.fill();
+      c.strokeStyle = "#3a2008";
+      c.lineWidth = 2.5;
+      c.stroke();
+    }),
+  }),
 };
 for (const m of [...Object.values(MARKS), gearMat]) SHARED_VIEW_MATS.add(m);
 
@@ -496,27 +721,32 @@ function silMat(team: number, skinned: boolean): THREE.MeshBasicMaterial {
   const key = `${team}|${skinned}`;
   let m = silMats.get(key);
   if (!m) {
-    m = clipBelowWater(new THREE.MeshBasicMaterial({
-      color: (silColors[team] ?? new THREE.Color(1, 1, 1)).clone().multiplyScalar(0.8),
-      transparent: true,
-      opacity: 0.5,
-      depthWrite: false,
-      depthFunc: THREE.GreaterDepth,
-      stencilWrite: true,
-      stencilRef: 1,
-      stencilFunc: THREE.NotEqualStencilFunc,
-      stencilFail: THREE.KeepStencilOp,
-      stencilZFail: THREE.KeepStencilOp,
-      stencilZPass: THREE.ReplaceStencilOp,
-      fog: false,
-    }));
+    m = clipBelowWater(
+      new THREE.MeshBasicMaterial({
+        color: (silColors[team] ?? new THREE.Color(1, 1, 1)).clone().multiplyScalar(0.8),
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        depthFunc: THREE.GreaterDepth,
+        stencilWrite: true,
+        stencilRef: 1,
+        stencilFunc: THREE.NotEqualStencilFunc,
+        stencilFail: THREE.KeepStencilOp,
+        stencilZFail: THREE.KeepStencilOp,
+        stencilZPass: THREE.ReplaceStencilOp,
+        fog: false,
+      }),
+    );
     silMats.set(key, m);
     SHARED_VIEW_MATS.add(m);
   }
   return m;
 }
 
-interface SilEntry { proxy: THREE.Mesh; src: THREE.Mesh }
+interface SilEntry {
+  proxy: THREE.Mesh;
+  src: THREE.Mesh;
+}
 export const silScene = new THREE.Scene();
 silScene.matrixWorldAutoUpdate = false;
 silScene.matrixAutoUpdate = false;
@@ -540,7 +770,8 @@ export function syncSilhouettes(scene: THREE.Object3D): void {
     proxy.visible = vis;
     if (!vis) continue;
     proxy.matrixWorld.copy(src.matrixWorld);
-    if (proxy instanceof THREE.SkinnedMesh && src instanceof THREE.SkinnedMesh) proxy.bindMatrixInverse.copy(src.bindMatrixInverse);
+    if (proxy instanceof THREE.SkinnedMesh && src instanceof THREE.SkinnedMesh)
+      proxy.bindMatrixInverse.copy(src.bindMatrixInverse);
   }
 }
 
@@ -550,7 +781,13 @@ function batchable(body: THREE.Object3D): THREE.SkinnedMesh | null {
     if (o instanceof THREE.Mesh) meshes.push(o);
   });
   const m = meshes[0];
-  if (meshes.length !== 1 || !(m instanceof THREE.SkinnedMesh) || Array.isArray(m.material) || m.material.name !== "merged") return null;
+  if (
+    meshes.length !== 1 ||
+    !(m instanceof THREE.SkinnedMesh) ||
+    Array.isArray(m.material) ||
+    m.material.name !== "merged"
+  )
+    return null;
   return m;
 }
 
@@ -574,7 +811,9 @@ export function markSilhouette(obj: THREE.Object3D, team: number): void {
   });
   for (const o of meshes) {
     const skinned = o instanceof THREE.SkinnedMesh;
-    const proxy = skinned ? new THREE.SkinnedMesh(o.geometry, silMat(team, true)) : new THREE.Mesh(o.geometry, silMat(team, false));
+    const proxy = skinned
+      ? new THREE.SkinnedMesh(o.geometry, silMat(team, true))
+      : new THREE.Mesh(o.geometry, silMat(team, false));
     if (proxy instanceof THREE.SkinnedMesh && o instanceof THREE.SkinnedMesh) proxy.bind(o.skeleton, o.bindMatrix);
     proxy.userData.silProxy = true;
     proxy.frustumCulled = o.frustumCulled;
@@ -599,7 +838,12 @@ export class EntityViews {
   private views = new Map<number, View>();
   private rings = new Map<number, THREE.Mesh>();
   private padMarkers: FxInst[] = [];
-  private padBatch = new FxBatch(new THREE.RingGeometry(1.7, 2.0, 24), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide }), false, true);
+  private padBatch = new FxBatch(
+    new THREE.RingGeometry(1.7, 2.0, 24),
+    new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide }),
+    false,
+    true,
+  );
   private padHints: THREE.Sprite[] = [];
   private shopHints: THREE.Sprite[] = [];
   humans: boolean[] = [];
@@ -696,7 +940,7 @@ export class EntityViews {
     this.corpses = [];
   }
 
-    private hidden: THREE.Object3D[] = [];
+  private hidden: THREE.Object3D[] = [];
   private sphere = new THREE.Sphere();
   private bars = new BarBatch();
   private batches = new UnitBatches();
@@ -719,7 +963,17 @@ export class EntityViews {
     if (!this.batches.root.parent) {
       this.padBatch.mesh.renderOrder = 3;
       this.footRings.renderOrder = 3;
-      this.extras.add(this.batches.root, this.statics.root, this.structBatch.root, this.bars.mesh, this.blobs, this.sprites.root, this.padBatch.mesh, this.footRings, this.foam);
+      this.extras.add(
+        this.batches.root,
+        this.statics.root,
+        this.structBatch.root,
+        this.bars.mesh,
+        this.blobs,
+        this.sprites.root,
+        this.padBatch.mesh,
+        this.footRings,
+        this.foam,
+      );
       silScene.add(this.batches.silRoot);
     }
     const held = this.viewHidden.slice();
@@ -774,7 +1028,10 @@ export class EntityViews {
       const f = Math.min(40, camera.position.distanceTo(anchor) / 16);
       hint.scale.set(base[0] * f, base[1] * f, 1);
       hint.center.set(0.5, 0.5);
-      hint.position.copy(anchor).addScaledVector(right, -(c0[0] - 0.5) * base[0]).addScaledVector(up, -(c0[1] - 0.5) * base[1]);
+      hint.position
+        .copy(anchor)
+        .addScaledVector(right, -(c0[0] - 0.5) * base[0])
+        .addScaledVector(up, -(c0[1] - 0.5) * base[1]);
       hint.updateMatrixWorld();
     }
     this.sprites.fill(camera);
@@ -848,7 +1105,8 @@ export class EntityViews {
 
   heroPoints(): THREE.Vector3[] {
     const out: THREE.Vector3[] = [];
-    for (const v of this.views.values()) if (v.kind === "hero" && v.framed !== false && v.seen) out.push(v.root.position.clone());
+    for (const v of this.views.values())
+      if (v.kind === "hero" && v.framed !== false && v.seen) out.push(v.root.position.clone());
     for (const e of this.world.entities) {
       const a = e.alive ? e.hero?.aim : null;
       if (a) out.push(new THREE.Vector3(a.x, this.world.groundY(a.x, a.z), a.z));
@@ -866,9 +1124,18 @@ export class EntityViews {
     const view: Partial<View> = {};
     if (e.hero) {
       const player = e.hero.player;
-      const pc = this.world.ffa ? team : this.playerColors[player] ?? team;
-      const twin = this.world.players.some((q) => q.team === e.team && q.player < player && q.heroType === e.hero!.type);
-      const inst = this.heroes.create(e.hero.type, team, `P${player + 1}`, pc, twin ? team.clone().lerp(pc, 0.7) : undefined, costumeOfPlayer(player));
+      const pc = this.world.ffa ? team : (this.playerColors[player] ?? team);
+      const twin = this.world.players.some(
+        (q) => q.team === e.team && q.player < player && q.heroType === e.hero!.type,
+      );
+      const inst = this.heroes.create(
+        e.hero.type,
+        team,
+        `P${player + 1}`,
+        pc,
+        twin ? team.clone().lerp(pc, 0.7) : undefined,
+        costumeOfPlayer(player),
+      );
       inst.root.scale.setScalar(this.heroScale);
       root.add(inst.root);
       body = inst.body;
@@ -894,7 +1161,14 @@ export class EntityViews {
       if (pipNodes.length) view.pipNodes = pipNodes;
       const bf = new THREE.Mesh(
         new THREE.RingGeometry(0.35, 0.75, 6),
-        new THREE.MeshBasicMaterial({ color: team.clone().lerp(white, 0.6), transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
+        new THREE.MeshBasicMaterial({
+          color: team.clone().lerp(white, 0.6),
+          transparent: true,
+          opacity: 0.5,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+        }),
       );
       bf.position.set(0, 1.0, 0.75);
       bf.visible = false;
@@ -919,7 +1193,9 @@ export class EntityViews {
       const skin = inst ? batchable(inst.body) : null;
       if (skin) view.batched = skin;
       else markSilhouette(g, e.team);
-      bar = e.neutral ? makeBar(2, team, 4.4) : makeBar(e.unit.type === "heavy" ? 1.1 : 0.8, team, e.unit.type === "heavy" ? 2.3 : 1.7);
+      bar = e.neutral
+        ? makeBar(2, team, 4.4)
+        : makeBar(e.unit.type === "heavy" ? 1.1 : 0.8, team, e.unit.type === "heavy" ? 2.3 : 1.7);
       bar.group.visible = !!e.neutral;
     } else {
       const st = e.structure!;
@@ -927,7 +1203,13 @@ export class EntityViews {
         body = this.structures.create("core", team);
         const sh = new THREE.Mesh(
           new THREE.SphereGeometry(3.0, 16, 10),
-          new THREE.MeshBasicMaterial({ color: team.clone().lerp(white, 0.4), transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }),
+          new THREE.MeshBasicMaterial({
+            color: team.clone().lerp(white, 0.4),
+            transparent: true,
+            opacity: 0.18,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+          }),
         );
         sh.position.y = 1.4;
         root.add(sh);
@@ -938,14 +1220,33 @@ export class EntityViews {
         root.add(view.work.group);
       } else {
         const oc = costumeOfPlayer(this.world.getAny(e.owner ?? -1)?.hero?.player);
-        body = st.works !== undefined ? new THREE.Group() : st.cask ? caskMesh(team, oc) : st.tesla ? teslaCoil(1.1, oc) : st.siege ? ballistaMesh(team, oc) : this.structures.has(st.type) ? this.structures.create(st.type, team) : structurePlaceholder(st.type, team);
+        body =
+          st.works !== undefined
+            ? new THREE.Group()
+            : st.cask
+              ? caskMesh(team, oc)
+              : st.tesla
+                ? teslaCoil(1.1, oc)
+                : st.siege
+                  ? ballistaMesh(team, oc)
+                  : this.structures.has(st.type)
+                    ? this.structures.create(st.type, team)
+                    : structurePlaceholder(st.type, team);
         body.traverse((o) => {
           if (!view.spin && o.name.startsWith("spin")) view.spin = o;
           if (!view.level2 && o.name.startsWith("level2")) view.level2 = o;
-          if (o.name.startsWith("level3_") && o.parent && !o.parent.name.startsWith("level3_")) (view.level3 ??= new Map()).set(o.name.slice(7).replace(/[._]\d+$/, ""), o);
+          if (o.name.startsWith("level3_") && o.parent && !o.parent.name.startsWith("level3_"))
+            (view.level3 ??= new Map()).set(o.name.slice(7).replace(/[._]\d+$/, ""), o);
         });
         body.rotation.y = e.transform.facing;
-        bar = st.works !== undefined ? makeBar(2.2, team, 3.6) : st.cask ? makeBar(1.5, team, 3.2) : st.siege ? makeBar(1.2, team, 2.4) : makeBar(1.9, team, 0, 0.5);
+        bar =
+          st.works !== undefined
+            ? makeBar(2.2, team, 3.6)
+            : st.cask
+              ? makeBar(1.5, team, 3.2)
+              : st.siege
+                ? makeBar(1.2, team, 2.4)
+                : makeBar(1.9, team, 0, 0.5);
         if (!st.siege && st.works === undefined) {
           view.work = makeBar(1.9, new THREE.Color(0xffd040), 0, 0.8);
           root.add(view.work.group);
@@ -967,9 +1268,28 @@ export class EntityViews {
       }
     });
     const v: View = {
-      kind: e.kind, root, body, mixer, actions, bar, seen: true,
-      weapon: view.weapon, held: view.held, pipNodes: view.pipNodes, spin: view.spin, level2: view.level2, level3: view.level3, shield: view.shield, blockFx: view.blockFx, work: view.work,
-      mats, flash: 0, joltX: 0, joltZ: 0, freeze: 0, stepDist: 0,
+      kind: e.kind,
+      root,
+      body,
+      mixer,
+      actions,
+      bar,
+      seen: true,
+      weapon: view.weapon,
+      held: view.held,
+      pipNodes: view.pipNodes,
+      spin: view.spin,
+      level2: view.level2,
+      level3: view.level3,
+      shield: view.shield,
+      blockFx: view.blockFx,
+      work: view.work,
+      mats,
+      flash: 0,
+      joltX: 0,
+      joltZ: 0,
+      freeze: 0,
+      stepDist: 0,
     };
     root.traverse((o) => {
       if (o instanceof THREE.Mesh && o.userData.footRing && !o.userData.batchHidden) {
@@ -986,7 +1306,15 @@ export class EntityViews {
     });
     if (e.structure) {
       const flash = () => v.flash > 0;
-      const done = [...this.structBatch.add(body, e.team, flash), ...this.statics.addTree(body, `${e.team}`, flash, (m) => !m.userData.structKind && !(m.material as THREE.Material).transparent)];
+      const done = [
+        ...this.structBatch.add(body, e.team, flash),
+        ...this.statics.addTree(
+          body,
+          `${e.team}`,
+          flash,
+          (m) => !m.userData.structKind && !(m.material as THREE.Material).transparent,
+        ),
+      ];
       const used = new Set(done.map((m) => m.material));
       v.mats = v.mats.filter((m) => !used.has(m));
       let meshes = 0;
@@ -1001,7 +1329,13 @@ export class EntityViews {
     if (view.batched) {
       const sm = view.batched;
       const tm = e.team;
-      this.batches.add(sm, v.body, `${sm.geometry.uuid}|${tm}`, () => ({ material: batchMaterial(sm, tm), sil: clipBelowWater(silMat(tm, true).clone()) }), () => v.flash > 0);
+      this.batches.add(
+        sm,
+        v.body,
+        `${sm.geometry.uuid}|${tm}`,
+        () => ({ material: batchMaterial(sm, tm), sil: clipBelowWater(silMat(tm, true).clone()) }),
+        () => v.flash > 0,
+      );
     }
     if (e.unit) this.fx.spawnFx(e.transform.pos.x, e.transform.y, e.transform.pos.z, e.team);
     return v;
@@ -1067,7 +1401,8 @@ export class EntityViews {
     const depth = surf - p.y;
     const h = e.hero;
     const air = !!h?.jump;
-    if (v.rings) for (const m of v.rings) m.position.y = 0.04 + (air ? 0 : Math.max(0, depth) / (m.parent?.scale.y || 1));
+    if (v.rings)
+      for (const m of v.rings) m.position.y = 0.04 + (air ? 0 : Math.max(0, depth) / (m.parent?.scale.y || 1));
     if (air || depth <= 0) {
       v.wade = 0;
       v.wadeY = undefined;
@@ -1168,10 +1503,20 @@ export class EntityViews {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     geo.setIndex(idx);
-    const color = this.teamColors[e.team].clone().lerp(white, st.type === "damage" ? 0.1 : st.type === "control" ? 0.35 : 0.6);
-    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, fog: false,
-    }));
+    const color = this.teamColors[e.team]
+      .clone()
+      .lerp(white, st.type === "damage" ? 0.1 : st.type === "control" ? 0.35 : 0.6);
+    const m = new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        fog: false,
+      }),
+    );
     m.renderOrder = 4;
     return m;
   }
@@ -1251,12 +1596,14 @@ export class EntityViews {
         }
         if (v.pipNodes) {
           const ha = e.hero.action;
-          const away = !!e.hero.pip || ha?.kind === "kegrocket" || ((ha?.kind === "keg" || ha?.kind === "powderkeg") && ha.t >= ha.hitAt - 0.03);
+          const away =
+            !!e.hero.pip ||
+            ha?.kind === "kegrocket" ||
+            ((ha?.kind === "keg" || ha?.kind === "powderkeg") && ha.t >= ha.hitAt - 0.03);
           for (const o of v.pipNodes) o.visible = !away;
         }
         v.baseVisible = v.root.visible;
-      }
-      else if (e.unit) this.syncUnit(e, v, facing, time, adt);
+      } else if (e.unit) this.syncUnit(e, v, facing, time, adt);
       else this.syncStructure(e, v, time);
       if (this.quiet) {
         v.bar.group.visible = false;
@@ -1307,9 +1654,17 @@ export class EntityViews {
     const shielded = e.alive && s.shield > 0 && w.time < s.shieldUntil;
     if (shielded && !v.dome) {
       const col = this.teamColors[e.team] ?? new THREE.Color(1, 1, 1);
-      v.dome = new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({
-        map: hexShieldTex, color: col.clone().lerp(new THREE.Color(1, 0.95, 0.7), 0.55), transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending,
-      }));
+      v.dome = new THREE.Mesh(
+        domeGeo,
+        new THREE.MeshBasicMaterial({
+          map: hexShieldTex,
+          color: col.clone().lerp(new THREE.Color(1, 0.95, 0.7), 0.55),
+          transparent: true,
+          opacity: 0.45,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
       v.dome.userData.noSil = true;
       v.root.add(v.dome);
     }
@@ -1338,7 +1693,16 @@ export class EntityViews {
     }
     const grave = !!st && !!st.graveUntil && w.time < st.graveUntil && e.alive;
     if (grave && !v.graveRing) {
-      v.graveRing = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: hd(SUMMONER.circle, costumeOfPlayer(e.hero?.player)), color: trailOf(costumeOfPlayer(e.hero?.player), "grave") ?? 0xb070ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      v.graveRing = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2),
+        new THREE.MeshBasicMaterial({
+          map: hd(SUMMONER.circle, costumeOfPlayer(e.hero?.player)),
+          color: trailOf(costumeOfPlayer(e.hero?.player), "grave") ?? 0xb070ff,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
       v.graveRing.rotation.x = -Math.PI / 2;
       v.graveRing.renderOrder = 4;
       v.graveRing.userData.noSil = true;
@@ -1359,21 +1723,50 @@ export class EntityViews {
     v.auraT = 0.12;
     const p = v.root.position;
     const h = e.hero;
-    if (h && h.frenzy > 0 && w.time < h.frenzyUntil) for (let k = 0; k < h.frenzy; k++) this.fx.aura("flame", p.x, p.y, p.z);
+    if (h && h.frenzy > 0 && w.time < h.frenzyUntil)
+      for (let k = 0; k < h.frenzy; k++) this.fx.aura("flame", p.x, p.y, p.z);
     if (h && w.time < h.empowerUntil) this.fx.aura("spark", p.x, p.y, p.z);
-    if (w.time < s.bleedUntil && s.bleedStacks > 0 && Math.random() < 0.3 * s.bleedStacks) this.fx.aura("drip", p.x, p.y, p.z);
+    if (w.time < s.bleedUntil && s.bleedStacks > 0 && Math.random() < 0.3 * s.bleedStacks)
+      this.fx.aura("drip", p.x, p.y, p.z);
     if (haste) this.fx.aura("steam", p.x + (Math.random() - 0.5), p.y + 4.5, p.z + (Math.random() - 0.5));
-    if (grave) withCostume(costumeOfPlayer(e.hero?.player), () => { for (let k = 0; k < 2; k++) this.fx.aura("grave", p.x, p.y, p.z, e.radius * 1.7); });
+    if (grave)
+      withCostume(costumeOfPlayer(e.hero?.player), () => {
+        for (let k = 0; k < 2; k++) this.fx.aura("grave", p.x, p.y, p.z, e.radius * 1.7);
+      });
   }
 
   private syncMark(e: Entity, v: View, time: number): void {
     const t = this.world.time;
     const s = e.status;
-    const kind = !e.alive ? "" : t < s.stunUntil ? "stun" : t < s.markUntil ? "mark" : e.hero && t < e.hero.openingUntil ? "opening" : t < s.hexUntil ? "hex"
-      : t < s.bleedUntil && s.bleedStacks > 0 ? "bleed" : t < s.armorUntil && s.armorMul < 1 ? "armor" : t < s.slowUntil && s.slowMul < 0.95 ? "slow" : (t < s.buffUntil && s.buffDamageMul > 1) || t < s.rallyUntil || t < (s.hauntUntil ?? 0) ? "buff" : t < s.guardUntil && s.guardMul < 1 ? "guard" : t < s.cowedUntil ? "cowed" : "";
+    const kind = !e.alive
+      ? ""
+      : t < s.stunUntil
+        ? "stun"
+        : t < s.markUntil
+          ? "mark"
+          : e.hero && t < e.hero.openingUntil
+            ? "opening"
+            : t < s.hexUntil
+              ? "hex"
+              : t < s.bleedUntil && s.bleedStacks > 0
+                ? "bleed"
+                : t < s.armorUntil && s.armorMul < 1
+                  ? "armor"
+                  : t < s.slowUntil && s.slowMul < 0.95
+                    ? "slow"
+                    : (t < s.buffUntil && s.buffDamageMul > 1) || t < s.rallyUntil || t < (s.hauntUntil ?? 0)
+                      ? "buff"
+                      : t < s.guardUntil && s.guardMul < 1
+                        ? "guard"
+                        : t < s.cowedUntil
+                          ? "cowed"
+                          : "";
     if (kind !== v.markKind) {
       v.markKind = kind;
-      if (v.mark) { v.root.remove(v.mark); v.mark = undefined; }
+      if (v.mark) {
+        v.root.remove(v.mark);
+        v.mark = undefined;
+      }
       if (kind) {
         v.mark = new THREE.Sprite(MARKS[kind]);
         v.mark.renderOrder = 32;
@@ -1455,17 +1848,16 @@ export class EntityViews {
         anim = ["attack_a", "attack_b", "attack_c"][k];
         const hit = hits?.[a.combo];
         swing = !!hit && !hit.projectile;
-        if (hit && !hit.projectile) this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.5, k === 1 ? 4 : 2, 1.6);
+        if (hit && !hit.projectile)
+          this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.5, k === 1 ? 4 : 2, 1.6);
         if (hit && !hit.projectile && !KITS[h.type]?.trail) {
           const p = v.root.position;
           this.fx.slash(p.x, p.y, p.z, facing, e.team, k, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
         }
-      }
-      else if (a.name === "dodge" && a.kind !== "kegrocket") {
+      } else if (a.name === "dodge" && a.kind !== "kegrocket") {
         anim = "dodge";
         this.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, this.heroScale * 0.8, 5, 2.2);
-      }
-      else if (a.name === "hit") anim = "hit";
+      } else if (a.name === "hit") anim = "hit";
       else anim = KIND_ANIM[a.kind] ?? "cast";
       for (let k = 0; k < 3 && !v.actions.has(anim) && ANIM_FALLBACK[anim]; k++) anim = ANIM_FALLBACK[anim];
       const len = this.clipLen(v, anim);
@@ -1473,7 +1865,15 @@ export class EntityViews {
       this.play(v, anim, swing ? Math.min(scale, 2) : scale, true, swing && scale > 2 ? 0.04 : 0.1);
     }
     v.lastAction = a;
-    if (a && (a.name === "dodge" || a.kind === "dash" || a.kind === "leap" || a.kind === "flurry" || a.kind === "blink" || a.kind === "charge")) {
+    if (
+      a &&
+      (a.name === "dodge" ||
+        a.kind === "dash" ||
+        a.kind === "leap" ||
+        a.kind === "flurry" ||
+        a.kind === "blink" ||
+        a.kind === "charge")
+    ) {
       v.trailT = (v.trailT ?? 0) - dt;
       if (v.trailT <= 0) {
         v.trailT = 0.035;
@@ -1509,7 +1909,8 @@ export class EntityViews {
       }
       if (k >= 0 && k < 0.15) this.play(v, "dodge", 0.8);
       else if (k < 0) this.play(v, "block");
-    } else if (w.jumpPads.some((p) => Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z) < 0.95)) lift = Math.max(lift, 0.5);
+    } else if (w.jumpPads.some((p) => Math.hypot(p.x - e.transform.pos.x, p.z - e.transform.pos.z) < 0.95))
+      lift = Math.max(lift, 0.5);
     v.body.position.y = lift - (v.wade ?? 0) / (v.body.parent?.scale.y || 1);
     const stealth = w.time < e.status.stealthUntil || (e.status.hidden && e.status.seenBy === 0);
     if (stealth !== v.stealthed) {
@@ -1526,11 +1927,31 @@ export class EntityViews {
     }
     if (v.blockFx) v.blockFx.visible = h.blocking;
     if (h.charging && !v.chargeAura) {
-      const col = new THREE.Color(trailOf(costumeOfPlayer(h.player)) ?? KITS[h.type]?.trail ?? this.teamColors[e.team].getHex());
+      const col = new THREE.Color(
+        trailOf(costumeOfPlayer(h.player)) ?? KITS[h.type]?.trail ?? this.teamColors[e.team].getHex(),
+      );
       const g = new THREE.Group();
-      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.burst, color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      const glow = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: FX.burst,
+          color: col,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
       glow.position.y = 1.4;
-      const ring = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: FX.shock, color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+      const ring = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2),
+        new THREE.MeshBasicMaterial({
+          map: FX.shock,
+          color: col,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+        }),
+      );
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.15;
       g.add(glow, ring);
@@ -1549,11 +1970,19 @@ export class EntityViews {
         const ph = (time * 2.5) % 1;
         ring.scale.setScalar(2.4 - ph * 1.8);
         (ring.material as THREE.MeshBasicMaterial).opacity = (0.4 + k * 0.6) * ph;
-        this.fx.chargeSparks(v.root.position.x, v.root.position.y, v.root.position.z, k, glow.material.color.getHex(), full);
+        this.fx.chargeSparks(
+          v.root.position.x,
+          v.root.position.y,
+          v.root.position.z,
+          k,
+          glow.material.color.getHex(),
+          full,
+        );
         v.body.position.y -= 0.12 * k;
       }
     }
-    if (e.status.stealUntil && w.time < e.status.stealUntil && !v.stealthed && Math.random() < dt * 8) this.fx.bloodMote(v.root.position.x, v.root.position.y, v.root.position.z);
+    if (e.status.stealUntil && w.time < e.status.stealUntil && !v.stealthed && Math.random() < dt * 8)
+      this.fx.bloodMote(v.root.position.x, v.root.position.y, v.root.position.z);
     if (e.hp < e.maxHp && !v.stealthed && w.calm(e) && Math.random() < dt * 5) {
       const turf = w.turf(e);
       if (turf === "home" || turf === "tower") this.fx.regen(v.root.position.x, v.root.position.y, v.root.position.z);
@@ -1590,7 +2019,12 @@ export class EntityViews {
       this.slaps.delete(e.id);
       return;
     }
-    const f = s.t < out ? 1 - Math.pow(1 - s.t / out, 3) : s.t < hold ? 1 : Math.max(0, 1 - Math.pow((s.t - hold) / (dur - hold), 1.6));
+    const f =
+      s.t < out
+        ? 1 - Math.pow(1 - s.t / out, 3)
+        : s.t < hold
+          ? 1
+          : Math.max(0, 1 - Math.pow((s.t - hold) / (dur - hold), 1.6));
     const blend = Math.min(1, f * 2.5);
     fore.scale.set(1, 1, 1);
     hand.scale.set(1, 1, 1);
@@ -1635,7 +2069,10 @@ export class EntityViews {
     for (const hd of v.hands) {
       hd.hand.getWorldPosition(tmp);
       const d = tmp.distanceToSquared(hd.last);
-      if (d > moved) { moved = d; best = hd; }
+      if (d > moved) {
+        moved = d;
+        best = hd;
+      }
     }
     const a = new THREE.Vector3();
     const b = new THREE.Vector3();
@@ -1649,7 +2086,8 @@ export class EntityViews {
     const kit = e.hero ? KITS[e.hero.type] : undefined;
     if (kit?.trailWidth) a.addScaledVector(tmp.subVectors(a, b), kit.trailWidth);
     const ct = trailOf(costumeOfPlayer(e.hero?.player)) ?? kit?.trail;
-    const c = ct !== undefined ? new THREE.Color(ct) : this.teamColors[e.team].clone().lerp(new THREE.Color(1, 1, 1), 0.6);
+    const c =
+      ct !== undefined ? new THREE.Color(ct) : this.teamColors[e.team].clone().lerp(new THREE.Color(1, 1, 1), 0.6);
     this.fx.handTrail(`h${e.id}`, a, b, c);
   }
 
@@ -1666,7 +2104,9 @@ export class EntityViews {
         v.badge = undefined;
       }
       if (u.rank > 0) {
-        v.badge = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true, map: rankTexes[Math.min(3, u.rank) - 1] }));
+        v.badge = new THREE.Sprite(
+          new THREE.SpriteMaterial({ depthTest: false, transparent: true, map: rankTexes[Math.min(3, u.rank) - 1] }),
+        );
         v.badge.renderOrder = 23;
         v.badge.scale.set(0.6, 0.6, 1);
         v.badge.position.y = v.bar.group.position.y + 0.32;
@@ -1678,7 +2118,10 @@ export class EntityViews {
         v.lastAttack = u.attackAnimAt;
         const clip = v.actions.get("attack")?.getClip();
         this.play(v, "attack", clip ? clip.duration / Math.min(0.6, u.cooldown * 0.8) : 1, true);
-      } else if ((v.hitUntil ?? 0) <= performance.now() / 1000 && (v.current !== "attack" || w.time - u.attackAnimAt > Math.min(0.6, u.cooldown * 0.8))) {
+      } else if (
+        (v.hitUntil ?? 0) <= performance.now() / 1000 &&
+        (v.current !== "attack" || w.time - u.attackAnimAt > Math.min(0.6, u.cooldown * 0.8))
+      ) {
         if (u.moving) this.play(v, "walk", (u.speed * w.speedMul(e)) / 3.2);
         else this.play(v, "idle");
       }
@@ -1689,7 +2132,8 @@ export class EntityViews {
       return;
     }
     const phase = time * (u.type === "heavy" ? 7 : 11) + e.id;
-    v.body.position.y = (u.moving ? Math.abs(Math.sin(phase)) * 0.09 : 0) - (v.wade ?? 0) / (v.body.parent?.scale.y || 1);
+    v.body.position.y =
+      (u.moving ? Math.abs(Math.sin(phase)) * 0.09 : 0) - (v.wade ?? 0) / (v.body.parent?.scale.y || 1);
     v.body.rotation.z = u.moving ? Math.sin(phase) * 0.07 : 0;
     if (v.weapon) {
       const k = (w.time - u.attackAnimAt) / 0.3;
@@ -1752,7 +2196,8 @@ export class EntityViews {
       bal.rotation.y = cur + (want - cur) * Math.min(1, (1 / 60) * 12);
     }
     if (v.spin) v.spin.visible = st.spec !== "ballista" && st.spec !== "firepot";
-    if (st.spec && v.root.visible) towerIdle(this.fx, st.spec, e.transform.pos.x, e.transform.y, e.transform.pos.z, e.transform.facing, 1 / 60);
+    if (st.spec && v.root.visible)
+      towerIdle(this.fx, st.spec, e.transform.pos.x, e.transform.y, e.transform.pos.z, e.transform.facing, 1 / 60);
     const fired = w.time - st.lastFireAt;
     if (v.spin) {
       if (st.type === "damage") {
@@ -1796,11 +2241,15 @@ export class EntityViews {
         if (padNear(w, h) === p) near = h;
       }
       const st = p.structureId ? w.get(p.structureId) : undefined;
-      const buildable = near && (!st ? p.zone === "neutral" || p.side === near.team : st.team === near.team && (st.structure!.level < 2 || canSpec(this.world, st)));
+      const buildable =
+        near &&
+        (!st
+          ? p.zone === "neutral" || p.side === near.team
+          : st.team === near.team && (st.structure!.level < 2 || canSpec(this.world, st)));
       if (buildable && near) {
         mat.color.copy(this.teamColors[near.team]).lerp(white, 0.4);
         mat.opacity = 0.55 + Math.sin(time * 8) * 0.3;
-      } else if (!st && (p.zone === "neutral")) {
+      } else if (!st && p.zone === "neutral") {
         mat.color.set(0xffd060);
         mat.opacity = 0.25;
       } else if (!st) {
@@ -1829,7 +2278,14 @@ export class EntityViews {
     });
     this.shopHints.forEach((hint, team) => {
       const core = w.core(team);
-      const shopper = heroes.find((h) => h.team === team && this.humans[h.hero!.player] && !this.menus[h.hero!.player] && w.arena.inShop(h) && !padNear(w, h));
+      const shopper = heroes.find(
+        (h) =>
+          h.team === team &&
+          this.humans[h.hero!.player] &&
+          !this.menus[h.hero!.player] &&
+          w.arena.inShop(h) &&
+          !padNear(w, h),
+      );
       hint.visible = this.hints && !!core && !!shopper;
       if (!hint.visible || !core) return;
       const s = 1 + Math.sin(time * 3) * 0.03;

@@ -7,7 +7,21 @@ import { prop, propParts } from "./props";
 import { costumeOfPlayer } from "./costumes";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { World } from "../sim/world";
-import { cm, composite, cv, ENGINEER, hd, hdAlias, FX, HERALD, RAIDER, SUMMONER, WARDEN, WARLORD, withCostume } from "./fxKit";
+import {
+  cm,
+  composite,
+  cv,
+  ENGINEER,
+  hd,
+  hdAlias,
+  FX,
+  HERALD,
+  RAIDER,
+  SUMMONER,
+  WARDEN,
+  WARLORD,
+  withCostume,
+} from "./fxKit";
 import { CACTUS, SPINE, isDesert } from "./desertKit";
 import type { FxHost } from "./fxParts";
 import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "./wardenFx";
@@ -37,8 +51,18 @@ const MOSS_STONE = new THREE.MeshLambertMaterial({
   }),
   flatShading: true,
 });
-const MOSS_TUFT = new THREE.MeshBasicMaterial({ map: WARDEN.moss, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
-const FLOWER = new THREE.MeshBasicMaterial({ map: WARDEN.flower, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
+const MOSS_TUFT = new THREE.MeshBasicMaterial({
+  map: WARDEN.moss,
+  transparent: true,
+  alphaTest: 0.4,
+  side: THREE.DoubleSide,
+});
+const FLOWER = new THREE.MeshBasicMaterial({
+  map: WARDEN.flower,
+  transparent: true,
+  alphaTest: 0.4,
+  side: THREE.DoubleSide,
+});
 const vineTex = new THREE.TextureLoader().load(barkUrl);
 vineTex.colorSpace = THREE.SRGBColorSpace;
 vineTex.wrapS = vineTex.wrapT = THREE.RepeatWrapping;
@@ -66,8 +90,13 @@ function crossQuad(mat: THREE.Material, w: number, h: number, n = 2): THREE.Grou
   return g;
 }
 const chunkGeo = new THREE.DodecahedronGeometry(1, 0);
-const STONE_CHUNK = new THREE.MeshLambertMaterial({ map: composite(64, (g, img) => g.drawImage(img(WARLORD.slab), 0, 0, 64, 64)), flatShading: true });
-function disc(draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void): THREE.CanvasTexture {
+const STONE_CHUNK = new THREE.MeshLambertMaterial({
+  map: composite(64, (g, img) => g.drawImage(img(WARLORD.slab), 0, 0, 64, 64)),
+  flatShading: true,
+});
+function disc(
+  draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void,
+): THREE.CanvasTexture {
   return composite(256, (g, img) => {
     g.save();
     g.beginPath();
@@ -146,7 +175,8 @@ hdAlias(BRAMBLE_DECAL, "warden", "zone.bramble");
 const stakeGeo = (() => {
   const g = new THREE.CylinderGeometry(0.17, 0.2, 2.4, 6);
   const p = g.getAttribute("position");
-  for (let i = 0; i < p.count; i++) if (p.getY(i) > 1.1) p.setXYZ(i, p.getX(i) * 0.05, p.getY(i) + 0.35, p.getZ(i) * 0.05);
+  for (let i = 0; i < p.count; i++)
+    if (p.getY(i) > 1.1) p.setXYZ(i, p.getX(i) * 0.05, p.getY(i) + 0.35, p.getZ(i) * 0.05);
   g.computeVertexNormals();
   return g;
 })();
@@ -159,7 +189,15 @@ export function teslaCoil(scale = 1, costume?: string): THREE.Group {
   if (model) {
     g.add(model);
     const at = model.getObjectByName("glow");
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: ENGINEER.arc, color: 0x9ad0ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const glow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: ENGINEER.arc,
+        color: 0x9ad0ff,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
     glow.position.y = at ? at.position.y : 2.2;
     glow.scale.setScalar(1.2);
     glow.name = "coilglow";
@@ -182,7 +220,15 @@ export function teslaCoil(scale = 1, costume?: string): THREE.Group {
   const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1), COPPER);
   ball.position.y = 2.2;
   g.add(ball);
-  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: ENGINEER.arc, color: 0x9ad0ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const glow = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: ENGINEER.arc,
+      color: 0x9ad0ff,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
   glow.position.y = 2.2;
   glow.scale.setScalar(1.2);
   glow.name = "coilglow";
@@ -193,8 +239,18 @@ export function teslaCoil(scale = 1, costume?: string): THREE.Group {
 
 const thornGeo = new THREE.ConeGeometry(0.06, 0.3, 4);
 const thornBig = new THREE.ConeGeometry(0.1, 0.7, 5);
-const LEAF_A = new THREE.MeshBasicMaterial({ map: WARDEN.leaf, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
-const LEAF_B = new THREE.MeshBasicMaterial({ map: WARDEN.leafAutumn, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide });
+const LEAF_A = new THREE.MeshBasicMaterial({
+  map: WARDEN.leaf,
+  transparent: true,
+  alphaTest: 0.4,
+  side: THREE.DoubleSide,
+});
+const LEAF_B = new THREE.MeshBasicMaterial({
+  map: WARDEN.leafAutumn,
+  transparent: true,
+  alphaTest: 0.4,
+  side: THREE.DoubleSide,
+});
 const easeBack = (t: number) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
 
 function deckBox(x: number, z: number, h: number): THREE.BoxGeometry {
@@ -208,7 +264,14 @@ function deckBox(x: number, z: number, h: number): THREE.BoxGeometry {
 function worldBox(w: number, h: number, d: number): THREE.BoxGeometry {
   const g = new THREE.BoxGeometry(w, h, d);
   const uv = g.getAttribute("uv") as THREE.BufferAttribute;
-  const dims: [number, number][] = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  const dims: [number, number][] = [
+    [d, h],
+    [d, h],
+    [w, d],
+    [w, d],
+    [w, h],
+    [w, h],
+  ];
   for (let f = 0; f < 6; f++) {
     for (let v = 0; v < 4; v++) {
       const i = f * 4 + v;
@@ -239,7 +302,12 @@ const blot = (c: CanvasRenderingContext2D, s: number, colors: string[], n: numbe
     const r = Math.pow(Math.random(), 0.7) * (s / 2 - 6);
     const z = 3 + Math.random() * 9 * (1 - r / (s / 2));
     c.fillStyle = colors[k % colors.length];
-    c.fillRect(Math.round(s / 2 + Math.cos(a) * r - z / 2), Math.round(s / 2 + Math.sin(a) * r - z / 2), Math.round(z), Math.round(z));
+    c.fillRect(
+      Math.round(s / 2 + Math.cos(a) * r - z / 2),
+      Math.round(s / 2 + Math.sin(a) * r - z / 2),
+      Math.round(z),
+      Math.round(z),
+    );
   }
 };
 const ZONE_TEX: Record<string, THREE.CanvasTexture> = {
@@ -256,7 +324,7 @@ const ZONE_TEX: Record<string, THREE.CanvasTexture> = {
       c.beginPath();
       for (let k = 0; k <= 30; k++) {
         const f = k / 30;
-        const a = arm * (Math.PI * 2 / 5) + f * 4;
+        const a = arm * ((Math.PI * 2) / 5) + f * 4;
         const r = (1 - f) * (s / 2 - 8) + 6;
         c.lineTo(s / 2 + Math.cos(a) * r, s / 2 + Math.sin(a) * r);
       }
@@ -302,19 +370,43 @@ const ZONE_TEX: Record<string, THREE.CanvasTexture> = {
 };
 
 const KEEP_GEO = new Set<THREE.BufferGeometry>([thornGeo, thornBig, chunkGeo, stakeGeo]);
-const KEEP_MAT = new Set<THREE.Material>([STONE_CHUNK, STAKE, ROPE, WOOD, WOOD_DARK, THORN, BONE, ROCK, IRON, COPPER, MOSS_STONE, MOSS_TUFT, FLOWER, VINE, LEAF_A, LEAF_B]);
+const KEEP_MAT = new Set<THREE.Material>([
+  STONE_CHUNK,
+  STAKE,
+  ROPE,
+  WOOD,
+  WOOD_DARK,
+  THORN,
+  BONE,
+  ROCK,
+  IRON,
+  COPPER,
+  MOSS_STONE,
+  MOSS_TUFT,
+  FLOWER,
+  VINE,
+  LEAF_A,
+  LEAF_B,
+]);
 function free(root: THREE.Object3D): void {
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    if (mesh.geometry && !KEEP_GEO.has(mesh.geometry) && !mesh.geometry.userData.model && !(o instanceof THREE.Sprite)) mesh.geometry.dispose();
+    if (mesh.geometry && !KEEP_GEO.has(mesh.geometry) && !mesh.geometry.userData.model && !(o instanceof THREE.Sprite))
+      mesh.geometry.dispose();
     const m = mesh.material as THREE.Material | THREE.Material[] | undefined;
     if (!m) return;
     for (const mat of Array.isArray(m) ? m : [m]) if (!KEEP_MAT.has(mat) && !mat.userData.keep) mat.dispose();
   });
 }
 
-type GrowU = { uGrowT: { value: number }; uGrowIn: { value: THREE.Vector2 }; uGrowMul: { value: THREE.Vector2 }; uSway: { value: THREE.Vector2 } };
-const GROW_HEAD = "attribute vec3 aGrowCenter;\nattribute vec2 aGrowDelay;\nuniform float uGrowT;\nuniform vec2 uGrowIn;\nuniform vec2 uGrowMul;\nuniform vec2 uSway;\n";
+type GrowU = {
+  uGrowT: { value: number };
+  uGrowIn: { value: THREE.Vector2 };
+  uGrowMul: { value: THREE.Vector2 };
+  uSway: { value: THREE.Vector2 };
+};
+const GROW_HEAD =
+  "attribute vec3 aGrowCenter;\nattribute vec2 aGrowDelay;\nuniform float uGrowT;\nuniform vec2 uGrowIn;\nuniform vec2 uGrowMul;\nuniform vec2 uSway;\n";
 const GROW_BODY = `
 float gT = uGrowT - aGrowDelay.x;
 float gK = gT / 0.3 - 1.0;
@@ -333,7 +425,8 @@ function growMat(base: THREE.Material, u: GrowU): THREE.Material {
   m.userData.keep = false;
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, u);
-    s.vertexShader = GROW_HEAD + s.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n" + GROW_BODY);
+    s.vertexShader =
+      GROW_HEAD + s.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n" + GROW_BODY);
   };
   m.customProgramCacheKey = () => "grow";
   return m;
@@ -368,7 +461,9 @@ function mergeInto(parent: THREE.Object3D, pieces: Piece[], u?: GrowU): void {
     by.set(mat, list);
   }
   for (const [mat, geos] of by) {
-    const merged = mergeGeometries(geos.every((q) => q.index) ? geos : geos.map((q) => (q.index ? q.toNonIndexed() : q)))!;
+    const merged = mergeGeometries(
+      geos.every((q) => q.index) ? geos : geos.map((q) => (q.index ? q.toNonIndexed() : q)),
+    )!;
     merged.computeBoundingSphere();
     if (u) merged.boundingSphere!.radius += 0.6;
     parent.add(new THREE.Mesh(merged, u ? growMat(mat, u) : mat));
@@ -391,9 +486,11 @@ function wallMat(base: THREE.Material, u: { value: Float32Array }): THREE.Materi
   const m = base.clone();
   m.onBeforeCompile = (s) => {
     s.uniforms.uCell = u;
-    s.vertexShader = WALL_HEAD + s.vertexShader
-      .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\n" + WALL_NORMAL)
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\n" + WALL_BODY);
+    s.vertexShader =
+      WALL_HEAD +
+      s.vertexShader
+        .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\n" + WALL_NORMAL)
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\n" + WALL_BODY);
   };
   m.customProgramCacheKey = () => "wallcells";
   return m;
@@ -441,12 +538,17 @@ function syncWall(o: THREE.Object3D): void {
   });
 }
 function mergeFlat(parent: THREE.Object3D): void {
-  mergeInto(parent, meshesOf(parent).map((mesh) => ({ mesh })));
+  mergeInto(
+    parent,
+    meshesOf(parent).map((mesh) => ({ mesh })),
+  );
   for (const c of [...parent.children]) if (!(c as THREE.Mesh).isMesh && !c.children.length) parent.remove(c);
 }
 function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
-  root.traverse((o) => { if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh); });
+  root.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh);
+  });
   return out;
 }
 
@@ -461,7 +563,13 @@ export class HazardViews {
 
   dispose(): void {
     this.mapFx.dispose();
-    for (const o of [...this.traps.values(), ...this.zones.values(), ...this.mods.values(), ...this.dying.map((d) => d.obj)]) free(o);
+    for (const o of [
+      ...this.traps.values(),
+      ...this.zones.values(),
+      ...this.mods.values(),
+      ...this.dying.map((d) => d.obj),
+    ])
+      free(o);
     this.traps.clear();
     this.zones.clear();
     this.mods.clear();
@@ -471,7 +579,11 @@ export class HazardViews {
 
   private mapFx: MapFx;
 
-  constructor(private world: World, private teamColors: THREE.Color[], private fx?: FxHost) {
+  constructor(
+    private world: World,
+    private teamColors: THREE.Color[],
+    private fx?: FxHost,
+  ) {
     this.root.add(this.sprites.root);
     this.mapFx = new MapFx(world, fx);
     this.mapFx.teamColors = teamColors;
@@ -485,11 +597,29 @@ export class HazardViews {
   private snareMesh(team: number, r: number, costume?: string): THREE.Object3D {
     const desert = isDesert(costume);
     const g = new THREE.Group();
-    const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.15, r * 1.02, 24), new THREE.MeshBasicMaterial({ map: hd(BRAMBLE_DECAL), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(r * 0.15, r * 1.02, 24),
+      new THREE.MeshBasicMaterial({
+        map: hd(BRAMBLE_DECAL),
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      }),
+    );
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.06;
     g.add(ring);
-    const glow = new THREE.Mesh(new THREE.RingGeometry(r * 0.92, r * 1.05, 28), new THREE.MeshBasicMaterial({ color: this.teamColors[team], transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const glow = new THREE.Mesh(
+      new THREE.RingGeometry(r * 0.92, r * 1.05, 28),
+      new THREE.MeshBasicMaterial({
+        color: this.teamColors[team],
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
     glow.rotation.x = -Math.PI / 2;
     glow.position.y = 0.08;
     glow.name = "glow";
@@ -502,10 +632,17 @@ export class HazardViews {
       const rr = r * (0.55 + Math.random() * 0.3);
       const A = new THREE.Vector3(Math.cos(a) * rr, -0.1, Math.sin(a) * rr);
       const tip = new THREE.Vector3(Math.cos(a) * rr * 0.25, 0.55 + Math.random() * 0.25, Math.sin(a) * rr * 0.25);
-      const M = A.clone().lerp(tip, 0.5).add(new THREE.Vector3(Math.cos(a) * 0.35, 0.25, Math.sin(a) * 0.35));
+      const M = A.clone()
+        .lerp(tip, 0.5)
+        .add(new THREE.Vector3(Math.cos(a) * 0.35, 0.25, Math.sin(a) * 0.35));
       const curve = new THREE.QuadraticBezierCurve3(A, M, tip);
       const vine = new THREE.Group();
-      vine.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 8, desert ? 0.1 : 0.07, desert ? 8 : 5, false), desert ? CACTUS : VINE));
+      vine.add(
+        new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 8, desert ? 0.1 : 0.07, desert ? 8 : 5, false),
+          desert ? CACTUS : VINE,
+        ),
+      );
       for (let k = 0; k < 4; k++) {
         const u = 0.2 + k * 0.2;
         const th = new THREE.Mesh(thornGeo, desert ? SPINE : THORN);
@@ -515,7 +652,10 @@ export class HazardViews {
         vine.add(th);
       }
       if (i % 2 === 0) {
-        const lf = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.35), desert ? cm(FLOWER) : i % 4 ? cm(LEAF_B) : cm(LEAF_A));
+        const lf = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.35, 0.35),
+          desert ? cm(FLOWER) : i % 4 ? cm(LEAF_B) : cm(LEAF_A),
+        );
         lf.position.copy(curve.getPoint(0.45)).add(new THREE.Vector3(0, 0.06, 0));
         lf.rotation.set(-1.2, Math.random() * 6, 0);
         vine.add(lf);
@@ -524,7 +664,10 @@ export class HazardViews {
       jaws.add(vine);
     }
     g.add(jaws);
-    const center = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22, 0), desert ? CACTUS : new THREE.MeshLambertMaterial({ map: vineTex, color: 0x8a6a40, flatShading: true }));
+    const center = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.22, 0),
+      desert ? CACTUS : new THREE.MeshLambertMaterial({ map: vineTex, color: 0x8a6a40, flatShading: true }),
+    );
     center.position.y = 0.05;
     center.scale.set(1, 0.6, 1);
     g.add(center);
@@ -533,9 +676,16 @@ export class HazardViews {
 
   private trapMesh(team: number): THREE.Object3D {
     const g = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.12, 8), new THREE.MeshLambertMaterial({ color: 0x4a4440, flatShading: true }));
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.65, 0.12, 8),
+      new THREE.MeshLambertMaterial({ color: 0x4a4440, flatShading: true }),
+    );
     g.add(base);
-    const tm = new THREE.MeshLambertMaterial({ color: this.teamColors[team], flatShading: true, emissive: this.teamColors[team].clone().multiplyScalar(0.3) });
+    const tm = new THREE.MeshLambertMaterial({
+      color: this.teamColors[team],
+      flatShading: true,
+      emissive: this.teamColors[team].clone().multiplyScalar(0.3),
+    });
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
       const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.35, 4), tm);
@@ -551,7 +701,13 @@ export class HazardViews {
     const g = new THREE.Group();
     const decal = new THREE.Mesh(
       new THREE.PlaneGeometry(r * 2.1, r * 2.1),
-      new THREE.MeshBasicMaterial({ map: ZONE_TEX[style] ?? ZONE_TEX.bramble, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+      new THREE.MeshBasicMaterial({
+        map: ZONE_TEX[style] ?? ZONE_TEX.bramble,
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      }),
     );
     decal.rotation.x = -Math.PI / 2;
     decal.position.y = 0.12;
@@ -561,7 +717,10 @@ export class HazardViews {
     if (style === "lava" || style === "crater" || style === "sinkhole") {
       const fis = zoneFissures(gy, r * 0.9, style === "lava" ? "lava" : "crack", costume);
       g.add(fis);
-      mergeInto(fis, meshesOf(fis).map((mesh) => ({ mesh })));
+      mergeInto(
+        fis,
+        meshesOf(fis).map((mesh) => ({ mesh })),
+      );
       for (const s of [...fis.children]) if (!(s as THREE.Mesh).isMesh) fis.remove(s);
     }
     const grows: { o: THREE.Object3D; d: number }[] = [];
@@ -577,7 +736,13 @@ export class HazardViews {
       }
     };
     if (style === "bramble") {
-      decal.material = new THREE.MeshBasicMaterial({ map: hd(BRAMBLE_DECAL), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+      decal.material = new THREE.MeshBasicMaterial({
+        map: hd(BRAMBLE_DECAL),
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      });
       const grow = (o: THREE.Object3D, x: number, z: number) => {
         grows.push({ o, d: (Math.hypot(x, z) / r) * 0.55 + Math.random() * 0.1 });
         g.add(o);
@@ -586,7 +751,13 @@ export class HazardViews {
       const thorns = isDesert(costume) ? propParts("thorns", costume) : null;
       const desert = !!(cactus && thorns);
       if (cactus && thorns) {
-        const place = (art: { geo: THREE.BufferGeometry; mat: THREE.Material }, n: number, frac: number, s0: number, s1: number) => {
+        const place = (
+          art: { geo: THREE.BufferGeometry; mat: THREE.Material },
+          n: number,
+          frac: number,
+          s0: number,
+          s1: number,
+        ) => {
           for (let i = 0; i < n; i++) {
             const a = (i / n) * Math.PI * 2 + Math.random() * 0.8;
             const d = (0.25 + Math.random() * 0.75) * r * frac;
@@ -613,8 +784,16 @@ export class HazardViews {
         const t = Math.random() * Math.PI * 2;
         const len = 1.2 + Math.random() * 1.4;
         const hgt = 0.55 + Math.random() * 0.75;
-        const A = new THREE.Vector3(-Math.cos(t) * len / 2, gy(x - Math.cos(t) * len / 2, z - Math.sin(t) * len / 2) - 0.1, -Math.sin(t) * len / 2);
-        const B = new THREE.Vector3(Math.cos(t) * len / 2, gy(x + Math.cos(t) * len / 2, z + Math.sin(t) * len / 2) - 0.1, Math.sin(t) * len / 2);
+        const A = new THREE.Vector3(
+          (-Math.cos(t) * len) / 2,
+          gy(x - (Math.cos(t) * len) / 2, z - (Math.sin(t) * len) / 2) - 0.1,
+          (-Math.sin(t) * len) / 2,
+        );
+        const B = new THREE.Vector3(
+          (Math.cos(t) * len) / 2,
+          gy(x + (Math.cos(t) * len) / 2, z + (Math.sin(t) * len) / 2) - 0.1,
+          (Math.sin(t) * len) / 2,
+        );
         const M = A.clone().add(B).multiplyScalar(0.5);
         M.y += hgt * 2;
         const curve = new THREE.QuadraticBezierCurve3(A, M, B);
@@ -630,7 +809,9 @@ export class HazardViews {
           const u = 0.12 + (k / 5) * 0.76;
           const p = curve.getPoint(u);
           const tan = curve.getTangent(u);
-          const side = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.2, Math.random() - 0.5).cross(tan).normalize();
+          const side = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.2, Math.random() - 0.5)
+            .cross(tan)
+            .normalize();
           const th = new THREE.Mesh(thornGeo, THORN);
           th.position.copy(p).addScaledVector(side, 0.12);
           th.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), side);
@@ -666,7 +847,15 @@ export class HazardViews {
         grow(f, x, z);
       }
       for (let i = 0; i < 4; i++) {
-        const w = new THREE.Sprite(new THREE.SpriteMaterial({ map: WARDEN.wisp, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }));
+        const w = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: WARDEN.wisp,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            opacity: 0.8,
+          }),
+        );
         w.name = "wisp";
         w.userData.phase = (i / 4) * Math.PI * 2;
         w.userData.rad = r * (0.35 + Math.random() * 0.45);
@@ -674,8 +863,23 @@ export class HazardViews {
         g.add(w);
       }
     } else {
-      const sprite = (tex: THREE.Texture, size: number, x: number, z: number, lift = 0, additive = false, name = "") => {
-        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cv(tex), transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+      const sprite = (
+        tex: THREE.Texture,
+        size: number,
+        x: number,
+        z: number,
+        lift = 0,
+        additive = false,
+        name = "",
+      ) => {
+        const sp = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: cv(tex),
+            transparent: true,
+            depthWrite: false,
+            blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+          }),
+        );
         sp.scale.setScalar(size);
         sp.position.set(x, gy(x, z) + lift + size * 0.4, z);
         if (name) sp.name = name;
@@ -691,7 +895,13 @@ export class HazardViews {
           f(Math.cos(a) * d, Math.sin(a) * d, i);
         }
       };
-      decal.material = new THREE.MeshBasicMaterial({ map: cv(ZONE_DECAL[style] ?? ZONE_TEX.bramble), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+      decal.material = new THREE.MeshBasicMaterial({
+        map: cv(ZONE_DECAL[style] ?? ZONE_TEX.bramble),
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      });
       if (style === "sinkhole" || style === "crater") {
         const rocks = new THREE.Group();
         rocks.name = "spin";
@@ -704,8 +914,13 @@ export class HazardViews {
           m.position.set(x, gy(x, z) + 0.08, z);
           rocks.add(m);
         });
-        mergeInto(rocks, meshesOf(rocks).map((mesh) => ({ mesh })));
-        ring(Math.round(r * 1.5), [0.5, 1], (x, z) => sprite(FX.dust, 0.9 + Math.random() * 0.5, x, z, 0, false, "drift"));
+        mergeInto(
+          rocks,
+          meshesOf(rocks).map((mesh) => ({ mesh })),
+        );
+        ring(Math.round(r * 1.5), [0.5, 1], (x, z) =>
+          sprite(FX.dust, 0.9 + Math.random() * 0.5, x, z, 0, false, "drift"),
+        );
       } else if (style === "bones") {
         ring(Math.round(r * 2.4), [0.15, 0.9], (x, z, i) => {
           const sp = sprite(i % 3 === 0 ? SUMMONER.graveHand : SUMMONER.bones, 0.8 + Math.random() * 0.4, x, z, -0.15);
@@ -719,7 +934,11 @@ export class HazardViews {
           ring(Math.max(2, Math.round(r * 0.9)), [0.35, 0.85], (x, z) => {
             const t = new THREE.Mesh(tomb.geo, tomb.mat);
             t.position.set(x, gy(x, z) - 0.05, z);
-            t.rotation.set((Math.random() - 0.5) * 0.25, Math.atan2(x, z) + (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.25);
+            t.rotation.set(
+              (Math.random() - 0.5) * 0.25,
+              Math.atan2(x, z) + (Math.random() - 0.5) * 0.6,
+              (Math.random() - 0.5) * 0.25,
+            );
             t.scale.setScalar(0.8 + Math.random() * 0.3);
             grows.push({ o: t, d: Math.random() * 0.3 });
             g.add(t);
@@ -730,14 +949,26 @@ export class HazardViews {
         const coil = teslaCoil(0.8, costume);
         coil.position.y = gy(0, 0);
         g.add(coil);
-        mergeInto(coil, meshesOf(coil).map((mesh) => ({ mesh })));
-        const arc = new THREE.Sprite(new THREE.SpriteMaterial({ map: ENGINEER.arc, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+        mergeInto(
+          coil,
+          meshesOf(coil).map((mesh) => ({ mesh })),
+        );
+        const arc = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: ENGINEER.arc,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+          }),
+        );
         arc.name = "zap";
         arc.userData.top = gy(0, 0) + 2.1;
         g.add(arc);
         ring(5, [0.4, 0.95], (x, z) => sprite(ENGINEER.weld, 0.5, x, z, 0, true, "spark"));
       } else if (style === "lava") {
-        ring(Math.round(r * 1.6), [0.2, 0.95], (x, z) => sprite(WARLORD.lavaGlow, 0.9 + Math.random() * 0.6, x, z, -0.2, true, "glow"));
+        ring(Math.round(r * 1.6), [0.2, 0.95], (x, z) =>
+          sprite(WARLORD.lavaGlow, 0.9 + Math.random() * 0.6, x, z, -0.2, true, "glow"),
+        );
         ring(Math.round(r * 2), [0.1, 1], (x, z) => sprite(WARLORD.ember, 0.3, x, z, 0.2, true, "ember"));
         const chunks: Piece[] = [];
         ring(Math.round(r * 1.2), [0.5, 1], (x, z) => {
@@ -751,23 +982,54 @@ export class HazardViews {
         });
         mergeInto(g, chunks);
       } else if (style === "smoke") {
-        ring(Math.round(r * 4), [0, 1], (x, z) => sprite(RAIDER.smoke, 1.6 + Math.random() * 1.2, x, z, 0.1, false, "smoke"));
+        ring(Math.round(r * 4), [0, 1], (x, z) =>
+          sprite(RAIDER.smoke, 1.6 + Math.random() * 1.2, x, z, 0.1, false, "smoke"),
+        );
         ring(4, [0.2, 0.8], (x, z) => sprite(RAIDER.shadow, 1.2, x, z, 0.6, false, "smoke"));
       } else if (style === "ale" || style === "aletrail") {
-        decal.material = new THREE.MeshBasicMaterial({ map: hd(ZONE_DECALS.ale), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.material = new THREE.MeshBasicMaterial({
+          map: hd(ZONE_DECALS.ale),
+          transparent: true,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+        });
         decal.visible = true;
-        ring(style === "ale" ? Math.round(r * 3) : 1, [0.05, 0.85], (x, z) => sprite(BUBBLE, 0.22 + Math.random() * 0.16, x, z, -0.05, false, "bubble"));
-        if (style === "ale") ring(Math.round(r * 1.5), [0.75, 0.98], (x, z) => sprite(FOAM, 0.45 + Math.random() * 0.3, x, z, -0.2, false, "foam"));
+        ring(style === "ale" ? Math.round(r * 3) : 1, [0.05, 0.85], (x, z) =>
+          sprite(BUBBLE, 0.22 + Math.random() * 0.16, x, z, -0.05, false, "bubble"),
+        );
+        if (style === "ale")
+          ring(Math.round(r * 1.5), [0.75, 0.98], (x, z) =>
+            sprite(FOAM, 0.45 + Math.random() * 0.3, x, z, -0.2, false, "foam"),
+          );
       } else if (style === "tar") {
-        decal.material = new THREE.MeshBasicMaterial({ map: cv(ZONE_DECALS.tar), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.material = new THREE.MeshBasicMaterial({
+          map: cv(ZONE_DECALS.tar),
+          transparent: true,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+        });
         decal.visible = true;
-        ring(Math.round(r * 2), [0.05, 0.85], (x, z) => sprite(BUBBLE, 0.25 + Math.random() * 0.2, x, z, -0.05, false, "tarbubble"));
+        ring(Math.round(r * 2), [0.05, 0.85], (x, z) =>
+          sprite(BUBBLE, 0.25 + Math.random() * 0.2, x, z, -0.05, false, "tarbubble"),
+        );
         ring(Math.round(r * 1.5), [0.1, 0.9], (x, z) => sprite(WARLORD.ember, 0.3, x, z, 0.1, true, "ember"));
-        ring(Math.round(r * 1.2), [0.1, 0.9], (x, z) => sprite(FX.fire, 0.6 + Math.random() * 0.3, x, z, -0.1, true, "glow"));
+        ring(Math.round(r * 1.2), [0.1, 0.9], (x, z) =>
+          sprite(FX.fire, 0.6 + Math.random() * 0.3, x, z, -0.1, true, "glow"),
+        );
       } else if (style === "brewfest") {
-        decal.material = new THREE.MeshBasicMaterial({ map: hd(ZONE_DECALS.brewfest), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+        decal.material = new THREE.MeshBasicMaterial({
+          map: hd(ZONE_DECALS.brewfest),
+          transparent: true,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+        });
         decal.visible = true;
-        ring(Math.round(r * 2.2), [0.25, 0.95], (x, z) => sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"));
+        ring(Math.round(r * 2.2), [0.25, 0.95], (x, z) =>
+          sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"),
+        );
         ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));
       } else if (style === "grove") {
         ring(Math.round(r * 2.2), [0.1, 0.95], (x, z) => {
@@ -787,10 +1049,21 @@ export class HazardViews {
       }
     }
     if (grows.length) {
-      const u: GrowU = { uGrowT: { value: 0 }, uGrowIn: { value: new THREE.Vector2(1, 1) }, uGrowMul: { value: new THREE.Vector2(1, 1) }, uSway: { value: new THREE.Vector2() } };
+      const u: GrowU = {
+        uGrowT: { value: 0 },
+        uGrowIn: { value: new THREE.Vector2(1, 1) },
+        uGrowMul: { value: new THREE.Vector2(1, 1) },
+        uSway: { value: new THREE.Vector2() },
+      };
       g.userData.growU = u;
-      g.userData.pops = grows.filter(({ o }) => o.children.length > 2).map(({ o, d }) => ({ d, p: o.position.clone(), done: false }));
-      mergeInto(g, grows.flatMap(({ o, d }) => meshesOf(o).map((mesh) => ({ mesh, c: o.position.clone(), d, yaw: o.rotation.y }))), u);
+      g.userData.pops = grows
+        .filter(({ o }) => o.children.length > 2)
+        .map(({ o, d }) => ({ d, p: o.position.clone(), done: false }));
+      mergeInto(
+        g,
+        grows.flatMap(({ o, d }) => meshesOf(o).map((mesh) => ({ mesh, c: o.position.clone(), d, yaw: o.rotation.y }))),
+        u,
+      );
       for (const { o } of grows) g.remove(o);
     }
     return g;
@@ -827,7 +1100,10 @@ export class HazardViews {
         if (works && m.deck[k] === m.top && m.cx !== undefined) {
           const ox = Math.abs(x - m.cx) < 0.25 ? 0 : Math.sign(x - m.cx);
           const oz = Math.abs(z - m.cz!) < 0.25 ? 0 : Math.sign(z - m.cz!);
-          for (const [sx, sz] of [[ox, 0], [0, oz]] as const) {
+          for (const [sx, sz] of [
+            [ox, 0],
+            [0, oz],
+          ] as const) {
             if (!sx && !sz) continue;
             const ni = this.world.terrain.index(Math.floor(x + sx), Math.floor(z + sz));
             if (m.cells.includes(ni)) continue;
@@ -850,7 +1126,8 @@ export class HazardViews {
         const art = pal ?? stone;
         if (art) {
           const piece = new THREE.Mesh(art.geo, art.mat);
-          piece.rotation.y = (pal ? wallYaw : Math.floor(Math.random() * 4) * Math.PI / 2) + (Math.random() - 0.5) * 0.2;
+          piece.rotation.y =
+            (pal ? wallYaw : (Math.floor(Math.random() * 4) * Math.PI) / 2) + (Math.random() - 0.5) * 0.2;
           piece.scale.y = 0.92 + Math.random() * 0.16;
           piece.position.y = -0.1;
           cell.add(piece);
@@ -862,7 +1139,11 @@ export class HazardViews {
         if (m.style === "wood") {
           for (let q = 0; q < 3; q++) {
             const st = new THREE.Mesh(stakeGeo, STAKE);
-            st.position.set((q - 1) * 0.33 + (Math.random() - 0.5) * 0.06, 1.1 + Math.random() * 0.2, (Math.random() - 0.5) * 0.1);
+            st.position.set(
+              (q - 1) * 0.33 + (Math.random() - 0.5) * 0.06,
+              1.1 + Math.random() * 0.2,
+              (Math.random() - 0.5) * 0.1,
+            );
             st.rotation.set((Math.random() - 0.5) * 0.12, Math.random() * 3, (Math.random() - 0.5) * 0.12);
             cell.add(st);
           }
@@ -901,7 +1182,15 @@ export class HazardViews {
   }
 
   handle(ev: { type: string; id?: number }): void {
-    if (ev.type === "avalanche" || ev.type === "gates" || ev.type === "lantern" || ev.type === "mist" || ev.type === "morph" || ev.type === "jumppad" || ev.type === "horn") {
+    if (
+      ev.type === "avalanche" ||
+      ev.type === "gates" ||
+      ev.type === "lantern" ||
+      ev.type === "mist" ||
+      ev.type === "morph" ||
+      ev.type === "jumppad" ||
+      ev.type === "horn"
+    ) {
       this.mapFx.handle(ev);
       return;
     }
@@ -920,9 +1209,22 @@ export class HazardViews {
           const dz = c1 && c0 ? c1.z - c0.z : 0;
           const dl = Math.hypot(dx, dz) || 1;
           const fx = this.fx;
-          withCostume(costumeOfPlayer(m?.owner !== undefined ? this.world.getAny(m.owner)?.hero?.player : undefined), () => {
-            for (const c of cells) wardenWallBlock(fx, c.position.x, c.userData.baseY, c.position.z, c.userData.delay, dz / dl, -dx / dl, m?.style === "wood");
-          });
+          withCostume(
+            costumeOfPlayer(m?.owner !== undefined ? this.world.getAny(m.owner)?.hero?.player : undefined),
+            () => {
+              for (const c of cells)
+                wardenWallBlock(
+                  fx,
+                  c.position.x,
+                  c.userData.baseY,
+                  c.position.z,
+                  c.userData.delay,
+                  dz / dl,
+                  -dx / dl,
+                  m?.style === "wood",
+                );
+            },
+          );
         }
         this.mods.set(ev.id, obj);
         this.root.add(obj);
@@ -932,7 +1234,8 @@ export class HazardViews {
       if (obj) {
         this.mods.delete(ev.id);
         if (obj.userData.wall && this.fx) {
-          for (const c of obj.userData.cells as THREE.Object3D[]) wardenWallCrumble(this.fx, c.position.x, c.userData.baseY, c.position.z);
+          for (const c of obj.userData.cells as THREE.Object3D[])
+            wardenWallCrumble(this.fx, c.position.x, c.userData.baseY, c.position.z);
           this.dying.push({ obj, at: this.now });
         } else {
           this.root.remove(obj);
@@ -969,7 +1272,12 @@ export class HazardViews {
       let o = this.traps.get(t.id);
       if (!o) {
         const owner = w.getAny(t.ownerId);
-        o = owner?.hero?.type === "warden" ? withCostume(costumeOfPlayer(owner.hero.player), () => this.snareMesh(t.team, t.radius, costumeOfPlayer(owner.hero!.player))) : this.trapMesh(t.team);
+        o =
+          owner?.hero?.type === "warden"
+            ? withCostume(costumeOfPlayer(owner.hero.player), () =>
+                this.snareMesh(t.team, t.radius, costumeOfPlayer(owner.hero!.player)),
+              )
+            : this.trapMesh(t.team);
         o.userData.snare = owner?.hero?.type === "warden";
         o.position.set(t.x, w.groundY(t.x, t.z) + 0.06, t.z);
         this.traps.set(t.id, o);
@@ -980,12 +1288,19 @@ export class HazardViews {
         const jaws = o.getObjectByName("jaws")!;
         const open = arming ? 0.35 + 0.65 * (1 - (t.armAt - w.time) / 0.6) : 1;
         jaws.scale.set(1, Math.max(0.2, Math.min(1, open)), 1);
-        jaws.children.forEach((v, k) => { v.rotation.y = Math.sin(time * 1.4 + k) * 0.05; });
+        jaws.children.forEach((v, k) => {
+          v.rotation.y = Math.sin(time * 1.4 + k) * 0.05;
+        });
         const gl = o.getObjectByName("glow") as THREE.Mesh;
         (gl.material as THREE.MeshBasicMaterial).opacity = arming ? 0.2 : 0.35 + 0.2 * Math.sin(time * 3);
       } else o.rotation.y = time * (w.time < t.armAt ? 6 : 0.5);
     }
-    for (const [id, o] of this.traps) if (!seenT.has(id)) { this.root.remove(o); free(o); this.traps.delete(id); }
+    for (const [id, o] of this.traps)
+      if (!seenT.has(id)) {
+        this.root.remove(o);
+        free(o);
+        this.traps.delete(id);
+      }
     const seenZ = new Set<number>();
     for (const z of w.zones) {
       seenZ.add(z.id);
@@ -1001,7 +1316,8 @@ export class HazardViews {
         o.userData.born = time;
         o.userData.bramble = (z.style ?? "bramble") === "bramble";
         o.scale.setScalar(1);
-        if (o.userData.bramble && this.fx) withCostume(zc, () => wardenBrambleCast(this.fx!, z.x, this.cy, z.z, z.radius));
+        if (o.userData.bramble && this.fx)
+          withCostume(zc, () => wardenBrambleCast(this.fx!, z.x, this.cy, z.z, z.radius));
         this.sprites.addTree(o);
         this.zones.set(z.id, o);
         this.root.add(o);
@@ -1012,7 +1328,10 @@ export class HazardViews {
         for (const p of (o.userData.pops ?? []) as { d: number; p: THREE.Vector3; done: boolean }[]) {
           if (p.done || age <= p.d) continue;
           p.done = true;
-          if (this.fx) withCostume(o.userData.costume, () => wardenSprout(this.fx!, o!.position.x + p.p.x, o!.position.y + p.p.y, o!.position.z + p.p.z));
+          if (this.fx)
+            withCostume(o.userData.costume, () =>
+              wardenSprout(this.fx!, o!.position.x + p.p.x, o!.position.y + p.p.y, o!.position.z + p.p.z),
+            );
         }
         const u = o.userData.growU as GrowU | undefined;
         const out = left < 0.6 ? Math.max(0.001, left / 0.6) : 1;
@@ -1025,7 +1344,11 @@ export class HazardViews {
         for (const c of o.children) {
           if (c.name === "wisp") {
             const a = c.userData.phase + time * 0.6;
-            c.position.set(Math.cos(a) * c.userData.rad, 0.6 + Math.sin(time * 2 + c.userData.phase) * 0.3, Math.sin(a) * c.userData.rad);
+            c.position.set(
+              Math.cos(a) * c.userData.rad,
+              0.6 + Math.sin(time * 2 + c.userData.phase) * 0.3,
+              Math.sin(a) * c.userData.rad,
+            );
             (c as THREE.Sprite).material.opacity = 0.7 * Math.min(1, age * 2, left / 0.6);
           }
         }
@@ -1041,25 +1364,40 @@ export class HazardViews {
       for (const c of o.children) {
         const b = c.userData.base as THREE.Vector3 | undefined;
         const ph = c.userData.phase ?? 0;
-        if (c.name === "drift" && b) { c.position.y = b.y + ((time * 0.4 + ph) % 1) * 0.6; (c as THREE.Sprite).material.opacity = 0.6 * life * (1 - ((time * 0.4 + ph) % 1)); }
-        else if (c.name === "wisp" && b) { c.position.set(b.x + Math.sin(time + ph) * 0.4, b.y + Math.sin(time * 2 + ph) * 0.3, b.z + Math.cos(time + ph) * 0.4); (c as THREE.Sprite).material.opacity = 0.8 * life; }
-        else if (c.name === "rise") { const k = Math.min(1, (time - (o.userData.born ?? time)) * 4 - ph * 0.05); c.scale.y = Math.max(0.01, c.scale.x * k * (left < 0.5 ? left / 0.5 : 1)); }
-        else if (c.name === "glow") { (c as THREE.Sprite).material.opacity = life * (0.55 + 0.35 * Math.sin(time * 3 + ph)); }
-        else if (c.name === "ember" && b) { const q = (time * 0.7 + ph) % 1; c.position.set(b.x, b.y + q * 1.6, b.z); (c as THREE.Sprite).material.opacity = life * (1 - q); }
-        else if (c.name === "smoke" && b) { c.position.set(b.x + Math.sin(time * 0.5 + ph) * 0.3, b.y + Math.sin(time * 0.7 + ph) * 0.15, b.z); (c as THREE.Sprite).material.rotation = time * 0.2 + ph; (c as THREE.Sprite).material.opacity = 0.9 * life; }
-        else if (c.name === "spark") (c as THREE.Sprite).material.opacity = Math.random() < 0.3 ? life : 0;
+        if (c.name === "drift" && b) {
+          c.position.y = b.y + ((time * 0.4 + ph) % 1) * 0.6;
+          (c as THREE.Sprite).material.opacity = 0.6 * life * (1 - ((time * 0.4 + ph) % 1));
+        } else if (c.name === "wisp" && b) {
+          c.position.set(
+            b.x + Math.sin(time + ph) * 0.4,
+            b.y + Math.sin(time * 2 + ph) * 0.3,
+            b.z + Math.cos(time + ph) * 0.4,
+          );
+          (c as THREE.Sprite).material.opacity = 0.8 * life;
+        } else if (c.name === "rise") {
+          const k = Math.min(1, (time - (o.userData.born ?? time)) * 4 - ph * 0.05);
+          c.scale.y = Math.max(0.01, c.scale.x * k * (left < 0.5 ? left / 0.5 : 1));
+        } else if (c.name === "glow") {
+          (c as THREE.Sprite).material.opacity = life * (0.55 + 0.35 * Math.sin(time * 3 + ph));
+        } else if (c.name === "ember" && b) {
+          const q = (time * 0.7 + ph) % 1;
+          c.position.set(b.x, b.y + q * 1.6, b.z);
+          (c as THREE.Sprite).material.opacity = life * (1 - q);
+        } else if (c.name === "smoke" && b) {
+          c.position.set(b.x + Math.sin(time * 0.5 + ph) * 0.3, b.y + Math.sin(time * 0.7 + ph) * 0.15, b.z);
+          (c as THREE.Sprite).material.rotation = time * 0.2 + ph;
+          (c as THREE.Sprite).material.opacity = 0.9 * life;
+        } else if (c.name === "spark") (c as THREE.Sprite).material.opacity = Math.random() < 0.3 ? life : 0;
         else if ((c.name === "bubble" || c.name === "tarbubble") && b) {
           const q = (time * (c.name === "tarbubble" ? 0.45 : 0.8) + ph) % 1;
           c.position.set(b.x, b.y + q * (c.name === "tarbubble" ? 0.25 : 0.7), b.z);
           const s0 = (c.userData.s0 ??= c.scale.x) as number;
           c.scale.setScalar(s0 * (0.5 + q * 0.7));
           (c as THREE.Sprite).material.opacity = life * (q < 0.8 ? 0.9 : (1 - q) * 4.5);
-        }
-        else if (c.name === "foam" && b) {
+        } else if (c.name === "foam" && b) {
           c.position.set(b.x + Math.sin(time * 0.8 + ph) * 0.08, b.y, b.z + Math.cos(time * 0.7 + ph) * 0.08);
           (c as THREE.Sprite).material.opacity = life * 0.9;
-        }
-        else if (c.name === "zap") {
+        } else if (c.name === "zap") {
           const sp = c as THREE.Sprite;
           if (Math.random() < 0.4) {
             const a = Math.random() * Math.PI * 2;
@@ -1083,15 +1421,42 @@ export class HazardViews {
         const top = new THREE.Vector3(0, arc.userData.top as number, 0);
         const a = Math.random() * Math.PI * 2;
         const d = z.radius * (0.4 + Math.random() * 0.6);
-        const end = new THREE.Vector3(Math.cos(a) * d, w.groundY(z.x + Math.cos(a) * d, z.z + Math.sin(a) * d) - this.cyOf(o) + 0.2, Math.sin(a) * d);
+        const end = new THREE.Vector3(
+          Math.cos(a) * d,
+          w.groundY(z.x + Math.cos(a) * d, z.z + Math.sin(a) * d) - this.cyOf(o) + 0.2,
+          Math.sin(a) * d,
+        );
         const pts = [top];
-        for (let k = 1; k < 5; k++) pts.push(top.clone().lerp(end, k / 5).add(new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5)));
+        for (let k = 1; k < 5; k++)
+          pts.push(
+            top
+              .clone()
+              .lerp(end, k / 5)
+              .add(
+                new THREE.Vector3(
+                  (Math.random() - 0.5) * 0.5,
+                  (Math.random() - 0.5) * 0.5,
+                  (Math.random() - 0.5) * 0.5,
+                ),
+              ),
+          );
         pts.push(end);
         arc.geometry.dispose();
-        arc.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0), 10, 0.05, 3, false);
+        arc.geometry = new THREE.TubeGeometry(
+          new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0),
+          10,
+          0.05,
+          3,
+          false,
+        );
       }
     }
-    for (const [id, o] of this.zones) if (!seenZ.has(id)) { this.root.remove(o); free(o); this.zones.delete(id); }
+    for (const [id, o] of this.zones)
+      if (!seenZ.has(id)) {
+        this.root.remove(o);
+        free(o);
+        this.zones.delete(id);
+      }
     for (const o of this.mods.values()) {
       if (!o.userData.wall) {
         o.scale.y = Math.min(1, o.scale.y + dt * 6);

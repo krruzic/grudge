@@ -13,18 +13,35 @@ import { engravedIcon } from "./icons";
 import titleFontUrl from "../../assets/fonts/PirataOne.ttf?url";
 
 const KEY_TEXT: Record<string, string> = {
-  t_champion: "CHOOSE YOUR CHAMPION", t_field: "CHOOSE THE FIELD", t_rules: "RULES OF COMBAT", t_records: "HALL OF GRUDGES",
-  t_tag: "SIGN YOUR NAME", t_1v1: "1 VS 1", t_2v2: "2 VS 2", t_ffa: "FREE FOR ALL", t_host: "HOST A BATTLE", t_join: "JOIN A BATTLE",
-  m_fight: "FIGHT", m_network: "VERSUS ONLINE", m_rules: "RULES", m_records: "RECORDS", m_options: "OPTIONS", m_controls: "CONTROLS", m_loading: "NOW LOADING",
+  t_champion: "CHOOSE YOUR CHAMPION",
+  t_field: "CHOOSE THE FIELD",
+  t_rules: "RULES OF COMBAT",
+  t_records: "HALL OF GRUDGES",
+  t_tag: "SIGN YOUR NAME",
+  t_1v1: "1 VS 1",
+  t_2v2: "2 VS 2",
+  t_ffa: "FREE FOR ALL",
+  t_host: "HOST A BATTLE",
+  t_join: "JOIN A BATTLE",
+  m_fight: "FIGHT",
+  m_network: "VERSUS ONLINE",
+  m_rules: "RULES",
+  m_records: "RECORDS",
+  m_options: "OPTIONS",
+  m_controls: "CONTROLS",
+  m_loading: "NOW LOADING",
 };
 const titleCache = new Map<string, HTMLCanvasElement>();
 let titleReady = false;
 const titleFace = new FontFace("GrudgeTitle", `url(${titleFontUrl})`);
-titleFace.load().then((f) => {
-  document.fonts.add(f);
-  titleReady = true;
-  titleCache.clear();
-}).catch(() => {});
+titleFace
+  .load()
+  .then((f) => {
+    document.fonts.add(f);
+    titleReady = true;
+    titleCache.clear();
+  })
+  .catch(() => {});
 
 const goldLeaf = new Image();
 goldLeaf.src = goldUrl;
@@ -110,7 +127,18 @@ import { drawPlain, onHiLayer, textWidth } from "./font";
 
 const INK = "#0b0806";
 const imgs: Record<string, HTMLImageElement> = {};
-for (const [k, u] of Object.entries({ stone: stoneUrl, ridge: ridgeUrl, gold: goldUrl, wood: woodUrl, leather: leatherUrl, brick: brickUrl, cloth: clothUrl, iron: ironUrl, parch: parchUrl, banner: bannerUrl })) {
+for (const [k, u] of Object.entries({
+  stone: stoneUrl,
+  ridge: ridgeUrl,
+  gold: goldUrl,
+  wood: woodUrl,
+  leather: leatherUrl,
+  brick: brickUrl,
+  cloth: clothUrl,
+  iron: ironUrl,
+  parch: parchUrl,
+  banner: bannerUrl,
+})) {
   const im = new Image();
   im.src = u;
   imgs[k] = im;
@@ -143,7 +171,17 @@ export function uiImagesReady(): boolean {
   return Object.values(imgs).every((im) => im.complete && im.naturalWidth > 0);
 }
 
-export function texturedRect(ctx: CanvasRenderingContext2D, key: string, x: number, y: number, w: number, h: number, tint: string | null, r = 3, scale = 1): void {
+export function texturedRect(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tint: string | null,
+  r = 3,
+  scale = 1,
+): void {
   const im = imgs[key];
   if (w <= 0 || h <= 0) return;
   if (!im || !im.complete || !im.naturalWidth) {
@@ -178,22 +216,41 @@ export function texturedRect(ctx: CanvasRenderingContext2D, key: string, x: numb
   ctx.drawImage(c, x, y, w, h);
 }
 
-function bakeRect(ctx: CanvasRenderingContext2D, key: string, w: number, h: number, tint: string | null, r: number, scale: number): void {
+function bakeRect(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  w: number,
+  h: number,
+  tint: string | null,
+  r: number,
+  scale: number,
+): void {
   const x = 0;
   const y = 0;
-  withClip(ctx, () => ctx.roundRect(x, y, w, h, r), () => {
-    ctx.fillStyle = pattern(ctx, key, scale, x, y);
-    ctx.fillRect(x, y, w, h);
-    if (tint) {
-      ctx.globalCompositeOperation = "multiply";
-      ctx.fillStyle = tint;
+  withClip(
+    ctx,
+    () => ctx.roundRect(x, y, w, h, r),
+    () => {
+      ctx.fillStyle = pattern(ctx, key, scale, x, y);
       ctx.fillRect(x, y, w, h);
-      ctx.globalCompositeOperation = "source-over";
-    }
-  });
+      if (tint) {
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillStyle = tint;
+        ctx.fillRect(x, y, w, h);
+        ctx.globalCompositeOperation = "source-over";
+      }
+    },
+  );
 }
 
-export function ridgePanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string): void {
+export function ridgePanel(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tint: string,
+): void {
   ctx.fillStyle = INK;
   ctx.beginPath();
   ctx.roundRect(x - 1.5, y - 1.5, w + 3, h + 3, 5);
@@ -206,7 +263,15 @@ export function ridgePanel(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.stroke();
 }
 
-export function goldPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, text: string, scale = 0.85): void {
+export function goldPill(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  text: string,
+  scale = 0.85,
+): void {
   ctx.fillStyle = INK;
   ctx.beginPath();
   ctx.roundRect(x - 1.5, y - 1.5, w + 3, h + 3, (h + 3) / 2);
@@ -226,10 +291,14 @@ export function woodDisc(ctx: CanvasRenderingContext2D, cx: number, cy: number, 
   ctx.beginPath();
   ctx.arc(cx, cy, r + 1.5, 0, Math.PI * 2);
   ctx.fill();
-  withClip(ctx, () => ctx.arc(cx, cy, r, 0, Math.PI * 2), () => {
-    ctx.fillStyle = pattern(ctx, "wood", r / 40, cx - r, cy - r);
-    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-  });
+  withClip(
+    ctx,
+    () => ctx.arc(cx, cy, r, 0, Math.PI * 2),
+    () => {
+      ctx.fillStyle = pattern(ctx, "wood", r / 40, cx - r, cy - r);
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    },
+  );
   ctx.strokeStyle = "rgba(20,10,4,0.55)";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -259,13 +328,29 @@ export function coin(ctx: CanvasRenderingContext2D, x: number, y: number, label:
   shadowText(ctx, label, x - textWidth(label, sc, true) / 2, y - 5 * sc - 0.5, "#ffffff", sc, true);
 }
 
-export function shadowText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale = 1, num = false): void {
+export function shadowText(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  color: string,
+  scale = 1,
+  num = false,
+): void {
   const d = Math.max(0.8, scale * 0.9);
   drawPlain(ctx, s, x + d, y + d, INK, scale, num);
   drawPlain(ctx, s, x, y, color, scale, num);
 }
 
-export function engraved(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, scale: number, base: string, num = true): void {
+export function engraved(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  scale: number,
+  base: string,
+  num = true,
+): void {
   drawPlain(ctx, s, x, y + 1.2, "rgba(255,255,255,0.3)", scale, num);
   drawPlain(ctx, s, x, y, base, scale, num);
 }
@@ -278,25 +363,44 @@ export function goldArrow(ctx: CanvasRenderingContext2D, x: number, y: number, d
   ctx.lineTo(x - dir * 1.5, y + s + 1.5);
   ctx.closePath();
   ctx.fill();
-  withClip(ctx, () => {
-    ctx.moveTo(x + dir * s, y);
-    ctx.lineTo(x, y - s);
-    ctx.lineTo(x, y + s);
-    ctx.closePath();
-  }, () => {
-    ctx.fillStyle = pattern(ctx, "gold", 0.3, x - s, y - s);
-    ctx.fillRect(x - s - 2, y - s - 2, s * 2 + 4, s * 2 + 4);
-  });
+  withClip(
+    ctx,
+    () => {
+      ctx.moveTo(x + dir * s, y);
+      ctx.lineTo(x, y - s);
+      ctx.lineTo(x, y + s);
+      ctx.closePath();
+    },
+    () => {
+      ctx.fillStyle = pattern(ctx, "gold", 0.3, x - s, y - s);
+      ctx.fillRect(x - s - 2, y - s - 2, s * 2 + 4, s * 2 + 4);
+    },
+  );
 }
 
-export function band(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string, alpha = 1): void {
+export function band(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+  alpha = 1,
+): void {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
   ctx.globalAlpha = 1;
 }
 
-export function portraitBack(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string): void {
+export function portraitBack(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tint: string,
+): void {
   texturedRect(ctx, "leather", x, y, w, h, tint, 0, 1);
 }
 
@@ -339,19 +443,27 @@ export function fieldShade(ctx: CanvasRenderingContext2D, W: number, H: number, 
   ctx.fillRect(0, 0, W, H);
 }
 
-export function plank(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint = "#7a5636"): void {
+export function plank(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tint = "#7a5636",
+): void {
   band(ctx, x + 2, y + 2, w, h, INK, 0.45);
   ctx.fillStyle = INK;
   ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
   texturedRect(ctx, "wood", x, y, w, h, tint, 0, 0.9);
   band(ctx, x, y, w, 1, "#ffe8c0", 0.25);
   band(ctx, x, y + h - 1, w, 1, INK, 0.5);
-  for (const nx of [x + 3, x + w - 5]) for (const ny of [y + 3, y + h - 5]) {
-    ctx.fillStyle = INK;
-    ctx.fillRect(nx, ny, 2, 2);
-    ctx.fillStyle = "#c8b080";
-    ctx.fillRect(nx, ny, 1, 1);
-  }
+  for (const nx of [x + 3, x + w - 5])
+    for (const ny of [y + 3, y + h - 5]) {
+      ctx.fillStyle = INK;
+      ctx.fillRect(nx, ny, 2, 2);
+      ctx.fillStyle = "#c8b080";
+      ctx.fillRect(nx, ny, 1, 1);
+    }
 }
 
 export function woodFloor(ctx: CanvasRenderingContext2D, y: number, W: number, H: number, tint = "#8a6448"): void {
@@ -381,7 +493,14 @@ export function beam(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   }
 }
 
-export function artTitle(ctx: CanvasRenderingContext2D, key: string, fallback: string, cx: number, y: number, h: number): void {
+export function artTitle(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  fallback: string,
+  cx: number,
+  y: number,
+  h: number,
+): void {
   const im = nameImage(key);
   if (!im) {
     paintedText(ctx, fallback, cx, y + (h - 11) / 2, "#f0c030", 1.15);
@@ -395,7 +514,14 @@ export function artTitle(ctx: CanvasRenderingContext2D, key: string, fallback: s
   });
 }
 
-export function paintedText(ctx: CanvasRenderingContext2D, s: string, cx: number, y: number, color: string, scale: number): void {
+export function paintedText(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  cx: number,
+  y: number,
+  color: string,
+  scale: number,
+): void {
   shadowText(ctx, s, cx - textWidth(s, scale, true) / 2, y, color, scale, true);
 }
 
@@ -417,24 +543,58 @@ const imgId = (o: object | null) => {
   return v;
 };
 
-export function shield(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, field: string, icon: HTMLCanvasElement | HTMLImageElement | null, rim: string): void {
+export function shield(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  field: string,
+  icon: HTMLCanvasElement | HTMLImageElement | null,
+  rim: string,
+): void {
   bakedPlate(ctx, `shield|${field}|${rim}|${imgId(icon)}`, x - 3, y - 3, w + 6, h + 6, (g) =>
-    shieldPlate(g, 3, 3, w, h, field, icon ? () => {
-      const s2 = w + 10;
-      g.drawImage(icon, 3 + (w - s2) / 2, 2, s2, s2);
-    } : null, rim));
+    shieldPlate(
+      g,
+      3,
+      3,
+      w,
+      h,
+      field,
+      icon
+        ? () => {
+            const s2 = w + 10;
+            g.drawImage(icon, 3 + (w - s2) / 2, 2, s2, s2);
+          }
+        : null,
+      rim,
+    ),
+  );
 }
 
-function shieldPlate(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, field: string, inner: (() => void) | null, rim: string): void {
-  withClip(ctx, () => shieldPath(ctx, x, y, w, h), () => {
-    ctx.fillStyle = pattern(ctx, "leather", 1, x, y);
-    ctx.fillRect(x, y, w, h);
-    ctx.globalCompositeOperation = "multiply";
-    ctx.fillStyle = field;
-    ctx.fillRect(x, y, w, h);
-    ctx.globalCompositeOperation = "source-over";
-    inner?.();
-  });
+function shieldPlate(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  field: string,
+  inner: (() => void) | null,
+  rim: string,
+): void {
+  withClip(
+    ctx,
+    () => shieldPath(ctx, x, y, w, h),
+    () => {
+      ctx.fillStyle = pattern(ctx, "leather", 1, x, y);
+      ctx.fillRect(x, y, w, h);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = field;
+      ctx.fillRect(x, y, w, h);
+      ctx.globalCompositeOperation = "source-over";
+      inner?.();
+    },
+  );
   ctx.lineJoin = "round";
   ctx.strokeStyle = INK;
   ctx.lineWidth = 4.5;
@@ -446,7 +606,11 @@ function shieldPlate(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   ctx.beginPath();
   shieldPath(ctx, x, y, w, h);
   ctx.stroke();
-  for (const [rx, ry] of [[x + 3, y + 3.5], [x + w - 3, y + 3.5], [x + w / 2, y + h - 4]]) {
+  for (const [rx, ry] of [
+    [x + 3, y + 3.5],
+    [x + w - 3, y + 3.5],
+    [x + w / 2, y + h - 4],
+  ]) {
     ctx.fillStyle = INK;
     ctx.beginPath();
     ctx.arc(rx, ry, 1.5, 0, Math.PI * 2);
@@ -455,7 +619,15 @@ function shieldPlate(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
 }
 
 const plates = new Map<string, HTMLCanvasElement>();
-function bakedPlate(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): void {
+function bakedPlate(
+  ctx: CanvasRenderingContext2D,
+  id: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  draw: (g: CanvasRenderingContext2D) => void,
+): void {
   const m = ctx.getTransform();
   const k = Math.max(1, Math.hypot(m.a, m.b));
   const key = `${id}|${w.toFixed(2)}|${h.toFixed(2)}|${k.toFixed(2)}`;
@@ -478,7 +650,17 @@ function bakedPlate(ctx: CanvasRenderingContext2D, id: string, x: number, y: num
   ctx.drawImage(c, x, y, w, h);
 }
 
-export function ribbon(ctx: CanvasRenderingContext2D, cx: number, y: number, w: number, h: number, text: string, scale: number, color = "#3a2410", art: HTMLCanvasElement | null = null): void {
+export function ribbon(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  y: number,
+  w: number,
+  h: number,
+  text: string,
+  scale: number,
+  color = "#3a2410",
+  art: HTMLCanvasElement | null = null,
+): void {
   const x = cx - w / 2;
   bakedPlate(ctx, `ribbon|${art ? 1 : 0}`, x - 8, y - 2, w + 16, h + 8, (g) => ribbonPlate(g, 8, 2, w, h, !!art));
   if (art) {
@@ -509,19 +691,23 @@ function ribbonPlate(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
     ctx.lineTo(ix, y + h + 2.5);
     ctx.closePath();
     ctx.fill();
-    withClip(ctx, () => {
-      ctx.moveTo(ix, y + 3.5);
-      ctx.lineTo(ex + side * -1, y + 3.5);
-      ctx.lineTo(ex - side * 3.8, y + 2.5 + h / 2);
-      ctx.lineTo(ex + side * -1, y + h + 1.5);
-      ctx.lineTo(ix, y + h + 1.5);
-      ctx.closePath();
-    }, () => {
-      ctx.fillStyle = pattern(ctx, "parch", 1, x, y);
-      ctx.fillRect(ex - 8, y, 16 + Math.abs(ix - ex), h + 6);
-      ctx.fillStyle = stain;
-      ctx.fillRect(ex - 8, y, 16 + Math.abs(ix - ex), h + 6);
-    });
+    withClip(
+      ctx,
+      () => {
+        ctx.moveTo(ix, y + 3.5);
+        ctx.lineTo(ex + side * -1, y + 3.5);
+        ctx.lineTo(ex - side * 3.8, y + 2.5 + h / 2);
+        ctx.lineTo(ex + side * -1, y + h + 1.5);
+        ctx.lineTo(ix, y + h + 1.5);
+        ctx.closePath();
+      },
+      () => {
+        ctx.fillStyle = pattern(ctx, "parch", 1, x, y);
+        ctx.fillRect(ex - 8, y, 16 + Math.abs(ix - ex), h + 6);
+        ctx.fillStyle = stain;
+        ctx.fillRect(ex - 8, y, 16 + Math.abs(ix - ex), h + 6);
+      },
+    );
   }
   ctx.fillStyle = INK;
   ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
@@ -564,31 +750,51 @@ function pole(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): v
   ctx.stroke();
 }
 
-export function banner(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string, notch = 10): void {
+export function banner(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tint: string,
+  notch = 10,
+): void {
   pole(ctx, x, y, w);
   bakedPlate(ctx, `banner|${tint}|${notch}`, x - 2, y, w + 4, h + 2, (g) => bannerCloth(g, 2, 0, w, h, tint, notch));
 }
 
-function bannerCloth(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tint: string, notch: number): void {
+function bannerCloth(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tint: string,
+  notch: number,
+): void {
   ctx.fillStyle = INK;
   ctx.beginPath();
   notchPath(ctx, x - 1.5, y, w + 3, h + 1.5, notch);
   ctx.fill();
-  withClip(ctx, () => notchPath(ctx, x, y, w, h, notch), () => {
-    ctx.fillStyle = pattern(ctx, "banner", 0.5, x, y);
-    ctx.fillRect(x, y, w, h);
-    ctx.globalCompositeOperation = "multiply";
-    ctx.fillStyle = tint;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = "rgba(0,0,0,0.14)";
-    ctx.fillRect(x + w * 0.3, y, w * 0.1, h);
-    ctx.fillRect(x + w * 0.72, y, w * 0.08, h);
-    ctx.globalCompositeOperation = "source-over";
-    for (const ty of [y + 3, y + h - notch - 5]) {
-      ctx.fillStyle = pattern(ctx, "gold", 0.25, x, ty);
-      ctx.fillRect(x, ty, w, 2.5);
-    }
-  });
+  withClip(
+    ctx,
+    () => notchPath(ctx, x, y, w, h, notch),
+    () => {
+      ctx.fillStyle = pattern(ctx, "banner", 0.5, x, y);
+      ctx.fillRect(x, y, w, h);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = tint;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "rgba(0,0,0,0.14)";
+      ctx.fillRect(x + w * 0.3, y, w * 0.1, h);
+      ctx.fillRect(x + w * 0.72, y, w * 0.08, h);
+      ctx.globalCompositeOperation = "source-over";
+      for (const ty of [y + 3, y + h - notch - 5]) {
+        ctx.fillStyle = pattern(ctx, "gold", 0.25, x, ty);
+        ctx.fillRect(x, ty, w, 2.5);
+      }
+    },
+  );
 }
 
 export function rolledBanner(ctx: CanvasRenderingContext2D, x: number, y: number, w: number): void {
@@ -610,7 +816,14 @@ export function rolledBanner(ctx: CanvasRenderingContext2D, x: number, y: number
   }
 }
 
-export function waxSeal(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, color: string, glyph: string): void {
+export function waxSeal(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  color: string,
+  glyph: string,
+): void {
   const blob = (rr: number) => {
     for (let k = 0; k <= 36; k++) {
       const a = (k / 36) * Math.PI * 2;
@@ -676,19 +889,23 @@ export function pennant(ctx: CanvasRenderingContext2D, x: number, y: number, col
   ctx.lineTo(x, y - 7.5);
   ctx.closePath();
   ctx.fill();
-  withClip(ctx, () => {
-    ctx.moveTo(x + 0.8, y - 16.8);
-    ctx.lineTo(x + 14.5, y - 13);
-    ctx.lineTo(x + 0.8, y - 9);
-    ctx.closePath();
-  }, () => {
-    ctx.fillStyle = pattern(ctx, "cloth", 0.5, x, y);
-    ctx.fillRect(x, y - 18, 16, 12);
-    ctx.globalCompositeOperation = "multiply";
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y - 18, 16, 12);
-    ctx.globalCompositeOperation = "source-over";
-  });
+  withClip(
+    ctx,
+    () => {
+      ctx.moveTo(x + 0.8, y - 16.8);
+      ctx.lineTo(x + 14.5, y - 13);
+      ctx.lineTo(x + 0.8, y - 9);
+      ctx.closePath();
+    },
+    () => {
+      ctx.fillStyle = pattern(ctx, "cloth", 0.5, x, y);
+      ctx.fillRect(x, y - 18, 16, 12);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y - 18, 16, 12);
+      ctx.globalCompositeOperation = "source-over";
+    },
+  );
   drawPlain(ctx, label, x + 2.5, y - 16.3, "#ffffff", 0.55, true);
 }
 
@@ -727,7 +944,16 @@ export function drawLogo(ctx: CanvasRenderingContext2D, cx: number, y: number, h
   hiImage(ctx, logo, cx - w / 2, y, w, h);
 }
 
-export function card(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tilt: number, pinColor: string | null, body: () => void): void {
+export function card(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tilt: number,
+  pinColor: string | null,
+  body: () => void,
+): void {
   ctx.save();
   ctx.translate(x + w / 2, y + h / 2);
   ctx.rotate(tilt);
@@ -738,7 +964,14 @@ export function card(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   ctx.restore();
 }
 
-export function inset(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fill: string | null = "#2a1a0a"): void {
+export function inset(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string | null = "#2a1a0a",
+): void {
   ctx.fillStyle = "#2a1a0a";
   ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
   if (fill) {
@@ -779,12 +1012,28 @@ export function boardTitle(ctx: CanvasRenderingContext2D, W: number, key: string
   artTitle(ctx, key, fallback, W / 2, 2, 16);
 }
 
-export function tag(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, sel: boolean, k: number, body: () => void): void {
+export function tag(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  sel: boolean,
+  k: number,
+  body: () => void,
+): void {
   card(ctx, x - (sel ? 8 : 0), y, w, h, sel ? 0 : k % 2 ? 0.025 : -0.025, sel ? "#c81818" : "#8a8a90", body);
   if (sel) goldArrow(ctx, x - 14, y + h / 2, -1, 6);
 }
 
-export function hiImage(ctx: CanvasRenderingContext2D, im: CanvasImageSource, x: number, y: number, w: number, h: number): void {
+export function hiImage(
+  ctx: CanvasRenderingContext2D,
+  im: CanvasImageSource,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
   onHiLayer(ctx, (t) => {
     t.imageSmoothingEnabled = true;
     t.imageSmoothingQuality = "high";

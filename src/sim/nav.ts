@@ -2,18 +2,37 @@ import { Kind, type Terrain } from "./terrain.ts";
 import type { Vec2 } from "./types.ts";
 
 const DIRS: [number, number, number][] = [
-  [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
-  [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
+  [1, 0, 1],
+  [-1, 0, 1],
+  [0, 1, 1],
+  [0, -1, 1],
+  [1, 1, Math.SQRT2],
+  [1, -1, Math.SQRT2],
+  [-1, 1, Math.SQRT2],
+  [-1, -1, Math.SQRT2],
 ];
 
 const DX = DIRS.map((d) => d[0]);
 const DZ = DIRS.map((d) => d[1]);
 const DC = DIRS.map((d) => d[2]);
-const SLOPE_SAMPLES: [number, number][] = [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35], [0.42, 0.42], [-0.42, 0.42], [0.42, -0.42], [-0.42, -0.42]];
+const SLOPE_SAMPLES: [number, number][] = [
+  [0, 0],
+  [0.35, 0],
+  [-0.35, 0],
+  [0, 0.35],
+  [0, -0.35],
+  [0.42, 0.42],
+  [-0.42, 0.42],
+  [0.42, -0.42],
+  [-0.42, -0.42],
+];
 const PLAN_SLOPE = 0.9;
 const LINE_SLOPE = 0.95;
 
-const CLEAR_RING: [number, number][] = Array.from({ length: 8 }, (_, k) => [Math.cos((k * Math.PI) / 4) * 0.6, Math.sin((k * Math.PI) / 4) * 0.6]);
+const CLEAR_RING: [number, number][] = Array.from({ length: 8 }, (_, k) => [
+  Math.cos((k * Math.PI) / 4) * 0.6,
+  Math.sin((k * Math.PI) / 4) * 0.6,
+]);
 
 export class NavGrid {
   readonly w: number;
@@ -33,7 +52,11 @@ export class NavGrid {
   private cache = new Map<number, { found: boolean; cells: Int32Array } | null>();
   private clearMemo = new Map<number, boolean>();
 
-  constructor(private t: Terrain, maxStep: number, private maxSlope: number) {
+  constructor(
+    private t: Terrain,
+    maxStep: number,
+    private maxSlope: number,
+  ) {
     this.w = t.width;
     this.d = t.depth;
     const n = this.w * this.d;
@@ -62,7 +85,10 @@ export class NavGrid {
     let ok = Number.isFinite(hc) && !(t.chasm !== undefined && hc < t.chasm + 0.5);
     if (ok) {
       for (const [ox, oz] of SLOPE_SAMPLES) {
-        if (!(t.slopeAt(x + ox, z + oz) <= this.maxSlope * PLAN_SLOPE)) { ok = false; break; }
+        if (!(t.slopeAt(x + ox, z + oz) <= this.maxSlope * PLAN_SLOPE)) {
+          ok = false;
+          break;
+        }
       }
     }
     this.walk[i] = ok ? 1 : 0;
@@ -80,7 +106,10 @@ export class NavGrid {
       for (let dz = -1; dz <= 1; dz++) {
         for (let dx = -1; dx <= 1; dx++) {
           const i = this.index(cx + dx, cz + dz);
-          if (i >= 0 && !done.has(i)) { done.add(i); this.computeCell(i); }
+          if (i >= 0 && !done.has(i)) {
+            done.add(i);
+            this.computeCell(i);
+          }
         }
       }
     }
@@ -127,7 +156,10 @@ export class NavGrid {
           if (!this.open(i)) continue;
           if (y !== undefined && Math.abs(this.h[i] - y) > this.maxStep * 1.2) continue;
           const d = Math.hypot(cx + 0.5 - x, cz + 0.5 - z);
-          if (d < bestD) { bestD = d; best = i; }
+          if (d < bestD) {
+            bestD = d;
+            best = i;
+          }
         }
       }
       if (best >= 0) return best;
@@ -136,7 +168,12 @@ export class NavGrid {
   }
 
   lineClear(a: Vec2, b: Vec2): boolean {
-    if (a.x - Math.floor(a.x) === 0.5 && a.z - Math.floor(a.z) === 0.5 && b.x - Math.floor(b.x) === 0.5 && b.z - Math.floor(b.z) === 0.5) {
+    if (
+      a.x - Math.floor(a.x) === 0.5 &&
+      a.z - Math.floor(a.z) === 0.5 &&
+      b.x - Math.floor(b.x) === 0.5 &&
+      b.z - Math.floor(b.z) === 0.5
+    ) {
       const ia = this.index(Math.floor(a.x), Math.floor(a.z));
       const ib = this.index(Math.floor(b.x), Math.floor(b.z));
       if (ia >= 0 && ib >= 0) {
@@ -215,8 +252,14 @@ export class NavGrid {
         const r = l + 1;
         let m = -1;
         let mf = lf;
-        if (l < n && F[l] < mf) { m = l; mf = F[l]; }
-        if (r < n && F[r] < mf) { m = r; mf = F[r]; }
+        if (l < n && F[l] < mf) {
+          m = l;
+          mf = F[l];
+        }
+        if (r < n && F[r] < mf) {
+          m = r;
+          mf = F[r];
+        }
         if (m < 0) break;
         H[k] = H[m];
         F[k] = F[m];
@@ -246,7 +289,12 @@ export class NavGrid {
         const c = stack.pop()!;
         const cx = c % this.w;
         const cz = (c / this.w) | 0;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
           const m = this.index(cx + dx, cz + dz);
           if (m < 0 || r[m] >= 0 || !this.passable(c, m)) continue;
           r[m] = id;
@@ -274,7 +322,10 @@ export class NavGrid {
     const l = Math.hypot(dx, dz) || 1;
     const ox = (-dz / l) * r;
     const oz = (dx / l) * r;
-    return this.lineClear({ x: a.x + ox, z: a.z + oz }, { x: b.x + ox, z: b.z + oz }) && this.lineClear({ x: a.x - ox, z: a.z - oz }, { x: b.x - ox, z: b.z - oz });
+    return (
+      this.lineClear({ x: a.x + ox, z: a.z + oz }, { x: b.x + ox, z: b.z + oz }) &&
+      this.lineClear({ x: a.x - ox, z: a.z - oz }, { x: b.x - ox, z: b.z - oz })
+    );
   }
 
   findPath(from: Vec2, to: Vec2, fromY?: number, radius = 0): Vec2[] | null {
@@ -304,7 +355,10 @@ export class NavGrid {
     this.lastFound = found;
     const W = this.w;
     const pts: Vec2[] = Array.from(cells, (c) => ({ x: (c % W) + 0.5, z: ((c / W) | 0) + 0.5 }));
-    if (found) pts[pts.length - 1] = this.open(this.index(Math.floor(to.x), Math.floor(to.z))) ? { x: to.x, z: to.z } : pts[pts.length - 1];
+    if (found)
+      pts[pts.length - 1] = this.open(this.index(Math.floor(to.x), Math.floor(to.z)))
+        ? { x: to.x, z: to.z }
+        : pts[pts.length - 1];
     const out: Vec2[] = [];
     let anchor: Vec2 = from;
     let k = 0;
@@ -319,7 +373,6 @@ export class NavGrid {
   }
 
   private search(start: number, goal: number): { found: boolean; cells: Int32Array } | null {
-
     const gen = ++this.gen;
     const W = this.w;
     const gx = goal % W;
@@ -342,9 +395,15 @@ export class NavGrid {
       const cur = this.pop();
       if (this.closed[cur] === gen) continue;
       this.closed[cur] = gen;
-      if (cur === goal) { found = true; break; }
+      if (cur === goal) {
+        found = true;
+        break;
+      }
       const hc = heur(cur);
-      if (hc < bestH) { bestH = hc; best = cur; }
+      if (hc < bestH) {
+        bestH = hc;
+        best = cur;
+      }
       const cx = cur % W;
       const cz = (cur / W) | 0;
       for (let di = 0; di < 8; di++) {
@@ -356,7 +415,8 @@ export class NavGrid {
         if (dx !== 0 && dz !== 0) {
           if (!this.passable(cur, this.index(cx + dx, cz)) || !this.passable(cur, this.index(cx, cz + dz))) continue;
         }
-        const ng = this.g[cur] + dc * (this.cost[cur] + this.cost[n]) * 0.5 + Math.max(0, this.h[n] - this.h[cur]) * 0.3;
+        const ng =
+          this.g[cur] + dc * (this.cost[cur] + this.cost[n]) * 0.5 + Math.max(0, this.h[n] - this.h[cur]) * 0.3;
         if (this.stamp[n] !== gen || ng < this.g[n]) {
           this.stamp[n] = gen;
           this.g[n] = ng;

@@ -19,7 +19,14 @@ export interface MapperUi {
   charge: { slot: "a" | "b"; k: number } | null;
   morph: number;
   morphBack: boolean;
-  reticle: { slot: "b" | "r" | "z"; dx: number; dz: number; range: number; at?: { x: number; z: number }; spots?: number } | null;
+  reticle: {
+    slot: "b" | "r" | "z";
+    dx: number;
+    dz: number;
+    range: number;
+    at?: { x: number; z: number };
+    spots?: number;
+  } | null;
 }
 
 export interface AimInfo {
@@ -54,8 +61,22 @@ export class CommandMapper {
   private smashArmed = true;
   smash = { from: 0.3, to: 0.85, within: 0.12 };
 
-  constructor(private flickThreshold: number, commander = false) {
-    this.ui = { buildMenu: "closed", commander, group: "all", groupAt: -99, lastOrderAt: -99, learnReady: false, charge: null, reticle: null, morph: 0, morphBack: false };
+  constructor(
+    private flickThreshold: number,
+    commander = false,
+  ) {
+    this.ui = {
+      buildMenu: "closed",
+      commander,
+      group: "all",
+      groupAt: -99,
+      lastOrderAt: -99,
+      learnReady: false,
+      charge: null,
+      reticle: null,
+      morph: 0,
+      morphBack: false,
+    };
   }
 
   private flick(p: PadState): Flick | null {
@@ -143,15 +164,30 @@ export class CommandMapper {
             for (const q of spots) {
               let d = Math.abs(Math.atan2(q.x - hx, q.z - hz) - sa);
               if (d > Math.PI) d = Math.PI * 2 - d;
-              if (d < bd) { bd = d; this.spotSel = q; }
+              if (d < bd) {
+                bd = d;
+                this.spotSel = q;
+              }
             }
           }
           const sel = this.spotSel;
-          const s = sel && spots.length ? spots.reduce((b, q) => (Math.hypot(q.x - sel.x, q.z - sel.z) < Math.hypot(b.x - sel.x, b.z - sel.z) ? q : b)) : spots[0] ?? null;
+          const s =
+            sel && spots.length
+              ? spots.reduce((b, q) =>
+                  Math.hypot(q.x - sel.x, q.z - sel.z) < Math.hypot(b.x - sel.x, b.z - sel.z) ? q : b,
+                )
+              : (spots[0] ?? null);
           this.spotSel = s;
           c.moveX = c.moveZ = 0;
           this.place = s ? { dx: s.x - hx, dz: s.z - hz } : { dx: 0, dz: 0 };
-          this.ui.reticle = { slot: k, dx: this.place.dx, dz: this.place.dz, range: 0, at: s ? { x: s.x, z: s.z } : undefined, spots: spots.length };
+          this.ui.reticle = {
+            slot: k,
+            dx: this.place.dx,
+            dz: this.place.dz,
+            range: 0,
+            at: s ? { x: s.x, z: s.z } : undefined,
+            spots: spots.length,
+          };
         } else if (held > TAP && range) {
           this.place.dx += p.stickX * 12 * dt;
           this.place.dz += p.stickY * 12 * dt;
@@ -262,7 +298,13 @@ export class CommandMapper {
     if (this.tDown && !p.held.y && !mr) {
       if (!this.tUsed && atPad && this.ui.buildMenu !== "spec") c.build = "upgrade";
       this.tDown = false;
-      if (this.ui.buildMenu === "tower" || this.ui.buildMenu === "shop" || this.ui.buildMenu === "learn" || this.ui.buildMenu === "spec") this.ui.buildMenu = "closed";
+      if (
+        this.ui.buildMenu === "tower" ||
+        this.ui.buildMenu === "shop" ||
+        this.ui.buildMenu === "learn" ||
+        this.ui.buildMenu === "spec"
+      )
+        this.ui.buildMenu = "closed";
     }
   }
 

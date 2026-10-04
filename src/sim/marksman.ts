@@ -4,8 +4,15 @@ import type { Command, Entity, HeroAction } from "./types.ts";
 import { abilities, applyBleed, fireMissile, mark, zoneAt } from "./talents.ts";
 import { aimTarget } from "./heroes.ts";
 
-const fx = (w: World, name: string, e: Entity, x: number, y: number, z: number, extra: { radius?: number; tx?: number; tz?: number; seconds?: number; id?: number } = {}) =>
-  w.emit({ type: "heroFx", name, src: e.id, team: e.team, x, y, z, ...extra });
+const fx = (
+  w: World,
+  name: string,
+  e: Entity,
+  x: number,
+  y: number,
+  z: number,
+  extra: { radius?: number; tx?: number; tz?: number; seconds?: number; id?: number } = {},
+) => w.emit({ type: "heroFx", name, src: e.id, team: e.team, x, y, z, ...extra });
 
 export function isMarksman(w: World, e: Entity): boolean {
   return !!e.hero && !!w.heroDef(e.hero.type).hooks.vantageMul;
@@ -14,7 +21,13 @@ export function isMarksman(w: World, e: Entity): boolean {
 export function trackStill(w: World, e: Entity): void {
   const h = e.hero!;
   const p = e.transform.pos;
-  if (h.stillX === undefined || h.stillZ === undefined || Math.hypot(p.x - h.stillX, p.z - h.stillZ) > 0.25 || h.jump || h.action?.name === "dodge") {
+  if (
+    h.stillX === undefined ||
+    h.stillZ === undefined ||
+    Math.hypot(p.x - h.stillX, p.z - h.stillZ) > 0.25 ||
+    h.jump ||
+    h.action?.name === "dodge"
+  ) {
     h.stillX = p.x;
     h.stillZ = p.z;
     h.stillAt = w.time;
@@ -38,7 +51,8 @@ export function vantageMul(w: World, src: Entity, target: Entity): number {
 export function pipMarkMul(w: World, src: Entity, target: Entity): number {
   const s = target.status;
   if (s.pipUntil === undefined || w.time >= s.pipUntil) return 1;
-  const owner = src.id === s.pipOwner ? src : src.owner !== undefined && src.owner === s.pipOwner ? w.getAny(src.owner) : undefined;
+  const owner =
+    src.id === s.pipOwner ? src : src.owner !== undefined && src.owner === s.pipOwner ? w.getAny(src.owner) : undefined;
   if (!owner?.hero) return 1;
   return abilities(w, owner).b.markMul ?? 1.15;
 }
@@ -66,12 +80,19 @@ export function interruptChannels(w: World, o: Entity): boolean {
     any = true;
   }
   const r = w.arena.relic;
-  if (r.channel > 0 && ((r.state === "carried" && r.carrier === o.id) || (r.state === "shrined" && r.stealer === o.id))) {
+  if (
+    r.channel > 0 &&
+    ((r.state === "carried" && r.carrier === o.id) || (r.state === "shrined" && r.stealer === o.id))
+  ) {
     r.channel = 0;
     any = true;
   }
   for (const hn of w.mapEvents.horns) {
-    if (hn.team === o.team && hn.progress > 0 && Math.hypot(hn.x - o.transform.pos.x, hn.z - o.transform.pos.z) <= 2.8) {
+    if (
+      hn.team === o.team &&
+      hn.progress > 0 &&
+      Math.hypot(hn.x - o.transform.pos.x, hn.z - o.transform.pos.z) <= 2.8
+    ) {
       hn.progress = 0;
       any = true;
     }
@@ -82,7 +103,12 @@ export function interruptChannels(w: World, o: Entity): boolean {
 export function peck(w: World, src: Entity, target: Entity): void {
   if (!target.alive || !src.hero) return;
   const b = abilities(w, src).b;
-  w.damage(src, target, (b.peck ?? 12) * src.hero.damageMul, { tick: true, noFlinch: true, fromX: target.transform.pos.x, fromZ: target.transform.pos.z });
+  w.damage(src, target, (b.peck ?? 12) * src.hero.damageMul, {
+    tick: true,
+    noFlinch: true,
+    fromX: target.transform.pos.x,
+    fromZ: target.transform.pos.z,
+  });
   if (b.fx?.bleed) applyBleed(w, src, target, b.fx.bleed);
   fx(w, "pipPeck", src, target.transform.pos.x, target.transform.y, target.transform.pos.z, { id: target.id });
 }
@@ -110,7 +136,20 @@ function launchPip(w: World, e: Entity, target: Entity): void {
   const x = p ? p.x : sp.x;
   const y = p ? p.y : sp.y;
   const z = p ? p.z : sp.z;
-  h.pip = { target: target.id, phase: "out", x, y, z, px: x, py: y, pz: z, until: 0, since: w.time, peckAt: 0, intAt: -99 };
+  h.pip = {
+    target: target.id,
+    phase: "out",
+    x,
+    y,
+    z,
+    px: x,
+    py: y,
+    pz: z,
+    until: 0,
+    since: w.time,
+    peckAt: 0,
+    intAt: -99,
+  };
   fx(w, "pipLaunch", e, x, y, z, { id: target.id });
 }
 
@@ -125,7 +164,10 @@ export function sendPip(w: World, e: Entity, a: HeroAction, def: AbilityDef): vo
       const d = Math.hypot(o.transform.pos.x - a.toX, o.transform.pos.z - a.toZ);
       if (d > 4 + o.radius || w.dist(e, o) > range + 4) continue;
       const sc = d - (o.hero ? 3 : 0);
-      if (sc < best) { best = sc; target = o; }
+      if (sc < best) {
+        best = sc;
+        target = o;
+      }
     }
   }
   if (!target) {
@@ -139,7 +181,10 @@ export function sendPip(w: World, e: Entity, a: HeroAction, def: AbilityDef): vo
       const dz = o.transform.pos.z - e.transform.pos.z;
       const along = (dx * a.dirX + dz * a.dirZ) / (d || 1);
       const sc = d - along * 4;
-      if (sc < best) { best = sc; target = o; }
+      if (sc < best) {
+        best = sc;
+        target = o;
+      }
     }
   }
   target ??= aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range);
@@ -192,11 +237,31 @@ export function updatePip(w: World, e: Entity): void {
         p.peckAt = w.time + 0.6;
         tgt!.status.pipUntil = p.until;
         tgt!.status.pipOwner = e.id;
-        fx(w, "pipLatch", e, tgt!.transform.pos.x, tgt!.transform.y, tgt!.transform.pos.z, { id: tgt!.id, seconds: def.seconds ?? 5 });
-        if (tgt!.hero) w.emit({ type: "callout", x: tgt!.transform.pos.x, y: tgt!.transform.y, z: tgt!.transform.pos.z, team: e.team, text: "MARKED BY PIP", owner: tgt!.id });
+        fx(w, "pipLatch", e, tgt!.transform.pos.x, tgt!.transform.y, tgt!.transform.pos.z, {
+          id: tgt!.id,
+          seconds: def.seconds ?? 5,
+        });
+        if (tgt!.hero)
+          w.emit({
+            type: "callout",
+            x: tgt!.transform.pos.x,
+            y: tgt!.transform.y,
+            z: tgt!.transform.pos.z,
+            team: e.team,
+            text: "MARKED BY PIP",
+            owner: tgt!.id,
+          });
         if (interruptChannels(w, tgt!)) {
           p.intAt = w.time;
-          w.emit({ type: "callout", x: tgt!.transform.pos.x, y: tgt!.transform.y, z: tgt!.transform.pos.z, team: e.team, text: "INTERRUPTED!", owner: tgt!.id });
+          w.emit({
+            type: "callout",
+            x: tgt!.transform.pos.x,
+            y: tgt!.transform.y,
+            z: tgt!.transform.pos.z,
+            team: e.team,
+            text: "INTERRUPTED!",
+            owner: tgt!.id,
+          });
         }
       }
     }
@@ -223,7 +288,15 @@ export function updatePip(w: World, e: Entity): void {
       }
       if (interruptChannels(w, o) && w.time - p.intAt > 1) {
         p.intAt = w.time;
-        w.emit({ type: "callout", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: e.team, text: "INTERRUPTED!", owner: o.id });
+        w.emit({
+          type: "callout",
+          x: o.transform.pos.x,
+          y: o.transform.y,
+          z: o.transform.pos.z,
+          team: e.team,
+          text: "INTERRUPTED!",
+          owner: o.id,
+        });
       }
     }
   }
@@ -269,7 +342,14 @@ export function pipTarget(w: World, e: Entity): Entity | null {
   return w.get(p.target) ?? null;
 }
 
-export function wrenTarget(w: World, e: Entity, dirX: number, dirZ: number, stick: boolean, reach: number): Entity | null {
+export function wrenTarget(
+  w: World,
+  e: Entity,
+  dirX: number,
+  dirZ: number,
+  stick: boolean,
+  reach: number,
+): Entity | null {
   const t = e.transform;
   let best: Entity | null = null;
   let bs = Infinity;
@@ -284,7 +364,10 @@ export function wrenTarget(w: World, e: Entity, dirX: number, dirZ: number, stic
     if (stick && along < 0.2) continue;
     const pip = o.status.pipOwner === e.id && w.time < (o.status.pipUntil ?? 0);
     const sc = d * 0.5 + (o.hero ? -6 : 0) + (pip ? -4 : 0) + (o.structure ? 5 : 0) - along * (stick ? 6 : 2);
-    if (sc < bs) { bs = sc; best = o; }
+    if (sc < bs) {
+      bs = sc;
+      best = o;
+    }
   }
   return best;
 }
@@ -296,7 +379,8 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
   const far = base * (hk.vantageRange ?? 1.2);
   const stick = !!a.stick;
   let target = wrenTarget(w, e, a.dirX, a.dirZ, stick, far);
-  if (target && w.dist(e, target) - target.radius > base && !vantage(w, e, target)) target = wrenTarget(w, e, a.dirX, a.dirZ, stick, base);
+  if (target && w.dist(e, target) - target.radius > base && !vantage(w, e, target))
+    target = wrenTarget(w, e, a.dirX, a.dirZ, stick, base);
   let dx = a.dirX;
   let dz = a.dirZ;
   if (target) {
@@ -309,22 +393,49 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
   }
   const pw = a.power ?? 1;
   if (pw >= 1.4) {
-    const range = (def.pierceRange ?? 14) * (vantage(w, e, target) ? hk.vantageRange ?? 1.2 : 1);
+    const range = (def.pierceRange ?? 14) * (vantage(w, e, target) ? (hk.vantageRange ?? 1.2) : 1);
     fireMissile(w, e, {
-      x: t.pos.x + dx * 0.6, z: t.pos.z + dz * 0.6, y: t.y + 1.4, dirX: dx, dirZ: dz, speed: 42, range, width: 0.8,
-      damage: (def.damage ?? 40) * mul * (0.9 + pw * 0.7), pierce: true, style: "powershot", arrow: true, knockback: 7,
+      x: t.pos.x + dx * 0.6,
+      z: t.pos.z + dz * 0.6,
+      y: t.y + 1.4,
+      dirX: dx,
+      dirZ: dz,
+      speed: 42,
+      range,
+      width: 0.8,
+      damage: (def.damage ?? 40) * mul * (0.9 + pw * 0.7),
+      pierce: true,
+      style: "powershot",
+      arrow: true,
+      knockback: 7,
     });
     fx(w, "powershot", e, t.pos.x, t.y, t.pos.z, { tx: t.pos.x + dx * range, tz: t.pos.z + dz * range });
     return;
   }
   const dmg = (def.damage ?? 40) * mul;
-  const splash = def.splash ? { radius: def.splash, damage: (def.splashDamage ?? 15) * mul, slowMul: 1, slowSeconds: 0 } : undefined;
+  const splash = def.splash
+    ? { radius: def.splash, damage: (def.splashDamage ?? 15) * mul, slowMul: 1, slowSeconds: 0 }
+    : undefined;
   const speed = def.speed ?? 32;
   if (target) {
     w.fireProjectile(e, target, dmg, speed, false, "longarrow", 1.5, false, splash);
     w.projectiles[w.projectiles.length - 1].arrow = true;
   } else {
-    fireMissile(w, e, { x: t.pos.x + dx * 0.6, z: t.pos.z + dz * 0.6, y: t.y + 1.4, dirX: dx, dirZ: dz, speed: speed * 1.2, range: base, width: 0.7, damage: dmg, pierce: false, style: "longarrow", arrow: true, knockback: 0.8 });
+    fireMissile(w, e, {
+      x: t.pos.x + dx * 0.6,
+      z: t.pos.z + dz * 0.6,
+      y: t.y + 1.4,
+      dirX: dx,
+      dirZ: dz,
+      speed: speed * 1.2,
+      range: base,
+      width: 0.7,
+      damage: dmg,
+      pierce: false,
+      style: "longarrow",
+      arrow: true,
+      knockback: 0.8,
+    });
   }
 }
 
@@ -351,7 +462,7 @@ export function volley(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul:
   const reps = 1 + (ec?.count ?? 0);
   for (let rep = 0; rep < reps; rep++) {
     const off = rep * (ec?.delay ?? 0);
-    const scale = rep === 0 ? 1 : ec?.scale ?? 1;
+    const scale = rep === 0 ? 1 : (ec?.scale ?? 1);
     const start = () => fx(w, "volley", e, x, w.groundY(x, z), z, { radius: r, seconds: delay + waves * gap, id: rep });
     if (off > 0) w.later(off, start);
     else start();
@@ -368,9 +479,14 @@ function volleyWave(w: World, e: Entity, x: number, z: number, r: number, def: A
   for (const o of w.entities.slice()) {
     if (!o.alive || o.team === e.team) continue;
     if (Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) - o.radius > r) continue;
-    const dmg = (def.damage ?? 26) * mul * (o.unit ? def.unitMul ?? 1.5 : 1);
+    const dmg = (def.damage ?? 26) * mul * (o.unit ? (def.unitMul ?? 1.5) : 1);
     w.damage(e, o, dmg, {
-      fromX: x, fromZ: z, knockback: 0.4, slowMul: def.slowMul, slowSeconds: def.slowSeconds, noFlinch: true,
+      fromX: x,
+      fromZ: z,
+      knockback: 0.4,
+      slowMul: def.slowMul,
+      slowSeconds: def.slowSeconds,
+      noFlinch: true,
       structureDamage: o.structure ? dmg * 0.5 : undefined,
     });
   }
@@ -392,7 +508,10 @@ export function heartseeker(w: World, e: Entity, a: HeroAction, def: AbilityDef,
     const d = Math.hypot(ox, oz);
     if (d > range || d < 0.5) continue;
     const c = (ox * a.dirX + oz * a.dirZ) / d;
-    if (c > bestCos) { bestCos = c; lock = o; }
+    if (c > bestCos) {
+      bestCos = c;
+      lock = o;
+    }
   }
   if (lock) {
     const ox = lock.transform.pos.x - t.pos.x;
@@ -404,7 +523,10 @@ export function heartseeker(w: World, e: Entity, a: HeroAction, def: AbilityDef,
   t.facing = Math.atan2(dx, dz);
   let len = range;
   for (let s = 0.5; s <= range; s += 0.5) {
-    if (w.losHeight(t.pos.x + dx * s, t.pos.z + dz * s) > t.y + 2.4) { len = s; break; }
+    if (w.losHeight(t.pos.x + dx * s, t.pos.z + dz * s) > t.y + 2.4) {
+      len = s;
+      break;
+    }
   }
   const hits: { o: Entity; along: number }[] = [];
   for (const o of w.entities) {
@@ -424,9 +546,12 @@ export function heartseeker(w: World, e: Entity, a: HeroAction, def: AbilityDef,
   const marked: Entity[] = [];
   for (const { o } of hits) {
     const champ = !!o.hero && !first;
-    const dmg = (champ ? def.heroDamage ?? 260 : def.damage ?? 110) * mul;
+    const dmg = (champ ? (def.heroDamage ?? 260) : (def.damage ?? 110)) * mul;
     const ok = w.damage(e, o, dmg, {
-      fromX: t.pos.x, fromZ: t.pos.z, knockback: champ ? def.knockback ?? 12 : 5, big: true,
+      fromX: t.pos.x,
+      fromZ: t.pos.z,
+      knockback: champ ? (def.knockback ?? 12) : 5,
+      big: true,
       structureDamage: o.structure ? (def.structureDamage ?? 120) * mul : undefined,
     });
     if (champ) first = o;
@@ -447,14 +572,26 @@ export function heartseeker(w: World, e: Entity, a: HeroAction, def: AbilityDef,
       const d = w.dist(from, o);
       if (d > rc.range) continue;
       const sc = d - (o.hero ? 6 : 0);
-      if (sc < bd) { bd = sc; best = o; }
+      if (sc < bd) {
+        bd = sc;
+        best = o;
+      }
     }
     if (best) {
-      fx(w, "ricochet", e, from.transform.pos.x, from.transform.y, from.transform.pos.z, { tx: best.transform.pos.x, tz: best.transform.pos.z, id: best.id });
+      fx(w, "ricochet", e, from.transform.pos.x, from.transform.y, from.transform.pos.z, {
+        tx: best.transform.pos.x,
+        tz: best.transform.pos.z,
+        id: best.id,
+      });
       const target = best;
       w.later(0.12, () => {
         if (!target.alive) return;
-        w.damage(e, target, (target.hero ? def.heroDamage ?? 260 : def.damage ?? 110) * mul * rc.mul, { fromX: from.transform.pos.x, fromZ: from.transform.pos.z, knockback: 6, big: true });
+        w.damage(e, target, (target.hero ? (def.heroDamage ?? 260) : (def.damage ?? 110)) * mul * rc.mul, {
+          fromX: from.transform.pos.x,
+          fromZ: from.transform.pos.z,
+          knockback: 6,
+          big: true,
+        });
         onArrowHit(w, e, target);
         if (fz.mark && target.alive) mark(w, e, target, fz.mark);
       });

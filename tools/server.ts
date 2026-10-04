@@ -74,7 +74,9 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
     res.end();
     return;
   }
-  createReadStream(file).on("error", () => res.destroy()).pipe(res);
+  createReadStream(file)
+    .on("error", () => res.destroy())
+    .pipe(res);
 }
 
 const relay = new NetRelay();

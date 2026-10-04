@@ -22,7 +22,12 @@ mat4 instSkin() {
 }
 `;
 
-function skinned(mat: THREE.Material, withNormals: boolean, uniforms: { uBones: { value: THREE.Texture }; uBind: { value: THREE.Matrix4 } }, key: string): void {
+function skinned(
+  mat: THREE.Material,
+  withNormals: boolean,
+  uniforms: { uBones: { value: THREE.Texture }; uBind: { value: THREE.Matrix4 } },
+  key: string,
+): void {
   const inner = mat.onBeforeCompile.bind(mat);
   mat.onBeforeCompile = (shader, r) => {
     inner(shader, r);
@@ -31,13 +36,25 @@ function skinned(mat: THREE.Material, withNormals: boolean, uniforms: { uBones: 
     shader.vertexShader = shader.vertexShader.replace("#include <common>", `#include <common>\n${SKIN_PARS}`);
     if (withNormals) {
       shader.vertexShader = shader.vertexShader
-        .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\nmat4 skinM = instSkin();\nobjectNormal = normalize(mat3(skinM) * objectNormal);\nvInstEmis = iEmis;")
-        .replace("#include <begin_vertex>", "#include <begin_vertex>\ntransformed = (skinM * vec4(transformed, 1.0)).xyz;");
+        .replace(
+          "#include <beginnormal_vertex>",
+          "#include <beginnormal_vertex>\nmat4 skinM = instSkin();\nobjectNormal = normalize(mat3(skinM) * objectNormal);\nvInstEmis = iEmis;",
+        )
+        .replace(
+          "#include <begin_vertex>",
+          "#include <begin_vertex>\ntransformed = (skinM * vec4(transformed, 1.0)).xyz;",
+        );
       shader.fragmentShader = shader.fragmentShader
         .replace("#include <common>", "#include <common>\nvarying vec3 vInstEmis;")
-        .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vInstEmis;");
+        .replace(
+          "#include <emissivemap_fragment>",
+          "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vInstEmis;",
+        );
     } else {
-      shader.vertexShader = shader.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nmat4 skinM = instSkin();\ntransformed = (skinM * vec4(transformed, 1.0)).xyz;\nvInstEmis = iEmis;");
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\nmat4 skinM = instSkin();\ntransformed = (skinM * vec4(transformed, 1.0)).xyz;\nvInstEmis = iEmis;",
+      );
     }
   };
   const prev = mat.customProgramCacheKey.bind(mat);
@@ -183,7 +200,13 @@ export class UnitBatches {
   readonly silRoot = new THREE.Group();
   private batches = new Map<string, Batch>();
 
-  add(mesh: THREE.SkinnedMesh, hide: THREE.Object3D, key: string, make: () => { material: THREE.Material; sil: THREE.Material | null }, flash: () => boolean): void {
+  add(
+    mesh: THREE.SkinnedMesh,
+    hide: THREE.Object3D,
+    key: string,
+    make: () => { material: THREE.Material; sil: THREE.Material | null },
+    flash: () => boolean,
+  ): void {
     let b = this.batches.get(key);
     if (!b) {
       const m = make();

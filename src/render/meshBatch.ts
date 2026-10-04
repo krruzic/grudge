@@ -11,7 +11,10 @@ function instMaterial(src: THREE.Material): THREE.Material {
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nattribute vec3 iEmis;\nvarying vec3 vIEmis;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\nvIEmis = iEmis;");
-    shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vIEmis;\n#define emissive vIEmis");
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <common>",
+      "#include <common>\nvarying vec3 vIEmis;\n#define emissive vIEmis",
+    );
   };
   const key = src.customProgramCacheKey.call(src);
   m.customProgramCacheKey = () => `${key}|inst-emis`;
@@ -121,10 +124,22 @@ export class MeshBatches {
     mesh.layers.set(HIDDEN_LAYER);
   }
 
-  addTree(root: THREE.Object3D, key: string, flash: () => boolean, ok: (m: THREE.Mesh) => boolean = () => true): THREE.Mesh[] {
+  addTree(
+    root: THREE.Object3D,
+    key: string,
+    flash: () => boolean,
+    ok: (m: THREE.Mesh) => boolean = () => true,
+  ): THREE.Mesh[] {
     const out: THREE.Mesh[] = [];
     root.traverse((o) => {
-      if (o instanceof THREE.Mesh && !(o instanceof THREE.SkinnedMesh) && !(o instanceof THREE.InstancedMesh) && !Array.isArray(o.material) && o.geometry.userData.model && ok(o)) {
+      if (
+        o instanceof THREE.Mesh &&
+        !(o instanceof THREE.SkinnedMesh) &&
+        !(o instanceof THREE.InstancedMesh) &&
+        !Array.isArray(o.material) &&
+        o.geometry.userData.model &&
+        ok(o)
+      ) {
         this.add(o, key, flash);
         out.push(o);
       }

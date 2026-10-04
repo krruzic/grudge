@@ -5,7 +5,20 @@ import { drawNum, drawText, fontReady, onTextLost, textWidth } from "../ui/font"
 import { dyeColor } from "./heroModels";
 import ironUrl from "../../assets/textures/iron.png?url";
 import woodUrl from "../../assets/textures/wood.png?url";
-import { activeCostume, DUELIST, ENGINEER, FX, HERALD, RAIDER, SUMMONER, trailOf, useCostume, WARDEN, WARLORD, withCostume } from "./fxKit";
+import {
+  activeCostume,
+  DUELIST,
+  ENGINEER,
+  FX,
+  HERALD,
+  RAIDER,
+  SUMMONER,
+  trailOf,
+  useCostume,
+  WARDEN,
+  WARLORD,
+  withCostume,
+} from "./fxKit";
 import { costumeOfEntity } from "./costumes";
 import { spikeBatch } from "./warlordFx";
 import { wardenSlap } from "./wardenFx";
@@ -13,7 +26,18 @@ import { towerProjectile, towerProjectileTick, towerPulse } from "./towerFx";
 import { KITS, type HeroKit } from "./kits";
 import { Particles } from "./particles";
 import "./heroFx";
-import { chunks, decal, DECAL_3D, emit, FISSURE_TEX, Ribbon, shockwave, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "./fxParts";
+import {
+  chunks,
+  decal,
+  DECAL_3D,
+  emit,
+  FISSURE_TEX,
+  Ribbon,
+  shockwave,
+  SHARED_CHUNK_GEOS,
+  SHARED_PLANE_GEOS,
+  type FxHost,
+} from "./fxParts";
 import { FxBatch, fxBatch, flushFxBatches, FxInst } from "./fxInstances";
 
 FISSURE_TEX.set(FX.crack, "crack");
@@ -52,7 +76,16 @@ const bladeGeo = new THREE.ConeGeometry(0.12, 0.7, 4);
 const rockGeo = new THREE.ConeGeometry(0.45, 1.3, 5);
 const rockMat = new THREE.MeshLambertMaterial({ color: 0x8a7a66, flatShading: true });
 const shardGeo = new THREE.TetrahedronGeometry(0.22);
-const SHARED_GEO = new Set<THREE.BufferGeometry>([plankGeo, handleGeo, headGeo, rivetGeo, rivetHeadGeo, bladeGeo, rockGeo, shardGeo]);
+const SHARED_GEO = new Set<THREE.BufferGeometry>([
+  plankGeo,
+  handleGeo,
+  headGeo,
+  rivetGeo,
+  rivetHeadGeo,
+  bladeGeo,
+  rockGeo,
+  shardGeo,
+]);
 const SHARED_MAT = new Set<THREE.Material>([woodMat, hammerHeadMat, ironMat, bladeMat, rockMat]);
 
 const ironTex = new THREE.TextureLoader().load(ironUrl);
@@ -61,7 +94,11 @@ ironMat.map = ironTex;
 const ballGeo = new THREE.IcosahedronGeometry(0.5, 1);
 const ballMat = new THREE.MeshLambertMaterial({ map: ironTex, color: 0x6a6660, flatShading: true });
 
-function canvasTex(size: number, draw: (ctx: CanvasRenderingContext2D, s: number) => void, res = 256): THREE.CanvasTexture {
+function canvasTex(
+  size: number,
+  draw: (ctx: CanvasRenderingContext2D, s: number) => void,
+  res = 256,
+): THREE.CanvasTexture {
   const k = Math.max(1, Math.round(res / size));
   const c = document.createElement("canvas");
   c.width = c.height = size * k;
@@ -179,7 +216,9 @@ class TextAtlas {
   }
 
   private draw(s: number): void {
-    const src = this.spare.pop() ?? new THREE.Texture(Object.assign(document.createElement("canvas"), { width: SLOT_W, height: SLOT_TEX_H }));
+    const src =
+      this.spare.pop() ??
+      new THREE.Texture(Object.assign(document.createElement("canvas"), { width: SLOT_W, height: SLOT_TEX_H }));
     const ctx = (src.image as HTMLCanvasElement).getContext("2d")!;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, SLOT_W, SLOT_TEX_H);
@@ -352,42 +391,46 @@ const streakTex = canvasTex(32, (ctx, s) => {
   ctx.fillRect(0, s / 2 - 2, s, 4);
 });
 
-export const targetTex = canvasTex(64, (ctx, s) => {
-  const c = s / 2;
-  ctx.imageSmoothingEnabled = false;
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "rgba(20,4,0,0.85)";
-  ctx.beginPath();
-  ctx.arc(c, c, c - 4, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "#ff3a1a";
-  ctx.beginPath();
-  ctx.arc(c, c, c - 4, 0, Math.PI * 2);
-  ctx.stroke();
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-    ctx.save();
-    ctx.translate(c + Math.cos(a) * (c - 10), c + Math.sin(a) * (c - 10));
-    ctx.rotate(a + Math.PI / 2);
-    ctx.fillStyle = "rgba(20,4,0,0.85)";
+export const targetTex = canvasTex(
+  64,
+  (ctx, s) => {
+    const c = s / 2;
+    ctx.imageSmoothingEnabled = false;
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(20,4,0,0.85)";
     ctx.beginPath();
-    ctx.moveTo(-6, -4);
-    ctx.lineTo(6, -4);
-    ctx.lineTo(0, 5);
-    ctx.fill();
-    ctx.fillStyle = "#ffd23a";
+    ctx.arc(c, c, c - 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#ff3a1a";
     ctx.beginPath();
-    ctx.moveTo(-4, -3);
-    ctx.lineTo(4, -3);
-    ctx.lineTo(0, 3);
-    ctx.fill();
-    ctx.restore();
-  }
-  ctx.fillStyle = "#ff3a1a";
-  ctx.fillRect(c - 1, c - 7, 2, 14);
-  ctx.fillRect(c - 7, c - 1, 14, 2);
-}, 512);
+    ctx.arc(c, c, c - 4, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      ctx.save();
+      ctx.translate(c + Math.cos(a) * (c - 10), c + Math.sin(a) * (c - 10));
+      ctx.rotate(a + Math.PI / 2);
+      ctx.fillStyle = "rgba(20,4,0,0.85)";
+      ctx.beginPath();
+      ctx.moveTo(-6, -4);
+      ctx.lineTo(6, -4);
+      ctx.lineTo(0, 5);
+      ctx.fill();
+      ctx.fillStyle = "#ffd23a";
+      ctx.beginPath();
+      ctx.moveTo(-4, -3);
+      ctx.lineTo(4, -3);
+      ctx.lineTo(0, 3);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = "#ff3a1a";
+    ctx.fillRect(c - 1, c - 7, 2, 14);
+    ctx.fillRect(c - 7, c - 1, 14, 2);
+  },
+  512,
+);
 
 const fillTex = canvasTex(32, (ctx, s) => {
   ctx.fillStyle = "#ff4a1a";
@@ -406,7 +449,12 @@ const scorchTex = canvasTex(64, (ctx, s) => {
     const r = Math.pow(Math.random(), 0.6) * (c - 4);
     const sz = 3 + Math.random() * 8 * (1 - r / c);
     ctx.fillStyle = `rgba(${18 + Math.random() * 20},${12 + Math.random() * 12},${8 + Math.random() * 8},${0.55 + Math.random() * 0.4})`;
-    ctx.fillRect(Math.round(c + Math.cos(a) * r - sz / 2), Math.round(c + Math.sin(a) * r - sz / 2), Math.round(sz), Math.round(sz));
+    ctx.fillRect(
+      Math.round(c + Math.cos(a) * r - sz / 2),
+      Math.round(c + Math.sin(a) * r - sz / 2),
+      Math.round(sz),
+      Math.round(sz),
+    );
   }
 });
 
@@ -440,169 +488,204 @@ function calloutTex(text: string, color: string): { tex: THREE.CanvasTexture; as
   return out;
 }
 
-const gearTex = canvasTex(128, (ctx, s) => {
-  const c = s / 2;
-  const teeth = 16;
-  ctx.beginPath();
-  for (let k = 0; k < teeth * 2; k++) {
-    const a0 = (k / (teeth * 2)) * Math.PI * 2;
-    const a1 = ((k + 1) / (teeth * 2)) * Math.PI * 2;
-    const r = k % 2 ? c - 4 : c - 11;
-    ctx.lineTo(c + Math.cos(a0) * r, c + Math.sin(a0) * r);
-    ctx.lineTo(c + Math.cos(a1) * r, c + Math.sin(a1) * r);
-  }
-  ctx.closePath();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "rgba(20,14,8,0.85)";
-  ctx.stroke();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "#f0c860";
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(c, c, c - 22, 0, Math.PI * 2);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "rgba(240,200,96,0.6)";
-  ctx.stroke();
-}, 512);
-
-const runeTex = canvasTex(128, (ctx, s) => {
-  const c = s / 2;
-  ctx.fillStyle = "rgba(60,10,80,0.45)";
-  ctx.beginPath();
-  ctx.arc(c, c, c - 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "rgba(10,0,16,0.9)";
-  ctx.stroke();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "#c070ff";
-  ctx.stroke();
-  ctx.beginPath();
-  for (let k = 0; k < 5; k++) {
-    const a = (k * 4 * Math.PI) / 5 - Math.PI / 2;
-    ctx.lineTo(c + Math.cos(a) * (c - 12), c + Math.sin(a) * (c - 12));
-  }
-  ctx.closePath();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "#e0b0ff";
-  ctx.stroke();
-  ctx.fillStyle = "#e8d8f0";
-  ctx.beginPath();
-  ctx.arc(c, c - 4, 12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(c - 7, c + 4, 14, 8);
-  ctx.fillStyle = "#1a0826";
-  ctx.beginPath();
-  ctx.arc(c - 5, c - 5, 3.5, 0, Math.PI * 2);
-  ctx.arc(c + 5, c - 5, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(c - 4, c + 6, 2, 6);
-  ctx.fillRect(c + 2, c + 6, 2, 6);
-}, 512);
-
-const crackTex = canvasTex(128, (ctx, s) => {
-  const c = s / 2;
-  ctx.lineCap = "round";
-  const branch = (x: number, y: number, a: number, len: number, w: number) => {
-    let px = x;
-    let py = y;
-    const steps = 5;
-    for (let k = 0; k < steps; k++) {
-      const na = a + (Math.random() - 0.5) * 0.7;
-      const nx = px + Math.cos(na) * (len / steps);
-      const ny = py + Math.sin(na) * (len / steps);
-      ctx.lineWidth = w * (1 - k / steps) + 1;
-      ctx.strokeStyle = "rgba(24,16,10,0.9)";
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(nx, ny);
-      ctx.stroke();
-      if (k === 2 && Math.random() < 0.6) branch(nx, ny, na + (Math.random() < 0.5 ? 0.6 : -0.6), len * 0.35, w * 0.5);
-      px = nx;
-      py = ny;
-    }
-  };
-  for (let k = 0; k < 9; k++) branch(c, c, (k / 9) * Math.PI * 2 + Math.random() * 0.3, c - 6, 5);
-  ctx.fillStyle = "rgba(24,16,10,0.85)";
-  ctx.beginPath();
-  ctx.arc(c, c, 9, 0, Math.PI * 2);
-  ctx.fill();
-}, 512);
-
-const frostTex = canvasTex(128, (ctx, s) => {
-  const c = s / 2;
-  ctx.lineWidth = 7;
-  ctx.strokeStyle = "rgba(10,30,60,0.6)";
-  ctx.beginPath();
-  ctx.arc(c, c, c - 6, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "#bfe8ff";
-  ctx.stroke();
-  for (let k = 0; k < 12; k++) {
-    const a = (k / 12) * Math.PI * 2;
-    const x = c + Math.cos(a) * (c - 6);
-    const y = c + Math.sin(a) * (c - 6);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(a);
-    ctx.fillStyle = "#e8f8ff";
+const gearTex = canvasTex(
+  128,
+  (ctx, s) => {
+    const c = s / 2;
+    const teeth = 16;
     ctx.beginPath();
-    ctx.moveTo(-10, 0);
-    ctx.lineTo(0, -4);
-    ctx.lineTo(4, 0);
-    ctx.lineTo(0, 4);
+    for (let k = 0; k < teeth * 2; k++) {
+      const a0 = (k / (teeth * 2)) * Math.PI * 2;
+      const a1 = ((k + 1) / (teeth * 2)) * Math.PI * 2;
+      const r = k % 2 ? c - 4 : c - 11;
+      ctx.lineTo(c + Math.cos(a0) * r, c + Math.sin(a0) * r);
+      ctx.lineTo(c + Math.cos(a1) * r, c + Math.sin(a1) * r);
+    }
     ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#1a3050";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-  }
-}, 512);
-
-const emblemTex = canvasTex(128, (ctx, s) => {
-  const c = s / 2;
-  ctx.fillStyle = "rgba(255,220,120,0.18)";
-  ctx.beginPath();
-  ctx.arc(c, c, c - 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "rgba(40,24,6,0.8)";
-  ctx.stroke();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "#ffd860";
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(c, c - 30); ctx.lineTo(c + 24, c - 20); ctx.lineTo(c + 20, c + 10); ctx.lineTo(c, c + 30); ctx.lineTo(c - 20, c + 10); ctx.lineTo(c - 24, c - 20); ctx.closePath();
-  ctx.fillStyle = "#f0e0b0"; ctx.fill();
-  ctx.lineWidth = 4; ctx.strokeStyle = "#3a2408"; ctx.stroke();
-  ctx.fillStyle = "#40c040";
-  ctx.fillRect(c - 4, c - 16, 8, 30);
-  ctx.fillRect(c - 15, c - 5, 30, 8);
-}, 512);
-
-const swirlTex = canvasTex(128, (ctx, s) => {
-  const c = s / 2;
-  ctx.lineCap = "round";
-  for (let arm = 0; arm < 4; arm++) {
-    ctx.beginPath();
-    for (let k = 0; k <= 40; k++) {
-      const f = k / 40;
-      const a = arm * (Math.PI / 2) + f * Math.PI * 2.2;
-      const r = (1 - f) * (c - 6) + 4;
-      const x = c + Math.cos(a) * r;
-      const y = c + Math.sin(a) * r;
-      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.lineWidth = 7;
-    ctx.strokeStyle = "rgba(30,20,12,0.75)";
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "rgba(20,14,8,0.85)";
     ctx.stroke();
     ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(220,200,160,0.85)";
+    ctx.strokeStyle = "#f0c860";
     ctx.stroke();
-  }
-}, 512);
+    ctx.beginPath();
+    ctx.arc(c, c, c - 22, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(240,200,96,0.6)";
+    ctx.stroke();
+  },
+  512,
+);
+
+const runeTex = canvasTex(
+  128,
+  (ctx, s) => {
+    const c = s / 2;
+    ctx.fillStyle = "rgba(60,10,80,0.45)";
+    ctx.beginPath();
+    ctx.arc(c, c, c - 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(10,0,16,0.9)";
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#c070ff";
+    ctx.stroke();
+    ctx.beginPath();
+    for (let k = 0; k < 5; k++) {
+      const a = (k * 4 * Math.PI) / 5 - Math.PI / 2;
+      ctx.lineTo(c + Math.cos(a) * (c - 12), c + Math.sin(a) * (c - 12));
+    }
+    ctx.closePath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#e0b0ff";
+    ctx.stroke();
+    ctx.fillStyle = "#e8d8f0";
+    ctx.beginPath();
+    ctx.arc(c, c - 4, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(c - 7, c + 4, 14, 8);
+    ctx.fillStyle = "#1a0826";
+    ctx.beginPath();
+    ctx.arc(c - 5, c - 5, 3.5, 0, Math.PI * 2);
+    ctx.arc(c + 5, c - 5, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(c - 4, c + 6, 2, 6);
+    ctx.fillRect(c + 2, c + 6, 2, 6);
+  },
+  512,
+);
+
+const crackTex = canvasTex(
+  128,
+  (ctx, s) => {
+    const c = s / 2;
+    ctx.lineCap = "round";
+    const branch = (x: number, y: number, a: number, len: number, w: number) => {
+      let px = x;
+      let py = y;
+      const steps = 5;
+      for (let k = 0; k < steps; k++) {
+        const na = a + (Math.random() - 0.5) * 0.7;
+        const nx = px + Math.cos(na) * (len / steps);
+        const ny = py + Math.sin(na) * (len / steps);
+        ctx.lineWidth = w * (1 - k / steps) + 1;
+        ctx.strokeStyle = "rgba(24,16,10,0.9)";
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(nx, ny);
+        ctx.stroke();
+        if (k === 2 && Math.random() < 0.6)
+          branch(nx, ny, na + (Math.random() < 0.5 ? 0.6 : -0.6), len * 0.35, w * 0.5);
+        px = nx;
+        py = ny;
+      }
+    };
+    for (let k = 0; k < 9; k++) branch(c, c, (k / 9) * Math.PI * 2 + Math.random() * 0.3, c - 6, 5);
+    ctx.fillStyle = "rgba(24,16,10,0.85)";
+    ctx.beginPath();
+    ctx.arc(c, c, 9, 0, Math.PI * 2);
+    ctx.fill();
+  },
+  512,
+);
+
+const frostTex = canvasTex(
+  128,
+  (ctx, s) => {
+    const c = s / 2;
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "rgba(10,30,60,0.6)";
+    ctx.beginPath();
+    ctx.arc(c, c, c - 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#bfe8ff";
+    ctx.stroke();
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const x = c + Math.cos(a) * (c - 6);
+      const y = c + Math.sin(a) * (c - 6);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a);
+      ctx.fillStyle = "#e8f8ff";
+      ctx.beginPath();
+      ctx.moveTo(-10, 0);
+      ctx.lineTo(0, -4);
+      ctx.lineTo(4, 0);
+      ctx.lineTo(0, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#1a3050";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+  },
+  512,
+);
+
+const emblemTex = canvasTex(
+  128,
+  (ctx, s) => {
+    const c = s / 2;
+    ctx.fillStyle = "rgba(255,220,120,0.18)";
+    ctx.beginPath();
+    ctx.arc(c, c, c - 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "rgba(40,24,6,0.8)";
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#ffd860";
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(c, c - 30);
+    ctx.lineTo(c + 24, c - 20);
+    ctx.lineTo(c + 20, c + 10);
+    ctx.lineTo(c, c + 30);
+    ctx.lineTo(c - 20, c + 10);
+    ctx.lineTo(c - 24, c - 20);
+    ctx.closePath();
+    ctx.fillStyle = "#f0e0b0";
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#3a2408";
+    ctx.stroke();
+    ctx.fillStyle = "#40c040";
+    ctx.fillRect(c - 4, c - 16, 8, 30);
+    ctx.fillRect(c - 15, c - 5, 30, 8);
+  },
+  512,
+);
+
+const swirlTex = canvasTex(
+  128,
+  (ctx, s) => {
+    const c = s / 2;
+    ctx.lineCap = "round";
+    for (let arm = 0; arm < 4; arm++) {
+      ctx.beginPath();
+      for (let k = 0; k <= 40; k++) {
+        const f = k / 40;
+        const a = arm * (Math.PI / 2) + f * Math.PI * 2.2;
+        const r = (1 - f) * (c - 6) + 4;
+        const x = c + Math.cos(a) * r;
+        const y = c + Math.sin(a) * r;
+        if (k === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = "rgba(30,20,12,0.75)";
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(220,200,160,0.85)";
+      ctx.stroke();
+    }
+  },
+  512,
+);
 
 const pillarTex = canvasTex(64, (ctx, s) => {
   const g = ctx.createLinearGradient(0, 0, 0, s);
@@ -617,8 +700,11 @@ const pillarTex = canvasTex(64, (ctx, s) => {
   }
 });
 
-
-const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
 const talentTex = new Map<string, THREE.Texture>();
 function talentTexture(id: string): THREE.Texture | null {
   const hit = talentTex.get(id);
@@ -716,7 +802,11 @@ export class CombatFx implements FxHost {
     const g = new THREE.Group();
     const wood = new THREE.MeshLambertMaterial({ color: 0x6a4424, flatShading: true });
     const gold = new THREE.MeshLambertMaterial({ color: 0xc8a040, flatShading: true });
-    const cloth = new THREE.MeshLambertMaterial({ color: dyeColor(this.teamColors[team]), side: THREE.DoubleSide, flatShading: true });
+    const cloth = new THREE.MeshLambertMaterial({
+      color: dyeColor(this.teamColors[team]),
+      side: THREE.DoubleSide,
+      flatShading: true,
+    });
     const trim = new THREE.MeshLambertMaterial({ color: 0xd8c890, side: THREE.DoubleSide, flatShading: true });
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 3.4, 6), wood);
     pole.position.y = 1.7;
@@ -737,7 +827,10 @@ export class CombatFx implements FxHost {
     flag.name = "flag";
     const band = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.12), trim);
     band.position.set(0, 2.88, 0.01);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.2, 7), new THREE.MeshLambertMaterial({ color: 0x5a5048, flatShading: true }));
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.35, 0.45, 0.2, 7),
+      new THREE.MeshLambertMaterial({ color: 0x5a5048, flatShading: true }),
+    );
     base.position.y = 0.1;
     g.add(pole, bar, tip, flag, band, base);
     g.visible = false;
@@ -766,7 +859,16 @@ export class CombatFx implements FxHost {
   quiet = false;
   slapArm?: (src: number, tx: number, ty: number, tz: number) => boolean;
 
-  private number(x: number, y: number, z: number, amount: number, color: string, big: boolean, mul = 1, key?: number): void {
+  private number(
+    x: number,
+    y: number,
+    z: number,
+    amount: number,
+    color: string,
+    big: boolean,
+    mul = 1,
+    key?: number,
+  ): void {
     if (this.quiet) return;
     const prev = key !== undefined ? this.numKeys.get(key) : undefined;
     if (prev && this.clock - prev.last < 0.3 && this.clock - prev.born < 1.2 && prev.f.t < prev.f.dur * 0.7) {
@@ -784,7 +886,15 @@ export class CombatFx implements FxHost {
     const vx = (Math.random() - 0.5) * 1.2;
     const f: Floater = {
       slot: textAtlas.acquire(numText(amount), color, 2.6, 2),
-      x, y: y + 1.6, z, sx: 0, sy: 0, a: 1, t: 0, dur: big ? 0.9 : 0.7, layer: 1,
+      x,
+      y: y + 1.6,
+      z,
+      sx: 0,
+      sy: 0,
+      a: 1,
+      t: 0,
+      dur: big ? 0.9 : 0.7,
+      layer: 1,
       step: (k, dt) => {
         const base = (n.big ? 1.5 : 1.0) * n.mul;
         const pop = k < 0.15 ? 1 + (1 - k / 0.15) * 0.8 : 1;
@@ -805,7 +915,16 @@ export class CombatFx implements FxHost {
     this.floats.list.push(f);
   }
 
-  private sparks(x: number, y: number, z: number, dx: number, dz: number, color: THREE.ColorRepresentation, n: number, speed: number): void {
+  private sparks(
+    x: number,
+    y: number,
+    z: number,
+    dx: number,
+    dz: number,
+    color: THREE.ColorRepresentation,
+    n: number,
+    speed: number,
+  ): void {
     const d = Math.hypot(dx, dz) || 1;
     const ux = dx / d;
     const uz = dz / d;
@@ -828,10 +947,21 @@ export class CombatFx implements FxHost {
     }
   }
 
-
-  private debris(x: number, y: number, z: number, colors: THREE.ColorRepresentation[], n: number, size: number, speed: number): void {
+  private debris(
+    x: number,
+    y: number,
+    z: number,
+    colors: THREE.ColorRepresentation[],
+    n: number,
+    size: number,
+    speed: number,
+  ): void {
     for (let i = 0; i < n; i++) {
-      const m = fxBatch(this.root, "deb", () => new FxBatch(chunkGeo, new THREE.MeshLambertMaterial({ transparent: true }), false, true)).spawn();
+      const m = fxBatch(
+        this.root,
+        "deb",
+        () => new FxBatch(chunkGeo, new THREE.MeshLambertMaterial({ transparent: true }), false, true),
+      ).spawn();
       m.color.set(colors[i % colors.length]);
       const sz = size * (0.5 + Math.random() * 0.8);
       m.scale.setScalar(sz);
@@ -845,7 +975,9 @@ export class CombatFx implements FxHost {
       const spin = (Math.random() - 0.5) * 20;
       const floor = y + sz / 2;
       this.items.push({
-        obj: m, t: 0, dur: 1.4 + Math.random() * 0.4,
+        obj: m,
+        t: 0,
+        dur: 1.4 + Math.random() * 0.4,
         tick: (k, dt) => {
           vy -= 22 * dt;
           m.position.x += vx * dt;
@@ -870,7 +1002,9 @@ export class CombatFx implements FxHost {
     const s = this.sprite(glowTex, color.clone().lerp(new THREE.Color(1, 1, 1), 0.5), true, 1);
     s.position.set(x, y + 1.2, z);
     this.items.push({
-      obj: s, t: 0, dur: 1.4,
+      obj: s,
+      t: 0,
+      dur: 1.4,
       tick: (k, dt) => {
         s.position.y += dt * 3.5 * (1 - k * 0.5);
         s.position.x += Math.sin(k * 14) * dt * 0.8;
@@ -894,11 +1028,32 @@ export class CombatFx implements FxHost {
     p.grow = 0.7;
   }
 
-
-  dust(x: number, y: number, z: number, size: number, n = 2, spread = 0.8, color: THREE.ColorRepresentation = 0xd8ccb0): void {
-    emit(this, { tex: puffTex, n, x, y: y + 0.15, z, color, size: [size * 0.7, size * 1.2], grow: 1.8, life: [0.45, 0.65], speed: [spread * 0.4, spread], flatSpread: true, up: [0.4, 0.6], drag: 2, opacity: 0.6 });
+  dust(
+    x: number,
+    y: number,
+    z: number,
+    size: number,
+    n = 2,
+    spread = 0.8,
+    color: THREE.ColorRepresentation = 0xd8ccb0,
+  ): void {
+    emit(this, {
+      tex: puffTex,
+      n,
+      x,
+      y: y + 0.15,
+      z,
+      color,
+      size: [size * 0.7, size * 1.2],
+      grow: 1.8,
+      life: [0.45, 0.65],
+      speed: [spread * 0.4, spread],
+      flatSpread: true,
+      up: [0.4, 0.6],
+      drag: 2,
+      opacity: 0.6,
+    });
   }
-
 
   private pending: { at: number; run: () => void; c?: string }[] = [];
   private clock = 0;
@@ -928,9 +1083,17 @@ export class CombatFx implements FxHost {
         SHARED_GEO.add(geo);
       }
     }
-    const mat = this.pooled("slash", () => new THREE.MeshBasicMaterial({
-      vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
-    }));
+    const mat = this.pooled(
+      "slash",
+      () =>
+        new THREE.MeshBasicMaterial({
+          vertexColors: true,
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+        }),
+    );
     mat.color.copy(this.teamColors[team]).lerp(WHITE, 0.65);
     mat.opacity = 0.9;
     const m = new THREE.Mesh(geo, mat);
@@ -940,7 +1103,9 @@ export class CombatFx implements FxHost {
     m.position.set(x, y + (combo === 2 ? 0.9 : 1.2), z);
     this.root.add(m);
     this.items.push({
-      obj: m, t: 0, dur: 0.16,
+      obj: m,
+      t: 0,
+      dur: 0.16,
       tick: (k) => {
         (m.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - k);
         m.scale.setScalar(0.85 + k * 0.25);
@@ -949,10 +1114,15 @@ export class CombatFx implements FxHost {
   }
 
   private sprite(tex: THREE.Texture, color: THREE.ColorRepresentation, additive = true, opacity = 1): THREE.Sprite {
-    const mat = this.pooled(additive ? "sprA" : "spr", () => new THREE.SpriteMaterial({
-      transparent: true, depthWrite: false,
-      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-    }));
+    const mat = this.pooled(
+      additive ? "sprA" : "spr",
+      () =>
+        new THREE.SpriteMaterial({
+          transparent: true,
+          depthWrite: false,
+          blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+        }),
+    );
     mat.map = tex;
     mat.color.set(color);
     mat.opacity = opacity;
@@ -963,7 +1133,16 @@ export class CombatFx implements FxHost {
   }
 
   private ring(x: number, y: number, z: number, color: THREE.Color, radius: number, dur: number, width = 0.35): void {
-    const mat = this.pooled("ring", () => new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    const mat = this.pooled(
+      "ring",
+      () =>
+        new THREE.MeshBasicMaterial({
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+        }),
+    );
     mat.color.copy(color);
     mat.opacity = 0.8;
     const m = new THREE.Mesh(ringGeo, mat);
@@ -972,7 +1151,9 @@ export class CombatFx implements FxHost {
     this.root.add(m);
     void width;
     this.items.push({
-      obj: m, t: 0, dur,
+      obj: m,
+      t: 0,
+      dur,
       tick: (k) => {
         const r = 0.3 + (radius - 0.3) * (1 - (1 - k) * (1 - k));
         m.scale.setScalar(r);
@@ -981,12 +1162,47 @@ export class CombatFx implements FxHost {
     });
   }
 
-  private burst(x: number, y: number, z: number, tex: THREE.Texture, color: THREE.ColorRepresentation, n: number, size: number, dur: number, spread: number, additive: boolean, rise = 0.5): void {
-    emit(this, { tex, n, x, y, z, color, additive, size: [size * 0.7, size * 1.3], grow: 2, life: [dur * 0.7, dur * 1.2], speed: [spread * 0.5, spread], flatSpread: true, up: [rise * 0.5, rise * 1.5], drag: 1.5, opacity: 0.9 });
+  private burst(
+    x: number,
+    y: number,
+    z: number,
+    tex: THREE.Texture,
+    color: THREE.ColorRepresentation,
+    n: number,
+    size: number,
+    dur: number,
+    spread: number,
+    additive: boolean,
+    rise = 0.5,
+  ): void {
+    emit(this, {
+      tex,
+      n,
+      x,
+      y,
+      z,
+      color,
+      additive,
+      size: [size * 0.7, size * 1.3],
+      grow: 2,
+      life: [dur * 0.7, dur * 1.2],
+      speed: [spread * 0.5, spread],
+      flatSpread: true,
+      up: [rise * 0.5, rise * 1.5],
+      drag: 1.5,
+      opacity: 0.9,
+    });
   }
 
-
-  private flash(x: number, y: number, z: number, tex: THREE.Texture, color: THREE.ColorRepresentation, size: number, dur: number): void {
+  private flash(
+    x: number,
+    y: number,
+    z: number,
+    tex: THREE.Texture,
+    color: THREE.ColorRepresentation,
+    size: number,
+    dur: number,
+  ): void {
     const p = this.particles.spawn(tex, color, true);
     if (!p) return;
     p.x = x;
@@ -998,11 +1214,18 @@ export class CombatFx implements FxHost {
     p.life = dur;
   }
 
-
   private label(x: number, y: number, z: number, [text, color]: Label): void {
     const f: Floater = {
       slot: textAtlas.acquire(text, color, 2.4, 3),
-      x, y: y + 0.8, z, sx: 1.6, sy: 0.4, a: 1, t: 0, dur: 0.8, layer: 0,
+      x,
+      y: y + 0.8,
+      z,
+      sx: 1.6,
+      sy: 0.4,
+      a: 1,
+      t: 0,
+      dur: 0.8,
+      layer: 0,
       step: (k, dt) => {
         f.y += dt * 1.2;
         f.a = 1 - k * k;
@@ -1013,7 +1236,9 @@ export class CombatFx implements FxHost {
 
   handle(ev: SimEvent): void {
     const sid = "src" in ev ? ev.src : undefined;
-    withCostume(costumeOfEntity(this.world, sid !== undefined ? this.world?.getAny(sid) : undefined), () => this.handleEv(ev));
+    withCostume(costumeOfEntity(this.world, sid !== undefined ? this.world?.getAny(sid) : undefined), () =>
+      this.handleEv(ev),
+    );
   }
 
   private handleEv(ev: SimEvent): void {
@@ -1022,7 +1247,8 @@ export class CombatFx implements FxHost {
     const sk = se?.hero ? KITS[se.hero.type] : undefined;
     if (ev.type === "act") {
       const pw = se?.hero?.action?.power ?? 1;
-      if (se && ev.phase === "fire" && pw > 1.25) this.chargeRelease(ev.x, ev.y, ev.z, ev.dirX, ev.dirZ, pw, trailOf(activeCostume()) ?? sk?.trail ?? 0xfff0b0);
+      if (se && ev.phase === "fire" && pw > 1.25)
+        this.chargeRelease(ev.x, ev.y, ev.z, ev.dirX, ev.dirZ, pw, trailOf(activeCostume()) ?? sk?.trail ?? 0xfff0b0);
       if (se && sk?.act) sk.act(this, ev, se);
       return;
     }
@@ -1056,8 +1282,32 @@ export class CombatFx implements FxHost {
           }
           if (ev.crit) {
             this.label(ev.x, ev.y + 1.3, ev.z, critTex);
-            emit(this, { tex: FX.burst, n: 1, x: ev.x, y: ev.y + 0.4, z: ev.z, color: 0xffe070, size: [2.6, 2.6], grow: 1.3, life: [0.16, 0.16], speed: [0, 0], additive: true, order: 8 });
-            emit(this, { tex: FX.twinkle, n: 6, x: ev.x, y: ev.y + 0.4, z: ev.z, size: [0.35, 0.55], life: [0.3, 0.45], speed: [4, 7], gravity: 8, additive: true });
+            emit(this, {
+              tex: FX.burst,
+              n: 1,
+              x: ev.x,
+              y: ev.y + 0.4,
+              z: ev.z,
+              color: 0xffe070,
+              size: [2.6, 2.6],
+              grow: 1.3,
+              life: [0.16, 0.16],
+              speed: [0, 0],
+              additive: true,
+              order: 8,
+            });
+            emit(this, {
+              tex: FX.twinkle,
+              n: 6,
+              x: ev.x,
+              y: ev.y + 0.4,
+              z: ev.z,
+              size: [0.35, 0.55],
+              life: [0.3, 0.45],
+              speed: [4, 7],
+              gravity: 8,
+              additive: true,
+            });
             this.shake = Math.max(this.shake, 0.3);
           }
           if (ev.amount && (tgt?.hero || tgt?.structure || src?.hero)) {
@@ -1106,7 +1356,8 @@ export class CombatFx implements FxHost {
       case "warcry": {
         const c = this.teamColors[ev.team];
         const hot = new THREE.Color(0xff8a30);
-        for (let k = 0; k < 3; k++) this.after(k * 0.12, () => this.ring(ev.x, ev.y + 0.2, ev.z, hot.clone().lerp(c, 0.3), ev.radius, 0.55));
+        for (let k = 0; k < 3; k++)
+          this.after(k * 0.12, () => this.ring(ev.x, ev.y + 0.2, ev.z, hot.clone().lerp(c, 0.3), ev.radius, 0.55));
         this.flash(ev.x, ev.y + 2.2, ev.z, starTex, 0xffb060, 4, 0.35);
         this.burst(ev.x, ev.y + 2, ev.z, starTex, 0xff9030, 10, 0.5, 0.6, 3, true, 2.5);
         break;
@@ -1135,11 +1386,33 @@ export class CombatFx implements FxHost {
       case "heroFx":
         if (ev.name === "healNum" && ev.radius) {
           this.number(ev.x, ev.y, ev.z, ev.radius, "#7dff7a", true);
-          emit(this, { tex: HERALD.heal, n: 3, x: ev.x, y: ev.y + 0.6, z: ev.z, size: [0.45, 0.6], life: [0.8, 1.1], speed: [0.2, 0.6], up: [1, 1.6], jitter: 0.8 });
+          emit(this, {
+            tex: HERALD.heal,
+            n: 3,
+            x: ev.x,
+            y: ev.y + 0.6,
+            z: ev.z,
+            size: [0.45, 0.6],
+            life: [0.8, 1.1],
+            speed: [0.2, 0.6],
+            up: [1, 1.6],
+            jitter: 0.8,
+          });
         }
         break;
       case "heal":
-        emit(this, { tex: HERALD.heal, n: 2, x: ev.x, y: ev.y + 1.4, z: ev.z, size: [0.4, 0.55], life: [0.8, 1.1], speed: [0.2, 0.6], up: [1, 1.6], jitter: 0.8 });
+        emit(this, {
+          tex: HERALD.heal,
+          n: 2,
+          x: ev.x,
+          y: ev.y + 1.4,
+          z: ev.z,
+          size: [0.4, 0.55],
+          life: [0.8, 1.1],
+          speed: [0.2, 0.6],
+          up: [1, 1.6],
+          jitter: 0.8,
+        });
         break;
       case "build":
         break;
@@ -1149,9 +1422,11 @@ export class CombatFx implements FxHost {
         m.position.set(ev.x, ev.y + 0.14, ev.z);
         const r = ev.radius;
         this.items.push({
-          obj: m, t: 0, dur: ev.seconds + 0.25,
+          obj: m,
+          t: 0,
+          dur: ev.seconds + 0.25,
           tick: (k) => {
-            const u = Math.min(1, k * (ev.seconds + 0.25) / 0.2);
+            const u = Math.min(1, (k * (ev.seconds + 0.25)) / 0.2);
             m.scale.setScalar(r * u);
             m.rotation.z = -k * 2;
             m.opacity = k > 0.85 ? (1 - k) / 0.15 : 0.95;
@@ -1191,7 +1466,9 @@ export class CombatFx implements FxHost {
         s.userData.owner = ev.owner;
         this.root.add(s);
         this.items.push({
-          obj: s, t: 0, dur: 1.8,
+          obj: s,
+          t: 0,
+          dur: 1.8,
           tick: (k, dt) => {
             s.position.y += dt * 0.5;
             s.material.opacity = k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
@@ -1235,12 +1512,31 @@ export class CombatFx implements FxHost {
         this.decal(swirlTex, ev.x, ev.y, ev.z, ev.radius, 0.55, 0, -7);
         for (let k = 0; k < 10; k++) {
           const a = (k / 10) * Math.PI * 2;
-          this.sparks(ev.x + Math.cos(a) * ev.radius, ev.y + 0.3, ev.z + Math.sin(a) * ev.radius, -Math.cos(a), -Math.sin(a), 0xd8c8a0, 1, ev.radius * 2.2);
+          this.sparks(
+            ev.x + Math.cos(a) * ev.radius,
+            ev.y + 0.3,
+            ev.z + Math.sin(a) * ev.radius,
+            -Math.cos(a),
+            -Math.sin(a),
+            0xd8c8a0,
+            1,
+            ev.radius * 2.2,
+          );
         }
         break;
       case "shieldBreak": {
         for (let k = 0; k < 12; k++) {
-          const m = fxBatch(this.root, "shard", () => new FxBatch(shardGeo, new THREE.MeshLambertMaterial({ transparent: true, flatShading: true }), true, true)).spawn();
+          const m = fxBatch(
+            this.root,
+            "shard",
+            () =>
+              new FxBatch(
+                shardGeo,
+                new THREE.MeshLambertMaterial({ transparent: true, flatShading: true }),
+                true,
+                true,
+              ),
+          ).spawn();
           m.color.set(ev.burst ? 0x7a5a30 : 0xbfe0ff);
           m.emissive.set(ev.burst ? 0x201008 : 0x203850);
           const a = Math.random() * Math.PI * 2;
@@ -1248,7 +1544,9 @@ export class CombatFx implements FxHost {
           let vy = 3 + Math.random() * 3;
           m.position.set(ev.x, ev.y + 1.2, ev.z);
           this.items.push({
-            obj: m, t: 0, dur: 0.8,
+            obj: m,
+            t: 0,
+            dur: 0.8,
             tick: (q, dt) => {
               vy -= 14 * dt;
               m.position.x += Math.cos(a) * sp * dt;
@@ -1320,9 +1618,11 @@ export class CombatFx implements FxHost {
     const ring = decal(targetTex, 0.12, 0.95, false);
     const fill = decal(fillTex, 0.1, 0.35, true);
     this.items.push({
-      obj: ring, t: 0, dur: seconds,
+      obj: ring,
+      t: 0,
+      dur: seconds,
       tick: (k) => {
-        const intro = Math.min(1, k * seconds / 0.18);
+        const intro = Math.min(1, (k * seconds) / 0.18);
         ring.scale.setScalar(radius * (1.6 - 0.6 * intro));
         ring.rotation.z = k * seconds * 1.4;
         const pulse = 0.5 + 0.5 * Math.sin(k * seconds * (6 + k * 18));
@@ -1330,13 +1630,18 @@ export class CombatFx implements FxHost {
       },
     });
     this.items.push({
-      obj: fill, t: 0, dur: seconds,
+      obj: fill,
+      t: 0,
+      dur: seconds,
       tick: (k) => {
         fill.scale.setScalar(Math.max(0.01, radius * k));
         fill.opacity = 0.25 + 0.35 * k;
       },
     });
-    const shadowMat = this.pooled("shadow", () => new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, depthWrite: false }));
+    const shadowMat = this.pooled(
+      "shadow",
+      () => new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, depthWrite: false }),
+    );
     shadowMat.opacity = 0;
     const shadow = new THREE.Mesh(shadowGeo, shadowMat);
     shadow.rotation.x = -Math.PI / 2;
@@ -1344,7 +1649,9 @@ export class CombatFx implements FxHost {
     this.root.add(shadow);
     const fly = Math.min(1.3, seconds * 0.6);
     this.items.push({
-      obj: shadow, t: 0, dur: seconds,
+      obj: shadow,
+      t: 0,
+      dur: seconds,
       tick: (k) => {
         const f = Math.max(0, (k * seconds - (seconds - fly)) / fly);
         (shadow.material as THREE.MeshBasicMaterial).opacity = f * 0.55;
@@ -1359,9 +1666,15 @@ export class CombatFx implements FxHost {
       this.root.add(ball);
       let puffT = 0;
       this.items.push({
-        obj: ball, t: 0, dur: fly,
+        obj: ball,
+        t: 0,
+        dur: fly,
         tick: (k, dt) => {
-          ball.position.set(sx + (x - sx) * k, y + 0.5 + 22 * (1 - k) * (0.35 + 0.65 * (1 - k)) + 3 * Math.sin(k * Math.PI) * (1 - k), sz + (z - sz) * k);
+          ball.position.set(
+            sx + (x - sx) * k,
+            y + 0.5 + 22 * (1 - k) * (0.35 + 0.65 * (1 - k)) + 3 * Math.sin(k * Math.PI) * (1 - k),
+            sz + (z - sz) * k,
+          );
           ball.rotation.x += dt * 9;
           ball.rotation.z += dt * 5;
           puffT -= dt;
@@ -1370,7 +1683,15 @@ export class CombatFx implements FxHost {
             const p = this.sprite(puffTex, 0x4a4440, false, 0.7);
             p.position.copy(ball.position);
             const sz0 = 0.6 + Math.random() * 0.3;
-            this.items.push({ obj: p, t: 0, dur: 0.7, tick: (q) => { p.scale.setScalar(sz0 * (1 + q * 1.5)); p.material.opacity = 0.6 * (1 - q); } });
+            this.items.push({
+              obj: p,
+              t: 0,
+              dur: 0.7,
+              tick: (q) => {
+                p.scale.setScalar(sz0 * (1 + q * 1.5));
+                p.material.opacity = 0.6 * (1 - q);
+              },
+            });
           }
         },
       });
@@ -1378,24 +1699,50 @@ export class CombatFx implements FxHost {
   }
 
   private decalInst(tex: THREE.Texture, opacity = 1, additive = false, offset = -2): FxInst {
-    const b = fxBatch(this.root, `decal|${tex.uuid}|${additive ? 1 : 0}|${offset}`, () => new FxBatch(quadGeo, new THREE.MeshBasicMaterial({
-      map: tex, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, polygonOffset: true, polygonOffsetFactor: offset,
-    }), false, !additive));
+    const b = fxBatch(
+      this.root,
+      `decal|${tex.uuid}|${additive ? 1 : 0}|${offset}`,
+      () =>
+        new FxBatch(
+          quadGeo,
+          new THREE.MeshBasicMaterial({
+            map: tex,
+            transparent: true,
+            depthWrite: false,
+            blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+            polygonOffset: true,
+            polygonOffsetFactor: offset,
+          }),
+          false,
+          !additive,
+        ),
+    );
     const p = b.spawn();
     p.opacity = opacity;
     return p;
   }
 
-  private decal(tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, grow: number, spin: number): void {
+  private decal(
+    tex: THREE.Texture,
+    x: number,
+    y: number,
+    z: number,
+    radius: number,
+    dur: number,
+    grow: number,
+    spin: number,
+  ): void {
     const m = this.decalInst(tex);
     m.rotation.x = -Math.PI / 2;
     m.rotation.z = Math.random() * Math.PI * 2;
     m.position.set(x, y + 0.12, z);
     const rz = m.rotation.z;
     this.items.push({
-      obj: m, t: 0, dur,
+      obj: m,
+      t: 0,
+      dur,
       tick: (k) => {
-        m.scale.setScalar(radius * Math.min(1, grow > 0 ? k * dur / grow : 1));
+        m.scale.setScalar(radius * Math.min(1, grow > 0 ? (k * dur) / grow : 1));
         m.rotation.z = rz + k * spin;
         m.opacity = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
       },
@@ -1433,7 +1780,9 @@ export class CombatFx implements FxHost {
     gear.rotation.x = -Math.PI / 2;
     gear.position.set(ev.x, ev.y + 0.12, ev.z);
     this.items.push({
-      obj: gear, t: 0, dur: 1.1,
+      obj: gear,
+      t: 0,
+      dur: 1.1,
       tick: (k) => {
         gear.scale.setScalar(ev.radius * (0.35 + 0.65 * Math.min(1, k * 4)));
         gear.rotation.z = k * 2.5;
@@ -1445,7 +1794,9 @@ export class CombatFx implements FxHost {
     slam.scale.setScalar(1.3);
     this.root.add(slam);
     this.items.push({
-      obj: slam, t: 0, dur: 0.45,
+      obj: slam,
+      t: 0,
+      dur: 0.45,
       tick: (k) => {
         slam.rotation.z = k < 0.4 ? 1.4 * (1 - k / 0.4) : 0;
         slam.visible = k < 0.9;
@@ -1467,7 +1818,9 @@ export class CombatFx implements FxHost {
         const off = (p - 1) * 0.5;
         this.root.add(plank);
         this.items.push({
-          obj: plank, t: 0, dur: 1.6 + n * 0.1,
+          obj: plank,
+          t: 0,
+          dur: 1.6 + n * 0.1,
           tick: (k) => {
             const fly = Math.min(1, k / 0.35);
             const x = sx + (f.x + off - sx) * fly;
@@ -1484,7 +1837,9 @@ export class CombatFx implements FxHost {
       this.root.add(ham);
       let strikes = 0;
       this.items.push({
-        obj: ham, t: 0, dur: 1.5 + n * 0.1,
+        obj: ham,
+        t: 0,
+        dur: 1.5 + n * 0.1,
         tick: (k) => {
           const u = Math.max(0, (k * 1.5 - 0.5) / 0.9);
           ham.visible = k * 1.5 > 0.45 && k < 0.95;
@@ -1505,14 +1860,24 @@ export class CombatFx implements FxHost {
     });
   }
 
-  private floatSprite(tex: THREE.Texture, aspect: number, x: number, y: number, z: number, h: number, dur: number): void {
+  private floatSprite(
+    tex: THREE.Texture,
+    aspect: number,
+    x: number,
+    y: number,
+    z: number,
+    h: number,
+    dur: number,
+  ): void {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
     s.renderOrder = 32;
     s.scale.set(h * aspect, h, 1);
     s.position.set(x, y, z);
     this.root.add(s);
     this.items.push({
-      obj: s, t: 0, dur,
+      obj: s,
+      t: 0,
+      dur,
       tick: (k, dt) => {
         const pop = k < 0.1 ? 1 + (1 - k / 0.1) * 0.5 : 1;
         s.scale.set(h * aspect * pop, h * pop, 1);
@@ -1523,13 +1888,25 @@ export class CombatFx implements FxHost {
   }
 
   private pillar(x: number, y: number, z: number): void {
-    const mat = this.pooled("pillar", () => new THREE.MeshBasicMaterial({ map: pillarTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    const mat = this.pooled(
+      "pillar",
+      () =>
+        new THREE.MeshBasicMaterial({
+          map: pillarTex,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+        }),
+    );
     mat.opacity = 1;
     const m = new THREE.Mesh(pillarGeo, mat);
     m.position.set(x, y + 3.5, z);
     this.root.add(m);
     this.items.push({
-      obj: m, t: 0, dur: 1.1,
+      obj: m,
+      t: 0,
+      dur: 1.1,
       tick: (k) => {
         m.scale.set(1 - k * 0.6, 0.3 + Math.min(1, k * 4) * 0.7, 1 - k * 0.6);
         m.rotation.y = k * 4;
@@ -1553,13 +1930,26 @@ export class CombatFx implements FxHost {
       }
       path.push(b);
       const curve = new THREE.CatmullRomCurve3(path, false, "catmullrom", 0);
-      for (const [r, col] of [[0.12, 0x6ab0ff], [0.05, 0xffffff]] as const) {
-        const mat = this.pooled("bolt", () => new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+      for (const [r, col] of [
+        [0.12, 0x6ab0ff],
+        [0.05, 0xffffff],
+      ] as const) {
+        const mat = this.pooled(
+          "bolt",
+          () => new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
+        );
         mat.color.set(col);
         mat.opacity = 1;
         const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 18, r, 4, false), mat);
         this.root.add(m);
-        this.items.push({ obj: m, t: 0, dur: 0.3, tick: (k) => { (m.material as THREE.MeshBasicMaterial).opacity = (1 - k) * (Math.random() < 0.3 ? 0.4 : 1); } });
+        this.items.push({
+          obj: m,
+          t: 0,
+          dur: 0.3,
+          tick: (k) => {
+            (m.material as THREE.MeshBasicMaterial).opacity = (1 - k) * (Math.random() < 0.3 ? 0.4 : 1);
+          },
+        });
       }
       this.flash(b.x, b.y, b.z, starTex, 0xbfe0ff, 1.6, 0.2);
     }
@@ -1576,7 +1966,15 @@ export class CombatFx implements FxHost {
         const s = this.sprite(streakTex, c, true, 0.9);
         s.position.set(px, y + 1.2, pz);
         s.material.rotation = Math.atan2(-(tz - z), tx - x);
-        this.items.push({ obj: s, t: 0, dur: 0.4, tick: (q) => { s.scale.set(2.2, 0.5, 1); s.material.opacity = 0.9 * (1 - q); } });
+        this.items.push({
+          obj: s,
+          t: 0,
+          dur: 0.4,
+          tick: (q) => {
+            s.scale.set(2.2, 0.5, 1);
+            s.material.opacity = 0.9 * (1 - q);
+          },
+        });
         this.flash(px, y + 1.2, pz, glowTex, c, 1.2, 0.25);
       });
     }
@@ -1593,8 +1991,21 @@ export class CombatFx implements FxHost {
       let v = this.missileViews.get(m.id);
       if (!v) {
         const obj = new THREE.Group();
-        const spr = (tex: THREE.Texture, size: number, additive = false, color: THREE.ColorRepresentation = 0xffffff) => {
-          const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+        const spr = (
+          tex: THREE.Texture,
+          size: number,
+          additive = false,
+          color: THREE.ColorRepresentation = 0xffffff,
+        ) => {
+          const sp = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+              map: tex,
+              color,
+              transparent: true,
+              depthWrite: false,
+              blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+            }),
+          );
           sp.scale.setScalar(size);
           obj.add(sp);
           return sp;
@@ -1606,7 +2017,16 @@ export class CombatFx implements FxHost {
           spr(RAIDER.knife, 0.9).name = "spin";
           spr(RAIDER.poison, 0.6, false).material.opacity = 0.6;
         } else if (m.style === "slash") {
-          const sp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.3), new THREE.MeshBasicMaterial({ map: DUELIST.crescent, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+          const sp = new THREE.Mesh(
+            new THREE.PlaneGeometry(2.6, 1.3),
+            new THREE.MeshBasicMaterial({
+              map: DUELIST.crescent,
+              transparent: true,
+              depthWrite: false,
+              blending: THREE.AdditiveBlending,
+              side: THREE.DoubleSide,
+            }),
+          );
           sp.name = "flat";
           obj.add(sp);
         } else if (m.style === "rock") {
@@ -1634,10 +2054,60 @@ export class CombatFx implements FxHost {
       const spin = v.obj.getObjectByName("spin") as THREE.Sprite | undefined;
       if (spin) spin.material.rotation = performance.now() / 60;
       if (Math.random() < 0.6) {
-        if (m.style === "rivet") emit(this, { tex: FX.twinkle, n: 1, x: m.x, y: m.y, z: m.z, color: 0xffa040, size: [0.25, 0.4], life: [0.2, 0.3], speed: [0.3, 1], gravity: 6, additive: true });
-        else if (m.style === "dagger") emit(this, { tex: RAIDER.drop, n: 1, x: m.x, y: m.y, z: m.z, color: 0x80ff60, size: [0.18, 0.26], life: [0.3, 0.5], speed: [0, 0.5], gravity: 10 });
-        else if (m.style === "slash") emit(this, { tex: DUELIST.sparkle, n: 1, x: m.x, y: m.y, z: m.z, size: [0.3, 0.45], life: [0.25, 0.4], speed: [0.3, 1], additive: true, jitter: 0.8 });
-        else if (m.style === "powershot") emit(this, { tex: FX.twinkle, n: 2, x: m.x, y: m.y, z: m.z, color: 0xd8ffa0, size: [0.25, 0.4], life: [0.25, 0.4], speed: [0.2, 0.8], additive: true, jitter: 0.4 });
+        if (m.style === "rivet")
+          emit(this, {
+            tex: FX.twinkle,
+            n: 1,
+            x: m.x,
+            y: m.y,
+            z: m.z,
+            color: 0xffa040,
+            size: [0.25, 0.4],
+            life: [0.2, 0.3],
+            speed: [0.3, 1],
+            gravity: 6,
+            additive: true,
+          });
+        else if (m.style === "dagger")
+          emit(this, {
+            tex: RAIDER.drop,
+            n: 1,
+            x: m.x,
+            y: m.y,
+            z: m.z,
+            color: 0x80ff60,
+            size: [0.18, 0.26],
+            life: [0.3, 0.5],
+            speed: [0, 0.5],
+            gravity: 10,
+          });
+        else if (m.style === "slash")
+          emit(this, {
+            tex: DUELIST.sparkle,
+            n: 1,
+            x: m.x,
+            y: m.y,
+            z: m.z,
+            size: [0.3, 0.45],
+            life: [0.25, 0.4],
+            speed: [0.3, 1],
+            additive: true,
+            jitter: 0.8,
+          });
+        else if (m.style === "powershot")
+          emit(this, {
+            tex: FX.twinkle,
+            n: 2,
+            x: m.x,
+            y: m.y,
+            z: m.z,
+            color: 0xd8ffa0,
+            size: [0.25, 0.4],
+            life: [0.25, 0.4],
+            speed: [0.2, 0.8],
+            additive: true,
+            jitter: 0.4,
+          });
       }
       if (m.style === "rock" && m.dist - v.lastSpike > 0.6) {
         v.lastSpike = m.dist;
@@ -1650,21 +2120,47 @@ export class CombatFx implements FxHost {
         rock.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * 3, (Math.random() - 0.5) * 0.5);
         const hgt = 1.6 * rock.scale.y;
         this.items.push({
-          obj: rock, t: 0, dur: 1,
+          obj: rock,
+          t: 0,
+          dur: 1,
           tick: (k) => {
             const up = k < 0.12 ? k / 0.12 : k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1;
             rock.position.set(gx, gy - hgt / 2 + hgt * 0.75 * up, gz);
           },
         });
         decal(this, WARLORD.crackRing, gx, gy, gz, 0.9, 1.2, { grow: 0.05 });
-        emit(this, { tex: WARLORD.dust, n: 2, x: gx, y: gy + 0.4, z: gz, size: [0.8, 1.1], grow: 1.7, life: [0.4, 0.6], speed: [0.8, 1.6], flatSpread: true, drag: 3, opacity: 0.85 });
+        emit(this, {
+          tex: WARLORD.dust,
+          n: 2,
+          x: gx,
+          y: gy + 0.4,
+          z: gz,
+          size: [0.8, 1.1],
+          grow: 1.7,
+          life: [0.4, 0.6],
+          speed: [0.8, 1.6],
+          flatSpread: true,
+          drag: 3,
+          opacity: 0.85,
+        });
         chunks(this, 1, gx, gy + 0.4, gz, { size: [0.1, 0.18], speed: [1, 2.5], up: [3, 5] });
       }
     }
     useCostume(prevC);
     for (const [id, v] of this.missileViews) {
       if (seen.has(id)) continue;
-      emit(this, { tex: FX.dust, n: 3, x: v.obj.position.x, y: v.obj.position.y, z: v.obj.position.z, size: [0.6, 0.9], grow: 1.6, life: [0.3, 0.5], speed: [0.8, 1.6], opacity: 0.8 });
+      emit(this, {
+        tex: FX.dust,
+        n: 3,
+        x: v.obj.position.x,
+        y: v.obj.position.y,
+        z: v.obj.position.z,
+        size: [0.6, 0.9],
+        grow: 1.6,
+        life: [0.3, 0.5],
+        speed: [0.8, 1.6],
+        opacity: 0.8,
+      });
       this.root.remove(v.obj);
       v.obj.traverse((o) => {
         const mat = (o as THREE.Mesh).material as THREE.Material | undefined;
@@ -1696,7 +2192,14 @@ export class CombatFx implements FxHost {
     scorch.rotation.z = Math.random() * Math.PI * 2;
     scorch.position.set(x, y + 0.08, z);
     scorch.scale.setScalar(radius * 0.9);
-    this.items.push({ obj: scorch, t: 0, dur: 9, tick: (k) => { scorch.opacity = 0.9 * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3); } });
+    this.items.push({
+      obj: scorch,
+      t: 0,
+      dur: 9,
+      tick: (k) => {
+        scorch.opacity = 0.9 * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3);
+      },
+    });
     this.shake = Math.max(this.shake, 0.7);
   }
 
@@ -1707,12 +2210,65 @@ export class CombatFx implements FxHost {
       const gx = x + Math.cos(a) * d;
       const gz = z + Math.sin(a) * d;
       const gy = this.world ? this.world.groundY(gx, gz) : y;
-      emit(this, { tex: Math.random() < 0.55 ? SUMMONER.ghost : SUMMONER.soulFlame, n: 1, x: gx, y: gy + 0.4, z: gz, size: [0.6, 0.95], grow: 1.2, life: [0.9, 1.4], speed: [0.1, 0.4], up: [1.2, 2.2], additive: true, color: 0xc890ff, opacity: 0.85 });
-      if (Math.random() < 0.35) emit(this, { tex: SUMMONER.skull, n: 1, x, y: y + 5 + Math.random(), z, size: [0.5, 0.7], life: [0.6, 0.8], speed: [0, 0.2], up: [0.6, 1], opacity: 0.7, jitter: r * 0.5 });
+      emit(this, {
+        tex: Math.random() < 0.55 ? SUMMONER.ghost : SUMMONER.soulFlame,
+        n: 1,
+        x: gx,
+        y: gy + 0.4,
+        z: gz,
+        size: [0.6, 0.95],
+        grow: 1.2,
+        life: [0.9, 1.4],
+        speed: [0.1, 0.4],
+        up: [1.2, 2.2],
+        additive: true,
+        color: 0xc890ff,
+        opacity: 0.85,
+      });
+      if (Math.random() < 0.35)
+        emit(this, {
+          tex: SUMMONER.skull,
+          n: 1,
+          x,
+          y: y + 5 + Math.random(),
+          z,
+          size: [0.5, 0.7],
+          life: [0.6, 0.8],
+          speed: [0, 0.2],
+          up: [0.6, 1],
+          opacity: 0.7,
+          jitter: r * 0.5,
+        });
       return;
     }
-    if (kind === "flame") this.burst(x + (Math.random() - 0.5) * 0.8, y + 0.4 + Math.random() * 1.2, z + (Math.random() - 0.5) * 0.8, starTex, 0xff7a20, 1, 0.45, 0.45, 0.2, true, 1.6);
-    else if (kind === "spark") this.burst(x + (Math.random() - 0.5) * 0.9, y + 1 + Math.random() * 1.2, z + (Math.random() - 0.5) * 0.9, starTex, 0xfff0a0, 1, 0.35, 0.35, 0.3, true, 0.6);
+    if (kind === "flame")
+      this.burst(
+        x + (Math.random() - 0.5) * 0.8,
+        y + 0.4 + Math.random() * 1.2,
+        z + (Math.random() - 0.5) * 0.8,
+        starTex,
+        0xff7a20,
+        1,
+        0.45,
+        0.45,
+        0.2,
+        true,
+        1.6,
+      );
+    else if (kind === "spark")
+      this.burst(
+        x + (Math.random() - 0.5) * 0.9,
+        y + 1 + Math.random() * 1.2,
+        z + (Math.random() - 0.5) * 0.9,
+        starTex,
+        0xfff0a0,
+        1,
+        0.35,
+        0.35,
+        0.3,
+        true,
+        0.6,
+      );
     else if (kind === "steam") this.burst(x, y, z, puffTex, 0xe8e8f0, 1, 0.8, 0.8, 0.3, false, 1.2);
     else {
       const s = this.sprite(glowTex, 0xa01010, false, 1);
@@ -1721,7 +2277,16 @@ export class CombatFx implements FxHost {
       let vy = 0;
       s.position.set(sx, y + 1.2 + Math.random() * 0.6, sz);
       s.scale.setScalar(0.22);
-      this.items.push({ obj: s, t: 0, dur: 0.5, tick: (k, dt) => { vy -= 12 * dt; s.position.y += vy * dt; s.material.opacity = 1 - k * 0.6; } });
+      this.items.push({
+        obj: s,
+        t: 0,
+        dur: 0.5,
+        tick: (k, dt) => {
+          vy -= 12 * dt;
+          s.position.y += vy * dt;
+          s.material.opacity = 1 - k * 0.6;
+        },
+      });
     }
   }
 
@@ -1731,7 +2296,9 @@ export class CombatFx implements FxHost {
     const sz = 0.4 + heat * 0.5;
     const drift = (Math.random() - 0.5) * 0.8;
     this.items.push({
-      obj: s, t: 0, dur: 0.9 + heat * 0.5,
+      obj: s,
+      t: 0,
+      dur: 0.9 + heat * 0.5,
       tick: (k, dt) => {
         s.position.y += dt * (1.2 + heat);
         s.position.x += dt * drift;
@@ -1742,7 +2309,15 @@ export class CombatFx implements FxHost {
     if (heat > 0.5 && Math.random() < heat * 0.5) {
       const f = this.sprite(starTex, 0xff9030, true, 0.9);
       f.position.set(x, y, z);
-      this.items.push({ obj: f, t: 0, dur: 0.15, tick: (k) => { f.scale.setScalar(0.5 + k * 0.4); f.material.opacity = 0.9 * (1 - k); } });
+      this.items.push({
+        obj: f,
+        t: 0,
+        dur: 0.15,
+        tick: (k) => {
+          f.scale.setScalar(0.5 + k * 0.4);
+          f.material.opacity = 0.9 * (1 - k);
+        },
+      });
     }
   }
 
@@ -1762,27 +2337,108 @@ export class CombatFx implements FxHost {
         p.size0 = 0.35 + k * 0.3;
       }
     }
-    if (full && Math.random() < 0.25) emit(this, { tex: FX.zap, n: 1, x, y: y + 1.3, z, color, size: [0.9, 1.3], life: [0.08, 0.14], speed: [0, 0], additive: true, jitter: 0.9 });
+    if (full && Math.random() < 0.25)
+      emit(this, {
+        tex: FX.zap,
+        n: 1,
+        x,
+        y: y + 1.3,
+        z,
+        color,
+        size: [0.9, 1.3],
+        life: [0.08, 0.14],
+        speed: [0, 0],
+        additive: true,
+        jitter: 0.9,
+      });
   }
 
-
-  chargeRelease(x: number, y: number, z: number, dirX: number, dirZ: number, power: number, color: THREE.ColorRepresentation): void {
+  chargeRelease(
+    x: number,
+    y: number,
+    z: number,
+    dirX: number,
+    dirZ: number,
+    power: number,
+    color: THREE.ColorRepresentation,
+  ): void {
     const k = Math.min(1, (power - 1) / 0.8);
-    emit(this, { tex: FX.burst, n: 1, x: x + dirX * 1.2, y: y + 1.2, z: z + dirZ * 1.2, color, size: [2 + k * 2, 2 + k * 2], grow: 1.4, life: [0.15, 0.15], speed: [0, 0], additive: true, order: 7 });
-    shockwave(this, FX.shock, x + dirX * 1.2, y + 1.1, z + dirZ * 1.2, new THREE.Vector3(dirX, 0, dirZ), 0.3, 1.5 + k * 2, 0.25, color);
+    emit(this, {
+      tex: FX.burst,
+      n: 1,
+      x: x + dirX * 1.2,
+      y: y + 1.2,
+      z: z + dirZ * 1.2,
+      color,
+      size: [2 + k * 2, 2 + k * 2],
+      grow: 1.4,
+      life: [0.15, 0.15],
+      speed: [0, 0],
+      additive: true,
+      order: 7,
+    });
+    shockwave(
+      this,
+      FX.shock,
+      x + dirX * 1.2,
+      y + 1.1,
+      z + dirZ * 1.2,
+      new THREE.Vector3(dirX, 0, dirZ),
+      0.3,
+      1.5 + k * 2,
+      0.25,
+      color,
+    );
     shockwave(this, FX.shock, x, y + 0.15, z, new THREE.Vector3(0, 1, 0), 0.4, 1.8 + k * 1.8, 0.35, 0xfff0c0, 0.8);
-    emit(this, { tex: FX.dust, n: 4 + Math.round(k * 4), x, y: y + 0.3, z, size: [0.9, 1.3], grow: 1.8, life: [0.4, 0.7], speed: [2, 4], flatSpread: true, drag: 3, opacity: 0.85 });
+    emit(this, {
+      tex: FX.dust,
+      n: 4 + Math.round(k * 4),
+      x,
+      y: y + 0.3,
+      z,
+      size: [0.9, 1.3],
+      grow: 1.8,
+      life: [0.4, 0.7],
+      speed: [2, 4],
+      flatSpread: true,
+      drag: 3,
+      opacity: 0.85,
+    });
     this.shake = Math.max(this.shake, 0.2 + k * 0.3);
   }
 
   bloodMote(x: number, y: number, z: number): void {
-    emit(this, { tex: RAIDER.drop, n: 1, x: x + (Math.random() - 0.5) * 1.2, y: y + 0.6 + Math.random() * 1.4, z: z + (Math.random() - 0.5) * 1.2, color: 0xff4040, size: [0.22, 0.32], life: [0.5, 0.8], speed: [0, 0.2], up: [0.6, 1.2], opacity: 0.9 });
+    emit(this, {
+      tex: RAIDER.drop,
+      n: 1,
+      x: x + (Math.random() - 0.5) * 1.2,
+      y: y + 0.6 + Math.random() * 1.4,
+      z: z + (Math.random() - 0.5) * 1.2,
+      color: 0xff4040,
+      size: [0.22, 0.32],
+      life: [0.5, 0.8],
+      speed: [0, 0.2],
+      up: [0.6, 1.2],
+      opacity: 0.9,
+    });
   }
 
   regen(x: number, y: number, z: number): void {
-    emit(this, { tex: plusTex, n: 1, x: x + (Math.random() - 0.5) * 1.2, y: y + 0.8 + Math.random() * 1.2, z: z + (Math.random() - 0.5) * 1.2, color: 0x90ff90, size: [0.32, 0.32], grow: 0.7, life: [0.9, 0.9], speed: [0, 0], up: [1.4, 1.4], opacity: 0.9 });
+    emit(this, {
+      tex: plusTex,
+      n: 1,
+      x: x + (Math.random() - 0.5) * 1.2,
+      y: y + 0.8 + Math.random() * 1.2,
+      z: z + (Math.random() - 0.5) * 1.2,
+      color: 0x90ff90,
+      size: [0.32, 0.32],
+      grow: 0.7,
+      life: [0.9, 0.9],
+      speed: [0, 0],
+      up: [1.4, 1.4],
+      opacity: 0.9,
+    });
   }
-
 
   buildFx(x: number, y: number, z: number, team: number): void {
     this.burst(x, y + 0.4, z, puffTex, 0xd8c8a8, 10, 1.4, 0.8, 2.5, false, 0.6);
@@ -1818,7 +2474,16 @@ export class CombatFx implements FxHost {
         f.obj.traverse((o) => {
           const m = (o as THREE.Mesh).material as THREE.Material | undefined;
           if (m && m !== ballMat && !SHARED_MAT.has(m) && !m.userData.keep) this.freeMat(m);
-          if (o instanceof THREE.Mesh && !o.geometry.userData.model && !SHARED_CHUNK_GEOS.has(o.geometry) && !SHARED_PLANE_GEOS.has(o.geometry) && o.geometry !== chunkGeo && o.geometry !== ballGeo && !SHARED_GEO.has(o.geometry)) o.geometry.dispose();
+          if (
+            o instanceof THREE.Mesh &&
+            !o.geometry.userData.model &&
+            !SHARED_CHUNK_GEOS.has(o.geometry) &&
+            !SHARED_PLANE_GEOS.has(o.geometry) &&
+            o.geometry !== chunkGeo &&
+            o.geometry !== ballGeo &&
+            !SHARED_GEO.has(o.geometry)
+          )
+            o.geometry.dispose();
         });
         this.items.splice(i, 1);
       }
@@ -1861,11 +2526,24 @@ export class CombatFx implements FxHost {
       }
       if (!s) {
         const c = this.teamColors[p.team];
-        const col = p.style === "arrow" || p.style === "ballista" ? new THREE.Color(0xfff0c0)
-          : p.style === "magic" || p.style === "orb" ? c.clone().lerp(new THREE.Color(0.8, 0.3, 1), 0.6)
-          : c.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
+        const col =
+          p.style === "arrow" || p.style === "ballista"
+            ? new THREE.Color(0xfff0c0)
+            : p.style === "magic" || p.style === "orb"
+              ? c.clone().lerp(new THREE.Color(0.8, 0.3, 1), 0.6)
+              : c.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
         s = this.sprite(glowTex, col, true, 1);
-        s.scale.setScalar(p.style === "arrow" ? 0.45 : p.style === "ballista" ? 0.8 : p.style === "magic" ? 1.4 : p.style === "orb" ? 2.4 : 1.1);
+        s.scale.setScalar(
+          p.style === "arrow"
+            ? 0.45
+            : p.style === "ballista"
+              ? 0.8
+              : p.style === "magic"
+                ? 1.4
+                : p.style === "orb"
+                  ? 2.4
+                  : 1.1,
+        );
         this.projViews.set(p.id, s);
       }
       const t = Math.min(1, p.prevT + (p.t - p.prevT) * alpha);
@@ -1883,7 +2561,9 @@ export class CombatFx implements FxHost {
       const kitOf = s.userData.kit as HeroKit | undefined;
       if (kitOf) {
         s.position.set(x, y, z);
-        withCostume(s.userData.costume as string | undefined, () => kitOf.projectileTick?.(this, s, x, y, z, this.frameDt));
+        withCostume(s.userData.costume as string | undefined, () =>
+          kitOf.projectileTick?.(this, s, x, y, z, this.frameDt),
+        );
         continue;
       }
       s.position.set(x, y, z);
@@ -1895,10 +2575,11 @@ export class CombatFx implements FxHost {
     for (const [id, s] of this.projViews) {
       if (!seen.has(id)) {
         this.root.remove(s);
-        if (!s.userData.towerProj) s.traverse((o) => {
-          const m = (o as THREE.Sprite).material as THREE.Material | undefined;
-          if (m) this.freeMat(m);
-        });
+        if (!s.userData.towerProj)
+          s.traverse((o) => {
+            const m = (o as THREE.Sprite).material as THREE.Material | undefined;
+            if (m) this.freeMat(m);
+          });
         this.projViews.delete(id);
       }
     }

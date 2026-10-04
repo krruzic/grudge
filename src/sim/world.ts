@@ -2,7 +2,25 @@ import { FLAG_GRASS, Kind, Terrain, type MapData } from "./terrain.ts";
 import { NavGrid } from "./nav.ts";
 import type { GameData, HeroDef } from "./config.ts";
 import type {
-  Boomerang, Command, Delayed, Missile, Directive, Entity, MatchState, Pad, PadZone, Projectile, SimEvent, Status, TargetClass, TeamState, TerrainMod, Trap, UnitType, Vec2, Zone,
+  Boomerang,
+  Command,
+  Delayed,
+  Missile,
+  Directive,
+  Entity,
+  MatchState,
+  Pad,
+  PadZone,
+  Projectile,
+  SimEvent,
+  Status,
+  TargetClass,
+  TeamState,
+  TerrainMod,
+  Trap,
+  UnitType,
+  Vec2,
+  Zone,
 } from "./types.ts";
 import { FORMATIONS, TEAM_NAMES, UNIT_TYPES } from "./types.ts";
 import { updateBoomerangs, updateHero } from "./heroes.ts";
@@ -10,7 +28,22 @@ import { updateUnit } from "./units.ts";
 import { spawnUnit, tryBuild, trySpec, updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
 import { MapEvents } from "./mapEvents.ts";
-import { abilities, addShield, mark as markOne, afterShot, allFx, gainXp, learn, learned as learnedOf, options, onKill, recompute, tickStatus, updateMissiles, xpForDamage } from "./talents.ts";
+import {
+  abilities,
+  addShield,
+  mark as markOne,
+  afterShot,
+  allFx,
+  gainXp,
+  learn,
+  learned as learnedOf,
+  options,
+  onKill,
+  recompute,
+  tickStatus,
+  updateMissiles,
+  xpForDamage,
+} from "./talents.ts";
 import { onArrowHit, pipMarkMul, vantageMul } from "./marksman.ts";
 import { healFrom, onZoneEnd, updateKegs } from "./friar.ts";
 import type { Keg } from "./types.ts";
@@ -58,10 +91,47 @@ export interface PlayerSlot {
 
 function newStatus(): Status {
   return {
-    slowUntil: 0, slowMul: 1, stunUntil: 0, kvx: 0, kvz: 0, buffUntil: 0, buffDamageMul: 1, buffSpeedMul: 1, rallyUntil: 0, lastHitAt: -99, lastHitX: 0, lastHitZ: 0,
-    invulnUntil: 0, lastAttackAt: -99, hidden: false, seenBy: 0, supportDamageMul: 1, auraDamageMul: 1, stealthUntil: 0, ambushMul: 1, guardUntil: 0, guardMul: 1, cowedUntil: 0, hexUntil: 0, hexOwner: 0,
-    bleedStacks: 0, bleedDps: 0, bleedUntil: 0, bleedOwner: 0, shield: 0, shieldUntil: 0, shieldBurst: 0, armorMul: 1, armorUntil: 0, ccImmuneUntil: 0,
-    markUntil: 0, markTeam: -1, markOwner: 0, markMul: 1, markAll: false, markWeaken: 1,
+    slowUntil: 0,
+    slowMul: 1,
+    stunUntil: 0,
+    kvx: 0,
+    kvz: 0,
+    buffUntil: 0,
+    buffDamageMul: 1,
+    buffSpeedMul: 1,
+    rallyUntil: 0,
+    lastHitAt: -99,
+    lastHitX: 0,
+    lastHitZ: 0,
+    invulnUntil: 0,
+    lastAttackAt: -99,
+    hidden: false,
+    seenBy: 0,
+    supportDamageMul: 1,
+    auraDamageMul: 1,
+    stealthUntil: 0,
+    ambushMul: 1,
+    guardUntil: 0,
+    guardMul: 1,
+    cowedUntil: 0,
+    hexUntil: 0,
+    hexOwner: 0,
+    bleedStacks: 0,
+    bleedDps: 0,
+    bleedUntil: 0,
+    bleedOwner: 0,
+    shield: 0,
+    shieldUntil: 0,
+    shieldBurst: 0,
+    armorMul: 1,
+    armorUntil: 0,
+    ccImmuneUntil: 0,
+    markUntil: 0,
+    markTeam: -1,
+    markOwner: 0,
+    markMul: 1,
+    markAll: false,
+    markWeaken: 1,
   };
 }
 
@@ -105,7 +175,11 @@ export class World {
   private slotCounter: number[];
   readonly teamCount: number;
 
-  constructor(map: MapData, readonly data: GameData, seed = 1) {
+  constructor(
+    map: MapData,
+    readonly data: GameData,
+    seed = 1,
+  ) {
     this.terrain = new Terrain(map);
     this.dt = 1 / data.match.tickRate;
     this.rng = mulberry32(seed);
@@ -114,7 +188,7 @@ export class World {
     this.slotCounter = new Array(this.teamCount).fill(0);
     this.terrain.pads.forEach((p, i) => {
       const zone = (p.zone ?? "home") as PadZone;
-      const side = zone === "neutral" ? -1 : p.side ?? (p.x < this.terrain.width / 2 ? 0 : 1);
+      const side = zone === "neutral" ? -1 : (p.side ?? (p.x < this.terrain.width / 2 ? 0 : 1));
       this.pads.push({ index: i, x: p.x, z: p.z, zone, side, structureId: 0, rubbleUntil: 0 });
     });
     for (let team = 0; team < this.teamCount; team++) {
@@ -125,19 +199,40 @@ export class World {
         coreId: 0,
         homeLost: false,
         directives: {
-          grunt: "push", ranged: "push", heavy: "push",
+          grunt: "push",
+          ranged: "push",
+          heavy: "push",
           holdPoint: { grunt: { ...hold }, ranged: { ...hold }, heavy: { ...hold } },
           focus: { grunt: 0, ranged: 0, heavy: 0 },
         },
-        coreDamageDealt: 0, kills: 0, structuresBuilt: 0, structuresLost: 0, heroKills: 0, catchUp: 0, unitCount: 0, commanderOrderAt: -99, banner: null, callReadyAt: 0, wardReadyAt: 0,
+        coreDamageDealt: 0,
+        kills: 0,
+        structuresBuilt: 0,
+        structuresLost: 0,
+        heroKills: 0,
+        catchUp: 0,
+        unitCount: 0,
+        commanderOrderAt: -99,
+        banner: null,
+        callReadyAt: 0,
+        wardReadyAt: 0,
       });
     }
     for (const c of this.terrain.cores) {
       const team = c.team ?? 0;
       const e = this.addEntity(team, "structure", data.structures.core.radius, c.x, c.z, data.structures.core.hp);
       e.structure = {
-        type: "core", padIndex: -1, level: 1, builtAt: 0, ready: true, nextAction: 0, range: 0, damage: 0,
-        lastFireAt: -99, shielded: true, ward: data.structures.core.ward,
+        type: "core",
+        padIndex: -1,
+        level: 1,
+        builtAt: 0,
+        ready: true,
+        nextAction: 0,
+        range: 0,
+        damage: 0,
+        lastFireAt: -99,
+        shielded: true,
+        ward: data.structures.core.ward,
       };
       this.teams[team].coreId = e.id;
       this.nav.setBlocked(c.x, c.z, data.structures.core.radius + 0.4, true);
@@ -167,7 +262,9 @@ export class World {
         const n = this.bases[team].entrances.length;
         if (!n) continue;
         const dirs = this.teams[team].directives;
-        const list = this.entities.filter((o) => o.alive && o.unit && !o.neutral && o.team === team && dirs[o.unit.type] === "defend");
+        const list = this.entities.filter(
+          (o) => o.alive && o.unit && !o.neutral && o.team === team && dirs[o.unit.type] === "defend",
+        );
         list.sort((a, b) => (order[a.unit!.type] ?? 3) - (order[b.unit!.type] ?? 3) || a.id - b.id);
         list.forEach((o, k) => this.posts.of.set(o.id, [k % n, Math.floor(k / n)]));
       }
@@ -207,7 +304,12 @@ export class World {
           const d = Math.hypot(cx - own.x, cz - own.z);
           near = Math.min(near, d);
           if (foe && Math.hypot(cx - foe.x, cz - foe.z) < d) mine = false;
-          for (const n of [nav.index(c % W + 1, Math.floor(c / W)), nav.index(c % W - 1, Math.floor(c / W)), nav.index(c % W, Math.floor(c / W) + 1), nav.index(c % W, Math.floor(c / W) - 1)]) {
+          for (const n of [
+            nav.index((c % W) + 1, Math.floor(c / W)),
+            nav.index((c % W) - 1, Math.floor(c / W)),
+            nav.index(c % W, Math.floor(c / W) + 1),
+            nav.index(c % W, Math.floor(c / W) - 1),
+          ]) {
             if (castle(n) && !visited[n]) {
               visited[n] = 1;
               seg.push(n);
@@ -266,7 +368,10 @@ export class World {
       for (let dz = -1; dz <= 1 && !out; dz++) {
         for (let dx = -1; dx <= 1; dx++) {
           const n = nav.index(cx + dx, cz + dz);
-          if (n >= 0 && !mask[n] && !inBox(cx + dx, cz + dz) && nav.passable(c, n)) { out = true; break; }
+          if (n >= 0 && !mask[n] && !inBox(cx + dx, cz + dz) && nav.passable(c, n)) {
+            out = true;
+            break;
+          }
         }
       }
       if (out) edge.push(c);
@@ -311,7 +416,10 @@ export class World {
         let bd = Infinity;
         for (const g of group) {
           const d = Math.hypot((g % W) + 0.5 - mx, Math.floor(g / W) + 0.5 - mz);
-          if (d < bd) { bd = d; best = g; }
+          if (d < bd) {
+            bd = d;
+            best = g;
+          }
         }
         px = (best % W) + 0.5;
         pz = Math.floor(best / W) + 0.5;
@@ -366,7 +474,12 @@ export class World {
 
   addEntity(team: number, kind: Entity["kind"], radius: number, x: number, z: number, hp: number): Entity {
     const y = this.groundY(x, z);
-    const facing = this.teamCount > 2 ? Math.atan2(this.terrain.width / 2 - x, this.terrain.depth / 2 - z) : team === 0 ? Math.PI / 2 : -Math.PI / 2;
+    const facing =
+      this.teamCount > 2
+        ? Math.atan2(this.terrain.width / 2 - x, this.terrain.depth / 2 - z)
+        : team === 0
+          ? Math.PI / 2
+          : -Math.PI / 2;
     const e: Entity = {
       id: this.nextId++,
       team,
@@ -395,13 +508,39 @@ export class World {
     const spawn = this.spawnPoint(team);
     const e = this.addEntity(team, "hero", b.radius, spawn.x, spawn.z, tiers.health[def.health]);
     e.hero = {
-      type, player,
+      type,
+      player,
       speed: tiers.speed[def.speed] * (def.hooks.speedMul ?? 1),
       damageMul: tiers.damage[def.damage],
       vel: { x: 0, z: 0 },
-      action: null, comboIndex: 0, comboUntil: 0, cooldowns: {}, meter: 0, blocking: false, openingUntil: 0, combatAt: -99, actionEndAt: -99, bomb: false, stuckFor: 0, aim: null,
-      xp: 0, level: 1, picks: [], path: { a: [], b: [], r: [], z: [] }, ab: null, frenzy: 0, frenzyUntil: 0, recastUntil: 0, empowerMul: 1, empowerUntil: 0,
-      dead: false, respawnAt: 0, lastTargetId: 0, lastTargetAt: -99, anim: "idle", animStart: 0,
+      action: null,
+      comboIndex: 0,
+      comboUntil: 0,
+      cooldowns: {},
+      meter: 0,
+      blocking: false,
+      openingUntil: 0,
+      combatAt: -99,
+      actionEndAt: -99,
+      bomb: false,
+      stuckFor: 0,
+      aim: null,
+      xp: 0,
+      level: 1,
+      picks: [],
+      path: { a: [], b: [], r: [], z: [] },
+      ab: null,
+      frenzy: 0,
+      frenzyUntil: 0,
+      recastUntil: 0,
+      empowerMul: 1,
+      empowerUntil: 0,
+      dead: false,
+      respawnAt: 0,
+      lastTargetId: 0,
+      lastTargetAt: -99,
+      anim: "idle",
+      animStart: 0,
       stepHeight: def.hooks.stepHeight ?? b.stepHeight,
       maxSlope: def.hooks.maxSlope ?? b.maxSlope,
     };
@@ -429,7 +568,14 @@ export class World {
         u.expiresAt = t + (this.heroDef(owner.hero.type).hooks.raiseSeconds ?? 15);
         u.owner = owner.id;
         u.unit!.raised = true;
-        this.emit({ type: "warcry", x: target.transform.pos.x, y: target.transform.y, z: target.transform.pos.z, radius: 1.5, team: owner.team });
+        this.emit({
+          type: "warcry",
+          x: target.transform.pos.x,
+          y: target.transform.y,
+          z: target.transform.pos.z,
+          radius: 1.5,
+          team: owner.team,
+        });
       }
     }
   }
@@ -453,7 +599,14 @@ export class World {
         const r = this.heroDef(src.hero.type).abilities.r;
         m *= r.openingMul ?? 1.5;
         src.hero.openingUntil = 0;
-        this.emit({ type: "parry", x: target.transform.pos.x, y: target.transform.y + 1, z: target.transform.pos.z, team: src.team, src: src.id });
+        this.emit({
+          type: "parry",
+          x: target.transform.pos.x,
+          y: target.transform.y + 1,
+          z: target.transform.pos.z,
+          team: src.team,
+          src: src.id,
+        });
       }
     }
     return m;
@@ -582,7 +735,11 @@ export class World {
         const next = FORMATIONS[(FORMATIONS.indexOf(ts.formation ?? "mass") + 1) % FORMATIONS.length];
         ts.formation = next;
         for (const u of this.entities) if (u.unit && u.team === slot.team) u.unit.repathAt = 0;
-        this.emit({ type: "notice", team: slot.team, text: `FORMATION · ${{ mass: "LOOSE", column: "COLUMN", line: "LINE", wedge: "WEDGE" }[next]}` });
+        this.emit({
+          type: "notice",
+          team: slot.team,
+          text: `FORMATION · ${{ mass: "LOOSE", column: "COLUMN", line: "LINE", wedge: "WEDGE" }[next]}`,
+        });
       }
       if (cmd.say) this.emit({ type: "notice", team: slot.team, text: cmd.say.slice(0, 48) });
       if (e.alive) gainXp(this, e, this.data.talents?.xp.passive * dt);
@@ -636,7 +793,14 @@ export class World {
         const at = cur < 0 ? -1 : rivals.indexOf(cur);
         ts.attackTeam = at + 1 < rivals.length ? rivals[at + 1] : -1;
       } else ts.attackTeam = -1;
-      this.emit({ type: "notice", team, text: ts.attackTeam !== undefined && ts.attackTeam >= 0 ? `ATTACK · ${this.teamName(ts.attackTeam)} HOUSE` : "ATTACK · NEAREST KEEP" });
+      this.emit({
+        type: "notice",
+        team,
+        text:
+          ts.attackTeam !== undefined && ts.attackTeam >= 0
+            ? `ATTACK · ${this.teamName(ts.attackTeam)} HOUSE`
+            : "ATTACK · NEAREST KEEP",
+      });
     } else if (dir === "push" && hero.hero && this.terrain.lanes.length) {
       const ts = this.teams[team];
       const already = types.every((t) => d[t] === "push");
@@ -644,7 +808,11 @@ export class World {
       const cur = ts.lane ?? -1;
       ts.lane = already ? (cur + 1 < n ? cur + 1 : -1) : -1;
       ts.laneGen = (ts.laneGen ?? 0) + 1;
-      this.emit({ type: "notice", team, text: ts.lane >= 0 ? `ATTACK · ${this.terrain.lanes[ts.lane].name} LANE` : "ATTACK · ANY LANE" });
+      this.emit({
+        type: "notice",
+        team,
+        text: ts.lane >= 0 ? `ATTACK · ${this.terrain.lanes[ts.lane].name} LANE` : "ATTACK · ANY LANE",
+      });
     }
     let focusId = 0;
     if (dir === "focus") {
@@ -652,13 +820,17 @@ export class World {
       for (const o of this.entities) {
         if (!o.alive || o.team === team || !o.structure) continue;
         const dd = this.dist(hero, o);
-        if (dd < best) { best = dd; focusId = o.id; }
+        if (dd < best) {
+          best = dd;
+          focusId = o.id;
+        }
       }
       if (!focusId) return;
     }
     for (const t of types) {
       d[t] = dir;
-      if (dir === "hold") d.holdPoint[t] = this.rallyPoint(team) ?? { x: hero.transform.pos.x, z: hero.transform.pos.z };
+      if (dir === "hold")
+        d.holdPoint[t] = this.rallyPoint(team) ?? { x: hero.transform.pos.x, z: hero.transform.pos.z };
       if (dir === "defend") d.holdPoint[t] = this.defaultHold(team);
       if (dir === "focus") d.focus[t] = focusId;
     }
@@ -673,7 +845,10 @@ export class World {
   }
 
   get matchLength(): number {
-    return this.data.match.matchSeconds * (this.ffa ? this.data.match.ffa?.timeMul ?? 1 : 1) + (this.mapEvents?.lockUntil ?? 0);
+    return (
+      this.data.match.matchSeconds * (this.ffa ? (this.data.match.ffa?.timeMul ?? 1) : 1) +
+      (this.mapEvents?.lockUntil ?? 0)
+    );
   }
 
   private updateMatch(): void {
@@ -713,7 +888,9 @@ export class World {
 
   inBanner(e: Entity): boolean {
     const b = this.teams[e.team]?.banner;
-    return !!b && this.time < b.until && Math.hypot(e.transform.pos.x - b.x, e.transform.pos.z - b.z) <= this.bannerReach;
+    return (
+      !!b && this.time < b.until && Math.hypot(e.transform.pos.x - b.x, e.transform.pos.z - b.z) <= this.bannerReach
+    );
   }
 
   private forms = { tick: -1, of: new Map<number, [number, number]>() };
@@ -780,7 +957,16 @@ export class World {
     return { x: hx * fwd - hz * right, z: hz * fwd + hx * right, leash };
   }
 
-  jumpPads: { x: number; z: number; tx: number; tz: number; launchAt: number; chargeAt: number; readyAt: number; failAt: number }[] = [];
+  jumpPads: {
+    x: number;
+    z: number;
+    tx: number;
+    tz: number;
+    launchAt: number;
+    chargeAt: number;
+    readyAt: number;
+    failAt: number;
+  }[] = [];
   readonly jumpCharge = 1.0;
   readonly jumpCooldown = 5;
 
@@ -798,7 +984,17 @@ export class World {
     e.hero.action = null;
     e.hero.jump = { fx: p.x, fz: p.z, tx: x, tz: z, start: this.time, dur, peak, pad: -1, launched: true };
     e.transform.facing = e.transform.prevFacing = Math.atan2(x - p.x, z - p.z);
-    this.emit({ type: "jumppad", stage: "launch", pad: -1, id: e.id, x: p.x, y: e.transform.y, z: p.z, windup: 0, dur });
+    this.emit({
+      type: "jumppad",
+      stage: "launch",
+      pad: -1,
+      id: e.id,
+      x: p.x,
+      y: e.transform.y,
+      z: p.z,
+      windup: 0,
+      dur,
+    });
     return true;
   }
 
@@ -814,7 +1010,17 @@ export class World {
     }
     e.hero!.jumpReadyAt = this.time + 0.5;
     const t = e.transform;
-    this.emit({ type: "jumppad", stage: "fail", pad: j.pad, id: e.id, x: t.pos.x, y: t.y, z: t.pos.z, windup: 0, dur: 0 });
+    this.emit({
+      type: "jumppad",
+      stage: "fail",
+      pad: j.pad,
+      id: e.id,
+      x: t.pos.x,
+      y: t.y,
+      z: t.pos.z,
+      windup: 0,
+      dur: 0,
+    });
   }
 
   initJumpPads(): void {
@@ -891,7 +1097,18 @@ export class World {
     h.morphBack = st === "back";
     h.action = null;
     const p = e.transform;
-    this.emit({ type: "morph", stage: "start", id: e.id, to: st === "back" ? h.morphed!.type : m.type, back: st === "back", x: p.pos.x, y: p.y, z: p.pos.z, team: e.team, seconds: m.channelSeconds });
+    this.emit({
+      type: "morph",
+      stage: "start",
+      id: e.id,
+      to: st === "back" ? h.morphed!.type : m.type,
+      back: st === "back",
+      x: p.pos.x,
+      y: p.y,
+      z: p.pos.z,
+      team: e.team,
+      seconds: m.channelSeconds,
+    });
   }
 
   tickMorph(e: Entity): void {
@@ -901,15 +1118,42 @@ export class World {
     if (h.morphBack) this.unmorph(e);
     else this.morphTo(e, this.morphCfg!.type);
     const p = e.transform;
-    this.emit({ type: "morph", stage: "done", id: e.id, to: h.type, back: !h.morphed, x: p.pos.x, y: p.y, z: p.pos.z, team: e.team, seconds: 0 });
+    this.emit({
+      type: "morph",
+      stage: "done",
+      id: e.id,
+      to: h.type,
+      back: !h.morphed,
+      x: p.pos.x,
+      y: p.y,
+      z: p.pos.z,
+      team: e.team,
+      seconds: 0,
+    });
     const slot = this.players.find((q) => q.heroId === e.id);
-    if (slot) this.emit({ type: "notice", team: -1, text: h.morphed ? `P${slot.player + 1} TAKES UP THE BANNER` : `P${slot.player + 1} PUTS DOWN THE BANNER` });
+    if (slot)
+      this.emit({
+        type: "notice",
+        team: -1,
+        text: h.morphed ? `P${slot.player + 1} TAKES UP THE BANNER` : `P${slot.player + 1} PUTS DOWN THE BANNER`,
+      });
   }
 
   private morphTo(e: Entity, type: string): void {
     const h = e.hero!;
     const frac = e.hp / e.maxHp;
-    h.morphed = { type: h.type, level: h.level, xp: h.xp, maxHp: e.maxHp, damageMul: h.damageMul, speed: h.speed, path: h.path, picks: h.picks, stepHeight: h.stepHeight, maxSlope: h.maxSlope };
+    h.morphed = {
+      type: h.type,
+      level: h.level,
+      xp: h.xp,
+      maxHp: e.maxHp,
+      damageMul: h.damageMul,
+      speed: h.speed,
+      path: h.path,
+      picks: h.picks,
+      stepHeight: h.stepHeight,
+      maxSlope: h.maxSlope,
+    };
     const def = this.heroDef(type);
     const tiers = this.data.heroes.tiers;
     const b = this.data.heroes.baseline;
@@ -980,14 +1224,34 @@ export class World {
         const pad = this.pads[e.structure.padIndex];
         pad.structureId = 0;
         this.nav.setBlocked(pad.x, pad.z, this.data.structures.structureRadius + 0.45, false);
-        pad.rubbleUntil = this.time + (pad.zone === "home" ? this.data.structures.rubbleHomeSeconds ?? this.data.structures.rubbleSeconds : this.data.structures.rubbleSeconds);
+        pad.rubbleUntil =
+          this.time +
+          (pad.zone === "home"
+            ? (this.data.structures.rubbleHomeSeconds ?? this.data.structures.rubbleSeconds)
+            : this.data.structures.rubbleSeconds);
       } else if (e.structure) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.radius, false);
       e.hp = 0;
       e.alive = false;
-      this.emit({ type: "death", id: e.id, kind: e.kind, x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, big: !!e.structure });
+      this.emit({
+        type: "death",
+        id: e.id,
+        kind: e.kind,
+        x: e.transform.pos.x,
+        y: e.transform.y,
+        z: e.transform.pos.z,
+        team: e.team,
+        big: !!e.structure,
+      });
     }
     const left = this.teams.map((_, i) => i).filter((i) => this.standing(i));
-    this.emit({ type: "notice", team: -1, text: by >= 0 ? `${this.teamName(by)} DESTROYS THE ${this.teamName(team)} KEEP` : `THE ${this.teamName(team)} KEEP FALLS` });
+    this.emit({
+      type: "notice",
+      team: -1,
+      text:
+        by >= 0
+          ? `${this.teamName(by)} DESTROYS THE ${this.teamName(team)} KEEP`
+          : `THE ${this.teamName(team)} KEEP FALLS`,
+    });
     this.emit({ type: "eliminated", team, by });
     if (left.length === 1) this.endMatch(left[0], "last house standing");
   }
@@ -1009,14 +1273,23 @@ export class World {
       for (const e of this.entities) {
         if (!e.alive || !e.structure || e.structure.type === "core" || e.team >= n) continue;
         const def = this.data.structures.types[e.structure.type];
-        worth[e.team] += def.cost + (e.structure.level > 1 ? def.upgradeCost : 0) + (e.structure.level > 2 ? def.specCost ?? 0 : 0);
+        worth[e.team] +=
+          def.cost + (e.structure.level > 1 ? def.upgradeCost : 0) + (e.structure.level > 2 ? (def.specCost ?? 0) : 0);
         count[e.team]++;
       }
       for (let t = 0; t < n; t++) {
         let deficit = 0;
         for (let o = 0; o < n; o++) {
           if (o === t || !this.standing(o)) continue;
-          const d = (this.teams[o].resource + this.teams[o].grain + worth[o] - this.teams[t].resource - this.teams[t].grain - worth[t]) / cu.resourceScale + (count[o] - count[t]) * cu.structureWeight;
+          const d =
+            (this.teams[o].resource +
+              this.teams[o].grain +
+              worth[o] -
+              this.teams[t].resource -
+              this.teams[t].grain -
+              worth[t]) /
+              cu.resourceScale +
+            (count[o] - count[t]) * cu.structureWeight;
           deficit = Math.max(deficit, d);
         }
         this.teams[t].catchUp = Math.max(0, Math.min(1, deficit));
@@ -1044,7 +1317,7 @@ export class World {
       inc += g.perLevel[Math.min(g.perLevel.length, s.structure.level) - 1] ?? 0;
       const def = this.data.structures.types[s.structure.type as "barracks"];
       if (g.outpostShare && def?.class === "production" && def.unit) {
-        const every = (def.cadence ?? 10) * (s.structure.level > 1 ? def.upgrade.cadence ?? 1 : 1);
+        const every = (def.cadence ?? 10) * (s.structure.level > 1 ? (def.upgrade.cadence ?? 1) : 1);
         inc += ((this.data.units.waves.spawnCost[def.unit] ?? 0) / every) * g.outpostShare;
       }
     }
@@ -1079,21 +1352,28 @@ export class World {
         for (const h of heroes) {
           if (h.team !== e.team) continue;
           const hooks = this.heroDef(h.hero!.type).hooks;
-          if (hooks.auraRadius && this.dist(h, e) <= hooks.auraRadius) s.auraDamageMul = Math.max(s.auraDamageMul, hooks.auraDamageMul);
+          if (hooks.auraRadius && this.dist(h, e) <= hooks.auraRadius)
+            s.auraDamageMul = Math.max(s.auraDamageMul, hooks.auraDamageMul);
         }
         for (const h of heroes) {
           if (h.team !== e.team) continue;
           const hk = this.heroDef(h.hero!.type).hooks;
           const bp = this.rallyPoint(h.team);
-          const nearBanner = !!bp && Math.hypot(e.transform.pos.x - bp.x, e.transform.pos.z - bp.z) <= (hk.commandAuraRadius ?? 0);
-          if (hk.commandAuraRadius && (this.dist(h, e) <= hk.commandAuraRadius || nearBanner) && this.time >= s.buffUntil) {
+          const nearBanner =
+            !!bp && Math.hypot(e.transform.pos.x - bp.x, e.transform.pos.z - bp.z) <= (hk.commandAuraRadius ?? 0);
+          if (
+            hk.commandAuraRadius &&
+            (this.dist(h, e) <= hk.commandAuraRadius || nearBanner) &&
+            this.time >= s.buffUntil
+          ) {
             s.buffUntil = this.time + 0.2;
             s.buffSpeedMul = hk.commandAuraSpeed ?? 1.1;
             s.buffDamageMul = 1;
           }
         }
         for (const st of supports) {
-          if (st.team === e.team && this.dist(st, e) <= st.structure!.range) s.supportDamageMul = this.data.structures.types.support.damageMul ?? 1;
+          if (st.team === e.team && this.dist(st, e) <= st.structure!.range)
+            s.supportDamageMul = this.data.structures.types.support.damageMul ?? 1;
         }
       }
       if (e.kind !== "structure") {
@@ -1110,11 +1390,11 @@ export class World {
     for (const e of covered) {
       const s = e.status;
       if (this.time < s.markUntil) {
-        const mt = s.markAll ? s.markTeam : this.getAny(s.markOwner)?.team ?? -1;
+        const mt = s.markAll ? s.markTeam : (this.getAny(s.markOwner)?.team ?? -1);
         if (mt >= 0 && mt !== e.team) s.seenBy |= 1 << mt;
       }
       for (const o of this.entities) {
-        if (!o.alive || o.kind === "structure" || o.team === e.team || o.team < 0 || (s.seenBy & (1 << o.team))) continue;
+        if (!o.alive || o.kind === "structure" || o.team === e.team || o.team < 0 || s.seenBy & (1 << o.team)) continue;
         if (this.dist(o, e) <= adj + e.radius || this.sharesPatch(o, e)) s.seenBy |= 1 << o.team;
       }
     }
@@ -1136,12 +1416,13 @@ export class World {
           const c = stack.pop()!;
           const cx = c % t.width;
           const cz = (c - cx) / t.width;
-          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-            const n = t.index(cx + dx, cz + dz);
-            if (n < 0 || p[n] || !(t.flags[n] & FLAG_GRASS)) continue;
-            p[n] = next;
-            stack.push(n);
-          }
+          for (let dz = -1; dz <= 1; dz++)
+            for (let dx = -1; dx <= 1; dx++) {
+              const n = t.index(cx + dx, cz + dz);
+              if (n < 0 || p[n] || !(t.flags[n] & FLAG_GRASS)) continue;
+              p[n] = next;
+              stack.push(n);
+            }
         }
       }
       this.grassPatches = p;
@@ -1235,7 +1516,10 @@ export class World {
       this.emit({ type: "miss", ...ev });
       return false;
     }
-    if (target.hero?.action?.kind === "parry" && target.hero.action.t <= (this.heroDef(target.hero.type).abilities.r.window ?? 0.5)) {
+    if (
+      target.hero?.action?.kind === "parry" &&
+      target.hero.action.t <= (this.heroDef(target.hero.type).abilities.r.window ?? 0.5)
+    ) {
       const r = this.heroDef(target.hero.type).abilities.r;
       const pfx = allFx(this, target);
       this.emit({ type: "parry", ...ev, team: target.team, src: target.id });
@@ -1243,7 +1527,11 @@ export class World {
       target.hero.riposteUntil = this.time + 0.7;
       if (src && src.kind !== "structure" && this.dist(src, target) < 5) {
         const pc = pfx.parryCounter;
-        this.damage(target, src, (r.counter ?? 80) * (pc?.mul ?? 1) * this.damageMulOf(target), { stun: (r.stunSeconds ?? 0) + (pc?.stun ?? 0), knockback: 4, big: true });
+        this.damage(target, src, (r.counter ?? 80) * (pc?.mul ?? 1) * this.damageMulOf(target), {
+          stun: (r.stunSeconds ?? 0) + (pc?.stun ?? 0),
+          knockback: 4,
+          big: true,
+        });
       }
       if (pfx.parryShield) addShield(target, pfx.parryShield, pfx.parryShield, 5, this.time);
       const pm = abilities(this, target).b.fx?.mark;
@@ -1266,7 +1554,13 @@ export class World {
     }
     if (target.hero) target.hero.combatAt = this.time;
     if (src?.hero && target.hero) src.hero.combatAt = this.time;
-    if (src && !opts.tick && src.status.blindUntil !== undefined && this.time < src.status.blindUntil && this.rng() < (src.status.blindMiss ?? 0.5)) {
+    if (
+      src &&
+      !opts.tick &&
+      src.status.blindUntil !== undefined &&
+      this.time < src.status.blindUntil &&
+      this.rng() < (src.status.blindMiss ?? 0.5)
+    ) {
       this.emit({ type: "miss", ...ev });
       return false;
     }
@@ -1286,7 +1580,9 @@ export class World {
       const hk = this.hooks(src);
       if (hk.flankMul) {
         if (target.structure) {
-          const defended = this.entities.some((o) => o.alive && o.unit && o.team === target.team && this.dist(o, target) < 7);
+          const defended = this.entities.some(
+            (o) => o.alive && o.unit && o.team === target.team && this.dist(o, target) < 7,
+          );
           if (!defended) amount *= hk.flankMul;
         } else {
           const dx = src.transform.pos.x - tp.pos.x;
@@ -1317,7 +1613,10 @@ export class World {
     } else if (src?.hero && !opts.tick) {
       const rl = this.data.match.rolls;
       const act = src.hero.action;
-      const ab = act && (act.name === "a" || act.name === "b" || act.name === "r" || act.name === "z") ? abilities(this, src)[act.name] : undefined;
+      const ab =
+        act && (act.name === "a" || act.name === "b" || act.name === "r" || act.name === "z")
+          ? abilities(this, src)[act.name]
+          : undefined;
       const hit = ab?.hits?.[act!.combo] as { variance?: number; crit?: number } | undefined;
       const v = hit?.variance ?? ab?.variance ?? rl.variance;
       const cc = hit?.crit ?? ab?.crit ?? rl.critChance;
@@ -1335,7 +1634,12 @@ export class World {
       }
     }
     const st = target.status;
-    if (src && this.time < st.markUntil && (st.markAll ? src.team === st.markTeam : src.id === st.markOwner || src.owner === st.markOwner)) amount *= st.markMul;
+    if (
+      src &&
+      this.time < st.markUntil &&
+      (st.markAll ? src.team === st.markTeam : src.id === st.markOwner || src.owner === st.markOwner)
+    )
+      amount *= st.markMul;
     if (src && this.time < src.status.markUntil && src.status.markWeaken < 1) amount *= src.status.markWeaken;
     if (this.time < st.armorUntil) amount *= st.armorMul;
     if (target.hero && st.shield > 0) {
@@ -1367,11 +1671,24 @@ export class World {
       if (ts.ward! <= 0) {
         ts.ward = 0;
         const tst = this.teams[target.team];
-        if (tst) tst.wardReadyAt = Math.max(tst.wardReadyAt, this.time + (this.data.match.arena.shop.ward.brokenLockout ?? 15));
+        if (tst)
+          tst.wardReadyAt = Math.max(
+            tst.wardReadyAt,
+            this.time + (this.data.match.arena.shop.ward.brokenLockout ?? 15),
+          );
         this.emit({ type: "notice", team: target.team, text: "CORE SHIELD DOWN" });
       }
       if (amount <= 0) {
-        this.emit({ type: "hit", ...ev, team: target.team, big: false, blocked: true, id: target.id, amount: soak, src: src?.id });
+        this.emit({
+          type: "hit",
+          ...ev,
+          team: target.team,
+          big: false,
+          blocked: true,
+          id: target.id,
+          amount: soak,
+          src: src?.id,
+        });
         return true;
       }
     }
@@ -1388,17 +1705,32 @@ export class World {
             for (const o of this.entities.slice()) {
               if (!o.alive || o.team === target.team || o.structure) continue;
               if (this.dist(o, target) - o.radius > 3) continue;
-              this.damage(target, o, burst * this.damageMulOf(target), { fromX: tp.pos.x, fromZ: tp.pos.z, knockback: 6, big: true });
+              this.damage(target, o, burst * this.damageMulOf(target), {
+                fromX: tp.pos.x,
+                fromZ: tp.pos.z,
+                knockback: 6,
+                big: true,
+              });
             }
           });
         }
       }
       if (amount <= 0) {
-        this.emit({ type: "hit", ...ev, team: target.team, big: false, blocked: true, id: target.id, amount: soak, src: src?.id });
+        this.emit({
+          type: "hit",
+          ...ev,
+          team: target.team,
+          big: false,
+          blocked: true,
+          id: target.id,
+          amount: soak,
+          src: src?.id,
+        });
         return true;
       }
     }
-    if (target.hero && src && !src.hero && this.lone(target)) amount *= 1 - (this.heroDef(target.hero.type).hooks.loneArmor ?? 0);
+    if (target.hero && src && !src.hero && this.lone(target))
+      amount *= 1 - (this.heroDef(target.hero.type).hooks.loneArmor ?? 0);
     if (target.hero && src?.hero) {
       const ua = this.heroDef(target.hero.type).hooks.outnumberedArmor;
       if (ua && this.outnumbered(target)) amount *= 1 - ua;
@@ -1408,22 +1740,39 @@ export class World {
       if (ud && this.outnumbered(src)) amount *= ud;
     }
     target.hp -= amount;
-    if (src?.hero && src.alive && target.hero && this.lone(src)) this.heal(src, amount * (this.heroDef(src.hero.type).hooks.loneLeech ?? 0));
+    if (src?.hero && src.alive && target.hero && this.lone(src))
+      this.heal(src, amount * (this.heroDef(src.hero.type).hooks.loneLeech ?? 0));
     if (target.hero?.jump && amount > 0) this.cancelJump(target);
     xpForDamage(this, src, target, amount);
-    if (src && src.alive && src.status.stealUntil && this.time < src.status.stealUntil) this.heal(src, amount * (src.status.stealMul ?? 0));
+    if (src && src.alive && src.status.stealUntil && this.time < src.status.stealUntil)
+      this.heal(src, amount * (src.status.stealMul ?? 0));
     const b = this.data.heroes.baseline;
     if (src?.hero) src.hero.meter = Math.min(b.superMax, src.hero.meter + amount * b.superPerDamageDealt);
-    if (target.hero && target.hp > 0) target.hero.meter = Math.min(b.superMax, target.hero.meter + amount * b.superPerDamageTaken);
+    if (target.hero && target.hp > 0)
+      target.hero.meter = Math.min(b.superMax, target.hero.meter + amount * b.superPerDamageTaken);
     if (src?.hero) {
       src.hero.lastTargetId = target.id;
       src.hero.lastTargetAt = this.time;
     }
     if (target.structure?.type === "core" && src) this.teams[src.team].coreDamageDealt += amount;
-    this.emit({ type: "hit", ...ev, team: target.team, big: !!opts.big || crit || amount >= 50, blocked, id: target.id, amount, src: src?.id, fx, fz, crit });
+    this.emit({
+      type: "hit",
+      ...ev,
+      team: target.team,
+      big: !!opts.big || crit || amount >= 50,
+      blocked,
+      id: target.id,
+      amount,
+      src: src?.id,
+      fx,
+      fz,
+      crit,
+    });
 
     if (!blocked && target.kind !== "structure" && fx !== undefined && fz !== undefined) {
-      const kb = (opts.knockback ?? 0) * (1 - (target.unit ? this.data.units.types[target.unit.type].knockbackResist ?? 0 : 0));
+      const kb =
+        (opts.knockback ?? 0) *
+        (1 - (target.unit ? (this.data.units.types[target.unit.type].knockbackResist ?? 0) : 0));
       if (kb > 0) {
         const dx = tp.pos.x - fx;
         const dz = tp.pos.z - fz;
@@ -1435,7 +1784,10 @@ export class World {
         const dx = fx - tp.pos.x;
         const dz = fz - tp.pos.z;
         const d = Math.hypot(dx, dz) || 1;
-        const pr = opts.pull * (1 - (target.unit ? this.data.units.types[target.unit.type].knockbackResist ?? 0 : 0)) * (target.hero ? 0.5 : 1);
+        const pr =
+          opts.pull *
+          (1 - (target.unit ? (this.data.units.types[target.unit.type].knockbackResist ?? 0) : 0)) *
+          (target.hero ? 0.5 : 1);
         const k = Math.min(pr, d * 1.6);
         target.status.kvx += (dx / d) * k;
         target.status.kvz += (dz / d) * k;
@@ -1446,7 +1798,17 @@ export class World {
         target.status.slowUntil = this.time + opts.slowSeconds;
       }
       if (target.hero && !target.hero.blocking && amount >= 25 && !target.hero.action && !opts.noFlinch) {
-        target.hero.action = { name: "hit", kind: "hit", t: 0, dur: b.hitStunSeconds, hitAt: 99, fired: true, combo: 0, dirX: 0, dirZ: 0 };
+        target.hero.action = {
+          name: "hit",
+          kind: "hit",
+          t: 0,
+          dur: b.hitStunSeconds,
+          hitAt: 99,
+          fired: true,
+          combo: 0,
+          dirX: 0,
+          dirZ: 0,
+        };
       }
     }
     if (target.dummy) {
@@ -1483,10 +1845,11 @@ export class World {
   makeTraining(): void {
     this.training = true;
     this.match.time = 0;
-    for (const p of this.players) if (p.team !== 0) {
-      const d = this.byId.get(p.heroId);
-      if (d) d.dummy = true;
-    }
+    for (const p of this.players)
+      if (p.team !== 0) {
+        const d = this.byId.get(p.heroId);
+        if (d) d.dummy = true;
+      }
     for (let t = 1; t < this.teamCount; t++) {
       const c = this.core(t);
       if (c) c.dummy = true;
@@ -1501,7 +1864,8 @@ export class World {
     }
     for (const e of this.entities) {
       if (!e.dummy || !e.alive) continue;
-      if (this.time - (e.dummyHitAt ?? -99) > 3 && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * this.dt * 0.6);
+      if (this.time - (e.dummyHitAt ?? -99) > 3 && e.hp < e.maxHp)
+        e.hp = Math.min(e.maxHp, e.hp + e.maxHp * this.dt * 0.6);
     }
   }
 
@@ -1548,7 +1912,10 @@ export class World {
       if (!e.alive || e.structure || (e.hero && e.hero.jump)) continue;
       const g = this.terrain.groundHeight(e.transform.pos.x, e.transform.pos.z);
       if (!(g < below) || e.transform.y > below + 0.6) continue;
-      const by = e.status.hurtBy !== undefined && this.time - (e.status.hurtAt ?? -99) < 6 ? this.get(e.status.hurtBy) : undefined;
+      const by =
+        e.status.hurtBy !== undefined && this.time - (e.status.hurtAt ?? -99) < 6
+          ? this.get(e.status.hurtBy)
+          : undefined;
       this.emit({ type: "chasm", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z });
       this.kill(e, by && by.alive ? by : null);
     }
@@ -1582,7 +1949,9 @@ export class World {
       o.status.rallyUntil = this.time + r.seconds;
     }
     this.emit({ type: "notice", team, text: `TOWER FELLED · ARMY RALLIES ${r.seconds}S` });
-    for (let o = 0; o < this.teamCount; o++) if (o !== team) this.emit({ type: "notice", team: o, text: `${this.teamName(team)} FELLED A TOWER · THEIR ARMY RALLIES` });
+    for (let o = 0; o < this.teamCount; o++)
+      if (o !== team)
+        this.emit({ type: "notice", team: o, text: `${this.teamName(team)} FELLED A TOWER · THEIR ARMY RALLIES` });
   }
 
   kill(target: Entity, src: Entity | null): void {
@@ -1598,20 +1967,33 @@ export class World {
     const cut = victim ? 1 - victim.catchUp * this.data.match.catchUp.bountyCut : 1;
     target.hp = 0;
     this.emit({
-      type: "death", id: target.id, kind: target.kind, x: tp.pos.x, y: tp.y, z: tp.pos.z, team: target.team,
+      type: "death",
+      id: target.id,
+      kind: target.kind,
+      x: tp.pos.x,
+      y: tp.y,
+      z: tp.pos.z,
+      team: target.team,
       big: target.kind !== "unit",
     });
     if (target.hero) {
-      if (src?.unit && src.alive && src.team !== target.team) this.promote(src, this.data.units.veterancy.heroKillValue);
+      if (src?.unit && src.alive && src.team !== target.team)
+        this.promote(src, this.data.units.veterancy.heroKillValue);
       target.alive = false;
       target.hero.dead = true;
       target.hero.action = null;
       target.hero.bomb = false;
       target.hero.aim = null;
-      const big = this.ffa || this.players.length > 2 ? this.data.match.economy.respawnBigMul ?? 1 : 1;
-      target.hero.respawnAt = this.time + this.data.heroes.baseline.respawnSeconds * big * (1 - (this.ffa ? victim?.catchUp ?? 0 : 0) * this.data.match.catchUp.respawnCut);
+      const big = this.ffa || this.players.length > 2 ? (this.data.match.economy.respawnBigMul ?? 1) : 1;
+      target.hero.respawnAt =
+        this.time +
+        this.data.heroes.baseline.respawnSeconds *
+          big *
+          (1 - (this.ffa ? (victim?.catchUp ?? 0) : 0) * this.data.match.catchUp.respawnCut);
       const hh = target.hero;
-      hh.frozenCd = Object.fromEntries(Object.entries(hh.cooldowns).map(([k, v]) => [k, Math.max(0, (v ?? 0) - this.time)]));
+      hh.frozenCd = Object.fromEntries(
+        Object.entries(hh.cooldowns).map(([k, v]) => [k, Math.max(0, (v ?? 0) - this.time)]),
+      );
       if (hh.meter < this.data.heroes.baseline.superMax) hh.meter = 0;
       killer.resource += bounty.hero * cut;
       killer.heroKills++;
@@ -1619,7 +2001,8 @@ export class World {
       return;
     }
     target.alive = false;
-    if (src?.unit && src.alive && src.team !== target.team) this.promote(src, target.unit ? 1 : this.data.units.veterancy.structureKillValue);
+    if (src?.unit && src.alive && src.team !== target.team)
+      this.promote(src, target.unit ? 1 : this.data.units.veterancy.structureKillValue);
     if (target.unit) {
       const vet = this.data.units.veterancy;
       if (target.neutral) {
@@ -1636,12 +2019,19 @@ export class World {
               this.heal(o, o.maxHp * 0.3);
             }
           }
-          this.emit({ type: "notice", team: -1, text: `THE OGRE FALLS · ${this.teamName(killerTeam)} HOUSE IS BLESSED` });
+          this.emit({
+            type: "notice",
+            team: -1,
+            text: `THE OGRE FALLS · ${this.teamName(killerTeam)} HOUSE IS BLESSED`,
+          });
         }
         return;
       }
       if (!target.unit.guard && !target.unit.raised) this.arena.unitLost(target);
-      killer.resource += (this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank) * cut * (this.data.match.economy.grain?.unitBountyMul ?? 1);
+      killer.resource +=
+        (this.data.units.types[target.unit.type].bounty + target.unit.rank * vet.bountyPerRank) *
+        cut *
+        (this.data.match.economy.grain?.unitBountyMul ?? 1);
       killer.kills++;
       return;
     }
@@ -1676,7 +2066,11 @@ export class World {
       this.loseGold(target.team, this.data.match.economy.loss.tower, "TOWER LOST");
       if (killerTeam >= 0) this.rally(killerTeam);
     }
-    pad.rubbleUntil = this.time + (pad.zone === "home" ? this.data.structures.rubbleHomeSeconds ?? this.data.structures.rubbleSeconds : this.data.structures.rubbleSeconds);
+    pad.rubbleUntil =
+      this.time +
+      (pad.zone === "home"
+        ? (this.data.structures.rubbleHomeSeconds ?? this.data.structures.rubbleSeconds)
+        : this.data.structures.rubbleSeconds);
     pad.rubbleTeam = target.team;
   }
 
@@ -1686,13 +2080,18 @@ export class World {
 
   speedMul(e: Entity): number {
     const s = e.status;
-    let m = this.ffa ? this.data.match.ffa?.speedMul ?? 1 : 1;
+    let m = this.ffa ? (this.data.match.ffa?.speedMul ?? 1) : 1;
     if (this.time < s.slowUntil) m *= s.slowMul;
     if (this.time < s.buffUntil) m *= s.buffSpeedMul;
     if (this.time < s.rallyUntil) m *= this.data.match.economy.rally.speedMul;
     if (e.hero) m *= this.mapEvents.hauntMul(e, "speed");
     for (const z of this.zones) {
-      if (z.haste && z.team === e.team && this.time < z.until && Math.hypot(e.transform.pos.x - z.x, e.transform.pos.z - z.z) <= z.radius) {
+      if (
+        z.haste &&
+        z.team === e.team &&
+        this.time < z.until &&
+        Math.hypot(e.transform.pos.x - z.x, e.transform.pos.z - z.z) <= z.radius
+      ) {
         m *= z.haste;
         break;
       }
@@ -1705,11 +2104,19 @@ export class World {
     if (e.hero) m *= this.pacingMul(e);
     if (e.hero) {
       const hk = this.heroDef(e.hero.type).hooks;
-      if (hk.marchSpeed && this.time - e.hero.combatAt > (hk.marchAfter ?? 2.5) && this.time - e.status.lastHitAt > (hk.marchAfter ?? 2.5)) m *= hk.marchSpeed;
+      if (
+        hk.marchSpeed &&
+        this.time - e.hero.combatAt > (hk.marchAfter ?? 2.5) &&
+        this.time - e.status.lastHitAt > (hk.marchAfter ?? 2.5)
+      )
+        m *= hk.marchSpeed;
     }
     if (e.unit) {
       const def = this.data.units.types[e.unit.type];
-      if (def.slopeSpeedMul < 1 && this.slopeAt(e.transform.pos.x, e.transform.pos.z) > this.data.match.terrain.slopeThreshold) {
+      if (
+        def.slopeSpeedMul < 1 &&
+        this.slopeAt(e.transform.pos.x, e.transform.pos.z) > this.data.match.terrain.slopeThreshold
+      ) {
         m *= def.slopeSpeedMul;
       }
     }
@@ -1722,7 +2129,8 @@ export class World {
     let own = false;
     for (const o of this.entities) {
       if (!o.alive || !o.structure || !o.structure.range || o.structure.type === "core") continue;
-      if (this.data.structures.types[o.structure.type as keyof typeof this.data.structures.types]?.class !== "tower") continue;
+      if (this.data.structures.types[o.structure.type as keyof typeof this.data.structures.types]?.class !== "tower")
+        continue;
       const d = Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z);
       if (d > o.structure.range * pc.towerReach) continue;
       if (o.team !== e.team) return "enemyTower";
@@ -1731,8 +2139,15 @@ export class World {
     if (!own) {
       for (const o of this.entities) {
         if (!o.alive || o.team !== e.team || !o.structure?.ready || o.structure.padIndex < 0) continue;
-        if (this.data.structures.types[o.structure.type as keyof typeof this.data.structures.types]?.class !== "production") continue;
-        if (Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z) <= pc.outpostReach) { own = true; break; }
+        if (
+          this.data.structures.types[o.structure.type as keyof typeof this.data.structures.types]?.class !==
+          "production"
+        )
+          continue;
+        if (Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z) <= pc.outpostReach) {
+          own = true;
+          break;
+        }
       }
     }
     if (own) return "tower";
@@ -1851,7 +2266,10 @@ export class World {
           up ??= { x: px, z: pz };
           continue;
         }
-        if (Math.abs(h - y) < bestDy) { bestDy = Math.abs(h - y); best = { x: px, z: pz }; }
+        if (Math.abs(h - y) < bestDy) {
+          bestDy = Math.abs(h - y);
+          best = { x: px, z: pz };
+        }
       }
       if (best) return best;
     }
@@ -1867,7 +2285,10 @@ export class World {
     if (this.canStand(e, x, z)) return true;
     if (!escaping) return false;
     const h = this.terrain.heightAt(x, z);
-    return Number.isFinite(h) && Math.abs(h - e.transform.y) <= (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) * 1.5;
+    return (
+      Number.isFinite(h) &&
+      Math.abs(h - e.transform.y) <= (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) * 1.5
+    );
   }
 
   moveBy(e: Entity, dx: number, dz: number): boolean {
@@ -1884,7 +2305,11 @@ export class World {
       t.pos.z = z;
       this.pushOut(e);
       const h = this.terrain.heightAt(t.pos.x, t.pos.z);
-      if (!Number.isFinite(h) || (Math.abs(h - t.y) > (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) + 0.05 && !((this.knocked || !!e.hero) && h < t.y))) {
+      if (
+        !Number.isFinite(h) ||
+        (Math.abs(h - t.y) > (e.hero?.stepHeight ?? this.data.heroes.baseline.stepHeight) + 0.05 &&
+          !((this.knocked || !!e.hero) && h < t.y))
+      ) {
         t.pos.x = ox;
         t.pos.z = oz;
         return false;
@@ -1901,7 +2326,8 @@ export class World {
       t.y = this.groundY(t.pos.x, t.pos.z);
       return true;
     };
-    const tryMove = (mx: number, mz: number) => this.accept(e, t.pos.x + mx, t.pos.z + mz, escaping) && place(t.pos.x + mx, t.pos.z + mz);
+    const tryMove = (mx: number, mz: number) =>
+      this.accept(e, t.pos.x + mx, t.pos.z + mz, escaping) && place(t.pos.x + mx, t.pos.z + mz);
     if (escaping) {
       const safe = this.nearestStandable(e, t.pos.x, t.pos.z);
       if (safe) {
@@ -1916,7 +2342,16 @@ export class World {
       }
     }
     if (tryMove(dx, dz)) return true;
-    const axes: [number, number][] = Math.abs(dx) > Math.abs(dz) ? [[dx, 0], [0, dz]] : [[0, dz], [dx, 0]];
+    const axes: [number, number][] =
+      Math.abs(dx) > Math.abs(dz)
+        ? [
+            [dx, 0],
+            [0, dz],
+          ]
+        : [
+            [0, dz],
+            [dx, 0],
+          ];
     for (const [ox, oz] of axes) if (Math.hypot(ox, oz) > len * 0.3 && tryMove(ox, oz)) return true;
     for (let k = 1; k <= 8; k++) {
       const ang = k * 0.2;
@@ -1949,7 +2384,10 @@ export class World {
     for (const e of this.entities) {
       if (!e.alive || e.kind === "structure") continue;
       const s = e.status;
-      if (Math.abs(s.kvx) + Math.abs(s.kvz) < 0.05) { s.kvx = s.kvz = 0; continue; }
+      if (Math.abs(s.kvx) + Math.abs(s.kvz) < 0.05) {
+        s.kvx = s.kvz = 0;
+        continue;
+      }
       const y0 = e.transform.y;
       this.knocked = Math.hypot(s.kvx, s.kvz) >= pos.knockDropMin;
       this.moveBy(e, s.kvx * dt, s.kvz * dt);
@@ -1958,7 +2396,11 @@ export class World {
       if (drop >= pos.fallMin) {
         e.transform.prevY = y0;
         this.emit({ type: "fall", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z });
-        this.damage(null, e, e.maxHp * pos.fallDamageFrac * Math.min(2, drop / pos.fallMin), { stun: pos.fallStun, fromX: e.transform.pos.x, fromZ: e.transform.pos.z });
+        this.damage(null, e, e.maxHp * pos.fallDamageFrac * Math.min(2, drop / pos.fallMin), {
+          stun: pos.fallStun,
+          fromX: e.transform.pos.x,
+          fromZ: e.transform.pos.z,
+        });
         if (!e.alive) continue;
       }
       const decay = Math.exp(-dt * 8);
@@ -1967,7 +2409,18 @@ export class World {
     }
   }
 
-  fireProjectile(src: Entity, target: Entity, damage: number, speed: number, ballistic: boolean, style: string, fromHeight: number, canMiss = true, splash?: Projectile["splash"], slow?: Projectile["slow"]): void {
+  fireProjectile(
+    src: Entity,
+    target: Entity,
+    damage: number,
+    speed: number,
+    ballistic: boolean,
+    style: string,
+    fromHeight: number,
+    canMiss = true,
+    splash?: Projectile["splash"],
+    slow?: Projectile["slow"],
+  ): void {
     const sp = src.transform;
     const tp = target.transform;
     const d = this.dist(src, target);
@@ -1991,15 +2444,36 @@ export class World {
     });
   }
 
-  fireAtPoint(src: Entity, x: number, z: number, speed: number, style: string, fromHeight: number, splash?: Projectile["splash"], ballistic = false, burn?: Projectile["burn"]): void {
+  fireAtPoint(
+    src: Entity,
+    x: number,
+    z: number,
+    speed: number,
+    style: string,
+    fromHeight: number,
+    splash?: Projectile["splash"],
+    ballistic = false,
+    burn?: Projectile["burn"],
+  ): void {
     const sp = src.transform;
     const d = Math.hypot(x - sp.pos.x, z - sp.pos.z);
     this.emit({ type: "shot", style, x: sp.pos.x, y: sp.y + fromHeight, z: sp.pos.z });
     this.projectiles.push({
-      id: this.nextId++, team: src.team, sourceId: src.id, targetId: 0,
+      id: this.nextId++,
+      team: src.team,
+      sourceId: src.id,
+      targetId: 0,
       from: { x: sp.pos.x, y: sp.y + fromHeight, z: sp.pos.z },
       to: { x, y: this.groundY(x, z) + 0.5, z },
-      t: 0, prevT: 0, dur: Math.max(0.15, d / speed), ballistic, damage: 0, style, canMiss: false, splash, burn,
+      t: 0,
+      prevT: 0,
+      dur: Math.max(0.15, d / speed),
+      ballistic,
+      damage: 0,
+      style,
+      canMiss: false,
+      splash,
+      burn,
     });
   }
 
@@ -2017,24 +2491,71 @@ export class World {
         this.projectiles.splice(i, 1);
         const src = this.getAny(p.sourceId) ?? null;
         const who = src && src.alive ? src : null;
-        const landed = target ? this.damage(who, target, p.damage, { fromX: p.from.x, fromZ: p.from.z, knockback: p.splash ? 3 : 0.8, canMiss: p.canMiss, slowMul: p.slow?.slowMul, slowSeconds: p.slow?.slowSeconds, noFlinch: !p.splash && !!who?.hero, crit: p.crit }) : false;
+        const landed = target
+          ? this.damage(who, target, p.damage, {
+              fromX: p.from.x,
+              fromZ: p.from.z,
+              knockback: p.splash ? 3 : 0.8,
+              canMiss: p.canMiss,
+              slowMul: p.slow?.slowMul,
+              slowSeconds: p.slow?.slowSeconds,
+              noFlinch: !p.splash && !!who?.hero,
+              crit: p.crit,
+            })
+          : false;
         if (landed && who && target && p.talent) afterShot(this, who, target, p.damage, p.talent === "orb");
         if (landed && who && target && p.arrow) onArrowHit(this, who, target);
-        if (p.burn) this.emit({ type: "pulse", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: p.burn.radius, team: p.team, style: "fireburst" });
+        if (p.burn)
+          this.emit({
+            type: "pulse",
+            x: p.to.x,
+            y: this.groundY(p.to.x, p.to.z),
+            z: p.to.z,
+            radius: p.burn.radius,
+            team: p.team,
+            style: "fireburst",
+          });
         if (p.splash) {
           const sp = p.splash;
-          if (!p.burn) this.emit({ type: "telegraph", x: p.to.x, y: this.groundY(p.to.x, p.to.z), z: p.to.z, radius: sp.radius, team: p.team, seconds: 0.05 });
+          if (!p.burn)
+            this.emit({
+              type: "telegraph",
+              x: p.to.x,
+              y: this.groundY(p.to.x, p.to.z),
+              z: p.to.z,
+              radius: sp.radius,
+              team: p.team,
+              seconds: 0.05,
+            });
           for (const o of this.entities.slice()) {
             if (!o.alive || o.team === p.team || o === target || o.kind === "structure") continue;
             if (Math.hypot(o.transform.pos.x - p.to.x, o.transform.pos.z - p.to.z) - o.radius > sp.radius) continue;
-            this.damage(who, o, sp.damage, { fromX: p.to.x, fromZ: p.to.z, knockback: 2.5, slowMul: sp.slowMul, slowSeconds: sp.slowSeconds });
+            this.damage(who, o, sp.damage, {
+              fromX: p.to.x,
+              fromZ: p.to.z,
+              knockback: 2.5,
+              slowMul: sp.slowMul,
+              slowSeconds: sp.slowSeconds,
+            });
           }
           if (target?.alive) {
             target.status.slowMul = sp.slowMul;
             target.status.slowUntil = this.time + sp.slowSeconds;
           }
         }
-        if (p.burn) this.zones.push({ id: this.newId(), team: p.team, ownerId: p.sourceId, x: p.to.x, z: p.to.z, radius: p.burn.radius, until: this.time + p.burn.seconds, dps: p.burn.dps, slowMul: 1, style: "lava" });
+        if (p.burn)
+          this.zones.push({
+            id: this.newId(),
+            team: p.team,
+            ownerId: p.sourceId,
+            x: p.to.x,
+            z: p.to.z,
+            radius: p.burn.radius,
+            until: this.time + p.burn.seconds,
+            dps: p.burn.dps,
+            slowMul: 1,
+            style: "lava",
+          });
       }
     }
   }
@@ -2057,7 +2578,11 @@ export class World {
         if (d >= minD) continue;
         let nx = dx;
         let nz = dz;
-        if (d < 1e-4) { nx = Math.cos(a.id); nz = Math.sin(a.id); d = 1; }
+        if (d < 1e-4) {
+          nx = Math.cos(a.id);
+          nz = Math.sin(a.id);
+          d = 1;
+        }
         const over = (minD - Math.hypot(dx, dz)) * push;
         const wa = a.hero ? 0.25 : b.hero ? 0.75 : 0.5;
         const px = (nx / d) * over;
@@ -2073,22 +2598,54 @@ export class World {
     for (const e of this.entities) {
       if (e.alive && e.expiresAt !== undefined && t >= e.expiresAt) {
         e.alive = false;
-        this.emit({ type: "death", id: e.id, kind: e.kind, x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, big: false });
-        if (e.structure && e.structure.padIndex < 0) this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.structure.cask ? 0.3 : e.radius, false);
+        this.emit({
+          type: "death",
+          id: e.id,
+          kind: e.kind,
+          x: e.transform.pos.x,
+          y: e.transform.y,
+          z: e.transform.pos.z,
+          team: e.team,
+          big: false,
+        });
+        if (e.structure && e.structure.padIndex < 0)
+          this.nav.setBlocked(e.transform.pos.x, e.transform.pos.z, e.structure.cask ? 0.3 : e.radius, false);
       }
     }
     for (let i = this.traps.length - 1; i >= 0; i--) {
       const tr = this.traps[i];
-      if (t >= tr.until) { this.traps.splice(i, 1); continue; }
+      if (t >= tr.until) {
+        this.traps.splice(i, 1);
+        continue;
+      }
       if (t < tr.armAt) continue;
       const owner = this.get(tr.ownerId) ?? null;
-      const victims = this.entities.filter((o) => o.alive && o.team !== tr.team && o.kind !== "structure" &&
-        Math.hypot(o.transform.pos.x - tr.x, o.transform.pos.z - tr.z) < tr.radius + o.radius);
+      const victims = this.entities.filter(
+        (o) =>
+          o.alive &&
+          o.team !== tr.team &&
+          o.kind !== "structure" &&
+          Math.hypot(o.transform.pos.x - tr.x, o.transform.pos.z - tr.z) < tr.radius + o.radius,
+      );
       if (!victims.length) continue;
-      this.emit({ type: "slam", x: tr.x, y: this.groundY(tr.x, tr.z), z: tr.z, radius: tr.radius * 1.5, team: tr.team, src: tr.ownerId, trap: true });
+      this.emit({
+        type: "slam",
+        x: tr.x,
+        y: this.groundY(tr.x, tr.z),
+        z: tr.z,
+        radius: tr.radius * 1.5,
+        team: tr.team,
+        src: tr.ownerId,
+        trap: true,
+      });
       for (const v of victims) this.damage(owner, v, tr.damage, { stun: tr.stun, fromX: tr.x, fromZ: tr.z, big: true });
       const rearm = owner?.hero ? this.heroDef(owner.hero.type).abilities.z.rearmSeconds : undefined;
-      if (rearm && this.zones.some((z) => z.ownerId === tr.ownerId && t < z.until && Math.hypot(z.x - tr.x, z.z - tr.z) <= z.radius)) {
+      if (
+        rearm &&
+        this.zones.some(
+          (z) => z.ownerId === tr.ownerId && t < z.until && Math.hypot(z.x - tr.x, z.z - tr.z) <= z.radius,
+        )
+      ) {
         tr.armAt = t + rearm;
         continue;
       }
@@ -2109,7 +2666,8 @@ export class World {
           if (!o.alive || o.team !== z.team || o.kind === "structure" || o.hp >= o.maxHp) continue;
           if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
           healFrom(this, healer, o, z.heal * 0.5);
-          if (this.tick % 30 === 0) this.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: z.team });
+          if (this.tick % 30 === 0)
+            this.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: z.team });
         }
       }
       if (z.brew) {
@@ -2143,7 +2701,14 @@ export class World {
           o.status.hexUntil = t + d.hexSeconds;
           o.status.hexOwner = d.ownerId;
         }
-        this.damage(owner, o, d.damage, { fromX: d.x, fromZ: d.z, slowMul: d.slowMul, slowSeconds: d.slowSeconds, knockback: 2, big: true });
+        this.damage(owner, o, d.damage, {
+          fromX: d.x,
+          fromZ: d.z,
+          slowMul: d.slowMul,
+          slowSeconds: d.slowSeconds,
+          knockback: 2,
+          big: true,
+        });
       }
     }
     for (let i = this.mods.length - 1; i >= 0; i--) {
@@ -2200,7 +2765,8 @@ export class World {
   private revertMod(m: TerrainMod): void {
     const tr = this.terrain;
     for (const e of this.entities) {
-      if (e.alive && (e.structure?.siege?.modId === m.id || e.structure?.onMod === m.id || e.structure?.works === m.id)) this.kill(e, null);
+      if (e.alive && (e.structure?.siege?.modId === m.id || e.structure?.onMod === m.id || e.structure?.works === m.id))
+        this.kill(e, null);
     }
     m.cells.forEach((c, k) => {
       tr.kinds[c] = m.prevKind[k];
@@ -2211,7 +2777,10 @@ export class World {
     for (const e of this.entities) {
       if (!e.alive || e.kind === "structure") continue;
       const h = this.terrain.heightAt(e.transform.pos.x, e.transform.pos.z);
-      if (Number.isFinite(h) && Math.abs(h - e.transform.y) < 1.5) { e.transform.y = h; continue; }
+      if (Number.isFinite(h) && Math.abs(h - e.transform.y) < 1.5) {
+        e.transform.y = h;
+        continue;
+      }
       const i = this.nav.nearestOpen(e.transform.pos.x, e.transform.pos.z, 6);
       if (i >= 0) this.teleport(e, (i % this.nav.w) + 0.5, Math.floor(i / this.nav.w) + 0.5);
     }

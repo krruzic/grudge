@@ -11,12 +11,25 @@ const DYN = THREE.DynamicDrawUsage;
 function inject(material: THREE.Material, emissive: boolean): void {
   material.onBeforeCompile = (s) => {
     s.vertexShader = s.vertexShader
-      .replace("#include <common>", `#include <common>\nattribute float iAlpha;\nvarying float vIAlpha;${emissive ? "\nattribute vec3 iEmissive;\nvarying vec3 vIEmissive;" : ""}`)
-      .replace("#include <begin_vertex>", `#include <begin_vertex>\nvIAlpha = iAlpha;${emissive ? "\nvIEmissive = iEmissive;" : ""}`);
+      .replace(
+        "#include <common>",
+        `#include <common>\nattribute float iAlpha;\nvarying float vIAlpha;${emissive ? "\nattribute vec3 iEmissive;\nvarying vec3 vIEmissive;" : ""}`,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>\nvIAlpha = iAlpha;${emissive ? "\nvIEmissive = iEmissive;" : ""}`,
+      );
     s.fragmentShader = s.fragmentShader
-      .replace("#include <common>", `#include <common>\nvarying float vIAlpha;${emissive ? "\nvarying vec3 vIEmissive;" : ""}`)
+      .replace(
+        "#include <common>",
+        `#include <common>\nvarying float vIAlpha;${emissive ? "\nvarying vec3 vIEmissive;" : ""}`,
+      )
       .replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= vIAlpha;");
-    if (emissive) s.fragmentShader = s.fragmentShader.replace("vec3 totalEmissiveRadiance = emissive;", "vec3 totalEmissiveRadiance = vIEmissive;");
+    if (emissive)
+      s.fragmentShader = s.fragmentShader.replace(
+        "vec3 totalEmissiveRadiance = emissive;",
+        "vec3 totalEmissiveRadiance = vIEmissive;",
+      );
   };
   material.customProgramCacheKey = () => (emissive ? "fxi-e" : "fxi");
 }
@@ -40,7 +53,12 @@ export class FxBatch {
   private keys = new Float32Array(0);
   private idx: number[] = [];
 
-  constructor(base: THREE.BufferGeometry, material: THREE.Material, private emissive = false, private sort = false) {
+  constructor(
+    base: THREE.BufferGeometry,
+    material: THREE.Material,
+    private emissive = false,
+    private sort = false,
+  ) {
     this.geo.index = base.index;
     for (const k in base.attributes) this.geo.setAttribute(k, base.attributes[k]);
     if (!base.boundingSphere) base.computeBoundingSphere();

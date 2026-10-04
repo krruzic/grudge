@@ -75,7 +75,11 @@ export function newId(): string {
 }
 
 export function cleanTag(name: string): string {
-  return name.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, MAX_TAG);
+  return name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, "")
+    .slice(0, MAX_TAG);
 }
 
 export interface SaveData {
@@ -94,30 +98,135 @@ const onOff = (v: number) => (v ? "ON" : "OFF");
 export const CAMERA_NAMES = ["SHARED VIEW", "SPLIT VIEW", "SPLIT VIEW"];
 
 export const RULE_ROWS: Row<Rules>[] = [
-  { key: "minutes", label: "MATCH LENGTH", values: [3, 4, 6, 8, 10, 15], fmt: (v) => `${v} MIN`, blurb: "TIME BEFORE THE BELL TOLLS." },
-  { key: "sudden", label: "SUDDEN DEATH", values: [0, 30, 60, 120], fmt: (v) => (v ? `${v} SEC` : "NONE"), blurb: "EXTRA TIME WHERE ALL IS CHEAPER AND DEADLIER." },
-  { key: "popCap", label: "SOLDIER CAP", values: [8, 12, 16, 20, 24], fmt: String, blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD." },
-  { key: "startGold", label: "STARTING GOLD", values: [0, 100, 200, 400, 800], fmt: String, blurb: "GOLD IN THE COFFERS AT THE FIRST HORN." },
-  { key: "goldRate", label: "GOLD RATE", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW FAST THE COFFERS FILL." },
-  { key: "troops", label: "TROOP OUTPUT", values: [0.5, 0.75, 1, 1.5, 2, 3], fmt: (v) => `X ${v}`, blurb: "HOW OFTEN OUTPOSTS SEND SOLDIERS." },
-  { key: "respawn", label: "HERO RETURNS", values: [3, 6, 10, 15], fmt: (v) => `${v} SEC`, blurb: "HOW LONG A FALLEN CHAMPION STAYS DOWN IN 1 VS 1. 2 VS 2 AND FREE FOR ALL WAIT ABOUT TWO THIRDS LONGER (6 SEC BECOMES 10)." },
-  { key: "partners", label: "2 VS 2 ALLIES", values: [1, 0], fmt: (v) => (v ? "CHAMPIONS" : "COMMANDERS"), blurb: "IN 2 VS 2, PLAYERS 3 AND 4 FIGHT AS CHAMPIONS OR LEAD AS COMMANDERS." },
+  {
+    key: "minutes",
+    label: "MATCH LENGTH",
+    values: [3, 4, 6, 8, 10, 15],
+    fmt: (v) => `${v} MIN`,
+    blurb: "TIME BEFORE THE BELL TOLLS.",
+  },
+  {
+    key: "sudden",
+    label: "SUDDEN DEATH",
+    values: [0, 30, 60, 120],
+    fmt: (v) => (v ? `${v} SEC` : "NONE"),
+    blurb: "EXTRA TIME WHERE ALL IS CHEAPER AND DEADLIER.",
+  },
+  {
+    key: "popCap",
+    label: "SOLDIER CAP",
+    values: [8, 12, 16, 20, 24],
+    fmt: String,
+    blurb: "MOST SOLDIERS ONE HOUSE MAY FIELD.",
+  },
+  {
+    key: "startGold",
+    label: "STARTING GOLD",
+    values: [0, 100, 200, 400, 800],
+    fmt: String,
+    blurb: "GOLD IN THE COFFERS AT THE FIRST HORN.",
+  },
+  {
+    key: "goldRate",
+    label: "GOLD RATE",
+    values: [0.5, 0.75, 1, 1.5, 2, 3],
+    fmt: (v) => `X ${v}`,
+    blurb: "HOW FAST THE COFFERS FILL.",
+  },
+  {
+    key: "troops",
+    label: "TROOP OUTPUT",
+    values: [0.5, 0.75, 1, 1.5, 2, 3],
+    fmt: (v) => `X ${v}`,
+    blurb: "HOW OFTEN OUTPOSTS SEND SOLDIERS.",
+  },
+  {
+    key: "respawn",
+    label: "HERO RETURNS",
+    values: [3, 6, 10, 15],
+    fmt: (v) => `${v} SEC`,
+    blurb:
+      "HOW LONG A FALLEN CHAMPION STAYS DOWN IN 1 VS 1. 2 VS 2 AND FREE FOR ALL WAIT ABOUT TWO THIRDS LONGER (6 SEC BECOMES 10).",
+  },
+  {
+    key: "partners",
+    label: "2 VS 2 ALLIES",
+    values: [1, 0],
+    fmt: (v) => (v ? "CHAMPIONS" : "COMMANDERS"),
+    blurb: "IN 2 VS 2, PLAYERS 3 AND 4 FIGHT AS CHAMPIONS OR LEAD AS COMMANDERS.",
+  },
   { key: "mercy", label: "MERCY", values: [1, 0], fmt: onOff, blurb: "THE LOSING HOUSE EARNS AND BUILDS FASTER." },
 ];
 
 export const OPTION_ROWS: Row<Options>[] = [
-  { key: "music", label: "MUSIC", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF THE MINSTRELS." },
-  { key: "sound", label: "SOUND", values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fmt: String, blurb: "LOUDNESS OF STEEL AND SPELLS." },
+  {
+    key: "music",
+    label: "MUSIC",
+    values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    fmt: String,
+    blurb: "LOUDNESS OF THE MINSTRELS.",
+  },
+  {
+    key: "sound",
+    label: "SOUND",
+    values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    fmt: String,
+    blurb: "LOUDNESS OF STEEL AND SPELLS.",
+  },
   { key: "shake", label: "SCREEN SHAKE", values: [1, 0], fmt: onOff, blurb: "THE GROUND TREMBLES WHEN BLOWS LAND." },
-  { key: "split", label: "CAMERA", values: [1, 0], fmt: (v) => CAMERA_NAMES[v], blurb: "SPLIT: EACH PLAYER GETS A VIEW. EACH PLAYER PICKS AUTO OR D-PAD ZOOM ON THEIR CARD AT CHAMPION SELECT." },
-  { key: "kbm", label: "KEYBOARD + MOUSE", values: [1, 0], fmt: onOff, blurb: "OFF: KEYS AND MOUSE NEVER TAKE A SEAT. CLICK HERE TO TURN BACK ON." },
-  { key: "quality", label: "GRAPHICS", values: [0, 1, 2], fmt: (v) => ["AUTO", "HIGH", "FAST"][v] ?? "AUTO", blurb: "FAST RENDERS 3 AND 4 PLAYER SPLIT SCREEN A LITTLE SOFTER FOR WEAK OR BUILT-IN GRAPHICS. AUTO PICKS FAST ON THOSE OR WHEN FRAMES DROP." },
-  { key: "fps", label: "FPS COUNTER", values: [1, 0], fmt: onOff, blurb: "FRAMES PER SECOND IN THE BOTTOM-RIGHT CORNER." },
+  {
+    key: "split",
+    label: "CAMERA",
+    values: [1, 0],
+    fmt: (v) => CAMERA_NAMES[v],
+    blurb: "SPLIT: EACH PLAYER GETS A VIEW. EACH PLAYER PICKS AUTO OR D-PAD ZOOM ON THEIR CARD AT CHAMPION SELECT.",
+  },
+  {
+    key: "kbm",
+    label: "KEYBOARD + MOUSE",
+    values: [1, 0],
+    fmt: onOff,
+    blurb: "OFF: KEYS AND MOUSE NEVER TAKE A SEAT. CLICK HERE TO TURN BACK ON.",
+  },
+  {
+    key: "quality",
+    label: "GRAPHICS",
+    values: [0, 1, 2],
+    fmt: (v) => ["AUTO", "HIGH", "FAST"][v] ?? "AUTO",
+    blurb:
+      "FAST RENDERS 3 AND 4 PLAYER SPLIT SCREEN A LITTLE SOFTER FOR WEAK OR BUILT-IN GRAPHICS. AUTO PICKS FAST ON THOSE OR WHEN FRAMES DROP.",
+  },
+  {
+    key: "fps",
+    label: "FPS COUNTER",
+    values: [1, 0],
+    fmt: onOff,
+    blurb: "FRAMES PER SECOND IN THE BOTTOM-RIGHT CORNER.",
+  },
   { key: "hints", label: "BUTTON HINTS", values: [1, 0], fmt: onOff, blurb: "SHOW BUILD HINTS ABOVE PADS." },
 ];
 
-export const DEFAULT_RULES: Rules = { minutes: 6, sudden: 60, popCap: 16, startGold: 200, goldRate: 1, troops: 1, respawn: 6, mercy: 1, partners: 1 };
-export const DEFAULT_OPTIONS: Options = { music: 7, sound: 8, shake: 1, hints: 1, split: 1, kbm: 1, fps: 1, quality: 0 };
+export const DEFAULT_RULES: Rules = {
+  minutes: 6,
+  sudden: 60,
+  popCap: 16,
+  startGold: 200,
+  goldRate: 1,
+  troops: 1,
+  respawn: 6,
+  mercy: 1,
+  partners: 1,
+};
+export const DEFAULT_OPTIONS: Options = {
+  music: 7,
+  sound: 8,
+  shake: 1,
+  hints: 1,
+  split: 1,
+  kbm: 1,
+  fps: 1,
+  quality: 0,
+};
 
 const KEY = "grudge.save.v1";
 const MAX_LOG = 30;
@@ -137,7 +246,8 @@ export class Save {
       if (raw) {
         const p = JSON.parse(raw) as Partial<SaveData>;
         d = { ...d, ...p, rules: { ...DEFAULT_RULES, ...p.rules }, options: { ...DEFAULT_OPTIONS, ...p.options } };
-        for (const row of RULE_ROWS) if (!row.values.includes(d.rules[row.key])) d.rules[row.key] = DEFAULT_RULES[row.key];
+        for (const row of RULE_ROWS)
+          if (!row.values.includes(d.rules[row.key])) d.rules[row.key] = DEFAULT_RULES[row.key];
         const tags: Record<string, TagStats> = {};
         for (const [k, t] of Object.entries(d.tags ?? {})) {
           if (t.name) tags[k] = t;
@@ -160,7 +270,9 @@ export class Save {
   }
 
   tagIds(): string[] {
-    return Object.entries(this.data.tags).sort((a, b) => b[1].last - a[1].last).map(([k]) => k);
+    return Object.entries(this.data.tags)
+      .sort((a, b) => b[1].last - a[1].last)
+      .map(([k]) => k);
   }
 
   tagNames(): string[] {
@@ -226,7 +338,13 @@ export function cycle<T>(obj: T, row: Row<T>, dir: number): void {
   const cur = obj[row.key] as unknown as number;
   const i = row.values.indexOf(cur);
   const n = row.values.length;
-  const next = row.values[((i < 0 ? row.values.indexOf(row.values.reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a))) : i) + dir + n) % n];
+  const next =
+    row.values[
+      ((i < 0 ? row.values.indexOf(row.values.reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a))) : i) +
+        dir +
+        n) %
+        n
+    ];
   (obj[row.key] as unknown as number) = next;
 }
 
@@ -238,7 +356,8 @@ export function applyRules(base: GameData, r: Rules): GameData {
   d.match.economy.start = r.startGold;
   d.match.economy.income = base.match.economy.income * r.goldRate;
   const gr = base.match.economy.grain;
-  if (gr) d.match.economy.grain = { ...gr, base: gr.base * r.goldRate, perLevel: gr.perLevel.map((v) => v * r.goldRate) };
+  if (gr)
+    d.match.economy.grain = { ...gr, base: gr.base * r.goldRate, perLevel: gr.perLevel.map((v) => v * r.goldRate) };
   d.heroes.baseline.respawnSeconds = r.respawn;
   const troops = r.troops || 1;
   d.units.waves.everySeconds = base.units.waves.everySeconds / troops;

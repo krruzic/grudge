@@ -79,10 +79,20 @@ const GRAVE_TEX = areaTex("200,140,255", "#d8a8ff", "#1a0830", "#c890ff");
 
 export class Reticles {
   readonly root = new THREE.Group();
-  private pool: { range: THREE.Mesh; area: THREE.Mesh; wall: THREE.Group; pads: THREE.Group; cursor: THREE.Mesh }[] = [];
+  private pool: { range: THREE.Mesh; area: THREE.Mesh; wall: THREE.Group; pads: THREE.Group; cursor: THREE.Mesh }[] =
+    [];
 
   private make(): { range: THREE.Mesh; area: THREE.Mesh; wall: THREE.Group; pads: THREE.Group; cursor: THREE.Mesh } {
-    const mat = (tex: THREE.Texture, op: number) => new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op, depthWrite: false, depthTest: false, polygonOffset: true, polygonOffsetFactor: -4 });
+    const mat = (tex: THREE.Texture, op: number) =>
+      new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent: true,
+        opacity: op,
+        depthWrite: false,
+        depthTest: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+      });
     const range = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat(RANGE_TEX, 0.55));
     range.rotation.x = -Math.PI / 2;
     range.renderOrder = 5;
@@ -91,17 +101,26 @@ export class Reticles {
     area.renderOrder = 6;
     const wall = new THREE.Group();
     for (let i = 0; i < 12; i++) {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.9), new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.6, depthTest: false }));
+      const b = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 0.12, 0.9),
+        new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.6, depthTest: false }),
+      );
       b.renderOrder = 6;
       wall.add(b);
     }
     const pads = new THREE.Group();
     for (let i = 0; i < 24; i++) {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(1, 0.14, 1), new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.55, depthTest: false }));
+      const b = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 0.14, 1),
+        new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.55, depthTest: false }),
+      );
       b.renderOrder = 6;
       pads.add(b);
     }
-    const cursor = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.9, depthTest: false }));
+    const cursor = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.45, 0),
+      new THREE.MeshBasicMaterial({ color: 0xffe070, transparent: true, opacity: 0.9, depthTest: false }),
+    );
     cursor.renderOrder = 7;
     this.root.add(range, area, wall, pads, cursor);
     const r = { range, area, wall, pads, cursor };
@@ -136,7 +155,10 @@ export class Reticles {
         p.pads.visible = true;
         let selX = hx;
         let selZ = hz;
-        const order = spots.map((sp, k) => [Math.hypot(sp.x - hx, sp.z - hz), k]).sort((a, b) => a[0] - b[0]).map(([, k]) => k);
+        const order = spots
+          .map((sp, k) => [Math.hypot(sp.x - hx, sp.z - hz), k])
+          .sort((a, b) => a[0] - b[0])
+          .map(([, k]) => k);
         const rank = new Array<number>(spots.length);
         order.forEach((k, i) => (rank[k] = i));
         (p.pads.children as THREE.Mesh[]).forEach((b, k) => {
@@ -150,7 +172,10 @@ export class Reticles {
           const x = hx + (dx / d) * r;
           const z = hz + (dz / d) * r;
           const sel = Math.hypot(sp.x - tx, sp.z - tz) < 0.5;
-          if (sel) { selX = x; selZ = z; }
+          if (sel) {
+            selX = x;
+            selZ = z;
+          }
           const size = (sp.keep ? 0.9 : 0.7) * (sel ? 1.35 + Math.sin(time * 8) * 0.08 : 1);
           b.position.set(x, hy + 0.22, z);
           b.scale.set(size, 1, size);
@@ -201,7 +226,12 @@ export class Reticles {
         return;
       }
       p.area.visible = true;
-      const r = def.kind === "zone" || def.kind === "leap" || def.kind === "hex" ? def.radius ?? 2.5 : def.kind === "works" ? (def.size ?? 2) * 0.9 + 0.5 : 3;
+      const r =
+        def.kind === "zone" || def.kind === "leap" || def.kind === "hex"
+          ? (def.radius ?? 2.5)
+          : def.kind === "works"
+            ? (def.size ?? 2) * 0.9 + 0.5
+            : 3;
       p.area.position.set(tx, gy + 0.12, tz);
       p.area.scale.setScalar(r * pulse);
       p.area.rotation.z = -time * 0.8;

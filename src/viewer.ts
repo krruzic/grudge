@@ -2,8 +2,15 @@ import * as THREE from "three";
 import { HeroModels, outlineConfig } from "./render/heroModels";
 import { UnitModels } from "./render/unitModels";
 
-const heroUrls = import.meta.glob("../assets/heroes/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
-const unitUrls = import.meta.glob("../assets/units/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const heroUrls = import.meta.glob("../assets/heroes/*.glb", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+const unitUrls = import.meta.glob("../assets/units/*.glb", { query: "?url", import: "default", eager: true }) as Record<
+  string,
+  string
+>;
 const base = (p: string) => p.split("/").pop()!.replace(".glb", "");
 
 const params = new URLSearchParams(location.search);

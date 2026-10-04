@@ -18,7 +18,7 @@ export function beachDebris(t: Terrain): THREE.InstancedMesh | null {
     const cx = i % W;
     const cz = Math.floor(i / W);
     let h = (cx * 2654435761) ^ (cz * 40503) ^ 0x5bd1e995;
-    const rnd = () => ((h = (Math.imul(h, 1103515245) + 12345) & 0x7fffffff) / 0x7fffffff);
+    const rnd = () => (h = (Math.imul(h, 1103515245) + 12345) & 0x7fffffff) / 0x7fffffff;
     const n = rnd() < 0.09 ? 1 : 0;
     for (let k = 0; k < n; k++) {
       let pick = rnd() * total;

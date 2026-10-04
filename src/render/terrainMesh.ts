@@ -110,7 +110,14 @@ export interface TerrainLight {
 }
 
 const PROP_SHADOW: Record<string, [number, number]> = {
-  pine: [1.6, 5], tree: [2.0, 4.5], tower: [1.8, 6], arch: [1.2, 3], statue: [0.8, 3], rock: [0.9, 1.2], crate: [0.6, 1], banner: [0.3, 3],
+  pine: [1.6, 5],
+  tree: [2.0, 4.5],
+  tower: [1.8, 6],
+  arch: [1.2, 3],
+  statue: [0.8, 3],
+  rock: [0.9, 1.2],
+  crate: [0.6, 1],
+  banner: [0.3, 3],
 };
 
 const WALK_SLOPE = heroesData.baseline.maxSlope;
@@ -123,7 +130,12 @@ function axis(n: number, sur: Surround | null): number[] {
     for (let v = -MARGIN; v <= n + MARGIN; v++) out.push(v);
     return out;
   }
-  const steps: [number, number][] = [[24, 1], [64, 2], [160, 4], [sur.far, 8]];
+  const steps: [number, number][] = [
+    [24, 1],
+    [64, 2],
+    [160, 4],
+    [sur.far, 8],
+  ];
   const lo: number[] = [];
   let v = 0;
   for (const [until, st] of steps) while (v < until) lo.push(-(v += st));
@@ -146,7 +158,12 @@ function locate(arr: number[], v: number): number {
   return v - arr[a] < arr[b] - v ? a : b;
 }
 
-export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: TerrainLight, sur: Surround | null = null): THREE.Mesh {
+export function buildTerrainMesh(
+  t: Terrain,
+  tex: TerrainTextures,
+  light?: TerrainLight,
+  sur: Surround | null = null,
+): THREE.Mesh {
   const xs = axis(t.width, sur);
   const zs = axis(t.depth, sur);
   const nx = xs.length - 1;
@@ -157,7 +174,8 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   const heights = new Float32Array(count);
 
   const inside = (x: number, z: number) => x >= 0 && z >= 0 && x <= t.width && z <= t.depth;
-  const hAt = (x: number, z: number) => (inside(x, z) ? t.vertexHeight(x, z) : sur ? sur.ground(x, z) : outerHeight(t, x, z));
+  const hAt = (x: number, z: number) =>
+    inside(x, z) ? t.vertexHeight(x, z) : sur ? sur.ground(x, z) : outerHeight(t, x, z);
 
   for (let j = 0; j <= nz; j++) {
     for (let i = 0; i <= nx; i++) {
@@ -176,7 +194,16 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   for (let j = 0; j < nz; j++) {
     for (let i = 0; i < nx; i++) {
       const pi = t.index(xs[i], zs[j]);
-      if (pi >= 0 && xs[i] >= 0 && zs[j] >= 0 && xs[i] < t.width && zs[j] < t.depth && t.kinds[pi] === Kind.Wall && t.styles[pi] === "pit") continue;
+      if (
+        pi >= 0 &&
+        xs[i] >= 0 &&
+        zs[j] >= 0 &&
+        xs[i] < t.width &&
+        zs[j] < t.depth &&
+        t.kinds[pi] === Kind.Wall &&
+        t.styles[pi] === "pit"
+      )
+        continue;
       const a = j * vw + i;
       const b = a + 1;
       const c = a + vw;
@@ -199,7 +226,12 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   const col = new Float32Array(count * 3);
   const cellFlag = (cx: number, cz: number, f: number) => (t.hasFlag(cx, cz, f) ? 1 : 0);
   const nearWall = (x: number, z: number) => {
-    for (const [cx, cz] of [[x - 1, z - 1], [x, z - 1], [x - 1, z], [x, z]]) {
+    for (const [cx, cz] of [
+      [x - 1, z - 1],
+      [x, z - 1],
+      [x - 1, z],
+      [x, z],
+    ]) {
       const i = t.index(cx, cz);
       if (i >= 0 && t.kinds[i] === Kind.Wall && t.styles[i] !== "rim" && t.styles[i] !== "pit") return true;
     }
@@ -207,7 +239,12 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   };
 
   const nearPit = (x: number, z: number) => {
-    for (const [cx, cz] of [[x - 1, z - 1], [x, z - 1], [x - 1, z], [x, z]]) {
+    for (const [cx, cz] of [
+      [x - 1, z - 1],
+      [x, z - 1],
+      [x - 1, z],
+      [x, z],
+    ]) {
       const i = t.index(cx, cz);
       if (i >= 0 && t.kinds[i] === Kind.Wall && t.styles[i] === "pit") return true;
     }
@@ -302,23 +339,31 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
       const h = heights[k];
       const ny = nrm.getY(k);
       const outside = !!sur && !inside(x, z);
-      const spacing = Math.max(xs[Math.min(nx, i + 1)] - xs[Math.max(0, i - 1)], zs[Math.min(nz, j + 1)] - zs[Math.max(0, j - 1)]) / 2;
+      const spacing =
+        Math.max(xs[Math.min(nx, i + 1)] - xs[Math.max(0, i - 1)], zs[Math.min(nz, j + 1)] - zs[Math.max(0, j - 1)]) /
+        2;
 
       let dirt = 0;
       let paving = 0;
       let wet = 0;
       if (inside(x, z)) {
-        const cells = [[x - 1, z - 1], [x, z - 1], [x - 1, z], [x, z]];
+        const cells = [
+          [x - 1, z - 1],
+          [x, z - 1],
+          [x - 1, z],
+          [x, z],
+        ];
         for (const [cx, cz] of cells) {
           dirt += cellFlag(cx, cz, FLAG_DIRT) / 4;
           paving += cellFlag(cx, cz, FLAG_PAVING) / 4;
           const ci = cx >= 0 && cz >= 0 && cx < t.width && cz < t.depth ? cz * t.width + cx : -1;
-          if (ci >= 0 && t.tideCells.length && (t.flags[ci] & FLAG_TIDE) && h < t.waterLevel + 0.7) wet += 0.25;
+          if (ci >= 0 && t.tideCells.length && t.flags[ci] & FLAG_TIDE && h < t.waterLevel + 0.7) wet += 0.25;
         }
       }
       if (wet > 0) dirt = Math.max(dirt, wet);
       const wob = (vnoise(x * 0.45, z * 0.45) - 0.5) * 0.7;
-      if (lakeW) lakeW[k] = THREE.MathUtils.smoothstep(wet + wob * 0.4, 0.15, 0.6) * (h < t.waterLevel - 0.05 ? 0.4 : 1);
+      if (lakeW)
+        lakeW[k] = THREE.MathUtils.smoothstep(wet + wob * 0.4, 0.15, 0.6) * (h < t.waterLevel - 0.05 ? 0.4 : 1);
       dirt = THREE.MathUtils.smoothstep(dirt + wob, 0.2, 0.75);
       paving = THREE.MathUtils.smoothstep(paving + wob * 0.3, 0.3, 0.7);
       if (h < t.waterLevel + 0.25) dirt = Math.max(dirt, 0.9);
@@ -330,13 +375,22 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
           const gz = (t.groundHeight(px, pz + r) - t.groundHeight(px, pz - r)) / (2 * r);
           return Math.hypot(gx, gz);
         };
-        slope = Math.max(g(x, z), g(x - 0.35, z - 0.35), g(x + 0.35, z - 0.35), g(x - 0.35, z + 0.35), g(x + 0.35, z + 0.35));
+        slope = Math.max(
+          g(x, z),
+          g(x - 0.35, z - 0.35),
+          g(x + 0.35, z - 0.35),
+          g(x - 0.35, z + 0.35),
+          g(x + 0.35, z + 0.35),
+        );
       }
       let tint: [number, number, number] = [1, 1, 1];
       if (outside) {
         const pt = sur!.paint(x, z, h, slope);
         const edge = THREE.MathUtils.smoothstep(sur!.boxDist(x, z), 0, 3);
-        const rk = Math.max(pt.rock, THREE.MathUtils.smoothstep(slope, WALK_SLOPE - 0.35, WALK_SLOPE - 0.08) * (1 - edge));
+        const rk = Math.max(
+          pt.rock,
+          THREE.MathUtils.smoothstep(slope, WALK_SLOPE - 0.35, WALK_SLOPE - 0.08) * (1 - edge),
+        );
         const tot = Math.max(1e-4, pt.grass + pt.dirt + pt.cobble);
         splat[k * 4] = (pt.grass / tot) * (1 - rk);
         splat[k * 4 + 1] = (pt.dirt / tot) * (1 - rk);
@@ -375,7 +429,10 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         occ += Math.atan(maxTan) / (Math.PI / 2);
       }
       occ /= dirs.length;
-      let ao = outside && spacing > 1.5 ? THREE.MathUtils.clamp(1 - occ * 0.8, 0.62, 1) : THREE.MathUtils.clamp(1 - occ * 1.6, 0.35, 1);
+      let ao =
+        outside && spacing > 1.5
+          ? THREE.MathUtils.clamp(1 - occ * 0.8, 0.62, 1)
+          : THREE.MathUtils.clamp(1 - occ * 1.6, 0.35, 1);
       if (inside(x, z) && nearWall(x, z)) ao *= 0.7;
       if (inside(x, z) && nearPit(x, z)) ao *= 0.45;
       const n = vnoise(x * 0.09 + 50, z * 0.09);
@@ -390,7 +447,7 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         const ndl = Math.max(0, nx * L.x + ny * L.y + nz * L.z);
         const sh = ndl > 0 ? sunShadow(x, h, z, outside && sur!.boxDist(x, z) > 6) : 0;
         const hemi = ny * 0.5 + 0.5;
-        const sunK = ndl * sh * light.sunIntensity / Math.PI;
+        const sunK = (ndl * sh * light.sunIntensity) / Math.PI;
         const lr = amb0.r * (1 - hemi) + amb1.r * hemi;
         const lg = amb0.g * (1 - hemi) + amb1.g * hemi;
         const lb = amb0.b * (1 - hemi) + amb1.b * hemi;
@@ -410,17 +467,35 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
         const wd = wallDist(x, z);
         const near = THREE.MathUtils.clamp(1 - wd / 1.8, 0, 1);
         let grassy = 0;
-        for (const [cx, cz] of [[x - 1, z - 1], [x, z - 1], [x - 1, z], [x, z]]) grassy += cellFlag(cx, cz, FLAG_GRASS) / 4;
-        const gone = THREE.MathUtils.smoothstep(fbm(x * 0.17 + 3.1, z * 0.17 - 8.4) + dirt * 0.35 + near * 0.1, 0.5, 0.82);
-        const moss = THREE.MathUtils.clamp(THREE.MathUtils.smoothstep(fbm(x * 0.13 - 11, z * 0.13 + 4), 0.42, 0.85) + near * 0.3 + grassy * 0.5, 0, 1);
-        const pud = THREE.MathUtils.smoothstep(fbm(x * 0.21 + 40, z * 0.21 + 9), 0.52, 0.76) * (1 - gone * 0.6) * (1 - near);
+        for (const [cx, cz] of [
+          [x - 1, z - 1],
+          [x, z - 1],
+          [x - 1, z],
+          [x, z],
+        ])
+          grassy += cellFlag(cx, cz, FLAG_GRASS) / 4;
+        const gone = THREE.MathUtils.smoothstep(
+          fbm(x * 0.17 + 3.1, z * 0.17 - 8.4) + dirt * 0.35 + near * 0.1,
+          0.5,
+          0.82,
+        );
+        const moss = THREE.MathUtils.clamp(
+          THREE.MathUtils.smoothstep(fbm(x * 0.13 - 11, z * 0.13 + 4), 0.42, 0.85) + near * 0.3 + grassy * 0.5,
+          0,
+          1,
+        );
+        const pud =
+          THREE.MathUtils.smoothstep(fbm(x * 0.21 + 40, z * 0.21 + 9), 0.52, 0.76) * (1 - gone * 0.6) * (1 - near);
         ruinW[k * 4] = gone;
         ruinW[k * 4 + 1] = moss;
         ruinW[k * 4 + 2] = pud;
         const grime = near * (0.55 + 0.45 * vnoise(x * 0.9 + 3, z * 0.9));
         const v = vnoise(x * 0.05 + 21, z * 0.05 - 7);
         const vv = 0.88 + vnoise(x * 0.23 - 4, z * 0.23 + 13) * 0.2;
-        const tw: [number, number, number] = v < 0.5 ? [0.9 + v * 0.16, 0.95 + v * 0.1, 1.0 - v * 0.24] : [0.98 + (v - 0.5) * 0.08, 1.0 - (v - 0.5) * 0.08, 0.88 - (v - 0.5) * 0.04];
+        const tw: [number, number, number] =
+          v < 0.5
+            ? [0.9 + v * 0.16, 0.95 + v * 0.1, 1.0 - v * 0.24]
+            : [0.98 + (v - 0.5) * 0.08, 1.0 - (v - 0.5) * 0.08, 0.88 - (v - 0.5) * 0.04];
         r *= tw[0] * vv * (1 - grime * 0.36);
         g *= tw[1] * vv * (1 - grime * 0.3);
         b *= tw[2] * vv * (1 - grime * 0.42);
@@ -449,7 +524,9 @@ export function buildTerrainMesh(t: Terrain, tex: TerrainTextures, light?: Terra
   if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
-  const mat = light ? new THREE.MeshBasicMaterial({ vertexColors: true }) : new THREE.MeshLambertMaterial({ vertexColors: true });
+  const mat = light
+    ? new THREE.MeshBasicMaterial({ vertexColors: true })
+    : new THREE.MeshLambertMaterial({ vertexColors: true });
   const uniforms = {
     tGrass: { value: prepare(tex.grass) },
     tDirt: { value: prepare(tex.dirt) },

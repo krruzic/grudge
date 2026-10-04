@@ -100,13 +100,23 @@ export function emit(h: FxHost, o: EmitOpts): void {
     return;
   }
   for (let i = 0; i < o.n; i++) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: o.tex, color: o.color ?? 0xffffff, transparent: true, depthWrite: false, depthTest: o.depthTest ?? true,
-      blending: o.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-    }));
+    const s = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: o.tex,
+        color: o.color ?? 0xffffff,
+        transparent: true,
+        depthWrite: false,
+        depthTest: o.depthTest ?? true,
+        blending: o.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+      }),
+    );
     if (o.order) s.renderOrder = o.order;
     const j = o.jitter ?? 0;
-    s.position.set(o.x + (Math.random() - 0.5) * j, o.y + (Math.random() - 0.5) * j * 0.5, o.z + (Math.random() - 0.5) * j);
+    s.position.set(
+      o.x + (Math.random() - 0.5) * j,
+      o.y + (Math.random() - 0.5) * j * 0.5,
+      o.z + (Math.random() - 0.5) * j,
+    );
     const v = randomDir(dir, o.cone ?? Math.PI, !!o.flatSpread).multiplyScalar(rr(o.speed));
     if (o.up) v.y += rr(o.up);
     const size = rr(o.size);
@@ -135,10 +145,42 @@ export function emit(h: FxHost, o: EmitOpts): void {
 }
 
 const leafGeo = new THREE.PlaneGeometry(1, 1);
-export function tumblers(h: FxHost, texes: THREE.Texture[], n: number, x: number, y: number, z: number, opts: { speed: Range; up: Range; size: Range; life: Range; dir?: { x: number; z: number }; spread?: number; floorY?: number }): void {
+export function tumblers(
+  h: FxHost,
+  texes: THREE.Texture[],
+  n: number,
+  x: number,
+  y: number,
+  z: number,
+  opts: {
+    speed: Range;
+    up: Range;
+    size: Range;
+    life: Range;
+    dir?: { x: number; z: number };
+    spread?: number;
+    floorY?: number;
+  },
+): void {
   for (let i = 0; i < n; i++) {
     const tex = cv(texes[i % texes.length]);
-    const m = fxBatch(h.root, `leaf|${tex.uuid}`, () => new FxBatch(leafGeo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, depthWrite: true }), false, true)).spawn();
+    const m = fxBatch(
+      h.root,
+      `leaf|${tex.uuid}`,
+      () =>
+        new FxBatch(
+          leafGeo,
+          new THREE.MeshBasicMaterial({
+            map: tex,
+            transparent: true,
+            alphaTest: 0.35,
+            side: THREE.DoubleSide,
+            depthWrite: true,
+          }),
+          false,
+          true,
+        ),
+    ).spawn();
     const sz = rr(opts.size);
     m.scale.setScalar(sz);
     m.position.set(x + (Math.random() - 0.5) * 0.4, y + (Math.random() - 0.5) * 0.4, z + (Math.random() - 0.5) * 0.4);
@@ -200,13 +242,33 @@ export interface CostumeSkin {
 }
 export const COSTUME_SKIN: Record<string, CostumeSkin> = {};
 
-export function chunks(h: FxHost, n: number, x: number, y: number, z: number, opts: { size: Range; speed: Range; up: Range; color?: THREE.ColorRepresentation; life?: number; dir?: { x: number; z: number }; spread?: number; tex?: THREE.Texture }): void {
+export function chunks(
+  h: FxHost,
+  n: number,
+  x: number,
+  y: number,
+  z: number,
+  opts: {
+    size: Range;
+    speed: Range;
+    up: Range;
+    color?: THREE.ColorRepresentation;
+    life?: number;
+    dir?: { x: number; z: number };
+    spread?: number;
+    tex?: THREE.Texture;
+  },
+): void {
   const sk = COSTUME_SKIN[activeCostume()]?.chunk;
   for (let i = 0; i < n; i++) {
     const map = opts.tex ?? (sk && sk.tex !== undefined ? sk.tex : stoneTex);
     const geo = sk ? sk.geos[i % sk.geos.length] : chunkGeos[i % 3];
-    const m = fxBatch(h.root, `chunk|${map?.uuid ?? "-"}|${geo.uuid}`, () => new FxBatch(geo, new THREE.MeshLambertMaterial({ map, flatShading: true, transparent: true }))).spawn();
-    m.color.set(sk ? sk.colors[i % sk.colors.length] : opts.color ?? 0xb8ab98);
+    const m = fxBatch(
+      h.root,
+      `chunk|${map?.uuid ?? "-"}|${geo.uuid}`,
+      () => new FxBatch(geo, new THREE.MeshLambertMaterial({ map, flatShading: true, transparent: true })),
+    ).spawn();
+    m.color.set(sk ? sk.colors[i % sk.colors.length] : (opts.color ?? 0xb8ab98));
     const sz = rr(opts.size);
     m.scale.setScalar(sz);
     m.position.set(x, y, z);
@@ -242,8 +304,28 @@ const planeGeo = new THREE.PlaneGeometry(1, 1);
 export const SHARED_PLANE_GEOS = new Set<THREE.BufferGeometry>([planeGeo, leafGeo]);
 const torusGeo = new THREE.TorusGeometry(1, 0.05, 4, 36);
 torusGeo.userData.model = true;
-export function shockwave(h: FxHost, _tex: THREE.Texture, x: number, y: number, z: number, normal: THREE.Vector3, r0: number, r1: number, dur: number, color: THREE.ColorRepresentation = 0xffffff, opacity = 1): void {
-  const m = fxBatch(h.root, "shock", () => new FxBatch(torusGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))).spawn();
+export function shockwave(
+  h: FxHost,
+  _tex: THREE.Texture,
+  x: number,
+  y: number,
+  z: number,
+  normal: THREE.Vector3,
+  r0: number,
+  r1: number,
+  dur: number,
+  color: THREE.ColorRepresentation = 0xffffff,
+  opacity = 1,
+): void {
+  const m = fxBatch(
+    h.root,
+    "shock",
+    () =>
+      new FxBatch(
+        torusGeo,
+        new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+      ),
+  ).spawn();
   m.color.set(tint(color));
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.clone().normalize());
   m.position.set(x, y, z);
@@ -268,14 +350,25 @@ const lavaTex = new THREE.TextureLoader().load(lavaUrl);
 lavaTex.colorSpace = THREE.SRGBColorSpace;
 const crackPlane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 crackPlane.userData.model = true;
-const LAVA_CORE = new THREE.MeshBasicMaterial({ map: lavaTex, alphaTest: 0.4, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 });
+const LAVA_CORE = new THREE.MeshBasicMaterial({
+  map: lavaTex,
+  alphaTest: 0.4,
+  side: THREE.DoubleSide,
+  polygonOffset: true,
+  polygonOffsetFactor: -2,
+});
 const LIP_MAT = new THREE.MeshLambertMaterial({ color: 0x6a5238, flatShading: true });
 const MOSS_LIP = new THREE.MeshLambertMaterial({ color: 0x3a5a1c, flatShading: true });
 for (const m of [...Object.values(FIS_MAT), LAVA_CORE, LIP_MAT, MOSS_LIP]) m.userData.keep = true;
 
-export function buildFissures(gy: (x: number, z: number) => number, r: number, style: FissureStyle, seed = Math.random()): { group: THREE.Group; parts: { o: THREE.Object3D; d: number }[] } {
+export function buildFissures(
+  gy: (x: number, z: number) => number,
+  r: number,
+  style: FissureStyle,
+  seed = Math.random(),
+): { group: THREE.Group; parts: { o: THREE.Object3D; d: number }[] } {
   let sd = Math.floor(seed * 1e6) || 1;
-  const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const group = new THREE.Group();
   const parts: { o: THREE.Object3D; d: number }[] = [];
   const n = Math.max(4, Math.round(4 + r * 1.6));
@@ -330,7 +423,12 @@ export function buildFissures(gy: (x: number, z: number) => number, r: number, s
 }
 
 const SKIN_MATS = new Map<string, THREE.Material>();
-export function zoneFissures(gy: (x: number, z: number) => number, r: number, style: FissureStyle, costume = ""): THREE.Group {
+export function zoneFissures(
+  gy: (x: number, z: number) => number,
+  r: number,
+  style: FissureStyle,
+  costume = "",
+): THREE.Group {
   const sk = COSTUME_SKIN[costume];
   const group = buildFissures(gy, r, sk?.fissure?.[style] ?? style).group;
   if (!sk?.fisMat) return group;
@@ -348,9 +446,25 @@ export function zoneFissures(gy: (x: number, z: number) => number, r: number, st
   return group;
 }
 
-const FIS_KEYS = new Map<THREE.Material, string>([[FIS_MAT.crack, "fc"], [FIS_MAT.lava, "fl"], [FIS_MAT.moss, "fm"], [LAVA_CORE, "fk"], [LIP_MAT, "fp"], [MOSS_LIP, "fq"]]);
+const FIS_KEYS = new Map<THREE.Material, string>([
+  [FIS_MAT.crack, "fc"],
+  [FIS_MAT.lava, "fl"],
+  [FIS_MAT.moss, "fm"],
+  [LAVA_CORE, "fk"],
+  [LIP_MAT, "fp"],
+  [MOSS_LIP, "fq"],
+]);
 
-export function fissures(h: FxHost, x: number, y: number, z: number, r: number, style: FissureStyle, life: number, grow = 0.25): void {
+export function fissures(
+  h: FxHost,
+  x: number,
+  y: number,
+  z: number,
+  r: number,
+  style: FissureStyle,
+  life: number,
+  grow = 0.25,
+): void {
   const ground = (px: number, pz: number) => (h.world ? h.world.groundY(x + px, z + pz) : y) - y;
   const { group, parts } = buildFissures(ground, r, style);
   group.position.set(x, y, z);
@@ -427,7 +541,11 @@ function laurelGeo(): THREE.BufferGeometry {
         const m = new THREE.Mesh(leaf);
         const tan = new THREE.Vector3(-Math.sin(a) * side, 0, Math.cos(a) * side);
         const rad = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
-        const dir = tan.clone().multiplyScalar(0.8).addScaledVector(rad, out * 0.62).normalize();
+        const dir = tan
+          .clone()
+          .multiplyScalar(0.8)
+          .addScaledVector(rad, out * 0.62)
+          .normalize();
         m.position.copy(rad.clone().multiplyScalar(1 + out * 0.07)).addScaledVector(dir, 0.14 * sz);
         m.position.y = 0.03 + (out > 0 ? 0.015 : 0);
         m.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
@@ -439,7 +557,10 @@ function laurelGeo(): THREE.BufferGeometry {
     const tip = new THREE.Mesh(leaf);
     const at = a0 + side * span;
     tip.position.set(Math.cos(at) * 1.02, 0.04, Math.sin(at) * 1.02);
-    tip.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-Math.sin(at) * side, 0, Math.cos(at) * side));
+    tip.quaternion.setFromUnitVectors(
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(-Math.sin(at) * side, 0, Math.cos(at) * side),
+    );
     tip.scale.set(0.11, 0.022, 0.045);
     parts.push(tip);
   }
@@ -519,7 +640,10 @@ function crestGeo(): THREE.BufferGeometry {
       const barb = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 3));
       const bd = new THREE.Vector3(Math.cos(a), 0.35, Math.sin(a)).normalize();
       barb.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), bd);
-      barb.position.set(Math.cos(a) * 0.9, 0, Math.sin(a) * 0.9).addScaledVector(d, hgt * 0.45).addScaledVector(bd, 0.08);
+      barb.position
+        .set(Math.cos(a) * 0.9, 0, Math.sin(a) * 0.9)
+        .addScaledVector(d, hgt * 0.45)
+        .addScaledVector(bd, 0.08);
       barb.scale.set(0.035, 0.16, 0.035);
       parts.push(barb);
     }
@@ -536,13 +660,35 @@ function crestGeo(): THREE.BufferGeometry {
   return crestShape;
 }
 
-const LAUREL_MAT = new THREE.MeshLambertMaterial({ color: 0xe0b840, emissive: 0x3a2400, flatShading: true, transparent: true });
-const CREST_MAT = new THREE.MeshLambertMaterial({ color: 0x4a403a, emissive: 0x1a0800, flatShading: true, transparent: true });
+const LAUREL_MAT = new THREE.MeshLambertMaterial({
+  color: 0xe0b840,
+  emissive: 0x3a2400,
+  flatShading: true,
+  transparent: true,
+});
+const CREST_MAT = new THREE.MeshLambertMaterial({
+  color: 0x4a403a,
+  emissive: 0x1a0800,
+  flatShading: true,
+  transparent: true,
+});
 for (const m of [LAUREL_MAT, CREST_MAT]) m.userData.keep = true;
 const glowRingGeo = new THREE.TorusGeometry(1, 0.06, 4, 40);
 glowRingGeo.userData.model = true;
 
-function model3d(h: FxHost, kind: "laurel" | "crown" | "crest", x: number, y: number, z: number, r: number, life: number, color: THREE.ColorRepresentation, spin: number, grow: number, opacity: number): void {
+function model3d(
+  h: FxHost,
+  kind: "laurel" | "crown" | "crest",
+  x: number,
+  y: number,
+  z: number,
+  r: number,
+  life: number,
+  color: THREE.ColorRepresentation,
+  spin: number,
+  grow: number,
+  opacity: number,
+): void {
   const g = new THREE.Group();
   const mats: THREE.Material[] = [];
   if (kind === "laurel") {
@@ -552,13 +698,24 @@ function model3d(h: FxHost, kind: "laurel" | "crown" | "crest", x: number, y: nu
     mats.push(mat);
     g.add(new THREE.Mesh(laurelGeo(), mat));
   } else if (kind === "crown") {
-    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
     mats.push(mat);
     g.add(new THREE.Mesh(crownGeo(), mat));
   } else {
     const iron = CREST_MAT.clone();
     iron.userData = {};
-    const glow = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const glow = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
     mats.push(iron, glow);
     g.add(new THREE.Mesh(crestGeo(), iron));
     const ring = new THREE.Mesh(glowRingGeo, glow);
@@ -583,7 +740,12 @@ function model3d(h: FxHost, kind: "laurel" | "crown" | "crest", x: number, y: nu
     g.scale.setScalar(Math.max(0.01, r * (kind === "crown" ? 0.35 + 0.65 * ease : ease)));
     if (kind === "crown") g.scale.y = Math.max(0.01, r * 0.5 * (1.4 - k * 0.6));
     g.rotation.y = r0 + t * spin;
-    const rise = kind === "crown" ? 0 : kind === "crest" ? -0.5 * (1 - Math.min(1, t / 0.18)) : Math.sin(Math.min(1, t / 0.3) * Math.PI * 0.5) * 0.12;
+    const rise =
+      kind === "crown"
+        ? 0
+        : kind === "crest"
+          ? -0.5 * (1 - Math.min(1, t / 0.18))
+          : Math.sin(Math.min(1, t / 0.3) * Math.PI * 0.5) * 0.12;
     g.position.y = y + 0.04 + rise - (k > 0.75 ? ((k - 0.75) / 0.25) * 0.2 : 0);
     const f = opacity * (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3);
     for (const m of mats) m.opacity = f;
@@ -620,11 +782,29 @@ function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: num
     const e = Math.min(1, t / 0.2);
     m.scale.setScalar(Math.max(0.01, r * 0.8 * e));
     m.rotation.y = t * spin;
-    m.position.y = y + 0.05 + Math.sin(Math.min(1, t / 0.25) * Math.PI) * 0.4 - (k > 0.75 ? ((k - 0.75) / 0.25) * 0.3 : 0);
+    m.position.y =
+      y + 0.05 + Math.sin(Math.min(1, t / 0.25) * Math.PI) * 0.4 - (k > 0.75 ? ((k - 0.75) / 0.25) * 0.3 : 0);
   });
 }
 
-export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: number, radius: number, dur: number, opts: { grow?: number; spin?: number; additive?: boolean; color?: THREE.ColorRepresentation; opacity?: number; rot?: number; stretch?: number } = {}): FxInst | null {
+export function decal(
+  h: FxHost,
+  tex: THREE.Texture,
+  x: number,
+  y: number,
+  z: number,
+  radius: number,
+  dur: number,
+  opts: {
+    grow?: number;
+    spin?: number;
+    additive?: boolean;
+    color?: THREE.ColorRepresentation;
+    opacity?: number;
+    rot?: number;
+    stretch?: number;
+  } = {},
+): FxInst | null {
   tex = hd(tex);
   opts = { ...opts, color: tint(opts.color) };
   const sk = COSTUME_SKIN[activeCostume()];
@@ -637,7 +817,19 @@ export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: nu
   }
   const d3 = over ?? DECAL_3D.get(baseTex(tex));
   if (d3 === "laurel" || d3 === "crown" || d3 === "crest") {
-    model3d(h, d3, x, y, z, radius, dur, opts.color ?? 0xffe0a0, d3 === "laurel" ? 0 : (opts.spin ?? 1) * 0.5, opts.grow ?? 0.2, opts.opacity ?? 1);
+    model3d(
+      h,
+      d3,
+      x,
+      y,
+      z,
+      radius,
+      dur,
+      opts.color ?? 0xffe0a0,
+      d3 === "laurel" ? 0 : (opts.spin ?? 1) * 0.5,
+      opts.grow ?? 0.2,
+      opts.opacity ?? 1,
+    );
     return null;
   }
   if (d3 === "gear") {
@@ -645,14 +837,40 @@ export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: nu
     return null;
   }
   if (d3 === "ring" || d3 === "smoke") {
-    shockwave(h, tex, x, y + 0.15, z, new THREE.Vector3(0, 1, 0), radius * 0.15, radius, Math.max(0.35, dur), d3 === "smoke" ? 0x8a8a90 : opts.color ?? 0xffe0c0, opts.opacity ?? 0.9);
+    shockwave(
+      h,
+      tex,
+      x,
+      y + 0.15,
+      z,
+      new THREE.Vector3(0, 1, 0),
+      radius * 0.15,
+      radius,
+      Math.max(0.35, dur),
+      d3 === "smoke" ? 0x8a8a90 : (opts.color ?? 0xffe0c0),
+      opts.opacity ?? 0.9,
+    );
     return null;
   }
   const add = !!opts.additive;
-  const m = fxBatch(h.root, `pdecal|${tex.uuid}|${add ? 1 : 0}`, () => new FxBatch(planeGeo, new THREE.MeshBasicMaterial({
-    map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3,
-    blending: add ? THREE.AdditiveBlending : THREE.NormalBlending,
-  }), false, !add)).spawn();
+  const m = fxBatch(
+    h.root,
+    `pdecal|${tex.uuid}|${add ? 1 : 0}`,
+    () =>
+      new FxBatch(
+        planeGeo,
+        new THREE.MeshBasicMaterial({
+          map: tex,
+          transparent: true,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -3,
+          blending: add ? THREE.AdditiveBlending : THREE.NormalBlending,
+        }),
+        false,
+        !add,
+      ),
+  ).spawn();
   m.color.set(opts.color ?? 0xffffff);
   m.rotation.set(-Math.PI / 2, 0, opts.rot ?? Math.random() * Math.PI * 2);
   m.position.set(x, y + 0.08, z);
@@ -670,7 +888,11 @@ export function decal(h: FxHost, tex: THREE.Texture, x: number, y: number, z: nu
   return m;
 }
 
-interface Sample { a: THREE.Vector3; b: THREE.Vector3; t: number }
+interface Sample {
+  a: THREE.Vector3;
+  b: THREE.Vector3;
+  t: number;
+}
 export class Ribbon {
   readonly mesh: THREE.Mesh;
   private samples: Sample[] = [];
@@ -682,7 +904,12 @@ export class Ribbon {
   private clock = 0;
   dead = false;
 
-  constructor(tex: THREE.Texture, color: THREE.Color, private life = 0.14, private fade = 1) {
+  constructor(
+    tex: THREE.Texture,
+    color: THREE.Color,
+    private life = 0.14,
+    private fade = 1,
+  ) {
     this.geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
     this.geo.setAttribute("uv", new THREE.BufferAttribute(this.uv, 2));
     this.geo.setAttribute("color", new THREE.BufferAttribute(this.col, 4));
@@ -692,9 +919,18 @@ export class Ribbon {
       idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
     }
     this.geo.setIndex(idx);
-    this.mesh = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({
-      map: tex, color, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
-    }));
+    this.mesh = new THREE.Mesh(
+      this.geo,
+      new THREE.MeshBasicMaterial({
+        map: tex,
+        color,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
     this.mesh.frustumCulled = false;
   }
 

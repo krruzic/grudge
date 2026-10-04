@@ -48,8 +48,30 @@ const RANGE = 1450;
 
 function emptyState(): Pro2State {
   return {
-    connected: false, a: false, b: false, x: false, y: false, l: false, r: false, zl: false, zr: false, plus: false, minus: false,
-    ls: false, rs: false, c: false, gl: false, gr: false, up: false, down: false, left: false, right: false, stickX: 0, stickY: 0, cX: 0, cY: 0,
+    connected: false,
+    a: false,
+    b: false,
+    x: false,
+    y: false,
+    l: false,
+    r: false,
+    zl: false,
+    zr: false,
+    plus: false,
+    minus: false,
+    ls: false,
+    rs: false,
+    c: false,
+    gl: false,
+    gr: false,
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    stickX: 0,
+    stickY: 0,
+    cX: 0,
+    cY: 0,
   };
 }
 
@@ -140,7 +162,8 @@ export class ProCon2 {
       b(9) | ((b(10) & 0x0f) << 8),
       (b(10) >> 4) | (b(11) << 4),
     ];
-    if (!this.centers[i]) this.centers[i] = raw.map((x) => (Math.abs(x - 2048) < 500 ? x : 2048)) as [number, number, number, number];
+    if (!this.centers[i])
+      this.centers[i] = raw.map((x) => (Math.abs(x - 2048) < 500 ? x : 2048)) as [number, number, number, number];
     const c = this.centers[i]!;
     const ax = (k: number) => Math.max(-1, Math.min(1, (raw[k] - c[k]) / RANGE));
     p.stickX = ax(0);

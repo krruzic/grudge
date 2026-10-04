@@ -52,10 +52,16 @@ function sharedParts(): THREE.MeshLambertMaterial | null {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uLayers = { value: arr };
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute float aLayer;\nflat varying int vLayer;\nvarying vec2 vUv0;")
+      .replace(
+        "#include <common>",
+        "#include <common>\nattribute float aLayer;\nflat varying int vLayer;\nvarying vec2 vUv0;",
+      )
       .replace("#include <uv_vertex>", "#include <uv_vertex>\nvLayer = int(aLayer + 0.5);\nvUv0 = uv;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform highp sampler2DArray uLayers;\nflat varying int vLayer;\nvarying vec2 vUv0;")
+      .replace(
+        "#include <common>",
+        "#include <common>\nuniform highp sampler2DArray uLayers;\nflat varying int vLayer;\nvarying vec2 vUv0;",
+      )
       .replace("#include <map_fragment>", "diffuseColor *= texture(uLayers, vec3(vUv0, float(vLayer)));");
   };
   mat.customProgramCacheKey = () => "ballista-parts";
@@ -141,7 +147,7 @@ function buildBallista(team: THREE.Color): THREE.Group {
 
   for (const s of [1, -1]) {
     const leg = box(1.5, 0.16, 0.2, WOOD_DARK, 0, 0.08, 0);
-    leg.rotation.y = s * Math.PI / 4;
+    leg.rotation.y = (s * Math.PI) / 4;
     g.add(leg);
     g.add(beam(v(s * 0.5, 0.1, 0.5), v(0, 0.62, 0), 0.06, WOOD_DARK));
     g.add(beam(v(s * 0.5, 0.1, -0.5), v(0, 0.62, 0), 0.06, WOOD_DARK));

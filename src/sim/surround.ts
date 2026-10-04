@@ -114,7 +114,8 @@ function spline(ctrl: [number, number][], step = 3): [number, number][] {
       const t = k / n;
       const t2 = t * t;
       const t3 = t2 * t;
-      const f = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      const f = (a: number, b: number, c: number, d: number) =>
+        0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
       out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
     }
   }
@@ -125,7 +126,8 @@ function spline(ctrl: [number, number][], step = 3): [number, number][] {
 function line(ctrl: [number, number][], w0: number, w1 = w0): Line {
   const pts = spline(ctrl);
   const len = [0];
-  for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  for (let i = 1; i < pts.length; i++)
+    len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   let x0 = Infinity;
   let z0 = Infinity;
   let x1 = -Infinity;
@@ -228,7 +230,9 @@ function exits(t: Terrain): Exit[] {
   scan("s", t.width, (i) => [i, t.depth - 2]);
   scan("w", t.depth, (i) => [1, i]);
   scan("e", t.depth, (i) => [t.width - 2, i]);
-  return out.filter((e) => e.width >= (e.edge === "w" || e.edge === "e" ? 1 : 2)).map((e) => ({ ...e, width: Math.max(e.width, 2.5) }));
+  return out
+    .filter((e) => e.width >= (e.edge === "w" || e.edge === "e" ? 1 : 2))
+    .map((e) => ({ ...e, width: Math.max(e.width, 2.5) }));
 }
 
 export class Surround {
@@ -247,7 +251,11 @@ export class Surround {
   private islands: Spot[] = [];
   private seed: number;
 
-  constructor(private t: Terrain, style: SurroundStyle, private mirror: "x" | "diag" | "rot" | "quad" | "none") {
+  constructor(
+    private t: Terrain,
+    style: SurroundStyle,
+    private mirror: "x" | "diag" | "rot" | "quad" | "none",
+  ) {
     this.style = style;
     this.W = t.width;
     this.D = t.depth;
@@ -268,10 +276,28 @@ export class Surround {
 
   private sym(x: number, z: number): [number, number][] {
     const { W, D } = this;
-    if (this.mirror === "x") return [[x, z], [W - x, z]];
-    if (this.mirror === "diag") return [[x, z], [z, x]];
-    if (this.mirror === "rot") return [[x, z], [W - x, D - z]];
-    if (this.mirror === "quad") return [[x, z], [D - z, x], [W - x, D - z], [z, W - x]];
+    if (this.mirror === "x")
+      return [
+        [x, z],
+        [W - x, z],
+      ];
+    if (this.mirror === "diag")
+      return [
+        [x, z],
+        [z, x],
+      ];
+    if (this.mirror === "rot")
+      return [
+        [x, z],
+        [W - x, D - z],
+      ];
+    if (this.mirror === "quad")
+      return [
+        [x, z],
+        [D - z, x],
+        [W - x, D - z],
+        [z, W - x],
+      ];
     return [[x, z]];
   }
 
@@ -302,14 +328,50 @@ export class Surround {
     const west = this.exits.filter((e) => e.edge === "w");
     for (const e of north) {
       const [x] = this.exitPoint(e, 0);
-      this.rivers.push(...this.symLine([[x, 2], [x, -8], [x + (cx - x) * 0.35, -20], [cx, -34]], e.width * 0.55 + 0.6, e.width * 0.7));
+      this.rivers.push(
+        ...this.symLine(
+          [
+            [x, 2],
+            [x, -8],
+            [x + (cx - x) * 0.35, -20],
+            [cx, -34],
+          ],
+          e.width * 0.55 + 0.6,
+          e.width * 0.7,
+        ),
+      );
     }
     if (north.length) {
-      this.rivers.push(line([[cx, -34], [cx - 7, -56], [cx + 9, -92], [cx - 6, -140], [cx + 12, -200], [cx - 4, -280], [cx + 6, -420]], 5.5, 9));
+      this.rivers.push(
+        line(
+          [
+            [cx, -34],
+            [cx - 7, -56],
+            [cx + 9, -92],
+            [cx - 6, -140],
+            [cx + 12, -200],
+            [cx - 4, -280],
+            [cx + 6, -420],
+          ],
+          5.5,
+          9,
+        ),
+      );
     }
     for (const e of south) {
       const [x] = this.exitPoint(e, 0);
-      this.rivers.push(...this.symLine([[x, D - 2], [x, D + 9], [x - 3, D + 22], [x + (cx - x) * 0.4, D + 34]], e.width * 0.55 + 0.6, e.width * 0.8));
+      this.rivers.push(
+        ...this.symLine(
+          [
+            [x, D - 2],
+            [x, D + 9],
+            [x - 3, D + 22],
+            [x + (cx - x) * 0.4, D + 34],
+          ],
+          e.width * 0.55 + 0.6,
+          e.width * 0.8,
+        ),
+      );
     }
     if (south.length) this.lakes.push({ x: cx, z: D + 46, rx: 34, rz: 18 });
     const wSorted = west.slice().sort((a, b) => a.at - b.at);
@@ -317,10 +379,47 @@ export class Surround {
       const a = wSorted[0].at;
       const b = wSorted[wSorted.length - 1].at;
       const mid = (a + b) / 2;
-      const loop: [number, number][] = [[2, a], [-6, a + 0.5], [-14, a + 4], [-19, mid - 4], [-19.5, mid + 3], [-15, b - 3], [-6, b - 0.5], [2, b]];
+      const loop: [number, number][] = [
+        [2, a],
+        [-6, a + 0.5],
+        [-14, a + 4],
+        [-19, mid - 4],
+        [-19.5, mid + 3],
+        [-15, b - 3],
+        [-6, b - 0.5],
+        [2, b],
+      ];
       this.rivers.push(...this.symLine(loop, 1.6, 1.6));
-      this.rivers.push(...this.symLine([[-17, b - 6], [-24, b + 8], [-30, D + 22], [-14, D + 40], [cx - 30, D + 48]], 1.8, 2.6));
-      this.roads.push(...this.symLine([[-1.5, mid], [-12, mid], [-26, mid + 1], [-48, mid - 2], [-74, mid - 7], [-110, mid - 4], [-170, mid + 8], [-260, mid + 4], [-420, mid + 10]], 1.6, 2.2));
+      this.rivers.push(
+        ...this.symLine(
+          [
+            [-17, b - 6],
+            [-24, b + 8],
+            [-30, D + 22],
+            [-14, D + 40],
+            [cx - 30, D + 48],
+          ],
+          1.8,
+          2.6,
+        ),
+      );
+      this.roads.push(
+        ...this.symLine(
+          [
+            [-1.5, mid],
+            [-12, mid],
+            [-26, mid + 1],
+            [-48, mid - 2],
+            [-74, mid - 7],
+            [-110, mid - 4],
+            [-170, mid + 8],
+            [-260, mid + 4],
+            [-420, mid + 10],
+          ],
+          1.6,
+          2.2,
+        ),
+      );
       this.clearings.push(...this.sym(-37, mid).map(([x, z]) => ({ x, z, r: 22 })));
     }
     const crops: Field["crop"][] = ["wheat", "plow", "green", "wheat", "fallow", "plow", "green", "wheat"];
@@ -343,7 +442,13 @@ export class Surround {
           const fz = z0 - u * sn + v * c;
           const crop = crops[(k++ * 5 + i * 3 + j) % crops.length];
           const f: Field = { cx: fx, cz: fz, hw: fw / 2 - 0.9, hd: fd / 2 - 0.9, rot, crop };
-          const cornersOk = [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, 0]].every(([a, b2]) => {
+          const cornersOk = [
+            [-1, -1],
+            [1, -1],
+            [1, 1],
+            [-1, 1],
+            [0, 0],
+          ].every(([a, b2]) => {
             const px = fx + (a * (fw / 2) * c + b2 * (fd / 2) * sn);
             const pz = fz + (-a * (fw / 2) * sn + b2 * (fd / 2) * c);
             return this.boxDist(px, pz) > 6 && !this.blocked(px, pz, 1.5);
@@ -351,7 +456,8 @@ export class Surround {
           if (!cornersOk) continue;
           if (hash(i, j, x0) < 0.08) continue;
           this.fields.push(f);
-          if (this.mirror === "x") this.fields.push({ ...f, cx: W - f.cx, rot: -f.rot, crop: crops[(k + 3) % crops.length] });
+          if (this.mirror === "x")
+            this.fields.push({ ...f, cx: W - f.cx, rot: -f.rot, crop: crops[(k + 3) % crops.length] });
         }
       }
     }
@@ -360,9 +466,48 @@ export class Surround {
   private designCrag(): void {
     const { W, D } = this;
     const midW = D / 2;
-    this.roads.push(...this.symLine([[-1, midW], [-12, midW + 1], [-30, midW - 2], [-52, midW + 4], [-80, midW + 2], [-130, midW + 10], [-220, midW + 2], [-420, midW + 14]], 1.5, 2));
-    this.roads.push(line([[-1, D + 1], [-10, D + 10], [-24, D + 22], [-40, D + 40], [-70, D + 66]], 1.4, 1.6));
-    this.roads.push(line([[W + 1, -1], [W + 10, -10], [W + 22, -24], [W + 40, -40], [W + 66, -70]], 1.4, 1.6));
+    this.roads.push(
+      ...this.symLine(
+        [
+          [-1, midW],
+          [-12, midW + 1],
+          [-30, midW - 2],
+          [-52, midW + 4],
+          [-80, midW + 2],
+          [-130, midW + 10],
+          [-220, midW + 2],
+          [-420, midW + 14],
+        ],
+        1.5,
+        2,
+      ),
+    );
+    this.roads.push(
+      line(
+        [
+          [-1, D + 1],
+          [-10, D + 10],
+          [-24, D + 22],
+          [-40, D + 40],
+          [-70, D + 66],
+        ],
+        1.4,
+        1.6,
+      ),
+    );
+    this.roads.push(
+      line(
+        [
+          [W + 1, -1],
+          [W + 10, -10],
+          [W + 22, -24],
+          [W + 40, -40],
+          [W + 66, -70],
+        ],
+        1.4,
+        1.6,
+      ),
+    );
     const R = 44;
     const ring: [number, number][] = [];
     for (let i = 0; i <= 24; i++) {
@@ -380,11 +525,50 @@ export class Surround {
 
   private designAlpine(): void {
     const c = this.D / 2;
-    const road: [number, number][] = [[-1, c], [-10, c - 3], [-18, c + 5], [-27, c - 3], [-36, c + 5], [-47, c - 1], [-62, c + 3], [-82, c], [-110, c + 6], [-160, c - 4], [-240, c + 8], [-420, c]];
+    const road: [number, number][] = [
+      [-1, c],
+      [-10, c - 3],
+      [-18, c + 5],
+      [-27, c - 3],
+      [-36, c + 5],
+      [-47, c - 1],
+      [-62, c + 3],
+      [-82, c],
+      [-110, c + 6],
+      [-160, c - 4],
+      [-240, c + 8],
+      [-420, c],
+    ];
     this.roads.push(...this.symLine(road, 1.4, 2.2));
-    this.valleyAxis.push(...this.symLine([[-1, c], [-40, c + 1], [-90, c + 3], [-170, c - 4], [-420, c + 2]], 1, 1));
+    this.valleyAxis.push(
+      ...this.symLine(
+        [
+          [-1, c],
+          [-40, c + 1],
+          [-90, c + 3],
+          [-170, c - 4],
+          [-420, c + 2],
+        ],
+        1,
+        1,
+      ),
+    );
     for (const [x, z] of this.sym(-78, c + 1)) this.lakes.push({ x, z, rx: 15, rz: 15 });
-    this.cirques.push(...this.symLine([[20, 20], [6, 6], [-14, -10], [-40, -30], [-80, -56], [-150, -110], [-420, -300]], 1, 1));
+    this.cirques.push(
+      ...this.symLine(
+        [
+          [20, 20],
+          [6, 6],
+          [-14, -10],
+          [-40, -30],
+          [-80, -56],
+          [-150, -110],
+          [-420, -300],
+        ],
+        1,
+        1,
+      ),
+    );
   }
 
   private cirques: Line[] = [];
@@ -437,7 +621,8 @@ export class Surround {
     const n = fbm(x * 0.06, z * 0.06, 3, s + 41);
     p.tint = [0.96 + n * 0.08, 0.98 + n * 0.06, 1.04 + n * 0.04];
     const vale = this.alpineVale(x, z, d);
-    const forest = smooth(0.35, 0.6, vale) * smooth(2, -30, h) * smooth(0.42, 0.56, fbm(x * 0.035, z * 0.035, 3, s + 42));
+    const forest =
+      smooth(0.35, 0.6, vale) * smooth(2, -30, h) * smooth(0.42, 0.56, fbm(x * 0.035, z * 0.035, 3, s + 42));
     if (forest > 0) {
       p.grass = forest * 0.8;
       p.dirt = 1 - p.grass;
@@ -449,7 +634,8 @@ export class Surround {
       p.tint = [lerp(p.tint[0], 0.78 * g, p.rock), lerp(p.tint[1], 0.84 * g, p.rock), lerp(p.tint[2], 1.0 * g, p.rock)];
     }
     const glacier = smooth(30, 45, h) * (1 - p.rock) * smooth(0.5, 0.7, fbm(x * 0.02, z * 0.02, 2, s + 44));
-    if (glacier > 0) p.tint = [lerp(p.tint[0], 0.82, glacier), lerp(p.tint[1], 0.95, glacier), lerp(p.tint[2], 1.25, glacier)];
+    if (glacier > 0)
+      p.tint = [lerp(p.tint[0], 0.82, glacier), lerp(p.tint[1], 0.95, glacier), lerp(p.tint[2], 1.25, glacier)];
     for (const l of this.lakes) {
       const e = Math.hypot(x - l.x, z - l.z) / l.rx;
       if (e < 1.05) {
@@ -476,7 +662,17 @@ export class Surround {
       const p = pointAt(road, u / total);
       const sg = Math.floor(u / 7) % 2 ? 1 : -1;
       const off = 2.4;
-      this.add({ t: u % 14 < 7 ? "lantern" : "fence", x: p.x + Math.cos(p.ang) * off * sg, z: p.z - Math.sin(p.ang) * off * sg, rot: p.ang, s: 1, seed: u }, false);
+      this.add(
+        {
+          t: u % 14 < 7 ? "lantern" : "fence",
+          x: p.x + Math.cos(p.ang) * off * sg,
+          z: p.z - Math.sin(p.ang) * off * sg,
+          rot: p.ang,
+          s: 1,
+          seed: u,
+        },
+        false,
+      );
     }
     for (let i = 0; i < 6; i++) {
       const p = pointAt(road, (30 + i * 9) / total);
@@ -485,29 +681,87 @@ export class Surround {
       const x = p.x + Math.cos(p.ang) * off * sg;
       const z = p.z - Math.sin(p.ang) * off * sg;
       if (this.alpineVale(x, z, this.boxDist(x, z)) < 0.5) continue;
-      this.add({ t: "cabin", x, z, rot: p.ang + (sg > 0 ? Math.PI / 2 : -Math.PI / 2), s: 0.9 + hash(i, 5) * 0.3, seed: i, side: 0 });
+      this.add({
+        t: "cabin",
+        x,
+        z,
+        rot: p.ang + (sg > 0 ? Math.PI / 2 : -Math.PI / 2),
+        s: 0.9 + hash(i, 5) * 0.3,
+        seed: i,
+        side: 0,
+      });
     }
     const lake = this.lakes[0];
     if (lake) this.add({ t: "shrine", x: lake.x + 2, z: lake.z - lake.rz - 5, rot: 0, s: 1, seed: 3 }, true);
     this.add({ t: "cairn", x: -4, z: this.D / 2 - 7, rot: 0, s: 1, seed: 1 }, false);
     this.add({ t: "cairn", x: -5, z: this.D / 2 + 8, rot: 1, s: 1.2, seed: 2 }, false);
-    const ok = (x: number, z: number) => this.canonical(x, z) && this.boxDist(x, z) > 3 && !this.blocked(x, z, 2) && !this.lakes.some((l) => Math.hypot(x - l.x, z - l.z) < l.rx + 2);
-    this.scatter(260, (r) => this.ring(r, 6, 110), (x, z) => {
-      if (!ok(x, z)) return false;
-      const d = this.boxDist(x, z);
-      const h = this.ground(x, z);
-      const v = this.alpineVale(x, z, d);
-      return v > 0.3 && h < 4 && fbm(x * 0.035, z * 0.035, 3, this.seed + 42) > 0.45;
-    }, (x, z, r) => this.add({ t: "pine", x, z, rot: r() * 6, s: 1.2 + r() * 1.0, seed: Math.floor(r() * 9999) }, false), 51);
-    this.scatter(60, (r) => this.ring(r, 2, 40), (x, z) => ok(x, z) && this.ground(x, z) < 18, (x, z, r) => this.add({ t: r() < 0.65 ? "rock" : "cairn", x, z, rot: r() * 6, s: 0.7 + r() * 0.9, seed: Math.floor(r() * 9999) }, false), 52);
+    const ok = (x: number, z: number) =>
+      this.canonical(x, z) &&
+      this.boxDist(x, z) > 3 &&
+      !this.blocked(x, z, 2) &&
+      !this.lakes.some((l) => Math.hypot(x - l.x, z - l.z) < l.rx + 2);
+    this.scatter(
+      260,
+      (r) => this.ring(r, 6, 110),
+      (x, z) => {
+        if (!ok(x, z)) return false;
+        const d = this.boxDist(x, z);
+        const h = this.ground(x, z);
+        const v = this.alpineVale(x, z, d);
+        return v > 0.3 && h < 4 && fbm(x * 0.035, z * 0.035, 3, this.seed + 42) > 0.45;
+      },
+      (x, z, r) => this.add({ t: "pine", x, z, rot: r() * 6, s: 1.2 + r() * 1.0, seed: Math.floor(r() * 9999) }, false),
+      51,
+    );
+    this.scatter(
+      60,
+      (r) => this.ring(r, 2, 40),
+      (x, z) => ok(x, z) && this.ground(x, z) < 18,
+      (x, z, r) =>
+        this.add(
+          { t: r() < 0.65 ? "rock" : "cairn", x, z, rot: r() * 6, s: 0.7 + r() * 0.9, seed: Math.floor(r() * 9999) },
+          false,
+        ),
+      52,
+    );
   }
 
   private canal = 11;
 
   private designGarden(): void {
-    this.roads.push(...this.symLine([[-15, -15], [-30, -30], [-50, -50]], 1.6, 1.6));
-    this.roads.push(...this.symLine([[30, -15], [30, -42], [24, -60]], 1.2, 1.2));
-    this.roads.push(...this.symLine([[-15, 30], [-42, 30], [-60, 24]], 1.2, 1.2));
+    this.roads.push(
+      ...this.symLine(
+        [
+          [-15, -15],
+          [-30, -30],
+          [-50, -50],
+        ],
+        1.6,
+        1.6,
+      ),
+    );
+    this.roads.push(
+      ...this.symLine(
+        [
+          [30, -15],
+          [30, -42],
+          [24, -60],
+        ],
+        1.2,
+        1.2,
+      ),
+    );
+    this.roads.push(
+      ...this.symLine(
+        [
+          [-15, 30],
+          [-42, 30],
+          [-60, 24],
+        ],
+        1.2,
+        1.2,
+      ),
+    );
   }
 
   private gardenH(x: number, z: number, d: number): number {
@@ -559,16 +813,30 @@ export class Surround {
       }
     }
     const far = smooth(60, 120, d);
-    if (far > 0) p.tint = [lerp(p.tint[0], 0.78 + n * 0.1, far), lerp(p.tint[1], 0.92 + n * 0.08, far), lerp(p.tint[2], 0.7, far)];
+    if (far > 0)
+      p.tint = [lerp(p.tint[0], 0.78 + n * 0.1, far), lerp(p.tint[1], 0.92 + n * 0.08, far), lerp(p.tint[2], 0.7, far)];
     p.rock = smooth(0.9, 1.3, slope + (n - 0.5) * 0.3);
     return p;
   }
 
   private gardenFeatures(): void {
-    const ok = (x: number, z: number, pad = 1.5) => this.canonical(x, z) && this.boxDist(x, z) > 1.5 && !this.blocked(x, z, pad) && Math.abs(this.boxDist(x, z) - this.canal) > 4.5;
-    const both = (t: string, x: number, z: number, rot: number, sc: number, seed: number, extra: Record<string, number> = {}) => {
+    const ok = (x: number, z: number, pad = 1.5) =>
+      this.canonical(x, z) &&
+      this.boxDist(x, z) > 1.5 &&
+      !this.blocked(x, z, pad) &&
+      Math.abs(this.boxDist(x, z) - this.canal) > 4.5;
+    const both = (
+      t: string,
+      x: number,
+      z: number,
+      rot: number,
+      sc: number,
+      seed: number,
+      extra: Record<string, number> = {},
+    ) => {
       this.add({ t, x, z, rot, s: sc, seed, ...extra } as never, false);
-      if (Math.abs(x - z) > 0.5) this.add({ t, x: z, z: x, rot: -Math.PI / 2 - rot, s: sc, seed: seed + 1, ...extra } as never, false);
+      if (Math.abs(x - z) > 0.5)
+        this.add({ t, x: z, z: x, rot: -Math.PI / 2 - rot, s: sc, seed: seed + 1, ...extra } as never, false);
     };
     for (let x = 3; x < 50; x += 6.2) both("hedgerow", x + 3, -1.1, 0, 1, Math.floor(x), { len: 6 });
     this.add({ t: "hedgerow", x: -1.1, z: -1.1, rot: Math.PI / 4, s: 1, seed: 7, len: 3 } as never, false);
@@ -578,15 +846,68 @@ export class Surround {
     this.add({ t: "manor", x: -58, z: -58, rot: -Math.PI * 0.75, s: 1, seed: 3, side: 0 });
     for (let u = 20; u < 70; u += 5.5) {
       const a = u / Math.SQRT2;
-      for (const sg of [-1, 1]) this.add({ t: "tree", x: -a + sg * 3.1, z: -a - sg * 3.1, rot: u, s: 1.0 + hash(u, sg) * 0.25, seed: Math.floor(u * 7 + sg) } as never, false);
+      for (const sg of [-1, 1])
+        this.add(
+          {
+            t: "tree",
+            x: -a + sg * 3.1,
+            z: -a - sg * 3.1,
+            rot: u,
+            s: 1.0 + hash(u, sg) * 0.25,
+            seed: Math.floor(u * 7 + sg),
+          } as never,
+          false,
+        );
     }
     both("gazebo", 40, -26, 0, 1, 4);
     both("fountain", 14, -34, 0, 0.6, 5);
-    for (const [x, z] of [[8, -20], [20, -20], [8, -46], [20, -46]] as const) both("topiary", x, z, 0, 1.3, x * 3 + z);
-    for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) both("flowers", 10 + i * 3, -30 - j * 3 - (i % 2) * 1.5, 0, 1.6, i * 7 + j);
-    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) both("tree", 36 + j * 5.5, -40 - i * 5, 0, 0.75, i * 11 + j);
-    this.scatter(70, (r) => this.ring(r, 60, 150), (x, z) => ok(x, z, 2) && fbm(x * 0.03, z * 0.03, 3, this.seed + 42) > 0.5, (x, z, r) => this.add({ t: r() < 0.5 ? "pine" : "tree", x, z, rot: r() * 6, s: 1.3 + r() * 0.9, seed: Math.floor(r() * 9999) } as never, false), 61);
-    this.scatter(24, (r) => this.ring(r, 20, 60), (x, z) => ok(x, z, 3), (x, z, r) => this.add({ t: r() < 0.5 ? "bush" : "tree", x, z, rot: r() * 6, s: 0.9 + r() * 0.5, seed: Math.floor(r() * 9999) } as never, false), 62);
+    for (const [x, z] of [
+      [8, -20],
+      [20, -20],
+      [8, -46],
+      [20, -46],
+    ] as const)
+      both("topiary", x, z, 0, 1.3, x * 3 + z);
+    for (let i = 0; i < 4; i++)
+      for (let j = 0; j < 3; j++) both("flowers", 10 + i * 3, -30 - j * 3 - (i % 2) * 1.5, 0, 1.6, i * 7 + j);
+    for (let i = 0; i < 5; i++)
+      for (let j = 0; j < 3; j++) both("tree", 36 + j * 5.5, -40 - i * 5, 0, 0.75, i * 11 + j);
+    this.scatter(
+      70,
+      (r) => this.ring(r, 60, 150),
+      (x, z) => ok(x, z, 2) && fbm(x * 0.03, z * 0.03, 3, this.seed + 42) > 0.5,
+      (x, z, r) =>
+        this.add(
+          {
+            t: r() < 0.5 ? "pine" : "tree",
+            x,
+            z,
+            rot: r() * 6,
+            s: 1.3 + r() * 0.9,
+            seed: Math.floor(r() * 9999),
+          } as never,
+          false,
+        ),
+      61,
+    );
+    this.scatter(
+      24,
+      (r) => this.ring(r, 20, 60),
+      (x, z) => ok(x, z, 3),
+      (x, z, r) =>
+        this.add(
+          {
+            t: r() < 0.5 ? "bush" : "tree",
+            x,
+            z,
+            rot: r() * 6,
+            s: 0.9 + r() * 0.5,
+            seed: Math.floor(r() * 9999),
+          } as never,
+          false,
+        ),
+      62,
+    );
   }
 
   private designSea(): void {
@@ -597,11 +918,21 @@ export class Surround {
       if (sym.length > 1 && (sym[1][0] < sym[0][0] || (sym[1][0] === sym[0][0] && sym[1][1] < sym[0][1]))) continue;
       const [x, z] = this.exitPoint(e, -2);
       const [ox, oz] = this.exitPoint(e, 40);
-      const bend = e.edge === "n" || e.edge === "s" ? [ox + (hash(x, z) - 0.5) * 16, oz] : [ox, oz + (hash(x, z) - 0.5) * 16];
-      this.rivers.push(...this.symLine([[x, z], [(x + bend[0]) / 2, (z + bend[1]) / 2], bend as [number, number]], e.width * 0.6, e.width * 1.6));
+      const bend =
+        e.edge === "n" || e.edge === "s" ? [ox + (hash(x, z) - 0.5) * 16, oz] : [ox, oz + (hash(x, z) - 0.5) * 16];
+      this.rivers.push(
+        ...this.symLine(
+          [[x, z], [(x + bend[0]) / 2, (z + bend[1]) / 2], bend as [number, number]],
+          e.width * 0.6,
+          e.width * 1.6,
+        ),
+      );
     }
     const isl: Spot[] = [
-      { x: -150, z: -120, r: 38 }, { x: cx + 40, z: -230, r: 60 }, { x: -260, z: 40, r: 70 }, { x: -70, z: -60, r: 9 },
+      { x: -150, z: -120, r: 38 },
+      { x: cx + 40, z: -230, r: 60 },
+      { x: -260, z: 40, r: 70 },
+      { x: -70, z: -60, r: 9 },
     ];
     for (const s of isl) for (const [x, z] of this.sym(s.x, s.z)) this.islands.push({ x, z, r: s.r });
   }
@@ -670,7 +1001,10 @@ export class Surround {
     }
     for (const l of this.lakes) {
       const a = Math.atan2(z - l.z, x - l.x);
-      const wob = 1 + (noise(Math.cos(a) * 2.2 + 5, Math.sin(a) * 2.2 + 5, 77) - 0.5) * 0.55 + (noise(Math.cos(a) * 6 + 9, Math.sin(a) * 6, 78) - 0.5) * 0.18;
+      const wob =
+        1 +
+        (noise(Math.cos(a) * 2.2 + 5, Math.sin(a) * 2.2 + 5, 77) - 0.5) * 0.55 +
+        (noise(Math.cos(a) * 6 + 9, Math.sin(a) * 6, 78) - 0.5) * 0.18;
       const e = Math.sqrt(((x - l.x) / l.rx) ** 2 + ((z - l.z) / l.rz) ** 2) / wob;
       if (e < 1.6) {
         const isle = Math.hypot((x - l.x - l.rx * 0.3) / 4.5, (z - l.z + l.rz * 0.15) / 3.2);
@@ -735,7 +1069,13 @@ export class Surround {
       const a = Math.atan2(z - i.z, x - i.x);
       const wob = 1 + (noise(Math.cos(a) * 1.8 + i.x * 0.01, Math.sin(a) * 1.8 + i.z * 0.01, 61) - 0.5) * 0.9;
       const r = Math.hypot(x - i.x, z - i.z) / (i.r * wob);
-      if (r < 1.3) h = Math.max(h, (1 - smooth(0.2, 1.1 + noise(x * 0.08, z * 0.08, s) * 0.2, r)) * (i.r * 0.38 + 1.5) - 1.2 + ridge(x * 0.05, z * 0.05, s + 7) * 4 * (1 - r));
+      if (r < 1.3)
+        h = Math.max(
+          h,
+          (1 - smooth(0.2, 1.1 + noise(x * 0.08, z * 0.08, s) * 0.2, r)) * (i.r * 0.38 + 1.5) -
+            1.2 +
+            ridge(x * 0.05, z * 0.05, s + 7) * 4 * (1 - r),
+        );
     }
     return this.carveWater(x, z, h, -2.6, 3);
   }
@@ -794,7 +1134,9 @@ export class Surround {
       p.grass = Math.min(p.grass, 1 - k);
     }
     for (const c of this.clearings) {
-      const k = smooth(c.r * 0.55, c.r * 0.2, Math.hypot(x - c.x, z - c.z)) * smooth(0.45, 0.7, noise(x * 0.25, z * 0.25, s + 9));
+      const k =
+        smooth(c.r * 0.55, c.r * 0.2, Math.hypot(x - c.x, z - c.z)) *
+        smooth(0.45, 0.7, noise(x * 0.25, z * 0.25, s + 9));
       p.dirt = Math.max(p.dirt, k * 0.8);
       p.grass = Math.min(p.grass, 1 - k * 0.8);
     }
@@ -802,13 +1144,18 @@ export class Surround {
     const rocky = Math.max(smooth(0.9, 1.35, slope), smooth(38, 58, hn));
     p.rock = rocky;
     if (h > 12) {
-      const pine = smooth(12, 22, hn) * (1 - smooth(34, 48, hn)) * smooth(0.4, 0.55, fbm(x * 0.04, z * 0.04, 3, s + 15));
+      const pine =
+        smooth(12, 22, hn) * (1 - smooth(34, 48, hn)) * smooth(0.4, 0.55, fbm(x * 0.04, z * 0.04, 3, s + 15));
       p.tint = [p.tint[0] * (1 - pine * 0.45), p.tint[1] * (1 - pine * 0.3), p.tint[2] * (1 - pine * 0.35)];
     }
     if (rocky > 0) {
       const g = 0.95 + noise(x * 0.08, z * 0.08, s + 16) * 0.25;
       const bank = smooth(8, 3, h);
-      p.tint = [lerp(p.tint[0], lerp(0.8, 1.0, bank) * g, rocky), lerp(p.tint[1], lerp(0.95, 0.95, bank) * g, rocky), lerp(p.tint[2], lerp(1.28, 0.85, bank) * g, rocky)];
+      p.tint = [
+        lerp(p.tint[0], lerp(0.8, 1.0, bank) * g, rocky),
+        lerp(p.tint[1], lerp(0.95, 0.95, bank) * g, rocky),
+        lerp(p.tint[2], lerp(1.28, 0.85, bank) * g, rocky),
+      ];
     }
     const snow = smooth(66, 88, hn + slope * -6);
     if (snow > 0) p.tint = [lerp(p.tint[0], 2.3, snow), lerp(p.tint[1], 2.35, snow), lerp(p.tint[2], 2.5, snow)];
@@ -891,12 +1238,27 @@ export class Surround {
         else if (this.mirror === "diag") rot = Math.PI / 2 - rot;
         else if (this.mirror === "rot") rot = rot + Math.PI;
       }
-      const side = f.side === undefined ? 0 : this.mirror === "quad" ? (mirrorSide ? (f.side + i) % 4 : f.side) : mirrorSide && i === 1 ? 1 - f.side : f.side;
+      const side =
+        f.side === undefined
+          ? 0
+          : this.mirror === "quad"
+            ? mirrorSide
+              ? (f.side + i) % 4
+              : f.side
+            : mirrorSide && i === 1
+              ? 1 - f.side
+              : f.side;
       this.features.push({ ...f, x, z, rot, side, y: this.ground(x, z) });
     });
   }
 
-  private scatter(n: number, area: (r: () => number) => [number, number], ok: (x: number, z: number) => boolean, make: (x: number, z: number, r: () => number) => void, seed: number): void {
+  private scatter(
+    n: number,
+    area: (r: () => number) => [number, number],
+    ok: (x: number, z: number) => boolean,
+    make: (x: number, z: number, r: () => number) => void,
+    seed: number,
+  ): void {
     let st = seed * 9301 + 49297;
     const r = () => {
       st = (st * 9301 + 49297) % 233280;
@@ -957,7 +1319,15 @@ export class Surround {
         if (this.blocked(hx, hz, 3.5) && !this.roads.every((r) => near(r, hx, hz, 4).d > 3)) continue;
         if (this.rivers.some((r) => near(r, hx, hz, 6).d < r.w1 + 3)) continue;
         const kind = hash(i, 2) < 0.18 ? "barn" : "house";
-        this.add({ t: kind, x: hx, z: hz, rot: p.ang + (sideSign > 0 ? Math.PI / 2 : -Math.PI / 2), s: 0.9 + hash(i, 3) * 0.3, seed: i, side: 0 });
+        this.add({
+          t: kind,
+          x: hx,
+          z: hz,
+          rot: p.ang + (sideSign > 0 ? Math.PI / 2 : -Math.PI / 2),
+          s: 0.9 + hash(i, 3) * 0.3,
+          seed: i,
+          side: 0,
+        });
       }
       for (const r of this.rivers) {
         for (const rd of this.roads) {
@@ -999,7 +1369,10 @@ export class Surround {
           const x = a[0] + (b[0] - a[0]) * t;
           const z = a[1] + (b[1] - a[1]) * t;
           if (this.blocked(x, z, 0.4)) continue;
-          this.add({ t: kind, x, z, rot: Math.atan2(b[0] - a[0], b[1] - a[1]), s: 1, seed: Math.floor(x * 31 + z * 17) }, false);
+          this.add(
+            { t: kind, x, z, rot: Math.atan2(b[0] - a[0], b[1] - a[1]), s: 1, seed: Math.floor(x * 31 + z * 17) },
+            false,
+          );
         }
       });
       if (f.crop === "wheat") {
@@ -1017,24 +1390,69 @@ export class Surround {
       }
     }
     const clear = (x: number, z: number, pad: number) =>
-      this.canonical(x, z) && !this.blocked(x, z, pad) && !this.fieldAt(x, z) && !this.fields.some((f) => Math.hypot(f.cx - x, f.cz - z) < Math.max(f.hw, f.hd) + pad + 1) &&
-      !this.features.some((f) => (f.t === "house" || f.t === "barn" || f.t === "windmill" || f.t === "gatehouse") && Math.hypot(f.x - x, f.z - z) < 7);
-    this.scatter(240, (r) => this.ring(r, 2, 28), (x, z) => {
-      const d = this.boxDist(x, z);
-      return d > 1.6 && clear(x, z, 1.2) && (d < 9 || fbm(x * 0.05, z * 0.05, 2, 41) > 0.42);
-    }, (x, z, r) => this.add({ t: r() < 0.6 ? "pine" : "tree", x, z, rot: r() * 6, s: 1.0 + r() * 0.7, seed: Math.floor(r() * 9999) }, false), 5);
-    this.scatter(300, (r) => this.ring(r, 22, 110), (x, z) => {
-      const d = this.boxDist(x, z);
-      const forest = smooth(0.52, 0.62, fbm(x * 0.03, z * 0.03, 3, this.seed + 12)) * smooth(22, 60, d);
-      return forest > 0.35 && clear(x, z, 2);
-    }, (x, z, r) => this.add({ t: this.ground(x, z) > 16 || r() < 0.75 ? "pine" : "tree", x, z, rot: r() * 6, s: 1.3 + r() * 1.0, seed: Math.floor(r() * 9999) }, false), 6);
-    this.scatter(50, (r) => this.ring(r, 10, 70), (x, z) => clear(x, z, 1.5), (x, z, r) => this.add({ t: r() < 0.5 ? "bush" : "rock", x, z, rot: r() * 6, s: 0.7 + r() * 0.8, seed: Math.floor(r() * 9999) }, false), 7);
+      this.canonical(x, z) &&
+      !this.blocked(x, z, pad) &&
+      !this.fieldAt(x, z) &&
+      !this.fields.some((f) => Math.hypot(f.cx - x, f.cz - z) < Math.max(f.hw, f.hd) + pad + 1) &&
+      !this.features.some(
+        (f) =>
+          (f.t === "house" || f.t === "barn" || f.t === "windmill" || f.t === "gatehouse") &&
+          Math.hypot(f.x - x, f.z - z) < 7,
+      );
+    this.scatter(
+      240,
+      (r) => this.ring(r, 2, 28),
+      (x, z) => {
+        const d = this.boxDist(x, z);
+        return d > 1.6 && clear(x, z, 1.2) && (d < 9 || fbm(x * 0.05, z * 0.05, 2, 41) > 0.42);
+      },
+      (x, z, r) =>
+        this.add(
+          { t: r() < 0.6 ? "pine" : "tree", x, z, rot: r() * 6, s: 1.0 + r() * 0.7, seed: Math.floor(r() * 9999) },
+          false,
+        ),
+      5,
+    );
+    this.scatter(
+      300,
+      (r) => this.ring(r, 22, 110),
+      (x, z) => {
+        const d = this.boxDist(x, z);
+        const forest = smooth(0.52, 0.62, fbm(x * 0.03, z * 0.03, 3, this.seed + 12)) * smooth(22, 60, d);
+        return forest > 0.35 && clear(x, z, 2);
+      },
+      (x, z, r) =>
+        this.add(
+          {
+            t: this.ground(x, z) > 16 || r() < 0.75 ? "pine" : "tree",
+            x,
+            z,
+            rot: r() * 6,
+            s: 1.3 + r() * 1.0,
+            seed: Math.floor(r() * 9999),
+          },
+          false,
+        ),
+      6,
+    );
+    this.scatter(
+      50,
+      (r) => this.ring(r, 10, 70),
+      (x, z) => clear(x, z, 1.5),
+      (x, z, r) =>
+        this.add(
+          { t: r() < 0.5 ? "bush" : "rock", x, z, rot: r() * 6, s: 0.7 + r() * 0.8, seed: Math.floor(r() * 9999) },
+          false,
+        ),
+      7,
+    );
     void cx;
   }
 
   private cragFeatures(): void {
     const { W, D } = this;
-    const roadNear = (x: number, z: number, pad: number) => this.roads.some((r) => near(r, x, z, pad + 3).d < r.w1 + pad);
+    const roadNear = (x: number, z: number, pad: number) =>
+      this.roads.some((r) => near(r, x, z, pad + 3).d < r.w1 + pad);
     const taken: Spot[] = [];
     const free = (x: number, z: number, r: number) => !taken.some((t) => Math.hypot(t.x - x, t.z - z) < t.r + r);
     const claim = (x: number, z: number, r: number) => {
@@ -1050,17 +1468,33 @@ export class Surround {
         if (!this.canonical(x, z) || roadNear(x, z, 1.5)) continue;
         const keep = noise(u * 0.16, x0 + z0 * 0.3, 51);
         if (keep < 0.34) {
-          if (keep > 0.22) this.add({ t: "rubble", x, z, rot: hash(x, z) * 6, s: 1, seed: Math.floor(x * 13 + z) }, false);
+          if (keep > 0.22)
+            this.add({ t: "rubble", x, z, rot: hash(x, z) * 6, s: 1, seed: Math.floor(x * 13 + z) }, false);
           continue;
         }
-        this.add({ t: "ruinwall", x, z, rot: Math.atan2(x1 - x0, z1 - z0), s: 1, h: 0.8 + keep * 3.4, seed: Math.floor(x * 7 + z * 3) }, false);
+        this.add(
+          {
+            t: "ruinwall",
+            x,
+            z,
+            rot: Math.atan2(x1 - x0, z1 - z0),
+            s: 1,
+            h: 0.8 + keep * 3.4,
+            seed: Math.floor(x * 7 + z * 3),
+          },
+          false,
+        );
       }
     };
     wall(-o, -o, W + o, -o);
     wall(W + o, -o, W + o, D + o);
     wall(W + o, D + o, -o, D + o);
     wall(-o, D + o, -o, -o);
-    for (const [x, z] of [[-o, D + o], [-o, D / 2 - 9], [-o, D / 2 + 9]] as const) {
+    for (const [x, z] of [
+      [-o, D + o],
+      [-o, D / 2 - 9],
+      [-o, D / 2 + 9],
+    ] as const) {
       this.add({ t: "ruintower", x, z, rot: 0.4, s: 1, seed: Math.floor(x * 3 + z) }, false);
       claim(x, z, 4);
     }
@@ -1080,7 +1514,17 @@ export class Surround {
           if (!this.canonical(hx, hz) || roadNear(hx, hz, 2.6) || !free(hx, hz, 3)) continue;
           if (hash(u, sg, 4) < 0.2) continue;
           const kind = hash(u, sg, 5) < 0.75 ? "ruinhouse" : "rubble";
-          this.add({ t: kind, x: hx, z: hz, rot: q.ang + (sg > 0 ? Math.PI / 2 : -Math.PI / 2), s: 0.95 + hash(u, sg, 6) * 0.3, seed: Math.floor(u * 10 + sg) }, false);
+          this.add(
+            {
+              t: kind,
+              x: hx,
+              z: hz,
+              rot: q.ang + (sg > 0 ? Math.PI / 2 : -Math.PI / 2),
+              s: 0.95 + hash(u, sg, 6) * 0.3,
+              seed: Math.floor(u * 10 + sg),
+            },
+            false,
+          );
           claim(hx, hz, 3.2);
         }
       }
@@ -1093,7 +1537,8 @@ export class Surround {
       const gz = gy.z - 2 + Math.floor(i / 5) * 3.2 + (hash(i, 2) - 0.5) * 0.6;
       this.add({ t: "grave", x: gx, z: gz, rot: -0.7 + (hash(i, 3) - 0.5) * 0.3, s: 1, seed: i }, true);
     }
-    for (let i = 0; i < 3; i++) this.add({ t: "deadtree", x: gy.x - 9 + i * 7, z: gy.z + 8 - i * 2, rot: i, s: 1.4, seed: 70 + i }, true);
+    for (let i = 0; i < 3; i++)
+      this.add({ t: "deadtree", x: gy.x - 9 + i * 7, z: gy.z + 8 - i * 2, rot: i, s: 1.4, seed: 70 + i }, true);
     this.add({ t: "well", x: -20, z: D / 2 - 7, rot: 0.3, s: 1, seed: 4 }, false);
     this.add({ t: "column", x: -24, z: D / 2 - 9.5, rot: 1.1, s: 1, h: 0.2, seed: 5 }, false);
     this.add({ t: "column", x: -17, z: D / 2 - 11, rot: 0, s: 1, h: 0.9, seed: 6 }, false);
@@ -1102,59 +1547,172 @@ export class Surround {
       const d = this.boxDist(x, z);
       return this.canonical(x, z) && d > 13 && d < 48 && !roadNear(x, z, 2.5) && free(x, z, 3.2);
     };
-    this.scatter(20, (r) => this.ring(r, 13, 48), okTown, (x, z, r) => {
-      const k = r();
-      this.add({ t: k < 0.55 ? "ruinhouse" : k < 0.75 ? "ruintower" : "rubble", x, z, rot: r() * 6, s: 0.9 + r() * 0.35, seed: Math.floor(r() * 9999) }, false);
-      claim(x, z, 3.5);
-    }, 11);
-    const okOpen = (pad: number) => (x: number, z: number) => this.canonical(x, z) && this.boxDist(x, z) > 3 && !roadNear(x, z, 1.5) && free(x, z, pad) && Math.abs(this.boxDist(x, z) - 5.6) > 3;
-    this.scatter(50, (r) => this.ring(r, 9, 45), okOpen(1.2), (x, z, r) => {
-      const k = r();
-      this.add({ t: k < 0.35 ? "rubble" : k < 0.55 ? "bush" : k < 0.75 ? "rock" : k < 0.9 ? "column" : "deadtree", x, z, rot: r() * 6, s: 0.7 + r() * 0.6, seed: Math.floor(r() * 9999), h: r() }, false);
-    }, 12);
+    this.scatter(
+      20,
+      (r) => this.ring(r, 13, 48),
+      okTown,
+      (x, z, r) => {
+        const k = r();
+        this.add(
+          {
+            t: k < 0.55 ? "ruinhouse" : k < 0.75 ? "ruintower" : "rubble",
+            x,
+            z,
+            rot: r() * 6,
+            s: 0.9 + r() * 0.35,
+            seed: Math.floor(r() * 9999),
+          },
+          false,
+        );
+        claim(x, z, 3.5);
+      },
+      11,
+    );
+    const okOpen = (pad: number) => (x: number, z: number) =>
+      this.canonical(x, z) &&
+      this.boxDist(x, z) > 3 &&
+      !roadNear(x, z, 1.5) &&
+      free(x, z, pad) &&
+      Math.abs(this.boxDist(x, z) - 5.6) > 3;
+    this.scatter(
+      50,
+      (r) => this.ring(r, 9, 45),
+      okOpen(1.2),
+      (x, z, r) => {
+        const k = r();
+        this.add(
+          {
+            t: k < 0.35 ? "rubble" : k < 0.55 ? "bush" : k < 0.75 ? "rock" : k < 0.9 ? "column" : "deadtree",
+            x,
+            z,
+            rot: r() * 6,
+            s: 0.7 + r() * 0.6,
+            seed: Math.floor(r() * 9999),
+            h: r(),
+          },
+          false,
+        );
+      },
+      12,
+    );
     const groves: Spot[] = [];
     for (let i = 0; i < 16; i++) {
       const a = hash(i, 1, 90) * Math.PI * 2;
       const dd = 30 + hash(i, 2, 90) * 70;
-      groves.push({ x: W / 2 + Math.cos(a) * (W / 2 + dd), z: D / 2 + Math.sin(a) * (D / 2 + dd), r: 9 + hash(i, 3, 90) * 9 });
+      groves.push({
+        x: W / 2 + Math.cos(a) * (W / 2 + dd),
+        z: D / 2 + Math.sin(a) * (D / 2 + dd),
+        r: 9 + hash(i, 3, 90) * 9,
+      });
     }
     groves.forEach((g, gi) => {
       const dead = gi % 3 === 0;
-      this.scatter(10, (r) => [g.x + (r() - 0.5) * g.r * 2, g.z + (r() - 0.5) * g.r * 2], okOpen(1.5), (x, z, r) =>
-        this.add({ t: dead || r() < 0.3 ? "deadtree" : r() < 0.5 ? "pine" : "tree", x, z, rot: r() * 6, s: 1.1 + r() * 0.9, seed: Math.floor(r() * 9999) }, false), Math.floor(g.x * 3 + g.z));
+      this.scatter(
+        10,
+        (r) => [g.x + (r() - 0.5) * g.r * 2, g.z + (r() - 0.5) * g.r * 2],
+        okOpen(1.5),
+        (x, z, r) =>
+          this.add(
+            {
+              t: dead || r() < 0.3 ? "deadtree" : r() < 0.5 ? "pine" : "tree",
+              x,
+              z,
+              rot: r() * 6,
+              s: 1.1 + r() * 0.9,
+              seed: Math.floor(r() * 9999),
+            },
+            false,
+          ),
+        Math.floor(g.x * 3 + g.z),
+      );
     });
   }
 
   private seaFeatures(): void {
     const { W, D } = this;
-    const ok = (x: number, z: number, pad = 1.5) => this.canonical(x, z) && this.boxDist(x, z) > 1.5 && !this.blocked(x, z, pad);
+    const ok = (x: number, z: number, pad = 1.5) =>
+      this.canonical(x, z) && this.boxDist(x, z) > 1.5 && !this.blocked(x, z, pad);
     const midW = D / 2;
     const wl = this.t.waterLevel;
     const shore = (z: number) => {
       for (let x = -2; x > -90; x -= 0.5) if (this.ground(x, z) < wl - 0.4) return x;
       return -90;
     };
-    for (const [z, len] of [[midW - 7, 14], [midW + 5, 18]] as const) {
+    for (const [z, len] of [
+      [midW - 7, 14],
+      [midW + 5, 18],
+    ] as const) {
       const sx = shore(z) + 3;
       this.add({ t: "pier", x: sx, z, rot: -Math.PI / 2, s: 1, w: len, seed: Math.floor(z), side: 0 });
-      this.add({ t: "boat", x: sx - len * 0.6, z: z + 3.4, rot: -Math.PI / 2 + 0.15, s: 1.1, seed: Math.floor(z) + 3, side: 0 });
+      this.add({
+        t: "boat",
+        x: sx - len * 0.6,
+        z: z + 3.4,
+        rot: -Math.PI / 2 + 0.15,
+        s: 1.1,
+        seed: Math.floor(z) + 3,
+        side: 0,
+      });
       this.add({ t: "hut", x: sx + 4, z: z - 3.5, rot: Math.PI / 2, s: 1, seed: Math.floor(z) + 5, side: 0 });
     }
     this.add({ t: "boat", x: shore(midW) - 26, z: midW - 2, rot: -1.2, s: 1.4, seed: 21, side: 0 });
     this.add({ t: "lighthouse", x: -26, z: -24, rot: 0.2, s: 1, seed: 3, side: 0 });
     this.add({ t: "wreck", x: 18, z: -30, rot: 0.7, s: 1.3, seed: 4 });
     this.add({ t: "wreck", x: -48, z: 66, rot: 2.1, s: 1.0, seed: 5 });
-    this.scatter(3, (r) => this.ring(r, 8, 30), (x, z) => ok(x, z, 6) && Math.abs(this.ground(x, z) - wl) < 0.6, (x, z, r) => this.add({ t: "stilthut", x, z, rot: r() * 6, s: 0.9 + r() * 0.3, seed: Math.floor(r() * 9999) }, false), 31);
-    this.scatter(6, (r) => this.ring(r, 18, 70), (x, z) => ok(x, z, 8) && this.ground(x, z) < -1.5, (x, z, r) => this.add({ t: "seastack", x, z, rot: r() * 6, s: 1.1 + r() * 0.8, seed: Math.floor(r() * 9999) }, false), 32);
-    this.scatter(10, (r) => this.ring(r, 10, 50), (x, z) => ok(x, z, 4) && this.ground(x, z) < -1.2, (x, z, r) => this.add({ t: "buoy", x, z, rot: r() * 6, s: 1, seed: Math.floor(r() * 9999) }, false), 34);
-    this.scatter(40, (r) => this.ring(r, 2, 26), (x, z) => ok(x, z, 1) && this.ground(x, z) > wl - 0.3 && this.ground(x, z) < 1.2, (x, z, r) => {
-      const k = r();
-      this.add({ t: k < 0.45 ? "rock" : k < 0.55 ? "posts" : k < 0.8 ? "kelp" : "shells", x, z, rot: r() * 6, s: 0.6 + r() * 0.8, seed: Math.floor(r() * 9999) }, false);
-    }, 33);
+    this.scatter(
+      3,
+      (r) => this.ring(r, 8, 30),
+      (x, z) => ok(x, z, 6) && Math.abs(this.ground(x, z) - wl) < 0.6,
+      (x, z, r) =>
+        this.add({ t: "stilthut", x, z, rot: r() * 6, s: 0.9 + r() * 0.3, seed: Math.floor(r() * 9999) }, false),
+      31,
+    );
+    this.scatter(
+      6,
+      (r) => this.ring(r, 18, 70),
+      (x, z) => ok(x, z, 8) && this.ground(x, z) < -1.5,
+      (x, z, r) =>
+        this.add({ t: "seastack", x, z, rot: r() * 6, s: 1.1 + r() * 0.8, seed: Math.floor(r() * 9999) }, false),
+      32,
+    );
+    this.scatter(
+      10,
+      (r) => this.ring(r, 10, 50),
+      (x, z) => ok(x, z, 4) && this.ground(x, z) < -1.2,
+      (x, z, r) => this.add({ t: "buoy", x, z, rot: r() * 6, s: 1, seed: Math.floor(r() * 9999) }, false),
+      34,
+    );
+    this.scatter(
+      40,
+      (r) => this.ring(r, 2, 26),
+      (x, z) => ok(x, z, 1) && this.ground(x, z) > wl - 0.3 && this.ground(x, z) < 1.2,
+      (x, z, r) => {
+        const k = r();
+        this.add(
+          {
+            t: k < 0.45 ? "rock" : k < 0.55 ? "posts" : k < 0.8 ? "kelp" : "shells",
+            x,
+            z,
+            rot: r() * 6,
+            s: 0.6 + r() * 0.8,
+            seed: Math.floor(r() * 9999),
+          },
+          false,
+        );
+      },
+      33,
+    );
     for (const i of this.islands) {
       if (!this.canonical(i.x, i.z)) continue;
       const n = Math.round(i.r * 1.4);
-      this.scatter(n, (r) => [i.x + (r() - 0.5) * i.r * 1.4, i.z + (r() - 0.5) * i.r * 1.4], (x, z) => this.ground(x, z) > 3, (x, z, r) => this.add({ t: "pine", x, z, rot: r() * 6, s: 1.4 + r() * 1.4, seed: Math.floor(r() * 9999) }, false), Math.floor(i.x));
+      this.scatter(
+        n,
+        (r) => [i.x + (r() - 0.5) * i.r * 1.4, i.z + (r() - 0.5) * i.r * 1.4],
+        (x, z) => this.ground(x, z) > 3,
+        (x, z, r) =>
+          this.add({ t: "pine", x, z, rot: r() * 6, s: 1.4 + r() * 1.4, seed: Math.floor(r() * 9999) }, false),
+        Math.floor(i.x),
+      );
     }
     void W;
   }

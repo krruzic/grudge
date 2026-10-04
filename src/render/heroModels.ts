@@ -48,9 +48,18 @@ outlineMat.onBeforeCompile = (shader) => {
     .replace("#include <begin_vertex>", "#include <begin_vertex>\ntransformed += outlineNormal * 0.035;");
 };
 
-export function hullMaterial(color: number, additive: boolean): { mat: THREE.MeshBasicMaterial; thick: { value: number } } {
+export function hullMaterial(
+  color: number,
+  additive: boolean,
+): { mat: THREE.MeshBasicMaterial; thick: { value: number } } {
   const thick = { value: 0.035 };
-  const mat = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, transparent: additive, depthWrite: !additive, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending });
+  const mat = new THREE.MeshBasicMaterial({
+    color,
+    side: THREE.BackSide,
+    transparent: additive,
+    depthWrite: !additive,
+    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+  });
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.hullThick = thick;
     shader.vertexShader = shader.vertexShader
@@ -115,7 +124,10 @@ export function shareSkeletons(root: THREE.Object3D): void {
   };
   root.traverse((o) => {
     if (!(o instanceof THREE.SkinnedMesh)) return;
-    const key = o.skeleton.bones.map(idOf).join(",") + "|" + o.skeleton.boneInverses.map((m) => m.elements.map((v) => v.toFixed(4)).join(":")).join(",");
+    const key =
+      o.skeleton.bones.map(idOf).join(",") +
+      "|" +
+      o.skeleton.boneInverses.map((m) => m.elements.map((v) => v.toFixed(4)).join(":")).join(",");
     const prev = byBones.get(key);
     if (prev) o.skeleton = prev;
     else byBones.set(key, o.skeleton);
@@ -151,7 +163,8 @@ export function addOutline(root: THREE.Object3D): void {
 export function buildHulls(root: THREE.Object3D, mat: THREE.Material, order: number): THREE.Mesh[] {
   const meshes: THREE.Mesh[] = [];
   root.traverse((o) => {
-    if (o instanceof THREE.Mesh && !o.userData.outline && !o.userData.noSil && o.geometry.getAttribute("normal")) meshes.push(o);
+    if (o instanceof THREE.Mesh && !o.userData.outline && !o.userData.noSil && o.geometry.getAttribute("normal"))
+      meshes.push(o);
   });
   return meshes.map((m) => {
     const geo = withOutlineNormals(m.geometry);
@@ -190,7 +203,14 @@ export class HeroModels {
     );
   }
 
-  create(type: string, team: THREE.Color, label: string, mark: THREE.Color = team, dye: THREE.Color = team, costume?: string): HeroInstance {
+  create(
+    type: string,
+    team: THREE.Color,
+    label: string,
+    mark: THREE.Color = team,
+    dye: THREE.Color = team,
+    costume?: string,
+  ): HeroInstance {
     const root = new THREE.Group();
     const gltf = this.gltfs.get(costumeModel(type, costume)) ?? this.gltfs.get(type);
     let body: THREE.Object3D;

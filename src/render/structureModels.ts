@@ -62,10 +62,18 @@ function bakeGeometry(src: THREE.BufferGeometry, part: number, matrix: THREE.Mat
 function plainMap(map: THREE.Texture, size: number): boolean {
   const img = map.image as { width?: number; height?: number } | undefined;
   return (
-    !!img?.width && img.width === img.height && img.width <= size &&
-    map.magFilter === THREE.LinearFilter && map.minFilter === THREE.LinearMipmapLinearFilter &&
-    map.wrapS === THREE.RepeatWrapping && map.wrapT === THREE.RepeatWrapping &&
-    map.offset.x === 0 && map.offset.y === 0 && map.repeat.x === 1 && map.repeat.y === 1 && map.rotation === 0
+    !!img?.width &&
+    img.width === img.height &&
+    img.width <= size &&
+    map.magFilter === THREE.LinearFilter &&
+    map.minFilter === THREE.LinearMipmapLinearFilter &&
+    map.wrapS === THREE.RepeatWrapping &&
+    map.wrapT === THREE.RepeatWrapping &&
+    map.offset.x === 0 &&
+    map.offset.y === 0 &&
+    map.repeat.x === 1 &&
+    map.repeat.y === 1 &&
+    map.rotation === 0
   );
 }
 
@@ -80,11 +88,15 @@ function mergeStatic(gltf: GLTF): Baked | null {
   const groups = new Map<THREE.Object3D, THREE.Mesh[]>();
   let size = 0;
   scene.traverse((o) => {
-    const w = o instanceof THREE.Mesh && !Array.isArray(o.material) ? ((o.material as THREE.MeshStandardMaterial).map?.image as { width?: number } | undefined)?.width ?? 0 : 0;
+    const w =
+      o instanceof THREE.Mesh && !Array.isArray(o.material)
+        ? (((o.material as THREE.MeshStandardMaterial).map?.image as { width?: number } | undefined)?.width ?? 0)
+        : 0;
     if (w >= 8 && w <= 256) size = Math.max(size, w);
   });
   scene.traverse((o) => {
-    if (!(o instanceof THREE.Mesh) || o instanceof THREE.SkinnedMesh || Array.isArray(o.material) || o.children.length) return;
+    if (!(o instanceof THREE.Mesh) || o instanceof THREE.SkinnedMesh || Array.isArray(o.material) || o.children.length)
+      return;
     const g = o.geometry as THREE.BufferGeometry;
     if (!g.index || !ATTRS.every((n) => g.getAttribute(n)) || Object.keys(g.morphAttributes).length) return;
     const m = o.material as THREE.MeshStandardMaterial;
@@ -118,7 +130,11 @@ function mergeStatic(gltf: GLTF): Baked | null {
       rel.copy(inv).multiply(o.matrixWorld);
       starts.push(n);
       n += o.geometry.getAttribute("position").count;
-      return bakeGeometry(o.geometry, mats.indexOf(o.material as THREE.MeshStandardMaterial), rel.equals(IDENTITY) ? null : rel);
+      return bakeGeometry(
+        o.geometry,
+        mats.indexOf(o.material as THREE.MeshStandardMaterial),
+        rel.equals(IDENTITY) ? null : rel,
+      );
     });
     const geo = mergeGeometries(geos, false);
     if (!geo) continue;
@@ -132,7 +148,12 @@ function mergeStatic(gltf: GLTF): Baked | null {
   return { tex: layerTexture(maps), parts: mats.map((m) => m.name), maps };
 }
 
-export function partsMaterial(tex: THREE.Texture, parts: string[], team: THREE.Color, size = MAX): THREE.MeshLambertMaterial {
+export function partsMaterial(
+  tex: THREE.Texture,
+  parts: string[],
+  team: THREE.Color,
+  size = MAX,
+): THREE.MeshLambertMaterial {
   const tint = Array.from({ length: size }, () => new THREE.Vector3(1, 1, 1));
   const emis = Array.from({ length: size }, () => new THREE.Vector4(0, 0, 0, 0));
   parts.forEach((name, i) => {
@@ -147,19 +168,28 @@ export function partsMaterial(tex: THREE.Texture, parts: string[], team: THREE.C
     shader.uniforms.uTint = { value: tint };
     shader.uniforms.uEmis = { value: emis };
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute float aMat;\nflat varying int vMat;\nvarying vec2 vUv0;")
+      .replace(
+        "#include <common>",
+        "#include <common>\nattribute float aMat;\nflat varying int vMat;\nvarying vec2 vUv0;",
+      )
       .replace("#include <uv_vertex>", "#include <uv_vertex>\nvMat = int(aMat + 0.5);\nvUv0 = uv;");
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>\nuniform highp sampler2DArray uLayers;\nuniform vec3 uTint[${size}];\nuniform vec4 uEmis[${size}];\nflat varying int vMat;\nvarying vec2 vUv0;`,
       )
-      .replace("#include <map_fragment>", "diffuseColor *= texture(uLayers, vec3(vUv0, float(vMat)));\ndiffuseColor.rgb *= uTint[vMat];\nvec4 em = uEmis[vMat];")
+      .replace(
+        "#include <map_fragment>",
+        "diffuseColor *= texture(uLayers, vec3(vUv0, float(vMat)));\ndiffuseColor.rgb *= uTint[vMat];\nvec4 em = uEmis[vMat];",
+      )
       .replace(
         "#include <normal_fragment_begin>",
         "#include <normal_fragment_begin>\nvec3 flatN = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));\nif (em.w > 0.5) normal = flatN;",
       )
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\nif (dot(emissive, emissive) == 0.0) totalEmissiveRadiance += em.rgb;");
+      .replace(
+        "#include <emissivemap_fragment>",
+        "#include <emissivemap_fragment>\nif (dot(emissive, emissive) == 0.0) totalEmissiveRadiance += em.rgb;",
+      );
   };
   mat.customProgramCacheKey = () => (size === MAX ? "merged-static" : `merged-static-${size}`);
   return mat;

@@ -56,7 +56,11 @@ export function gateSlots(w: World, def: GatesDef): GateSlot[] {
     for (let k = 0; k < 4; k++) {
       out.push({ ...r });
       r = {
-        ...r, x: D - r.z - r.h, z: r.x, w: r.h, h: r.w,
+        ...r,
+        x: D - r.z - r.h,
+        z: r.x,
+        w: r.h,
+        h: r.w,
         cells: r.cells?.map(([x, z]) => [D - 1 - z, x] as [number, number]),
         line: r.line ? [D - r.line[1], r.line[0], D - r.line[3], r.line[2]] : undefined,
       };
@@ -73,7 +77,11 @@ export interface LockGate {
   segs: [number, number, number, number][];
 }
 
-function gateSegs(cells: number[], W: number, box: [number, number, number, number]): [number, number, number, number][] {
+function gateSegs(
+  cells: number[],
+  W: number,
+  box: [number, number, number, number],
+): [number, number, number, number][] {
   const [x0, z0, x1, z1] = box;
   const rows = new Map<number, number[]>();
   const cols = new Map<number, number[]>();
@@ -208,7 +216,11 @@ export class MapEvents {
   shutNotice(e: Entity): void {
     if (!e.hero || this.w.time < (this.shutNoticeAt.get(e.id) ?? -99)) return;
     this.shutNoticeAt.set(e.id, this.w.time + 2.5);
-    this.w.emit({ type: "notice", team: e.team, text: `THE GATES ARE SHUT · ${Math.ceil(this.lockUntil - this.w.time)}S` });
+    this.w.emit({
+      type: "notice",
+      team: e.team,
+      text: `THE GATES ARE SHUT · ${Math.ceil(this.lockUntil - this.w.time)}S`,
+    });
   }
 
   private buildLock(seconds: number, warn: number): void {
@@ -223,7 +235,13 @@ export class MapEvents {
       for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) zone[z * W + x] = team;
       for (const g of b.gates) {
         for (const c of g) zone[c] = -1;
-        this.lockGates.push({ team, cells: g.slice(), prev: g.map((c) => t.kinds[c]), prevStyle: g.map((c) => t.styles[c]), segs: gateSegs(g, W, b.box) });
+        this.lockGates.push({
+          team,
+          cells: g.slice(),
+          prev: g.map((c) => t.kinds[c]),
+          prevStyle: g.map((c) => t.styles[c]),
+          segs: gateSegs(g, W, b.box),
+        });
         all.push(...g);
       }
     });
@@ -266,10 +284,11 @@ export class MapEvents {
     if (!this.lockZone) return fn();
     const t = this.w.terrain;
     const all: number[] = [];
-    for (const g of this.lockGates) g.cells.forEach((c, k) => {
-      t.kinds[c] = g.prev[k];
-      all.push(c);
-    });
+    for (const g of this.lockGates)
+      g.cells.forEach((c, k) => {
+        t.kinds[c] = g.prev[k];
+        all.push(c);
+      });
     this.w.nav.recompute(all);
     try {
       return fn();
@@ -283,7 +302,13 @@ export class MapEvents {
     const w = this.w;
     if (!this.lockWarned && w.time >= this.lockUntil - this.lockWarn) {
       this.lockWarned = true;
-      w.emit({ type: "gates", stage: "warn", pattern: this.pattern, seconds: Math.max(0, this.lockUntil - w.time), lock: true });
+      w.emit({
+        type: "gates",
+        stage: "warn",
+        pattern: this.pattern,
+        seconds: Math.max(0, this.lockUntil - w.time),
+        lock: true,
+      });
     }
     if (w.time >= this.lockUntil) this.endLockdown(true);
   }
@@ -316,16 +341,19 @@ export class MapEvents {
       const t = w.terrain;
       const m = new Uint8Array(t.width * t.depth);
       const p = this.mist.pad;
-      for (let z = 0; z < t.depth; z++) for (let x = 0; x < t.width; x++) {
-        const k = t.kinds[z * t.width + x];
-        if (k !== Kind.Water && k !== Kind.Ford && k !== Kind.Bridge) continue;
-        if (x < (this.mist.x0 ?? 0) || x >= (this.mist.x1 ?? t.width)) continue;
-        for (let dz = -p; dz <= p; dz++) for (let dx = -p; dx <= p; dx++) {
-          const xx = x + dx;
-          const zz = z + dz;
-          if (xx >= 0 && zz >= 0 && xx < t.width && zz < t.depth && dx * dx + dz * dz <= p * p + 1) m[zz * t.width + xx] = 1;
+      for (let z = 0; z < t.depth; z++)
+        for (let x = 0; x < t.width; x++) {
+          const k = t.kinds[z * t.width + x];
+          if (k !== Kind.Water && k !== Kind.Ford && k !== Kind.Bridge) continue;
+          if (x < (this.mist.x0 ?? 0) || x >= (this.mist.x1 ?? t.width)) continue;
+          for (let dz = -p; dz <= p; dz++)
+            for (let dx = -p; dx <= p; dx++) {
+              const xx = x + dx;
+              const zz = z + dz;
+              if (xx >= 0 && zz >= 0 && xx < t.width && zz < t.depth && dx * dx + dz * dz <= p * p + 1)
+                m[zz * t.width + xx] = 1;
+            }
         }
-      }
       this.mistMask = m;
       this.mistAt = this.mist.firstSeconds;
     }
@@ -345,10 +373,12 @@ export class MapEvents {
             const i = t.index(x, z);
             if (i >= 0) cells.push(i);
           }
-        } else for (let z = slot.z; z < slot.z + slot.h; z++) for (let x = slot.x; x < slot.x + slot.w; x++) {
-          const i = t.index(x, z);
-          if (i >= 0) cells.push(i);
-        }
+        } else
+          for (let z = slot.z; z < slot.z + slot.h; z++)
+            for (let x = slot.x; x < slot.x + slot.w; x++) {
+              const i = t.index(x, z);
+              if (i >= 0) cells.push(i);
+            }
         this.slots.push({ slot, cells, prev: cells.map((c) => t.kinds[c]) });
       }
       this.applyGates(false);
@@ -377,7 +407,8 @@ export class MapEvents {
     const av = this.av;
     if (!av) return null;
     const t = this.w.time;
-    if (this.slide) return { lane: this.slide.lane, stage: "slide", k: Math.min(1, (t - this.slide.start) / av.sweepSeconds) };
+    if (this.slide)
+      return { lane: this.slide.lane, stage: "slide", k: Math.min(1, (t - this.slide.start) / av.sweepSeconds) };
     if (this.warned) return { lane: this.lanes[this.arm], stage: "warn", k: 1 - (this.nextAt - t) / av.warnSeconds };
     return null;
   }
@@ -408,7 +439,12 @@ export class MapEvents {
         sx += cx + 0.5;
         sz += cz + 0.5;
         n++;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
           const xx = cx + dx;
           const zz = cz + dz;
           if (xx < 0 || zz < 0 || xx >= t.width || zz >= t.depth) continue;
@@ -442,7 +478,8 @@ export class MapEvents {
     const span = this.w.terrain.depth + 6;
     if (t < 0 || t > d.rollSeconds * 2 + d.holdSeconds) return [0, 0];
     const front = Math.min(1, t / d.rollSeconds) * span - 3;
-    const tail = t > d.rollSeconds + d.holdSeconds ? ((t - d.rollSeconds - d.holdSeconds) / d.rollSeconds) * span - 3 : -Infinity;
+    const tail =
+      t > d.rollSeconds + d.holdSeconds ? ((t - d.rollSeconds - d.holdSeconds) / d.rollSeconds) * span - 3 : -Infinity;
     return [tail, front];
   }
 
@@ -485,8 +522,26 @@ export class MapEvents {
           spot = s;
         }
       }
-      this.lantern = { state: "rise", x: pit.x, z: pit.z, fromX: pit.x, fromZ: pit.z, tx: spot.x, tz: spot.z, start: w.time, id: ++this.lanternSeq };
-      w.emit({ type: "lantern", stage: "rise", x: pit.x, y: w.groundY(pit.x, pit.z), z: pit.z, id: this.lanternSeq, hero: 0 });
+      this.lantern = {
+        state: "rise",
+        x: pit.x,
+        z: pit.z,
+        fromX: pit.x,
+        fromZ: pit.z,
+        tx: spot.x,
+        tz: spot.z,
+        start: w.time,
+        id: ++this.lanternSeq,
+      };
+      w.emit({
+        type: "lantern",
+        stage: "rise",
+        x: pit.x,
+        y: w.groundY(pit.x, pit.z),
+        z: pit.z,
+        id: this.lanternSeq,
+        hero: 0,
+      });
       return;
     }
     const l = this.lantern;
@@ -560,7 +615,17 @@ export class MapEvents {
         let best = -1;
         for (const a of rivals) {
           const r = this.lanes[a].rect;
-          const n = w.entities.filter((e) => e.alive && e.unit && !e.neutral && e.team !== team && e.transform.pos.x >= r.x && e.transform.pos.x <= r.x + r.w && e.transform.pos.z >= r.z && e.transform.pos.z <= r.z + r.h).length;
+          const n = w.entities.filter(
+            (e) =>
+              e.alive &&
+              e.unit &&
+              !e.neutral &&
+              e.team !== team &&
+              e.transform.pos.x >= r.x &&
+              e.transform.pos.x <= r.x + r.w &&
+              e.transform.pos.z >= r.z &&
+              e.transform.pos.z <= r.z + r.h,
+          ).length;
           if (n > best) {
             best = n;
             arm = a;
@@ -648,11 +713,27 @@ export class MapEvents {
     const lane = this.lanes[this.arm];
     if (!this.warned && w.time >= this.nextAt - av.warnSeconds) {
       this.warned = true;
-      w.emit({ type: "avalanche", stage: "warn", arm: this.arm, rect: lane.rect, dx: lane.dx, dz: lane.dz, seconds: av.warnSeconds });
+      w.emit({
+        type: "avalanche",
+        stage: "warn",
+        arm: this.arm,
+        rect: lane.rect,
+        dx: lane.dx,
+        dz: lane.dz,
+        seconds: av.warnSeconds,
+      });
     }
     if (!this.slide && w.time >= this.nextAt) {
       this.slide = { lane, arm: this.arm, start: w.time, hit: new Set() };
-      w.emit({ type: "avalanche", stage: "slide", arm: this.arm, rect: lane.rect, dx: lane.dx, dz: lane.dz, seconds: av.sweepSeconds });
+      w.emit({
+        type: "avalanche",
+        stage: "slide",
+        arm: this.arm,
+        rect: lane.rect,
+        dx: lane.dx,
+        dz: lane.dz,
+        seconds: av.sweepSeconds,
+      });
     }
     if (this.slide) this.sweep(av, this.slide);
     for (let i = this.drifts.length - 1; i >= 0; i--) {
@@ -674,12 +755,21 @@ export class MapEvents {
     for (const e of w.entities) {
       if (!e.alive || e.structure || s.hit.has(e.id)) continue;
       const p = e.transform.pos;
-      if (p.x < rect.x - 0.5 || p.x > rect.x + rect.w + 0.5 || p.z < rect.z - 0.5 || p.z > rect.z + rect.h + 0.5) continue;
-      const along = dx > 0 ? p.x - rect.x : dx < 0 ? rect.x + rect.w - p.x : dz > 0 ? p.z - rect.z : rect.z + rect.h - p.z;
+      if (p.x < rect.x - 0.5 || p.x > rect.x + rect.w + 0.5 || p.z < rect.z - 0.5 || p.z > rect.z + rect.h + 0.5)
+        continue;
+      const along =
+        dx > 0 ? p.x - rect.x : dx < 0 ? rect.x + rect.w - p.x : dz > 0 ? p.z - rect.z : rect.z + rect.h - p.z;
       if (along > front || along < front - 4) continue;
       s.hit.add(e.id);
       const dmg = e.hero ? av.heroDamage : e.maxHp * av.unitDamage;
-      w.damage(null, e, dmg, { fromX: p.x - dx * 2, fromZ: p.z - dz * 2, knockback: av.knock, slowMul: 0.55, slowSeconds: 2.5, big: true });
+      w.damage(null, e, dmg, {
+        fromX: p.x - dx * 2,
+        fromZ: p.z - dz * 2,
+        knockback: av.knock,
+        slowMul: 0.55,
+        slowSeconds: 2.5,
+        big: true,
+      });
     }
     if (k < 1) return;
     const cells: number[] = [];

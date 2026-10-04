@@ -89,7 +89,8 @@ const ANISO = 4;
 
 function upscaled(map: THREE.Texture, size: number): THREE.Texture {
   const img = map.image as CanvasImageSource & { width: number; height: number };
-  const w = img.width, h = img.height;
+  const w = img.width,
+    h = img.height;
   if (w === size && h === size) return map;
   const src = document.createElement("canvas");
   src.width = w;
@@ -103,9 +104,13 @@ function upscaled(map: THREE.Texture, size: number): THREE.Texture {
   const od = octx.createImageData(size, size);
   const px = (x: number, y: number, c: number) => sp[((((y % h) + h) % h) * w + (((x % w) + w) % w)) * 4 + c];
   for (let y = 0; y < size; y++) {
-    const fy = ((y + 0.5) * h) / size - 0.5, y0 = Math.floor(fy), ty = fy - y0;
+    const fy = ((y + 0.5) * h) / size - 0.5,
+      y0 = Math.floor(fy),
+      ty = fy - y0;
     for (let x = 0; x < size; x++) {
-      const fx = ((x + 0.5) * w) / size - 0.5, x0 = Math.floor(fx), tx = fx - x0;
+      const fx = ((x + 0.5) * w) / size - 0.5,
+        x0 = Math.floor(fx),
+        tx = fx - x0;
       for (let c = 0; c < 4; c++) {
         const a = px(x0, y0, c) * (1 - tx) + px(x0 + 1, y0, c) * tx;
         const b = px(x0, y0 + 1, c) * (1 - tx) + px(x0 + 1, y0 + 1, c) * tx;
@@ -123,7 +128,14 @@ function mergeProps(scene: THREE.Object3D): void {
   scene.traverse((o) => {
     if (!(o instanceof THREE.Mesh) || Array.isArray(o.material)) return;
     const m = o.material as THREE.MeshLambertMaterial;
-    if (m.name === "tallgrass" || !m.map || m.transparent || m.alphaTest > 0 || m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) return;
+    if (
+      m.name === "tallgrass" ||
+      !m.map ||
+      m.transparent ||
+      m.alphaTest > 0 ||
+      m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile
+    )
+      return;
     const img = m.map.image as { width?: number; height?: number } | undefined;
     if (!img?.width || img.width > PROP_LAYER || img.width !== img.height) return;
     list.push(o);
@@ -151,17 +163,33 @@ function mergeProps(scene: THREE.Object3D): void {
   tex.anisotropy = ANISO;
   const tint = mats.map((m) => new THREE.Vector4(m.color.r, m.color.g, m.color.b, m.side === THREE.FrontSide ? 0 : 1));
   const double = tint.some((t) => t.w > 0);
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: double ? THREE.DoubleSide : THREE.FrontSide, name: "props" });
+  const mat = new THREE.MeshLambertMaterial({
+    vertexColors: true,
+    side: double ? THREE.DoubleSide : THREE.FrontSide,
+    name: "props",
+  });
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uLayers = { value: tex };
     shader.uniforms.uTint = { value: tint };
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute float aMat;\nflat varying int vMat;\nvarying vec2 vUv0;")
+      .replace(
+        "#include <common>",
+        "#include <common>\nattribute float aMat;\nflat varying int vMat;\nvarying vec2 vUv0;",
+      )
       .replace("#include <uv_vertex>", "#include <uv_vertex>\nvMat = int(aMat + 0.5);\nvUv0 = uv;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\nuniform highp sampler2DArray uLayers;\nuniform vec4 uTint[${mats.length}];\nflat varying int vMat;\nvarying vec2 vUv0;`)
-      .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (!gl_FrontFacing && uTint[vMat].w < 0.5) discard;")
-      .replace("#include <map_fragment>", "diffuseColor *= texture(uLayers, vec3(vUv0, float(vMat)));\ndiffuseColor.rgb *= uTint[vMat].rgb;");
+      .replace(
+        "#include <common>",
+        `#include <common>\nuniform highp sampler2DArray uLayers;\nuniform vec4 uTint[${mats.length}];\nflat varying int vMat;\nvarying vec2 vUv0;`,
+      )
+      .replace(
+        "#include <clipping_planes_fragment>",
+        "#include <clipping_planes_fragment>\nif (!gl_FrontFacing && uTint[vMat].w < 0.5) discard;",
+      )
+      .replace(
+        "#include <map_fragment>",
+        "diffuseColor *= texture(uLayers, vec3(vUv0, float(vMat)));\ndiffuseColor.rgb *= uTint[vMat].rgb;",
+      );
   };
   mat.customProgramCacheKey = () => `props-${mats.length}`;
   const merged = new THREE.Mesh(geo, mat);
@@ -183,8 +211,19 @@ function stripMap(root: THREE.Object3D, t: Terrain): void {
   const field = new THREE.Box3(new THREE.Vector3(-6, -1e3, -6), new THREE.Vector3(t.width + 6, 1e3, t.depth + 6));
   const list: THREE.Mesh[] = [];
   root.traverse((o) => {
-    if (!(o instanceof THREE.Mesh) || o instanceof THREE.InstancedMesh || o instanceof THREE.SkinnedMesh || Array.isArray(o.material)) return;
-    if (o.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender || Object.keys(o.geometry.morphAttributes).length || o.material.transparent) return;
+    if (
+      !(o instanceof THREE.Mesh) ||
+      o instanceof THREE.InstancedMesh ||
+      o instanceof THREE.SkinnedMesh ||
+      Array.isArray(o.material)
+    )
+      return;
+    if (
+      o.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender ||
+      Object.keys(o.geometry.morphAttributes).length ||
+      o.material.transparent
+    )
+      return;
     list.push(o);
   });
   root.updateMatrixWorld(true);
@@ -198,16 +237,25 @@ function stripMap(root: THREE.Object3D, t: Terrain): void {
   }
 }
 
-export async function loadMap(url: string, terrain: Terrain, textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake">, string>, light?: TerrainLight): Promise<MapView> {
+export async function loadMap(
+  url: string,
+  terrain: Terrain,
+  textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake">, string>,
+  light?: TerrainLight,
+): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
   const [gltf, ...texs] = await Promise.all([
     new GLTFLoader().loadAsync(url),
-    ...(["grass", "dirt", "rock", "cobble", "water"] as const).map((k) => texLoader.loadAsync(textureUrls[k] as string)),
+    ...(["grass", "dirt", "rock", "cobble", "water"] as const).map((k) =>
+      texLoader.loadAsync(textureUrls[k] as string),
+    ),
   ]);
   const [grass, dirt, rock, cobble, water] = texs;
   const altUrl = terrain.surround === "alpine" ? snowUrl : terrain.surround === "garden" ? gravelUrl : sandUrl;
   const ruined = !!gltf.scene.getObjectByName("ground_ruined");
-  const [sand, pavId, crack] = await Promise.all([altUrl, ...(ruined ? [pavIdUrl, crackUrl] : [])].map((u) => texLoader.loadAsync(u)));
+  const [sand, pavId, crack] = await Promise.all(
+    [altUrl, ...(ruined ? [pavIdUrl, crackUrl] : [])].map((u) => texLoader.loadAsync(u)),
+  );
   const root = new THREE.Group();
   root.add(gltf.scene);
   const sur = surroundFor(terrain);

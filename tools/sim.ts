@@ -61,10 +61,19 @@ function run(seed: number): Result {
     w.events.length = 0;
     if (w.tick % (30 * 30) === 0) {
       const cores = [w.core(0)?.hp ?? 0, w.core(1)?.hp ?? 0];
-      curve.push([Math.round(w.time), Math.round(w.teams[0].resource), Math.round(w.teams[1].resource), Math.round(cores[0]), Math.round(cores[1]), w.teams[0].unitCount, w.teams[1].unitCount]);
+      curve.push([
+        Math.round(w.time),
+        Math.round(w.teams[0].resource),
+        Math.round(w.teams[1].resource),
+        Math.round(cores[0]),
+        Math.round(cores[1]),
+        w.teams[0].unitCount,
+        w.teams[1].unitCount,
+      ]);
     }
     if (leadAt90 < 0 && w.time >= 90) {
-      const score = (t: number) => w.teams[t].structuresBuilt - w.teams[t].structuresLost + w.teams[t].kills * 0.1 + w.teams[t].heroKills * 0.5;
+      const score = (t: number) =>
+        w.teams[t].structuresBuilt - w.teams[t].structuresLost + w.teams[t].kills * 0.1 + w.teams[t].heroKills * 0.5;
       leadAt90 = score(0) > score(1) ? 0 : score(1) > score(0) ? 1 : -1;
     }
   }
@@ -80,8 +89,12 @@ function run(seed: number): Result {
     curve,
   };
   if (verbose) {
-    console.log(`lost ${w.teams[0].structuresLost},${w.teams[1].structuresLost} kills ${w.teams[0].kills},${w.teams[1].kills}`);
-    console.log(`seed ${seed}: winner ${r.winner} (${r.reason}) t=${r.time.toFixed(0)}s coreDmg ${r.coreDmg.map(Math.round)} heroKills ${r.heroKills} built ${r.structures}`);
+    console.log(
+      `lost ${w.teams[0].structuresLost},${w.teams[1].structuresLost} kills ${w.teams[0].kills},${w.teams[1].kills}`,
+    );
+    console.log(
+      `seed ${seed}: winner ${r.winner} (${r.reason}) t=${r.time.toFixed(0)}s coreDmg ${r.coreDmg.map(Math.round)} heroKills ${r.heroKills} built ${r.structures}`,
+    );
     for (const c of curve) console.log("   t,res0,res1,core0,core1,units0,units1", c.join(","));
   }
   return r;
@@ -107,9 +120,13 @@ for (const r of results) {
 const avg = (f: (r: Result) => number) => results.reduce((s, r) => s + f(r), 0) / results.length;
 const pctA = (wins[0] / Math.max(1, wins[0] + wins[1])) * 100;
 console.log(`Matchup ${heroA} vs ${heroB}: ${matches} matches in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
-console.log(`  ${heroA} wins ${wins[0]}, ${heroB} wins ${wins[1]}, draws ${draws}  (${pctA.toFixed(0)}% / ${(100 - pctA).toFixed(0)}%)`);
+console.log(
+  `  ${heroA} wins ${wins[0]}, ${heroB} wins ${wins[1]}, draws ${draws}  (${pctA.toFixed(0)}% / ${(100 - pctA).toFixed(0)}%)`,
+);
 console.log(`  avg length ${avg((r) => r.time).toFixed(0)}s, end reasons ${JSON.stringify(reasons)}`);
-console.log(`  avg core damage ${avg((r) => r.coreDmg[0] + r.coreDmg[1]).toFixed(0)}, avg hero kills ${avg((r) => r.heroKills[0] + r.heroKills[1]).toFixed(1)}`);
+console.log(
+  `  avg core damage ${avg((r) => r.coreDmg[0] + r.coreDmg[1]).toFixed(0)}, avg hero kills ${avg((r) => r.heroKills[0] + r.heroKills[1]).toFixed(1)}`,
+);
 console.log(`  early lead (t=90s) converted: ${leads ? ((leadConv / leads) * 100).toFixed(0) : "-"}%`);
 if (pctA < 40 || pctA > 60) console.log("  FLAG: matchup outside 40-60");
 if (leads && leadConv / leads > 0.7) console.log("  FLAG: early lead converts over 70%");

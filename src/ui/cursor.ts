@@ -1,6 +1,10 @@
 import { onHiLayer } from "./font";
 import type { PadState } from "../input/gamepads";
-const spriteUrls = import.meta.glob("../../assets/ui/{chip,glove,tag}_*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const spriteUrls = import.meta.glob("../../assets/ui/{chip,glove,tag}_*.png", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
 const IMG: Record<string, HTMLImageElement> = {};
 for (const [p, u] of Object.entries(spriteUrls)) {
   const im = new Image();
@@ -54,7 +58,17 @@ const POSES = ["glove_point", "glove_open", "glove_grab"] as const;
 export function cleanHand(v: unknown): HandWire | null {
   if (!Array.isArray(v) || v.length !== 7) return null;
   const n = (k: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(Number(v[k]) || 0)));
-  return [String(v[0] ?? "").replace(/[^a-z0-9:_-]/gi, "").slice(0, 24), n(1, 0, 63), n(2, 0, 63), n(3, -999, 999), n(4, -50, 300), n(5, -1, 3), n(6, 0, 2)];
+  return [
+    String(v[0] ?? "")
+      .replace(/[^a-z0-9:_-]/gi, "")
+      .slice(0, 24),
+    n(1, 0, 63),
+    n(2, 0, 63),
+    n(3, -999, 999),
+    n(4, -50, 300),
+    n(5, -1, 3),
+    n(6, 0, 2),
+  ];
 }
 
 const CHIP_COLORS = ["#6a8cff", "#ff5a4a", "#ffd040", "#50d050"];
@@ -78,7 +92,15 @@ export class MenuCursors {
     const h = this.at(c.x, c.y);
     const fx = h ? Math.round(((c.x - h.x) / Math.max(1, h.w)) * 63) : 0;
     const fy = h ? Math.round(((c.y - h.y) / Math.max(1, h.h)) * 63) : 0;
-    return [h?.id ?? "", Math.max(0, Math.min(63, fx)), Math.max(0, Math.min(63, fy)), Math.round(c.x - this.scale.w / 2), Math.round(c.y), c.holding, c.holding >= 0 ? 2 : c.grabbable ? 1 : 0];
+    return [
+      h?.id ?? "",
+      Math.max(0, Math.min(63, fx)),
+      Math.max(0, Math.min(63, fy)),
+      Math.round(c.x - this.scale.w / 2),
+      Math.round(c.y),
+      c.holding,
+      c.holding >= 0 ? 2 : c.grabbable ? 1 : 0,
+    ];
   }
 
   setGhosts(list: [number, HandWire][]): void {
@@ -105,7 +127,14 @@ export class MenuCursors {
   }
 
   constructor(n: number) {
-    this.cursors = Array.from({ length: n }, (_, i) => ({ x: 60 + i * 90, y: 150, active: false, holding: -1, hover: "", pressedAt: -1 }));
+    this.cursors = Array.from({ length: n }, (_, i) => ({
+      x: 60 + i * 90,
+      y: 150,
+      active: false,
+      holding: -1,
+      hover: "",
+      pressedAt: -1,
+    }));
     this.chips = Array.from({ length: n }, () => ({ hero: null, x: 0, y: 0 }));
     window.addEventListener("mousemove", (e) => {
       this.mouse.x = (e.clientX / window.innerWidth) * this.scale.w;
@@ -206,7 +235,8 @@ export class MenuCursors {
       c.y = Math.max(2, Math.min(H - 2, c.y));
       const over = this.at(c.x, c.y);
       c.hover = over?.id ?? "";
-      c.grabbable = c.holding < 0 && (over?.id.startsWith("hero:") || this.chipAt(c.x, c.y, (slot) => canTake(slot, i)) >= 0);
+      c.grabbable =
+        c.holding < 0 && (over?.id.startsWith("hero:") || this.chipAt(c.x, c.y, (slot) => canTake(slot, i)) >= 0);
       if (c.holding >= 0) {
         const chip = this.chips[c.holding];
         chip.x = c.x + 3;
@@ -223,7 +253,9 @@ export class MenuCursors {
         } else if (c.holding < 0) {
           const s = this.chipAt(c.x, c.y, (slot) => canTake(slot, i));
           if (s >= 0) {
-            this.cursors.forEach((o) => { if (o.holding === s) o.holding = -1; });
+            this.cursors.forEach((o) => {
+              if (o.holding === s) o.holding = -1;
+            });
             c.holding = s;
             this.chips[s].hero = null;
             out.push({ type: "pick", slot: s, by: i });
@@ -291,7 +323,14 @@ export class MenuCursors {
         chip(ctx, ch.x, ch.y, c.holding, this.chipCpu[c.holding], false);
       }
       const tg = this.tagOf?.(i) ?? i;
-      glove(ctx, c.x, c.y, tg >= 0 ? tg : i, c.holding >= 0 ? "glove_grab" : c.grabbable ? "glove_open" : "glove_point", press);
+      glove(
+        ctx,
+        c.x,
+        c.y,
+        tg >= 0 ? tg : i,
+        c.holding >= 0 ? "glove_grab" : c.grabbable ? "glove_open" : "glove_point",
+        press,
+      );
     });
   }
 }
@@ -345,10 +384,25 @@ function chip(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number,
 }
 
 const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030"];
-const MID: Record<string, [number, number]> = { glove_point: [0.6, 0.6], glove_grab: [0.52, 0.55], glove_open: [0.58, 0.58] };
-const HOT: Record<string, [number, number]> = { glove_point: [0.3, 0.03], glove_grab: [0.5, 0.15], glove_open: [0.5, 0.05] };
+const MID: Record<string, [number, number]> = {
+  glove_point: [0.6, 0.6],
+  glove_grab: [0.52, 0.55],
+  glove_open: [0.58, 0.58],
+};
+const HOT: Record<string, [number, number]> = {
+  glove_point: [0.3, 0.03],
+  glove_grab: [0.5, 0.15],
+  glove_open: [0.5, 0.05],
+};
 
-function glove(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number, pose: "glove_point" | "glove_grab" | "glove_open", press: boolean): void {
+function glove(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  slot: number,
+  pose: "glove_point" | "glove_grab" | "glove_open",
+  press: boolean,
+): void {
   const im = IMG[pose];
   const k = GLOVE_K * (press ? 0.92 : 1);
   const [hx, hy] = HOT[pose];
@@ -361,7 +415,13 @@ function glove(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number
     const tk = k * 0.85;
     const smooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(tag, gx + im.naturalWidth * k * cx - (tag.width * tk) / 2, gy + im.naturalHeight * k * cy - (tag.height * tk) / 2, tag.width * tk, tag.height * tk);
+    ctx.drawImage(
+      tag,
+      gx + im.naturalWidth * k * cx - (tag.width * tk) / 2,
+      gy + im.naturalHeight * k * cy - (tag.height * tk) / 2,
+      tag.width * tk,
+      tag.height * tk,
+    );
     ctx.imageSmoothingEnabled = smooth;
   }
 }

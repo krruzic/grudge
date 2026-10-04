@@ -65,7 +65,10 @@ export class StructureBatch {
   private members: Member[] = [];
   private tmp = new THREE.Color();
 
-  constructor(private models: StructureModels, private teamColor: (team: number) => THREE.Color) {}
+  constructor(
+    private models: StructureModels,
+    private teamColor: (team: number) => THREE.Color,
+  ) {}
 
   private team(t: number): { mesh: THREE.BatchedMesh; ids: Map<THREE.BufferGeometry, number> } | null {
     let b = this.teams.get(t);
@@ -80,7 +83,10 @@ export class StructureBatch {
       shader.vertexShader = shader.vertexShader
         .replace("#include <common>", "#include <common>\nvarying vec3 vBEmis;")
         .replace("#include <color_vertex>", COLOR_VERTEX);
-      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vBEmis;\n#define emissive vBEmis");
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <common>",
+        "#include <common>\nvarying vec3 vBEmis;\n#define emissive vBEmis",
+      );
     };
     const key = mat.customProgramCacheKey();
     mat.customProgramCacheKey = () => `${key}|batched`;

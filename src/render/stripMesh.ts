@@ -31,8 +31,12 @@ export function stripMesh(mesh: THREE.Mesh, cell: number, outerCell = cell * 4, 
     if (!field || (cz >= field.min.z && cz <= field.max.z)) {
       const z0 = field?.min.z ?? 0;
       rowOf[t] = 0;
-      if (!field || (cx >= field.min.x && cx <= field.max.x)) colOf[t] = Math.floor(cx / cell) * 4096 + Math.floor((cz - z0) / cell);
-      else colOf[t] = ((cx < field.min.x ? -100000 : 100000) + Math.floor(cx / outerCell)) * 4096 + Math.floor((cz - z0) / outerCell);
+      if (!field || (cx >= field.min.x && cx <= field.max.x))
+        colOf[t] = Math.floor(cx / cell) * 4096 + Math.floor((cz - z0) / cell);
+      else
+        colOf[t] =
+          ((cx < field.min.x ? -100000 : 100000) + Math.floor(cx / outerCell)) * 4096 +
+          Math.floor((cz - z0) / outerCell);
     } else {
       rowOf[t] = cz < field.min.z ? 1 : 2;
       colOf[t] = Math.floor(cx / outerCell);
@@ -91,7 +95,8 @@ export function stripMesh(mesh: THREE.Mesh, cell: number, outerCell = cell * 4, 
         pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
         frustum.setFromProjectionMatrix(pv);
         const ident = part.matrixWorld.equals(IDENT);
-        const seen = (c: number) => frustum.intersectsBox(ident ? cells[c].box : world.copy(cells[c].box).applyMatrix4(part.matrixWorld));
+        const seen = (c: number) =>
+          frustum.intersectsBox(ident ? cells[c].box : world.copy(cells[c].box).applyMatrix4(part.matrixWorld));
         let a = 0;
         while (a < cells.length && !seen(a)) a++;
         if (a === cells.length) a = -1;

@@ -44,8 +44,25 @@ const PRODUCT = 0x0337;
 
 function emptyPort(): GcPort {
   return {
-    connected: false, a: false, b: false, x: false, y: false, z: false, l: false, r: false, start: false,
-    up: false, down: false, left: false, right: false, stickX: 0, stickY: 0, cX: 0, cY: 0, lAnalog: 0, rAnalog: 0,
+    connected: false,
+    a: false,
+    b: false,
+    x: false,
+    y: false,
+    z: false,
+    l: false,
+    r: false,
+    start: false,
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    stickX: 0,
+    stickY: 0,
+    cX: 0,
+    cY: 0,
+    lAnalog: 0,
+    rAnalog: 0,
   };
 }
 
@@ -153,7 +170,7 @@ export class GcAdapter {
         const o = off + p * 9;
         if (o >= v.byteLength) return -1;
         const b = v.getUint8(o);
-        if ((b >> 4) <= 2 && (b & 0x0b) === 0) n++;
+        if (b >> 4 <= 2 && (b & 0x0b) === 0) n++;
       }
       return n;
     };
@@ -169,7 +186,9 @@ export class GcAdapter {
     this.states++;
     const v = e.data;
     if (this.offset < 0 || this.reports % 120 === 0) this.offset = this.detectOffset(v);
-    this.lastStatus = [0, 1, 2, 3].map((p) => (this.offset + p * 9 < v.byteLength ? v.getUint8(this.offset + p * 9) : 0));
+    this.lastStatus = [0, 1, 2, 3].map((p) =>
+      this.offset + p * 9 < v.byteLength ? v.getUint8(this.offset + p * 9) : 0,
+    );
     for (let p = 0; p < 4; p++) {
       const o = this.offset + p * 9;
       if (o + 8 >= v.byteLength) break;
@@ -183,8 +202,14 @@ export class GcAdapter {
       }
       const b1 = v.getUint8(o + 1);
       const b2 = v.getUint8(o + 2);
-      const raw: [number, number, number, number] = [v.getUint8(o + 3), v.getUint8(o + 4), v.getUint8(o + 5), v.getUint8(o + 6)];
-      if (!this.center[p]) this.center[p] = raw.map((x) => (Math.abs(x - 128) < 40 ? x : 128)) as [number, number, number, number];
+      const raw: [number, number, number, number] = [
+        v.getUint8(o + 3),
+        v.getUint8(o + 4),
+        v.getUint8(o + 5),
+        v.getUint8(o + 6),
+      ];
+      if (!this.center[p])
+        this.center[p] = raw.map((x) => (Math.abs(x - 128) < 40 ? x : 128)) as [number, number, number, number];
       const c = this.center[p];
       const ax = (i: number, range: number) => Math.max(-1, Math.min(1, (raw[i] - c[i]) / range));
       port.a = !!(b1 & 0x01);

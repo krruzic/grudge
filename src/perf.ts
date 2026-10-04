@@ -1,6 +1,11 @@
 import type * as THREE from "three";
 
-type Timer = { ext: { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number }; gl: WebGL2RenderingContext; free: WebGLQuery[]; pending: { q: WebGLQuery; key: string; frame: number }[] };
+type Timer = {
+  ext: { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number };
+  gl: WebGL2RenderingContext;
+  free: WebGLQuery[];
+  pending: { q: WebGLQuery; key: string; frame: number }[];
+};
 
 const on = typeof location !== "undefined" && new URLSearchParams(location.search).has("perf");
 
@@ -42,7 +47,8 @@ export const perf = {
     if (ext) timer = { ext, gl, free: [], pending: [] };
     renderer.info.autoReset = false;
     el = document.createElement("pre");
-    el.style.cssText = "position:fixed;left:4px;top:4px;z-index:99;margin:0;padding:4px 6px;background:rgba(0,0,0,.7);color:#cfe;font:11px monospace;pointer-events:none;white-space:pre";
+    el.style.cssText =
+      "position:fixed;left:4px;top:4px;z-index:99;margin:0;padding:4px 6px;background:rgba(0,0,0,.7);color:#cfe;font:11px monospace;pointer-events:none;white-space:pre";
     document.body.appendChild(el);
   },
   gpuBegin(key: string): void {
@@ -99,6 +105,9 @@ export const perf = {
     frames = 0;
     lastShow = t;
     (window as unknown as { grudgePerf: unknown }).grudgePerf = snapshot;
-    if (el) el.textContent = Object.entries(snapshot).map(([k, v]) => `${k.padEnd(18)} ${v.toFixed(2)}`).join("\n");
+    if (el)
+      el.textContent = Object.entries(snapshot)
+        .map(([k, v]) => `${k.padEnd(18)} ${v.toFixed(2)}`)
+        .join("\n");
   },
 };

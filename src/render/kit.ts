@@ -15,7 +15,13 @@ function lam(hex: number | THREE.Color, emissive = 0): THREE.MeshLambertMaterial
 }
 
 function add(
-  parent: THREE.Object3D, geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, name?: string,
+  parent: THREE.Object3D,
+  geo: THREE.BufferGeometry,
+  mat: THREE.Material,
+  x: number,
+  y: number,
+  z: number,
+  name?: string,
 ): THREE.Mesh {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);

@@ -96,7 +96,10 @@ void main() {
 
 function quad(): THREE.InstancedBufferGeometry {
   const g = new THREE.InstancedBufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute([-0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0], 3));
+  g.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute([-0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0], 3),
+  );
   g.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2));
   g.setIndex([0, 1, 2, 0, 2, 3]);
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1);
@@ -104,7 +107,11 @@ function quad(): THREE.InstancedBufferGeometry {
 }
 
 function mixable(m: THREE.SpriteMaterial): boolean {
-  return m.transparent && !m.premultipliedAlpha && (m.blending === THREE.NormalBlending || m.blending === THREE.AdditiveBlending);
+  return (
+    m.transparent &&
+    !m.premultipliedAlpha &&
+    (m.blending === THREE.NormalBlending || m.blending === THREE.AdditiveBlending)
+  );
 }
 
 function batchKey(s: THREE.Sprite): string {
@@ -130,7 +137,10 @@ class SpriteBatch {
     const defines: Record<string, string> = {};
     if (mix) defines.SB_MIX = "";
     if (m.sizeAttenuation) defines.SB_ATTEN = "";
-    const own: Record<string, THREE.IUniform> = { uvTransform: { value: Array.from({ length: MAPS }, () => new THREE.Matrix3()) }, alphaTest: { value: m.alphaTest } };
+    const own: Record<string, THREE.IUniform> = {
+      uvTransform: { value: Array.from({ length: MAPS }, () => new THREE.Matrix3()) },
+      alphaTest: { value: m.alphaTest },
+    };
     for (let i = 0; i < MAPS; i++) own[`map${i}`] = { value: null };
     const mat = new THREE.ShaderMaterial({
       uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), ...own },
@@ -272,7 +282,8 @@ class SpriteBatch {
       arr[o + 9] = m.color.g;
       arr[o + 10] = m.color.b;
       arr[o + 11] = m.opacity;
-      arr[o + 12] = (m.map ? this.maps.indexOf(m.map) : MAPS) + (m.blending === THREE.AdditiveBlending ? MAPS * 2 + 1 : 0);
+      arr[o + 12] =
+        (m.map ? this.maps.indexOf(m.map) : MAPS) + (m.blending === THREE.AdditiveBlending ? MAPS * 2 + 1 : 0);
     }
     this.buf.clearUpdateRanges();
     this.buf.addUpdateRange(0, n * STRIDE);

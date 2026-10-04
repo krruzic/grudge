@@ -7,7 +7,15 @@ export interface Vec2 {
 export type UnitType = "grunt" | "ranged" | "heavy";
 export const UNIT_TYPES: UnitType[] = ["grunt", "ranged", "heavy"];
 export type StructureType = "damage" | "control" | "support" | "barracks" | "range" | "foundry" | "outpost";
-export const STRUCTURE_TYPES: StructureType[] = ["damage", "control", "support", "barracks", "range", "foundry", "outpost"];
+export const STRUCTURE_TYPES: StructureType[] = [
+  "damage",
+  "control",
+  "support",
+  "barracks",
+  "range",
+  "foundry",
+  "outpost",
+];
 export type Directive = "push" | "hold" | "follow" | "nearest" | "focus" | "defend";
 export type TargetClass = UnitType | "hero" | "structure";
 export type PadZone = "home" | "forward" | "neutral";
@@ -154,10 +162,31 @@ export interface HeroState {
   morphAt?: number;
   frozenCd?: Record<string, number>;
   pickSince?: number;
-  jump?: { fx: number; fz: number; tx: number; tz: number; start: number; dur: number; peak: number; pad: number; launched?: boolean };
+  jump?: {
+    fx: number;
+    fz: number;
+    tx: number;
+    tz: number;
+    start: number;
+    dur: number;
+    peak: number;
+    pad: number;
+    launched?: boolean;
+  };
   jumpReadyAt?: number;
   morphBack?: boolean;
-  morphed?: { type: string; level: number; xp: number; maxHp: number; damageMul: number; speed: number; path: Record<string, number[]>; picks: string[]; stepHeight: number; maxSlope: number };
+  morphed?: {
+    type: string;
+    level: number;
+    xp: number;
+    maxHp: number;
+    damageMul: number;
+    speed: number;
+    path: Record<string, number[]>;
+    picks: string[];
+    stepHeight: number;
+    maxSlope: number;
+  };
   recallUsed?: boolean;
   recallAt?: number;
   recallFrom?: number;
@@ -482,23 +511,76 @@ export interface Command {
 }
 
 export type SimEvent =
-  | { type: "hit"; x: number; y: number; z: number; team: number; big: boolean; blocked?: boolean; id?: number; amount?: number; src?: number; fx?: number; fz?: number; crit?: boolean }
+  | {
+      type: "hit";
+      x: number;
+      y: number;
+      z: number;
+      team: number;
+      big: boolean;
+      blocked?: boolean;
+      id?: number;
+      amount?: number;
+      src?: number;
+      fx?: number;
+      fz?: number;
+      crit?: boolean;
+    }
   | { type: "miss"; x: number; y: number; z: number }
   | { type: "death"; id: number; kind: Entity["kind"]; x: number; y: number; z: number; team: number; big: boolean }
   | { type: "eliminated"; team: number; by: number }
   | { type: "tide"; high: boolean }
   | { type: "horn"; stage: "blow" | "fail"; horn: number; team: number; arm: number; x: number; y: number; z: number }
   | { type: "chasm"; x: number; y: number; z: number }
-  | { type: "jumppad"; stage: "charge" | "launch" | "land" | "fail"; pad: number; id: number; x: number; y: number; z: number; windup: number; dur: number }
-  | { type: "morph"; stage: "start" | "done"; id: number; to: string; back: boolean; x: number; y: number; z: number; team: number; seconds: number }
+  | {
+      type: "jumppad";
+      stage: "charge" | "launch" | "land" | "fail";
+      pad: number;
+      id: number;
+      x: number;
+      y: number;
+      z: number;
+      windup: number;
+      dur: number;
+    }
+  | {
+      type: "morph";
+      stage: "start" | "done";
+      id: number;
+      to: string;
+      back: boolean;
+      x: number;
+      y: number;
+      z: number;
+      team: number;
+      seconds: number;
+    }
   | { type: "mist"; stage: "warn" | "in" | "out"; seconds: number }
   | { type: "lantern"; stage: "rise" | "taken" | "fade"; x: number; y: number; z: number; id: number; hero: number }
   | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number; lock?: boolean }
-  | { type: "avalanche"; stage: "warn" | "slide" | "settle"; arm: number; rect: { x: number; z: number; w: number; h: number }; dx: number; dz: number; seconds: number }
+  | {
+      type: "avalanche";
+      stage: "warn" | "slide" | "settle";
+      arm: number;
+      rect: { x: number; z: number; w: number; h: number };
+      dx: number;
+      dz: number;
+      seconds: number;
+    }
   | { type: "spawn"; id: number }
   | { type: "rankUp"; id: number; rank: number; x: number; y: number; z: number; team: number }
   | { type: "build"; id: number; padIndex: number; team: number; upgrade: boolean }
-  | { type: "slam"; x: number; y: number; z: number; radius: number; team: number; zone?: boolean; trap?: boolean; src?: number }
+  | {
+      type: "slam";
+      x: number;
+      y: number;
+      z: number;
+      radius: number;
+      team: number;
+      zone?: boolean;
+      trap?: boolean;
+      src?: number;
+    }
   | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number; src?: number; style?: string }
   | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number; style?: string }
   | { type: "heal"; x: number; y: number; z: number; team: number; src?: number }
@@ -506,20 +588,72 @@ export type SimEvent =
   | { type: "rally"; x: number; y: number; z: number; radius: number; team: number; src?: number }
   | { type: "directive"; team: number; unitType: UnitType | "all"; dir: Directive }
   | { type: "notice"; team: number; text: string }
-  | { type: "telegraph"; x: number; y: number; z: number; radius: number; team: number; seconds: number; src?: number; style?: string }
+  | {
+      type: "telegraph";
+      x: number;
+      y: number;
+      z: number;
+      radius: number;
+      team: number;
+      seconds: number;
+      src?: number;
+      style?: string;
+    }
   | { type: "blink"; x: number; y: number; z: number; team: number; src?: number }
-  | { type: "act"; src: number; slot: string; kind: string; phase: "start" | "fire"; x: number; y: number; z: number; dirX: number; dirZ: number; combo: number; toX?: number; toZ?: number }
+  | {
+      type: "act";
+      src: number;
+      slot: string;
+      kind: string;
+      phase: "start" | "fire";
+      x: number;
+      y: number;
+      z: number;
+      dirX: number;
+      dirZ: number;
+      combo: number;
+      toX?: number;
+      toZ?: number;
+    }
   | { type: "parry"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "mod"; id: number }
   | { type: "shot"; style: string; x: number; y: number; z: number }
   | { type: "modEnd"; id: number }
   | { type: "cannonWarn"; x: number; y: number; z: number; radius: number; seconds: number }
   | { type: "cannonHit"; x: number; y: number; z: number; radius: number }
-  | { type: "relic"; state: "taken" | "dropped" | "shrined" | "stolen" | "home"; team: number; player: number; x: number; y: number; z: number }
-  | { type: "reach"; x: number; y: number; z: number; tx: number; tz: number; team: number; hit: boolean; style?: string; src?: number }
+  | {
+      type: "relic";
+      state: "taken" | "dropped" | "shrined" | "stolen" | "home";
+      team: number;
+      player: number;
+      x: number;
+      y: number;
+      z: number;
+    }
+  | {
+      type: "reach";
+      x: number;
+      y: number;
+      z: number;
+      tx: number;
+      tz: number;
+      team: number;
+      hit: boolean;
+      style?: string;
+      src?: number;
+    }
   | { type: "bomb"; state: "planted" | "boom"; x: number; y: number; z: number; team: number; fuse: number }
   | { type: "callout"; x: number; y: number; z: number; team: number; text: string; owner: number }
-  | { type: "repair"; x: number; y: number; z: number; team: number; radius: number; fixed: { x: number; y: number; z: number; amount: number; h: number }[]; src?: number }
+  | {
+      type: "repair";
+      x: number;
+      y: number;
+      z: number;
+      team: number;
+      radius: number;
+      fixed: { x: number; y: number; z: number; amount: number; h: number }[];
+      src?: number;
+    }
   | { type: "levelup"; id: number; level: number; x: number; y: number; z: number; team: number }
   | { type: "learned"; id: number; name: string; icon: string; x: number; y: number; z: number; team: number }
   | { type: "chain"; pts: number[]; team: number }
@@ -528,7 +662,20 @@ export type SimEvent =
   | { type: "charge"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "shove"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "fall"; x: number; y: number; z: number }
-  | { type: "heroFx"; name: string; src: number; team: number; x: number; y: number; z: number; radius?: number; tx?: number; tz?: number; seconds?: number; id?: number }
+  | {
+      type: "heroFx";
+      name: string;
+      src: number;
+      team: number;
+      x: number;
+      y: number;
+      z: number;
+      radius?: number;
+      tx?: number;
+      tz?: number;
+      seconds?: number;
+      id?: number;
+    }
   | { type: "squad"; team: number; unitType: UnitType; x: number; y: number; z: number };
 
 export interface MatchState {

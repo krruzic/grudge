@@ -3,8 +3,32 @@ import type { AbilityDef } from "./config.ts";
 import type { Command, Entity, HeroAction, TerrainMod, UnitType } from "./types.ts";
 import { Kind } from "./terrain.ts";
 import { spawnUnit } from "./structures.ts";
-import { abilities, addShield, afterMelee, bCooldown, fireMissile, frenzySpeed, markTargets, meleeMods, onBUse, pullTo, zoneAt } from "./talents.ts";
-import { canRake, heartseeker, isMarksman, marksmanShot, rake, sendPip, wrenTarget, skyshot, trackStill, updatePip, volley } from "./marksman.ts";
+import {
+  abilities,
+  addShield,
+  afterMelee,
+  bCooldown,
+  fireMissile,
+  frenzySpeed,
+  markTargets,
+  meleeMods,
+  onBUse,
+  pullTo,
+  zoneAt,
+} from "./talents.ts";
+import {
+  canRake,
+  heartseeker,
+  isMarksman,
+  marksmanShot,
+  rake,
+  sendPip,
+  wrenTarget,
+  skyshot,
+  trackStill,
+  updatePip,
+  volley,
+} from "./marksman.ts";
 import { brewfest, kegRocketTick, plentyTick, startKegRocket, throwKeg } from "./friar.ts";
 
 type Slot = "a" | "b" | "r" | "z";
@@ -25,11 +49,19 @@ export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Ent
     const dx = o.transform.pos.x - t.pos.x;
     const dz = o.transform.pos.z - t.pos.z;
     const len = Math.hypot(dx, dz) || 1;
-    const along = mag > 0.3 ? (dx * cmd.moveX + dz * cmd.moveZ) / (len * mag) : reach > 4 ? (dx * Math.sin(t.facing) + dz * Math.cos(t.facing)) / len : 1;
+    const along =
+      mag > 0.3
+        ? (dx * cmd.moveX + dz * cmd.moveZ) / (len * mag)
+        : reach > 4
+          ? (dx * Math.sin(t.facing) + dz * Math.cos(t.facing)) / len
+          : 1;
     if (mag > 0.3 && along < 0.3) continue;
     if (mag <= 0.3 && reach > 4 && along < 0.5) continue;
     const score = d + (o.hero ? -1.5 : 0) + (o.structure ? 1 : 0) - along * 2;
-    if (score < bestScore) { bestScore = score; best = o; }
+    if (score < bestScore) {
+      bestScore = score;
+      best = o;
+    }
   }
   return best;
 }
@@ -54,7 +86,16 @@ function chaining(w: World, e: Entity): boolean {
   return !!hits && w.time < h.comboUntil && h.comboIndex % hits.length !== 0;
 }
 
-function begin(e: Entity, name: HeroAction["name"], kind: string, dur: number, hitAt: number, dirX: number, dirZ: number, combo = 0): HeroAction {
+function begin(
+  e: Entity,
+  name: HeroAction["name"],
+  kind: string,
+  dur: number,
+  hitAt: number,
+  dirX: number,
+  dirZ: number,
+  combo = 0,
+): HeroAction {
   const a: HeroAction = { name, kind, dur, hitAt, combo, t: 0, fired: false, dirX, dirZ };
   e.hero!.action = a;
   e.transform.facing = Math.atan2(dirX, dirZ);
@@ -62,7 +103,22 @@ function begin(e: Entity, name: HeroAction["name"], kind: string, dur: number, h
   return a;
 }
 
-export const PLACEABLE: Record<string, number> = { wall: 9, works: 8, zone: 9, summon: 7, leap: 0, hex: 0, banner: 0, blink: 0, rootcage: 0, turret: 7, pip: 0, volley: 0, keg: 0, powderkeg: 0 };
+export const PLACEABLE: Record<string, number> = {
+  wall: 9,
+  works: 8,
+  zone: 9,
+  summon: 7,
+  leap: 0,
+  hex: 0,
+  banner: 0,
+  blink: 0,
+  rootcage: 0,
+  turret: 7,
+  pip: 0,
+  volley: 0,
+  keg: 0,
+  powderkeg: 0,
+};
 
 function placeRange(def: AbilityDef): number | undefined {
   const r = PLACEABLE[def.kind];
@@ -70,7 +126,19 @@ function placeRange(def: AbilityDef): number | undefined {
   return r || (def.range ?? 8);
 }
 
-export function placeRanges(w: World, e: Entity): { facing: number; hx: number; hz: number; b?: number; r?: number; z?: number; spots?: { x: number; z: number }[]; ready: { b: boolean; r: boolean; z: boolean } } {
+export function placeRanges(
+  w: World,
+  e: Entity,
+): {
+  facing: number;
+  hx: number;
+  hz: number;
+  b?: number;
+  r?: number;
+  z?: number;
+  spots?: { x: number; z: number }[];
+  ready: { b: boolean; r: boolean; z: boolean };
+} {
   const ab = abilities(w, e);
   const h = e.hero!;
   const grave = ab.r.kind === "gravewalk";
@@ -82,7 +150,11 @@ export function placeRanges(w: World, e: Entity): { facing: number; hx: number; 
     r: grave ? 999 : placeRange(ab.r),
     z: placeRange(ab.z),
     spots: grave ? graveSpots(w, e).map((s) => ({ x: s.x, z: s.z })) : undefined,
-    ready: { b: ready(e, "b", w.time), r: ready(e, "r", w.time) && !(grave && w.arena.carrying(e)), z: h.meter >= w.data.heroes.baseline.superMax },
+    ready: {
+      b: ready(e, "b", w.time),
+      r: ready(e, "r", w.time) && !(grave && w.arena.carrying(e)),
+      z: h.meter >= w.data.heroes.baseline.superMax,
+    },
   };
 }
 
@@ -152,12 +224,19 @@ function graveBegin(w: World, e: Entity, cmd: Command, def: AbilityDef): void {
     let bd = Infinity;
     for (const s of spots) {
       const d = Math.hypot(s.x - px, s.z - pz);
-      if (d < bd) { bd = d; pick = s; }
+      if (d < bd) {
+        bd = d;
+        pick = s;
+      }
     }
   }
   const s = pick ? graveValid(w, e, pick.id) : null;
   if (!s) {
-    w.emit({ type: "notice", team: e.team, text: w.mapEvents.locked ? "NO GRAVE TO WALK TO · GATES SHUT" : "NO GRAVE TO WALK TO" });
+    w.emit({
+      type: "notice",
+      team: e.team,
+      text: w.mapEvents.locked ? "NO GRAVE TO WALK TO · GATES SHUT" : "NO GRAVE TO WALK TO",
+    });
     h.cooldowns.r = w.time + 0.5;
     return;
   }
@@ -171,8 +250,23 @@ function graveBegin(w: World, e: Entity, cmd: Command, def: AbilityDef): void {
   a.targetId = s.id;
   a.placed = true;
   h.cooldowns.r = w.time + (def.interruptCooldown ?? 5);
-  if (def.callout) w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: def.callout, owner: e.id });
-  w.emit({ type: "act", src: e.id, slot: "r", kind: "gravewalk", phase: "start", x: t.pos.x, y: t.y, z: t.pos.z, dirX: a.dirX, dirZ: a.dirZ, combo: 0, toX: land.x, toZ: land.z });
+  if (def.callout)
+    w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: def.callout, owner: e.id });
+  w.emit({
+    type: "act",
+    src: e.id,
+    slot: "r",
+    kind: "gravewalk",
+    phase: "start",
+    x: t.pos.x,
+    y: t.y,
+    z: t.pos.z,
+    dirX: a.dirX,
+    dirZ: a.dirZ,
+    combo: 0,
+    toX: land.x,
+    toZ: land.z,
+  });
 }
 
 function graveArrive(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
@@ -203,7 +297,14 @@ function graveArrive(w: World, e: Entity, a: HeroAction, def: AbilityDef): void 
       if (Math.hypot(o.transform.pos.x - t.pos.x, o.transform.pos.z - t.pos.z) - o.radius > gb.radius) continue;
       o.status.hexUntil = w.time + hexSec;
       o.status.hexOwner = e.id;
-      w.damage(e, o, gb.damage * w.damageMulOf(e), { fromX: t.pos.x, fromZ: t.pos.z, slowMul: gb.slowMul, slowSeconds: gb.slowSeconds, knockback: 3, big: true });
+      w.damage(e, o, gb.damage * w.damageMulOf(e), {
+        fromX: t.pos.x,
+        fromZ: t.pos.z,
+        slowMul: gb.slowMul,
+        slowSeconds: gb.slowSeconds,
+        knockback: 3,
+        big: true,
+      });
     }
     if (gb.shield) addShield(e, gb.shield, gb.shield, 6, w.time);
   }
@@ -218,14 +319,19 @@ function graveTick(w: World, e: Entity, def: AbilityDef): void {
     h.grave = undefined;
     return;
   }
-  if (Math.hypot(s.transform.pos.x - e.transform.pos.x, s.transform.pos.z - e.transform.pos.z) > (def.radius ?? 6) + s.radius) return;
+  if (
+    Math.hypot(s.transform.pos.x - e.transform.pos.x, s.transform.pos.z - e.transform.pos.z) >
+    (def.radius ?? 6) + s.radius
+  )
+    return;
   const st = s.structure;
   const was = (st.graveUntil ?? 0) > w.time;
   st.graveUntil = w.time + 0.3;
   st.graveMul = def.spawnMul ?? 0.6;
   st.graveHaste = def.towerHaste ?? 1.5;
   st.graveRank = def.fx?.graveRank ?? 0;
-  if (!was && st.spawnAt !== undefined && st.spawnAt > w.time) st.spawnAt = Math.min(st.spawnAt, w.time + w.arena.spawnInterval(s));
+  if (!was && st.spawnAt !== undefined && st.spawnAt > w.time)
+    st.spawnAt = Math.min(st.spawnAt, w.time + w.arena.spawnInterval(s));
 }
 
 function reachOf(def: AbilityDef): number {
@@ -241,7 +347,14 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   if (wren) {
     const sx = mag > 0.3 ? cmd.moveX / mag : Math.sin(e.transform.facing);
     const sz = mag > 0.3 ? cmd.moveZ / mag : Math.cos(e.transform.facing);
-    const tg = wrenTarget(w, e, sx, sz, mag > 0.3, (def.range ?? 11) * (w.heroDef(e.hero!.type).hooks.vantageRange ?? 1.2));
+    const tg = wrenTarget(
+      w,
+      e,
+      sx,
+      sz,
+      mag > 0.3,
+      (def.range ?? 11) * (w.heroDef(e.hero!.type).hooks.vantageRange ?? 1.2),
+    );
     if (tg) {
       const l = Math.hypot(tg.transform.pos.x - e.transform.pos.x, tg.transform.pos.z - e.transform.pos.z) || 1;
       dx = (tg.transform.pos.x - e.transform.pos.x) / l;
@@ -255,18 +368,36 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
     const c = begin(e, slot, "charge", 0.62, 0.42, dx, dz);
     c.hitIds = [];
     w.emit({ type: "charge", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, src: e.id });
-    if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
+    if (def.callout)
+      w.emit({
+        type: "callout",
+        x: e.transform.pos.x,
+        y: e.transform.y,
+        z: e.transform.pos.z,
+        team: e.team,
+        text: def.callout,
+        owner: e.id,
+      });
     return;
   }
   const a = begin(e, slot, def.kind, def.dur ?? 0.5, def.hitAt ?? 0.25, dx, dz);
   if (wren) a.stick = mag > 0.3;
   a.fromX2 = e.transform.pos.x;
   a.fromZ2 = e.transform.pos.z;
-  if (def.callout) w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: def.callout, owner: e.id });
+  if (def.callout)
+    w.emit({
+      type: "callout",
+      x: e.transform.pos.x,
+      y: e.transform.y,
+      z: e.transform.pos.z,
+      team: e.team,
+      text: def.callout,
+      owner: e.id,
+    });
   if (def.kind === "leap") {
     const p = e.transform.pos;
     const target = cmd.place ? null : aimTarget(w, e, cmd, (def.range ?? 7) + 1);
-    const pd = cmd.place ? Math.min(def.range ?? 7, Math.hypot(cmd.place.dx, cmd.place.dz)) : def.range ?? 7;
+    const pd = cmd.place ? Math.min(def.range ?? 7, Math.hypot(cmd.place.dx, cmd.place.dz)) : (def.range ?? 7);
     const pdx = cmd.place && pd > 0.3 ? cmd.place.dx / Math.hypot(cmd.place.dx, cmd.place.dz) : dx;
     const pdz = cmd.place && pd > 0.3 ? cmd.place.dz / Math.hypot(cmd.place.dx, cmd.place.dz) : dz;
     let tx = p.x + pdx * pd;
@@ -280,12 +411,19 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
       const f = 1 - k / 10;
       const x = p.x + (tx - p.x) * f;
       const z = p.z + (tz - p.z) * f;
-      if (Number.isFinite(w.terrain.heightAt(x, z)) && w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) && !w.mapEvents.sealed(p.x, p.z, x, z)) {
+      if (
+        Number.isFinite(w.terrain.heightAt(x, z)) &&
+        w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) &&
+        !w.mapEvents.sealed(p.x, p.z, x, z)
+      ) {
         tx = x;
         tz = z;
         break;
       }
-      if (k === 10) { tx = p.x; tz = p.z; }
+      if (k === 10) {
+        tx = p.x;
+        tz = p.z;
+      }
     }
     a.fromX = p.x;
     a.fromZ = p.z;
@@ -302,7 +440,10 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
     let px = cmd.place.dx;
     let pz = cmd.place.dz;
     const d = Math.hypot(px, pz);
-    if (d > rng) { px *= rng / d; pz *= rng / d; }
+    if (d > rng) {
+      px *= rng / d;
+      pz *= rng / d;
+    }
     a.placed = true;
     a.toX = Math.max(1, Math.min(w.terrain.width - 1, e.transform.pos.x + px));
     a.toZ = Math.max(1, Math.min(w.terrain.depth - 1, e.transform.pos.z + pz));
@@ -312,7 +453,21 @@ function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
       e.transform.facing = Math.atan2(a.dirX, a.dirZ);
     }
   }
-  w.emit({ type: "act", src: e.id, slot, kind: def.kind, phase: "start", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, dirX: dx, dirZ: dz, combo: 0, toX: a.toX, toZ: a.toZ });
+  w.emit({
+    type: "act",
+    src: e.id,
+    slot,
+    kind: def.kind,
+    phase: "start",
+    x: e.transform.pos.x,
+    y: e.transform.y,
+    z: e.transform.pos.z,
+    dirX: dx,
+    dirZ: dz,
+    combo: 0,
+    toX: a.toX,
+    toZ: a.toZ,
+  });
 }
 
 export function updateHero(w: World, e: Entity, cmd: Command): void {
@@ -342,7 +497,8 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       h.recallAt = undefined;
       const pen = w.data.match.economy.respawnCooldownPenalty ?? 0;
       const frozen = h.frozenCd ?? {};
-      for (const k of new Set([...Object.keys(frozen), "b", "r"])) h.cooldowns[k as keyof typeof h.cooldowns] = w.time + (frozen[k] ?? 0) + pen;
+      for (const k of new Set([...Object.keys(frozen), "b", "r"]))
+        h.cooldowns[k as keyof typeof h.cooldowns] = w.time + (frozen[k] ?? 0) + pen;
       h.frozenCd = undefined;
       w.emit({ type: "spawn", id: e.id });
     }
@@ -363,7 +519,17 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       const p = w.jumpPads[j.pad];
       p.launchAt = w.time;
       p.readyAt = w.time + w.jumpCooldown;
-      w.emit({ type: "jumppad", stage: "launch", pad: j.pad, id: e.id, x: j.fx, y: t.y, z: j.fz, windup: 0, dur: j.dur });
+      w.emit({
+        type: "jumppad",
+        stage: "launch",
+        pad: j.pad,
+        id: e.id,
+        x: j.fx,
+        y: t.y,
+        z: j.fz,
+        windup: 0,
+        dur: j.dur,
+      });
     }
     const f = Math.min(1, k);
     t.pos.x = j.fx + (j.tx - j.fx) * f;
@@ -379,8 +545,20 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     }
     return;
   }
-  if (!h.action && w.jumpPads.length && w.time >= (h.jumpReadyAt ?? 0) && !w.arena.carrying(e) && !h.bomb && h.morphAt === undefined) {
-    const i = w.jumpPads.findIndex((p) => w.time >= p.readyAt && w.time - p.chargeAt > w.jumpCharge + 0.05 && Math.hypot(p.x - t.pos.x, p.z - t.pos.z) < 1.1);
+  if (
+    !h.action &&
+    w.jumpPads.length &&
+    w.time >= (h.jumpReadyAt ?? 0) &&
+    !w.arena.carrying(e) &&
+    !h.bomb &&
+    h.morphAt === undefined
+  ) {
+    const i = w.jumpPads.findIndex(
+      (p) =>
+        w.time >= p.readyAt &&
+        w.time - p.chargeAt > w.jumpCharge + 0.05 &&
+        Math.hypot(p.x - t.pos.x, p.z - t.pos.z) < 1.1,
+    );
     if (i >= 0 && w.mapEvents.sealed(t.pos.x, t.pos.z, w.jumpPads[i].tx, w.jumpPads[i].tz)) w.mapEvents.shutNotice(e);
     else if (i >= 0) {
       const p = w.jumpPads[i];
@@ -401,7 +579,16 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     return;
   }
   if (h.recallAt !== undefined) {
-    const busy = Math.hypot(cmd.moveX, cmd.moveZ) > 0.3 || cmd.attack || cmd.secondary || cmd.special || cmd.super || cmd.dodge || h.combatAt > (h.recallFrom ?? 0) || w.time < e.status.stunUntil || w.arena.carrying(e);
+    const busy =
+      Math.hypot(cmd.moveX, cmd.moveZ) > 0.3 ||
+      cmd.attack ||
+      cmd.secondary ||
+      cmd.special ||
+      cmd.super ||
+      cmd.dodge ||
+      h.combatAt > (h.recallFrom ?? 0) ||
+      w.time < e.status.stunUntil ||
+      w.arena.carrying(e);
     if (busy) {
       h.recallAt = undefined;
       w.emit({ type: "notice", team: e.team, text: "RECALL BROKEN" });
@@ -425,7 +612,15 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       h.recallAt = w.time + b.recallSeconds;
       h.recallFrom = w.time;
       h.blocking = false;
-      w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: `RECALLING · ${b.recallSeconds}S`, owner: e.id });
+      w.emit({
+        type: "callout",
+        x: t.pos.x,
+        y: t.y,
+        z: t.pos.z,
+        team: e.team,
+        text: `RECALLING · ${b.recallSeconds}S`,
+        owner: e.id,
+      });
     }
   }
 
@@ -456,10 +651,20 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     w.arena.drop(e, t.pos.x, t.pos.z);
     cmd = { ...cmd, block: false };
   }
-  if (w.arena.carrying(e)) cmd = { ...cmd, attack: false, secondary: false, special: false, super: false, dodge: false, build: undefined };
+  if (w.arena.carrying(e))
+    cmd = { ...cmd, attack: false, secondary: false, special: false, super: false, dodge: false, build: undefined };
   if (def.hooks.wrenchDamage) {
     const on = onWorks(w, e);
-    if (on && !h.onWorks) w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: "ON THE RAMP · A THROWS WRENCH", owner: e.id });
+    if (on && !h.onWorks)
+      w.emit({
+        type: "callout",
+        x: t.pos.x,
+        y: t.y,
+        z: t.pos.z,
+        team: e.team,
+        text: "ON THE RAMP · A THROWS WRENCH",
+        owner: e.id,
+      });
     h.onWorks = on;
   }
   const charging = !h.action && !h.aim ? cmd.charging : undefined;
@@ -541,7 +746,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
         h.comboIndex = idx + 1;
         const end = sh.dur ?? ab.a.dur ?? 0.4;
         h.comboUntil = idx === shots.length - 1 ? 0 : w.time + end + (ab.a.comboWindow ?? 0.5);
-        h.cooldowns.a = w.time + end + (idx === shots.length - 1 ? ab.a.comboCooldown ?? 0.3 : 0);
+        h.cooldowns.a = w.time + end + (idx === shots.length - 1 ? (ab.a.comboCooldown ?? 0.3) : 0);
       } else {
         startAbility(w, e, "a", cmd);
         if (ab.a.cooldown) h.cooldowns.a = w.time + ab.a.cooldown;
@@ -549,9 +754,16 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     }
   }
 
-  if (cmd.charge && h.action && h.action !== act && h.action.t === 0 && (h.action.name === "a" || h.action.name === "b")) {
+  if (
+    cmd.charge &&
+    h.action &&
+    h.action !== act &&
+    h.action.t === 0 &&
+    (h.action.name === "a" || h.action.name === "b")
+  ) {
     h.action.power = 1 + cmd.charge * (h.action.name === "a" ? 0.8 : 0.6);
-    if (cmd.charge >= 0.99) w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: "FULL POWER!", owner: e.id });
+    if (cmd.charge >= 0.99)
+      w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: "FULL POWER!", owner: e.id });
   }
   const a = h.action;
   if (a) {
@@ -564,7 +776,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
       kegRocketTick(w, e, a);
     } else if (a.kind === "combo" && a.t < a.hitAt) {
       const hit = ab.a.hits![a.combo];
-      const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? ab.a.fx?.finisherBonus?.lunge ?? 1 : 1;
+      const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;
       w.moveBy(e, a.dirX * hit.lunge * fin * dt, a.dirZ * hit.lunge * fin * dt);
     } else if (a.kind === "charge" && a.t < a.hitAt) {
       const ch = ab.b.fx?.charge ?? { range: 5, damage: 45, knockback: 5, stun: 0.6 };
@@ -641,7 +853,16 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (!h.blocking && Math.hypot(cmd.moveX, cmd.moveZ) > 0.01) w.faceToward(e, cmd.moveX, cmd.moveZ, b.turnRate);
 }
 
-const callout = (w: World, e: Entity, text: string) => w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text, owner: e.id });
+const callout = (w: World, e: Entity, text: string) =>
+  w.emit({
+    type: "callout",
+    x: e.transform.pos.x,
+    y: e.transform.y,
+    z: e.transform.pos.z,
+    team: e.team,
+    text,
+    owner: e.id,
+  });
 
 function combo(w: World, e: Entity, cmd: Command): boolean {
   const h = e.hero!;
@@ -662,7 +883,15 @@ function combo(w: World, e: Entity, cmd: Command): boolean {
     callout(w, e, "CRACK CHARGE");
     return true;
   }
-  if (act?.kind === "reach" && act.fired && act.toX !== undefined && act.t <= act.dur + 0.1 && cmd.attack && cmd.block && ready(e, "shove", w.time)) {
+  if (
+    act?.kind === "reach" &&
+    act.fired &&
+    act.toX !== undefined &&
+    act.t <= act.dur + 0.1 &&
+    cmd.attack &&
+    cmd.block &&
+    ready(e, "shove", w.time)
+  ) {
     const len = Math.hypot(act.toX - t.pos.x, act.toZ! - t.pos.z) + 0.6;
     for (const o of w.entities.slice()) {
       if (!o.alive || o.team === e.team || o.structure || o.neutral) continue;
@@ -679,7 +908,8 @@ function combo(w: World, e: Entity, cmd: Command): boolean {
     return true;
   }
   if (cmd.dodge && ready(e, "dodge", w.time) && !act) {
-    const dodgeCd = () => (h.cooldowns.dodge = w.time + w.data.heroes.baseline.dodgeSeconds + w.data.heroes.baseline.dodgeCooldown);
+    const dodgeCd = () =>
+      (h.cooldowns.dodge = w.time + w.data.heroes.baseline.dodgeSeconds + w.data.heroes.baseline.dodgeCooldown);
     if (isMarksman(w, e) && skyshot(w, e, cmd)) return true;
     if (ab.b.kind === "keg" && startKegRocket(w, e, cmd)) return true;
     if (ab.r.kind === "works" && onWorks(w, e)) {
@@ -695,15 +925,33 @@ function combo(w: World, e: Entity, cmd: Command): boolean {
       let best: Entity | null = null;
       let bd = 10;
       for (const o of w.entities) {
-        if (!o.alive || !o.hero || o.team === e.team || o.status.hexOwner !== e.id || w.time >= o.status.hexUntil || w.mapEvents.sealed(t.pos.x, t.pos.z, o.transform.pos.x, o.transform.pos.z)) continue;
+        if (
+          !o.alive ||
+          !o.hero ||
+          o.team === e.team ||
+          o.status.hexOwner !== e.id ||
+          w.time >= o.status.hexUntil ||
+          w.mapEvents.sealed(t.pos.x, t.pos.z, o.transform.pos.x, o.transform.pos.z)
+        )
+          continue;
         const d = w.dist(e, o);
-        if (d < bd) { bd = d; best = o; }
+        if (d < bd) {
+          bd = d;
+          best = o;
+        }
       }
       if (best) {
         const ax = t.pos.x;
         const az = t.pos.z;
         w.emit({ type: "blink", x: ax, y: t.y, z: az, team: e.team, src: e.id });
-        w.emit({ type: "blink", x: best.transform.pos.x, y: best.transform.y, z: best.transform.pos.z, team: e.team, src: e.id });
+        w.emit({
+          type: "blink",
+          x: best.transform.pos.x,
+          y: best.transform.y,
+          z: best.transform.pos.z,
+          team: e.team,
+          src: e.id,
+        });
         w.teleport(e, best.transform.pos.x, best.transform.pos.z);
         w.teleport(best, ax, az);
         best.status.stunUntil = Math.max(best.status.stunUntil, w.time + 0.4);
@@ -780,7 +1028,13 @@ export function updateBoomerangs(w: World): void {
       if (Math.hypot(o.transform.pos.x - b.x, o.transform.pos.z - b.z) - o.radius > 1.0) continue;
       b.hit.push(o.id);
       const dmg = o.structure ? b.damage * 0.6 : b.damage;
-      w.damage(owner, o, dmg, { knockback: 3, fromX: b.x - b.dirX, fromZ: b.z - b.dirZ, big: true, structureDamage: o.structure ? dmg : undefined });
+      w.damage(owner, o, dmg, {
+        knockback: 3,
+        fromX: b.x - b.dirX,
+        fromZ: b.z - b.dirZ,
+        big: true,
+        structureDamage: o.structure ? dmg : undefined,
+      });
     }
   }
 }
@@ -808,7 +1062,14 @@ function flurryHit(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
     const side = dx * a.dirZ - dz * a.dirX >= 0 ? 1 : -1;
     const kx = a.dirZ * side * 0.8 + a.dirX * 0.35;
     const kz = -a.dirX * side * 0.8 + a.dirZ * 0.35;
-    w.damage(e, o, (def.damage ?? 40) * mul * w.damageMulOf(e), { knockback: 5, fromX: o.transform.pos.x - kx, fromZ: o.transform.pos.z - kz, canMiss: true, big: last, vsStunnedMul: def.vsStunnedMul });
+    w.damage(e, o, (def.damage ?? 40) * mul * w.damageMulOf(e), {
+      knockback: 5,
+      fromX: o.transform.pos.x - kx,
+      fromZ: o.transform.pos.z - kz,
+      canMiss: true,
+      big: last,
+      vsStunnedMul: def.vsStunnedMul,
+    });
     seen[o.id] = [o.transform.pos.x, o.transform.pos.z];
   }
 }
@@ -833,14 +1094,32 @@ function unstick(w: World, e: Entity, ux: number, uz: number): void {
       let clear = true;
       for (let k = 1; k <= 4 && clear; k++) {
         const f = k / 4;
-        if (!Number.isFinite(w.terrain.heightAt(t.pos.x + (cx + dx + 0.5 - t.pos.x) * f, t.pos.z + (cz + dz + 0.5 - t.pos.z) * f))) clear = false;
+        if (
+          !Number.isFinite(
+            w.terrain.heightAt(t.pos.x + (cx + dx + 0.5 - t.pos.x) * f, t.pos.z + (cz + dz + 0.5 - t.pos.z) * f),
+          )
+        )
+          clear = false;
       }
       if (!clear) continue;
       const mx = cx + dx + 0.5;
       const mz = cz + dz + 0.5;
-      if (w.entities.some((o) => o.alive && o.structure && Math.hypot(o.transform.pos.x - mx, o.transform.pos.z - mz) < o.radius + 1 || (o.alive && o.structure && Math.hypot(o.transform.pos.x - (t.pos.x + mx) / 2, o.transform.pos.z - (t.pos.z + mz) / 2) < o.radius + 0.5))) continue;
+      if (
+        w.entities.some(
+          (o) =>
+            (o.alive && o.structure && Math.hypot(o.transform.pos.x - mx, o.transform.pos.z - mz) < o.radius + 1) ||
+            (o.alive &&
+              o.structure &&
+              Math.hypot(o.transform.pos.x - (t.pos.x + mx) / 2, o.transform.pos.z - (t.pos.z + mz) / 2) <
+                o.radius + 0.5),
+        )
+      )
+        continue;
       const score = d - along * 1.5;
-      if (score < bestScore) { bestScore = score; best = i; }
+      if (score < bestScore) {
+        bestScore = score;
+        best = i;
+      }
     }
   }
   if (best < 0) return;
@@ -855,7 +1134,18 @@ function unstick(w: World, e: Entity, ux: number, uz: number): void {
   t.y = w.groundY(t.pos.x, t.pos.z);
 }
 
-function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, arcDeg: number, damage: number, knockback: number, big: boolean, vsStunnedMul?: number): Entity[] {
+function arcHit(
+  w: World,
+  e: Entity,
+  dirX: number,
+  dirZ: number,
+  range: number,
+  arcDeg: number,
+  damage: number,
+  knockback: number,
+  big: boolean,
+  vsStunnedMul?: number,
+): Entity[] {
   const out: Entity[] = [];
   const cands: [Entity, number][] = [];
   const t = e.transform;
@@ -871,12 +1161,13 @@ function arcHit(w: World, e: Entity, dirX: number, dirZ: number, range: number, 
     cands.push([o, d]);
   }
   cands.sort((a, b) => (b[0].hero ? 1 : 0) - (a[0].hero ? 1 : 0) || a[1] - b[1]);
-  for (const [o] of cands.slice(0, maxHits(w, e))) if (w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul })) out.push(o);
+  for (const [o] of cands.slice(0, maxHits(w, e)))
+    if (w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul })) out.push(o);
   return out;
 }
 
 function maxHits(w: World, e: Entity): number {
-  return e.hero ? w.heroDef(e.hero.type).hooks.maxHits ?? Infinity : Infinity;
+  return e.hero ? (w.heroDef(e.hero.type).hooks.maxHits ?? Infinity) : Infinity;
 }
 
 function shoveHit(w: World, e: Entity, a: HeroAction): void {
@@ -894,7 +1185,13 @@ function shoveHit(w: World, e: Entity, a: HeroAction): void {
     if (Math.abs(o.transform.y - t.y) > 2) continue;
     if (o.hero) o.hero.blocking = false;
     const heavy = o.neutral ? 0.35 : 1;
-    w.damage(e, o, sv.damage * w.damageMulOf(e), { knockback: sv.knockback * heavy, fromX: t.pos.x - a.dirX, fromZ: t.pos.z - a.dirZ, stun: sv.stun * heavy, big: true });
+    w.damage(e, o, sv.damage * w.damageMulOf(e), {
+      knockback: sv.knockback * heavy,
+      fromX: t.pos.x - a.dirX,
+      fromZ: t.pos.z - a.dirZ,
+      stun: sv.stun * heavy,
+      big: true,
+    });
     any = true;
   }
   w.emit({ type: "shove", x: t.pos.x + a.dirX, y: t.y, z: t.pos.z + a.dirZ, team: any ? e.team : -1, src: e.id });
@@ -908,14 +1205,27 @@ function dashHits(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
     if (ids.length >= maxHits(w, e) && !o.hero) continue;
     ids.push(o.id);
     const hit = w.damage(e, o, (def.damage ?? 60) * w.damageMulOf(e), {
-      knockback: def.knockback ?? 3, structureDamage: def.structureDamage !== undefined ? def.structureDamage * w.damageMulOf(e) : undefined, big: true,
-      executeBelow: def.executeBelow, executeMul: def.executeMul,
+      knockback: def.knockback ?? 3,
+      structureDamage: def.structureDamage !== undefined ? def.structureDamage * w.damageMulOf(e) : undefined,
+      big: true,
+      executeBelow: def.executeBelow,
+      executeMul: def.executeMul,
     });
     if (hit && a.name === "b") markTargets(w, e, [o]);
   }
 }
 
-function slamAt(w: World, e: Entity, cx: number, cz: number, radius: number, def: AbilityDef, mul: number, dirX: number, dirZ: number): void {
+function slamAt(
+  w: World,
+  e: Entity,
+  cx: number,
+  cz: number,
+  radius: number,
+  def: AbilityDef,
+  mul: number,
+  dirX: number,
+  dirZ: number,
+): void {
   const fx = def.fx;
   const once = (x: number, z: number, scale: number) => {
     if (fx?.pull) pullTo(w, e, x, z, radius + 1.5);
@@ -929,7 +1239,9 @@ function slamAt(w: World, e: Entity, cx: number, cz: number, radius: number, def
     for (let k = 1; k <= ec.count; k++) {
       const x = cx + dirX * (ec.step ?? 0) * k;
       const z = cz + dirZ * (ec.step ?? 0) * k;
-      w.later(ec.delay * k, () => { if (e.alive) once(x, z, ec.scale); });
+      w.later(ec.delay * k, () => {
+        if (e.alive) once(x, z, ec.scale);
+      });
     }
   }
 }
@@ -941,10 +1253,17 @@ function aoe(w: World, e: Entity, cx: number, cz: number, radius: number, def: A
     const d = Math.hypot(o.transform.pos.x - cx, o.transform.pos.z - cz);
     if (d - o.radius > radius) continue;
     const impaired = w.time < o.status.stunUntil || (w.time < o.status.slowUntil && o.status.slowMul < 1);
-    const stun = def.stunSeconds ? def.stunSeconds + (impaired ? def.stunBonus ?? 0 : 0) : undefined;
+    const stun = def.stunSeconds ? def.stunSeconds + (impaired ? (def.stunBonus ?? 0) : 0) : undefined;
     const hit = w.damage(e, o, (def.damage ?? 50) * mul, {
-      knockback: def.knockback, fromX: cx, fromZ: cz, slowMul: def.slowMul, slowSeconds: def.slowSeconds, stun,
-      structureDamage: def.structureDamage !== undefined ? def.structureDamage * mul : undefined, canMiss: def.kind === "slam", big: true,
+      knockback: def.knockback,
+      fromX: cx,
+      fromZ: cz,
+      slowMul: def.slowMul,
+      slowSeconds: def.slowSeconds,
+      stun,
+      structureDamage: def.structureDamage !== undefined ? def.structureDamage * mul : undefined,
+      canMiss: def.kind === "slam",
+      big: true,
       vsSlowedMul: def.vsSlowedMul,
     });
     if (hit && def.cowSeconds && o.kind !== "structure") o.status.cowedUntil = w.time + def.cowSeconds;
@@ -965,7 +1284,15 @@ function hexLand(w: World, e: Entity, x: number, z: number, def: AbilityDef, mul
       o.status.hexUntil = w.time + def.hexSeconds;
       o.status.hexOwner = e.id;
     }
-    w.damage(e, o, (def.damage ?? 80) * mul, { fromX: x, fromZ: z, slowMul: def.slowMul, slowSeconds: def.slowSeconds, stun: def.stunSeconds, knockback: fx?.pull ? 0 : 2, big: true });
+    w.damage(e, o, (def.damage ?? 80) * mul, {
+      fromX: x,
+      fromZ: z,
+      slowMul: def.slowMul,
+      slowSeconds: def.slowSeconds,
+      stun: def.stunSeconds,
+      knockback: fx?.pull ? 0 : 2,
+      big: true,
+    });
   }
   if (fx?.zoneAfter) zoneAt(w, e, x, z, r, fx.zoneAfter);
   if (fx?.summon) {
@@ -980,7 +1307,16 @@ function hexLand(w: World, e: Entity, x: number, z: number, def: AbilityDef, mul
   }
 }
 
-function dashLine(w: World, e: Entity, fx0: number, fz0: number, fx1: number, fz1: number, def: AbilityDef, mul: number): void {
+function dashLine(
+  w: World,
+  e: Entity,
+  fx0: number,
+  fz0: number,
+  fx1: number,
+  fz1: number,
+  def: AbilityDef,
+  mul: number,
+): void {
   const dx = fx1 - fx0;
   const dz = fz1 - fz0;
   const len = Math.hypot(dx, dz) || 1;
@@ -993,7 +1329,17 @@ function dashLine(w: World, e: Entity, fx0: number, fz0: number, fx1: number, fz
     const px = fx0 + (dx / len) * along;
     const pz = fz0 + (dz / len) * along;
     if (Math.hypot(o.transform.pos.x - px, o.transform.pos.z - pz) - o.radius > (def.width ?? 1.2)) continue;
-    if (w.damage(e, o, (def.damage ?? 60) * mul, { knockback: def.knockback ?? 3, big: true, executeBelow: def.executeBelow, executeMul: def.executeMul, fromX: px - dx / len, fromZ: pz - dz / len })) hit.push(o);
+    if (
+      w.damage(e, o, (def.damage ?? 60) * mul, {
+        knockback: def.knockback ?? 3,
+        big: true,
+        executeBelow: def.executeBelow,
+        executeMul: def.executeMul,
+        fromX: px - dx / len,
+        fromZ: pz - dz / len,
+      })
+    )
+      hit.push(o);
   }
   markTargets(w, e, hit);
 }
@@ -1005,7 +1351,15 @@ function endDash(w: World, e: Entity, a: HeroAction): void {
   if (fx?.empowerNextA) {
     h.empowerMul = fx.empowerNextA;
     h.empowerUntil = w.time + 3;
-    w.emit({ type: "callout", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z, team: e.team, text: "EMPOWERED", owner: e.id });
+    w.emit({
+      type: "callout",
+      x: e.transform.pos.x,
+      y: e.transform.y,
+      z: e.transform.pos.z,
+      team: e.team,
+      text: "EMPOWERED",
+      owner: e.id,
+    });
   }
   if (fx?.afterimage && a.fromX2 !== undefined) {
     const x0 = a.fromX2;
@@ -1015,7 +1369,18 @@ function endDash(w: World, e: Entity, a: HeroAction): void {
     const mul = w.damageMulOf(e);
     w.later(fx.afterimage, () => {
       if (!e.alive) return;
-      w.emit({ type: "reach", x: x0, y: w.groundY(x0, z0), z: z0, tx: x1, tz: z1, team: e.team, hit: false, style: "afterimage", src: e.id });
+      w.emit({
+        type: "reach",
+        x: x0,
+        y: w.groundY(x0, z0),
+        z: z0,
+        tx: x1,
+        tz: z1,
+        team: e.team,
+        hit: false,
+        style: "afterimage",
+        src: e.id,
+      });
       dashLine(w, e, x0, z0, x1, z1, def, mul);
     });
   }
@@ -1024,7 +1389,21 @@ function endDash(w: World, e: Entity, a: HeroAction): void {
 function fire(w: World, e: Entity, a: HeroAction): void {
   const ab = abilities(w, e);
   const t = e.transform;
-  w.emit({ type: "act", src: e.id, slot: a.name, kind: a.kind, phase: "fire", x: t.pos.x, y: t.y, z: t.pos.z, dirX: a.dirX, dirZ: a.dirZ, combo: a.combo, toX: a.toX, toZ: a.toZ });
+  w.emit({
+    type: "act",
+    src: e.id,
+    slot: a.name,
+    kind: a.kind,
+    phase: "fire",
+    x: t.pos.x,
+    y: t.y,
+    z: t.pos.z,
+    dirX: a.dirX,
+    dirZ: a.dirZ,
+    combo: a.combo,
+    toX: a.toX,
+    toZ: a.toZ,
+  });
   const mul = w.damageMulOf(e);
   if (a.kind === "combo") {
     const hit = ab.a.hits![a.combo];
@@ -1033,7 +1412,17 @@ function fire(w: World, e: Entity, a: HeroAction): void {
     const arc = m.arc ?? hit.arcDeg;
     const dmg = (a.jab ? hit.damage * 0.55 : hit.damage) * mul * m.dmgMul + m.extra;
     const pw = a.power ?? 1;
-    const targets = arcHit(w, e, a.dirX, a.dirZ, hit.range * (1 + (pw - 1) * 0.3), arc, dmg, hit.knockback * (a.jab ? 0.5 : 1) * m.knockMul * pw, fin || m.extra > 0 || pw > 1.3);
+    const targets = arcHit(
+      w,
+      e,
+      a.dirX,
+      a.dirZ,
+      hit.range * (1 + (pw - 1) * 0.3),
+      arc,
+      dmg,
+      hit.knockback * (a.jab ? 0.5 : 1) * m.knockMul * pw,
+      fin || m.extra > 0 || pw > 1.3,
+    );
     afterMelee(w, e, targets, dmg * targets.length, fin, a.dirX, a.dirZ, hit.range, !!a.jab);
     return;
   }
@@ -1055,8 +1444,19 @@ function fire(w: World, e: Entity, a: HeroAction): void {
   if (a.kind === "wrench") {
     const hk = w.heroDef(e.hero!.type).hooks;
     w.boomerangs.push({
-      id: w.newId(), ownerId: e.id, team: e.team, x: t.pos.x + a.dirX * 0.8, z: t.pos.z + a.dirZ * 0.8, y: t.y + 1.6, dirX: a.dirX, dirZ: a.dirZ,
-      dist: 0, back: false, hit: [], damage: (hk.wrenchDamage ?? 95) * w.damageMulOf(e), range: hk.wrenchRange ?? 10,
+      id: w.newId(),
+      ownerId: e.id,
+      team: e.team,
+      x: t.pos.x + a.dirX * 0.8,
+      z: t.pos.z + a.dirZ * 0.8,
+      y: t.y + 1.6,
+      dirX: a.dirX,
+      dirZ: a.dirZ,
+      dist: 0,
+      back: false,
+      hit: [],
+      damage: (hk.wrenchDamage ?? 95) * w.damageMulOf(e),
+      range: hk.wrenchRange ?? 10,
     });
     w.emit({ type: "shot", style: "wrench", x: t.pos.x, y: t.y + 1.6, z: t.pos.z });
     return;
@@ -1104,7 +1504,7 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       return;
     }
     case "banner": {
-      const range = a.placed ? Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z) : def.range ?? 6;
+      const range = a.placed ? Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z) : (def.range ?? 6);
       let bx = t.pos.x + a.dirX * range;
       let bz = t.pos.z + a.dirZ * range;
       for (let k = 0; k <= 12; k++) {
@@ -1116,7 +1516,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
           bz = z;
           break;
         }
-        if (k === 12) { bx = t.pos.x; bz = t.pos.z; }
+        if (k === 12) {
+          bx = t.pos.x;
+          bz = t.pos.z;
+        }
       }
       const until = w.time + (def.seconds ?? 30);
       w.teams[e.team].banner = { x: bx, z: bz, until };
@@ -1146,14 +1549,30 @@ function fire(w: World, e: Entity, a: HeroAction): void {
             const ready = o.hero.cooldowns[k] ?? 0;
             if (ready > w.time) o.hero.cooldowns[k] = w.time + (ready - w.time) * (1 - def.supplyCut);
           }
-          w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: e.team, src: e.id });
+          w.emit({
+            type: "heal",
+            x: o.transform.pos.x,
+            y: o.transform.y,
+            z: o.transform.pos.z,
+            team: e.team,
+            src: e.id,
+          });
         }
         w.emit({ type: "notice", team: e.team, text: "RESUPPLIED · COOLDOWNS HALVED" });
       }
       return;
     }
     case "warcry": {
-      w.emit({ type: "warcry", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.radius ?? 8, team: e.team, src: e.id, style: def.fx?.challenge ? "challenge" : def.fx?.lifestealAura ? "blood" : undefined });
+      w.emit({
+        type: "warcry",
+        x: t.pos.x,
+        y: t.y,
+        z: t.pos.z,
+        radius: def.radius ?? 8,
+        team: e.team,
+        src: e.id,
+        style: def.fx?.challenge ? "challenge" : def.fx?.lifestealAura ? "blood" : undefined,
+      });
       if (def.resetB) e.hero!.cooldowns.b = w.time;
       for (const o of w.entities) {
         if (!o.alive || o.team !== e.team || o.kind === "structure") continue;
@@ -1213,14 +1632,29 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const target = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, def.range ?? 8);
       const sh = a.name === "a" && def.shots ? def.shots[a.combo] : undefined;
       const dmg = (sh?.damage ?? def.damage ?? 30) * mul;
-      const splash = sh?.splash ? { radius: sh.splash, damage: (sh.splashDamage ?? 30) * mul, slowMul: sh.slowMul ?? 1, slowSeconds: sh.slowSeconds ?? 0 } : undefined;
+      const splash = sh?.splash
+        ? {
+            radius: sh.splash,
+            damage: (sh.splashDamage ?? 30) * mul,
+            slowMul: sh.slowMul ?? 1,
+            slowSeconds: sh.slowSeconds ?? 0,
+          }
+        : undefined;
       const style = splash ? "orb" : "magic";
       const speed = (def.speed ?? 15) * (splash ? 0.8 : 1);
       if (target) {
         w.fireProjectile(e, target, dmg, speed, false, style, 1.6, true, splash);
         if (sh) w.projectiles[w.projectiles.length - 1].talent = splash ? "orb" : "bolt";
-      }
-      else w.fireAtPoint(e, t.pos.x + a.dirX * (def.range ?? 8), t.pos.z + a.dirZ * (def.range ?? 8), speed, style, 1.6, splash);
+      } else
+        w.fireAtPoint(
+          e,
+          t.pos.x + a.dirX * (def.range ?? 8),
+          t.pos.z + a.dirZ * (def.range ?? 8),
+          speed,
+          style,
+          1.6,
+          splash,
+        );
       return;
     }
     case "hex": {
@@ -1235,9 +1669,20 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         const hx = x + a.dirX * (ec?.step ?? 0) * k;
         const hz = z + a.dirZ * (ec?.step ?? 0) * k;
         const at = delay + (ec?.delay ?? 0) * k;
-        const scale = k === 0 ? 1 : ec?.scale ?? 1;
-        w.emit({ type: "telegraph", x: hx, y: w.groundY(hx, hz), z: hz, radius: def.radius ?? 2.5, team: e.team, seconds: at, src: e.id });
-        w.later(at, () => { if (e.alive) hexLand(w, e, hx, hz, def, mul * scale); });
+        const scale = k === 0 ? 1 : (ec?.scale ?? 1);
+        w.emit({
+          type: "telegraph",
+          x: hx,
+          y: w.groundY(hx, hz),
+          z: hz,
+          radius: def.radius ?? 2.5,
+          team: e.team,
+          seconds: at,
+          src: e.id,
+        });
+        w.later(at, () => {
+          if (e.alive) hexLand(w, e, hx, hz, def, mul * scale);
+        });
       }
       return;
     }
@@ -1256,10 +1701,28 @@ function fire(w: World, e: Entity, a: HeroAction): void {
           }
         }
       }
-      w.emit({ type: "telegraph", x: a.placed ? a.toX! : t.pos.x, y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y, z: a.placed ? a.toZ! : t.pos.z, radius: 3, team: e.team, seconds: 0.35, src: e.id });
+      w.emit({
+        type: "telegraph",
+        x: a.placed ? a.toX! : t.pos.x,
+        y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y,
+        z: a.placed ? a.toZ! : t.pos.z,
+        radius: 3,
+        team: e.team,
+        seconds: 0.35,
+        src: e.id,
+      });
       if (def.hexRadius) {
         const hexSec = w.heroDef(e.hero!.type).abilities.b.hexSeconds ?? 6;
-        w.emit({ type: "telegraph", x: t.pos.x, y: t.y, z: t.pos.z, radius: def.hexRadius, team: e.team, seconds: 0.5, src: e.id });
+        w.emit({
+          type: "telegraph",
+          x: t.pos.x,
+          y: t.y,
+          z: t.pos.z,
+          radius: def.hexRadius,
+          team: e.team,
+          seconds: 0.5,
+          src: e.id,
+        });
         for (const o of w.entities) {
           if (!o.alive || o.team === e.team || o.kind === "structure" || w.dist(e, o) > def.hexRadius) continue;
           o.status.hexUntil = w.time + hexSec;
@@ -1293,13 +1756,28 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         const f = 1 - k / 12;
         const x = t.pos.x + a.dirX * d * f;
         const z = t.pos.z + a.dirZ * d * f;
-        if (Number.isFinite(w.terrain.heightAt(x, z)) && w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) && !w.mapEvents.sealed(t.pos.x, t.pos.z, x, z)) {
+        if (
+          Number.isFinite(w.terrain.heightAt(x, z)) &&
+          w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) &&
+          !w.mapEvents.sealed(t.pos.x, t.pos.z, x, z)
+        ) {
           bx = x;
           bz = z;
           break;
         }
       }
-      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx: bx, tz: bz, team: e.team, hit: false, style: "afterimage", src: e.id });
+      w.emit({
+        type: "reach",
+        x: t.pos.x,
+        y: t.y,
+        z: t.pos.z,
+        tx: bx,
+        tz: bz,
+        team: e.team,
+        hit: false,
+        style: "afterimage",
+        src: e.id,
+      });
       w.teleport(e, bx, bz);
       e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.35);
       if (def.seconds) {
@@ -1319,14 +1797,30 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const x = a.placed ? a.toX! : target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.6;
       const z = a.placed ? a.toZ! : target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.6;
       const r = def.radius ?? 2.4;
-      w.emit({ type: "telegraph", x, y: w.groundY(x, z), z, radius: r, team: e.team, seconds: def.delay ?? 0.5, src: e.id, style: "roots" });
+      w.emit({
+        type: "telegraph",
+        x,
+        y: w.groundY(x, z),
+        z,
+        radius: r,
+        team: e.team,
+        seconds: def.delay ?? 0.5,
+        src: e.id,
+        style: "roots",
+      });
       w.later(def.delay ?? 0.5, () => {
         if (!e.alive) return;
         w.emit({ type: "slam", x, y: w.groundY(x, z), z, radius: r * 1.5, team: e.team, src: e.id, trap: true });
         for (const o of w.entities.slice()) {
           if (!o.alive || o.team === e.team || o.structure) continue;
           if (Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) - o.radius > r) continue;
-          w.damage(e, o, (def.damage ?? 60) * mul, { stun: def.stunSeconds ?? 1.4, fromX: x, fromZ: z, knockback: 0, big: true });
+          w.damage(e, o, (def.damage ?? 60) * mul, {
+            stun: def.stunSeconds ?? 1.4,
+            fromX: x,
+            fromZ: z,
+            knockback: 0,
+            big: true,
+          });
         }
       });
       return;
@@ -1342,8 +1836,15 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         if (o.team === e.team && o.structure) {
           const before = o.hp;
           w.heal(o, def.heal ?? 200);
-          fixed.push({ x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, amount: Math.round(o.hp - before), h: o.structure.type === "core" ? 4.5 : 3.6 });
-          if (fx?.structShield) addShield(o, fx.structShield.amount, fx.structShield.amount, fx.structShield.seconds, w.time);
+          fixed.push({
+            x: o.transform.pos.x,
+            y: o.transform.y,
+            z: o.transform.pos.z,
+            amount: Math.round(o.hp - before),
+            h: o.structure.type === "core" ? 4.5 : 3.6,
+          });
+          if (fx?.structShield)
+            addShield(o, fx.structShield.amount, fx.structShield.amount, fx.structShield.seconds, w.time);
           if (fx?.towerHaste && o.structure.type !== "core") {
             o.structure.hasteMul = fx.towerHaste.mul;
             o.structure.hasteUntil = w.time + fx.towerHaste.seconds;
@@ -1354,7 +1855,11 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         if (o.team === e.team && o !== e && !o.structure && hk.overhaulHeal) {
           w.heal(o, o.hero ? hk.overhaulHeal * 0.5 : hk.overhaulHeal);
         } else if (o.team !== e.team && o.kind !== "structure") {
-          w.damage(e, o, (def.damage ?? 30) * mul, { knockback: fx?.pull ? 0.5 : 3, stun: def.stunSeconds, big: !!def.stunSeconds });
+          w.damage(e, o, (def.damage ?? 30) * mul, {
+            knockback: fx?.pull ? 0.5 : 3,
+            stun: def.stunSeconds,
+            big: !!def.stunSeconds,
+          });
         }
       }
       if (fx?.zoneAfter) zoneAt(w, e, t.pos.x, t.pos.z, r, fx.zoneAfter);
@@ -1362,10 +1867,25 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         for (const m of w.mods) {
           if (m.kind !== "wall" || m.owner !== e.id) continue;
           m.until += fx.extendWalls;
-          fixed.push({ x: (m.cells[0] % w.terrain.width) + 0.5, y: t.y, z: Math.floor(m.cells[0] / w.terrain.width) + 0.5, amount: 0, h: 2.4 });
+          fixed.push({
+            x: (m.cells[0] % w.terrain.width) + 0.5,
+            y: t.y,
+            z: Math.floor(m.cells[0] / w.terrain.width) + 0.5,
+            amount: 0,
+            h: 2.4,
+          });
         }
       }
-      w.emit({ type: "repair", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, radius: def.radius ?? 6, fixed, src: e.id });
+      w.emit({
+        type: "repair",
+        x: t.pos.x,
+        y: t.y,
+        z: t.pos.z,
+        team: e.team,
+        radius: def.radius ?? 6,
+        fixed,
+        src: e.id,
+      });
       if (!fixed.length) w.emit({ type: "notice", team: e.team, text: "NOTHING TO REPAIR IN REACH" });
       return;
     }
@@ -1378,8 +1898,16 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const sz = Math.floor(i / w.nav.w) + 0.5;
       const s = w.addEntity(e.team, "structure", 0.8, sx, sz, def.hp ?? 400);
       s.structure = {
-        type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 0.3,
-        range: def.range ?? 8, damage: def.damage ?? 40, lastFireAt: -99, shielded: false,
+        type: "damage",
+        padIndex: -1,
+        level: 1,
+        builtAt: w.time,
+        ready: true,
+        nextAction: w.time + 0.3,
+        range: def.range ?? 8,
+        damage: def.damage ?? 40,
+        lastFireAt: -99,
+        shielded: false,
       };
       s.expiresAt = w.time + (def.seconds ?? 20);
       s.owner = e.id;
@@ -1400,13 +1928,16 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         if (k !== Kind.Ground && k !== Kind.Water && k !== Kind.Ford) return true;
         const x = (i % tr.width) + 0.5;
         const z = Math.floor(i / tr.width) + 0.5;
-        return w.entities.some((o) => o.alive && o.structure && Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) < o.radius + 0.9)
-          || w.pads.some((pd) => Math.hypot(pd.x - x, pd.z - z) < w.data.structures.padRadius + 0.6);
+        return (
+          w.entities.some(
+            (o) => o.alive && o.structure && Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) < o.radius + 0.9,
+          ) || w.pads.some((pd) => Math.hypot(pd.x - x, pd.z - z) < w.data.structures.padRadius + 0.6)
+        );
       };
       let plat: number[] | null = null;
       let pcx = 0;
       let pcz = 0;
-      const startDist = a.placed ? Math.max(2.5, Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z)) : def.range ?? 5;
+      const startDist = a.placed ? Math.max(2.5, Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z)) : (def.range ?? 5);
       for (let dist = startDist; dist >= 2.5 && !plat; dist -= 0.5) {
         pcx = Math.floor(t.pos.x + a.dirX * dist);
         pcz = Math.floor(t.pos.z + a.dirZ * dist);
@@ -1415,7 +1946,10 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         for (let dz = lo; dz <= hi && ok; dz++) {
           for (let dx = lo; dx <= hi; dx++) {
             const i = tr.index(pcx + dx, pcz + dz);
-            if (i < 0 || blockedCell(i)) { ok = false; break; }
+            if (i < 0 || blockedCell(i)) {
+              ok = false;
+              break;
+            }
             cells.push(i);
           }
         }
@@ -1426,7 +1960,13 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         return;
       }
       let base = -Infinity;
-      for (const i of plat) base = Math.max(base, tr.kinds[i] === Kind.Ground ? tr.groundHeight((i % tr.width) + 0.5, Math.floor(i / tr.width) + 0.5) : tr.waterLevel);
+      for (const i of plat)
+        base = Math.max(
+          base,
+          tr.kinds[i] === Kind.Ground
+            ? tr.groundHeight((i % tr.width) + 0.5, Math.floor(i / tr.width) + 0.5)
+            : tr.waterLevel,
+        );
       const top = base + (def.height ?? 1.5);
       const cells = plat.slice();
       const deck = plat.map(() => top);
@@ -1464,7 +2004,20 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
       }
       for (const m of w.mods) if (m.kind === "works" && m.owner === e.id) m.until = Math.min(m.until, w.time);
-      const m: TerrainMod = { id: w.newId(), kind: "works", team: e.team, owner: e.id, cells, prevKind: [], prevDeck: [], deck, until: w.time + (def.seconds ?? 25), cx, cz, top };
+      const m: TerrainMod = {
+        id: w.newId(),
+        kind: "works",
+        team: e.team,
+        owner: e.id,
+        cells,
+        prevKind: [],
+        prevDeck: [],
+        deck,
+        until: w.time + (def.seconds ?? 25),
+        cx,
+        cz,
+        top,
+      };
       if (!w.applyModIfOpen(m)) {
         w.emit({ type: "notice", team: e.team, text: "WOULD BLOCK THE ROAD" });
         e.hero!.cooldowns.r = w.time + 1;
@@ -1479,8 +2032,18 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       w.emit({ type: "slam", x: cx, y: top, z: cz, radius: 2, team: e.team, src: e.id });
       const anchor = w.addEntity(e.team, "structure", half + 0.4, cx, cz, def.rampHp ?? 500);
       anchor.structure = {
-        type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 9999,
-        range: 0, damage: 0, lastFireAt: -99, shielded: false, works: m.id, siege: { cooldown: 9999, vs: {}, modId: m.id },
+        type: "damage",
+        padIndex: -1,
+        level: 1,
+        builtAt: w.time,
+        ready: true,
+        nextAction: w.time + 9999,
+        range: 0,
+        damage: 0,
+        lastFireAt: -99,
+        shielded: false,
+        works: m.id,
+        siege: { cooldown: 9999, vs: {}, modId: m.id },
       };
       anchor.transform.y = base;
       anchor.owner = e.id;
@@ -1488,8 +2051,18 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       if (def.fx?.tesla) {
         const s = w.addEntity(e.team, "structure", 0.8, cx, cz, def.hp ?? 400);
         s.structure = {
-          type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 0.3,
-          range: 8, damage: def.damage ?? 45, lastFireAt: -99, shielded: false, tesla: true, onMod: m.id,
+          type: "damage",
+          padIndex: -1,
+          level: 1,
+          builtAt: w.time,
+          ready: true,
+          nextAction: w.time + 0.3,
+          range: 8,
+          damage: def.damage ?? 45,
+          lastFireAt: -99,
+          shielded: false,
+          tesla: true,
+          onMod: m.id,
         };
         s.expiresAt = m.until;
         s.owner = e.id;
@@ -1513,7 +2086,17 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       let sz: number;
       if (perch) {
         const p = perch;
-        const spots = p.cells.filter((i) => topCell(p, i) && w.nav.open(i) && !w.entities.some((o) => o.alive && o.kind === "structure" && tr.index(Math.floor(o.transform.pos.x), Math.floor(o.transform.pos.z)) === i));
+        const spots = p.cells.filter(
+          (i) =>
+            topCell(p, i) &&
+            w.nav.open(i) &&
+            !w.entities.some(
+              (o) =>
+                o.alive &&
+                o.kind === "structure" &&
+                tr.index(Math.floor(o.transform.pos.x), Math.floor(o.transform.pos.z)) === i,
+            ),
+        );
         if (!spots.length) return;
         const cxOf = (i: number) => (i % tr.width) + 0.5;
         const czOf = (i: number) => Math.floor(i / tr.width) + 0.5;
@@ -1534,14 +2117,23 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const cellAt = tr.index(Math.floor(sx), Math.floor(sz));
       const onRamp = perch ?? mine.find((m) => m.cells.includes(cellAt)) ?? null;
       const s = w.addEntity(e.team, "structure", 0.7, sx, sz, def.hp ?? 180);
-      const mul = perch ? def.perchMul ?? 1.25 : 1;
+      const mul = perch ? (def.perchMul ?? 1.25) : 1;
       s.structure = {
-        type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 0.5,
-        range: def.range ?? 11, damage: (def.damage ?? 80) * mul, lastFireAt: -99, shielded: false,
+        type: "damage",
+        padIndex: -1,
+        level: 1,
+        builtAt: w.time,
+        ready: true,
+        nextAction: w.time + 0.5,
+        range: def.range ?? 11,
+        damage: (def.damage ?? 80) * mul,
+        lastFireAt: -99,
+        shielded: false,
         siege: { cooldown: def.cooldown ?? 1.8, vs: def.vs ?? {}, modId: onRamp ? onRamp.id : 0 },
       };
       const core = w.foeCore(e.team, sx, sz);
-      if (core) s.transform.facing = s.transform.prevFacing = Math.atan2(core.transform.pos.x - sx, core.transform.pos.z - sz);
+      if (core)
+        s.transform.facing = s.transform.prevFacing = Math.atan2(core.transform.pos.x - sx, core.transform.pos.z - sz);
       s.expiresAt = Math.min(onRamp ? onRamp.until : Infinity, w.time + (def.seconds ?? 20));
       s.owner = e.id;
       w.nav.setBlocked(sx, sz, 0.7, true);
@@ -1582,7 +2174,16 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
       }
       if (!cells.length) return;
-      const m: TerrainMod = { id: w.newId(), kind: "ramp", team: e.team, cells, prevKind: [], prevDeck: [], deck, until: w.time + (def.seconds ?? 12) };
+      const m: TerrainMod = {
+        id: w.newId(),
+        kind: "ramp",
+        team: e.team,
+        cells,
+        prevKind: [],
+        prevDeck: [],
+        deck,
+        until: w.time + (def.seconds ?? 12),
+      };
       w.applyMod(m);
       w.emit({ type: "mod", id: m.id });
       return;
@@ -1600,15 +2201,43 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         const k = w.terrain.kinds[i];
         if (k !== Kind.Ground && k !== Kind.Ford) continue;
         if (w.pads.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) continue;
-        const occupied = w.entities.some((o) => o.alive && (o.kind === "structure" || (o.hero && o.team === e.team)) &&
-          Math.abs(o.transform.pos.x - (Math.floor(x) + 0.5)) < 0.5 + o.radius && Math.abs(o.transform.pos.z - (Math.floor(z) + 0.5)) < 0.5 + o.radius);
+        const occupied = w.entities.some(
+          (o) =>
+            o.alive &&
+            (o.kind === "structure" || (o.hero && o.team === e.team)) &&
+            Math.abs(o.transform.pos.x - (Math.floor(x) + 0.5)) < 0.5 + o.radius &&
+            Math.abs(o.transform.pos.z - (Math.floor(z) + 0.5)) < 0.5 + o.radius,
+        );
         if (occupied) continue;
         cells.push(i);
       }
       if (!cells.length) return;
-      const m: TerrainMod = { id: w.newId(), kind: "wall", team: e.team, owner: e.id, style: (def as { style?: string }).style, cells, prevKind: [], prevDeck: [], deck: [], until: w.time + (def.seconds ?? 8) };
+      const m: TerrainMod = {
+        id: w.newId(),
+        kind: "wall",
+        team: e.team,
+        owner: e.id,
+        style: (def as { style?: string }).style,
+        cells,
+        prevKind: [],
+        prevDeck: [],
+        deck: [],
+        until: w.time + (def.seconds ?? 8),
+      };
       if (def.fx?.grove) {
-        w.zones.push({ id: w.newId(), team: e.team, ownerId: e.id, x: cx, z: cz, radius: len / 2 + 1.5, until: m.until, dps: 0, slowMul: 1, style: "grove", heal: def.fx.grove.heal });
+        w.zones.push({
+          id: w.newId(),
+          team: e.team,
+          ownerId: e.id,
+          x: cx,
+          z: cz,
+          radius: len / 2 + 1.5,
+          until: m.until,
+          dps: 0,
+          slowMul: 1,
+          style: "grove",
+          heal: def.fx.grove.heal,
+        });
       }
       w.applyMod(m);
       if (def.endTraps) {
@@ -1618,13 +2247,27 @@ function fire(w: World, e: Entity, a: HeroAction): void {
           const ez = cz + a.dirX * s * (len / 2 + 1);
           if (!Number.isFinite(w.terrain.heightAt(ex, ez))) continue;
           w.traps.push({
-            id: w.newId(), team: e.team, ownerId: e.id, x: ex, z: ez, radius: tdef.radius ?? 1.2, armAt: w.time + (tdef.arm ?? 0.5),
-            until: w.time + (def.seconds ?? 8) + 6, damage: (tdef.damage ?? 40) * mul, stun: tdef.stunSeconds ?? 1.2, bonus: true,
+            id: w.newId(),
+            team: e.team,
+            ownerId: e.id,
+            x: ex,
+            z: ez,
+            radius: tdef.radius ?? 1.2,
+            armAt: w.time + (tdef.arm ?? 0.5),
+            until: w.time + (def.seconds ?? 8) + 6,
+            damage: (tdef.damage ?? 40) * mul,
+            stun: tdef.stunSeconds ?? 1.2,
+            bonus: true,
           });
         }
       }
       w.emit({ type: "mod", id: m.id });
-      const near = (o: Entity) => cells.some((c) => Math.abs((c % w.terrain.width) + 0.5 - o.transform.pos.x) < 0.5 + o.radius && Math.abs(Math.floor(c / w.terrain.width) + 0.5 - o.transform.pos.z) < 0.5 + o.radius);
+      const near = (o: Entity) =>
+        cells.some(
+          (c) =>
+            Math.abs((c % w.terrain.width) + 0.5 - o.transform.pos.x) < 0.5 + o.radius &&
+            Math.abs(Math.floor(c / w.terrain.width) + 0.5 - o.transform.pos.z) < 0.5 + o.radius,
+        );
       for (const o of w.entities.slice()) {
         if (!o.alive || o.kind === "structure") continue;
         const i = w.terrain.index(Math.floor(o.transform.pos.x), Math.floor(o.transform.pos.z));
@@ -1641,7 +2284,13 @@ function fire(w: World, e: Entity, a: HeroAction): void {
           if (j >= 0) w.teleport(o, (j % w.nav.w) + 0.5, Math.floor(j / w.nav.w) + 0.5);
         }
         if (o.team === e.team) continue;
-        w.damage(e, o, (def.damage ?? 70) * mul, { stun: def.stunSeconds ?? 0.9, knockback: def.knockback ?? 9, fromX: lx - a.dirX * side, fromZ: lz - a.dirZ * side, big: true });
+        w.damage(e, o, (def.damage ?? 70) * mul, {
+          stun: def.stunSeconds ?? 0.9,
+          knockback: def.knockback ?? 9,
+          fromX: lx - a.dirX * side,
+          fromZ: lz - a.dirZ * side,
+          big: true,
+        });
         w.emit({ type: "slam", x: lx, y: w.groundY(lx, lz), z: lz, radius: 1.6, team: e.team });
       }
       return;
@@ -1659,11 +2308,17 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         if (along < 0 || along - o.radius > reach) continue;
         const side = Math.abs(dx * a.dirZ - dz * a.dirX);
         if (side > width + o.radius || Math.abs(o.transform.y - t.y) > 3) continue;
-        if (along < bestD) { bestD = along; best = o; }
+        if (along < bestD) {
+          bestD = along;
+          best = o;
+        }
       }
       let len = reach;
       for (let s = 0.5; s <= reach; s += 0.5) {
-        if (w.losHeight(t.pos.x + a.dirX * s, t.pos.z + a.dirZ * s) > t.y + 2.2) { len = s; break; }
+        if (w.losHeight(t.pos.x + a.dirX * s, t.pos.z + a.dirZ * s) > t.y + 2.2) {
+          len = s;
+          break;
+        }
       }
       if (best && bestD > len) best = null;
       const fx = def.fx;
@@ -1684,12 +2339,30 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       }
       const tx = t.pos.x + a.dirX * len;
       const tz = t.pos.z + a.dirZ * len;
-      w.emit({ type: "reach", x: t.pos.x, y: t.y, z: t.pos.z, tx, tz, team: e.team, hit: victims.length > 0, style: fx?.pull ? "vine" : undefined, src: e.id });
+      w.emit({
+        type: "reach",
+        x: t.pos.x,
+        y: t.y,
+        z: t.pos.z,
+        tx,
+        tz,
+        team: e.team,
+        hit: victims.length > 0,
+        style: fx?.pull ? "vine" : undefined,
+        src: e.id,
+      });
       a.toX = tx;
       a.toZ = tz;
       for (const o of victims) {
-        const hit = w.damage(e, o, (def.damage ?? 70) * mul * (o.structure ? def.structureMul ?? 1.5 : 1), {
-          knockback: fx?.pull ? 0 : def.knockback ?? 8, fromX: t.pos.x, fromZ: t.pos.z, stun: def.stunSeconds, slowMul: def.slowMul, slowSeconds: def.slowSeconds, big: true, vsStunnedMul: def.vsStunnedMul,
+        const hit = w.damage(e, o, (def.damage ?? 70) * mul * (o.structure ? (def.structureMul ?? 1.5) : 1), {
+          knockback: fx?.pull ? 0 : (def.knockback ?? 8),
+          fromX: t.pos.x,
+          fromZ: t.pos.z,
+          stun: def.stunSeconds,
+          slowMul: def.slowMul,
+          slowSeconds: def.slowSeconds,
+          big: true,
+          vsStunnedMul: def.vsStunnedMul,
         });
         if (hit && fx?.pull && o.alive && !o.structure && w.time >= o.status.ccImmuneUntil) {
           const dx = t.pos.x - o.transform.pos.x;
@@ -1701,7 +2374,15 @@ function fire(w: World, e: Entity, a: HeroAction): void {
         }
       }
       if (fx?.splinter) {
-        w.emit({ type: "slam", x: tx, y: w.groundY(tx, tz), z: tz, radius: fx.splinter.radius, team: e.team, src: e.id });
+        w.emit({
+          type: "slam",
+          x: tx,
+          y: w.groundY(tx, tz),
+          z: tz,
+          radius: fx.splinter.radius,
+          team: e.team,
+          src: e.id,
+        });
         for (const o of w.entities.slice()) {
           if (!o.alive || o.team === e.team || o.neutral) continue;
           if (Math.hypot(o.transform.pos.x - tx, o.transform.pos.z - tz) - o.radius > fx.splinter.radius) continue;
@@ -1716,17 +2397,43 @@ function fire(w: World, e: Entity, a: HeroAction): void {
       const x = t.pos.x + a.dirX * (def.range ?? 4);
       const z = t.pos.z + a.dirZ * (def.range ?? 4);
       w.traps.push({
-        id: w.newId(), team: e.team, ownerId: e.id, x, z, radius: def.radius ?? 1.2, armAt: w.time + (def.arm ?? 0.5),
-        until: w.time + (def.seconds ?? 30), damage: (def.damage ?? 40) * mul, stun: def.stunSeconds ?? 1.2,
+        id: w.newId(),
+        team: e.team,
+        ownerId: e.id,
+        x,
+        z,
+        radius: def.radius ?? 1.2,
+        armAt: w.time + (def.arm ?? 0.5),
+        until: w.time + (def.seconds ?? 30),
+        damage: (def.damage ?? 40) * mul,
+        stun: def.stunSeconds ?? 1.2,
       });
       return;
     }
     case "zone": {
       w.zones.push({
-        id: w.newId(), team: e.team, ownerId: e.id, x: a.placed ? a.toX! : t.pos.x, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6,
-        until: w.time + (def.seconds ?? 6), dps: (def.dps ?? 20) * mul, slowMul: def.slowMul ?? 0.4, heal: def.fx?.grove?.heal, haste: def.allySpeedMul,
+        id: w.newId(),
+        team: e.team,
+        ownerId: e.id,
+        x: a.placed ? a.toX! : t.pos.x,
+        z: a.placed ? a.toZ! : t.pos.z,
+        radius: def.radius ?? 6,
+        until: w.time + (def.seconds ?? 6),
+        dps: (def.dps ?? 20) * mul,
+        slowMul: def.slowMul ?? 0.4,
+        heal: def.fx?.grove?.heal,
+        haste: def.allySpeedMul,
       });
-      w.emit({ type: "slam", x: a.placed ? a.toX! : t.pos.x, y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y, z: a.placed ? a.toZ! : t.pos.z, radius: def.radius ?? 6, team: e.team, zone: true, src: e.id });
+      w.emit({
+        type: "slam",
+        x: a.placed ? a.toX! : t.pos.x,
+        y: a.placed ? w.groundY(a.toX!, a.toZ!) : t.y,
+        z: a.placed ? a.toZ! : t.pos.z,
+        radius: def.radius ?? 6,
+        team: e.team,
+        zone: true,
+        src: e.id,
+      });
       return;
     }
     default:

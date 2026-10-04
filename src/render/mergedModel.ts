@@ -61,11 +61,22 @@ export function mergeParts(scene: THREE.Object3D): void {
   });
   for (const [parent, meshes] of groups) {
     const skel = meshes[0].skeleton;
-    const big = (m: THREE.SkinnedMesh) => (((m.material as THREE.MeshStandardMaterial).map?.image as { width?: number } | undefined)?.width ?? 0) > 256;
-    const list = meshes.filter((m) => m.skeleton === skel && m.bindMatrix.equals(meshes[0].bindMatrix) && !big(m) && !/_(pip|wrench)/.test(m.name));
+    const big = (m: THREE.SkinnedMesh) =>
+      (((m.material as THREE.MeshStandardMaterial).map?.image as { width?: number } | undefined)?.width ?? 0) > 256;
+    const list = meshes.filter(
+      (m) =>
+        m.skeleton === skel && m.bindMatrix.equals(meshes[0].bindMatrix) && !big(m) && !/_(pip|wrench)/.test(m.name),
+    );
     if (list.length < 2 || list.length > MAX) continue;
     const keys = Object.keys(list[0].geometry.attributes).sort().join(",");
-    if (list.some((m) => Object.keys(m.geometry.attributes).sort().join(",") !== keys || !!m.geometry.index !== !!list[0].geometry.index)) continue;
+    if (
+      list.some(
+        (m) =>
+          Object.keys(m.geometry.attributes).sort().join(",") !== keys ||
+          !!m.geometry.index !== !!list[0].geometry.index,
+      )
+    )
+      continue;
     const geos = list.map((m, i) => {
       const g = m.geometry.clone();
       g.morphAttributes = {};
@@ -79,7 +90,14 @@ export function mergeParts(scene: THREE.Object3D): void {
     const mats = list.map((m) => m.material as THREE.MeshStandardMaterial);
     const parts: Part[] = mats.map((m) => {
       const face = m.name.startsWith("face");
-      return { name: m.name, color: (m.color ?? new THREE.Color(1, 1, 1)).clone(), emissive: (m.emissive ?? new THREE.Color(0, 0, 0)).clone(), vc: !face, face, mask: m.name.startsWith("dye") };
+      return {
+        name: m.name,
+        color: (m.color ?? new THREE.Color(1, 1, 1)).clone(),
+        emissive: (m.emissive ?? new THREE.Color(0, 0, 0)).clone(),
+        vc: !face,
+        face,
+        mask: m.name.startsWith("dye"),
+      };
     });
     merged.set(geo, { tex: layerTexture(mats.map((m) => m.map ?? null)), parts });
     const one = new THREE.SkinnedMesh(geo, mats[0]);
@@ -93,7 +111,10 @@ export function mergeParts(scene: THREE.Object3D): void {
   }
 }
 
-export function mergedMaterial(geo: THREE.BufferGeometry, dye: (part: string) => THREE.Color | null): THREE.MeshLambertMaterial | null {
+export function mergedMaterial(
+  geo: THREE.BufferGeometry,
+  dye: (part: string) => THREE.Color | null,
+): THREE.MeshLambertMaterial | null {
   const info = merged.get(geo);
   if (!info) return null;
   const tint = Array.from({ length: MAX }, () => new THREE.Vector4(1, 1, 1, 1));

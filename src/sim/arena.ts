@@ -69,7 +69,10 @@ export class Arena {
   constructor(private w: World) {
     const cores = w.terrain.cores;
     if (w.teamCount > 2 && cores.length) {
-      this.home = this.snap(cores.reduce((s, c) => s + c.x, 0) / cores.length, cores.reduce((s, c) => s + c.z, 0) / cores.length);
+      this.home = this.snap(
+        cores.reduce((s, c) => s + c.x, 0) / cores.length,
+        cores.reduce((s, c) => s + c.z, 0) / cores.length,
+      );
     } else {
       const a = cores.find((c) => c.team === 0) ?? { x: w.terrain.width * 0.2, z: w.terrain.depth / 2 };
       const b = cores.find((c) => c.team === 1) ?? { x: w.terrain.width * 0.8, z: w.terrain.depth / 2 };
@@ -77,7 +80,20 @@ export class Arena {
     }
     w.nav.setBlocked(this.home.x, this.home.z, 1.2, true);
     const cfg = w.data.match.arena;
-    this.relic = { state: "waiting", x: this.home.x, z: this.home.z, y: w.groundY(this.home.x, this.home.z), carrier: 0, since: cfg.relic.firstSeconds, lockId: 0, lockUntil: 0, channel: 0, shrineId: 0, team: -1, stealer: 0 };
+    this.relic = {
+      state: "waiting",
+      x: this.home.x,
+      z: this.home.z,
+      y: w.groundY(this.home.x, this.home.z),
+      carrier: 0,
+      since: cfg.relic.firstSeconds,
+      lockId: 0,
+      lockUntil: 0,
+      channel: 0,
+      shrineId: 0,
+      team: -1,
+      stealer: 0,
+    };
     this.nextCannon = cfg.cannon.firstSeconds;
     this.nextOgre = cfg.ogre.firstSeconds;
     this.nextWave = w.data.units.waves.firstSeconds;
@@ -148,7 +164,7 @@ export class Arena {
     const st = o.structure!;
     const def = w.data.structures.types[st.type as StructureType];
     const wv = w.data.units.waves;
-    let t = (def.cadence ?? 10) * (st.level > 1 ? def.upgrade.cadence ?? 1 : 1);
+    let t = (def.cadence ?? 10) * (st.level > 1 ? (def.upgrade.cadence ?? 1) : 1);
     t /= wv.rateMul ?? 1;
     if (w.ffaCfg) t /= w.ffaCfg.spawnRateMul ?? 1;
     if (this.relic.state === "shrined" && this.relic.shrineId === o.id) t /= 1 + w.data.match.arena.relic.outpostExtra;
@@ -192,7 +208,9 @@ export class Arena {
         }
       } else if (ts.spawnHalt) {
         ts.spawnHalt = false;
-        for (const o of w.entities) if (o.alive && o.team === t && o.structure?.spawnAt !== undefined) o.structure.spawnAt = w.time + this.spawnInterval(o);
+        for (const o of w.entities)
+          if (o.alive && o.team === t && o.structure?.spawnAt !== undefined)
+            o.structure.spawnAt = w.time + this.spawnInterval(o);
       }
     }
     const grainy = !!w.data.match.economy.grain;
@@ -213,18 +231,27 @@ export class Arena {
         continue;
       }
       const type = def.mix ? this.pickMix(def.mix) : def.unit;
-      const cost = Math.round((wv.spawnCost[type] ?? 0) * w.costMul() * (w.ffaCfg?.spawnCostMul ?? 1) * (1 - ts.catchUp * w.data.match.catchUp.productionBoost));
+      const cost = Math.round(
+        (wv.spawnCost[type] ?? 0) *
+          w.costMul() *
+          (w.ffaCfg?.spawnCostMul ?? 1) *
+          (1 - ts.catchUp * w.data.match.catchUp.productionBoost),
+      );
       if ((grainy ? ts.grain : ts.resource) < cost) {
         st.spawnAt = w.time + 0.5;
         if (w.time - (ts.idleAt ?? -99) > 10) {
           ts.idleAt = w.time;
-          w.emit({ type: "notice", team: o.team, text: grainy ? "NO GRAIN · OUTPOSTS IDLE" : "NO GOLD · OUTPOSTS IDLE" });
+          w.emit({
+            type: "notice",
+            team: o.team,
+            text: grainy ? "NO GRAIN · OUTPOSTS IDLE" : "NO GOLD · OUTPOSTS IDLE",
+          });
         }
         continue;
       }
       if (grainy) ts.grain -= cost;
       else ts.resource -= cost;
-      const up = st.level > 1 ? def.upgrade.unitStat ?? 1 : 1;
+      const up = st.level > 1 ? (def.upgrade.unitStat ?? 1) : 1;
       const blessed = this.relic.state === "shrined" && this.relic.shrineId === o.id;
       st.spawnN = (st.spawnN ?? 0) + 1;
       const p = this.frontOf(o, o.team, st.spawnN);
@@ -246,7 +273,10 @@ export class Arena {
     const dl = Math.hypot(dx, dz) || 1;
     const out = from.radius + 1.6;
     const side = ((i % 3) - 1) * 0.9;
-    return { x: from.transform.pos.x + (dx / dl) * out - (dz / dl) * side, z: from.transform.pos.z + (dz / dl) * out + (dx / dl) * side };
+    return {
+      x: from.transform.pos.x + (dx / dl) * out - (dz / dl) * side,
+      z: from.transform.pos.z + (dz / dl) * out + (dx / dl) * side,
+    };
   }
 
   private updateRelic(): void {
@@ -332,7 +362,15 @@ export class Arena {
     r.lockId = from?.id ?? 0;
     r.lockUntil = w.time + w.data.match.arena.relic.dropLockSeconds;
     r.carrier = 0;
-    w.emit({ type: "relic", state: "dropped", team: from?.team ?? -1, player: from?.hero?.player ?? -1, x: r.x, y: r.y, z: r.z });
+    w.emit({
+      type: "relic",
+      state: "dropped",
+      team: from?.team ?? -1,
+      player: from?.hero?.player ?? -1,
+      x: r.x,
+      y: r.y,
+      z: r.z,
+    });
     w.emit({ type: "notice", team: -1, text: "GRUDGE DROPPED!" });
   }
 
@@ -352,7 +390,10 @@ export class Arena {
     for (const o of w.entities) {
       if (!o.alive || o.team !== c.team || !this.isTowerOrKeep(o)) continue;
       const d = w.dist(c, o) - o.radius;
-      if (d <= reach && d < bd) { bd = d; best = o; }
+      if (d <= reach && d < bd) {
+        bd = d;
+        best = o;
+      }
     }
     return best;
   }
@@ -372,7 +413,8 @@ export class Arena {
   towerBoost(e: Entity): { damage: number; range: number } {
     const r = this.relic;
     const cfg = this.w.data.match.arena.relic;
-    if (r.state === "shrined" && r.shrineId === e.id && e.structure?.type !== "core") return { damage: cfg.towerDamageMul, range: cfg.towerRangeMul };
+    if (r.state === "shrined" && r.shrineId === e.id && e.structure?.type !== "core")
+      return { damage: cfg.towerDamageMul, range: cfg.towerRangeMul };
     return { damage: 1, range: 1 };
   }
 
@@ -391,7 +433,15 @@ export class Arena {
     r.z = sp.pos.z;
     r.y = sp.y;
     const where = s.structure!.type === "core" ? "KEEP" : "TOWER";
-    w.emit({ type: "relic", state: "shrined", team: c.team, player: c.hero!.player, x: sp.pos.x, y: sp.y, z: sp.pos.z });
+    w.emit({
+      type: "relic",
+      state: "shrined",
+      team: c.team,
+      player: c.hero!.player,
+      x: sp.pos.x,
+      y: sp.y,
+      z: sp.pos.z,
+    });
     w.emit({ type: "notice", team: -1, text: `${w.teamName(c.team)} ENSHRINES THE GRUDGE IN A ${where}` });
   }
 
@@ -425,10 +475,14 @@ export class Arena {
       const e = w.get(p.heroId);
       if (!e || !e.alive || e.hero?.dead || e.team === r.team) continue;
       const d = w.dist(e, s) - s.radius;
-      if (d <= cfg.stealReach && d < bd) { bd = d; thief = e; }
+      if (d <= cfg.stealReach && d < bd) {
+        bd = d;
+        thief = e;
+      }
     }
     if (!thief || thief.id !== r.stealer || w.time - thief.hero!.combatAt < 0.05) {
-      if (thief && thief.id !== r.stealer) w.emit({ type: "notice", team: r.team, text: "YOUR GRUDGE IS BEING STOLEN!" });
+      if (thief && thief.id !== r.stealer)
+        w.emit({ type: "notice", team: r.team, text: "YOUR GRUDGE IS BEING STOLEN!" });
       r.stealer = thief?.id ?? 0;
       r.channel = 0;
       return;
@@ -440,7 +494,15 @@ export class Arena {
     r.shrineId = 0;
     r.stealer = 0;
     r.channel = 0;
-    w.emit({ type: "relic", state: "stolen", team: thief.team, player: thief.hero!.player, x: sp.pos.x, y: sp.y, z: sp.pos.z });
+    w.emit({
+      type: "relic",
+      state: "stolen",
+      team: thief.team,
+      player: thief.hero!.player,
+      x: sp.pos.x,
+      y: sp.y,
+      z: sp.pos.z,
+    });
     w.emit({ type: "notice", team: -1, text: `P${thief.hero!.player + 1} BROKE THE SHRINE · THE GRUDGE RETURNS` });
     this.reset();
   }
@@ -452,7 +514,14 @@ export class Arena {
       this.nextCannon = w.time + cfg.everySeconds;
       const based = (x: number, z: number) => {
         for (let t = 0; t < w.teamCount; t++) {
-          for (const [ox, oz] of [[0, 0], [cfg.radius, 0], [-cfg.radius, 0], [0, cfg.radius], [0, -cfg.radius]]) if (w.inBase(t, x + ox, z + oz)) return true;
+          for (const [ox, oz] of [
+            [0, 0],
+            [cfg.radius, 0],
+            [-cfg.radius, 0],
+            [0, cfg.radius],
+            [0, -cfg.radius],
+          ])
+            if (w.inBase(t, x + ox, z + oz)) return true;
         }
         return false;
       };
@@ -485,7 +554,10 @@ export class Arena {
             x = this.home.x + (w.rng() - 0.5) * w.terrain.width * 0.5;
             z = this.home.z + (w.rng() - 0.5) * w.terrain.depth * 0.5;
           }
-          const q = this.snap(Math.max(2, Math.min(w.terrain.width - 2, x)), Math.max(2, Math.min(w.terrain.depth - 2, z)));
+          const q = this.snap(
+            Math.max(2, Math.min(w.terrain.width - 2, x)),
+            Math.max(2, Math.min(w.terrain.depth - 2, z)),
+          );
           if (based(q.x, q.z) || used.some((u) => Math.hypot(u.x - q.x, u.z - q.z) < cfg.radius * 1.4)) continue;
           p = q;
         }
@@ -507,12 +579,18 @@ export class Arena {
         if (!o.alive || o.team === s.team) continue;
         const d = Math.hypot(o.transform.pos.x - s.x, o.transform.pos.z - s.z) - o.radius;
         if (d > s.radius) continue;
-        const k = 1 - Math.max(0, d) / s.radius * 0.5;
+        const k = 1 - (Math.max(0, d) / s.radius) * 0.5;
         if (o.structure) {
           if (o.structure.type !== "core") w.damage(null, o, cfg.structureDamage * k, { big: true });
           continue;
         }
-        w.damage(null, o, cfg.damage * k, { knockback: cfg.knockback * k, fromX: s.x, fromZ: s.z, big: true, stun: 0.25 });
+        w.damage(null, o, cfg.damage * k, {
+          knockback: cfg.knockback * k,
+          fromX: s.x,
+          fromZ: s.z,
+          big: true,
+          stun: 0.25,
+        });
       }
     }
   }
@@ -548,7 +626,9 @@ export class Arena {
       this.ogreRoute = { a, b, leg: start ? 1 : 0, waitUntil: 0 };
     } else {
       const den = dens.length ? dens[Math.floor(w.rng() * dens.length) % dens.length] : null;
-      p = den ? this.snap(den.x, den.z) : this.snap(this.home.x - (az / al) * off * side, this.home.z + (ax / al) * off * side);
+      p = den
+        ? this.snap(den.x, den.z)
+        : this.snap(this.home.x - (az / al) * off * side, this.home.z + (ax / al) * off * side);
       const px = -(az / al) * 10;
       const pz = (ax / al) * 10;
       this.ogreRoute = { a: this.snap(p.x - px, p.z - pz), b: this.snap(p.x + px, p.z + pz), leg: 1, waitUntil: 0 };
@@ -556,9 +636,23 @@ export class Arena {
     const e = w.addEntity(NEUTRAL, "unit", cfg.radius, p.x, p.z, cfg.hp);
     e.neutral = true;
     e.unit = {
-      type: "heavy", damage: cfg.damage, speed: cfg.speed, range: cfg.range, cooldown: cfg.cooldown, aggro: cfg.aggro,
-      nextAttack: w.time + 1, targetId: 0, retargetAt: 0, path: [], pathGoal: { x: p.x, z: p.z }, repathAt: 0, slot: 0,
-      attackAnimAt: -99, moving: false, rank: 0, kills: 0,
+      type: "heavy",
+      damage: cfg.damage,
+      speed: cfg.speed,
+      range: cfg.range,
+      cooldown: cfg.cooldown,
+      aggro: cfg.aggro,
+      nextAttack: w.time + 1,
+      targetId: 0,
+      retargetAt: 0,
+      path: [],
+      pathGoal: { x: p.x, z: p.z },
+      repathAt: 0,
+      slot: 0,
+      attackAnimAt: -99,
+      moving: false,
+      rank: 0,
+      kills: 0,
     };
     this.ogreId = e.id;
     w.emit({ type: "spawn", id: e.id });
@@ -636,7 +730,11 @@ export class Arena {
     }
     if (aimAt) return this.fireStrike(hero, aimAt.x, aimAt.z);
     const f = hero.transform.facing;
-    h.aim = { x: hero.transform.pos.x + Math.sin(f) * 8, z: hero.transform.pos.z + Math.cos(f) * 8, until: w.time + sh.cannon.aimSeconds };
+    h.aim = {
+      x: hero.transform.pos.x + Math.sin(f) * 8,
+      z: hero.transform.pos.z + Math.cos(f) * 8,
+      until: w.time + sh.cannon.aimSeconds,
+    };
     return true;
   }
 
@@ -654,7 +752,10 @@ export class Arena {
     for (let i = 0; i < sh.shots; i++) {
       const a = (i / sh.shots) * Math.PI * 2 + w.rng();
       const r = i === 0 ? 0 : sh.spread * (0.5 + w.rng() * 0.5);
-      const p = this.snap(Math.max(1, Math.min(w.terrain.width - 1, x + Math.cos(a) * r)), Math.max(1, Math.min(w.terrain.depth - 1, z + Math.sin(a) * r)));
+      const p = this.snap(
+        Math.max(1, Math.min(w.terrain.width - 1, x + Math.cos(a) * r)),
+        Math.max(1, Math.min(w.terrain.depth - 1, z + Math.sin(a) * r)),
+      );
       const at = w.time + warn + i * 0.3;
       const shot = { x: p.x, z: p.z, y: w.groundY(p.x, p.z), at, warnAt: w.time, radius: sh.radius, team: hero.team };
       this.shots.push(shot);
@@ -672,7 +773,18 @@ export class Arena {
     const p = e.transform.pos;
     const x = Math.max(1, Math.min(w.terrain.width - 1, tx));
     const z = Math.max(1, Math.min(w.terrain.depth - 1, tz));
-    this.thrown.push({ fromX: p.x, fromZ: p.z, fromY: e.transform.y + 2.2, toX: x, toZ: z, toY: w.groundY(x, z), start: w.time, dur: sh.throwSeconds, ownerId: e.id, team: e.team });
+    this.thrown.push({
+      fromX: p.x,
+      fromZ: p.z,
+      fromY: e.transform.y + 2.2,
+      toX: x,
+      toZ: z,
+      toY: w.groundY(x, z),
+      start: w.time,
+      dur: sh.throwSeconds,
+      ownerId: e.id,
+      team: e.team,
+    });
     w.emit({ type: "shot", style: "throw", x: p.x, y: e.transform.y + 2, z: p.z });
   }
 
@@ -684,7 +796,10 @@ export class Arena {
     for (const o of w.entities) {
       if (!o.alive || !o.structure || o.team === b.team || o.neutral || o.structure.siege) continue;
       const d = Math.hypot(o.transform.pos.x - b.toX, o.transform.pos.z - b.toZ) - o.radius;
-      if (d <= sh.stickReach && d < best) { best = d; target = o; }
+      if (d <= sh.stickReach && d < best) {
+        best = d;
+        target = o;
+      }
     }
     let x = b.toX;
     let z = b.toZ;
@@ -700,7 +815,15 @@ export class Arena {
       z = p.z;
     }
     const fuse = target ? sh.fuse : sh.groundFuse;
-    this.bombs.push({ x, z, y: w.groundY(x, z), targetId: target?.id ?? 0, ownerId: b.ownerId, team: b.team, at: w.time + fuse });
+    this.bombs.push({
+      x,
+      z,
+      y: w.groundY(x, z),
+      targetId: target?.id ?? 0,
+      ownerId: b.ownerId,
+      team: b.team,
+      at: w.time + fuse,
+    });
     w.emit({ type: "bomb", state: "planted", x, y: w.groundY(x, z), z, team: b.team, fuse });
     if (target) w.emit({ type: "notice", team: target.team, text: "BOMB ON YOUR TOWER!" });
   }
@@ -725,7 +848,15 @@ export class Arena {
         const dl = Math.hypot(dx, dz) || 1;
         const bx = o.transform.pos.x + (dx / dl) * (o.radius + 0.2);
         const bz = o.transform.pos.z + (dz / dl) * (o.radius + 0.2);
-        this.bombs.push({ x: bx, z: bz, y: w.groundY(bx, bz), targetId: o.id, ownerId: e.id, team: e.team, at: w.time + sh.fuse });
+        this.bombs.push({
+          x: bx,
+          z: bz,
+          y: w.groundY(bx, bz),
+          targetId: o.id,
+          ownerId: e.id,
+          team: e.team,
+          at: w.time + sh.fuse,
+        });
         e.hero.bomb = false;
         w.emit({ type: "bomb", state: "planted", x: bx, y: w.groundY(bx, bz), z: bz, team: e.team, fuse: sh.fuse });
         w.emit({ type: "notice", team: o.team, text: "BOMB ON YOUR TOWER!" });
@@ -741,7 +872,8 @@ export class Arena {
       w.emit({ type: "cannonHit", x: b.x, y: b.y, z: b.z, radius: sh.splash + 0.2 });
       const t = b.targetId ? w.get(b.targetId) : undefined;
       if (t?.alive && t.structure) {
-        if (t.structure.type === "core") w.damage(owner, t, sh.coreDamage, { big: true, structureDamage: sh.coreDamage });
+        if (t.structure.type === "core")
+          w.damage(owner, t, sh.coreDamage, { big: true, structureDamage: sh.coreDamage });
         else w.damage(owner, t, t.hp + t.maxHp, { big: true, structureDamage: t.hp + t.maxHp });
       }
       for (const o of w.entities.slice()) {
@@ -752,7 +884,13 @@ export class Arena {
           if (!b.targetId) w.damage(owner, o, sh.structureSplash, { big: true, structureDamage: sh.structureSplash });
           continue;
         }
-        w.damage(owner, o, sh.splashDamage * (o.unit ? sh.splashUnitMul ?? 1 : 1), { knockback: 9, fromX: b.x, fromZ: b.z, big: true, stun: 0.3 });
+        w.damage(owner, o, sh.splashDamage * (o.unit ? (sh.splashUnitMul ?? 1) : 1), {
+          knockback: 9,
+          fromX: b.x,
+          fromZ: b.z,
+          big: true,
+          stun: 0.3,
+        });
       }
     }
   }
@@ -789,10 +927,14 @@ export function updateOgre(w: World, e: Entity): void {
       const ahead = d > 0.01 ? (dx * fx + dz * fz) / d : 1;
       const sight = target ? cfg.aggro * 1.5 : ahead > 0.35 ? cfg.aggro : cfg.aggro * 0.42;
       if (d > sight || offRoute(o.transform.pos.x, o.transform.pos.z) > cfg.leash) continue;
-      if (d < bestD) { bestD = d; best = o; }
+      if (d < bestD) {
+        bestD = d;
+        best = o;
+      }
     }
     if (best) {
-      if (!target) w.emit({ type: "callout", x: p0.x, y: e.transform.y + 3, z: p0.z, team: NEUTRAL, text: "!", owner: e.id });
+      if (!target)
+        w.emit({ type: "callout", x: p0.x, y: e.transform.y + 3, z: p0.z, team: NEUTRAL, text: "!", owner: e.id });
       target = best;
     } else if (target && w.dist(e, target) > cfg.aggro * 1.5) target = undefined;
     u.targetId = target?.id ?? 0;
@@ -806,7 +948,8 @@ export function updateOgre(w: World, e: Entity): void {
       return;
     }
     if (w.time < route.waitUntil) {
-      if (Math.floor(route.waitUntil - w.time) !== Math.floor(route.waitUntil - w.time + w.dt)) w.faceToward(e, Math.sin(e.transform.facing + 1.6), Math.cos(e.transform.facing + 1.6), 4);
+      if (Math.floor(route.waitUntil - w.time) !== Math.floor(route.waitUntil - w.time + w.dt))
+        w.faceToward(e, Math.sin(e.transform.facing + 1.6), Math.cos(e.transform.facing + 1.6), 4);
       return;
     }
     const goal = route.leg ? route.b : route.a;

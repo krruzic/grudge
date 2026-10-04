@@ -21,11 +21,29 @@ function bombMesh(): THREE.Group {
   const fuse = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.28, 4), fuseMat);
   fuse.position.set(0.05, 1.02, 0);
   fuse.rotation.z = -0.35;
-  const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, color: 0xffc040, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const spark = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: starTex,
+      color: 0xffc040,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
   spark.position.set(0.1, 1.18, 0);
   spark.scale.setScalar(0.45);
   spark.name = "spark";
-  const warn = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0xff3010, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  const warn = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 20),
+    new THREE.MeshBasicMaterial({
+      color: 0xff3010,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    }),
+  );
   warn.rotation.x = -Math.PI / 2;
   warn.position.y = 0.05;
   warn.name = "warn";
@@ -39,7 +57,14 @@ goldTex.colorSpace = THREE.SRGBColorSpace;
 function blob(radius: number, opacity: number): THREE.Mesh {
   const m = new THREE.Mesh(
     new THREE.CircleGeometry(radius, 14),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    }),
   );
   m.rotation.x = -Math.PI / 2;
   return m;
@@ -61,7 +86,12 @@ export class RelicView {
   private smokeT = 0;
   fx: CombatFx | null = null;
 
-  constructor(private world: World, models: StructureModels, private teamColors: THREE.Color[], private heroScale: number) {
+  constructor(
+    private world: World,
+    models: StructureModels,
+    private teamColors: THREE.Color[],
+    private heroScale: number,
+  ) {
     const src = models.create("grudge", new THREE.Color(1, 1, 1));
     src.updateMatrixWorld(true);
     const relic = src.getObjectByName("relic");
@@ -89,10 +119,21 @@ export class RelicView {
     }
     const cone = new THREE.ConeGeometry(0.28, 0.5, 4);
     cone.rotateX(Math.PI);
-    this.arrow = new THREE.Mesh(cone, new THREE.MeshLambertMaterial({ map: goldTex, color: 0xffe08a, emissive: 0x3a2a00, flatShading: true }));
+    this.arrow = new THREE.Mesh(
+      cone,
+      new THREE.MeshLambertMaterial({ map: goldTex, color: 0xffe08a, emissive: 0x3a2a00, flatShading: true }),
+    );
     this.ring = new THREE.Mesh(
       new THREE.RingGeometry(0.75, 1.0, 20),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.7,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      }),
     );
     this.ring.rotation.x = -Math.PI / 2;
     this.root.add(this.relic, this.arrow, this.shadow, this.ring);
@@ -127,19 +168,42 @@ export class RelicView {
         seenAim.add(e.id);
         let r = this.reticles.get(e.id);
         if (!r) {
-          r = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: targetTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+          r = new THREE.Mesh(
+            new THREE.PlaneGeometry(2, 2),
+            new THREE.MeshBasicMaterial({
+              map: targetTex,
+              transparent: true,
+              depthWrite: false,
+              polygonOffset: true,
+              polygonOffsetFactor: -2,
+            }),
+          );
           r.rotation.x = -Math.PI / 2;
           this.reticles.set(e.id, r);
           this.root.add(r);
         }
         const a = e.hero.aim;
         r.position.set(a.x, w.groundY(a.x, a.z) + 0.15, a.z);
-        r.scale.setScalar(w.data.match.arena.shop.cannon.radius + w.data.match.arena.shop.cannon.spread * 0.6 + Math.sin(this.t * 8) * 0.15);
+        r.scale.setScalar(
+          w.data.match.arena.shop.cannon.radius +
+            w.data.match.arena.shop.cannon.spread * 0.6 +
+            Math.sin(this.t * 8) * 0.15,
+        );
         r.rotation.z = this.t * 1.5;
       }
     }
-    for (const [id, b] of this.carried) if (!seen.has(id)) { this.root.remove(b); this.carried.delete(id); }
-    for (const [id, r] of this.reticles) if (!seenAim.has(id)) { this.root.remove(r); r.geometry.dispose(); (r.material as THREE.Material).dispose(); this.reticles.delete(id); }
+    for (const [id, b] of this.carried)
+      if (!seen.has(id)) {
+        this.root.remove(b);
+        this.carried.delete(id);
+      }
+    for (const [id, r] of this.reticles)
+      if (!seenAim.has(id)) {
+        this.root.remove(r);
+        r.geometry.dispose();
+        (r.material as THREE.Material).dispose();
+        this.reticles.delete(id);
+      }
     const bombs = w.arena.bombs;
     while (this.planted.length < bombs.length) {
       const g = bombMesh();
@@ -199,7 +263,11 @@ export class RelicView {
       g.visible = !!b;
       if (!b) return;
       const k = Math.min(1, (w.time - b.start) / b.dur);
-      g.position.set(b.fromX + (b.toX - b.fromX) * k, b.fromY + (b.toY - b.fromY) * k + Math.sin(k * Math.PI) * 3, b.fromZ + (b.toZ - b.fromZ) * k);
+      g.position.set(
+        b.fromX + (b.toX - b.fromX) * k,
+        b.fromY + (b.toY - b.fromY) * k + Math.sin(k * Math.PI) * 3,
+        b.fromZ + (b.toZ - b.fromZ) * k,
+      );
       g.rotation.set(k * 9, 0, k * 5);
       g.scale.setScalar(0.8);
     });

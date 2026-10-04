@@ -6,7 +6,35 @@ import { box, padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
 import { costumesOf } from "../render/costumes";
 import glyphUrl from "../../assets/ui/abilities.png?url";
-import { artTitle, hiImage, boardBg, band, card, inset, windowCut, drawLogo, banner, beam, fieldShade, goldArrow, nameImage, paintedText, parchment, pennant, pin, plank, ribbon, rolledBanner, scroll, shadowText, shield, texturedRect, waxSeal, woodFloor, markWindow } from "./n64ui";
+import {
+  artTitle,
+  hiImage,
+  boardBg,
+  band,
+  card,
+  inset,
+  windowCut,
+  drawLogo,
+  banner,
+  beam,
+  fieldShade,
+  goldArrow,
+  nameImage,
+  paintedText,
+  parchment,
+  pennant,
+  pin,
+  plank,
+  ribbon,
+  rolledBanner,
+  scroll,
+  shadowText,
+  shield,
+  texturedRect,
+  waxSeal,
+  woodFloor,
+  markWindow,
+} from "./n64ui";
 import type { Portraits } from "./portraits";
 import { chipColor, type MenuCursors } from "./cursor";
 import { talentIcon } from "./hud";
@@ -16,9 +44,18 @@ import heroJson from "../../data/heroes.json";
 import talentData from "../../data/talents.json";
 
 type TNode = { id: string; next?: TNode[] };
-const TREES = (talentData as unknown as { heroes: Record<string, Partial<Record<"a" | "b" | "r" | "z", TNode[]>>> }).heroes;
+const TREES = (talentData as unknown as { heroes: Record<string, Partial<Record<"a" | "b" | "r" | "z", TNode[]>>> })
+  .heroes;
 
-function drawTree(ctx: CanvasRenderingContext2D, hero: string, side: "a" | "b", x: number, y: number, right: boolean, k = 1): void {
+function drawTree(
+  ctx: CanvasRenderingContext2D,
+  hero: string,
+  side: "a" | "b",
+  x: number,
+  y: number,
+  right: boolean,
+  k = 1,
+): void {
   const tree = TREES[hero];
   if (!tree) return;
   const big = Math.round(11 * k);
@@ -26,16 +63,40 @@ function drawTree(ctx: CanvasRenderingContext2D, hero: string, side: "a" | "b", 
   slots.forEach((slot, row) => {
     const list = tree[slot] ?? [];
     const yy = y + row * (big + 4);
-    list.forEach((t, j) => talentIcon(ctx, t.id, right ? x + (1 - j) * (big + 1) : x + j * (big + 1), yy, big, false, true));
+    list.forEach((t, j) =>
+      talentIcon(ctx, t.id, right ? x + (1 - j) * (big + 1) : x + j * (big + 1), yy, big, false, true),
+    );
   });
 }
 
 const KIND_LABEL: Record<string, string> = {
-  combo: "3-HIT COMBO", slam: "GROUND SLAM", quake: "EARTHQUAKE", warcry: "WAR CRY", shoot: "MAGIC BOLT",
-  hex: "HEX BLAST", leap: "CLIFF LEAP", dash: "PIERCING DASH", stealth: "SMOKE AMBUSH", summon: "SUMMON TROOPS", gravewalk: "GRAVEWALK",
-  repair: "REPAIR PULSE", turret: "DROP TURRET", ramp: "BUILD RAMP", wall: "STONE WALL", trap: "THROW TRAP", reach: "LONG ARM SLAP",
-  zone: "BRAMBLE FIELD", flurry: "BLADE FLURRY", parry: "PARRY", pip: "SEND PIP", volley: "VOLLEY", heartseeker: "HEARTSEEKER",
-  keg: "HEALING KEG", powderkeg: "POWDER KEG", brewfest: "BREWFEST", none: "-",
+  combo: "3-HIT COMBO",
+  slam: "GROUND SLAM",
+  quake: "EARTHQUAKE",
+  warcry: "WAR CRY",
+  shoot: "MAGIC BOLT",
+  hex: "HEX BLAST",
+  leap: "CLIFF LEAP",
+  dash: "PIERCING DASH",
+  stealth: "SMOKE AMBUSH",
+  summon: "SUMMON TROOPS",
+  gravewalk: "GRAVEWALK",
+  repair: "REPAIR PULSE",
+  turret: "DROP TURRET",
+  ramp: "BUILD RAMP",
+  wall: "STONE WALL",
+  trap: "THROW TRAP",
+  reach: "LONG ARM SLAP",
+  zone: "BRAMBLE FIELD",
+  flurry: "BLADE FLURRY",
+  parry: "PARRY",
+  pip: "SEND PIP",
+  volley: "VOLLEY",
+  heartseeker: "HEARTSEEKER",
+  keg: "HEALING KEG",
+  powderkeg: "POWDER KEG",
+  brewfest: "BREWFEST",
+  none: "-",
 };
 
 export interface SelectSlot {
@@ -87,7 +148,14 @@ function centerNum(ctx: CanvasRenderingContext2D, W: number, s: string, y: numbe
   drawNum(ctx, s, Math.round((W - textWidth(s, scale, true)) / 2), y, color, scale);
 }
 
-export function prompt(ctx: CanvasRenderingContext2D, x: number, y: number, items: [string, string][], scale = 0.85, ink?: string): void {
+export function prompt(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  items: [string, string][],
+  scale = 0.85,
+  ink?: string,
+): void {
   let cx = x;
   for (const [btn, label] of items) {
     const color = btn === "A" ? PAD.a : btn === "B" ? PAD.b : btn === "S" ? PAD.start : PAD.c;
@@ -105,7 +173,11 @@ export function promptWidth(items: [string, string][], scale = 0.85): number {
 
 const TEAM_BOX = ["#1c34a8", "#a81c1c", "#1c7a2a", "#9a7410"];
 const TEAM_BRIGHT = ["#4a74ff", "#ff4a3a", "#3ac85a", "#ffcf2a"];
-const stageUrls = import.meta.glob("../../assets/ui/stages/*.jpg", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const stageUrls = import.meta.glob("../../assets/ui/stages/*.jpg", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const stageArt = new Map<string, HTMLImageElement>();
 for (const [path, url] of Object.entries(stageUrls)) {
   const im = new Image();
@@ -117,7 +189,11 @@ const HERO_COL = ["warlord", "engineer", "raider", "summoner", "duelist", "warde
 const glyphSheet = new Image();
 glyphSheet.src = glyphUrl;
 const glyphCache = new Map<number, { dark: HTMLCanvasElement; light: HTMLCanvasElement }>();
-const glyphStripUrls = import.meta.glob("../../assets/ui/ability_glyphs/*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const glyphStripUrls = import.meta.glob("../../assets/ui/ability_glyphs/*.png", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const glyphStrips = new Map<string, HTMLImageElement>();
 for (const [path, url] of Object.entries(glyphStripUrls)) {
   const im = new Image();
@@ -169,7 +245,11 @@ function abilityGlyph(col: number, row: number): { dark: HTMLCanvasElement; ligh
   return out;
 }
 
-const costumeIconUrls = import.meta.glob("../../assets/ui/costume_icons/*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const costumeIconUrls = import.meta.glob("../../assets/ui/costume_icons/*.png", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const costumeIcons = new Map<string, HTMLImageElement>();
 for (const [path, url] of Object.entries(costumeIconUrls)) {
   const im = new Image();
@@ -190,9 +270,6 @@ const MODE_NAME: Record<MatchMode, string> = { "1v1": "1 VS 1", "2v2": "2 VS 2",
 const INK = "#0b0806";
 const BTN = { a: PAD.a, b: PAD.b, r: PAD.z, z: PAD.z };
 
-
-
-
 function mapPreview(d: MapData): HTMLCanvasElement {
   const t = new Terrain(d);
   const S = 4;
@@ -207,7 +284,9 @@ function mapPreview(d: MapData): HTMLCanvasElement {
       const st = t.styles[i];
       const h = t.groundHeight(x + 0.5, z + 0.5);
       let col: [number, number, number];
-      if (k === Kind.Wall) col = st === "pit" ? [8, 8, 12] : st === "rim" ? [40, 60, 34] : st === "castle" ? [120, 112, 100] : [96, 100, 84];
+      if (k === Kind.Wall)
+        col =
+          st === "pit" ? [8, 8, 12] : st === "rim" ? [40, 60, 34] : st === "castle" ? [120, 112, 100] : [96, 100, 84];
       else if (k === Kind.Water) col = [40, 96, 176];
       else if (k === Kind.Ford) col = [72, 128, 196];
       else if (k === Kind.Bridge) col = [140, 104, 64];
@@ -226,7 +305,8 @@ function mapPreview(d: MapData): HTMLCanvasElement {
     ctx.beginPath();
     ctx.arc(p.x * S, p.z * S, S * 1.3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = p.zone === "neutral" ? "#f0f0f0" : (p.side ?? (p.x < t.width / 2 ? 0 : 1)) === 0 ? "#6a8cff" : "#ff5a4a";
+    ctx.fillStyle =
+      p.zone === "neutral" ? "#f0f0f0" : (p.side ?? (p.x < t.width / 2 ? 0 : 1)) === 0 ? "#6a8cff" : "#ff5a4a";
     ctx.beginPath();
     ctx.arc(p.x * S, p.z * S, S * 0.9, 0, Math.PI * 2);
     ctx.fill();
@@ -298,7 +378,13 @@ export class Screens {
   openHint = false;
   peer = false;
 
-  updateSelect(slots: SelectSlot[], heroes: Record<string, HeroInfo>, roster: string[], mode: MatchMode, heroPartners = false): void {
+  updateSelect(
+    slots: SelectSlot[],
+    heroes: Record<string, HeroInfo>,
+    roster: string[],
+    mode: MatchMode,
+    heroPartners = false,
+  ): void {
     this.heroPartners = heroPartners;
     this.slots = slots;
     this.heroes = heroes;
@@ -308,7 +394,12 @@ export class Screens {
 
   private pool: number[] = [];
 
-  updateMaps(maps: MapData[], index: number, pool: number[] = maps.map((_, i) => i), mode: MatchMode = this.mode): void {
+  updateMaps(
+    maps: MapData[],
+    index: number,
+    pool: number[] = maps.map((_, i) => i),
+    mode: MatchMode = this.mode,
+  ): void {
     this.maps = maps;
     this.mapIndex = index;
     this.pool = pool;
@@ -319,15 +410,26 @@ export class Screens {
 
   private resultPlayers: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [];
   private placing: number[] = [];
-  showResults(w: World, players: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [], _names: Record<string, string> = {}, fallen: number[] = []): void {
+  showResults(
+    w: World,
+    players: { tag: string | null; hero: string; team: number; cpu: boolean }[] = [],
+    _names: Record<string, string> = {},
+    fallen: number[] = [],
+  ): void {
     this.results = w;
     this.resultPlayers = players;
     const keep = (t: number) => {
       const c = w.core(t);
       return c?.alive ? c.hp / c.maxHp : 0;
     };
-    const standing = w.teams.map((_, t) => t).filter((t) => !w.teams[t].out && t !== w.match.winner).sort((a, b) => keep(b) - keep(a));
-    const out = [...w.teams.map((_, t) => t).filter((t) => w.teams[t].out && !fallen.includes(t)), ...fallen.filter((t) => w.teams[t]?.out)];
+    const standing = w.teams
+      .map((_, t) => t)
+      .filter((t) => !w.teams[t].out && t !== w.match.winner)
+      .sort((a, b) => keep(b) - keep(a));
+    const out = [
+      ...w.teams.map((_, t) => t).filter((t) => w.teams[t].out && !fallen.includes(t)),
+      ...fallen.filter((t) => w.teams[t]?.out),
+    ];
     this.placing = [...(w.match.winner >= 0 ? [w.match.winner] : []), ...standing, ...out.reverse()];
   }
 
@@ -365,15 +467,24 @@ export class Screens {
     else if (this.which === "map") this.drawMap(ctx, W, H, blink);
     if (this.cursors && (sel || this.which === "map")) {
       if (sel) {
-        const labels = this.slots.map((sl, i) => (!this.championSeat(i) || !this.twoVtwo && i >= 2 ? "" : sl.cpu ? "CPU" : `${i + 1}`));
+        const labels = this.slots.map((sl, i) =>
+          !this.championSeat(i) || (!this.twoVtwo && i >= 2) ? "" : sl.cpu ? "CPU" : `${i + 1}`,
+        );
         this.slots.forEach((sl, i) => {
           const c = this.cursors!.chips[i];
           if (c.hero) {
             const p = this.shieldAt.get(c.hero);
-            if (p) { c.x = p.x + (i % 2 === 0 ? -9 : 9); c.y = p.y + (i >= 2 ? 9 : 0); }
+            if (p) {
+              c.x = p.x + (i % 2 === 0 ? -9 : 9);
+              c.y = p.y + (i >= 2 ? 9 : 0);
+            }
           }
         });
-        this.cursors.drawChips(ctx, labels, this.slots.map((sl, i) => chipColor(i, sl.cpu)));
+        this.cursors.drawChips(
+          ctx,
+          labels,
+          this.slots.map((sl, i) => chipColor(i, sl.cpu)),
+        );
       }
       this.cursors.drawCursors(ctx, now);
     }
@@ -387,7 +498,17 @@ export class Screens {
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, "t_champion", "CHOOSE YOUR CHAMPION", W / 2, 3, 14);
     const mw = this.mode === "ffa" ? 70 : 46;
-    ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, this.training ? "TRAINING" : MODE_NAME[this.mode], 0.55, undefined, this.training ? null : nameImage(`t_${this.mode}`));
+    ribbon(
+      ctx,
+      W - 15 - mw / 2,
+      4,
+      mw,
+      11,
+      this.training ? "TRAINING" : MODE_NAME[this.mode],
+      0.55,
+      undefined,
+      this.training ? null : nameImage(`t_${this.mode}`),
+    );
     this.hit("mode", W - 15 - mw / 2 - mw / 2 - 5, 1, mw + 10, 17);
     const cam = CAMERA_NAMES[this.cameraMode] ?? CAMERA_NAMES[1];
     const cw = Math.max(64, textWidth(cam, 0.5) + 18);
@@ -396,28 +517,50 @@ export class Screens {
 
     const n = this.roster.length;
     const sw = Math.max(26, Math.min(42, Math.floor((W - 24 - (n - 1) * 6) / Math.max(1, n))));
-    const sh = Math.round(sw * 54 / 42);
+    const sh = Math.round((sw * 54) / 42);
     const gap = Math.min(12, Math.floor((W - 24 - n * sw) / Math.max(1, n - 1)));
     const gx = Math.round((W - (n * sw + (n - 1) * gap)) / 2);
     const gy = 25;
     this.roster.forEach((type, k) => {
       const x = gx + k * (sw + gap);
-      const on = [0, 1, 2, 3].filter((i) => (i < 2 || (this.twoVtwo && this.championSeat(i))) && this.slots[i]?.ready && this.slots[i].hero === type).map((i) => this.teamOf(i));
+      const on = [0, 1, 2, 3]
+        .filter(
+          (i) =>
+            (i < 2 || (this.twoVtwo && this.championSeat(i))) && this.slots[i]?.ready && this.slots[i].hero === type,
+        )
+        .map((i) => this.teamOf(i));
       const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `hero:${type}`);
       this.hit(`hero:${type}`, x - 2, gy - 2, sw + 4, sh + 4);
       this.shieldAt.set(type, { x: x + sw / 2, y: gy + sh - 22 });
       const icon = this.portraits?.icon(type);
       const tilt = on.length || hot ? 0 : k % 2 ? 0.04 : -0.04;
-      card(ctx, x, gy - (hot ? 2 : 0), sw, sh, tilt, on.length === 1 ? TEAM_BRIGHT[on[0]] : on.length === 2 ? "#f0c030" : hot ? "#c81818" : "#8a8a90", () => {
-        const iw = sw - 8;
-        ctx.fillStyle = "#2a1a0a";
-        ctx.fillRect(2, 6, iw + 4, iw + 4);
-        texturedRect(ctx, "cloth", 4, 8, iw, iw, on.length ? TEAM_FIELD[on[0]] : "#7a2a1c", 0, 0.7);
-        if (icon) hiImage(ctx, icon, 4, 8, iw, iw);
-        const name = (this.heroes[type]?.name ?? type).toUpperCase();
-        const ns = Math.min(0.62, (sw - 4) / Math.max(1, textWidth(name, 1, true)));
-        drawPlain(ctx, name, sw / 2 - textWidth(name, ns, true) / 2, sh - 10, on.length ? "#8a1810" : "#3a2410", ns, true);
-      });
+      card(
+        ctx,
+        x,
+        gy - (hot ? 2 : 0),
+        sw,
+        sh,
+        tilt,
+        on.length === 1 ? TEAM_BRIGHT[on[0]] : on.length === 2 ? "#f0c030" : hot ? "#c81818" : "#8a8a90",
+        () => {
+          const iw = sw - 8;
+          ctx.fillStyle = "#2a1a0a";
+          ctx.fillRect(2, 6, iw + 4, iw + 4);
+          texturedRect(ctx, "cloth", 4, 8, iw, iw, on.length ? TEAM_FIELD[on[0]] : "#7a2a1c", 0, 0.7);
+          if (icon) hiImage(ctx, icon, 4, 8, iw, iw);
+          const name = (this.heroes[type]?.name ?? type).toUpperCase();
+          const ns = Math.min(0.62, (sw - 4) / Math.max(1, textWidth(name, 1, true)));
+          drawPlain(
+            ctx,
+            name,
+            sw / 2 - textWidth(name, ns, true) / 2,
+            sh - 10,
+            on.length ? "#8a1810" : "#3a2410",
+            ns,
+            true,
+          );
+        },
+      );
     });
 
     const order = this.mode === "ffa" ? [0, 1, 2, 3] : this.twoVtwo ? [0, 2, 1, 3] : [0, 1];
@@ -428,23 +571,43 @@ export class Screens {
     const bh = floorY - by - 6;
     order.forEach((i, k) => this.drawBanner(ctx, i, bgap + k * (bw + bgap), by, bw, bh, blink));
     if (!this.twoVtwo) {
-      for (const [i, bx] of [[2, 12], [3, W - 12 - 44]] as const) {
+      for (const [i, bx] of [
+        [2, 12],
+        [3, W - 12 - 44],
+      ] as const) {
         this.portraits?.drop(i);
         if (this.peer) continue;
         const hot = !!this.cursors?.cursors.some((c) => c.active && c.hover === `add:${i}`);
         card(ctx, bx, by + 4, 44, 34, hot ? 0 : i === 2 ? -0.04 : 0.04, hot ? "#c81818" : "#8a8a90", () => {
-          for (const [line, dy] of [["+ ADD", 10], ["CPU", 19]] as const) drawPlain(ctx, line, 22 - textWidth(line, 0.55, true) / 2, dy, hot ? "#8a1810" : "#6a4424", 0.55, true);
+          for (const [line, dy] of [
+            ["+ ADD", 10],
+            ["CPU", 19],
+          ] as const)
+            drawPlain(ctx, line, 22 - textWidth(line, 0.55, true) / 2, dy, hot ? "#8a1810" : "#6a4424", 0.55, true);
         });
         this.hit(`add:${i}`, bx - 2, by + 2, 48, 38);
       }
     }
 
-    const it: [string, string][] = this.peer ? [["A", "TAKE / PLACE SEAL"], ["B", "LEAVE"]] : [["A", "TAKE / PLACE SEAL"], ["B", "BACK"], ["S", "START"]];
+    const it: [string, string][] = this.peer
+      ? [
+          ["A", "TAKE / PLACE SEAL"],
+          ["B", "LEAVE"],
+        ]
+      : [
+          ["A", "TAKE / PLACE SEAL"],
+          ["B", "BACK"],
+          ["S", "START"],
+        ];
     prompt(ctx, Math.round((W - promptWidth(it, 0.7)) / 2), H - 13, it, 0.7);
     if (this.peer && this.lobby) {
       const lb = this.lobby;
       const r = lb.rules;
-      const t = lb.status || (lb.phase === "match" ? "A MATCH IS UNDER WAY · YOU'LL JOIN THE NEXT ONE" : `${lb.map} · ${r.minutes} MIN · ${r.popCap} SOLDIERS · GOLD X${r.goldRate} · WAITING FOR THE HOST`);
+      const t =
+        lb.status ||
+        (lb.phase === "match"
+          ? "A MATCH IS UNDER WAY · YOU'LL JOIN THE NEXT ONE"
+          : `${lb.map} · ${r.minutes} MIN · ${r.popCap} SOLDIERS · GOLD X${r.goldRate} · WAITING FOR THE HOST`);
       if (blink || !lb.status) center(ctx, W, t, floorY - 10, "#fff0c0", 0.55);
     }
 
@@ -454,7 +617,9 @@ export class Screens {
         card(t, W / 2 - sw2 / 2, 124, sw2, 32, 0.01, "#c81818", () => {
           const t1 = "SEATS STILL OPEN";
           drawPlain(t, t1, sw2 / 2 - textWidth(t1, 1.05, true) / 2, 5, "#3a2410", 1.05, true);
-          const t2 = this.twoVtwo ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1" : "WAIT FOR A PLAYER OR + ADD CPU";
+          const t2 = this.twoVtwo
+            ? "WAIT FOR PLAYERS, + ADD CPU, OR SWITCH TO 1 VS 1"
+            : "WAIT FOR A PLAYER OR + ADD CPU";
           drawPlain(t, t2, sw2 / 2 - textWidth(t2, 0.55, true) / 2, 20, "#8a1810", 0.55, true);
         });
       });
@@ -632,7 +797,15 @@ export class Screens {
     }
   }
 
-  private drawBanner(ctx: CanvasRenderingContext2D, i: number, x: number, y: number, w: number, h: number, blink: boolean): void {
+  private drawBanner(
+    ctx: CanvasRenderingContext2D,
+    i: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    blink: boolean,
+  ): void {
     const s = this.slots[i];
     const active = !!s && (i < 2 || this.twoVtwo);
     const team = this.teamOf(i);
@@ -658,10 +831,27 @@ export class Screens {
         band(ctx, 6, 24, w - 12, h - 92, "#000000", 0.45);
         waxSeal(ctx, w / 2, 24 + (h - 92) / 2, 14, "#5a4a3a", "none");
         const lines = this.peer ? ["OPEN SEAT", "WAITING FOR", "A PLAYER"] : ["OPEN SEAT", "WAITING FOR A PLAYER"];
-        lines.forEach((l, k) => drawPlain(ctx, l, w / 2 - textWidth(l, k ? 0.48 : 0.68, true) / 2, h - 62 + k * 9, k ? "#6a4424" : BROWN_S, k ? 0.48 : 0.68, true));
+        lines.forEach((l, k) =>
+          drawPlain(
+            ctx,
+            l,
+            w / 2 - textWidth(l, k ? 0.48 : 0.68, true) / 2,
+            h - 62 + k * 9,
+            k ? "#6a4424" : BROWN_S,
+            k ? 0.48 : 0.68,
+            true,
+          ),
+        );
       });
-      const btns: [string, string][] = this.peer ? [[`take:${i}`, "SIT HERE"]] : [[`sit:${i}`, "SIT HERE"], [`seatcpu:${i}`, "+ ADD CPU"]];
-      btns.forEach(([bid, t], k) => this.woodButton(ctx, bid, t, x + w / 2, y + h - 34 + k * 15 - (btns.length - 1) * 8));
+      const btns: [string, string][] = this.peer
+        ? [[`take:${i}`, "SIT HERE"]]
+        : [
+            [`sit:${i}`, "SIT HERE"],
+            [`seatcpu:${i}`, "+ ADD CPU"],
+          ];
+      btns.forEach(([bid, t], k) =>
+        this.woodButton(ctx, bid, t, x + w / 2, y + h - 34 + k * 15 - (btns.length - 1) * 8),
+      );
       return;
     }
     const commander = !this.championSeat(i);
@@ -684,7 +874,9 @@ export class Screens {
       if (blank) {
         band(ctx, 5, iy, w - 10, ih, "#000000", 0.35);
         const lines = ["PICK A", "CHAMPION"];
-        lines.forEach((l, k) => drawPlain(ctx, l, w / 2 - textWidth(l, 0.62, true) / 2, iy + ih / 2 - 9 + k * 10, "#e8d8b8", 0.62, true));
+        lines.forEach((l, k) =>
+          drawPlain(ctx, l, w / 2 - textWidth(l, 0.62, true) / 2, iy + ih / 2 - 9 + k * 10, "#e8d8b8", 0.62, true),
+        );
         return;
       }
       const name = (def?.name ?? s.hero).toUpperCase();
@@ -773,14 +965,15 @@ export class Screens {
     (["a", "b", "r", "z"] as const).forEach((a, j) => {
       const cx = x + (w / 4) * (j + 0.5);
       const g = heroGlyph(s.hero, j);
-      if (g) onHiLayer(ctx, (t) => {
-        t.imageSmoothingEnabled = true;
-        t.imageSmoothingQuality = "high";
-        t.globalAlpha = 0.5;
-        t.drawImage(g.light, cx - 7, y + h - 17 + 0.8, 14, 14);
-        t.globalAlpha = 1;
-        t.drawImage(g.dark, cx - 7, y + h - 17, 14, 14);
-      });
+      if (g)
+        onHiLayer(ctx, (t) => {
+          t.imageSmoothingEnabled = true;
+          t.imageSmoothingQuality = "high";
+          t.globalAlpha = 0.5;
+          t.drawImage(g.light, cx - 7, y + h - 17 + 0.8, 14, 14);
+          t.globalAlpha = 1;
+          t.drawImage(g.dark, cx - 7, y + h - 17, 14, 14);
+        });
       else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
     });
     const cl = costumesOf(s.hero);
@@ -836,7 +1029,17 @@ export class Screens {
     artTitle(ctx, "t_field", "CHOOSE THE FIELD", W / 2, 3, 14);
     const pool = this.pool;
     const mw = this.fieldMode === "ffa" ? 70 : 46;
-    ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, MODE_NAME[this.fieldMode], 0.55, undefined, nameImage(`t_${this.fieldMode}`));
+    ribbon(
+      ctx,
+      W - 15 - mw / 2,
+      4,
+      mw,
+      11,
+      MODE_NAME[this.fieldMode],
+      0.55,
+      undefined,
+      nameImage(`t_${this.fieldMode}`),
+    );
 
     const random = this.mapIndex >= pool.length;
     const d = random ? null : this.maps[pool[this.mapIndex]];
@@ -853,7 +1056,8 @@ export class Screens {
     const ih = Math.round(iw * 0.48);
     ctx.fillStyle = "#2a1a0a";
     ctx.fillRect(10, 10, iw + 4, ih + 4);
-    if (!random && this.portraits) hiImage(ctx, this.portraits.mapLive(pool[this.mapIndex], iw * 4, ih * 4), 12, 12, iw, ih);
+    if (!random && this.portraits)
+      hiImage(ctx, this.portraits.mapLive(pool[this.mapIndex], iw * 4, ih * 4), 12, 12, iw, ih);
     else {
       texturedRect(ctx, "parch", 12, 12, iw, ih, "#c8a878", 0, 1);
       drawPlain(ctx, "?", 12 + iw / 2 - textWidth("?", 5, true) / 2, 12 + ih / 2 - 26, "#5a3a18", 5, true);
@@ -861,8 +1065,10 @@ export class Screens {
     const name = random ? "A Field Unknown" : d!.name;
     const nsc = Math.min(1.35, (pw - 60) / Math.max(1, textWidth(name, 1, true)));
     drawPlain(ctx, name, 14, ih + 18, "#3a2410", nsc, true);
-    const blurb = random ? "LET FATE CHOOSE WHERE THE GRUDGE IS SETTLED." : d!.blurb ?? "";
-    wrap(blurb, pw - 70, 0.6).slice(0, 3).forEach((l, j) => drawPlain(ctx, l, 14, ih + 35 + j * 8, "#4a3018", 0.6));
+    const blurb = random ? "LET FATE CHOOSE WHERE THE GRUDGE IS SETTLED." : (d!.blurb ?? "");
+    wrap(blurb, pw - 70, 0.6)
+      .slice(0, 3)
+      .forEach((l, j) => drawPlain(ctx, l, 14, ih + 35 + j * 8, "#4a3018", 0.6));
     if (d) {
       let padCount = padCounts.get(d.name);
       if (padCount === undefined) {
@@ -870,9 +1076,16 @@ export class Screens {
         padCounts.set(d.name, padCount);
       }
       const size = d.width * d.depth <= 2400 ? "SMALL" : d.width * d.depth <= 4000 ? "MEDIUM" : "LARGE";
-      drawPlain(ctx, `${size} FIELD  ·  ${d.width} BY ${d.depth} PACES  ·  ${padCount} TOWER PADS`, 14, ph - 12, "#6a4424", 0.55);
+      drawPlain(
+        ctx,
+        `${size} FIELD  ·  ${d.width} BY ${d.depth} PACES  ·  ${padCount} TOWER PADS`,
+        14,
+        ph - 12,
+        "#6a4424",
+        0.55,
+      );
     }
-    waxSeal(ctx, pw - 22, ih + 36, 15, "#a8141a", random ? "hex" : d?.emblem ?? "castle");
+    waxSeal(ctx, pw - 22, ih + 36, 15, "#a8141a", random ? "hex" : (d?.emblem ?? "castle"));
     ctx.restore();
 
     const cx0 = px + pw + 18;
@@ -886,7 +1099,7 @@ export class Screens {
       this.hit(`map:${k}`, cx0 - 8, cy - 2, cw + 8, chh + 6);
       ctx.save();
       ctx.translate(cx + cw / 2, cy + chh / 2);
-      ctx.rotate(sel ? 0 : (k % 2 ? 0.03 : -0.03));
+      ctx.rotate(sel ? 0 : k % 2 ? 0.03 : -0.03);
       ctx.translate(-cw / 2, -chh / 2);
       parchment(ctx, 0, 0, cw, chh);
       const tw = cw - 10;
@@ -906,12 +1119,33 @@ export class Screens {
       ctx.restore();
       if (sel) goldArrow(ctx, cx - 6, cy + chh / 2, -1, 6);
     }
-    const it: [string, string][] = this.fieldWatch ? [["B", "LEAVE"]] : [["A", "TO BATTLE"], ["B", "BACK"], ["S", "START"]];
+    const it: [string, string][] = this.fieldWatch
+      ? [["B", "LEAVE"]]
+      : [
+          ["A", "TO BATTLE"],
+          ["B", "BACK"],
+          ["S", "START"],
+        ];
     prompt(ctx, Math.round((W - promptWidth(it, 0.7)) / 2), H - 13, it, 0.7);
-    if (this.fieldNote) shadowText(ctx, this.fieldNote, Math.round(px + pw / 2 - textWidth(this.fieldNote, 0.55) / 2), H - 28, this.fieldWatch ? "#fff0c0" : "#f8e8a0", 0.55);
+    if (this.fieldNote)
+      shadowText(
+        ctx,
+        this.fieldNote,
+        Math.round(px + pw / 2 - textWidth(this.fieldNote, 0.55) / 2),
+        H - 28,
+        this.fieldWatch ? "#fff0c0" : "#f8e8a0",
+        0.55,
+      );
   }
 
-  private drawFfaRows(ctx: CanvasRenderingContext2D, pw: number, ry: number, rh: number, rows: [string, (i: number) => number][], w: World): void {
+  private drawFfaRows(
+    ctx: CanvasRenderingContext2D,
+    pw: number,
+    ry: number,
+    rh: number,
+    rows: [string, (i: number) => number][],
+    w: World,
+  ): void {
     const order = this.placing.length ? this.placing : w.teams.map((_, t) => t);
     const lw = 74;
     const colW = (pw - 12 - lw - 8) / order.length;
@@ -940,7 +1174,15 @@ export class Screens {
       vals.forEach((v, k) => {
         const sv = String(v);
         const top = vals.filter((q) => q === best).length === 1 && v === best;
-        drawPlain(ctx, sv, cx(k) - textWidth(sv, 0.72, true) / 2, y + 1, top ? TEAM_TEXT_R[order[k]] : "#4a3018", 0.72, true);
+        drawPlain(
+          ctx,
+          sv,
+          cx(k) - textWidth(sv, 0.72, true) / 2,
+          y + 1,
+          top ? TEAM_TEXT_R[order[k]] : "#4a3018",
+          0.72,
+          true,
+        );
       });
       const tot = vals.reduce((a, b) => a + b, 0);
       const barW = pw - 24;
@@ -970,10 +1212,14 @@ export class Screens {
     woodFloor(ctx, H - 20, W, H);
     beam(ctx, 4, 2, W - 8, 17);
     artTitle(ctx, `!${head}`, head, W / 2, 3, 14);
-    const ps0 = this.resultPlayers.length ? this.resultPlayers : w.players.map((p) => ({ tag: null, hero: p.heroType, team: p.team, cpu: true }));
+    const ps0 = this.resultPlayers.length
+      ? this.resultPlayers
+      : w.players.map((p) => ({ tag: null, hero: p.heroType, team: p.team, cpu: true }));
     const ffa = w.ffa;
     const place = (t: number) => this.placing.indexOf(t);
-    const ps = ffa ? ps0.map((p, i) => ({ ...p, slot: i })).sort((a, b) => place(a.team) - place(b.team)) : ps0.map((p, i) => ({ ...p, slot: i }));
+    const ps = ffa
+      ? ps0.map((p, i) => ({ ...p, slot: i })).sort((a, b) => place(a.team) - place(b.team))
+      : ps0.map((p, i) => ({ ...p, slot: i }));
     const t = w.teams;
     const pw = Math.min(250, Math.round(W * 0.6));
     const ph = H - 52;
@@ -1005,31 +1251,32 @@ export class Screens {
     const ry = ih + 22;
     const rh = Math.min(18, (ph - ry - 8) / rows.length);
     if (ffa) this.drawFfaRows(ctx, pw, ry + 14, Math.min(rh, (ph - ry - 20) / rows.length), rows, w);
-    else rows.forEach(([label, f], i) => {
-      const y = ry + i * rh;
-      const a = f(0);
-      const b = f(1);
-      drawPlain(ctx, label, pw / 2 - textWidth(label, 0.5, true) / 2, y, "#6a4424", 0.5, true);
-      const va = String(a);
-      const vb = String(b);
-      drawPlain(ctx, va, 12, y + 2, a > b ? "#1c34a8" : "#4a3018", 0.72, true);
-      drawPlain(ctx, vb, pw - 12 - textWidth(vb, 0.72, true), y + 2, b > a ? "#a81c1c" : "#4a3018", 0.72, true);
-      const tot = Math.max(1, a + b);
-      const barW = pw - 110;
-      const bx = 55;
-      const by = y + 9;
-      ctx.fillStyle = "#3a2410";
-      ctx.fillRect(bx - 1, by - 1, barW + 2, 5);
-      if (a + b === 0) {
-        ctx.fillStyle = "#8a7a60";
-        ctx.fillRect(bx, by, barW, 3);
-      } else {
-        ctx.fillStyle = "#3a58e0";
-        ctx.fillRect(bx, by, Math.round((barW * a) / tot), 3);
-        ctx.fillStyle = "#d83828";
-        ctx.fillRect(bx + Math.round((barW * a) / tot), by, barW - Math.round((barW * a) / tot), 3);
-      }
-    });
+    else
+      rows.forEach(([label, f], i) => {
+        const y = ry + i * rh;
+        const a = f(0);
+        const b = f(1);
+        drawPlain(ctx, label, pw / 2 - textWidth(label, 0.5, true) / 2, y, "#6a4424", 0.5, true);
+        const va = String(a);
+        const vb = String(b);
+        drawPlain(ctx, va, 12, y + 2, a > b ? "#1c34a8" : "#4a3018", 0.72, true);
+        drawPlain(ctx, vb, pw - 12 - textWidth(vb, 0.72, true), y + 2, b > a ? "#a81c1c" : "#4a3018", 0.72, true);
+        const tot = Math.max(1, a + b);
+        const barW = pw - 110;
+        const bx = 55;
+        const by = y + 9;
+        ctx.fillStyle = "#3a2410";
+        ctx.fillRect(bx - 1, by - 1, barW + 2, 5);
+        if (a + b === 0) {
+          ctx.fillStyle = "#8a7a60";
+          ctx.fillRect(bx, by, barW, 3);
+        } else {
+          ctx.fillStyle = "#3a58e0";
+          ctx.fillRect(bx, by, Math.round((barW * a) / tot), 3);
+          ctx.fillStyle = "#d83828";
+          ctx.fillRect(bx + Math.round((barW * a) / tot), by, barW - Math.round((barW * a) / tot), 3);
+        }
+      });
     ctx.restore();
     const cx0 = px + pw + 18;
     const cw = W - cx0 - 14;
@@ -1049,7 +1296,7 @@ export class Screens {
       texturedRect(ctx, "cloth", 5, 5, chh - 8, chh - 8, TEAM_CLOTH[p.team], 0, 0.7);
       const icon = this.portraits?.icon(p.hero);
       if (icon) hiImage(ctx, icon, 5, 5, chh - 8, chh - 8);
-      const nm = p.cpu ? "CPU" : p.tag ?? `P${p.slot + 1}`;
+      const nm = p.cpu ? "CPU" : (p.tag ?? `P${p.slot + 1}`);
       drawPlain(ctx, nm, chh + 2, chh / 2 - 9, TEAM_TEXT_R[p.team], 0.72, true);
       const hero = (this.heroes[p.hero]?.name ?? p.hero).toUpperCase();
       drawPlain(ctx, hero, chh + 2, chh / 2 + 2, "#4a3018", 0.55, true);
@@ -1057,7 +1304,8 @@ export class Screens {
       else if (ffa) {
         const pl = PLACE[place(p.team)] ?? "";
         drawPlain(ctx, pl, cw - 6 - textWidth(pl, 0.62, true), chh / 2 - 9, "#6a4424", 0.62, true);
-        if (w.teams[p.team]?.out) drawPlain(ctx, "FALLEN", cw - 6 - textWidth("FALLEN", 0.45, true), chh / 2 + 2, "#8a1810", 0.45, true);
+        if (w.teams[p.team]?.out)
+          drawPlain(ctx, "FALLEN", cw - 6 - textWidth("FALLEN", 0.45, true), chh / 2 + 2, "#8a1810", 0.45, true);
       }
       pin(ctx, cw / 2, 3, won ? "#c8a020" : TEAM_BRIGHT[p.team]);
       ctx.restore();

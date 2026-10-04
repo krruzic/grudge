@@ -22,7 +22,6 @@ interface Peer {
   name: string;
 }
 
-
 export function lanAddresses(port: number): string[] {
   const out: string[] = [];
   for (const list of Object.values(networkInterfaces())) {
@@ -74,7 +73,11 @@ interface StatsFile {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const word = (v: unknown, n: number) => String(v ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, n);
+const word = (v: unknown, n: number) =>
+  String(v ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, "")
+    .slice(0, n);
 const int = (v: unknown, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
 
 export class StatsStore {
@@ -99,7 +102,16 @@ export class StatsStore {
     const players = list.map((q) => {
       const p = (q ?? {}) as Record<string, unknown>;
       const id = typeof p.id === "string" && UUID.test(p.id) ? p.id : null;
-      return { id, name: word(p.name, 6), hero: String(p.hero ?? "").replace(/[^a-z0-9_-]/gi, "").slice(0, 24), team: int(p.team, 0, 7), cpu: !!p.cpu, kills: int(p.kills, 0, 999) };
+      return {
+        id,
+        name: word(p.name, 6),
+        hero: String(p.hero ?? "")
+          .replace(/[^a-z0-9_-]/gi, "")
+          .slice(0, 24),
+        team: int(p.team, 0, 7),
+        cpu: !!p.cpu,
+        kills: int(p.kills, 0, 999),
+      };
     });
     const humans = players.filter((p) => !p.cpu);
     if (new Set(humans.map((p) => p.team)).size < 2) return false;
@@ -109,14 +121,37 @@ export class StatsStore {
     const res = (t: number): keyof Rec => (winner < 0 ? "d" : winner === t ? "w" : "l");
     for (const p of humans) {
       if (!p.id || !p.name) continue;
-      const t = (this.data.tags[p.id] ??= { name: p.name, w: 0, l: 0, d: 0, kills: 0, heroes: {}, first: at, last: at });
+      const t = (this.data.tags[p.id] ??= {
+        name: p.name,
+        w: 0,
+        l: 0,
+        d: 0,
+        kills: 0,
+        heroes: {},
+        first: at,
+        last: at,
+      });
       t.name = p.name;
       t.last = at;
       t[res(p.team)]++;
       t.kills += p.kills;
       if (p.hero) (t.heroes[p.hero] ??= { w: 0, l: 0, d: 0 })[res(p.team)]++;
     }
-    this.data.matches.unshift({ at, mode: word(r.mode, 4), map: String(r.map ?? "").replace(/[^a-z0-9_-]/gi, "").slice(0, 24), winner, secs: int(r.secs, 0, 7200), players: players.map((p) => ({ id: p.cpu ? null : p.id, name: p.cpu ? "CPU" : p.name, hero: p.hero, team: p.team })) });
+    this.data.matches.unshift({
+      at,
+      mode: word(r.mode, 4),
+      map: String(r.map ?? "")
+        .replace(/[^a-z0-9_-]/gi, "")
+        .slice(0, 24),
+      winner,
+      secs: int(r.secs, 0, 7200),
+      players: players.map((p) => ({
+        id: p.cpu ? null : p.id,
+        name: p.cpu ? "CPU" : p.name,
+        hero: p.hero,
+        team: p.team,
+      })),
+    });
     this.data.matches.length = Math.min(this.data.matches.length, 500);
     this.save();
     return true;
@@ -145,8 +180,18 @@ export class StatsStore {
       res.end(JSON.stringify(t ? { id, ...t } : { error: "unknown" }));
       return;
     }
-    const top = Object.values(this.data.tags).sort((a, b) => b.w - a.w || a.l - b.l).slice(0, 50).map((t) => ({ name: t.name, w: t.w, l: t.l, d: t.d, kills: t.kills }));
-    res.end(JSON.stringify({ top, matches: this.data.matches.slice(0, 20).map((m) => ({ ...m, players: m.players.map((p) => ({ name: p.name, hero: p.hero, team: p.team })) })) }));
+    const top = Object.values(this.data.tags)
+      .sort((a, b) => b.w - a.w || a.l - b.l)
+      .slice(0, 50)
+      .map((t) => ({ name: t.name, w: t.w, l: t.l, d: t.d, kills: t.kills }));
+    res.end(
+      JSON.stringify({
+        top,
+        matches: this.data.matches
+          .slice(0, 20)
+          .map((m) => ({ ...m, players: m.players.map((p) => ({ name: p.name, hero: p.hero, team: p.team })) })),
+      }),
+    );
   }
 }
 
@@ -161,7 +206,9 @@ export class NetRelay {
   stats = new StatsStore();
 
   constructor() {
-    this.wss.on("connection", (ws, req: IncomingMessage) => this.accept(ws, Number((req.headers.host ?? "").split(":")[1] ?? 0) || this.port));
+    this.wss.on("connection", (ws, req: IncomingMessage) =>
+      this.accept(ws, Number((req.headers.host ?? "").split(":")[1] ?? 0) || this.port),
+    );
   }
 
   attach(server: Server | null | undefined): void {
@@ -185,10 +232,23 @@ export class NetRelay {
 
   info(req: IncomingMessage, res: ServerResponse): void {
     const port = this.port || Number((req.headers.host ?? "").split(":")[1] ?? 0);
-    const rooms = [...this.rooms.values()].map((r) => ({ id: r.id, ...r.meta, peers: r.peers.size, age: Math.round((Date.now() - r.created) / 1000) }));
+    const rooms = [...this.rooms.values()].map((r) => ({
+      id: r.id,
+      ...r.meta,
+      peers: r.peers.size,
+      age: Math.round((Date.now() - r.created) / 1000),
+    }));
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store");
-    res.end(JSON.stringify({ hosting: rooms.length > 0, players: rooms.reduce((n, r) => n + r.peers, 0), rooms, addrs: lanAddresses(port), public: publicUrl() }));
+    res.end(
+      JSON.stringify({
+        hosting: rooms.length > 0,
+        players: rooms.reduce((n, r) => n + r.peers, 0),
+        rooms,
+        addrs: lanAddresses(port),
+        public: publicUrl(),
+      }),
+    );
   }
 
   private send(ws: WebSocket, msg: unknown): void {
@@ -211,15 +271,33 @@ export class NetRelay {
         return;
       }
       if (!role && m.t === "host") {
-        if (this.rooms.size >= MAX_ROOMS) return this.send(ws, { t: "error", msg: "THE SERVER IS FULL OF BATTLES · TRY LATER" });
+        if (this.rooms.size >= MAX_ROOMS)
+          return this.send(ws, { t: "error", msg: "THE SERVER IS FULL OF BATTLES · TRY LATER" });
         role = "host";
         me = { ws, id: 0, name: String(m.name ?? "HOST").slice(0, 12) };
-        room = { id: this.nextRoom++, host: me, peers: new Map(), created: Date.now(), reported: 0, meta: { name: `${me.name.toUpperCase()}'S BATTLE`, mode: "1 VS 1", map: "", humans: 1, seats: 4, phase: "lobby" } };
+        room = {
+          id: this.nextRoom++,
+          host: me,
+          peers: new Map(),
+          created: Date.now(),
+          reported: 0,
+          meta: {
+            name: `${me.name.toUpperCase()}'S BATTLE`,
+            mode: "1 VS 1",
+            map: "",
+            humans: 1,
+            seats: 4,
+            phase: "lobby",
+          },
+        };
         this.rooms.set(room.id, room);
         return this.send(ws, { t: "hosting", room: room.id, addrs: lanAddresses(port), public: publicUrl() });
       }
       if (!role && m.t === "join") {
-        const want = m.room !== undefined && m.room !== null ? this.rooms.get(Number(m.room)) : this.openRoom() ?? [...this.rooms.values()][0];
+        const want =
+          m.room !== undefined && m.room !== null
+            ? this.rooms.get(Number(m.room))
+            : (this.openRoom() ?? [...this.rooms.values()][0]);
         if (!want) return this.send(ws, { t: "error", msg: m.room ? "THAT BATTLE IS OVER" : "NOBODY IS HOSTING YET" });
         role = "peer";
         room = want;

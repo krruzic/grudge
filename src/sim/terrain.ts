@@ -197,7 +197,10 @@ export class Terrain {
     this.flags = new Uint8Array(n);
     this.deck = new Float32Array(n);
     this.styles = new Array<string>(n).fill("");
-    this.mirror = data.mirror === "x" || data.mirror === "diag" || data.mirror === "rot" || data.mirror === "quad" ? data.mirror : "none";
+    this.mirror =
+      data.mirror === "x" || data.mirror === "diag" || data.mirror === "rot" || data.mirror === "quad"
+        ? data.mirror
+        : "none";
     this.teams = data.teams ?? 2;
     this.tide = data.tide;
     this.surround = data.surround;
@@ -219,7 +222,8 @@ export class Terrain {
         return [r, { ...r, x: mx }];
       }
       if (mode === "rot" && r.z !== undefined) {
-        const m = r.w !== undefined ? { ...r, x: W - r.x - r.w, z: D - r.z - (r.h ?? 0) } : { ...r, x: W - r.x, z: D - r.z };
+        const m =
+          r.w !== undefined ? { ...r, x: W - r.x - r.w, z: D - r.z - (r.h ?? 0) } : { ...r, x: W - r.x, z: D - r.z };
         if (Math.abs(m.x - r.x) < 1e-6 && Math.abs(m.z - r.z) < 1e-6) return [r];
         return [r, m];
       }
@@ -227,8 +231,17 @@ export class Terrain {
         const out: T[] = [r];
         let c = r;
         for (let k = 0; k < 3; k++) {
-          c = c.w !== undefined ? { ...c, x: D - c.z! - (c.h ?? 0), z: c.x, w: c.h, h: c.w } : { ...c, x: D - c.z!, z: c.x };
-          if (!out.some((o) => Math.abs(o.x - c.x) < 1e-6 && Math.abs((o.z ?? 0) - (c.z ?? 0)) < 1e-6 && o.w === c.w && o.h === c.h)) out.push(c);
+          c =
+            c.w !== undefined
+              ? { ...c, x: D - c.z! - (c.h ?? 0), z: c.x, w: c.h, h: c.w }
+              : { ...c, x: D - c.z!, z: c.x };
+          if (
+            !out.some(
+              (o) =>
+                Math.abs(o.x - c.x) < 1e-6 && Math.abs((o.z ?? 0) - (c.z ?? 0)) < 1e-6 && o.w === c.w && o.h === c.h,
+            )
+          )
+            out.push(c);
         }
         return out;
       }
@@ -244,9 +257,11 @@ export class Terrain {
       if (op.op === "noise") {
         this.eachVertex((vx, vz, i) => {
           const s = op.scale;
-          const v = valueNoise(vx * s, vz * s, op.seed) * 0.65 + valueNoise(vx * s * 2.3, vz * s * 2.3, op.seed + 9) * 0.35;
+          const v =
+            valueNoise(vx * s, vz * s, op.seed) * 0.65 + valueNoise(vx * s * 2.3, vz * s * 2.3, op.seed + 9) * 0.35;
           const [mx, mz] = this.canon(vx, vz);
-          const vm = valueNoise(mx * s, mz * s, op.seed) * 0.65 + valueNoise(mx * s * 2.3, mz * s * 2.3, op.seed + 9) * 0.35;
+          const vm =
+            valueNoise(mx * s, mz * s, op.seed) * 0.65 + valueNoise(mx * s * 2.3, mz * s * 2.3, op.seed + 9) * 0.35;
           this.heights[i] += ((mirror ? vm : v) - 0.5) * 2 * op.amp;
         });
         continue;
@@ -258,15 +273,38 @@ export class Terrain {
       for (const r of mirrorRect(op)) {
         this.fill(r, (i) => {
           switch (op.op) {
-            case "wall": this.kinds[i] = Kind.Wall; this.styles[i] = op.style ?? "castle"; break;
-            case "pit": this.kinds[i] = Kind.Wall; this.styles[i] = "pit"; break;
-            case "water": this.kinds[i] = Kind.Water; if (op.deep) this.flags[i] |= FLAG_DEEP; break;
-            case "ford": this.kinds[i] = Kind.Ford; break;
-            case "bridge": this.kinds[i] = Kind.Bridge; this.deck[i] = op.y ?? 0; this.styles[i] = op.style ?? "wood"; break;
-            case "dirt": this.flags[i] |= FLAG_DIRT; break;
-            case "paving": this.flags[i] |= FLAG_PAVING; break;
-            case "grass": this.flags[i] |= FLAG_GRASS; break;
-            case "tide": this.flags[i] |= FLAG_TIDE; break;
+            case "wall":
+              this.kinds[i] = Kind.Wall;
+              this.styles[i] = op.style ?? "castle";
+              break;
+            case "pit":
+              this.kinds[i] = Kind.Wall;
+              this.styles[i] = "pit";
+              break;
+            case "water":
+              this.kinds[i] = Kind.Water;
+              if (op.deep) this.flags[i] |= FLAG_DEEP;
+              break;
+            case "ford":
+              this.kinds[i] = Kind.Ford;
+              break;
+            case "bridge":
+              this.kinds[i] = Kind.Bridge;
+              this.deck[i] = op.y ?? 0;
+              this.styles[i] = op.style ?? "wood";
+              break;
+            case "dirt":
+              this.flags[i] |= FLAG_DIRT;
+              break;
+            case "paving":
+              this.flags[i] |= FLAG_PAVING;
+              break;
+            case "grass":
+              this.flags[i] |= FLAG_GRASS;
+              break;
+            case "tide":
+              this.flags[i] |= FLAG_TIDE;
+              break;
           }
         });
       }
@@ -275,9 +313,14 @@ export class Terrain {
     for (let cz = 0; cz < D; cz++) {
       for (let cx = 0; cx < W; cx++) {
         const i = cz * W + cx;
-        const c = (this.vertexHeight(cx, cz) + this.vertexHeight(cx + 1, cz) + this.vertexHeight(cx, cz + 1) +
-          this.vertexHeight(cx + 1, cz + 1)) / 4;
-        if ((this.kinds[i] === Kind.Water || this.kinds[i] === Kind.Ford) && c > this.waterLevel + 0.15) this.kinds[i] = Kind.Ground;
+        const c =
+          (this.vertexHeight(cx, cz) +
+            this.vertexHeight(cx + 1, cz) +
+            this.vertexHeight(cx, cz + 1) +
+            this.vertexHeight(cx + 1, cz + 1)) /
+          4;
+        if ((this.kinds[i] === Kind.Water || this.kinds[i] === Kind.Ford) && c > this.waterLevel + 0.15)
+          this.kinds[i] = Kind.Ground;
         else if (this.kinds[i] === Kind.Ground && c < this.waterLevel - 0.15) this.kinds[i] = Kind.Water;
       }
     }
@@ -288,7 +331,9 @@ export class Terrain {
     }
 
     const both = <T extends { x: number; z: number; rot?: number; team?: number; side?: number }>(
-      list: T[], out: T[], flipTeam: boolean,
+      list: T[],
+      out: T[],
+      flipTeam: boolean,
     ) => {
       for (const p of list) {
         if (mode === "quad") {
@@ -308,7 +353,12 @@ export class Terrain {
         if (mode === "x" && Math.abs(p.x - W / 2) < 0.01) continue;
         if (mode === "diag" && Math.abs(p.x - p.z) < 0.01) continue;
         if (mode === "rot" && Math.abs(p.x - W / 2) < 0.01 && Math.abs(p.z - D / 2) < 0.01) continue;
-        const m: T = mode === "x" ? { ...p, x: W - p.x, side: 1 } : mode === "rot" ? { ...p, x: W - p.x, z: D - p.z, side: 1 } : { ...p, x: p.z, z: p.x, side: 1 };
+        const m: T =
+          mode === "x"
+            ? { ...p, x: W - p.x, side: 1 }
+            : mode === "rot"
+              ? { ...p, x: W - p.x, z: D - p.z, side: 1 }
+              : { ...p, x: p.z, z: p.x, side: 1 };
         if (p.rot !== undefined) m.rot = mode === "x" ? -p.rot : mode === "rot" ? p.rot + 180 : 90 - p.rot;
         if (flipTeam && p.team !== undefined) m.team = 1 - p.team;
         out.push(m);
@@ -367,10 +417,18 @@ export class Terrain {
       if (t <= 0) return;
       const h = this.heights[i];
       switch (op.mode) {
-        case "add": this.heights[i] = h + (op.dy ?? 0) * t; break;
-        case "set": this.heights[i] = h + ((op.y ?? 0) - h) * t; break;
-        case "max": this.heights[i] = Math.max(h, h + ((op.y ?? 0) - h) * t); break;
-        case "min": this.heights[i] = Math.min(h, h + ((op.y ?? 0) - h) * t); break;
+        case "add":
+          this.heights[i] = h + (op.dy ?? 0) * t;
+          break;
+        case "set":
+          this.heights[i] = h + ((op.y ?? 0) - h) * t;
+          break;
+        case "max":
+          this.heights[i] = Math.max(h, h + ((op.y ?? 0) - h) * t);
+          break;
+        case "min":
+          this.heights[i] = Math.min(h, h + ((op.y ?? 0) - h) * t);
+          break;
       }
     });
   }
@@ -420,7 +478,7 @@ export class Terrain {
     const kind = this.kindAt(cx, cz);
     if (kind === Kind.Wall || kind === Kind.Prop) return Number.POSITIVE_INFINITY;
     if (kind === Kind.Bridge) return this.deck[this.index(cx, cz)];
-    if (kind === Kind.Water && (this.flags[this.index(cx, cz)] & FLAG_DEEP)) return Number.POSITIVE_INFINITY;
+    if (kind === Kind.Water && this.flags[this.index(cx, cz)] & FLAG_DEEP) return Number.POSITIVE_INFINITY;
     if (kind === Kind.Water) return Math.max(this.groundHeight(x, z), this.waterLevel - 0.35);
     return this.groundHeight(x, z);
   }

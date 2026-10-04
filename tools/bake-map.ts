@@ -18,8 +18,11 @@ if (sur) {
   const nx = Math.ceil((t.width + pad * 2) / step);
   const nz = Math.ceil((t.depth + pad * 2) / step);
   const heights: number[] = [];
-  for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) heights.push(r3(sur.ground(x0 + i * step, z0 + j * step)));
-  const features = sur.buildFeatures().map((f) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === "number" ? r3(v) : v])));
+  for (let j = 0; j <= nz; j++)
+    for (let i = 0; i <= nx; i++) heights.push(r3(sur.ground(x0 + i * step, z0 + j * step)));
+  const features = sur
+    .buildFeatures()
+    .map((f) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === "number" ? r3(v) : v])));
   surround = { style: sur.style, x0, z0, step, nx, nz, heights, features };
 }
 const out = {
@@ -50,7 +53,22 @@ if (process.argv.includes("--ascii")) {
     for (let x = 0; x < t.width; x++) {
       const k = t.kindAt(x, z);
       const h = t.groundHeight(x + 0.5, z + 0.5);
-      row += k === 1 && t.styles[t.index(x, z)] === "pit" ? "O" : k === 1 ? "#" : k === 2 ? "~" : k === 3 ? "=" : k === 4 ? "B" : k === 5 ? "T" : h < 0 ? "-" : String(Math.min(9, Math.floor(h * 2)));
+      row +=
+        k === 1 && t.styles[t.index(x, z)] === "pit"
+          ? "O"
+          : k === 1
+            ? "#"
+            : k === 2
+              ? "~"
+              : k === 3
+                ? "="
+                : k === 4
+                  ? "B"
+                  : k === 5
+                    ? "T"
+                    : h < 0
+                      ? "-"
+                      : String(Math.min(9, Math.floor(h * 2)));
     }
     rows.push(row);
   }

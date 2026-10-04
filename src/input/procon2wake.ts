@@ -52,7 +52,18 @@ const WAKE: number[][] = [
   [0x0a, 0x91, 0x00, 0x02, 0x00, 0x04, 0x00, 0x00, 0x03, 0x00, 0x00],
 ];
 
-const led = (slot: number) => [0x09, 0x91, 0x00, 0x07, 0x00, 0x08, 0x00, 0x00, [0x01, 0x03, 0x07, 0x0f][slot % 4], ...zero(7)];
+const led = (slot: number) => [
+  0x09,
+  0x91,
+  0x00,
+  0x07,
+  0x00,
+  0x08,
+  0x00,
+  0x00,
+  [0x01, 0x03, 0x07, 0x0f][slot % 4],
+  ...zero(7),
+];
 
 export class ProCon2Waker {
   status = "";
@@ -92,7 +103,9 @@ export class ProCon2Waker {
     try {
       if (!d.opened) await d.open();
       if (!d.configuration) await d.selectConfiguration(1);
-      const iface = d.configuration!.interfaces.find((i) => i.interfaceNumber === 1) ?? d.configuration!.interfaces.find((i) => i.alternate.interfaceClass === 0xff);
+      const iface =
+        d.configuration!.interfaces.find((i) => i.interfaceNumber === 1) ??
+        d.configuration!.interfaces.find((i) => i.alternate.interfaceClass === 0xff);
       if (!iface) throw new Error("no vendor interface");
       await d.claimInterface(iface.interfaceNumber);
       const eps = iface.alternate.endpoints.filter((e) => e.type === "bulk");

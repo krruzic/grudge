@@ -40,12 +40,16 @@ function mergeFx(a: TalentFx | undefined, b: TalentFx | undefined): TalentFx | u
   const out: Record<string, unknown> = { ...(a ?? {}) };
   for (const [k, v] of Object.entries(b)) {
     const prev = out[k];
-    out[k] = prev && typeof prev === "object" && v && typeof v === "object" ? { ...(prev as object), ...(v as object) } : v;
+    out[k] =
+      prev && typeof prev === "object" && v && typeof v === "object" ? { ...(prev as object), ...(v as object) } : v;
   }
   return out as TalentFx;
 }
 
-function apply(def: AbilityDef, t: { set?: Record<string, unknown>; add?: Record<string, number>; mul?: Record<string, number>; fx?: TalentFx }): AbilityDef {
+function apply(
+  def: AbilityDef,
+  t: { set?: Record<string, unknown>; add?: Record<string, number>; mul?: Record<string, number>; fx?: TalentFx },
+): AbilityDef {
   const d = structuredClone(def) as AbilityDef & Record<string, unknown>;
   for (const [k, v] of Object.entries(t.set ?? {})) d[k] = structuredClone(v);
   for (const [k, v] of Object.entries(t.add ?? {})) d[k] = ((d[k] as number | undefined) ?? 0) + v;
@@ -157,7 +161,11 @@ export function mark(w: World, src: Entity, target: Entity, m: NonNullable<Talen
       if (!target.alive || target.status.markOwner !== src.id || target.status.markUntil !== until) return;
       const p = target.transform;
       w.emit({ type: "slam", x: p.pos.x, y: p.y, z: p.pos.z, radius: 1.6, team: src.team });
-      w.damage(src.alive ? src : null, target, m.burst! * w.damageMulOf(src), { big: true, fromX: p.pos.x, fromZ: p.pos.z });
+      w.damage(src.alive ? src : null, target, m.burst! * w.damageMulOf(src), {
+        big: true,
+        fromX: p.pos.x,
+        fromZ: p.pos.z,
+      });
     });
   }
 }
@@ -172,7 +180,10 @@ export function chainLightning(w: World, src: Entity, from: Entity, count: numbe
     for (const o of w.entities) {
       if (!o.alive || o.team === src.team || done.has(o.id) || o.structure || !w.canSee(cur, o)) continue;
       const d = w.dist(cur, o);
-      if (d < bd) { bd = d; best = o; }
+      if (d < bd) {
+        bd = d;
+        best = o;
+      }
     }
     if (!best) break;
     done.add(best.id);
@@ -198,10 +209,25 @@ export function pullTo(w: World, src: Entity, cx: number, cz: number, radius: nu
   }
 }
 
-export function zoneAt(w: World, src: Entity, x: number, z: number, radius: number, z0: NonNullable<TalentFx["zoneAfter"]>): void {
+export function zoneAt(
+  w: World,
+  src: Entity,
+  x: number,
+  z: number,
+  radius: number,
+  z0: NonNullable<TalentFx["zoneAfter"]>,
+): void {
   w.zones.push({
-    id: w.newId(), team: src.team, ownerId: src.id, x, z, radius: z0.radius ?? radius, until: w.time + z0.seconds,
-    dps: z0.dps * w.damageMulOf(src), slowMul: z0.slowMul, style: z0.style,
+    id: w.newId(),
+    team: src.team,
+    ownerId: src.id,
+    x,
+    z,
+    radius: z0.radius ?? radius,
+    until: w.time + z0.seconds,
+    dps: z0.dps * w.damageMulOf(src),
+    slowMul: z0.slowMul,
+    style: z0.style,
   });
 }
 
@@ -240,16 +266,37 @@ export function updateMissiles(w: World): void {
       m.hit.push(o.id);
       const dmg = o.structure ? m.damage * 0.5 : m.damage;
       const landed = w.damage(owner, o, dmg, {
-        fromX: m.x - m.dirX, fromZ: m.z - m.dirZ, knockback: m.knockback ?? (m.style === "rock" ? 3 : 1.5), stun: m.stun, slowMul: m.slowMul, slowSeconds: m.slowSeconds,
-        big: m.style === "rock" || m.style === "slash" || !!m.arrow, structureDamage: o.structure ? dmg : undefined,
+        fromX: m.x - m.dirX,
+        fromZ: m.z - m.dirZ,
+        knockback: m.knockback ?? (m.style === "rock" ? 3 : 1.5),
+        stun: m.stun,
+        slowMul: m.slowMul,
+        slowSeconds: m.slowSeconds,
+        big: m.style === "rock" || m.style === "slash" || !!m.arrow,
+        structureDamage: o.structure ? dmg : undefined,
       });
       if (landed && m.arrow && owner && !o.structure) onArrowHit(w, owner, o);
       if (m.splash) {
-        w.emit({ type: "slam", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, radius: m.splash, team: m.team });
+        w.emit({
+          type: "slam",
+          x: o.transform.pos.x,
+          y: o.transform.y,
+          z: o.transform.pos.z,
+          radius: m.splash,
+          team: m.team,
+        });
         for (const q of w.entities.slice()) {
           if (!q.alive || q.team === m.team || q === o || q.structure) continue;
-          if (Math.hypot(q.transform.pos.x - o.transform.pos.x, q.transform.pos.z - o.transform.pos.z) - q.radius > m.splash) continue;
-          w.damage(owner, q, m.splashDamage ?? 30, { fromX: o.transform.pos.x, fromZ: o.transform.pos.z, knockback: 2 });
+          if (
+            Math.hypot(q.transform.pos.x - o.transform.pos.x, q.transform.pos.z - o.transform.pos.z) - q.radius >
+            m.splash
+          )
+            continue;
+          w.damage(owner, q, m.splashDamage ?? 30, {
+            fromX: o.transform.pos.x,
+            fromZ: o.transform.pos.z,
+            knockback: 2,
+          });
         }
       }
       if (m.chain && owner) {
@@ -258,13 +305,27 @@ export function updateMissiles(w: World): void {
         for (const q of w.entities) {
           if (!q.alive || q.team === m.team || q.id === o.id || q.structure || m.hit.includes(q.id)) continue;
           const d = w.dist(o, q);
-          if (d < bd) { bd = d; best = q; }
+          if (d < bd) {
+            bd = d;
+            best = q;
+          }
         }
         if (best) {
           const dx = best.transform.pos.x - o.transform.pos.x;
           const dz = best.transform.pos.z - o.transform.pos.z;
           const dl = Math.hypot(dx, dz) || 1;
-          w.missiles.push({ ...m, id: w.newId(), x: o.transform.pos.x, z: o.transform.pos.z, dirX: dx / dl, dirZ: dz / dl, dist: 0, range: dl + 1, hit: [...m.hit], chain: m.chain - 1 });
+          w.missiles.push({
+            ...m,
+            id: w.newId(),
+            x: o.transform.pos.x,
+            z: o.transform.pos.z,
+            dirX: dx / dl,
+            dirZ: dz / dl,
+            dist: 0,
+            range: dl + 1,
+            hit: [...m.hit],
+            chain: m.chain - 1,
+          });
         }
       }
       if (!m.pierce) {
@@ -280,7 +341,12 @@ export function updateMissiles(w: World): void {
         for (const o of w.entities.slice()) {
           if (!o.alive || o.team === m.team || o.structure) continue;
           if (Math.hypot(o.transform.pos.x - m.x, o.transform.pos.z - m.z) - o.radius > m.endBurst.radius) continue;
-          w.damage(owner, o, m.endBurst.damage * w.damageMulOf(owner), { fromX: m.x, fromZ: m.z, knockback: 5, big: true });
+          w.damage(owner, o, m.endBurst.damage * w.damageMulOf(owner), {
+            fromX: m.x,
+            fromZ: m.z,
+            knockback: 5,
+            big: true,
+          });
         }
       }
     }
@@ -296,7 +362,11 @@ export function tickStatus(w: World): void {
     if (s.shield > 0 && t >= s.shieldUntil) s.shield = 0;
     if (tick && t < s.bleedUntil && s.bleedStacks > 0) {
       const owner = w.get(s.bleedOwner) ?? null;
-      w.damage(owner, e, s.bleedDps * s.bleedStacks * 0.5, { fromX: e.transform.pos.x, fromZ: e.transform.pos.z, tick: true });
+      w.damage(owner, e, s.bleedDps * s.bleedStacks * 0.5, {
+        fromX: e.transform.pos.x,
+        fromZ: e.transform.pos.z,
+        tick: true,
+      });
     }
     const h = e.hero;
     if (!h) continue;
@@ -320,7 +390,12 @@ export interface MeleeResult {
   damage: number;
 }
 
-export function meleeMods(w: World, e: Entity, finisher: boolean, jab: boolean): { dmgMul: number; arc: number | null; knockMul: number; extra: number } {
+export function meleeMods(
+  w: World,
+  e: Entity,
+  finisher: boolean,
+  jab: boolean,
+): { dmgMul: number; arc: number | null; knockMul: number; extra: number } {
   const fx = abilities(w, e).a.fx;
   const h = e.hero!;
   let dmgMul = 1;
@@ -347,32 +422,66 @@ export function meleeMods(w: World, e: Entity, finisher: boolean, jab: boolean):
   return { dmgMul, arc, knockMul, extra };
 }
 
-export function afterMelee(w: World, e: Entity, targets: Entity[], dealt: number, finisher: boolean, dirX: number, dirZ: number, reach: number, jab: boolean): void {
+export function afterMelee(
+  w: World,
+  e: Entity,
+  targets: Entity[],
+  dealt: number,
+  finisher: boolean,
+  dirX: number,
+  dirZ: number,
+  reach: number,
+  jab: boolean,
+): void {
   const fx = abilities(w, e).a.fx;
   const t = e.transform;
   if (fx && finisher && !jab) {
     if (fx.wave) {
       if (fx.wave.style === "rock") e.hero!.crack = { at: w.time, dirX, dirZ };
       fireMissile(w, e, {
-        x: t.pos.x + dirX * 0.8, z: t.pos.z + dirZ * 0.8, y: fx.wave.style === "rock" ? t.y : t.y + 1.2, dirX, dirZ, speed: fx.wave.style === "rock" ? 14 : 20,
-        range: fx.wave.length, width: fx.wave.width, damage: fx.wave.damage * w.damageMulOf(e), pierce: true, style: fx.wave.style, stun: fx.wave.stun,
+        x: t.pos.x + dirX * 0.8,
+        z: t.pos.z + dirZ * 0.8,
+        y: fx.wave.style === "rock" ? t.y : t.y + 1.2,
+        dirX,
+        dirZ,
+        speed: fx.wave.style === "rock" ? 14 : 20,
+        range: fx.wave.length,
+        width: fx.wave.width,
+        damage: fx.wave.damage * w.damageMulOf(e),
+        pierce: true,
+        style: fx.wave.style,
+        stun: fx.wave.stun,
         endBurst: fx.waveEnd,
       });
     }
     if (fx.bolt) {
       const b = fx.bolt;
       for (let k = 0; k < b.count; k++) {
-        const off = b.count > 1 ? ((k / (b.count - 1)) - 0.5) * 2 * (b.spread * Math.PI / 180) : 0;
+        const off = b.count > 1 ? (k / (b.count - 1) - 0.5) * 2 * ((b.spread * Math.PI) / 180) : 0;
         const c = Math.cos(off);
         const s = Math.sin(off);
         fireMissile(w, e, {
-          x: t.pos.x + dirX * 0.6, z: t.pos.z + dirZ * 0.6, y: t.y + 1.3, dirX: dirX * c - dirZ * s, dirZ: dirX * s + dirZ * c, speed: 22, range: b.range, width: 0.7,
-          damage: b.damage * w.damageMulOf(e), pierce: false, style: b.style, splash: b.splash, splashDamage: (b.splashDamage ?? 0) * w.damageMulOf(e),
-          slowMul: b.slowMul, slowSeconds: b.slowSeconds, chain: b.chain,
+          x: t.pos.x + dirX * 0.6,
+          z: t.pos.z + dirZ * 0.6,
+          y: t.y + 1.3,
+          dirX: dirX * c - dirZ * s,
+          dirZ: dirX * s + dirZ * c,
+          speed: 22,
+          range: b.range,
+          width: 0.7,
+          damage: b.damage * w.damageMulOf(e),
+          pierce: false,
+          style: b.style,
+          splash: b.splash,
+          splashDamage: (b.splashDamage ?? 0) * w.damageMulOf(e),
+          slowMul: b.slowMul,
+          slowSeconds: b.slowSeconds,
+          chain: b.chain,
         });
       }
     }
-    if (fx.finisherZone) zoneAt(w, e, t.pos.x + dirX * reach * 0.6, t.pos.z + dirZ * reach * 0.6, fx.finisherZone.radius, fx.finisherZone);
+    if (fx.finisherZone)
+      zoneAt(w, e, t.pos.x + dirX * reach * 0.6, t.pos.z + dirZ * reach * 0.6, fx.finisherZone.radius, fx.finisherZone);
   }
   if (!fx || !targets.length) return;
   const h = e.hero!;
@@ -380,8 +489,16 @@ export function afterMelee(w: World, e: Entity, targets: Entity[], dealt: number
   for (const o of targets) {
     if (fx.lifestealVsBleed && w.time < o.status.bleedUntil) ls += fx.lifestealVsBleed / targets.length;
     if (fx.bleed) applyBleed(w, e, o, fx.bleed);
-    if (finisher && !jab && fx.finisherStun && o.alive && !o.structure) o.status.stunUntil = Math.max(o.status.stunUntil, w.time + fx.finisherStun);
-    if (finisher && !jab && fx.consumeBleed && o.alive && o.status.bleedStacks >= (fx.bleed?.max ?? 3) && w.time < o.status.bleedUntil) {
+    if (finisher && !jab && fx.finisherStun && o.alive && !o.structure)
+      o.status.stunUntil = Math.max(o.status.stunUntil, w.time + fx.finisherStun);
+    if (
+      finisher &&
+      !jab &&
+      fx.consumeBleed &&
+      o.alive &&
+      o.status.bleedStacks >= (fx.bleed?.max ?? 3) &&
+      w.time < o.status.bleedUntil
+    ) {
       o.status.bleedStacks = 0;
       o.status.bleedUntil = 0;
       const p = o.transform;
@@ -405,7 +522,8 @@ export function afterMelee(w: World, e: Entity, targets: Entity[], dealt: number
       heal(w, o, fx.healAllies * (o.structure ? 2 : 1));
     }
   }
-  if (fx.chainAtMax && fx.frenzy && h.frenzy >= fx.frenzy.max) chainLightning(w, e, targets[0], fx.chainAtMax.count, fx.chainAtMax.damage * w.damageMulOf(e));
+  if (fx.chainAtMax && fx.frenzy && h.frenzy >= fx.frenzy.max)
+    chainLightning(w, e, targets[0], fx.chainAtMax.count, fx.chainAtMax.damage * w.damageMulOf(e));
   if (fx.shieldOnHit) addShield(e, fx.shieldOnHit.amount, fx.shieldOnHit.max, fx.shieldOnHit.seconds, w.time);
 }
 
@@ -426,14 +544,27 @@ export function afterShot(w: World, src: Entity, target: Entity, dealt: number, 
 export function onKill(w: World, src: Entity | null, target: Entity): void {
   const cfg = w.data.talents?.xp;
   const hero = src?.hero ? src : src?.owner ? w.get(src.owner) : undefined;
-  if (cfg && hero) gainXp(w, hero, target.hero ? cfg.heroKill : target.structure ? cfg.structureKill : target.neutral ? 80 : cfg.unitKill);
+  if (cfg && hero)
+    gainXp(
+      w,
+      hero,
+      target.hero ? cfg.heroKill : target.structure ? cfg.structureKill : target.neutral ? 80 : cfg.unitKill,
+    );
   if (!hero?.hero || hero.team === target.team) return;
   const fx = allFx(w, hero);
   const h = hero.hero;
   if (target.hero) {
     if (fx.resetOnKill) {
       h.cooldowns[fx.resetOnKill] = w.time;
-      w.emit({ type: "callout", x: hero.transform.pos.x, y: hero.transform.y, z: hero.transform.pos.z, team: hero.team, text: "RESET!", owner: hero.id });
+      w.emit({
+        type: "callout",
+        x: hero.transform.pos.x,
+        y: hero.transform.y,
+        z: hero.transform.pos.z,
+        team: hero.team,
+        text: "RESET!",
+        owner: hero.id,
+      });
     }
     if (fx.takedownShield) addShield(hero, fx.takedownShield, fx.takedownShield, 6, w.time);
     if (fx.meterOnKill) h.meter = Math.max(h.meter, w.data.heroes.baseline.superMax * fx.meterOnKill);

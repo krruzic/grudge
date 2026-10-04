@@ -50,13 +50,33 @@ import type { LobbySlot } from "./ui/screens";
 import { perf } from "./perf";
 
 const MAX_PLAYERS = 4;
-const data = { talents: talentData, heroes: heroData, units: unitData, structures: structureData, match: matchData } as unknown as GameData;
-const heroUrls = import.meta.glob("../assets/heroes/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
-const unitUrls = import.meta.glob("../assets/units/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
-const structureUrls = import.meta.glob("../assets/structures/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const data = {
+  talents: talentData,
+  heroes: heroData,
+  units: unitData,
+  structures: structureData,
+  match: matchData,
+} as unknown as GameData;
+const heroUrls = import.meta.glob("../assets/heroes/*.glb", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+const unitUrls = import.meta.glob("../assets/units/*.glb", { query: "?url", import: "default", eager: true }) as Record<
+  string,
+  string
+>;
+const structureUrls = import.meta.glob("../assets/structures/*.glb", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
 const mapJsons = import.meta.glob("../data/maps/*.json", { import: "default", eager: true }) as Record<string, MapData>;
-const mapGlbs = import.meta.glob("../assets/maps/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const mapGlbs = import.meta.glob("../assets/maps/*.glb", { query: "?url", import: "default", eager: true }) as Record<
+  string,
+  string
+>;
 const MAP_ORDER = ["crossing", "ruins", "shoals"];
 const maps = Object.entries(mapJsons)
   .map(([path, d]) => {
@@ -64,7 +84,7 @@ const maps = Object.entries(mapJsons)
     return { id, data: d, url: mapGlbs[`../assets/maps/${id}.glb`] };
   })
   .filter((m) => m.url)
-  .sort((a, b) => (MAP_ORDER.indexOf(a.id) + 99) % 99 - (MAP_ORDER.indexOf(b.id) + 99) % 99);
+  .sort((a, b) => ((MAP_ORDER.indexOf(a.id) + 99) % 99) - ((MAP_ORDER.indexOf(b.id) + 99) % 99));
 
 const bootEl = document.getElementById("boot");
 const endBoot = () => {
@@ -79,10 +99,14 @@ type State = "title" | "menu" | "select" | "map" | "match" | "paused" | "results
 async function start(): Promise<void> {
   const params = new URLSearchParams(location.search);
   const roster = Object.keys(data.heroes.heroes).filter((k) => data.heroes.heroes[k].role !== "commander");
-  const commanderType = Object.keys(data.heroes.heroes).find((k) => data.heroes.heroes[k].role === "commander") ?? roster[0];
+  const commanderType =
+    Object.keys(data.heroes.heroes).find((k) => data.heroes.heroes[k].role === "commander") ?? roster[0];
   let players = 2;
   let seed = Number(params.get("seed") ?? Math.floor(Math.random() * 1e6));
-  let mapIndex = Math.max(0, maps.findIndex((m) => m.id === params.get("map")));
+  let mapIndex = Math.max(
+    0,
+    maps.findIndex((m) => m.id === params.get("map")),
+  );
   const forceJoin = Number(params.get("join") ?? 0);
   let mode: MatchMode = params.get("mode") === "2v2" ? "2v2" : params.get("mode") === "ffa" ? "ffa" : "1v1";
   let training = params.has("training");
@@ -96,7 +120,14 @@ async function start(): Promise<void> {
   const newWorld = (heroes: string[], count = 2, rules = false, partners = false): World => {
     const w = new World(maps[mapIndex].data, rules ? applyRules(data, save.data.rules) : data, seed++);
     const ffa = w.ffa;
-    for (let p = 0; p < count; p++) w.spawnHero(ffa || p < 2 || partners || (rules && save.data.rules.partners === 1) ? heroes[p] ?? roster[0] : commanderType, p, ffa ? p : p % 2);
+    for (let p = 0; p < count; p++)
+      w.spawnHero(
+        ffa || p < 2 || partners || (rules && save.data.rules.partners === 1)
+          ? (heroes[p] ?? roster[0])
+          : commanderType,
+        p,
+        ffa ? p : p % 2,
+      );
     return w;
   };
 
@@ -109,7 +140,16 @@ async function start(): Promise<void> {
     sUrls[name] = url;
   }
   const [mapViews, heroes] = await Promise.all([
-    Promise.all(maps.map((m) => loadMap(m.url, new Terrain(m.data), { grass: grassTex, dirt: dirtTex, rock: cliffTex, cobble: cobbleTex, water: waterTex, sand: sandTex }, renderData as RenderConfig))),
+    Promise.all(
+      maps.map((m) =>
+        loadMap(
+          m.url,
+          new Terrain(m.data),
+          { grass: grassTex, dirt: dirtTex, rock: cliffTex, cobble: cobbleTex, water: waterTex, sand: sandTex },
+          renderData as RenderConfig,
+        ),
+      ),
+    ),
     (async () => {
       const h = new HeroModels();
       const urls: Record<string, string> = {};
@@ -120,7 +160,9 @@ async function start(): Promise<void> {
     structures.load(sUrls),
     loadProps(),
     preloadCostumes(),
-    unitModels.load(Object.fromEntries(Object.entries(unitUrls).map(([p, u]) => [p.split("/").pop()!.replace(".glb", ""), u]))),
+    unitModels.load(
+      Object.fromEntries(Object.entries(unitUrls).map(([p, u]) => [p.split("/").pop()!.replace(".glb", ""), u])),
+    ),
     loadFont(),
   ]);
 
@@ -157,7 +199,9 @@ async function start(): Promise<void> {
   screens.portraits.units = unitModels;
   hud.portraits = screens.portraits;
   hud.mapIndex = () => shownMap;
-  screens.portraits.setMaps(mapViews.map((mv, i) => ({ root: mv.root, width: maps[i].data.width, depth: maps[i].data.depth })));
+  screens.portraits.setMaps(
+    mapViews.map((mv, i) => ({ root: mv.root, width: maps[i].data.width, depth: maps[i].data.depth })),
+  );
   const padsEl = document.getElementById("pads")!;
   const audio = new Audio();
   const menus = new Menus(save);
@@ -180,17 +224,22 @@ async function start(): Promise<void> {
     view.setHints(!!o.hints);
     pads.kbmEnabled = o.kbm !== 0;
     const q = params.get("quality");
-    view.quality = q === "low" ? 2 : q === "high" ? 1 : o.quality ?? 0;
+    view.quality = q === "low" ? 2 : q === "high" ? 1 : (o.quality ?? 0);
   };
   applyOptions();
-  menus.devices = () => pads.players.map((p) => {
-    if (!p.connected) return null;
-    if (p.profile === "keyboard") return "KEYBOARD + MOUSE";
-    if (p.profile === "gc-adapter" || p.profile.startsWith("gc_")) return "GAMECUBE CONTROLLER";
-    if (p.profile === "procon2") return "SWITCH 2 PRO CONTROLLER";
-    const id = p.padId.replace(/\(.*?\)/g, "").replace(/[^A-Za-z0-9 ]+/g, " ").trim().toUpperCase();
-    return id ? id.slice(0, 30) : "CONTROLLER";
-  });
+  menus.devices = () =>
+    pads.players.map((p) => {
+      if (!p.connected) return null;
+      if (p.profile === "keyboard") return "KEYBOARD + MOUSE";
+      if (p.profile === "gc-adapter" || p.profile.startsWith("gc_")) return "GAMECUBE CONTROLLER";
+      if (p.profile === "procon2") return "SWITCH 2 PRO CONTROLLER";
+      const id = p.padId
+        .replace(/\(.*?\)/g, "")
+        .replace(/[^A-Za-z0-9 ]+/g, " ")
+        .trim()
+        .toUpperCase();
+      return id ? id.slice(0, 30) : "CONTROLLER";
+    });
   menus.releaseSeat = (i) => pads.release(i);
   menus.requestDevice = () => void pads.requestHid();
   const navRep = Array.from({ length: MAX_PLAYERS }, () => ({ dir: "", t: 0 }));
@@ -200,11 +249,26 @@ async function start(): Promise<void> {
       if (!p.connected || (only >= 0 && i !== only)) return;
       const sx = p.stickX + (p.held.right ? 1 : 0) - (p.held.left ? 1 : 0);
       const sy = p.stickY + (p.held.down ? 1 : 0) - (p.held.up ? 1 : 0);
-      const dir = Math.max(Math.abs(sx), Math.abs(sy)) < 0.5 ? "" : Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? "r" : "l") : sy > 0 ? "d" : "u";
+      const dir =
+        Math.max(Math.abs(sx), Math.abs(sy)) < 0.5
+          ? ""
+          : Math.abs(sx) > Math.abs(sy)
+            ? sx > 0
+              ? "r"
+              : "l"
+            : sy > 0
+              ? "d"
+              : "u";
       const r = navRep[i];
       let fire = false;
-      if (dir !== r.dir) { r.dir = dir; r.t = now + 0.38; fire = !!dir; }
-      else if (dir && now >= r.t) { r.t = now + 0.1; fire = true; }
+      if (dir !== r.dir) {
+        r.dir = dir;
+        r.t = now + 0.38;
+        fire = !!dir;
+      } else if (dir && now >= r.t) {
+        r.t = now + 0.1;
+        fire = true;
+      }
       if (fire) {
         if (dir === "l") n.dx = -1;
         if (dir === "r") n.dx = 1;
@@ -224,16 +288,20 @@ async function start(): Promise<void> {
     const ne = slot === undefined ? undefined : screens.naming.get(slot);
     return ne && slot !== undefined ? [slot, ne] : null;
   };
-  window.addEventListener("keydown", (e) => {
-    const ed = kbEditor();
-    if (!ed) return;
-    const r = ed[1].key(e.code, performance.now() / 1000);
-    if (r === false) return;
-    if (r) nameDone(ed[0], r, pads.keyboardSlot());
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    audio.ui("move");
-  }, true);
+  window.addEventListener(
+    "keydown",
+    (e) => {
+      const ed = kbEditor();
+      if (!ed) return;
+      const r = ed[1].key(e.code, performance.now() / 1000);
+      if (r === false) return;
+      if (r) nameDone(ed[0], r, pads.keyboardSlot());
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      audio.ui("move");
+    },
+    true,
+  );
   const nameDone = (slot: number, r: TagResult, k = slot) => {
     screens.naming.delete(slot);
     if (r.tag === undefined) {
@@ -249,13 +317,16 @@ async function start(): Promise<void> {
     }
   };
   const otherNames = (slot: number): string[] => {
-    const list = state === "lobby" ? (screens.lobby?.slots ?? []).map((s) => (s.cpu || s.open ? null : s.name)) : slots.map((s) => (s.cpu || s.open ? null : s.tag ?? null));
+    const list =
+      state === "lobby"
+        ? (screens.lobby?.slots ?? []).map((s) => (s.cpu || s.open ? null : s.name))
+        : slots.map((s) => (s.cpu || s.open ? null : (s.tag ?? null)));
     return list.filter((n, j): n is string => j !== slot && !!n);
   };
   const tagEditor = (slot: number, current: string | null | undefined) => {
     const rows = (): TagRow[] => {
       const taken = otherNames(slot);
-      const ids = state === "lobby" ? [] : slots.map((s, j) => (j === slot ? null : s.tagId ?? null));
+      const ids = state === "lobby" ? [] : slots.map((s, j) => (j === slot ? null : (s.tagId ?? null)));
       return save.tagIds().map((id) => {
         const t = save.data.tags[id];
         return { id, name: t.name, rec: `${t.w}-${t.l}`, taken: taken.includes(t.name) || ids.includes(id) };
@@ -267,7 +338,8 @@ async function start(): Promise<void> {
     };
     return new NameEntry(current, rows, create, MAX_TAG);
   };
-  const freeLabel = (slot: number, name: string): string | undefined => (slots.some((s, j) => j !== slot && !s.cpu && !s.open && s.tag === name) ? undefined : name);
+  const freeLabel = (slot: number, name: string): string | undefined =>
+    slots.some((s, j) => j !== slot && !s.cpu && !s.open && s.tag === name) ? undefined : name;
   let namingAte = false;
   const closedNow = new Set<number>();
   const runNaming = (padOf: (slot: number) => number, now: number) => {
@@ -284,12 +356,12 @@ async function start(): Promise<void> {
       if (r?.done) {
         closedNow.add(k);
         nameDone(slot, r, k);
-      }
-      else if (Object.values(p.pressed).some(Boolean)) audio.ui("move");
+      } else if (Object.values(p.pressed).some(Boolean)) audio.ui("move");
     }
   };
-  const naming = (k: number) => [...screens.naming.keys()].some((s) => (state === "lobby" ? mySlots.get(k) === s : s === k));
-  const cursorPads = <T,>(list: T[]): T[] => {
+  const naming = (k: number) =>
+    [...screens.naming.keys()].some((s) => (state === "lobby" ? mySlots.get(k) === s : s === k));
+  const cursorPads = <T>(list: T[]): T[] => {
     cursors.frozen.clear();
     list.forEach((_, k) => (naming(k) || closedNow.has(k)) && cursors.frozen.add(k));
     return list;
@@ -298,7 +370,13 @@ async function start(): Promise<void> {
 
   let mappers: (CommandMapper | null)[] = [];
   let bots: (Bot | null)[] = [];
-  const slots: SelectSlot[] = Array.from({ length: MAX_PLAYERS }, (_, i) => ({ joined: false, ready: false, hero: i < 2 ? roster[0] : commanderType, cpu: true, level: 2 }));
+  const slots: SelectSlot[] = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
+    joined: false,
+    ready: false,
+    hero: i < 2 ? roster[0] : commanderType,
+    cpu: true,
+    level: 2,
+  }));
   const cursors = new MenuCursors(MAX_PLAYERS);
   screens.cursors = cursors;
   const net = new NetLink();
@@ -337,13 +415,19 @@ async function start(): Promise<void> {
   const MATH = mathPrint();
   const present = (i: number) => pads.players[i].connected || i < forceJoin || remoteAt(i) >= 0;
   const costumeFlick = [0, 0, 0, 0];
-  const padsForCursors = () => pads.players.map((p, i) => (i < forceJoin && !p.connected ? { ...p, connected: true } : p));
+  const padsForCursors = () =>
+    pads.players.map((p, i) => (i < forceJoin && !p.connected ? { ...p, connected: true } : p));
   const slotActive = (i: number) => i < 2 || mode !== "1v1";
   const commanderSlot = (i: number) => i >= 2 && mode !== "ffa" && save.data.rules.partners === 0;
   const heldBy = (slot: number) => cursors.cursors.findIndex((c) => c.active && c.holding === slot);
   const settleCpu = (i: number) => {
     const sl = slots[i];
-    if (commanderSlot(i)) { sl.hero = commanderType; sl.ready = true; cursors.placeChip(i, null); return; }
+    if (commanderSlot(i)) {
+      sl.hero = commanderType;
+      sl.ready = true;
+      cursors.placeChip(i, null);
+      return;
+    }
     if (heldBy(i) >= 0) return;
     if (!sl.ready || sl.open || !roster.includes(sl.hero)) {
       sl.hero = randomHero();
@@ -358,7 +442,11 @@ async function start(): Promise<void> {
     sl.open = false;
     sl.cpu = false;
     sl.joined = true;
-    if (commanderSlot(i)) { sl.hero = commanderType; sl.ready = true; return; }
+    if (commanderSlot(i)) {
+      sl.hero = commanderType;
+      sl.ready = true;
+      return;
+    }
     if (!roster.includes(sl.hero)) sl.hero = roster[0];
     const h = heldBy(i);
     if (h >= 0 && h !== i) cursors.cursors[h].holding = -1;
@@ -415,11 +503,16 @@ async function start(): Promise<void> {
     }
   };
   const enterSelect = (keep = false) => {
-    const prev = slots.map((sl) => (keep && sl.ready && !sl.cpu && !sl.open && roster.includes(sl.hero) ? { hero: sl.hero, costume: sl.costume } : null));
+    const prev = slots.map((sl) =>
+      keep && sl.ready && !sl.cpu && !sl.open && roster.includes(sl.hero)
+        ? { hero: sl.hero, costume: sl.costume }
+        : null,
+    );
     const here = [0, 1, 2, 3].filter(present).length;
     const keptCpu = (i: number) => netMode === "host" && slots[i].cpu && slots[i].autoCpu === false && !slots[i].open;
-    if (here >= 3) { if (mode === "1v1") mode = "2v2"; }
-    else if (netMode === "host" && mode !== "ffa" && !(mode === "2v2" && [2, 3].some(keptCpu))) mode = "1v1";
+    if (here >= 3) {
+      if (mode === "1v1") mode = "2v2";
+    } else if (netMode === "host" && mode !== "ffa" && !(mode === "2v2" && [2, 3].some(keptCpu))) mode = "1v1";
     cursors.setScale(pixel.w, pixel.h);
     cursors.reset(mode === "ffa" ? [0, 1, 2, 3] : mode === "2v2" ? [0, 2, 1, 3] : [0, 1]);
     slots.forEach((sl, i) => {
@@ -436,15 +529,16 @@ async function start(): Promise<void> {
           if (cursors.cursors[i].holding === i) cursors.cursors[i].holding = -1;
           cursors.placeChip(i, pv.hero);
         }
-      }
-      else if (keep) {
+      } else if (keep) {
         makeCpu(i);
         sl.autoCpu = false;
       } else vacant(i);
     });
     readySince = -1;
   };
-  const selectReady = () => slots.every((sl, i) => !slotActive(i) || (sl.ready && !sl.open && heldBy(i) < 0)) && cursors.cursors.every((c) => !c.active || c.holding < 0 || !slotActive(c.holding));
+  const selectReady = () =>
+    slots.every((sl, i) => !slotActive(i) || (sl.ready && !sl.open && heldBy(i) < 0)) &&
+    cursors.cursors.every((c) => !c.active || c.holding < 0 || !slotActive(c.holding));
   let state: State = "title";
   const stickLatch = [false, false, false, false];
   const randomHero = () => roster[Math.floor(Math.random() * roster.length)];
@@ -465,7 +559,9 @@ async function start(): Promise<void> {
       if (inputData.smashDodge) m.smash = inputData.smashDodge;
       return m;
     });
-    bots = humans.map((h, i) => (h || remote[i] || !botsToo ? null : new Bot(i, [0.5, 0.75, 0.95][(levels[i] ?? 2) - 1] ?? 0.75, seed + i)));
+    bots = humans.map((h, i) =>
+      h || remote[i] || !botsToo ? null : new Bot(i, [0.5, 0.75, 0.95][(levels[i] ?? 2) - 1] ?? 0.75, seed + i),
+    );
     people = humans.map((h, i) => h || !!remote[i]);
     linkMates();
     view.setHumans(splitAll ? humans.map(() => true) : humans);
@@ -475,7 +571,12 @@ async function start(): Promise<void> {
     mapIndex = mi < 0 ? 0 : mi;
     const w = new World(maps[mapIndex].data, applyRules(data, spec.rules), spec.seed);
     const ffa = spec.mode === "ffa";
-    for (let p = 0; p < spec.players; p++) w.spawnHero(ffa || p < 2 || spec.rules.partners === 1 ? spec.heroes[p] ?? roster[0] : commanderType, p, ffa ? p : p % 2);
+    for (let p = 0; p < spec.players; p++)
+      w.spawnHero(
+        ffa || p < 2 || spec.rules.partners === 1 ? (spec.heroes[p] ?? roster[0]) : commanderType,
+        p,
+        ffa ? p : p % 2,
+      );
     if (spec.training) w.makeTraining();
     return w;
   };
@@ -488,7 +589,15 @@ async function start(): Promise<void> {
     hud.resetTrainer();
     menus.training = !!spec.training;
     show(buildWorld(spec));
-    matchPlayers = spec.heroes.slice(0, spec.players).map((hero, i) => ({ tag: spec.names[i] ?? null, tagId: spec.tagIds?.[i] ?? null, hero, team: mode === "ffa" ? i : i % 2, cpu: !spec.humans[i] }));
+    matchPlayers = spec.heroes
+      .slice(0, spec.players)
+      .map((hero, i) => ({
+        tag: spec.names[i] ?? null,
+        tagId: spec.tagIds?.[i] ?? null,
+        hero,
+        team: mode === "ffa" ? i : i % 2,
+        cpu: !spec.humans[i],
+      }));
     recorded = false;
     fallen = [];
     state = "match";
@@ -565,16 +674,36 @@ async function start(): Promise<void> {
     void humans0;
     const remote = slots.slice(0, players).map((_, i) => remoteAt(i) >= 0);
     const spec: MatchSpec = {
-      map: maps[mapIndex].id, seed: seed++, rules: { ...save.data.rules }, heroes: slots.slice(0, players).map((s) => s.hero), players,
-      levels: slots.slice(0, players).map((s) => s.level), humans, training: training && netMode === "off", names: slots.slice(0, players).map((s) => (s.cpu ? null : s.tag ?? null)), tagIds: slots.slice(0, players).map((s) => (s.cpu ? null : s.tagId ?? null)), mode,
-      costumes: slots.slice(0, players).map((s) => (costumesOf(s.hero).includes(s.costume ?? "") ? s.costume ?? "" : "")),
+      map: maps[mapIndex].id,
+      seed: seed++,
+      rules: { ...save.data.rules },
+      heroes: slots.slice(0, players).map((s) => s.hero),
+      players,
+      levels: slots.slice(0, players).map((s) => s.level),
+      humans,
+      training: training && netMode === "off",
+      names: slots.slice(0, players).map((s) => (s.cpu ? null : (s.tag ?? null))),
+      tagIds: slots.slice(0, players).map((s) => (s.cpu ? null : (s.tagId ?? null))),
+      mode,
+      costumes: slots
+        .slice(0, players)
+        .map((s) => (costumesOf(s.hero).includes(s.costume ?? "") ? (s.costume ?? "") : "")),
     };
     for (const r of rseats) {
       r.queue = [];
       r.last = { moveX: 0, moveZ: 0 };
     }
-    if (netMode === "host") net.toPeer("all", { t: "start", spec, seats: rseats.filter((r) => r.slot >= 0 && r.slot < players).map((r) => [r.peer, r.k, r.slot]) });
-    startNetMatch(spec, humans.map((h, i) => h && !remote[i]), remote);
+    if (netMode === "host")
+      net.toPeer("all", {
+        t: "start",
+        spec,
+        seats: rseats.filter((r) => r.slot >= 0 && r.slot < players).map((r) => [r.peer, r.k, r.slot]),
+      });
+    startNetMatch(
+      spec,
+      humans.map((h, i) => h && !remote[i]),
+      remote,
+    );
   };
 
   let matchPlayers: MatchPlayer[] = [];
@@ -638,11 +767,15 @@ async function start(): Promise<void> {
     beginAttract();
     state = params.get("screen") === "map" ? "map" : "select";
     enterSelect();
-    if (params.get("heroes")) params.get("heroes")!.split(",").forEach((h, i) => {
-      if (!slots[i] || !roster.includes(h)) return;
-      slots[i].hero = h;
-      if (slots[i].cpu && !commanderSlot(i)) cursors.placeChip(i, h);
-    });
+    if (params.get("heroes"))
+      params
+        .get("heroes")!
+        .split(",")
+        .forEach((h, i) => {
+          if (!slots[i] || !roster.includes(h)) return;
+          slots[i].hero = h;
+          if (slots[i].cpu && !commanderSlot(i)) cursors.placeChip(i, h);
+        });
     for (let r = 0; r < Number(params.get("ready") ?? 0); r++) {
       if (!slots[r] || commanderSlot(r)) continue;
       slots[r].ready = true;
@@ -654,7 +787,16 @@ async function start(): Promise<void> {
     beginAttract();
     toMenu();
     const pg = params.get("page");
-    if (pg === "players" || pg === "network" || pg === "rules" || pg === "options" || pg === "records" || pg === "controls" || pg === "codex") menus.page = pg;
+    if (
+      pg === "players" ||
+      pg === "network" ||
+      pg === "rules" ||
+      pg === "options" ||
+      pg === "records" ||
+      pg === "controls" ||
+      pg === "codex"
+    )
+      menus.page = pg;
     menus.tab = Number(params.get("tab") ?? 0);
   } else if (params.has("bots")) {
     setupControl([false, false]);
@@ -668,7 +810,19 @@ async function start(): Promise<void> {
     if (!fields().includes(mapIndex)) mapIndex = fields()[0] ?? mapIndex;
     players = mode === "1v1" ? 2 : 4;
     setupControl(Array(players).fill(false));
-    show(newWorld([hs[0] ?? randomHero(), hs[1] ?? hs[0] ?? randomHero(), ...hs.slice(2), ...(mode === "ffa" ? Array.from({ length: Math.max(0, players - Math.max(2, hs.length)) }, randomHero) : [])], players, false, params.has("partners")));
+    show(
+      newWorld(
+        [
+          hs[0] ?? randomHero(),
+          hs[1] ?? hs[0] ?? randomHero(),
+          ...hs.slice(2),
+          ...(mode === "ffa" ? Array.from({ length: Math.max(0, players - Math.max(2, hs.length)) }, randomHero) : []),
+        ],
+        players,
+        false,
+        params.has("partners"),
+      ),
+    );
     state = "match";
     screens.set("none");
     hud.show(true);
@@ -678,7 +832,8 @@ async function start(): Promise<void> {
     if (rk > 0) {
       const need = world.data.units.veterancy.killsForRank[Math.min(rk, 3) - 1];
       let i = 0;
-      for (const e of world.entities) if (e.alive && e.unit) world.promote(e, i++ % 2 === 0 ? need : world.data.units.veterancy.killsForRank[0]);
+      for (const e of world.entities)
+        if (e.alive && e.unit) world.promote(e, i++ % 2 === 0 ? need : world.data.units.veterancy.killsForRank[0]);
     }
     if (params.has("plant")) {
       world.teams.forEach((ts, team) => {
@@ -717,31 +872,71 @@ async function start(): Promise<void> {
     }
   }
 
-  if (import.meta.env.DEV || params.has("debug")) (window as unknown as { grudge: unknown }).grudge = { Bot, dbg, hud, screens, spawnUnit, levelUp: (player: number, picks: number[]) => {
-    const e = world.heroForPlayer(player);
-    if (!e?.hero) return [];
-    gainXp(world, e, 99999);
-    for (const k of picks) learn(world, e, k);
-    while (e.hero.picks.length) learn(world, e, 0);
-    return allLearned(world, e).map((t) => t.id);
-  }, pause: () => setPaused(true), endMatch: (winner = 0) => {
-    world.match.phase = "over";
-    world.match.winner = winner;
-    world.match.reason = "core destroyed";
-  }, setLobby: () => {
-    state = "lobby";
-    screens.set("lobby");
-  }, bots: () => bots, humanize: (i: number) => {
-    mappers[i] = new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i));
-    bots[i] = null;
-    view.setHumans(mappers.map((m) => !!m));
-  }, pads, slots, cursors, menus, save, view, audio, get state() { return state; }, get world() { return world; }, get net() { return { mode: netMode, open: net.open, role: net.role, sent: lobbySentAt, desync, mySlot: [...mySlots.values()][0] ?? -1, mySlots: Object.fromEntries(mySlots), frames: netFrames.length, remotes: rseats.map((r) => [r.peer, r.k, r.slot]) }; } };
+  if (import.meta.env.DEV || params.has("debug"))
+    (window as unknown as { grudge: unknown }).grudge = {
+      Bot,
+      dbg,
+      hud,
+      screens,
+      spawnUnit,
+      levelUp: (player: number, picks: number[]) => {
+        const e = world.heroForPlayer(player);
+        if (!e?.hero) return [];
+        gainXp(world, e, 99999);
+        for (const k of picks) learn(world, e, k);
+        while (e.hero.picks.length) learn(world, e, 0);
+        return allLearned(world, e).map((t) => t.id);
+      },
+      pause: () => setPaused(true),
+      endMatch: (winner = 0) => {
+        world.match.phase = "over";
+        world.match.winner = winner;
+        world.match.reason = "core destroyed";
+      },
+      setLobby: () => {
+        state = "lobby";
+        screens.set("lobby");
+      },
+      bots: () => bots,
+      humanize: (i: number) => {
+        mappers[i] = new CommandMapper(inputData.cstickFlickThreshold, commanderSlot(i));
+        bots[i] = null;
+        view.setHumans(mappers.map((m) => !!m));
+      },
+      pads,
+      slots,
+      cursors,
+      menus,
+      save,
+      view,
+      audio,
+      get state() {
+        return state;
+      },
+      get world() {
+        return world;
+      },
+      get net() {
+        return {
+          mode: netMode,
+          open: net.open,
+          role: net.role,
+          sent: lobbySentAt,
+          desync,
+          mySlot: [...mySlots.values()][0] ?? -1,
+          mySlots: Object.fromEntries(mySlots),
+          frames: netFrames.length,
+          remotes: rseats.map((r) => [r.peer, r.k, r.slot]),
+        };
+      },
+    };
 
   let last = performance.now();
   let acc = 0;
 
   const freeRemoteSlot = (): number => {
-    for (const i of [1, 2, 3, 0]) if (!pads.players[i].connected && !(i < forceJoin) && !seatAt(i) && (slots[i].open || slots[i].autoCpu)) return i;
+    for (const i of [1, 2, 3, 0])
+      if (!pads.players[i].connected && !(i < forceJoin) && !seatAt(i) && (slots[i].open || slots[i].autoCpu)) return i;
     return -1;
   };
   const seatRemote = (r: RSeat) => {
@@ -761,9 +956,25 @@ async function start(): Promise<void> {
     math: MATH,
     rules: save.data.rules,
     mode,
-    map: pickIndex >= fields().length ? "RANDOM FIELD" : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
+    map:
+      pickIndex >= fields().length
+        ? "RANDOM FIELD"
+        : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
     phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
-    slots: slots.map((s, i): LobbySlot => ({ hero: s.hero, level: s.level, ready: s.ready, cpu: s.cpu, open: !!s.open, name: s.tag ?? null, remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1, local: seatAt(i)?.k ?? 0, active: slotActive(i), commander: commanderSlot(i), cam: remoteAt(i) >= 0 ? remoteCam[i] : save.data.options.zoom?.[i] ?? 0, costume: s.costume ?? "" })),
+    slots: slots.map((s, i): LobbySlot => ({
+      hero: s.hero,
+      level: s.level,
+      ready: s.ready,
+      cpu: s.cpu,
+      open: !!s.open,
+      name: s.tag ?? null,
+      remote: remoteAt(i) >= 0 ? remoteAt(i) : pads.players[i].connected ? 0 : -1,
+      local: seatAt(i)?.k ?? 0,
+      active: slotActive(i),
+      commander: commanderSlot(i),
+      cam: remoteAt(i) >= 0 ? remoteCam[i] : (save.data.options.zoom?.[i] ?? 0),
+      costume: s.costume ?? "",
+    })),
   });
   const freeSeat = (r: RSeat, now: number) => {
     const i = r.slot;
@@ -798,7 +1009,8 @@ async function start(): Promise<void> {
     }
     const r = rseats.find((q) => q.peer === id && q.k === Number(m.k ?? 0));
     if (!r) {
-      if (m.t === "pause" && (state === "match" || state === "paused") && rseats.some((q) => q.peer === id)) setPaused(state === "match");
+      if (m.t === "pause" && (state === "match" || state === "paused") && rseats.some((q) => q.peer === id))
+        setPaused(state === "match");
       return;
     }
     const key = `${id}:${r.k}`;
@@ -810,7 +1022,14 @@ async function start(): Promise<void> {
     }
     if (m.t === "nm") {
       const v = m.v;
-      if (Array.isArray(v)) remoteSigning.set(key, [v[0] === 1 ? 1 : 0, String(v[1] ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, MAX_TAG)]);
+      if (Array.isArray(v))
+        remoteSigning.set(key, [
+          v[0] === 1 ? 1 : 0,
+          String(v[1] ?? "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9-]/g, "")
+            .slice(0, MAX_TAG),
+        ]);
       else remoteSigning.delete(key);
       return;
     }
@@ -829,7 +1048,8 @@ async function start(): Promise<void> {
     if (m.t === "tag" && i >= 0) {
       const t = m.tag === null ? "" : cleanTag(String(m.tag ?? ""));
       const id = typeof m.id === "string" && /^[0-9a-f-]{36}$/.test(m.id) ? m.id : null;
-      const clash = !!t && slots.some((s, j) => j !== i && !s.cpu && !s.open && (s.tag === t || (!!id && s.tagId === id)));
+      const clash =
+        !!t && slots.some((s, j) => j !== i && !s.cpu && !s.open && (s.tag === t || (!!id && s.tagId === id)));
       if (!clash) {
         slots[i].tag = t || freeLabel(i, r.name);
         slots[i].tagId = t ? id : undefined;
@@ -848,9 +1068,18 @@ async function start(): Promise<void> {
     if (m.t === "seat" && state === "select") {
       const to = Number(m.slot);
       const tgt = slots[to];
-      if (!tgt || !slotActive(to) || commanderSlot(to) || to === i || seatAt(to) || pads.players[to]?.connected || !(tgt.open || tgt.autoCpu)) return;
+      if (
+        !tgt ||
+        !slotActive(to) ||
+        commanderSlot(to) ||
+        to === i ||
+        seatAt(to) ||
+        pads.players[to]?.connected ||
+        !(tgt.open || tgt.autoCpu)
+      )
+        return;
       const hero = i >= 0 ? slots[i].hero : roster[0];
-      const keep = i >= 0 ? [slots[i].tag, slots[i].tagId] as const : null;
+      const keep = i >= 0 ? ([slots[i].tag, slots[i].tagId] as const) : null;
       if (i >= 0) makeOpen(i);
       r.slot = to;
       slots[to].autoCpu = false;
@@ -864,7 +1093,14 @@ async function start(): Promise<void> {
     }
     if (m.t === "cmd" && i >= 0 && (state === "match" || state === "paused")) {
       if (r.queue.length < 30) r.queue.push(m.c as Command);
-    } else if (m.t === "pick" && i >= 0 && state === "select" && !slots[i].ready && roster.includes(String(m.hero)) && !commanderSlot(i)) {
+    } else if (
+      m.t === "pick" &&
+      i >= 0 &&
+      state === "select" &&
+      !slots[i].ready &&
+      roster.includes(String(m.hero)) &&
+      !commanderSlot(i)
+    ) {
       slots[i].hero = String(m.hero);
     } else if (m.t === "ready" && i >= 0 && state === "select" && !commanderSlot(i)) {
       slots[i].ready = !!m.on;
@@ -892,7 +1128,12 @@ async function start(): Promise<void> {
     for (const m of net.drain()) {
       if (m.t === "closed" || m.t === "hostgone") {
         if (netMode !== "off" || menus.netBusy) {
-          const why = m.t === "hostgone" || netMode === "peer" ? "THE HOST HAS LEFT" : menus.netBusy ? net.status || "COULD NOT REACH THE HOST" : "LOST THE CONNECTION";
+          const why =
+            m.t === "hostgone" || netMode === "peer"
+              ? "THE HOST HAS LEFT"
+              : menus.netBusy
+                ? net.status || "COULD NOT REACH THE HOST"
+                : "LOST THE CONNECTION";
           const onPage = state === "menu";
           toMenu(why);
           if (!onPage) {
@@ -931,7 +1172,12 @@ async function start(): Promise<void> {
       }
       if (netMode === "host") {
         if (m.t === "joined") {
-          peerNames.set(Number(m.id), String(m.name ?? "GUEST").toUpperCase().slice(0, 8));
+          peerNames.set(
+            Number(m.id),
+            String(m.name ?? "GUEST")
+              .toUpperCase()
+              .slice(0, 8),
+          );
           audio.ui("ok");
           lobbySentAt = 0;
         } else if (m.t === "left") {
@@ -963,10 +1209,19 @@ async function start(): Promise<void> {
             hud.banner_("DIFFERENT BROWSER FROM THE HOST · USE THE SAME ONE OR YOU MAY DESYNC", now, 6);
           }
           mySlots.clear();
-          lv.slots.forEach((s, i) => { if (s.remote === net.id) mySlots.set(s.local ?? 0, i); });
+          lv.slots.forEach((s, i) => {
+            if (s.remote === net.id) mySlots.set(s.local ?? 0, i);
+          });
           for (const [k, i] of mySlots) if (!myHero[k]) myHero[k] = lv.slots[i].hero;
           const anyDevice = pads.players.some((p) => p.connected);
-          const status = lv.phase === "match" ? "" : !anyDevice ? "PRESS A BUTTON ON A CONTROLLER OR KEYBOARD TO TAKE A SEAT" : !mySlots.size ? "THE BATTLE IS FULL · WAITING FOR A SEAT" : "";
+          const status =
+            lv.phase === "match"
+              ? ""
+              : !anyDevice
+                ? "PRESS A BUTTON ON A CONTROLLER OR KEYBOARD TO TAKE A SEAT"
+                : !mySlots.size
+                  ? "THE BATTLE IS FULL · WAITING FOR A SEAT"
+                  : "";
           screens.lobby = { ...lv, mine: [...mySlots.values()], status };
           if (state === "results" || state === "match" || state === "paused") {
             if (lv.phase === "lobby") {
@@ -980,20 +1235,40 @@ async function start(): Promise<void> {
         } else if (m.t === "start") {
           const spec = m.spec as MatchSpec;
           mySlots.clear();
-          for (const [peer, k, slot] of (m.seats as [number, number, number][]) ?? []) if (peer === net.id) mySlots.set(k, slot);
+          for (const [peer, k, slot] of (m.seats as [number, number, number][]) ?? [])
+            if (peer === net.id) mySlots.set(k, slot);
           if (!mySlots.size) continue;
           const mine = new Set(mySlots.values());
           const local = Array.from({ length: spec.players }, (_, i) => mine.has(i));
-          startNetMatch(spec, local, local.map(() => false));
+          startNetMatch(
+            spec,
+            local,
+            local.map(() => false),
+          );
         } else if (m.t === "pres") {
           const mine = new Set(mySlots.values());
           const okSlot = (s: number) => Number.isInteger(s) && s >= 0 && s < MAX_PLAYERS && !mine.has(s);
           const hs = (Array.isArray(m.h) ? m.h : []) as unknown[][];
-          cursors.setGhosts(hs.flatMap((e): [number, HandWire][] => {
-            const w = cleanHand(e?.[1]);
-            return w && okSlot(Number(e?.[0])) ? [[Number(e[0]), w]] : [];
-          }));
-          screens.signing = new Map(((Array.isArray(m.n) ? m.n : []) as unknown[][]).filter((e) => okSlot(Number(e?.[0]))).map((e): [number, [number, string]] => [Number(e[0]), [e[1] === 1 ? 1 : 0, String(e[2] ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, MAX_TAG)]]));
+          cursors.setGhosts(
+            hs.flatMap((e): [number, HandWire][] => {
+              const w = cleanHand(e?.[1]);
+              return w && okSlot(Number(e?.[0])) ? [[Number(e[0]), w]] : [];
+            }),
+          );
+          screens.signing = new Map(
+            ((Array.isArray(m.n) ? m.n : []) as unknown[][])
+              .filter((e) => okSlot(Number(e?.[0])))
+              .map((e): [number, [number, string]] => [
+                Number(e[0]),
+                [
+                  e[1] === 1 ? 1 : 0,
+                  String(e[2] ?? "")
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9-]/g, "")
+                    .slice(0, MAX_TAG),
+                ],
+              ]),
+          );
           const f = Array.isArray(m.f) ? (m.f as number[]).map(Number) : null;
           guestField = f && maps[f[1]] ? [f[0], f[1]] : null;
           if (guestField && state === "lobby" && guestField[1] !== mapIndex) {
@@ -1082,7 +1357,10 @@ async function start(): Promise<void> {
       net.meta({
         name: `${(save.tagNames()[0] ?? "HOST").toUpperCase()}'S BATTLE`,
         mode: mode === "ffa" ? "FREE FOR ALL" : mode === "2v2" ? "2 VS 2" : "1 VS 1",
-        map: pickIndex >= fields().length ? "RANDOM" : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
+        map:
+          pickIndex >= fields().length
+            ? "RANDOM"
+            : (maps[fields()[pickIndex]]?.data.name ?? maps[mapIndex].data.name).toUpperCase(),
         humans: Math.max(1, localHumans + seated),
         seats: 4,
         phase: state === "match" || state === "paused" || state === "results" ? "match" : "lobby",
@@ -1155,7 +1433,9 @@ async function start(): Promise<void> {
         fetch(`${base}/net/info`, { cache: "no-store" })
           .then((res) => res.json())
           .then((j: { rooms?: RoomInfo[] }) => {
-            menus.rooms = (j.rooms ?? []).sort((a, b) => Number(a.phase !== "lobby") - Number(b.phase !== "lobby") || b.humans - a.humans);
+            menus.rooms = (j.rooms ?? []).sort(
+              (a, b) => Number(a.phase !== "lobby") - Number(b.phase !== "lobby") || b.humans - a.humans,
+            );
             menus.roomsError = "";
             if (menus.focus > menus.rooms.length) menus.focus = menus.rooms.length;
           })
@@ -1163,7 +1443,9 @@ async function start(): Promise<void> {
             menus.rooms = [];
             menus.roomsError = "COULD NOT REACH THE SERVER";
           })
-          .finally(() => { roomFetch = false; });
+          .finally(() => {
+            roomFetch = false;
+          });
       }
       if (r === "fight" || r === "training") {
         training = r === "training";
@@ -1178,9 +1460,15 @@ async function start(): Promise<void> {
       if (mode === "1v1" && [0, 1, 2, 3].filter(present).length >= 3) setMode("2v2");
       slots.forEach((sl, i) => {
         sl.local = pads.players[i].connected;
-        if (present(i) && (sl.open || (sl.cpu && sl.autoCpu))) { sl.autoCpu = false; makeHuman(i); }
+        if (present(i) && (sl.open || (sl.cpu && sl.autoCpu))) {
+          sl.autoCpu = false;
+          makeHuman(i);
+        }
         if (!present(i) && !sl.cpu && !sl.open) vacant(i);
-        if (netMode !== "host" && sl.open) { makeCpu(i); sl.autoCpu = true; }
+        if (netMode !== "host" && sl.open) {
+          makeCpu(i);
+          sl.autoCpu = true;
+        }
       });
       runNaming((slot) => (pads.players[slot]?.connected ? slot : -1), now);
       pads.players.forEach((p, i) => {
@@ -1197,10 +1485,18 @@ async function start(): Promise<void> {
         }
         costumeFlick[i] = dir;
       });
-      const acts = cursors.update(cursorPads(padsForCursors()), dt, now, (slot, by) => slotActive(slot) && !commanderSlot(slot) && (slot === by ? !slots[slot].cpu : slots[slot].cpu));
+      const acts = cursors.update(
+        cursorPads(padsForCursors()),
+        dt,
+        now,
+        (slot, by) => slotActive(slot) && !commanderSlot(slot) && (slot === by ? !slots[slot].cpu : slots[slot].cpu),
+      );
       for (const act of acts) {
         if (act.type === "hover") {
-          if (!slots[act.slot].ready && slots[act.slot].hero !== act.hero) { slots[act.slot].hero = act.hero; audio.ui("move"); }
+          if (!slots[act.slot].ready && slots[act.slot].hero !== act.hero) {
+            slots[act.slot].hero = act.hero;
+            audio.ui("move");
+          }
         } else if (act.type === "place") {
           slots[act.slot].hero = act.hero;
           slots[act.slot].ready = true;
@@ -1222,7 +1518,15 @@ async function start(): Promise<void> {
             audio.ui("ok");
           } else if (id === "sit") {
             const from = act.by;
-            const ok = from >= 0 && from !== i && slotActive(i) && !commanderSlot(i) && !seatAt(i) && pads.players[from]?.connected && !pads.players[i]?.connected && (slots[i].open || slots[i].cpu);
+            const ok =
+              from >= 0 &&
+              from !== i &&
+              slotActive(i) &&
+              !commanderSlot(i) &&
+              !seatAt(i) &&
+              pads.players[from]?.connected &&
+              !pads.players[i]?.connected &&
+              (slots[i].open || slots[i].cpu);
             if (ok && pads.move(from, i)) {
               const hero = slots[from].hero;
               const tag = slots[from].tag;
@@ -1271,7 +1575,10 @@ async function start(): Promise<void> {
             audio.ui("ok");
           } else if (id === "kind") {
             if (slots[i].cpu && present(i)) makeHuman(i);
-            else if (!slots[i].cpu) { makeCpu(i); slots[i].autoCpu = false; }
+            else if (!slots[i].cpu) {
+              makeCpu(i);
+              slots[i].autoCpu = false;
+            }
             audio.ui("ok");
           } else if (id === "lvl") {
             slots[i].level = (slots[i].level % 3) + 1;
@@ -1303,13 +1610,17 @@ async function start(): Promise<void> {
         }
       }
       screens.updateSelect(slots, data.heroes.heroes, roster, mode, save.data.rules.partners === 1);
-      for (let i = 0; i < 4; i++) screens.zoomModes[i] = remoteAt(i) >= 0 ? remoteCam[i] : save.data.options.zoom?.[i] ?? 0;
+      for (let i = 0; i < 4; i++)
+        screens.zoomModes[i] = remoteAt(i) >= 0 ? remoteCam[i] : (save.data.options.zoom?.[i] ?? 0);
       screens.hosting = netMode === "host";
       const allReady = selectReady();
       if (allReady && readySince < 0) readySince = now;
       if (!allReady) readySince = -1;
       screens.readyBanner = allReady && !screens.naming.size;
-      screens.openHint = !allReady && slots.some((sl, i) => slotActive(i) && sl.open) && slots.every((sl, i) => !slotActive(i) || sl.open || (sl.ready && heldBy(i) < 0));
+      screens.openHint =
+        !allReady &&
+        slots.some((sl, i) => slotActive(i) && sl.open) &&
+        slots.every((sl, i) => !slotActive(i) || sl.open || (sl.ready && heldBy(i) < 0));
       if (allReady && now - readySince > 0.25 && anyPressed("start") && !namingAte && !screens.naming.size) toMap();
     } else if (state === "map") {
       cursors.setScale(pixel.w, pixel.h);
@@ -1322,7 +1633,9 @@ async function start(): Promise<void> {
           go = true;
         }
       }
-      const hov = cursors.cursors.find((c, i) => c.active && c.hover.startsWith("map:") && mapHover[i] !== "*" && c.hover !== mapHover[i]);
+      const hov = cursors.cursors.find(
+        (c, i) => c.active && c.hover.startsWith("map:") && mapHover[i] !== "*" && c.hover !== mapHover[i],
+      );
       cursors.cursors.forEach((c, i) => (mapHover[i] = c.hover));
       if (hov) {
         const k = Number(hov.hover.slice(4));
@@ -1362,14 +1675,16 @@ async function start(): Promise<void> {
         const held = (i: number) => cursors.cursors.some((c) => c.active && c.holding === i);
         lb.slots.forEach((sl, i) => {
           if (!held(i)) cursors.placeChip(i, sl.ready && !sl.open && sl.active && !sl.commander ? sl.hero : null);
-          screens.zoomModes[i] = [...mySlots.values()].includes(i) ? save.data.options.zoom?.[i] ?? 0 : sl.cam ?? 0;
+          screens.zoomModes[i] = [...mySlots.values()].includes(i) ? (save.data.options.zoom?.[i] ?? 0) : (sl.cam ?? 0);
         });
         for (const [k, i] of mySlots) {
           const sl = lb.slots[i];
-          if (lb.phase === "lobby" && !guestField && !sl.ready && !sl.commander && !held(i) && !dropped.has(i)) cursors.cursors[k].holding = i;
+          if (lb.phase === "lobby" && !guestField && !sl.ready && !sl.commander && !held(i) && !dropped.has(i))
+            cursors.cursors[k].holding = i;
           if (sl.ready) dropped.delete(i);
         }
-        for (const c of cursors.cursors) if (c.holding >= 0 && ![...mySlots.values()].includes(c.holding)) c.holding = -1;
+        for (const c of cursors.cursors)
+          if (c.holding >= 0 && ![...mySlots.values()].includes(c.holding)) c.holding = -1;
         const kOf = (i: number) => [...mySlots].find(([, v]) => v === i)?.[0] ?? -1;
         for (const [k, i] of mySlots) {
           const p = pads.players[k];
@@ -1387,7 +1702,12 @@ async function start(): Promise<void> {
           costumeFlick[k] = dir;
         }
         runNaming((slot) => [...mySlots].find(([, v]) => v === slot)?.[0] ?? -1, now);
-        const acts = cursors.update(cursorPads(pads.players), dt, now, (slot, by) => lb.phase === "lobby" && !guestField && mySlots.get(by) === slot && !lb.slots[slot].commander);
+        const acts = cursors.update(
+          cursorPads(pads.players),
+          dt,
+          now,
+          (slot, by) => lb.phase === "lobby" && !guestField && mySlots.get(by) === slot && !lb.slots[slot].commander,
+        );
         let leave = false;
         for (const act of acts) {
           if (act.type === "hover") {
@@ -1462,7 +1782,15 @@ async function start(): Promise<void> {
           menus.open("network");
         } else {
           const ss: SelectSlot[] = lb.slots.map((sl, i) => ({
-            joined: !sl.cpu && !sl.open, ready: sl.ready, hero: sl.hero, cpu: sl.cpu, level: sl.level ?? 2, open: sl.open, tag: sl.name, local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i, costume: sl.costume,
+            joined: !sl.cpu && !sl.open,
+            ready: sl.ready,
+            hero: sl.hero,
+            cpu: sl.cpu,
+            level: sl.level ?? 2,
+            open: sl.open,
+            tag: sl.name,
+            local: sl.remote === net.id && mySlots.get(sl.local ?? 0) === i,
+            costume: sl.costume,
           }));
           screens.updateSelect(ss, data.heroes.heroes, roster, lb.mode, lb.rules.partners === 1);
           screens.hosting = false;
@@ -1475,7 +1803,7 @@ async function start(): Promise<void> {
         else setPaused(true);
       }
       pads.players.forEach((p, pi) => {
-        const i = netMode === "peer" ? mySlots.get(pi) ?? -1 : pi;
+        const i = netMode === "peer" ? (mySlots.get(pi) ?? -1) : pi;
         const m = i >= 0 ? mappers[i] : null;
         if (!m) return;
         const h = world.heroForPlayer(i);
@@ -1486,19 +1814,30 @@ async function start(): Promise<void> {
         const hp = h?.alive ? padNear(world, h) : null;
         const hs = hp?.structureId ? world.get(hp.structureId) : undefined;
         m.specReady = !!hs && hs.team === h!.team && canSpec(world, hs);
-        m.update(p, now, !!h && h.alive && !!padNear(world, h), !!h && h.alive && world.arena.inShop(h), !!h?.hero?.picks.length, h?.alive && h.hero ? placeRanges(world, h) : null);
+        m.update(
+          p,
+          now,
+          !!h && h.alive && !!padNear(world, h),
+          !!h && h.alive && world.arena.inShop(h),
+          !!h?.hero?.picks.length,
+          h?.alive && h.hero ? placeRanges(world, h) : null,
+        );
         if (view.camMode !== 0 && !m.ui.commander) {
           if (p.pressed.down) view.zoomStep(i, 1);
           if (p.pressed.up) view.zoomStep(i, -1);
         }
       });
       view.setMenus(mappers.map((m) => !!m && m.ui.buildMenu !== "closed"));
-      view.setReticles(mappers.flatMap((m, i) => {
-        const r = m?.ui.reticle;
-        const h = r ? world.heroForPlayer(i) : undefined;
-        return r && h ? [{ heroId: h.id, slot: r.slot, dx: r.dx, dz: r.dz, range: r.range }] : [];
-      }));
-      if (netMode === "peer") for (const [k, slot] of mySlots) if (mappers[slot]) net.toHost({ t: "cmd", k, c: packCommand(mappers[slot]!.take()) });
+      view.setReticles(
+        mappers.flatMap((m, i) => {
+          const r = m?.ui.reticle;
+          const h = r ? world.heroForPlayer(i) : undefined;
+          return r && h ? [{ heroId: h.id, slot: r.slot, dx: r.dx, dz: r.dz, range: r.range }] : [];
+        }),
+      );
+      if (netMode === "peer")
+        for (const [k, slot] of mySlots)
+          if (mappers[slot]) net.toHost({ t: "cmd", k, c: packCommand(mappers[slot]!.take()) });
     } else if (state === "paused") {
       const own = pauser >= 0 && pads.players[pauser]?.connected ? pauser : -1;
       const mouse = cursors.takeMouse();
@@ -1572,7 +1911,13 @@ async function start(): Promise<void> {
         ticks++;
       }
       if (!netFrames.length) acc = Math.min(acc, world.dt);
-    } else if (state === "match" || state === "title" || (state === "menu" && menus.page === "main") || state === "results" || state === "lobby") {
+    } else if (
+      state === "match" ||
+      state === "title" ||
+      (state === "menu" && menus.page === "main") ||
+      state === "results" ||
+      state === "lobby"
+    ) {
       const pfs = perf.now();
       const hosting = netMode === "host" && state === "match";
       acc += dt;
@@ -1595,7 +1940,11 @@ async function start(): Promise<void> {
         outHashes = [];
       }
     }
-    if ((state === "title" || state === "menu" || state === "select" || state === "map") && world.match.phase === "over") beginAttractWorldOnly();
+    if (
+      (state === "title" || state === "menu" || state === "select" || state === "map") &&
+      world.match.phase === "over"
+    )
+      beginAttractWorldOnly();
     if (state === "match" && world.match.phase === "over") {
       if (overAt < 0) {
         overAt = now;
@@ -1604,8 +1953,32 @@ async function start(): Promise<void> {
         state = "results";
         if (!recorded && !world.training && matchPlayers.some((p) => !p.cpu)) {
           recorded = true;
-          save.record({ at: Date.now(), mode, map: maps[mapIndex].id, winner: world.match.winner, secs: world.time, players: matchPlayers }, world.teams.map((t) => t.heroKills));
-          if (netMode === "host") net.report({ mode, map: maps[mapIndex].id, winner: world.match.winner, secs: Math.round(world.time), players: matchPlayers.map((p) => ({ id: p.tagId ?? null, name: p.tag, hero: p.hero, team: p.team, cpu: p.cpu, kills: world.teams[p.team]?.heroKills ?? 0 })) });
+          save.record(
+            {
+              at: Date.now(),
+              mode,
+              map: maps[mapIndex].id,
+              winner: world.match.winner,
+              secs: world.time,
+              players: matchPlayers,
+            },
+            world.teams.map((t) => t.heroKills),
+          );
+          if (netMode === "host")
+            net.report({
+              mode,
+              map: maps[mapIndex].id,
+              winner: world.match.winner,
+              secs: Math.round(world.time),
+              players: matchPlayers.map((p) => ({
+                id: p.tagId ?? null,
+                name: p.tag,
+                hero: p.hero,
+                team: p.team,
+                cpu: p.cpu,
+                kills: world.teams[p.team]?.heroKills ?? 0,
+              })),
+            });
         }
         screens.showResults(world, matchPlayers, menus.heroNames, fallen);
         screens.set("results");
@@ -1614,17 +1987,35 @@ async function start(): Promise<void> {
     }
 
     let pft = perf.now();
-    if (state === "match" || state === "paused") hud.update(world, mappers.map((m) => m?.ui ?? null), now);
+    if (state === "match" || state === "paused")
+      hud.update(
+        world,
+        mappers.map((m) => m?.ui ?? null),
+        now,
+      );
     pft = perf.cpu("hudUpdate", pft);
-    if (state === "match") for (const ev of world.events) if (ev.type === "eliminated" && !fallen.includes(ev.team)) fallen.push(ev.team);
+    if (state === "match")
+      for (const ev of world.events) if (ev.type === "eliminated" && !fallen.includes(ev.team)) fallen.push(ev.team);
     if (state === "match") audio.handle(world.events, (x, y, z) => view.worldToScreen(x, y, z));
     const fight = state === "match" || state === "paused";
-    audio.setMusic(fight ? (world.match.phase === "sudden" ? "sudden" : "battle") : state === "results" ? "results" : state === "select" || state === "map" || state === "lobby" ? "select" : "menu", state === "paused" ? 0.35 : 1);
+    audio.setMusic(
+      fight
+        ? world.match.phase === "sudden"
+          ? "sudden"
+          : "battle"
+        : state === "results"
+          ? "results"
+          : state === "select" || state === "map" || state === "lobby"
+            ? "select"
+            : "menu",
+      state === "paused" ? 0.35 : 1,
+    );
     audio.update();
-    view.cinematic = state === "select" || state === "map" || state === "lobby" || (state === "menu" && menus.page !== "main");
+    view.cinematic =
+      state === "select" || state === "map" || state === "lobby" || (state === "menu" && menus.page !== "main");
     const demoAlpha = runDemo(dt);
     pft = perf.now();
-    view.render(state === "paused" ? 0 : demoAlpha ?? acc / world.dt, state === "paused" ? 0 : dt);
+    view.render(state === "paused" ? 0 : (demoAlpha ?? acc / world.dt), state === "paused" ? 0 : dt);
     pft = perf.cpu("render", pft);
     view.windowRect = liveWindow.rect;
     liveWindow.rect = null;
@@ -1647,17 +2038,45 @@ async function start(): Promise<void> {
     if (!skipHud) hud.draw(ctx, pixel.w, pixel.h, world, uiList, now);
     pft = perf.cpu("hudDraw", pft);
     const watchLb = state === "lobby" && guestField ? screens.lobby : null;
-    if (watchLb && guestField) screens.updateMaps(maps.map((m) => m.data), guestField[0], fieldsFor(watchLb.mode), watchLb.mode);
-    else screens.updateMaps(maps.map((m) => m.data), state === "map" ? pickIndex : Math.max(0, fields().indexOf(mapIndex)), fields(), mode);
+    if (watchLb && guestField)
+      screens.updateMaps(
+        maps.map((m) => m.data),
+        guestField[0],
+        fieldsFor(watchLb.mode),
+        watchLb.mode,
+      );
+    else
+      screens.updateMaps(
+        maps.map((m) => m.data),
+        state === "map" ? pickIndex : Math.max(0, fields().indexOf(mapIndex)),
+        fields(),
+        mode,
+      );
     screens.fieldWatch = !!watchLb;
     const hostTag = watchLb?.slots.find((s) => s.remote === 0 && !s.cpu && !s.open && s.name)?.name;
-    screens.fieldNote = watchLb ? `${hostTag ? `${hostTag} · THE HOST` : "THE HOST"} PICKS THE FIELD` : netMode === "host" && state === "map" && peerNames.size ? "YOU PICK THE FIELD FOR EVERYONE" : "";
+    screens.fieldNote = watchLb
+      ? `${hostTag ? `${hostTag} · THE HOST` : "THE HOST"} PICKS THE FIELD`
+      : netMode === "host" && state === "map" && peerNames.size
+        ? "YOU PICK THE FIELD FOR EVERYONE"
+        : "";
     if (state === "select" || state === "lobby") screens.portraits?.renderStages();
     const viaDriver = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
     const nativeGc = pads.players.some((p) => p.connected && p.profile === "gc_adapter_uinput");
-    const gcText = viaDriver || nativeGc ? "GAMECUBE ADAPTER CONNECTED" : pads.gc.status.startsWith("LINUX") ? pads.gc.status : pads.gc.connected ? `GAMECUBE ADAPTER READY · ${pads.gc.ports.filter((p) => p.connected).length} CONTROLLER(S)` : pads.gc.status;
-    const proText = pads.pro.count ? `${pads.pro.count} PRO CONTROLLER${pads.pro.count > 1 ? "S" : ""}` : pads.proWake.woken ? "PRO CONTROLLER AWAKE · PRESS G" : pads.pro.status || pads.proWake.status;
-    screens.adapterStatus = [gcText, proText].filter(Boolean).join(" · ") || "G: GAMECUBE ADAPTER · P: WAKE A SWITCH 2 PRO CONTROLLER";
+    const gcText =
+      viaDriver || nativeGc
+        ? "GAMECUBE ADAPTER CONNECTED"
+        : pads.gc.status.startsWith("LINUX")
+          ? pads.gc.status
+          : pads.gc.connected
+            ? `GAMECUBE ADAPTER READY · ${pads.gc.ports.filter((p) => p.connected).length} CONTROLLER(S)`
+            : pads.gc.status;
+    const proText = pads.pro.count
+      ? `${pads.pro.count} PRO CONTROLLER${pads.pro.count > 1 ? "S" : ""}`
+      : pads.proWake.woken
+        ? "PRO CONTROLLER AWAKE · PRESS G"
+        : pads.pro.status || pads.proWake.status;
+    screens.adapterStatus =
+      [gcText, proText].filter(Boolean).join(" · ") || "G: GAMECUBE ADAPTER · P: WAKE A SWITCH 2 PRO CONTROLLER";
     screens.adapterDebug = pads.gc.debug();
     if (!skipHud) screens.draw(ctx, pixel.w, pixel.h, now);
     if (state === "menu") menus.draw(ctx, pixel.w, pixel.h, now);
@@ -1687,14 +2106,56 @@ async function start(): Promise<void> {
   const demoData = {
     ...data,
     units: { ...data.units, waves: { ...data.units.waves, firstSeconds: 1e9 } },
-    match: { ...data.match, arena: { ...data.match.arena, relic: { ...data.match.arena.relic, firstSeconds: 1e9 }, ogre: { ...data.match.arena.ogre, firstSeconds: 1e9 }, cannon: { ...data.match.arena.cannon, firstSeconds: 1e9 } } },
+    match: {
+      ...data.match,
+      arena: {
+        ...data.match.arena,
+        relic: { ...data.match.arena.relic, firstSeconds: 1e9 },
+        ogre: { ...data.match.arena.ogre, firstSeconds: 1e9 },
+        cannon: { ...data.match.arena.cannon, firstSeconds: 1e9 },
+      },
+    },
   } as GameData;
-  const demoMap = Math.max(0, maps.findIndex((m) => m.id === "crossing"));
+  const demoMap = Math.max(
+    0,
+    maps.findIndex((m) => m.id === "crossing"),
+  );
   let demoBase = "";
   let demoLoop = 0;
-  let demo: { key: string; w: World; t: number; acc: number; loop: number; len: number; presses: number[]; dist: number; btn: keyof Command; mapShown: boolean; kind: string } | null = null;
+  let demo: {
+    key: string;
+    w: World;
+    t: number;
+    acc: number;
+    loop: number;
+    len: number;
+    presses: number[];
+    dist: number;
+    btn: keyof Command;
+    mapShown: boolean;
+    kind: string;
+  } | null = null;
   const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner", "keg", "brewfest"]);
-  const BIG = new Set(["quake", "zone", "summon", "gravewalk", "rally", "warcry", "works", "ballista", "turret", "rootcage", "stealth", "teslatower", "palisade", "wall", "repair", "volley", "brewfest", "heartseeker"]);
+  const BIG = new Set([
+    "quake",
+    "zone",
+    "summon",
+    "gravewalk",
+    "rally",
+    "warcry",
+    "works",
+    "ballista",
+    "turret",
+    "rootcage",
+    "stealth",
+    "teslatower",
+    "palisade",
+    "wall",
+    "repair",
+    "volley",
+    "brewfest",
+    "heartseeker",
+  ]);
   const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry", "pip", "keg", "powderkeg"]);
   const DEMO_SPOT = { x: 23.5, z: 7 };
   function runDemo(dt: number): number | null {
@@ -1719,7 +2180,8 @@ async function start(): Promise<void> {
           for (let p = 0; p < n; p++) w.spawnHero(roster[p % roster.length], p, n === 4 ? p : p % 2);
           for (const e of w.entities) if (e.hero) w.teleport(e, -50, -50);
         }
-        const me = mapScene >= 0 ? w.heroForPlayer(0)! : w.spawnHero(spec.scene === "formation" ? "herald" : "warlord", 0, 0);
+        const me =
+          mapScene >= 0 ? w.heroForPlayer(0)! : w.spawnHero(spec.scene === "formation" ? "herald" : "warlord", 0, 0);
         const foe = mapScene >= 0 ? w.heroForPlayer(1)! : w.spawnHero("warden", 1, 1);
         const mate = spec.scene === "morph" ? w.spawnHero("raider", 2, 0) : null;
         if (mate) w.teleport(mate, 6, 4);
@@ -1744,7 +2206,14 @@ async function start(): Promise<void> {
           w.teleport(me, DEMO_SPOT.x - 3, DEMO_SPOT.z);
           me.status.invulnUntil = 0;
           for (let k = 0; k < 9; k++) {
-            const u = spawnUnit(w, 0, (["heavy", "grunt", "ranged"] as const)[k % 3], DEMO_SPOT.x + (k % 3), DEMO_SPOT.z - 1 + Math.floor(k / 3), 1);
+            const u = spawnUnit(
+              w,
+              0,
+              (["heavy", "grunt", "ranged"] as const)[k % 3],
+              DEMO_SPOT.x + (k % 3),
+              DEMO_SPOT.z - 1 + Math.floor(k / 3),
+              1,
+            );
             if (u?.unit) u.unit.damage = 0;
           }
           w.setDirective(0, "all", "hold", me);
@@ -1754,7 +2223,16 @@ async function start(): Promise<void> {
         if (spec.scene.startsWith("tower:")) {
           const id = spec.scene.slice(6);
           const kind = w.data.structures.types.damage.specs?.some((q) => q.id === id) ? "damage" : "control";
-          const pad = { index: -1, x: DEMO_SPOT.x - 3, z: DEMO_SPOT.z, zone: "forward", side: 0, structureId: 0, rubbleUntil: 0, rubbleTeam: -1 } as unknown as Parameters<typeof createStructure>[2];
+          const pad = {
+            index: -1,
+            x: DEMO_SPOT.x - 3,
+            z: DEMO_SPOT.z,
+            zone: "forward",
+            side: 0,
+            structureId: 0,
+            rubbleUntil: 0,
+            rubbleTeam: -1,
+          } as unknown as Parameters<typeof createStructure>[2];
           const tw = createStructure(w, 0, pad, kind);
           const st = tw.structure!;
           st.ready = true;
@@ -1780,7 +2258,19 @@ async function start(): Promise<void> {
         }
         view.setMap(mapViews[sceneMap], w.terrain);
         view.setWorld(w);
-        demo = { key, w, t: 0, acc: 0, loop: 0, len: 1e9, presses: [], dist: 0, btn: "attack", mapShown: sceneMap === demoMap, kind: spec.scene };
+        demo = {
+          key,
+          w,
+          t: 0,
+          acc: 0,
+          loop: 0,
+          len: 1e9,
+          presses: [],
+          dist: 0,
+          btn: "attack",
+          mapShown: sceneMap === demoMap,
+          kind: spec.scene,
+        };
       }
       const d = demo;
       const w = d.w;
@@ -1799,12 +2289,21 @@ async function start(): Promise<void> {
           }
           me.transform.facing = me.transform.prevFacing = 0.15;
         }
-        if (spec.scene === "formation" && Math.floor(d.t / 2.6) !== Math.floor((d.t - w.dt) / 2.6)) cmds[0].formation = true;
+        if (spec.scene === "formation" && Math.floor(d.t / 2.6) !== Math.floor((d.t - w.dt) / 2.6))
+          cmds[0].formation = true;
         if (spec.scene.startsWith("tower:")) {
           for (const o of w.entities) if (o.structure && o.team === 0 && o.structure.padIndex === -1) o.hp = o.maxHp;
           const foes = w.entities.filter((o) => o.alive && o.unit && o.team === 1).length;
           if (foes < 7 && Math.floor(d.t / 2.2) !== Math.floor((d.t - w.dt) / 2.2)) {
-            for (let k = 0; k < 4; k++) spawnUnit(w, 1, (["grunt", "grunt", "ranged", "heavy"] as const)[k], DEMO_SPOT.x + 6 + (k % 2) * 0.9, DEMO_SPOT.z - 1 + k * 0.7, 1);
+            for (let k = 0; k < 4; k++)
+              spawnUnit(
+                w,
+                1,
+                (["grunt", "grunt", "ranged", "heavy"] as const)[k],
+                DEMO_SPOT.x + 6 + (k % 2) * 0.9,
+                DEMO_SPOT.z - 1 + k * 0.7,
+                1,
+              );
           }
         }
         w.step(cmds);
@@ -1820,21 +2319,57 @@ async function start(): Promise<void> {
       if (mapScene >= 0) {
         const t = w.terrain;
         const size = Math.max(t.width, t.depth);
-        view.demoCam = { rect: menus.demoRect, target: { x: t.width / 2, y: 0, z: t.depth / 2 }, yaw: Math.sin(d.t * 0.12) * 0.4, pitch: 1.0, dist: size * 1.75 };
+        view.demoCam = {
+          rect: menus.demoRect,
+          target: { x: t.width / 2, y: 0, z: t.depth / 2 },
+          yaw: Math.sin(d.t * 0.12) * 0.4,
+          pitch: 1.0,
+          dist: size * 1.75,
+        };
         return d.acc / w.dt;
       }
       const core = w.core(0)!;
-      const tgt = spec.scene === "grudge" ? { x: w.arena.home.x, y: w.groundY(w.arena.home.x, w.arena.home.z) + 1.0, z: w.arena.home.z }
-        : spec.scene === "keep" ? { x: core.transform.pos.x, y: core.transform.y + 1.6, z: core.transform.pos.z }
-        : spec.scene === "formation" ? { x: DEMO_SPOT.x + 1, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.5, z: DEMO_SPOT.z }
-        : spec.scene.startsWith("tower:") ? { x: DEMO_SPOT.x + 1.5, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 1.4, z: DEMO_SPOT.z }
-        : { x: DEMO_SPOT.x, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.9, z: DEMO_SPOT.z };
+      const tgt =
+        spec.scene === "grudge"
+          ? { x: w.arena.home.x, y: w.groundY(w.arena.home.x, w.arena.home.z) + 1.0, z: w.arena.home.z }
+          : spec.scene === "keep"
+            ? { x: core.transform.pos.x, y: core.transform.y + 1.6, z: core.transform.pos.z }
+            : spec.scene === "formation"
+              ? { x: DEMO_SPOT.x + 1, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.5, z: DEMO_SPOT.z }
+              : spec.scene.startsWith("tower:")
+                ? { x: DEMO_SPOT.x + 1.5, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 1.4, z: DEMO_SPOT.z }
+                : { x: DEMO_SPOT.x, y: w.groundY(DEMO_SPOT.x, DEMO_SPOT.z) + 0.9, z: DEMO_SPOT.z };
       view.demoCam = {
         rect: menus.demoRect,
         target: tgt,
-        yaw: spec.scene === "keep" ? 0.9 + Math.sin(d.t * 0.25) * 0.25 : spec.scene === "morph" ? 0.15 : 0.22 + Math.sin(d.t * 0.3) * 0.25,
-        pitch: spec.scene === "keep" ? 0.42 : spec.scene === "formation" ? 0.8 : spec.scene === "morph" ? 0.45 : spec.scene.startsWith("tower:") ? 0.5 : 0.3,
-        dist: spec.scene === "keep" ? 15 : spec.scene === "grudge" ? 8 : spec.scene === "formation" ? 11 : spec.scene === "morph" ? 9 : spec.scene.startsWith("tower:") ? 14 : 7,
+        yaw:
+          spec.scene === "keep"
+            ? 0.9 + Math.sin(d.t * 0.25) * 0.25
+            : spec.scene === "morph"
+              ? 0.15
+              : 0.22 + Math.sin(d.t * 0.3) * 0.25,
+        pitch:
+          spec.scene === "keep"
+            ? 0.42
+            : spec.scene === "formation"
+              ? 0.8
+              : spec.scene === "morph"
+                ? 0.45
+                : spec.scene.startsWith("tower:")
+                  ? 0.5
+                  : 0.3,
+        dist:
+          spec.scene === "keep"
+            ? 15
+            : spec.scene === "grudge"
+              ? 8
+              : spec.scene === "formation"
+                ? 11
+                : spec.scene === "morph"
+                  ? 9
+                  : spec.scene.startsWith("tower:")
+                    ? 14
+                    : 7,
       };
       return d.acc / w.dt;
     }
@@ -1863,7 +2398,17 @@ async function start(): Promise<void> {
       foe.status.stunUntil = 1e9;
       foe.status.invulnUntil = 1e9;
       const kind = (me.hero?.ab ?? w.heroDef(spec.hero).abilities)[spec.slot].kind;
-      if (kind === "gravewalk") w.pads.push({ index: w.pads.length, x: DEMO_SPOT.x + 10, z: DEMO_SPOT.z, zone: "forward", side: 0, structureId: 0, rubbleUntil: 0, rubbleTeam: -1 } as unknown as Parameters<typeof createStructure>[2]);
+      if (kind === "gravewalk")
+        w.pads.push({
+          index: w.pads.length,
+          x: DEMO_SPOT.x + 10,
+          z: DEMO_SPOT.z,
+          zone: "forward",
+          side: 0,
+          structureId: 0,
+          rubbleUntil: 0,
+          rubbleTeam: -1,
+        } as unknown as Parameters<typeof createStructure>[2]);
       const big = BIG.has(kind);
       const far = FAR.has(kind) || (spec.slot === "a" && kind === "shoot");
       const dist = kind === "works" ? 8 : big ? 4.5 : far ? 6.5 : 2.8;
@@ -1871,7 +2416,19 @@ async function start(): Promise<void> {
       const btn = ({ a: "attack", b: "secondary", r: "special", z: "super" } as const)[spec.slot];
       if (!demo || !demo.mapShown) view.setMap(mapViews[demoMap], w.terrain);
       view.setWorld(w);
-      demo = { key, w, t: -1, acc: 0, loop, len: kind === "works" ? 5.5 : big ? 4.6 : 3.4, presses, dist, btn, mapShown: true, kind };
+      demo = {
+        key,
+        w,
+        t: -1,
+        acc: 0,
+        loop,
+        len: kind === "works" ? 5.5 : big ? 4.6 : 3.4,
+        presses,
+        dist,
+        btn,
+        mapShown: true,
+        kind,
+      };
     }
     const d = demo;
     const w = d.w;
@@ -1889,7 +2446,8 @@ async function start(): Promise<void> {
       me.status.stealthUntil = 0;
       me.status.hidden = false;
       w.kegs.length = 0;
-      for (const u of w.entities) if (u.unit || (u.structure && u.structure.padIndex < 0 && u.structure.type !== "core")) u.alive = false;
+      for (const u of w.entities)
+        if (u.unit || (u.structure && u.structure.padIndex < 0 && u.structure.type !== "core")) u.alive = false;
       w.zones.length = 0;
       w.traps.length = 0;
       for (const m of w.mods) m.until = w.time;
@@ -1917,7 +2475,8 @@ async function start(): Promise<void> {
         ad.grunt = ad.ranged = ad.heavy = "hold";
         ad.holdPoint.grunt = { x: DEMO_SPOT.x - 1.4, z: DEMO_SPOT.z };
       }
-      const gravePad = d.kind === "gravewalk" ? w.pads.find((q) => q.x === DEMO_SPOT.x + 10 && q.z === DEMO_SPOT.z) : undefined;
+      const gravePad =
+        d.kind === "gravewalk" ? w.pads.find((q) => q.x === DEMO_SPOT.x + 10 && q.z === DEMO_SPOT.z) : undefined;
       if (gravePad) {
         const pad = gravePad;
         const old = pad.structureId ? w.get(pad.structureId) : undefined;
@@ -1930,7 +2489,18 @@ async function start(): Promise<void> {
       }
       if (d.kind === "repair") {
         const st = w.addEntity(0, "structure", 1.2, DEMO_SPOT.x - 1, DEMO_SPOT.z + 3.2, 620);
-        st.structure = { type: "damage", padIndex: -1, level: 1, builtAt: 0, ready: true, nextAction: 1e9, range: 0, damage: 0, lastFireAt: -99, shielded: false };
+        st.structure = {
+          type: "damage",
+          padIndex: -1,
+          level: 1,
+          builtAt: 0,
+          ready: true,
+          nextAction: 1e9,
+          range: 0,
+          damage: 0,
+          lastFireAt: -99,
+          shielded: false,
+        };
         st.hp = 180;
       }
     };

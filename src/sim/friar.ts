@@ -3,8 +3,16 @@ import type { AbilityDef } from "./config.ts";
 import type { Command, Entity, HeroAction, Keg, Zone } from "./types.ts";
 import { abilities, addShield, zoneAt } from "./talents.ts";
 
-const fx = (w: World, name: string, src: number, team: number, x: number, y: number, z: number, extra: { radius?: number; tx?: number; tz?: number; seconds?: number; id?: number } = {}) =>
-  w.emit({ type: "heroFx", name, src, team, x, y, z, ...extra });
+const fx = (
+  w: World,
+  name: string,
+  src: number,
+  team: number,
+  x: number,
+  y: number,
+  z: number,
+  extra: { radius?: number; tx?: number; tz?: number; seconds?: number; id?: number } = {},
+) => w.emit({ type: "heroFx", name, src, team, x, y, z, ...extra });
 
 export function healFrom(w: World, src: Entity | null | undefined, o: Entity, amount: number): number {
   if (!o.alive || o.structure || o.hp >= o.maxHp || amount <= 0) return 0;
@@ -23,15 +31,22 @@ export function plentyTick(w: World, e: Entity): void {
   for (const o of w.entities) {
     if (!o.alive || o.team !== e.team || o.structure || o.hp >= o.maxHp) continue;
     if (Math.hypot(o.transform.pos.x - e.transform.pos.x, o.transform.pos.z - e.transform.pos.z) > r) continue;
-    const frac = o.hero ? hk.plentyHero ?? 0.006 : hk.plentyUnit ?? 0.012;
+    const frac = o.hero ? (hk.plentyHero ?? 0.006) : (hk.plentyUnit ?? 0.012);
     if (healFrom(w, e, o, o.maxHp * frac * 0.5) > 0) any = true;
   }
-  if (any && w.tick % 60 === 0) fx(w, "plenty", e.id, e.team, e.transform.pos.x, e.transform.y, e.transform.pos.z, { radius: r });
+  if (any && w.tick % 60 === 0)
+    fx(w, "plenty", e.id, e.team, e.transform.pos.x, e.transform.y, e.transform.pos.z, { radius: r });
 }
 
 function allySpot(w: World, e: Entity, range: number, radius: number): { x: number; z: number; score: number } | null {
   const p = e.transform.pos;
-  const allies = w.entities.filter((o) => o.alive && o.team === e.team && !o.structure && Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z) <= range + radius);
+  const allies = w.entities.filter(
+    (o) =>
+      o.alive &&
+      o.team === e.team &&
+      !o.structure &&
+      Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z) <= range + radius,
+  );
   let best: { x: number; z: number; score: number } | null = null;
   for (const c of allies) {
     let cx = c.transform.pos.x;
@@ -59,7 +74,13 @@ export function healSpotScore(w: World, e: Entity): number {
 
 function foeSpot(w: World, e: Entity, range: number, radius: number): { x: number; z: number; score: number } | null {
   const p = e.transform.pos;
-  const foes = w.entities.filter((o) => o.alive && o.team !== e.team && w.canSee(e, o) && Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z) - o.radius <= range + radius);
+  const foes = w.entities.filter(
+    (o) =>
+      o.alive &&
+      o.team !== e.team &&
+      w.canSee(e, o) &&
+      Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z) - o.radius <= range + radius,
+  );
   let best: { x: number; z: number; score: number } | null = null;
   for (const c of foes) {
     let cx = c.transform.pos.x;
@@ -84,7 +105,14 @@ export function clumpScore(w: World, e: Entity): number {
   return foeSpot(w, e, r.range ?? 8, r.radius ?? 3.2)?.score ?? 0;
 }
 
-export function throwKeg(w: World, e: Entity, a: HeroAction, def: AbilityDef, kind: "heal" | "powder", mul: number): void {
+export function throwKeg(
+  w: World,
+  e: Entity,
+  a: HeroAction,
+  def: AbilityDef,
+  kind: "heal" | "powder",
+  mul: number,
+): void {
   const t = e.transform;
   const range = def.range ?? 8;
   let x: number;
@@ -104,18 +132,63 @@ export function throwKeg(w: World, e: Entity, a: HeroAction, def: AbilityDef, ki
   const dz = z - t.pos.z;
   const d = Math.hypot(dx, dz);
   if (d > 0.3) t.facing = Math.atan2(dx, dz);
-  spawnKeg(w, e, kind, t.pos.x + Math.sin(t.facing) * 0.5, t.y + 1.9, t.pos.z + Math.cos(t.facing) * 0.5, x, z, (def.flight ?? 0.35) + d / 18, mul);
+  spawnKeg(
+    w,
+    e,
+    kind,
+    t.pos.x + Math.sin(t.facing) * 0.5,
+    t.y + 1.9,
+    t.pos.z + Math.cos(t.facing) * 0.5,
+    x,
+    z,
+    (def.flight ?? 0.35) + d / 18,
+    mul,
+  );
 }
 
-function spawnKeg(w: World, e: Entity, kind: Keg["kind"], fx0: number, fy0: number, fz0: number, x: number, z: number, dur: number, mul: number): void {
+function spawnKeg(
+  w: World,
+  e: Entity,
+  kind: Keg["kind"],
+  fx0: number,
+  fy0: number,
+  fz0: number,
+  x: number,
+  z: number,
+  dur: number,
+  mul: number,
+): void {
   w.kegs.push({
-    id: w.newId(), ownerId: e.id, team: e.team, kind, fromX: fx0, fromY: fy0, fromZ: fz0, toX: x, toY: w.groundY(x, z), toZ: z,
-    start: w.time, dur, landed: false, fuseAt: 0, mul,
+    id: w.newId(),
+    ownerId: e.id,
+    team: e.team,
+    kind,
+    fromX: fx0,
+    fromY: fy0,
+    fromZ: fz0,
+    toX: x,
+    toY: w.groundY(x, z),
+    toZ: z,
+    start: w.time,
+    dur,
+    landed: false,
+    fuseAt: 0,
+    mul,
   });
-  fx(w, kind === "heal" || kind === "miniheal" ? "kegThrow" : "powderThrow", e.id, e.team, fx0, fy0, fz0, { tx: x, tz: z, seconds: dur });
+  fx(w, kind === "heal" || kind === "miniheal" ? "kegThrow" : "powderThrow", e.id, e.team, fx0, fy0, fz0, {
+    tx: x,
+    tz: z,
+    seconds: dur,
+  });
 }
 
-function scatter(w: World, owner: Entity, k: Keg, kind: Keg["kind"], c: NonNullable<AbilityDef["fx"]>["cluster"]): void {
+function scatter(
+  w: World,
+  owner: Entity,
+  k: Keg,
+  kind: Keg["kind"],
+  c: NonNullable<AbilityDef["fx"]>["cluster"],
+): void {
   if (!c) return;
   for (let i = 0; i < c.count; i++) {
     const ang = (i / c.count) * Math.PI * 2 + k.id * 0.7;
@@ -133,14 +206,37 @@ function splash(w: World, owner: Entity, k: Keg, radius: number, heal: number, m
     if (!o.alive || o.team !== owner.team || o.structure) continue;
     if (Math.hypot(o.transform.pos.x - k.toX, o.transform.pos.z - k.toZ) - o.radius > radius) continue;
     const got = healFrom(w, owner, o, heal);
-    if (!mini && b.fx?.kegShield) addShield(o, b.fx.kegShield.amount, b.fx.kegShield.amount, b.fx.kegShield.seconds, w.time);
-    if (got >= 1 && o.hero) fx(w, "healNum", owner.id, owner.team, o.transform.pos.x, o.transform.y + 1, o.transform.pos.z, { radius: Math.round(got), id: o.id });
-    else if (got >= 1) w.emit({ type: "heal", x: o.transform.pos.x, y: o.transform.y, z: o.transform.pos.z, team: owner.team, src: owner.id });
+    if (!mini && b.fx?.kegShield)
+      addShield(o, b.fx.kegShield.amount, b.fx.kegShield.amount, b.fx.kegShield.seconds, w.time);
+    if (got >= 1 && o.hero)
+      fx(w, "healNum", owner.id, owner.team, o.transform.pos.x, o.transform.y + 1, o.transform.pos.z, {
+        radius: Math.round(got),
+        id: o.id,
+      });
+    else if (got >= 1)
+      w.emit({
+        type: "heal",
+        x: o.transform.pos.x,
+        y: o.transform.y,
+        z: o.transform.pos.z,
+        team: owner.team,
+        src: owner.id,
+      });
   }
   if (mini) return;
   w.zones.push({
-    id: w.newId(), team: owner.team, ownerId: owner.id, x: k.toX, z: k.toZ, radius: b.puddleRadius ?? 2.6, until: w.time + (b.puddleSeconds ?? 5),
-    dps: 0, slowMul: b.fx?.puddleSlow ?? 1, style: "ale", heal: b.puddleHeal ?? 22, haste: b.fx?.puddleHaste,
+    id: w.newId(),
+    team: owner.team,
+    ownerId: owner.id,
+    x: k.toX,
+    z: k.toZ,
+    radius: b.puddleRadius ?? 2.6,
+    until: w.time + (b.puddleSeconds ?? 5),
+    dps: 0,
+    slowMul: b.fx?.puddleSlow ?? 1,
+    style: "ale",
+    heal: b.puddleHeal ?? 22,
+    haste: b.fx?.puddleHaste,
   });
   scatter(w, owner, k, "miniheal", b.fx?.cluster);
 }
@@ -148,16 +244,19 @@ function splash(w: World, owner: Entity, k: Keg, radius: number, heal: number, m
 function boom(w: World, owner: Entity, k: Keg, mini: boolean): void {
   const r = abilities(w, owner).r;
   const c = r.fx?.cluster;
-  const radius = mini ? c?.radius ?? 2 : r.radius ?? 3.2;
-  const base = mini ? c?.damage ?? 40 : r.damage ?? 110;
+  const radius = mini ? (c?.radius ?? 2) : (r.radius ?? 3.2);
+  const base = mini ? (c?.damage ?? 40) : (r.damage ?? 110);
   fx(w, mini ? "kegPop" : "kegBoom", owner.id, owner.team, k.toX, k.toY, k.toZ, { radius });
   for (const o of w.entities.slice()) {
     if (!o.alive || o.team === owner.team) continue;
     if (Math.hypot(o.transform.pos.x - k.toX, o.transform.pos.z - k.toZ) - o.radius > radius) continue;
-    const dmg = base * k.mul * (o.unit ? r.unitMul ?? 1.6 : 1);
+    const dmg = base * k.mul * (o.unit ? (r.unitMul ?? 1.6) : 1);
     w.damage(owner, o, dmg, {
-      fromX: k.toX, fromZ: k.toZ, knockback: mini ? 5 : r.knockback ?? 10, big: true,
-      structureDamage: o.structure ? (mini ? base * 0.8 : r.structureDamage ?? 160) * k.mul : undefined,
+      fromX: k.toX,
+      fromZ: k.toZ,
+      knockback: mini ? 5 : (r.knockback ?? 10),
+      big: true,
+      structureDamage: o.structure ? (mini ? base * 0.8 : (r.structureDamage ?? 160)) * k.mul : undefined,
     });
   }
   if (mini) return;
@@ -194,9 +293,18 @@ export function updateKegs(w: World): void {
         continue;
       }
       const r = abilities(w, owner).r;
-      const direct = w.entities.some((o) => o.alive && o.hero && o.team !== owner.team && Math.hypot(o.transform.pos.x - k.toX, o.transform.pos.z - k.toZ) < 1.4);
-      k.fuseAt = w.time + (direct ? 0 : r.fuse ?? 1);
-      fx(w, "kegLand", owner.id, owner.team, k.toX, k.toY, k.toZ, { radius: r.radius ?? 3.2, seconds: k.fuseAt - w.time });
+      const direct = w.entities.some(
+        (o) =>
+          o.alive &&
+          o.hero &&
+          o.team !== owner.team &&
+          Math.hypot(o.transform.pos.x - k.toX, o.transform.pos.z - k.toZ) < 1.4,
+      );
+      k.fuseAt = w.time + (direct ? 0 : (r.fuse ?? 1));
+      fx(w, "kegLand", owner.id, owner.team, k.toX, k.toY, k.toZ, {
+        radius: r.radius ?? 3.2,
+        seconds: k.fuseAt - w.time,
+      });
     }
     if (k.kind === "powder" && w.time >= k.fuseAt) {
       boom(w, owner, k, false);
@@ -217,18 +325,43 @@ export function brewfest(w: World, e: Entity, a: HeroAction, def: AbilityDef): v
   for (const o of w.entities) if (o.alive && o.owner === e.id && o.structure?.cask) o.expiresAt = w.time;
   const s = w.addEntity(e.team, "structure", 0.95, x, z, def.hp ?? 600);
   s.structure = {
-    type: "damage", padIndex: -1, level: 1, builtAt: w.time, ready: true, nextAction: w.time + 9999, range: 0, damage: 0, lastFireAt: -99, shielded: false,
-    siege: { cooldown: 9999, vs: {}, modId: 0 }, cask: true,
+    type: "damage",
+    padIndex: -1,
+    level: 1,
+    builtAt: w.time,
+    ready: true,
+    nextAction: w.time + 9999,
+    range: 0,
+    damage: 0,
+    lastFireAt: -99,
+    shielded: false,
+    siege: { cooldown: 9999, vs: {}, modId: 0 },
+    cask: true,
   };
   s.transform.facing = s.transform.prevFacing = Math.atan2(t.pos.x - x, t.pos.z - z);
   s.expiresAt = w.time + (def.seconds ?? 10);
   s.owner = e.id;
   w.nav.setBlocked(x, z, 0.3, true);
   w.zones.push({
-    id: w.newId(), team: e.team, ownerId: e.id, x, z, radius: def.radius ?? 7, until: s.expiresAt, dps: 0, slowMul: def.slowMul ?? 0.7,
-    style: "brewfest", heal: def.heal ?? 24, anchor: s.id, brew: def.damageMul ?? 1.15,
+    id: w.newId(),
+    team: e.team,
+    ownerId: e.id,
+    x,
+    z,
+    radius: def.radius ?? 7,
+    until: s.expiresAt,
+    dps: 0,
+    slowMul: def.slowMul ?? 0.7,
+    style: "brewfest",
+    heal: def.heal ?? 24,
+    anchor: s.id,
+    brew: def.damageMul ?? 1.15,
   });
-  fx(w, "brewfest", e.id, e.team, x, w.groundY(x, z), z, { radius: def.radius ?? 7, seconds: def.seconds ?? 10, id: s.id });
+  fx(w, "brewfest", e.id, e.team, x, w.groundY(x, z), z, {
+    radius: def.radius ?? 7,
+    seconds: def.seconds ?? 10,
+    id: s.id,
+  });
 }
 
 export function onZoneEnd(w: World, z: Zone): void {
@@ -245,13 +378,23 @@ export function onZoneEnd(w: World, z: Zone): void {
     if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) - o.radius > lc.radius) continue;
     if (o.team === owner.team) {
       const got = healFrom(w, owner, o, lc.heal);
-      if (got >= 1 && o.hero) fx(w, "healNum", owner.id, owner.team, o.transform.pos.x, o.transform.y + 1, o.transform.pos.z, { radius: Math.round(got), id: o.id });
+      if (got >= 1 && o.hero)
+        fx(w, "healNum", owner.id, owner.team, o.transform.pos.x, o.transform.y + 1, o.transform.pos.z, {
+          radius: Math.round(got),
+          id: o.id,
+        });
     } else w.damage(owner, o, lc.damage * mul, { fromX: z.x, fromZ: z.z, knockback: lc.knockback, big: true });
   }
 }
 
 export function inOwnPuddle(w: World, e: Entity): boolean {
-  return w.zones.some((z) => z.ownerId === e.id && z.style === "ale" && w.time < z.until && Math.hypot(e.transform.pos.x - z.x, e.transform.pos.z - z.z) <= z.radius + 0.3);
+  return w.zones.some(
+    (z) =>
+      z.ownerId === e.id &&
+      z.style === "ale" &&
+      w.time < z.until &&
+      Math.hypot(e.transform.pos.x - z.x, e.transform.pos.z - z.z) <= z.radius + 0.3,
+  );
 }
 
 export function startKegRocket(w: World, e: Entity, cmd: Command): boolean {
@@ -261,7 +404,20 @@ export function startKegRocket(w: World, e: Entity, cmd: Command): boolean {
   const mag = Math.hypot(cmd.moveX, cmd.moveZ);
   const dx = mag > 0.2 ? cmd.moveX / mag : Math.sin(t.facing);
   const dz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);
-  const a: HeroAction = { name: "dodge", kind: "kegrocket", dur: 0.62, hitAt: 99, combo: 0, t: 0, fired: false, dirX: dx, dirZ: dz, hitIds: [], fromX: t.pos.x, fromZ: t.pos.z };
+  const a: HeroAction = {
+    name: "dodge",
+    kind: "kegrocket",
+    dur: 0.62,
+    hitAt: 99,
+    combo: 0,
+    t: 0,
+    fired: false,
+    dirX: dx,
+    dirZ: dz,
+    hitIds: [],
+    fromX: t.pos.x,
+    fromZ: t.pos.z,
+  };
   h.action = a;
   h.blocking = false;
   t.facing = Math.atan2(dx, dz);
@@ -269,7 +425,11 @@ export function startKegRocket(w: World, e: Entity, cmd: Command): boolean {
   e.status.ccImmuneUntil = Math.max(e.status.ccImmuneUntil, w.time + 0.62);
   h.cooldowns.dodge = w.time + 0.62 + w.data.heroes.baseline.dodgeCooldown + 0.3;
   w.emit({ type: "callout", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, text: "KEG ROCKET", owner: e.id });
-  fx(w, "kegRocket", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: t.pos.x + dx * 10, tz: t.pos.z + dz * 10, seconds: 0.62 });
+  fx(w, "kegRocket", e.id, e.team, t.pos.x, t.y, t.pos.z, {
+    tx: t.pos.x + dx * 10,
+    tz: t.pos.z + dz * 10,
+    seconds: 0.62,
+  });
   return true;
 }
 
@@ -288,10 +448,28 @@ export function kegRocketTick(w: World, e: Entity, a: HeroAction): void {
     const side = ox * a.dirZ - oz * a.dirX >= 0 ? 1 : -1;
     const kx = a.dirZ * side * 0.85 + a.dirX * 0.4;
     const kz = -a.dirX * side * 0.85 + a.dirZ * 0.4;
-    w.damage(e, o, 45 * mul, { fromX: o.transform.pos.x - kx, fromZ: o.transform.pos.z - kz, knockback: 11, stun: 0.3, big: true });
+    w.damage(e, o, 45 * mul, {
+      fromX: o.transform.pos.x - kx,
+      fromZ: o.transform.pos.z - kz,
+      knockback: 11,
+      stun: 0.3,
+      big: true,
+    });
   }
   const step = Math.floor(a.t / 0.1);
   if (step !== Math.floor((a.t - dt) / 0.1)) {
-    w.zones.push({ id: w.newId(), team: e.team, ownerId: e.id, x: t.pos.x, z: t.pos.z, radius: 1.2, until: w.time + 2.5, dps: 0, slowMul: 1, style: "aletrail", heal: 14 });
+    w.zones.push({
+      id: w.newId(),
+      team: e.team,
+      ownerId: e.id,
+      x: t.pos.x,
+      z: t.pos.z,
+      radius: 1.2,
+      until: w.time + 2.5,
+      dps: 0,
+      slowMul: 1,
+      style: "aletrail",
+      heal: 14,
+    });
   }
 }

@@ -11,7 +11,8 @@ import { costumeOfPlayer } from "./costumes";
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ground = (h: FxHost, x: number, z: number, y: number) => (h.world ? h.world.groundY(x, z) : y);
-const near = (ev: HitEvent, src: Entity, r: number) => Math.hypot(src.transform.pos.x - ev.x, src.transform.pos.z - ev.z) <= r;
+const near = (ev: HitEvent, src: Entity, r: number) =>
+  Math.hypot(src.transform.pos.x - ev.x, src.transform.pos.z - ev.z) <= r;
 const keep = <T extends THREE.Material>(m: T): T => {
   m.userData.keep = true;
   return m;
@@ -49,19 +50,32 @@ export const VOLLEY_RING = WREN.arrowRing;
 export const HEART_RING = WREN.spiral;
 
 function disc(draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
-  return composite(256, (g) => {
-    g.save();
-    g.beginPath();
-    g.arc(128, 128, 126, 0, Math.PI * 2);
-    g.clip();
-    draw(g);
-    g.restore();
-  }, false, 512);
+  return composite(
+    256,
+    (g) => {
+      g.save();
+      g.beginPath();
+      g.arc(128, 128, 126, 0, Math.PI * 2);
+      g.clip();
+      draw(g);
+      g.restore();
+    },
+    false,
+    512,
+  );
 }
 
-function speckle(g: CanvasRenderingContext2D, n: number, rMin: number, rMax: number, color: string, size: [number, number], seed: number): void {
+function speckle(
+  g: CanvasRenderingContext2D,
+  n: number,
+  rMin: number,
+  rMax: number,
+  color: string,
+  size: [number, number],
+  seed: number,
+): void {
   let s = seed;
-  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   g.fillStyle = color;
   for (let i = 0; i < n; i++) {
     const a = rnd() * Math.PI * 2;
@@ -141,15 +155,17 @@ const CREAM = keep(new THREE.MeshLambertMaterial({ color: 0xf0e0c0, flatShading:
 const BLACK = keep(new THREE.MeshLambertMaterial({ color: 0x141010 }));
 const FEATHER_MAT = keep(new THREE.MeshLambertMaterial({ color: 0xf0e8d8, flatShading: true, side: THREE.DoubleSide }));
 
-const barrelGeo = model((() => {
-  const pts: THREE.Vector2[] = [];
-  for (let i = 0; i <= 8; i++) {
-    const y = i / 8 - 0.5;
-    pts.push(new THREE.Vector2(0.36 + 0.08 * Math.cos(y * Math.PI), y));
-  }
-  const g = new THREE.LatheGeometry(pts, 12);
-  return g;
-})());
+const barrelGeo = model(
+  (() => {
+    const pts: THREE.Vector2[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const y = i / 8 - 0.5;
+      pts.push(new THREE.Vector2(0.36 + 0.08 * Math.cos(y * Math.PI), y));
+    }
+    const g = new THREE.LatheGeometry(pts, 12);
+    return g;
+  })(),
+);
 const capGeo = model(new THREE.CircleGeometry(0.37, 12));
 const bandGeo = model(new THREE.TorusGeometry(0.4, 0.025, 4, 14));
 const fuseGeo = model(new THREE.CylinderGeometry(0.02, 0.025, 0.3, 4));
@@ -242,7 +258,10 @@ export function caskMesh(team: THREE.Color, costume?: string): THREE.Group {
   const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.25, 6), BRASS);
   spout.position.set(1.42, 0.88, 0);
   g.add(spout);
-  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.35), keep(new THREE.MeshLambertMaterial({ color: team, side: THREE.DoubleSide })));
+  const flag = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.5, 0.35),
+    keep(new THREE.MeshLambertMaterial({ color: team, side: THREE.DoubleSide })),
+  );
   flag.position.set(-0.4, 2.55, 0);
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.8, 4), WOOD_DARK);
   pole.position.set(-0.62, 2.35, 0);
@@ -270,14 +289,29 @@ const fletch2 = model(fletchGeo.clone().rotateZ(Math.PI / 2));
 
 const STAR_SHAFT = keep(new THREE.MeshLambertMaterial({ color: 0xc8cce0, flatShading: true }));
 const STAR_TIP = keep(new THREE.MeshBasicMaterial({ color: 0xd8c8ff }));
-const STAR_FLETCH = keep(new THREE.MeshLambertMaterial({ color: 0x9a4ad8, emissive: 0x3a1060, flatShading: true, side: THREE.DoubleSide }));
+const STAR_FLETCH = keep(
+  new THREE.MeshLambertMaterial({ color: 0x9a4ad8, emissive: 0x3a1060, flatShading: true, side: THREE.DoubleSide }),
+);
 
 function arrowMesh(scale: number, glow?: number): THREE.Group {
   const g = new THREE.Group();
   const star = activeCostume() === "starfall";
-  g.add(new THREE.Mesh(shaftGeo, star ? STAR_SHAFT : WOOD), new THREE.Mesh(tipGeo, star ? STAR_TIP : IRON), new THREE.Mesh(fletchGeo, star ? STAR_FLETCH : FEATHER_MAT), new THREE.Mesh(fletch2, star ? STAR_FLETCH : FEATHER_MAT));
+  g.add(
+    new THREE.Mesh(shaftGeo, star ? STAR_SHAFT : WOOD),
+    new THREE.Mesh(tipGeo, star ? STAR_TIP : IRON),
+    new THREE.Mesh(fletchGeo, star ? STAR_FLETCH : FEATHER_MAT),
+    new THREE.Mesh(fletch2, star ? STAR_FLETCH : FEATHER_MAT),
+  );
   if (glow !== undefined) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.burst2, color: tint(glow), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const s = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: FX.burst2,
+        color: tint(glow),
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
     s.scale.setScalar(0.9);
     s.position.z = 0.7;
     g.add(s);
@@ -331,18 +365,28 @@ function pipModel(costume: string): { obj: THREE.Group; wings: THREE.Object3D[];
 export class HeroPropViews {
   readonly root = new THREE.Group();
   fx: FxHost | null = null;
-  private pips = new Map<number, { obj: THREE.Group; wings: THREE.Object3D[]; base: number[]; prev: THREE.Vector3; latchT: number; costume: string }>();
+  private pips = new Map<
+    number,
+    { obj: THREE.Group; wings: THREE.Object3D[]; base: number[]; prev: THREE.Vector3; latchT: number; costume: string }
+  >();
   private kegs = new Map<number, { obj: THREE.Object3D; ring?: THREE.Mesh; spark?: THREE.Sprite }>();
   private riders = new Map<number, THREE.Object3D>();
   private vantage = new Map<number, boolean>();
   private t = 0;
   private emitT = 0;
 
-  constructor(private world: World, private heroScale: number) {}
+  constructor(
+    private world: World,
+    private heroScale: number,
+  ) {}
 
   private viewPos(e: Entity, alpha: number): THREE.Vector3 {
     const t = e.transform;
-    return new THREE.Vector3(t.prevPos.x + (t.pos.x - t.prevPos.x) * alpha, t.prevY + (t.y - t.prevY) * alpha, t.prevPos.z + (t.pos.z - t.prevPos.z) * alpha);
+    return new THREE.Vector3(
+      t.prevPos.x + (t.pos.x - t.prevPos.x) * alpha,
+      t.prevY + (t.y - t.prevY) * alpha,
+      t.prevPos.z + (t.pos.z - t.prevPos.z) * alpha,
+    );
   }
 
   sync(alpha: number, dt: number): void {
@@ -391,9 +435,36 @@ export class HeroPropViews {
     const p = this.viewPos(e, alpha);
     if (!was) {
       shockwave(this.fx, FX.shock, p.x, p.y + 0.15, p.z, UP, 0.3, 1.4, 0.35, 0xffe08a, 0.7);
-      emit(this.fx, { tex: FX.twinkle, n: 5, x: p.x, y: p.y + 1.2 * this.heroScale, z: p.z, color: 0xfff0a0, size: [0.25, 0.4], life: [0.4, 0.6], speed: [0.5, 1.5], up: [0.5, 1.2], additive: true, jitter: 0.6 });
+      emit(this.fx, {
+        tex: FX.twinkle,
+        n: 5,
+        x: p.x,
+        y: p.y + 1.2 * this.heroScale,
+        z: p.z,
+        color: 0xfff0a0,
+        size: [0.25, 0.4],
+        life: [0.4, 0.6],
+        speed: [0.5, 1.5],
+        up: [0.5, 1.2],
+        additive: true,
+        jitter: 0.6,
+      });
     }
-    if (Math.random() < 0.08) emit(this.fx, { tex: FX.twinkle, n: 1, x: p.x, y: p.y + (1.1 + Math.random() * 0.7) * this.heroScale, z: p.z, color: 0xffe890, size: [0.18, 0.3], life: [0.35, 0.5], speed: [0, 0.3], up: [0.3, 0.6], additive: true, jitter: 0.7 });
+    if (Math.random() < 0.08)
+      emit(this.fx, {
+        tex: FX.twinkle,
+        n: 1,
+        x: p.x,
+        y: p.y + (1.1 + Math.random() * 0.7) * this.heroScale,
+        z: p.z,
+        color: 0xffe890,
+        size: [0.18, 0.3],
+        life: [0.35, 0.5],
+        speed: [0, 0.3],
+        up: [0.3, 0.6],
+        additive: true,
+        jitter: 0.7,
+      });
   }
 
   private syncPip(e: Entity, alpha: number, dt: number, puff: boolean): void {
@@ -411,7 +482,11 @@ export class HeroPropViews {
       this.root.add(m.obj);
       this.pips.set(e.id, v);
     }
-    const pos = new THREE.Vector3(ps.px + (ps.x - ps.px) * alpha, ps.py + (ps.y - ps.py) * alpha, ps.pz + (ps.z - ps.pz) * alpha);
+    const pos = new THREE.Vector3(
+      ps.px + (ps.x - ps.px) * alpha,
+      ps.py + (ps.y - ps.py) * alpha,
+      ps.pz + (ps.z - ps.pz) * alpha,
+    );
     let flap = 18;
     let yaw: number | null = null;
     let pitch = 0;
@@ -419,17 +494,41 @@ export class HeroPropViews {
       const tgt = w.getAny(ps.target);
       if (tgt) {
         const tp = this.viewPos(tgt, alpha);
-        const head = tgt.hero ? 3.05 * (this.heroScale / 1.5) : tgt.neutral ? 4.4 : tgt.unit?.type === "heavy" ? 2.4 : 1.95;
+        const head = tgt.hero
+          ? 3.05 * (this.heroScale / 1.5)
+          : tgt.neutral
+            ? 4.4
+            : tgt.unit?.type === "heavy"
+              ? 2.4
+              : 1.95;
         v.latchT += dt;
         const a = this.t * 2.6 + e.id;
         const r = 0.55;
         const peckCycle = (this.t * 1.8) % 1;
         const peck = peckCycle < 0.18 ? Math.sin((peckCycle / 0.18) * Math.PI) : 0;
-        pos.set(tp.x + Math.cos(a) * r * (1 - peck * 0.7), tp.y + head + 0.25 + Math.sin(this.t * 7) * 0.06 - peck * 0.3, tp.z + Math.sin(a) * r * (1 - peck * 0.7));
+        pos.set(
+          tp.x + Math.cos(a) * r * (1 - peck * 0.7),
+          tp.y + head + 0.25 + Math.sin(this.t * 7) * 0.06 - peck * 0.3,
+          tp.z + Math.sin(a) * r * (1 - peck * 0.7),
+        );
         yaw = peck > 0.05 ? Math.atan2(tp.x - pos.x, tp.z - pos.z) : Math.atan2(-Math.sin(a), Math.cos(a));
         pitch = peck * 0.9;
         flap = 14;
-        if (peck > 0.9 && this.fx && Math.random() < 0.5) emit(this.fx, { tex: WREN.feather, n: 1, x: tp.x, y: tp.y + head, z: tp.z, size: [0.16, 0.24], life: [0.6, 0.9], speed: [0.5, 1.2], up: [0.2, 0.8], gravity: 1.5, drag: 1, spin: 5 });
+        if (peck > 0.9 && this.fx && Math.random() < 0.5)
+          emit(this.fx, {
+            tex: WREN.feather,
+            n: 1,
+            x: tp.x,
+            y: tp.y + head,
+            z: tp.z,
+            size: [0.16, 0.24],
+            life: [0.6, 0.9],
+            speed: [0.5, 1.2],
+            up: [0.2, 0.8],
+            gravity: 1.5,
+            drag: 1,
+            spin: 5,
+          });
       }
     } else {
       v.latchT = 0;
@@ -456,7 +555,19 @@ export class HeroPropViews {
       const s = wg.name.startsWith("wing_L") ? 1 : -1;
       wg.rotation.z = v!.base[i] + s * Math.sin(this.t * flap) * 0.7;
     });
-    if (this.fx && puff && ps.phase !== "on" && vel.lengthSq() > 1e-4) emit(this.fx, { tex: FX.twinkle, n: 1, x: pos.x, y: pos.y, z: pos.z, color: 0xff8060, size: [0.12, 0.2], life: [0.25, 0.35], speed: [0, 0.2], additive: true });
+    if (this.fx && puff && ps.phase !== "on" && vel.lengthSq() > 1e-4)
+      emit(this.fx, {
+        tex: FX.twinkle,
+        n: 1,
+        x: pos.x,
+        y: pos.y,
+        z: pos.z,
+        color: 0xff8060,
+        size: [0.12, 0.2],
+        life: [0.25, 0.35],
+        speed: [0, 0.2],
+        additive: true,
+      });
   }
 
   private syncRider(e: Entity, alpha: number, puff: boolean): void {
@@ -486,9 +597,46 @@ export class HeroPropViews {
     const roll = o.getObjectByName("roll");
     if (roll) roll.rotation.x = this.t * 18;
     if (this.fx && puff) {
-      emit(this.fx, { tex: FOAM, n: 1, x: p.x - a.dirX * 0.8, y: p.y + 0.3, z: p.z - a.dirZ * 0.8, size: [0.4, 0.6], grow: 1.5, life: [0.4, 0.6], speed: [0.3, 1], up: [0.5, 1.2], gravity: 3 });
-      emit(this.fx, { tex: ALE_DROP, n: 2, x: p.x - a.dirX * 0.6, y: p.y + 0.5, z: p.z - a.dirZ * 0.6, size: [0.15, 0.22], life: [0.4, 0.6], speed: [1, 2.5], up: [1.5, 3], gravity: 12, floor: p.y + 0.05 });
-      emit(this.fx, { tex: FX.dust, n: 1, x: p.x, y: p.y + 0.2, z: p.z, size: [0.6, 0.9], grow: 1.6, life: [0.35, 0.5], speed: [0.5, 1.2], flatSpread: true, drag: 3, opacity: 0.7 });
+      emit(this.fx, {
+        tex: FOAM,
+        n: 1,
+        x: p.x - a.dirX * 0.8,
+        y: p.y + 0.3,
+        z: p.z - a.dirZ * 0.8,
+        size: [0.4, 0.6],
+        grow: 1.5,
+        life: [0.4, 0.6],
+        speed: [0.3, 1],
+        up: [0.5, 1.2],
+        gravity: 3,
+      });
+      emit(this.fx, {
+        tex: ALE_DROP,
+        n: 2,
+        x: p.x - a.dirX * 0.6,
+        y: p.y + 0.5,
+        z: p.z - a.dirZ * 0.6,
+        size: [0.15, 0.22],
+        life: [0.4, 0.6],
+        speed: [1, 2.5],
+        up: [1.5, 3],
+        gravity: 12,
+        floor: p.y + 0.05,
+      });
+      emit(this.fx, {
+        tex: FX.dust,
+        n: 1,
+        x: p.x,
+        y: p.y + 0.2,
+        z: p.z,
+        size: [0.6, 0.9],
+        grow: 1.6,
+        life: [0.35, 0.5],
+        speed: [0.5, 1.2],
+        flatSpread: true,
+        drag: 3,
+        opacity: 0.7,
+      });
     }
   }
 
@@ -505,12 +653,29 @@ export class HeroPropViews {
         const obj = kegModel(k.kind, costumeOfPlayer(owner?.hero?.player));
         v = { obj };
         if (k.kind === "powder") {
-          const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 32), new THREE.MeshBasicMaterial({ color: 0xff4020, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(0.9, 1, 32),
+            new THREE.MeshBasicMaterial({
+              color: 0xff4020,
+              transparent: true,
+              opacity: 0,
+              depthWrite: false,
+              side: THREE.DoubleSide,
+            }),
+          );
           ring.rotation.x = -Math.PI / 2;
           ring.visible = false;
           v.ring = ring;
           this.root.add(ring);
-          const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX.twinkle, color: 0xffc040, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+          const spark = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+              map: FX.twinkle,
+              color: 0xffc040,
+              transparent: true,
+              depthWrite: false,
+              blending: THREE.AdditiveBlending,
+            }),
+          );
           spark.scale.setScalar(0.4);
           v.spark = spark;
           this.root.add(spark);
@@ -524,10 +689,38 @@ export class HeroPropViews {
         const f = Math.max(0, Math.min(1, (time - k.start) / k.dur));
         const d = Math.hypot(k.toX - k.fromX, k.toZ - k.fromZ);
         const hgt = 1.2 + d * 0.28;
-        o.position.set(k.fromX + (k.toX - k.fromX) * f, k.fromY + (k.toY - k.fromY) * f + hgt * 4 * f * (1 - f), k.fromZ + (k.toZ - k.fromZ) * f);
+        o.position.set(
+          k.fromX + (k.toX - k.fromX) * f,
+          k.fromY + (k.toY - k.fromY) * f + hgt * 4 * f * (1 - f),
+          k.fromZ + (k.toZ - k.fromZ) * f,
+        );
         o.rotation.set(f * 7, Math.atan2(k.toX - k.fromX, k.toZ - k.fromZ), f * 3);
-        if (this.fx && puff && (k.kind === "powder" || k.kind === "minipowder")) emit(this.fx, { tex: FX.twinkle, n: 1, x: o.position.x, y: o.position.y + 0.5, z: o.position.z, color: 0xffb040, size: [0.2, 0.3], life: [0.2, 0.3], speed: [0.5, 1.5], gravity: 4, additive: true });
-        else if (this.fx && puff && Math.random() < 0.5) emit(this.fx, { tex: ALE_DROP, n: 1, x: o.position.x, y: o.position.y + 0.4, z: o.position.z, size: [0.14, 0.2], life: [0.4, 0.6], speed: [0.2, 0.6], gravity: 10 });
+        if (this.fx && puff && (k.kind === "powder" || k.kind === "minipowder"))
+          emit(this.fx, {
+            tex: FX.twinkle,
+            n: 1,
+            x: o.position.x,
+            y: o.position.y + 0.5,
+            z: o.position.z,
+            color: 0xffb040,
+            size: [0.2, 0.3],
+            life: [0.2, 0.3],
+            speed: [0.5, 1.5],
+            gravity: 4,
+            additive: true,
+          });
+        else if (this.fx && puff && Math.random() < 0.5)
+          emit(this.fx, {
+            tex: ALE_DROP,
+            n: 1,
+            x: o.position.x,
+            y: o.position.y + 0.4,
+            z: o.position.z,
+            size: [0.14, 0.2],
+            life: [0.4, 0.6],
+            speed: [0.2, 0.6],
+            gravity: 10,
+          });
         if (v.ring) v.ring.visible = false;
         if (v.spark) v.spark.position.set(o.position.x, o.position.y + 1.1, o.position.z);
       } else {
@@ -542,15 +735,43 @@ export class HeroPropViews {
           v.ring.visible = true;
           v.ring.position.set(k.toX, k.toY + 0.12, k.toZ);
           v.ring.scale.setScalar(r * (0.4 + 0.6 * heat));
-          (v.ring.material as THREE.MeshBasicMaterial).opacity = 0.35 + 0.4 * (Math.sin(this.t * (10 + heat * 20)) > 0 ? 1 : 0.3);
+          (v.ring.material as THREE.MeshBasicMaterial).opacity =
+            0.35 + 0.4 * (Math.sin(this.t * (10 + heat * 20)) > 0 ? 1 : 0.3);
         }
         if (v.spark) {
           v.spark.position.set(k.toX, k.toY + 1.25, k.toZ);
           v.spark.scale.setScalar(0.35 + Math.random() * 0.35);
         }
         if (this.fx && puff) {
-          emit(this.fx, { tex: FX.twinkle, n: 2, x: k.toX, y: k.toY + 1.25, z: k.toZ, color: 0xffa030, size: [0.15, 0.28], life: [0.2, 0.35], speed: [1, 2.5], up: [1, 2], gravity: 6, additive: true });
-          emit(this.fx, { tex: FRIAR.spark, n: 1, x: k.toX, y: k.toY + 1.3, z: k.toZ, additive: true, color: 0xffffff, size: [0.25, 0.4], grow: 0.6, life: [0.2, 0.35], speed: [0.5, 1.5], up: [0.6, 1.2], opacity: 0.9 });
+          emit(this.fx, {
+            tex: FX.twinkle,
+            n: 2,
+            x: k.toX,
+            y: k.toY + 1.25,
+            z: k.toZ,
+            color: 0xffa030,
+            size: [0.15, 0.28],
+            life: [0.2, 0.35],
+            speed: [1, 2.5],
+            up: [1, 2],
+            gravity: 6,
+            additive: true,
+          });
+          emit(this.fx, {
+            tex: FRIAR.spark,
+            n: 1,
+            x: k.toX,
+            y: k.toY + 1.3,
+            z: k.toZ,
+            additive: true,
+            color: 0xffffff,
+            size: [0.25, 0.4],
+            grow: 0.6,
+            life: [0.2, 0.35],
+            speed: [0.5, 1.5],
+            up: [0.6, 1.2],
+            opacity: 0.9,
+          });
         }
       }
     }
@@ -568,12 +789,33 @@ export class HeroPropViews {
   }
 }
 
-function streak(h: FxHost, tex: THREE.Texture, x0: number, y: number, z0: number, x1: number, z1: number, n: number, color: THREE.ColorRepresentation, width: number, dur = 0.35, additive = true): void {
+function streak(
+  h: FxHost,
+  tex: THREE.Texture,
+  x0: number,
+  y: number,
+  z0: number,
+  x1: number,
+  z1: number,
+  n: number,
+  color: THREE.ColorRepresentation,
+  width: number,
+  dur = 0.35,
+  additive = true,
+): void {
   const rot = Math.atan2(-(z1 - z0), x1 - x0);
   for (let k = 0; k <= n; k++) {
     const f = k / n;
     h.after(f * 0.1, () => {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: tint(color), transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+      const s = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: tex,
+          color: tint(color),
+          transparent: true,
+          depthWrite: false,
+          blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+        }),
+      );
       s.material.rotation = rot;
       s.position.set(x0 + (x1 - x0) * f, y, z0 + (z1 - z0) * f);
       h.add(s, dur, (q) => {
@@ -584,11 +826,28 @@ function streak(h: FxHost, tex: THREE.Texture, x0: number, y: number, z0: number
   }
 }
 
-function beam(h: FxHost, x0: number, y: number, z0: number, x1: number, z1: number, width: number, dur: number, color: THREE.ColorRepresentation): void {
+function beam(
+  h: FxHost,
+  x0: number,
+  y: number,
+  z0: number,
+  x1: number,
+  z1: number,
+  width: number,
+  dur: number,
+  color: THREE.ColorRepresentation,
+): void {
   const len = Math.hypot(x1 - x0, z1 - z0);
   if (len < 0.1) return;
   const geo = new THREE.PlaneGeometry(len, width);
-  const mat = new THREE.MeshBasicMaterial({ map: BEAM, color: tint(color), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const mat = new THREE.MeshBasicMaterial({
+    map: BEAM,
+    color: tint(color),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
   const g = new THREE.Group();
   for (let k = 0; k < 2; k++) {
     const m = new THREE.Mesh(geo, mat);
@@ -603,7 +862,18 @@ function beam(h: FxHost, x0: number, y: number, z0: number, x1: number, z1: numb
   });
 }
 
-function flyingArrow(h: FxHost, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, dur: number, scale: number, glow?: number): void {
+function flyingArrow(
+  h: FxHost,
+  x0: number,
+  y0: number,
+  z0: number,
+  x1: number,
+  y1: number,
+  z1: number,
+  dur: number,
+  scale: number,
+  glow?: number,
+): void {
   const a = arrowMesh(scale, glow);
   const dir = new THREE.Vector3(x1 - x0, y1 - y0, z1 - z0).normalize();
   a.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
@@ -613,7 +883,12 @@ function flyingArrow(h: FxHost, x0: number, y0: number, z0: number, x1: number, 
 let rainGeo: THREE.BufferGeometry | null = null;
 function rainArrowGeo(): THREE.BufferGeometry {
   if (rainGeo) return rainGeo;
-  const parts: [THREE.BufferGeometry, THREE.MeshLambertMaterial][] = [[shaftGeo, WOOD], [tipGeo, IRON], [fletchGeo, FEATHER_MAT], [fletch2, FEATHER_MAT]];
+  const parts: [THREE.BufferGeometry, THREE.MeshLambertMaterial][] = [
+    [shaftGeo, WOOD],
+    [tipGeo, IRON],
+    [fletchGeo, FEATHER_MAT],
+    [fletch2, FEATHER_MAT],
+  ];
   const geos = parts.map(([g, m]) => {
     const c = g.clone();
     const n = c.getAttribute("position").count;
@@ -627,7 +902,18 @@ function rainArrowGeo(): THREE.BufferGeometry {
 }
 
 function rainArrow(h: FxHost, x: number, gy: number, z: number, lean: number): void {
-  const a: THREE.Object3D = activeCostume() === "starfall" ? arrowMesh(1.05) : fxBatch(h.root, "rainArrow", () => new FxBatch(rainArrowGeo(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }))).spawn();
+  const a: THREE.Object3D =
+    activeCostume() === "starfall"
+      ? arrowMesh(1.05)
+      : fxBatch(
+          h.root,
+          "rainArrow",
+          () =>
+            new FxBatch(
+              rainArrowGeo(),
+              new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }),
+            ),
+        ).spawn();
   a.scale.setScalar(1.05);
   const top = new THREE.Vector3(x + lean * 3, gy + 11, z + lean * 1.5);
   const end = new THREE.Vector3(x, gy + 0.35, z);
@@ -655,10 +941,55 @@ KITS.marksman = {
     const px = ev.x - n.x * 0.3;
     const pz = ev.z - n.z * 0.3;
     const py = ev.y + 0.3;
-    emit(h, { tex: FX.burst2, n: 1, x: px, y: py, z: pz, color: 0xfff0c0, size: ev.big ? [1.5, 1.5] : [0.8, 0.8], grow: 1.5, life: [0.1, 0.1], speed: [0, 0], additive: true, order: 6 });
-    emit(h, { tex: WREN.splinters, n: ev.big ? 4 : 2, x: px, y: py, z: pz, size: [0.25, 0.4], life: [0.35, 0.55], speed: [3, 6], dir: { x: n.x, y: 0.5, z: n.z }, cone: 0.9, gravity: 14, spin: 10 });
-    emit(h, { tex: FX.twinkle, n: ev.big ? 6 : 3, x: px, y: py, z: pz, color: 0xe8ffb0, size: [0.2, 0.35], life: [0.15, 0.3], speed: [4, 8], dir: { x: n.x, y: 0.3, z: n.z }, cone: 1, gravity: 10, additive: true });
-    tumblers(h, [WREN.feather], ev.big ? 3 : 1, px, py + 0.2, pz, { speed: [0.5, 1.5], up: [0.5, 1.5], size: [0.22, 0.32], life: [0.8, 1.2] });
+    emit(h, {
+      tex: FX.burst2,
+      n: 1,
+      x: px,
+      y: py,
+      z: pz,
+      color: 0xfff0c0,
+      size: ev.big ? [1.5, 1.5] : [0.8, 0.8],
+      grow: 1.5,
+      life: [0.1, 0.1],
+      speed: [0, 0],
+      additive: true,
+      order: 6,
+    });
+    emit(h, {
+      tex: WREN.splinters,
+      n: ev.big ? 4 : 2,
+      x: px,
+      y: py,
+      z: pz,
+      size: [0.25, 0.4],
+      life: [0.35, 0.55],
+      speed: [3, 6],
+      dir: { x: n.x, y: 0.5, z: n.z },
+      cone: 0.9,
+      gravity: 14,
+      spin: 10,
+    });
+    emit(h, {
+      tex: FX.twinkle,
+      n: ev.big ? 6 : 3,
+      x: px,
+      y: py,
+      z: pz,
+      color: 0xe8ffb0,
+      size: [0.2, 0.35],
+      life: [0.15, 0.3],
+      speed: [4, 8],
+      dir: { x: n.x, y: 0.3, z: n.z },
+      cone: 1,
+      gravity: 10,
+      additive: true,
+    });
+    tumblers(h, [WREN.feather], ev.big ? 3 : 1, px, py + 0.2, pz, {
+      speed: [0.5, 1.5],
+      up: [0.5, 1.5],
+      size: [0.22, 0.32],
+      life: [0.8, 1.2],
+    });
     if (ev.big) {
       shockwave(h, FX.shock, px, py, pz, n, 0.25, 1.6, 0.25, 0xd8ffb0, 0.85);
       h.shake = Math.max(h.shake, 0.2);
@@ -678,49 +1009,192 @@ KITS.marksman = {
       if (d.lengthSq() > 1e-6) obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), d.normalize());
     }
     obj.userData.prev = new THREE.Vector3(x, y, z);
-    if (Math.random() < 0.5) emit(h, { tex: FX.twinkle, n: 1, x, y, z, color: obj.children.length > 4 ? 0xffd860 : 0xf0ffe0, size: [0.12, 0.2], life: [0.15, 0.25], speed: [0, 0.2], additive: true });
+    if (Math.random() < 0.5)
+      emit(h, {
+        tex: FX.twinkle,
+        n: 1,
+        x,
+        y,
+        z,
+        color: obj.children.length > 4 ? 0xffd860 : 0xf0ffe0,
+        size: [0.12, 0.2],
+        life: [0.15, 0.25],
+        speed: [0, 0.2],
+        additive: true,
+      });
   },
   event(h, ev) {
     if (ev.type !== "heroFx") return false;
     const gy = ground(h, ev.x, ev.z, ev.y);
     switch (ev.name) {
       case "pipLaunch":
-        tumblers(h, [WREN.feather], 3, ev.x, ev.y, ev.z, { speed: [0.5, 1.5], up: [0.3, 1], size: [0.18, 0.26], life: [0.8, 1.1] });
-        emit(h, { tex: FX.twinkle, n: 4, x: ev.x, y: ev.y, z: ev.z, color: 0xff7050, size: [0.2, 0.3], life: [0.25, 0.4], speed: [1, 2], additive: true });
+        tumblers(h, [WREN.feather], 3, ev.x, ev.y, ev.z, {
+          speed: [0.5, 1.5],
+          up: [0.3, 1],
+          size: [0.18, 0.26],
+          life: [0.8, 1.1],
+        });
+        emit(h, {
+          tex: FX.twinkle,
+          n: 4,
+          x: ev.x,
+          y: ev.y,
+          z: ev.z,
+          color: 0xff7050,
+          size: [0.2, 0.3],
+          life: [0.25, 0.4],
+          speed: [1, 2],
+          additive: true,
+        });
         return true;
       case "pipLatch":
         decal(h, MARK_RING, ev.x, gy, ev.z, 1.1, 0.7, { grow: 0.15, spin: 2 });
-        emit(h, { tex: WREN.feather, n: 6, x: ev.x, y: ev.y + 2.6, z: ev.z, size: [0.18, 0.28], life: [0.8, 1.2], speed: [1, 2.5], up: [0.5, 1.5], gravity: 2, drag: 1, spin: 6 });
-        emit(h, { tex: FX.burst2, n: 1, x: ev.x, y: ev.y + 2.5, z: ev.z, color: 0xff8060, size: [1.2, 1.2], grow: 1.4, life: [0.15, 0.15], speed: [0, 0], additive: true });
+        emit(h, {
+          tex: WREN.feather,
+          n: 6,
+          x: ev.x,
+          y: ev.y + 2.6,
+          z: ev.z,
+          size: [0.18, 0.28],
+          life: [0.8, 1.2],
+          speed: [1, 2.5],
+          up: [0.5, 1.5],
+          gravity: 2,
+          drag: 1,
+          spin: 6,
+        });
+        emit(h, {
+          tex: FX.burst2,
+          n: 1,
+          x: ev.x,
+          y: ev.y + 2.5,
+          z: ev.z,
+          color: 0xff8060,
+          size: [1.2, 1.2],
+          grow: 1.4,
+          life: [0.15, 0.15],
+          speed: [0, 0],
+          additive: true,
+        });
         return true;
       case "pipPeck":
-        emit(h, { tex: FX.twinkle, n: 3, x: ev.x, y: ev.y + 2.3, z: ev.z, color: 0xff6a50, size: [0.2, 0.32], life: [0.2, 0.3], speed: [1.5, 3], gravity: 6, additive: true });
-        emit(h, { tex: WREN.feather, n: 1, x: ev.x, y: ev.y + 2.4, z: ev.z, size: [0.16, 0.22], life: [0.6, 0.9], speed: [0.5, 1.2], up: [0.3, 0.8], gravity: 1.5, spin: 6 });
-        emit(h, { tex: FX.burst2, n: 1, x: ev.x, y: ev.y + 2.1, z: ev.z, color: 0xffb0a0, size: [0.6, 0.6], grow: 1.3, life: [0.08, 0.08], speed: [0, 0], additive: true });
+        emit(h, {
+          tex: FX.twinkle,
+          n: 3,
+          x: ev.x,
+          y: ev.y + 2.3,
+          z: ev.z,
+          color: 0xff6a50,
+          size: [0.2, 0.32],
+          life: [0.2, 0.3],
+          speed: [1.5, 3],
+          gravity: 6,
+          additive: true,
+        });
+        emit(h, {
+          tex: WREN.feather,
+          n: 1,
+          x: ev.x,
+          y: ev.y + 2.4,
+          z: ev.z,
+          size: [0.16, 0.22],
+          life: [0.6, 0.9],
+          speed: [0.5, 1.2],
+          up: [0.3, 0.8],
+          gravity: 1.5,
+          spin: 6,
+        });
+        emit(h, {
+          tex: FX.burst2,
+          n: 1,
+          x: ev.x,
+          y: ev.y + 2.1,
+          z: ev.z,
+          color: 0xffb0a0,
+          size: [0.6, 0.6],
+          grow: 1.3,
+          life: [0.08, 0.08],
+          speed: [0, 0],
+          additive: true,
+        });
         return true;
       case "pipRake": {
         const y = ev.y + 1.6;
-        emit(h, { tex: WREN.claws, n: 1, x: ev.x, y: y + 0.4, z: ev.z, size: [1.5, 1.5], grow: 1.25, life: [0.3, 0.3], speed: [0, 0], order: 5 });
-        emit(h, { tex: WREN.feathers, n: 1, x: ev.x, y: y + 0.7, z: ev.z, size: [1.1, 1.1], grow: 1.6, life: [0.45, 0.45], speed: [0, 0.3] });
-        emit(h, { tex: WREN.feather, n: 8, x: ev.x, y: y + 0.6, z: ev.z, size: [0.2, 0.32], life: [0.8, 1.3], speed: [2, 4], up: [0.5, 2], gravity: 2, drag: 1, spin: 8 });
+        emit(h, {
+          tex: WREN.claws,
+          n: 1,
+          x: ev.x,
+          y: y + 0.4,
+          z: ev.z,
+          size: [1.5, 1.5],
+          grow: 1.25,
+          life: [0.3, 0.3],
+          speed: [0, 0],
+          order: 5,
+        });
+        emit(h, {
+          tex: WREN.feathers,
+          n: 1,
+          x: ev.x,
+          y: y + 0.7,
+          z: ev.z,
+          size: [1.1, 1.1],
+          grow: 1.6,
+          life: [0.45, 0.45],
+          speed: [0, 0.3],
+        });
+        emit(h, {
+          tex: WREN.feather,
+          n: 8,
+          x: ev.x,
+          y: y + 0.6,
+          z: ev.z,
+          size: [0.2, 0.32],
+          life: [0.8, 1.3],
+          speed: [2, 4],
+          up: [0.5, 2],
+          gravity: 2,
+          drag: 1,
+          spin: 8,
+        });
         const secs = ev.seconds ?? 2.5;
         for (let k = 0; k * 0.35 < secs; k++) {
           h.after(0.1 + k * 0.35, () => {
             const o = ev.id !== undefined ? h.world?.get(ev.id) : undefined;
             if (ev.id !== undefined && !o?.alive) return;
-            emit(h, { tex: WREN.dizzy, n: 1, x: o ? o.transform.pos.x : ev.x, y: (o ? o.transform.y : ev.y) + 2.3, z: o ? o.transform.pos.z : ev.z, size: [0.85, 0.85], life: [0.45, 0.45], speed: [0, 0], spin: 4 });
+            emit(h, {
+              tex: WREN.dizzy,
+              n: 1,
+              x: o ? o.transform.pos.x : ev.x,
+              y: (o ? o.transform.y : ev.y) + 2.3,
+              z: o ? o.transform.pos.z : ev.z,
+              size: [0.85, 0.85],
+              life: [0.45, 0.45],
+              speed: [0, 0],
+              spin: 4,
+            });
           });
         }
         return true;
       }
       case "pipHome":
-        tumblers(h, [WREN.feather], 2, ev.x, ev.y, ev.z, { speed: [0.3, 0.8], up: [0.2, 0.6], size: [0.16, 0.22], life: [0.7, 1] });
+        tumblers(h, [WREN.feather], 2, ev.x, ev.y, ev.z, {
+          speed: [0.3, 0.8],
+          up: [0.2, 0.6],
+          size: [0.16, 0.22],
+          life: [0.7, 1],
+        });
         return true;
       case "volley": {
         const r = ev.radius ?? 3.5;
         const secs = ev.seconds ?? 2.35;
         decal(h, VOLLEY_RING, ev.x, gy, ev.z, r * 1.05, secs + 0.3, { grow: 0.2, spin: 0.4, opacity: 0.9 });
-        decal(h, FX.shock, ev.x, gy, ev.z, r, secs + 0.3, { grow: 0.25, additive: true, color: 0xff9a50, opacity: 0.45 });
+        decal(h, FX.shock, ev.x, gy, ev.z, r, secs + 0.3, {
+          grow: 0.25,
+          additive: true,
+          color: 0xff9a50,
+          opacity: 0.45,
+        });
         const lean = Math.random() - 0.5;
         const total = Math.round(r * r * 3.2);
         for (let i = 0; i < total; i++) {
@@ -730,14 +1204,42 @@ KITS.marksman = {
           const x = ev.x + Math.cos(a) * d;
           const z = ev.z + Math.sin(a) * d;
           h.after(at, () => rainArrow(h, x, ground(h, x, z, ev.y), z, lean));
-          h.after(at + 0.28, () => emit(h, { tex: FX.dust, n: 1, x, y: ground(h, x, z, ev.y) + 0.3, z, size: [0.45, 0.7], grow: 1.6, life: [0.3, 0.45], speed: [0.4, 1], flatSpread: true, drag: 3, opacity: 0.75 }));
+          h.after(at + 0.28, () =>
+            emit(h, {
+              tex: FX.dust,
+              n: 1,
+              x,
+              y: ground(h, x, z, ev.y) + 0.3,
+              z,
+              size: [0.45, 0.7],
+              grow: 1.6,
+              life: [0.3, 0.45],
+              speed: [0.4, 1],
+              flatSpread: true,
+              drag: 3,
+              opacity: 0.75,
+            }),
+          );
         }
         return true;
       }
       case "volleyWave": {
         const r = ev.radius ?? 3.5;
         shockwave(h, FX.shock, ev.x, gy + 0.15, ev.z, UP, r * 0.3, r, 0.3, 0xffe0b0, 0.5);
-        emit(h, { tex: WREN.splinters, n: 4, x: ev.x, y: gy + 0.4, z: ev.z, size: [0.2, 0.35], life: [0.3, 0.5], speed: [2, 4], up: [2, 4], gravity: 14, spin: 10, jitter: r * 1.2 });
+        emit(h, {
+          tex: WREN.splinters,
+          n: 4,
+          x: ev.x,
+          y: gy + 0.4,
+          z: ev.z,
+          size: [0.2, 0.35],
+          life: [0.3, 0.5],
+          speed: [2, 4],
+          up: [2, 4],
+          gravity: 14,
+          spin: 10,
+          jitter: r * 1.2,
+        });
         h.shake = Math.max(h.shake, 0.1);
         return true;
       }
@@ -747,8 +1249,32 @@ KITS.marksman = {
         const dx = tx - ev.x;
         const dz = tz - ev.z;
         const dl = Math.hypot(dx, dz) || 1;
-        emit(h, { tex: FX.burst, n: 1, x: ev.x + (dx / dl) * 0.9, y: gy + 1.4, z: ev.z + (dz / dl) * 0.9, color: 0xe0ffb0, size: [1.6, 1.6], grow: 1.4, life: [0.12, 0.12], speed: [0, 0], additive: true });
-        shockwave(h, FX.shock, ev.x + (dx / dl) * 0.9, gy + 1.4, ev.z + (dz / dl) * 0.9, new THREE.Vector3(dx / dl, 0, dz / dl), 0.2, 1.4, 0.25, 0xd8ffb0, 0.9);
+        emit(h, {
+          tex: FX.burst,
+          n: 1,
+          x: ev.x + (dx / dl) * 0.9,
+          y: gy + 1.4,
+          z: ev.z + (dz / dl) * 0.9,
+          color: 0xe0ffb0,
+          size: [1.6, 1.6],
+          grow: 1.4,
+          life: [0.12, 0.12],
+          speed: [0, 0],
+          additive: true,
+        });
+        shockwave(
+          h,
+          FX.shock,
+          ev.x + (dx / dl) * 0.9,
+          gy + 1.4,
+          ev.z + (dz / dl) * 0.9,
+          new THREE.Vector3(dx / dl, 0, dz / dl),
+          0.2,
+          1.4,
+          0.25,
+          0xd8ffb0,
+          0.9,
+        );
         streak(h, FX.streak, ev.x, gy + 1.4, ev.z, tx, tz, 7, 0xd8ffb0, 2.2);
         h.shake = Math.max(h.shake, 0.15);
         return true;
@@ -763,16 +1289,79 @@ KITS.marksman = {
         beam(h, ev.x, y, ev.z, tx, tz, 0.9, 0.55, 0xff9a70);
         beam(h, ev.x, y, ev.z, tx, tz, 0.35, 0.4, 0xffffff);
         flyingArrow(h, ev.x, y, ev.z, tx, ground(h, tx, tz, ev.y) + 1.45, tz, 0.22, 1.6, 0xff7050);
-        emit(h, { tex: HEART, n: 1, x: ev.x + (dx / dl) * 1.2, y, z: ev.z + (dz / dl) * 1.2, size: [1.8, 1.8], grow: 1.6, life: [0.35, 0.35], speed: [0, 0], additive: true, order: 7 });
-        shockwave(h, FX.shock, ev.x + (dx / dl) * 1.2, y, ev.z + (dz / dl) * 1.2, new THREE.Vector3(dx / dl, 0, dz / dl), 0.3, 2.6, 0.35, 0xffb090, 1);
+        emit(h, {
+          tex: HEART,
+          n: 1,
+          x: ev.x + (dx / dl) * 1.2,
+          y,
+          z: ev.z + (dz / dl) * 1.2,
+          size: [1.8, 1.8],
+          grow: 1.6,
+          life: [0.35, 0.35],
+          speed: [0, 0],
+          additive: true,
+          order: 7,
+        });
+        shockwave(
+          h,
+          FX.shock,
+          ev.x + (dx / dl) * 1.2,
+          y,
+          ev.z + (dz / dl) * 1.2,
+          new THREE.Vector3(dx / dl, 0, dz / dl),
+          0.3,
+          2.6,
+          0.35,
+          0xffb090,
+          1,
+        );
         for (let k = 1; k <= 8; k++) {
           const f = k / 8;
-          h.after(f * 0.2, () => emit(h, { tex: FX.twinkle, n: 3, x: ev.x + dx * f, y, z: ev.z + dz * f, color: 0xffc0a0, size: [0.25, 0.45], life: [0.3, 0.5], speed: [0.5, 2], additive: true, jitter: 0.6 }));
+          h.after(f * 0.2, () =>
+            emit(h, {
+              tex: FX.twinkle,
+              n: 3,
+              x: ev.x + dx * f,
+              y,
+              z: ev.z + dz * f,
+              color: 0xffc0a0,
+              size: [0.25, 0.45],
+              life: [0.3, 0.5],
+              speed: [0.5, 2],
+              additive: true,
+              jitter: 0.6,
+            }),
+          );
         }
         h.after(0.22, () => {
           const ty = ground(h, tx, tz, ev.y);
-          emit(h, { tex: FX.burst, n: 1, x: tx, y: ty + 1.2, z: tz, color: 0xffd0a0, size: [2.4, 2.4], grow: 1.3, life: [0.2, 0.2], speed: [0, 0], additive: true });
-          emit(h, { tex: FX.dust, n: 5, x: tx, y: ty + 0.4, z: tz, size: [0.8, 1.2], grow: 1.8, life: [0.5, 0.8], speed: [1, 2.5], flatSpread: true, drag: 3, opacity: 0.85 });
+          emit(h, {
+            tex: FX.burst,
+            n: 1,
+            x: tx,
+            y: ty + 1.2,
+            z: tz,
+            color: 0xffd0a0,
+            size: [2.4, 2.4],
+            grow: 1.3,
+            life: [0.2, 0.2],
+            speed: [0, 0],
+            additive: true,
+          });
+          emit(h, {
+            tex: FX.dust,
+            n: 5,
+            x: tx,
+            y: ty + 0.4,
+            z: tz,
+            size: [0.8, 1.2],
+            grow: 1.8,
+            life: [0.5, 0.8],
+            speed: [1, 2.5],
+            flatSpread: true,
+            drag: 3,
+            opacity: 0.85,
+          });
         });
         h.shake = Math.max(h.shake, 0.45);
         return true;
@@ -785,8 +1374,26 @@ KITS.marksman = {
         return true;
       }
       case "skyshot":
-        tumblers(h, [WREN.feather, WREN.leaves], 4, ev.x, gy + 0.6, ev.z, { speed: [0.8, 2], up: [1, 2], size: [0.25, 0.35], life: [0.9, 1.3] });
-        emit(h, { tex: FX.dust, n: 4, x: ev.x, y: gy + 0.3, z: ev.z, size: [0.8, 1.1], grow: 1.7, life: [0.4, 0.6], speed: [1, 2.5], flatSpread: true, drag: 3, opacity: 0.85 });
+        tumblers(h, [WREN.feather, WREN.leaves], 4, ev.x, gy + 0.6, ev.z, {
+          speed: [0.8, 2],
+          up: [1, 2],
+          size: [0.25, 0.35],
+          life: [0.9, 1.3],
+        });
+        emit(h, {
+          tex: FX.dust,
+          n: 4,
+          x: ev.x,
+          y: gy + 0.3,
+          z: ev.z,
+          size: [0.8, 1.1],
+          grow: 1.7,
+          life: [0.4, 0.6],
+          speed: [1, 2.5],
+          flatSpread: true,
+          drag: 3,
+          opacity: 0.85,
+        });
         return true;
     }
     return false;
@@ -800,8 +1407,32 @@ KITS.marksman = {
           const a = Math.random() * Math.PI * 2;
           const bx = ev.x + ev.dirX * 0.9;
           const bz = ev.z + ev.dirZ * 0.9;
-          emit(h, { tex: FX.twinkle, n: 2, x: bx + Math.cos(a) * 1.4, y: gy + 1.5 + (Math.random() - 0.5), z: bz + Math.sin(a) * 1.4, color: 0xffb090, size: [0.25, 0.4], life: [0.25, 0.3], speed: [4.5, 5], dir: { x: -Math.cos(a), y: 0, z: -Math.sin(a) }, cone: 0.1, additive: true });
-          emit(h, { tex: HEART, n: 1, x: bx, y: gy + 1.5, z: bz, size: [0.5 + k * 0.08, 0.5 + k * 0.08], life: [0.12, 0.12], speed: [0, 0], additive: true, opacity: 0.6 });
+          emit(h, {
+            tex: FX.twinkle,
+            n: 2,
+            x: bx + Math.cos(a) * 1.4,
+            y: gy + 1.5 + (Math.random() - 0.5),
+            z: bz + Math.sin(a) * 1.4,
+            color: 0xffb090,
+            size: [0.25, 0.4],
+            life: [0.25, 0.3],
+            speed: [4.5, 5],
+            dir: { x: -Math.cos(a), y: 0, z: -Math.sin(a) },
+            cone: 0.1,
+            additive: true,
+          });
+          emit(h, {
+            tex: HEART,
+            n: 1,
+            x: bx,
+            y: gy + 1.5,
+            z: bz,
+            size: [0.5 + k * 0.08, 0.5 + k * 0.08],
+            life: [0.12, 0.12],
+            speed: [0, 0],
+            additive: true,
+            opacity: 0.6,
+          });
         });
       }
     }
@@ -809,29 +1440,183 @@ KITS.marksman = {
       for (let k = 0; k < 6; k++) {
         const x0 = ev.x + ev.dirX * 0.5;
         const z0 = ev.z + ev.dirZ * 0.5;
-        h.after(k * 0.04, () => flyingArrow(h, x0, gy + 1.8, z0, x0 + ev.dirX * 2 + (Math.random() - 0.5), gy + 9, z0 + ev.dirZ * 2 + (Math.random() - 0.5), 0.3, 0.9));
+        h.after(k * 0.04, () =>
+          flyingArrow(
+            h,
+            x0,
+            gy + 1.8,
+            z0,
+            x0 + ev.dirX * 2 + (Math.random() - 0.5),
+            gy + 9,
+            z0 + ev.dirZ * 2 + (Math.random() - 0.5),
+            0.3,
+            0.9,
+          ),
+        );
       }
     }
-    if (ev.phase === "fire" && ev.kind === "pip") emit(h, { tex: FX.twinkle, n: 3, x: ev.x, y: gy + 2.2, z: ev.z, color: 0xff7050, size: [0.2, 0.3], life: [0.2, 0.3], speed: [1, 2], additive: true });
+    if (ev.phase === "fire" && ev.kind === "pip")
+      emit(h, {
+        tex: FX.twinkle,
+        n: 3,
+        x: ev.x,
+        y: gy + 2.2,
+        z: ev.z,
+        color: 0xff7050,
+        size: [0.2, 0.3],
+        life: [0.2, 0.3],
+        speed: [1, 2],
+        additive: true,
+      });
   },
 };
 
 function aleSplash(h: FxHost, x: number, gy: number, z: number, r: number, big: boolean): void {
-  emit(h, { tex: ALE_SPLASH, n: 1, x, y: gy + 0.6, z, size: [r * 1.4, r * 1.4], grow: 1.4, life: [0.3, 0.3], speed: [0, 0], order: 5 });
-  emit(h, { tex: FX.splash, n: big ? 3 : 1, x, y: gy + 0.5, z, color: 0xffc860, size: [r * 0.8, r], grow: 1.5, life: [0.35, 0.5], speed: [0.2, 0.6], up: [0.5, 1] });
+  emit(h, {
+    tex: ALE_SPLASH,
+    n: 1,
+    x,
+    y: gy + 0.6,
+    z,
+    size: [r * 1.4, r * 1.4],
+    grow: 1.4,
+    life: [0.3, 0.3],
+    speed: [0, 0],
+    order: 5,
+  });
+  emit(h, {
+    tex: FX.splash,
+    n: big ? 3 : 1,
+    x,
+    y: gy + 0.5,
+    z,
+    color: 0xffc860,
+    size: [r * 0.8, r],
+    grow: 1.5,
+    life: [0.35, 0.5],
+    speed: [0.2, 0.6],
+    up: [0.5, 1],
+  });
   shockwave(h, FX.shock, x, gy + 0.15, z, UP, 0.3, r, 0.4, 0xffe6a0, 0.8);
-  emit(h, { tex: ALE_DROP, n: big ? 16 : 6, x, y: gy + 0.6, z, size: [0.18, 0.3], life: [0.5, 0.8], speed: [2, r * 1.6], up: [2.5, 5], gravity: 14, floor: gy + 0.05 });
-  emit(h, { tex: FOAM, n: big ? 6 : 2, x, y: gy + 0.4, z, size: [0.5, 0.8], grow: 1.5, life: [0.5, 0.8], speed: [1, 2.5], flatSpread: true, drag: 3 });
-  emit(h, { tex: BUBBLE, n: big ? 10 : 4, x, y: gy + 0.3, z, size: [0.18, 0.32], life: [0.6, 1.1], speed: [0.2, 0.6], up: [0.6, 1.4], jitter: r * 1.2 });
-  emit(h, { tex: FRIAR.heal, n: big ? 6 : 2, x, y: gy + 0.8, z, size: [0.4, 0.55], life: [0.9, 1.2], speed: [0.2, 0.6], up: [1.2, 2], jitter: r });
+  emit(h, {
+    tex: ALE_DROP,
+    n: big ? 16 : 6,
+    x,
+    y: gy + 0.6,
+    z,
+    size: [0.18, 0.3],
+    life: [0.5, 0.8],
+    speed: [2, r * 1.6],
+    up: [2.5, 5],
+    gravity: 14,
+    floor: gy + 0.05,
+  });
+  emit(h, {
+    tex: FOAM,
+    n: big ? 6 : 2,
+    x,
+    y: gy + 0.4,
+    z,
+    size: [0.5, 0.8],
+    grow: 1.5,
+    life: [0.5, 0.8],
+    speed: [1, 2.5],
+    flatSpread: true,
+    drag: 3,
+  });
+  emit(h, {
+    tex: BUBBLE,
+    n: big ? 10 : 4,
+    x,
+    y: gy + 0.3,
+    z,
+    size: [0.18, 0.32],
+    life: [0.6, 1.1],
+    speed: [0.2, 0.6],
+    up: [0.6, 1.4],
+    jitter: r * 1.2,
+  });
+  emit(h, {
+    tex: FRIAR.heal,
+    n: big ? 6 : 2,
+    x,
+    y: gy + 0.8,
+    z,
+    size: [0.4, 0.55],
+    life: [0.9, 1.2],
+    speed: [0.2, 0.6],
+    up: [1.2, 2],
+    jitter: r,
+  });
 }
 
 function kegBoom(h: FxHost, x: number, gy: number, z: number, r: number, big: boolean): void {
-  emit(h, { tex: FRIAR.blast, n: 1, x, y: gy + 1, z, size: [r * 1.3, r * 1.3], grow: 1.4, life: [0.2, 0.2], speed: [0, 0], order: 6 });
-  emit(h, { tex: FX.fire, n: big ? 10 : 4, x, y: gy + 0.8, z, size: [0.9, 1.5], grow: 1.6, life: [0.3, 0.55], speed: [1.5, r * 1.6], up: [1, 2.5], additive: true });
-  emit(h, { tex: FRIAR.smoke, n: big ? 10 : 4, x, y: gy + 1, z, size: [1.2, 1.9], grow: 1.8, life: [0.9, 1.5], speed: [1, 2.5], up: [0.8, 1.6], drag: 1.5, opacity: 0.85 });
-  emit(h, { tex: FRIAR.spark, n: big ? 12 : 5, x, y: gy + 0.8, z, size: [0.15, 0.25], life: [0.6, 1], speed: [3, 7], up: [2, 5], gravity: 9, additive: true });
-  emit(h, { tex: FRIAR.stave, n: big ? 6 : 2, x, y: gy + 0.6, z, size: [0.45, 0.7], life: [0.7, 1], speed: [3, 6], up: [4, 7], gravity: 16, spin: 10, floor: gy + 0.1 });
+  emit(h, {
+    tex: FRIAR.blast,
+    n: 1,
+    x,
+    y: gy + 1,
+    z,
+    size: [r * 1.3, r * 1.3],
+    grow: 1.4,
+    life: [0.2, 0.2],
+    speed: [0, 0],
+    order: 6,
+  });
+  emit(h, {
+    tex: FX.fire,
+    n: big ? 10 : 4,
+    x,
+    y: gy + 0.8,
+    z,
+    size: [0.9, 1.5],
+    grow: 1.6,
+    life: [0.3, 0.55],
+    speed: [1.5, r * 1.6],
+    up: [1, 2.5],
+    additive: true,
+  });
+  emit(h, {
+    tex: FRIAR.smoke,
+    n: big ? 10 : 4,
+    x,
+    y: gy + 1,
+    z,
+    size: [1.2, 1.9],
+    grow: 1.8,
+    life: [0.9, 1.5],
+    speed: [1, 2.5],
+    up: [0.8, 1.6],
+    drag: 1.5,
+    opacity: 0.85,
+  });
+  emit(h, {
+    tex: FRIAR.spark,
+    n: big ? 12 : 5,
+    x,
+    y: gy + 0.8,
+    z,
+    size: [0.15, 0.25],
+    life: [0.6, 1],
+    speed: [3, 7],
+    up: [2, 5],
+    gravity: 9,
+    additive: true,
+  });
+  emit(h, {
+    tex: FRIAR.stave,
+    n: big ? 6 : 2,
+    x,
+    y: gy + 0.6,
+    z,
+    size: [0.45, 0.7],
+    life: [0.7, 1],
+    speed: [3, 6],
+    up: [4, 7],
+    gravity: 16,
+    spin: 10,
+    floor: gy + 0.1,
+  });
   shockwave(h, FX.shock, x, gy + 0.3, z, UP, 0.4, r * 1.15, 0.35, 0xffb060, 0.95);
   if (big) {
     decal(h, FX.crack, x, gy, z, r * 0.75, 2.2, { grow: 0.06, opacity: 0.85 });
@@ -851,11 +1636,73 @@ KITS.friar = {
     const pz = ev.z - n.z * 0.35;
     const py = ev.y + 0.3;
     const gy = ground(h, ev.x, ev.z, ev.y - 1);
-    emit(h, { tex: FX.burst2, n: 1, x: px, y: py, z: pz, color: 0xfff0c0, size: ev.big ? [1.5, 1.5] : [1, 1], grow: 1.6, life: [0.1, 0.1], speed: [0, 0], additive: true, order: 6 });
-    emit(h, { tex: FX.burst, n: 1, x: px, y: py, z: pz, color: 0xffe0a0, size: ev.big ? [2.2, 2.2] : [1.3, 1.3], grow: 1.3, life: [0.18, 0.18], speed: [0, 0], order: 5 });
-    emit(h, { tex: ALE_DROP, n: ev.big ? 8 : 4, x: px, y: py + 0.2, z: pz, size: [0.16, 0.26], life: [0.45, 0.7], speed: [2, 4], up: [1.5, 3], dir: { x: n.x, y: 0.3, z: n.z }, cone: 1, gravity: 14, floor: gy + 0.05 });
-    emit(h, { tex: FOAM, n: ev.big ? 2 : 1, x: px, y: py, z: pz, size: [0.4, 0.6], grow: 1.6, life: [0.3, 0.45], speed: [0.5, 1.2] });
-    emit(h, { tex: FX.dust, n: ev.big ? 2 : 1, x: ev.x, y: gy + 0.35, z: ev.z, size: [0.7, 1], grow: 1.8, life: [0.4, 0.6], speed: [1, 2], flatSpread: true, drag: 3, opacity: 0.8 });
+    emit(h, {
+      tex: FX.burst2,
+      n: 1,
+      x: px,
+      y: py,
+      z: pz,
+      color: 0xfff0c0,
+      size: ev.big ? [1.5, 1.5] : [1, 1],
+      grow: 1.6,
+      life: [0.1, 0.1],
+      speed: [0, 0],
+      additive: true,
+      order: 6,
+    });
+    emit(h, {
+      tex: FX.burst,
+      n: 1,
+      x: px,
+      y: py,
+      z: pz,
+      color: 0xffe0a0,
+      size: ev.big ? [2.2, 2.2] : [1.3, 1.3],
+      grow: 1.3,
+      life: [0.18, 0.18],
+      speed: [0, 0],
+      order: 5,
+    });
+    emit(h, {
+      tex: ALE_DROP,
+      n: ev.big ? 8 : 4,
+      x: px,
+      y: py + 0.2,
+      z: pz,
+      size: [0.16, 0.26],
+      life: [0.45, 0.7],
+      speed: [2, 4],
+      up: [1.5, 3],
+      dir: { x: n.x, y: 0.3, z: n.z },
+      cone: 1,
+      gravity: 14,
+      floor: gy + 0.05,
+    });
+    emit(h, {
+      tex: FOAM,
+      n: ev.big ? 2 : 1,
+      x: px,
+      y: py,
+      z: pz,
+      size: [0.4, 0.6],
+      grow: 1.6,
+      life: [0.3, 0.45],
+      speed: [0.5, 1.2],
+    });
+    emit(h, {
+      tex: FX.dust,
+      n: ev.big ? 2 : 1,
+      x: ev.x,
+      y: gy + 0.35,
+      z: ev.z,
+      size: [0.7, 1],
+      grow: 1.8,
+      life: [0.4, 0.6],
+      speed: [1, 2],
+      flatSpread: true,
+      drag: 3,
+      opacity: 0.8,
+    });
     if (ev.big) shockwave(h, FX.shock, px, py, pz, n, 0.25, 1.8, 0.28, 0xffe0a0, 0.9);
     h.shake = Math.max(h.shake, ev.big ? 0.28 : 0.1);
     return true;
@@ -866,7 +1713,19 @@ KITS.friar = {
     switch (ev.name) {
       case "kegThrow":
       case "powderThrow":
-        emit(h, { tex: FX.swoosh, n: 1, x: ev.x, y: ev.y, z: ev.z, color: 0xfff0d0, size: [1.2, 1.2], grow: 1.3, life: [0.18, 0.18], speed: [0, 0], opacity: 0.8 });
+        emit(h, {
+          tex: FX.swoosh,
+          n: 1,
+          x: ev.x,
+          y: ev.y,
+          z: ev.z,
+          color: 0xfff0d0,
+          size: [1.2, 1.2],
+          grow: 1.3,
+          life: [0.18, 0.18],
+          speed: [0, 0],
+          opacity: 0.8,
+        });
         return true;
       case "kegSplash":
         aleSplash(h, ev.x, gy, ev.z, ev.radius ?? 3, true);
@@ -876,7 +1735,20 @@ KITS.friar = {
         aleSplash(h, ev.x, gy, ev.z, ev.radius ?? 2, false);
         return true;
       case "kegLand":
-        emit(h, { tex: FX.dust, n: 4, x: ev.x, y: gy + 0.3, z: ev.z, size: [0.7, 1], grow: 1.7, life: [0.4, 0.6], speed: [1, 2], flatSpread: true, drag: 3, opacity: 0.85 });
+        emit(h, {
+          tex: FX.dust,
+          n: 4,
+          x: ev.x,
+          y: gy + 0.3,
+          z: ev.z,
+          size: [0.7, 1],
+          grow: 1.7,
+          life: [0.4, 0.6],
+          speed: [1, 2],
+          flatSpread: true,
+          drag: 3,
+          opacity: 0.85,
+        });
         h.shake = Math.max(h.shake, 0.08);
         return true;
       case "kegBoom":
@@ -887,29 +1759,162 @@ KITS.friar = {
         return true;
       case "brewfest": {
         const r = ev.radius ?? 7;
-        emit(h, { tex: FX.dust, n: 12, x: ev.x, y: gy + 0.4, z: ev.z, size: [1, 1.5], grow: 1.8, life: [0.5, 0.9], speed: [2, 4.5], flatSpread: true, drag: 3, opacity: 0.85 });
+        emit(h, {
+          tex: FX.dust,
+          n: 12,
+          x: ev.x,
+          y: gy + 0.4,
+          z: ev.z,
+          size: [1, 1.5],
+          grow: 1.8,
+          life: [0.5, 0.9],
+          speed: [2, 4.5],
+          flatSpread: true,
+          drag: 3,
+          opacity: 0.85,
+        });
         shockwave(h, FX.shock, ev.x, gy + 0.2, ev.z, UP, 0.5, r, 0.6, 0xffd070, 0.85);
         decal(h, FRIAR.hopRing, ev.x, gy + 0.02, ev.z, r, 1.0, { grow: 0.5, spin: 0.5, opacity: 0.8 });
-        emit(h, { tex: FOAM, n: 10, x: ev.x, y: gy + 2.4, z: ev.z, size: [0.5, 0.9], grow: 1.4, life: [0.7, 1.1], speed: [1.5, 3.5], up: [3, 5], gravity: 9 });
-        emit(h, { tex: ALE_DROP, n: 18, x: ev.x, y: gy + 2.4, z: ev.z, size: [0.2, 0.32], life: [0.7, 1.1], speed: [2, 4], up: [3, 6], gravity: 12, floor: gy + 0.05 });
-        emit(h, { tex: FRIAR.cheers, n: 8, x: ev.x, y: gy + 3, z: ev.z, color: 0xffe090, size: [0.3, 0.45], life: [0.6, 0.9], speed: [1.5, 3], up: [1, 2.5], gravity: 4, additive: true });
+        emit(h, {
+          tex: FOAM,
+          n: 10,
+          x: ev.x,
+          y: gy + 2.4,
+          z: ev.z,
+          size: [0.5, 0.9],
+          grow: 1.4,
+          life: [0.7, 1.1],
+          speed: [1.5, 3.5],
+          up: [3, 5],
+          gravity: 9,
+        });
+        emit(h, {
+          tex: ALE_DROP,
+          n: 18,
+          x: ev.x,
+          y: gy + 2.4,
+          z: ev.z,
+          size: [0.2, 0.32],
+          life: [0.7, 1.1],
+          speed: [2, 4],
+          up: [3, 6],
+          gravity: 12,
+          floor: gy + 0.05,
+        });
+        emit(h, {
+          tex: FRIAR.cheers,
+          n: 8,
+          x: ev.x,
+          y: gy + 3,
+          z: ev.z,
+          color: 0xffe090,
+          size: [0.3, 0.45],
+          life: [0.6, 0.9],
+          speed: [1.5, 3],
+          up: [1, 2.5],
+          gravity: 4,
+          additive: true,
+        });
         h.shake = Math.max(h.shake, 0.35);
         return true;
       }
       case "lastCall": {
         const r = ev.radius ?? 7;
-        emit(h, { tex: ALE_SPLASH, n: 1, x: ev.x, y: gy + 1.5, z: ev.z, size: [r, r], grow: 1.4, life: [0.4, 0.4], speed: [0, 0] });
+        emit(h, {
+          tex: ALE_SPLASH,
+          n: 1,
+          x: ev.x,
+          y: gy + 1.5,
+          z: ev.z,
+          size: [r, r],
+          grow: 1.4,
+          life: [0.4, 0.4],
+          speed: [0, 0],
+        });
         shockwave(h, FX.shock, ev.x, gy + 0.3, ev.z, UP, 0.5, r, 0.5, 0xffd070, 1);
-        emit(h, { tex: FOAM, n: 14, x: ev.x, y: gy + 1, z: ev.z, size: [0.6, 1.1], grow: 1.5, life: [0.8, 1.2], speed: [2, 5], up: [4, 8], gravity: 10 });
-        emit(h, { tex: ALE_DROP, n: 30, x: ev.x, y: gy + 1, z: ev.z, size: [0.2, 0.34], life: [0.8, 1.2], speed: [3, 6], up: [4, 9], gravity: 12, floor: gy + 0.05 });
-        emit(h, { tex: FRIAR.heal, n: 10, x: ev.x, y: gy + 0.8, z: ev.z, size: [0.45, 0.6], life: [1, 1.4], speed: [0.3, 1], up: [1.5, 2.5], jitter: r });
-        emit(h, { tex: FRIAR.stave, n: 8, x: ev.x, y: gy + 1, z: ev.z, size: [0.5, 0.8], life: [0.8, 1.1], speed: [3, 6], up: [4, 8], gravity: 16, spin: 10, floor: gy + 0.1 });
+        emit(h, {
+          tex: FOAM,
+          n: 14,
+          x: ev.x,
+          y: gy + 1,
+          z: ev.z,
+          size: [0.6, 1.1],
+          grow: 1.5,
+          life: [0.8, 1.2],
+          speed: [2, 5],
+          up: [4, 8],
+          gravity: 10,
+        });
+        emit(h, {
+          tex: ALE_DROP,
+          n: 30,
+          x: ev.x,
+          y: gy + 1,
+          z: ev.z,
+          size: [0.2, 0.34],
+          life: [0.8, 1.2],
+          speed: [3, 6],
+          up: [4, 9],
+          gravity: 12,
+          floor: gy + 0.05,
+        });
+        emit(h, {
+          tex: FRIAR.heal,
+          n: 10,
+          x: ev.x,
+          y: gy + 0.8,
+          z: ev.z,
+          size: [0.45, 0.6],
+          life: [1, 1.4],
+          speed: [0.3, 1],
+          up: [1.5, 2.5],
+          jitter: r,
+        });
+        emit(h, {
+          tex: FRIAR.stave,
+          n: 8,
+          x: ev.x,
+          y: gy + 1,
+          z: ev.z,
+          size: [0.5, 0.8],
+          life: [0.8, 1.1],
+          speed: [3, 6],
+          up: [4, 8],
+          gravity: 16,
+          spin: 10,
+          floor: gy + 0.1,
+        });
         h.shake = Math.max(h.shake, 0.5);
         return true;
       }
       case "kegRocket":
-        emit(h, { tex: FX.dust, n: 6, x: ev.x, y: gy + 0.3, z: ev.z, size: [0.8, 1.2], grow: 1.7, life: [0.4, 0.7], speed: [1, 2.5], flatSpread: true, drag: 3, opacity: 0.85 });
-        emit(h, { tex: FOAM, n: 4, x: ev.x, y: gy + 0.4, z: ev.z, size: [0.5, 0.8], grow: 1.5, life: [0.5, 0.7], speed: [1, 2], up: [1, 2], gravity: 4 });
+        emit(h, {
+          tex: FX.dust,
+          n: 6,
+          x: ev.x,
+          y: gy + 0.3,
+          z: ev.z,
+          size: [0.8, 1.2],
+          grow: 1.7,
+          life: [0.4, 0.7],
+          speed: [1, 2.5],
+          flatSpread: true,
+          drag: 3,
+          opacity: 0.85,
+        });
+        emit(h, {
+          tex: FOAM,
+          n: 4,
+          x: ev.x,
+          y: gy + 0.4,
+          z: ev.z,
+          size: [0.5, 0.8],
+          grow: 1.5,
+          life: [0.5, 0.7],
+          speed: [1, 2],
+          up: [1, 2],
+          gravity: 4,
+        });
         return true;
       case "plenty": {
         const w = h.world;
@@ -918,8 +1923,33 @@ KITS.friar = {
         for (const o of w.entities) {
           if (!o.alive || o.team !== ev.team || o.structure || o.hp >= o.maxHp) continue;
           if (Math.hypot(o.transform.pos.x - ev.x, o.transform.pos.z - ev.z) > r) continue;
-          emit(h, { tex: BUBBLE, n: 1, x: o.transform.pos.x, y: o.transform.y + 0.8, z: o.transform.pos.z, size: [0.16, 0.26], life: [0.7, 1], speed: [0.1, 0.3], up: [0.8, 1.2], jitter: 0.8 });
-          if (o.hero) emit(h, { tex: FRIAR.heal, n: 1, x: o.transform.pos.x, y: o.transform.y + 1.6, z: o.transform.pos.z, color: 0xffe8a0, size: [0.3, 0.4], life: [0.8, 1], speed: [0.1, 0.3], up: [0.8, 1.2], jitter: 0.5, opacity: 0.85 });
+          emit(h, {
+            tex: BUBBLE,
+            n: 1,
+            x: o.transform.pos.x,
+            y: o.transform.y + 0.8,
+            z: o.transform.pos.z,
+            size: [0.16, 0.26],
+            life: [0.7, 1],
+            speed: [0.1, 0.3],
+            up: [0.8, 1.2],
+            jitter: 0.8,
+          });
+          if (o.hero)
+            emit(h, {
+              tex: FRIAR.heal,
+              n: 1,
+              x: o.transform.pos.x,
+              y: o.transform.y + 1.6,
+              z: o.transform.pos.z,
+              color: 0xffe8a0,
+              size: [0.3, 0.4],
+              life: [0.8, 1],
+              speed: [0.1, 0.3],
+              up: [0.8, 1.2],
+              jitter: 0.5,
+              opacity: 0.85,
+            });
         }
         return true;
       }
@@ -929,7 +1959,20 @@ KITS.friar = {
   act(h, ev) {
     const gy = ground(h, ev.x, ev.z, ev.y);
     if (ev.phase === "start" && ev.kind === "brewfest") {
-      emit(h, { tex: FRIAR.cheers, n: 6, x: ev.x, y: gy + 2.6, z: ev.z, color: 0xffe090, size: [0.25, 0.4], life: [0.4, 0.6], speed: [0.5, 1.5], up: [0.5, 1.2], additive: true, jitter: 0.8 });
+      emit(h, {
+        tex: FRIAR.cheers,
+        n: 6,
+        x: ev.x,
+        y: gy + 2.6,
+        z: ev.z,
+        color: 0xffe090,
+        size: [0.25, 0.4],
+        life: [0.4, 0.6],
+        speed: [0.5, 1.5],
+        up: [0.5, 1.2],
+        additive: true,
+        jitter: 0.8,
+      });
     }
   },
 };

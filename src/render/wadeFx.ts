@@ -14,10 +14,16 @@ export function clipBelowWater<T extends THREE.Material>(mat: T): T {
     shader.uniforms.uWaterClip = waterClip;
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nvarying float vWadeY;")
-      .replace("#include <project_vertex>", "#include <project_vertex>\n{\nvec4 wadeP = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nwadeP = instanceMatrix * wadeP;\n#endif\nvWadeY = (modelMatrix * wadeP).y;\n}");
+      .replace(
+        "#include <project_vertex>",
+        "#include <project_vertex>\n{\nvec4 wadeP = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nwadeP = instanceMatrix * wadeP;\n#endif\nvWadeY = (modelMatrix * wadeP).y;\n}",
+      );
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", "#include <common>\nuniform float uWaterClip;\nvarying float vWadeY;")
-      .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (vWadeY < uWaterClip) discard;");
+      .replace(
+        "#include <clipping_planes_fragment>",
+        "#include <clipping_planes_fragment>\nif (vWadeY < uWaterClip) discard;",
+      );
   };
   const prev = mat.customProgramCacheKey.bind(mat);
   mat.customProgramCacheKey = () => `${prev()}|wclip`;
@@ -58,7 +64,14 @@ const flatGeo = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
 flatGeo.userData.model = true;
 
 export function foamBatch(max: number): THREE.InstancedMesh {
-  const mat = new THREE.MeshBasicMaterial({ map: foamTex, color: 0xeaf6ff, transparent: true, opacity: 0.7, depthWrite: false, fog: false });
+  const mat = new THREE.MeshBasicMaterial({
+    map: foamTex,
+    color: 0xeaf6ff,
+    transparent: true,
+    opacity: 0.7,
+    depthWrite: false,
+    fog: false,
+  });
   const im = new THREE.InstancedMesh(flatGeo, mat, max);
   im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   im.count = 0;
@@ -68,9 +81,27 @@ export function foamBatch(max: number): THREE.InstancedMesh {
   return im;
 }
 
-export function ripple(h: FxHost, x: number, y: number, z: number, r0: number, r1: number, dur: number, opacity: number): void {
+export function ripple(
+  h: FxHost,
+  x: number,
+  y: number,
+  z: number,
+  r0: number,
+  r1: number,
+  dur: number,
+  opacity: number,
+): void {
   const b = fxBatch(h.root, "ripple", () => {
-    const fb = new FxBatch(flatGeo, new THREE.MeshBasicMaterial({ map: rippleTex, color: 0xe4f4ff, transparent: true, depthWrite: false, fog: false }));
+    const fb = new FxBatch(
+      flatGeo,
+      new THREE.MeshBasicMaterial({
+        map: rippleTex,
+        color: 0xe4f4ff,
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+      }),
+    );
     fb.mesh.renderOrder = 3;
     return fb;
   });
@@ -87,5 +118,22 @@ export function ripple(h: FxHost, x: number, y: number, z: number, r0: number, r
 }
 
 export function splash(h: FxHost, x: number, y: number, z: number, size: number, n: number): void {
-  emit(h, { tex: FX.splash, n, x, y: y + 0.05, z, color: 0xe2f4ff, size: [size * 0.3, size * 0.5], grow: 1.3, life: [0.32, 0.48], speed: [0.5, 1.3], flatSpread: true, up: [1.8, 2.8], gravity: 10, drag: 1, opacity: 0.85, jitter: size * 0.4 });
+  emit(h, {
+    tex: FX.splash,
+    n,
+    x,
+    y: y + 0.05,
+    z,
+    color: 0xe2f4ff,
+    size: [size * 0.3, size * 0.5],
+    grow: 1.3,
+    life: [0.32, 0.48],
+    speed: [0.5, 1.3],
+    flatSpread: true,
+    up: [1.8, 2.8],
+    gravity: 10,
+    drag: 1,
+    opacity: 0.85,
+    jitter: size * 0.4,
+  });
 }

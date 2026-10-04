@@ -1,7 +1,12 @@
 import * as THREE from "three";
 
 function part(
-  geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D,
+  geo: THREE.BufferGeometry,
+  mat: THREE.Material,
+  x: number,
+  y: number,
+  z: number,
+  parent: THREE.Object3D,
 ): THREE.Mesh {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
@@ -54,7 +59,9 @@ export function blobShadow(radius = 0.75): THREE.Mesh {
     blobTex.needsUpdate = true;
   }
   blobGeo ??= markGeo(new THREE.PlaneGeometry(2, 2));
-  blobMat ??= keepMat(new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, opacity: 0.55, depthWrite: false, fog: true }));
+  blobMat ??= keepMat(
+    new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, opacity: 0.55, depthWrite: false, fog: true }),
+  );
   const m = new THREE.Mesh(blobGeo, blobMat);
   m.scale.set(radius, radius, 1);
   m.rotation.x = -Math.PI / 2;
@@ -89,7 +96,10 @@ export function blobBatch(max: number): THREE.InstancedMesh {
 let ringGeo: THREE.BufferGeometry | undefined;
 export function footRing(teamColor: THREE.Color): THREE.Mesh {
   ringGeo ??= markGeo(new THREE.RingGeometry(0.62, 0.8, 16));
-  const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9, depthWrite: false }));
+  const ring = new THREE.Mesh(
+    ringGeo,
+    new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9, depthWrite: false }),
+  );
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.04;
   ring.userData.footRing = true;
@@ -98,7 +108,11 @@ export function footRing(teamColor: THREE.Color): THREE.Mesh {
 
 export function footRingBatch(max: number): THREE.InstancedMesh {
   ringGeo ??= markGeo(new THREE.RingGeometry(0.62, 0.8, 16));
-  const im = new THREE.InstancedMesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false }), max);
+  const im = new THREE.InstancedMesh(
+    ringGeo,
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false }),
+    max,
+  );
   im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   im.setColorAt(0, new THREE.Color());
   im.instanceColor!.setUsage(THREE.DynamicDrawUsage);

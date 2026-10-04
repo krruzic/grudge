@@ -13,9 +13,17 @@ import friarUrl from "../../assets/fx/friar.png?url";
 const CELL = 128;
 const COLS = 4;
 
-const variantUrls = import.meta.glob("../../assets/fx/*@*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const variantUrls = import.meta.glob("../../assets/fx/*@*.png", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const VARIANT_URL = new Map(Object.entries(variantUrls).map(([p, u]) => [p.split("/").pop()!.replace(".png", ""), u]));
-const hqUrls = import.meta.glob("../../assets/fx/hq/*.png", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const hqUrls = import.meta.glob("../../assets/fx/hq/*.png", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const HQ_URL = new Map(Object.entries(hqUrls).map(([p, u]) => [p.split("/").pop()!.replace(".png", ""), u]));
 
 const waits: Promise<void>[] = [];
@@ -51,7 +59,11 @@ function sheet(url: string): THREE.CanvasTexture[] {
   return out;
 }
 
-interface Atlas { name: string; base: THREE.CanvasTexture[]; vars: Map<string, THREE.CanvasTexture[] | null | "loading"> }
+interface Atlas {
+  name: string;
+  base: THREE.CanvasTexture[];
+  vars: Map<string, THREE.CanvasTexture[] | null | "loading">;
+}
 const CELL_OF = new Map<THREE.Texture, { a: Atlas; i: number }>();
 const BASE_OF = new Map<THREE.Texture, THREE.Texture>();
 let active = "";
@@ -85,7 +97,9 @@ function atlas<K extends string>(name: string, url: string, keys: readonly K[]):
   a.base.forEach((t, i) => CELL_OF.set(t, { a, i }));
   keys.forEach((k, i) => hdAlias(a.base[i], name, `${name}.${k}`));
   const o = {} as Record<K, THREE.CanvasTexture>;
-  keys.forEach((k, i) => Object.defineProperty(o, k, { enumerable: true, get: () => (active && variant(a, active)?.[i]) || a.base[i] }));
+  keys.forEach((k, i) =>
+    Object.defineProperty(o, k, { enumerable: true, get: () => (active && variant(a, active)?.[i]) || a.base[i] }),
+  );
   return o;
 }
 
@@ -154,7 +168,13 @@ export function baseTex(t: THREE.Texture): THREE.Texture {
   return BASE_OF.get(t) ?? t;
 }
 
-interface Comp { size: number; draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void; repeat: boolean; res: number; vars: Map<string, THREE.CanvasTexture | null> }
+interface Comp {
+  size: number;
+  draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void;
+  repeat: boolean;
+  res: number;
+  vars: Map<string, THREE.CanvasTexture | null>;
+}
 const COMPS = new Map<THREE.Texture, Comp>();
 let baseReady = false;
 
@@ -207,7 +227,7 @@ export function cv<T extends THREE.Texture>(t: T, c = active): T {
     if (v !== s) return v as unknown as T;
   }
   const cell = CELL_OF.get(t);
-  if (cell) return ((variant(cell.a, c)?.[cell.i] as unknown as T) ?? t);
+  if (cell) return (variant(cell.a, c)?.[cell.i] as unknown as T) ?? t;
   const comp = COMPS.get(t);
   if (comp) return compVariant(t, comp, c) as T;
   return t;
@@ -251,7 +271,12 @@ export function trailOf(c: string | undefined, slot = "trail"): number | undefin
 
 const C = sheet(commonUrl);
 
-export function composite(size: number, draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void, repeat = false, res = 256): THREE.CanvasTexture {
+export function composite(
+  size: number,
+  draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void,
+  repeat = false,
+  res = 256,
+): THREE.CanvasTexture {
   const { t, g } = paint(size, repeat, res);
   COMPS.set(t, { size, draw, repeat, res, vars: new Map() });
   void fxReady.then(() => {
@@ -283,23 +308,176 @@ export const FX = {
 };
 for (const [k, t] of Object.entries(FX)) hdAlias(t, "common", `common.${k}`);
 
-export const WARDEN = atlas("warden", wardenUrl, ["leaf", "leafAutumn", "bark", "moss", "wisp", "vine", "wreath", "roots", "splinters", "natureBurst", "stone", "pebbleDust", "mossCrack", "thorn", "flower", "rune"] as const);
+export const WARDEN = atlas("warden", wardenUrl, [
+  "leaf",
+  "leafAutumn",
+  "bark",
+  "moss",
+  "wisp",
+  "vine",
+  "wreath",
+  "roots",
+  "splinters",
+  "natureBurst",
+  "stone",
+  "pebbleDust",
+  "mossCrack",
+  "thorn",
+  "flower",
+  "rune",
+] as const);
 
-export const WARLORD = atlas("warlord", warlordUrl, ["rage", "slab", "lavaCrack", "shout", "helm", "dust", "ember", "splash", "ring", "swoosh", "pebbles", "impact", "horn", "lavaGlow", "crackRing", "rune"] as const);
+export const WARLORD = atlas("warlord", warlordUrl, [
+  "rage",
+  "slab",
+  "lavaCrack",
+  "shout",
+  "helm",
+  "dust",
+  "ember",
+  "splash",
+  "ring",
+  "swoosh",
+  "pebbles",
+  "impact",
+  "horn",
+  "lavaGlow",
+  "crackRing",
+  "rune",
+] as const);
 
-export const ENGINEER = atlas("engineer", engineerUrl, ["gear", "gearSmall", "weld", "steam", "nut", "spring", "wrench", "plank", "rivet", "arc", "oilSmoke", "clang", "ring", "blueprint", "shards", "heal"] as const);
+export const ENGINEER = atlas("engineer", engineerUrl, [
+  "gear",
+  "gearSmall",
+  "weld",
+  "steam",
+  "nut",
+  "spring",
+  "wrench",
+  "plank",
+  "rivet",
+  "arc",
+  "oilSmoke",
+  "clang",
+  "ring",
+  "blueprint",
+  "shards",
+  "heal",
+] as const);
 
-export const RAIDER = atlas("raider", raiderUrl, ["smoke", "shadow", "poison", "slash", "cross", "glint", "knife", "drop", "darkSlash", "dashStreak", "bubble", "smokeRing", "skull", "afterimage", "dust", "vortex"] as const);
+export const RAIDER = atlas("raider", raiderUrl, [
+  "smoke",
+  "shadow",
+  "poison",
+  "slash",
+  "cross",
+  "glint",
+  "knife",
+  "drop",
+  "darkSlash",
+  "dashStreak",
+  "bubble",
+  "smokeRing",
+  "skull",
+  "afterimage",
+  "dust",
+  "vortex",
+] as const);
 
-export const SUMMONER = atlas("summoner", summonerUrl, ["orb", "crystal", "sparkle", "ghost", "bones", "hex", "flame", "soulFlame", "graveHand", "trail", "burst", "smoke", "skull", "bolt", "eyes", "circle"] as const);
+export const SUMMONER = atlas("summoner", summonerUrl, [
+  "orb",
+  "crystal",
+  "sparkle",
+  "ghost",
+  "bones",
+  "hex",
+  "flame",
+  "soulFlame",
+  "graveHand",
+  "trail",
+  "burst",
+  "smoke",
+  "skull",
+  "bolt",
+  "eyes",
+  "circle",
+] as const);
 
-export const DUELIST = atlas("duelist", duelistUrl, ["glint", "rapier", "crescent", "feather", "sparkle", "clash", "speed", "fleur", "ribbon", "star", "crossed", "petal", "gust", "parryRing", "crit", "cut"] as const);
+export const DUELIST = atlas("duelist", duelistUrl, [
+  "glint",
+  "rapier",
+  "crescent",
+  "feather",
+  "sparkle",
+  "clash",
+  "speed",
+  "fleur",
+  "ribbon",
+  "star",
+  "crossed",
+  "petal",
+  "gust",
+  "parryRing",
+  "crit",
+  "cut",
+] as const);
 
-export const HERALD = atlas("herald", heraldUrl, ["beams", "fleur", "horn", "flag", "halo", "coin", "rays", "heal", "shield", "laurel", "blast", "arrow", "plume", "star", "dust", "crown"] as const);
+export const HERALD = atlas("herald", heraldUrl, [
+  "beams",
+  "fleur",
+  "horn",
+  "flag",
+  "halo",
+  "coin",
+  "rays",
+  "heal",
+  "shield",
+  "laurel",
+  "blast",
+  "arrow",
+  "plume",
+  "star",
+  "dust",
+  "crown",
+] as const);
 
-export const WREN = atlas("wren", wrenUrl, ["feather", "feathers", "claws", "arrow", "streak", "splinters", "leaf", "leaves", "markRing", "arrowRing", "heart", "glint", "dizzy", "gust", "flame", "spiral"] as const);
+export const WREN = atlas("wren", wrenUrl, [
+  "feather",
+  "feathers",
+  "claws",
+  "arrow",
+  "streak",
+  "splinters",
+  "leaf",
+  "leaves",
+  "markRing",
+  "arrowRing",
+  "heart",
+  "glint",
+  "dizzy",
+  "gust",
+  "flame",
+  "spiral",
+] as const);
 
-export const FRIAR = atlas("friar", friarUrl, ["foam", "bubble", "drop", "splash", "puddle", "hop", "barley", "stave", "hoop", "bung", "heal", "cheers", "smoke", "spark", "blast", "hopRing"] as const);
+export const FRIAR = atlas("friar", friarUrl, [
+  "foam",
+  "bubble",
+  "drop",
+  "splash",
+  "puddle",
+  "hop",
+  "barley",
+  "stave",
+  "hoop",
+  "bung",
+  "heal",
+  "cheers",
+  "smoke",
+  "spark",
+  "blast",
+  "hopRing",
+] as const);
 
 export const fxReady = Promise.all(waits).then(() => {
   baseReady = true;

@@ -4,7 +4,11 @@ import { dyeColor, toLambert } from "./heroModels";
 import { markModel } from "./placeholders";
 import { costumeTexture } from "./costumes";
 
-const propUrls = import.meta.glob("../../assets/props/*.glb", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const propUrls = import.meta.glob("../../assets/props/*.glb", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const scenes = new Map<string, THREE.Object3D>();
 const shared = new Map<THREE.Material, THREE.Material>();
 
@@ -41,7 +45,11 @@ export async function loadProps(): Promise<void> {
 
 const dyed = new Map<string, THREE.Material>();
 
-export function prop(name: string, team?: THREE.Color, owner?: { hero: string; costume?: string }): THREE.Object3D | null {
+export function prop(
+  name: string,
+  team?: THREE.Color,
+  owner?: { hero: string; costume?: string },
+): THREE.Object3D | null {
   const s = (owner?.costume && scenes.get(`${name}@${owner.costume}`)) || scenes.get(name);
   if (!s) return null;
   const o = s.clone(true);

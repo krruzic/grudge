@@ -79,7 +79,13 @@ interface Gate {
 
 const BONE = new THREE.MeshLambertMaterial({ color: 0xe8dcc0 });
 BONE.userData.keep = true;
-const SOUL = new THREE.MeshBasicMaterial({ color: 0x40ff60, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
+const SOUL = new THREE.MeshBasicMaterial({
+  color: 0x40ff60,
+  transparent: true,
+  opacity: 0.85,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
 SOUL.userData.keep = true;
 
 const IRON = new THREE.MeshLambertMaterial({ color: 0x3a3a40 });
@@ -128,8 +134,14 @@ function blanketMat(uni: { uFront: { value: number }; uMelt: { value: number } }
     s.uniforms.uFront = uni.uFront;
     s.uniforms.uMelt = uni.uMelt;
     s.vertexShader = s.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute float aArrive;\nattribute float aLift;\nattribute float aMelt;\nuniform float uFront;\nuniform float uMelt;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nfloat bf = clamp((uFront - aArrive) / 3.0, 0.0, 1.0);\nfloat bg = bf * (1.0 + 0.5 * sin(bf * 3.14159));\nfloat bm = clamp(uMelt * 1.8 - aMelt * 0.8, 0.0, 1.0);\ntransformed.y -= aLift * (1.0 - bg * (1.0 - bm));");
+      .replace(
+        "#include <common>",
+        "#include <common>\nattribute float aArrive;\nattribute float aLift;\nattribute float aMelt;\nuniform float uFront;\nuniform float uMelt;",
+      )
+      .replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\nfloat bf = clamp((uFront - aArrive) / 3.0, 0.0, 1.0);\nfloat bg = bf * (1.0 + 0.5 * sin(bf * 3.14159));\nfloat bm = clamp(uMelt * 1.8 - aMelt * 0.8, 0.0, 1.0);\ntransformed.y -= aLift * (1.0 - bg * (1.0 - bm));",
+      );
   };
   m.customProgramCacheKey = () => "snowBlanket";
   return m;
@@ -139,7 +151,15 @@ function puffTexture(): THREE.Texture {
   const c = document.createElement("canvas");
   c.width = c.height = 128;
   const g = c.getContext("2d")!;
-  const blobs = [[64, 70, 40], [44, 62, 28], [86, 60, 30], [60, 44, 28], [80, 82, 26], [42, 84, 24], [70, 56, 34]];
+  const blobs = [
+    [64, 70, 40],
+    [44, 62, 28],
+    [86, 60, 30],
+    [60, 44, 28],
+    [80, 82, 26],
+    [42, 84, 24],
+    [70, 56, 34],
+  ];
   for (const [x, y, r] of blobs) {
     const q = g.createRadialGradient(x - r * 0.25, y - r * 0.3, r * 0.1, x, y, r);
     q.addColorStop(0, "rgba(255,255,255,0.95)");
@@ -208,11 +228,32 @@ function glowTexture(): THREE.Texture {
   return t;
 }
 
-const HALO = new THREE.SpriteMaterial({ map: glowTexture(), color: 0x70ff80, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+const HALO = new THREE.SpriteMaterial({
+  map: glowTexture(),
+  color: 0x70ff80,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
 HALO.userData.keep = true;
-const DECAL = new THREE.MeshBasicMaterial({ map: SUMMONER.circle, color: 0x70ff80, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -2 });
+const DECAL = new THREE.MeshBasicMaterial({
+  map: SUMMONER.circle,
+  color: 0x70ff80,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  polygonOffset: true,
+  polygonOffsetFactor: -2,
+});
 DECAL.userData.keep = true;
-const CHAIN = new THREE.MeshBasicMaterial({ color: 0x90ffa0, vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending });
+const CHAIN = new THREE.MeshBasicMaterial({
+  color: 0x90ffa0,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.4,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
 CHAIN.userData.keep = true;
 const coreGeo = new THREE.IcosahedronGeometry(0.16, 1);
 const decalGeo = new THREE.PlaneGeometry(1, 1);
@@ -253,7 +294,10 @@ function lanternMat(src: THREE.Material): THREE.Material {
     s.uniforms.uGlow = LANTERN_GLOW;
     s.fragmentShader = s.fragmentShader
       .replace("#include <common>", "#include <common>\nuniform float uGlow;")
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\nfloat gk = smoothstep(0.04, 0.2, diffuseColor.g - max(diffuseColor.r, diffuseColor.b));\ntotalEmissiveRadiance += mix(diffuseColor.rgb, vec3(0.3, 1.0, 0.4) * max(diffuseColor.g, 0.4), 0.6) * gk * uGlow * 1.2;");
+      .replace(
+        "#include <emissivemap_fragment>",
+        "#include <emissivemap_fragment>\nfloat gk = smoothstep(0.04, 0.2, diffuseColor.g - max(diffuseColor.r, diffuseColor.b));\ntotalEmissiveRadiance += mix(diffuseColor.rgb, vec3(0.3, 1.0, 0.4) * max(diffuseColor.g, 0.4), 0.6) * gk * uGlow * 1.2;",
+      );
   };
   c.customProgramCacheKey = () => "lanternGlow";
   lanternMats.set(src, c);
@@ -268,7 +312,14 @@ export class MapFx {
   private now = 0;
 
   private gates: Gate[] = [];
-  private lock: { root: THREE.Group; posts: [number, number, number][]; mids: [number, number, number, number, number][]; warn: number; done: boolean; acc: number } | null = null;
+  private lock: {
+    root: THREE.Group;
+    posts: [number, number, number][];
+    mids: [number, number, number, number, number][];
+    warn: number;
+    done: boolean;
+    acc: number;
+  } | null = null;
   private fountain?: FountainDef;
   private sprayAcc = 0;
   private ring = 0;
@@ -278,7 +329,13 @@ export class MapFx {
   private lanternPos = new THREE.Vector2();
   private lanternTilt = new THREE.Vector4();
   private lanternEnd: { kind: "taken" | "fade"; hero: number } = { kind: "fade", hero: 0 };
-  private lanternOut: { obj: THREE.Group; start: number; kind: "taken" | "fade"; hero: number; from?: THREE.Vector3 }[] = [];
+  private lanternOut: {
+    obj: THREE.Group;
+    start: number;
+    kind: "taken" | "fade";
+    hero: number;
+    from?: THREE.Vector3;
+  }[] = [];
   private wispAcc = 0;
   private mistCells: number[] = [];
   private mistAcc = 0;
@@ -286,7 +343,13 @@ export class MapFx {
   private morphs: { id: number; start: number; until: number; team: number; acc: number }[] = [];
   teamColors: THREE.Color[] = [];
 
-  private hornObjs: { ring: THREE.Mesh; mat: THREE.MeshBasicMaterial; flag: THREE.Mesh; horn: THREE.Object3D; k: number }[] = [];
+  private hornObjs: {
+    ring: THREE.Mesh;
+    mat: THREE.MeshBasicMaterial;
+    flag: THREE.Mesh;
+    horn: THREE.Object3D;
+    k: number;
+  }[] = [];
 
   private buildHorns(): void {
     const w = this.world;
@@ -301,7 +364,13 @@ export class MapFx {
     for (let k = 0; k <= 24; k++) {
       const t = k / 24;
       const a = t * Math.PI * 1.15;
-      pts.push(new THREE.Vector3(Math.sin(a) * 0.9 * (1 - t * 0.2), 0.3 + t * 0.5 + Math.sin(a) * 0.15, Math.cos(a) * 0.55 - 0.55));
+      pts.push(
+        new THREE.Vector3(
+          Math.sin(a) * 0.9 * (1 - t * 0.2),
+          0.3 + t * 0.5 + Math.sin(a) * 0.15,
+          Math.cos(a) * 0.55 - 0.55,
+        ),
+      );
     }
     const curve = new THREE.CatmullRomCurve3(pts);
     const hornGeo = new THREE.TubeGeometry(curve, 40, 0.09, 8, false);
@@ -310,7 +379,10 @@ export class MapFx {
       const k = Math.floor(i / 9) / 40;
       const p = curve.getPoint(k);
       const r = 0.06 + 0.3 * Math.pow(k, 3);
-      const v = new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)).sub(p).multiplyScalar(r / 0.09).add(p);
+      const v = new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i))
+        .sub(p)
+        .multiplyScalar(r / 0.09)
+        .add(p);
       pos.setXYZ(i, v.x, v.y, v.z);
     }
     hornGeo.computeVertexNormals();
@@ -327,7 +399,11 @@ export class MapFx {
         horn.castShadow = true;
         g.add(horn);
       } else {
-        [[1.1, 0.5, 0], [0.8, 0.4, 0.45], [0.55, 0.35, 0.8]].forEach(([r, hh, y], k) => {
+        [
+          [1.1, 0.5, 0],
+          [0.8, 0.4, 0.45],
+          [0.55, 0.35, 0.8],
+        ].forEach(([r, hh, y], k) => {
           const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), stone);
           m.scale.set(1, hh / r, 1);
           m.position.y = y + hh * 0.6;
@@ -358,10 +434,19 @@ export class MapFx {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.4, 5), wood);
       pole.position.set(hp ? 0.62 : 0.55, hp ? 1.1 : 1.6, hp ? -0.42 : 0.3);
       g.add(pole);
-      const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4), new THREE.MeshLambertMaterial({ color: 0x8a8070, side: THREE.DoubleSide }));
+      const flag = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.6, 0.4),
+        new THREE.MeshLambertMaterial({ color: 0x8a8070, side: THREE.DoubleSide }),
+      );
       flag.position.set(pole.position.x + 0.3, pole.position.y + 0.45, pole.position.z);
       g.add(flag);
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffd040, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide });
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffd040,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
       const ring = new THREE.Mesh(new THREE.RingGeometry(1.45, 1.62, 40, 1, 0, 0.001), mat);
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.15;
@@ -378,7 +463,11 @@ export class MapFx {
       const o = this.hornObjs[i];
       if (!o) return;
       const ready = w.time >= h.readyAt;
-      const k = ready ? (h.progress > 0 ? h.progress / w.mapEvents.hornCapture : 1) : 1 - (h.readyAt - w.time) / w.mapEvents.hornCooldown;
+      const k = ready
+        ? h.progress > 0
+          ? h.progress / w.mapEvents.hornCapture
+          : 1
+        : 1 - (h.readyAt - w.time) / w.mapEvents.hornCooldown;
       const kq = Math.round(Math.max(0.001, Math.min(1, k)) * 120) / 120;
       if (kq !== o.k) {
         o.k = kq;
@@ -493,7 +582,10 @@ export class MapFx {
         const q = charge / this.world.jumpCharge;
         k = 1 - 0.62 * q * q + Math.sin(charge * 60) * 0.02 * q;
       } else if (sinceLaunch >= 0 && sinceLaunch < 1.1) {
-        k = 0.55 + 0.75 * Math.exp(-sinceLaunch * 4.5) * Math.cos(sinceLaunch * 22) * (sinceLaunch < 0.05 ? 0 : 1) + 0.45 * Math.min(1, sinceLaunch * 20) * Math.exp(-sinceLaunch * 3);
+        k =
+          0.55 +
+          0.75 * Math.exp(-sinceLaunch * 4.5) * Math.cos(sinceLaunch * 22) * (sinceLaunch < 0.05 ? 0 : 1) +
+          0.45 * Math.min(1, sinceLaunch * 20) * Math.exp(-sinceLaunch * 3);
       } else if (sinceFail >= 0 && sinceFail < 0.8) {
         k = 0.55 + 0.25 * Math.exp(-sinceFail * 6) * Math.cos(sinceFail * 30);
       }
@@ -506,14 +598,42 @@ export class MapFx {
       if (t < b.at) continue;
       this.pendingBursts.splice(i, 1);
       if (!this.fx) continue;
-      emit(this.fx, { tex: FX.dust, n: 10, x: b.x, y: b.y + 0.3, z: b.z, size: [1.0, 1.6], grow: 1.6, life: [0.4, 0.7], speed: [3, 5], flatSpread: true, opacity: 0.75 });
-      emit(this.fx, { tex: FX.streak, n: 6, x: b.x, y: b.y + 0.6, z: b.z, size: [0.5, 0.9], life: [0.3, 0.5], speed: [7, 11], dir: { x: 0, y: 1, z: 0 }, cone: 0.3, additive: true, color: 0xfff0c0 });
+      emit(this.fx, {
+        tex: FX.dust,
+        n: 10,
+        x: b.x,
+        y: b.y + 0.3,
+        z: b.z,
+        size: [1.0, 1.6],
+        grow: 1.6,
+        life: [0.4, 0.7],
+        speed: [3, 5],
+        flatSpread: true,
+        opacity: 0.75,
+      });
+      emit(this.fx, {
+        tex: FX.streak,
+        n: 6,
+        x: b.x,
+        y: b.y + 0.6,
+        z: b.z,
+        size: [0.5, 0.9],
+        life: [0.3, 0.5],
+        speed: [7, 11],
+        dir: { x: 0, y: 1, z: 0 },
+        cone: 0.3,
+        additive: true,
+        color: 0xfff0c0,
+      });
       chunks(this.fx, 5, b.x, b.y + 0.5, b.z, { size: [0.08, 0.16], speed: [2, 4], up: [3, 5] });
       this.fx.shake = Math.max(this.fx.shake, 0.15);
     }
   }
 
-  constructor(private world: World, private fx?: FxHost) {
+  constructor(
+    private world: World,
+    private fx?: FxHost,
+  ) {
     const gd = world.terrain.gates as GatesDef | undefined;
     if (gd) this.buildGates(gateSlots(world, gd));
     if (world.mapEvents.lockGates.length) this.buildLockGates(world.mapEvents.lockGates);
@@ -590,7 +710,13 @@ export class MapFx {
     const hook = new THREE.TorusGeometry(0.12, 0.03, 4, 8);
     hook.translate(0, 0.95, 0);
     parts.push(hook);
-    const cage = new THREE.Mesh(mergeGeometries(parts.map((q) => q.toNonIndexed()), false)!, BONE);
+    const cage = new THREE.Mesh(
+      mergeGeometries(
+        parts.map((q) => q.toNonIndexed()),
+        false,
+      )!,
+      BONE,
+    );
     parts.forEach((q) => q.dispose());
     g.add(cage);
     const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), SOUL);
@@ -609,7 +735,11 @@ export class MapFx {
       const hero = taken ? this.world.getAny(o.hero) : undefined;
       if (hero) {
         const e = k * k;
-        o.obj.position.set(o.from.x + (hero.transform.pos.x - o.from.x) * e, o.from.y + (hero.transform.y + 1.2 - o.from.y) * e + Math.sin(k * Math.PI) * 0.8, o.from.z + (hero.transform.pos.z - o.from.z) * e);
+        o.obj.position.set(
+          o.from.x + (hero.transform.pos.x - o.from.x) * e,
+          o.from.y + (hero.transform.y + 1.2 - o.from.y) * e + Math.sin(k * Math.PI) * 0.8,
+          o.from.z + (hero.transform.pos.z - o.from.z) * e,
+        );
       } else o.obj.position.y = o.from.y + k * 1.2;
       o.obj.scale.setScalar(Math.max(0.001, 1 - k * k));
       o.obj.rotation.y += taken ? 0.5 : 0.2;
@@ -621,8 +751,32 @@ export class MapFx {
       });
       this.lanternOut.splice(i, 1);
       if (this.fx && hero) {
-        emit(this.fx, { tex: SUMMONER.burst, n: 1, x: hero.transform.pos.x, y: hero.transform.y + 1.2, z: hero.transform.pos.z, size: [2.0, 2.0], grow: 1.5, life: [0.3, 0.3], speed: [0, 0], additive: true, color: 0x9cff9c });
-        emit(this.fx, { tex: SUMMONER.soulFlame, n: 8, x: hero.transform.pos.x, y: hero.transform.y + 1, z: hero.transform.pos.z, size: [0.5, 0.8], life: [0.4, 0.7], speed: [1.5, 3], up: [1, 2], additive: true, color: 0x80ff90 });
+        emit(this.fx, {
+          tex: SUMMONER.burst,
+          n: 1,
+          x: hero.transform.pos.x,
+          y: hero.transform.y + 1.2,
+          z: hero.transform.pos.z,
+          size: [2.0, 2.0],
+          grow: 1.5,
+          life: [0.3, 0.3],
+          speed: [0, 0],
+          additive: true,
+          color: 0x9cff9c,
+        });
+        emit(this.fx, {
+          tex: SUMMONER.soulFlame,
+          n: 8,
+          x: hero.transform.pos.x,
+          y: hero.transform.y + 1,
+          z: hero.transform.pos.z,
+          size: [0.5, 0.8],
+          life: [0.4, 0.7],
+          speed: [1.5, 3],
+          up: [1, 2],
+          additive: true,
+          color: 0x80ff90,
+        });
       }
     }
   }
@@ -701,10 +855,67 @@ export class MapFx {
         this.wispAcc += dt;
         if (this.wispAcc > 0.06) {
           this.wispAcc = 0;
-          emit(this.fx, { tex: SUMMONER.soulFlame, n: 1, x: lx, y: y + 0.35, z: lz, size: [0.5, 0.8], grow: 0.5, life: [0.35, 0.6], speed: [0.2, 0.5], up: [0.8, 1.3], additive: true, color: 0x60ff70, jitter: 0.25 });
-          if (Math.random() < 0.3) emit(this.fx, { tex: SUMMONER.ghost, n: 1, x: lx, y: y - 0.3, z: lz, size: [0.6, 0.9], grow: 1.2, life: [0.8, 1.2], speed: [0.4, 0.9], up: [0.2, 0.5], opacity: 0.5, color: 0xc8ffd0, jitter: 1.0 });
-          if (Math.random() < 0.25) emit(this.fx, { tex: FX.twinkle, n: 1, x: lx, y: y - 0.2, z: lz, size: [0.2, 0.35], life: [0.6, 1.0], speed: [0.3, 0.8], up: [-0.6, 0.2], additive: true, color: 0x80ff90, jitter: 0.9 });
-          if (l.state === "rise" && Math.random() < 0.6) emit(this.fx, { tex: SUMMONER.graveHand, n: 1, x: lx, y: ground - 0.2, z: lz, size: [0.7, 1.0], life: [0.6, 0.9], speed: [0.2, 0.5], up: [1, 2], opacity: 0.85, color: 0xb8e8b0, jitter: 1.6 });
+          emit(this.fx, {
+            tex: SUMMONER.soulFlame,
+            n: 1,
+            x: lx,
+            y: y + 0.35,
+            z: lz,
+            size: [0.5, 0.8],
+            grow: 0.5,
+            life: [0.35, 0.6],
+            speed: [0.2, 0.5],
+            up: [0.8, 1.3],
+            additive: true,
+            color: 0x60ff70,
+            jitter: 0.25,
+          });
+          if (Math.random() < 0.3)
+            emit(this.fx, {
+              tex: SUMMONER.ghost,
+              n: 1,
+              x: lx,
+              y: y - 0.3,
+              z: lz,
+              size: [0.6, 0.9],
+              grow: 1.2,
+              life: [0.8, 1.2],
+              speed: [0.4, 0.9],
+              up: [0.2, 0.5],
+              opacity: 0.5,
+              color: 0xc8ffd0,
+              jitter: 1.0,
+            });
+          if (Math.random() < 0.25)
+            emit(this.fx, {
+              tex: FX.twinkle,
+              n: 1,
+              x: lx,
+              y: y - 0.2,
+              z: lz,
+              size: [0.2, 0.35],
+              life: [0.6, 1.0],
+              speed: [0.3, 0.8],
+              up: [-0.6, 0.2],
+              additive: true,
+              color: 0x80ff90,
+              jitter: 0.9,
+            });
+          if (l.state === "rise" && Math.random() < 0.6)
+            emit(this.fx, {
+              tex: SUMMONER.graveHand,
+              n: 1,
+              x: lx,
+              y: ground - 0.2,
+              z: lz,
+              size: [0.7, 1.0],
+              life: [0.6, 0.9],
+              speed: [0.2, 0.5],
+              up: [1, 2],
+              opacity: 0.85,
+              color: 0xb8e8b0,
+              jitter: 1.6,
+            });
         }
       }
     }
@@ -713,7 +924,21 @@ export class MapFx {
       if (!e.alive || !e.hero || !(time < (e.status.hauntUntil ?? 0))) continue;
       if (Math.random() > dt * 10) continue;
       const a = Math.random() * Math.PI * 2;
-      emit(this.fx, { tex: Math.random() < 0.5 ? SUMMONER.soulFlame : SUMMONER.ghost, n: 1, x: e.transform.pos.x + Math.cos(a) * 0.7, y: e.transform.y + 0.8 + Math.random() * 1.2, z: e.transform.pos.z + Math.sin(a) * 0.7, size: [0.35, 0.6], grow: 0.8, life: [0.4, 0.7], speed: [0.2, 0.6], up: [0.6, 1.2], additive: true, color: 0x90ff9c, opacity: 0.8 });
+      emit(this.fx, {
+        tex: Math.random() < 0.5 ? SUMMONER.soulFlame : SUMMONER.ghost,
+        n: 1,
+        x: e.transform.pos.x + Math.cos(a) * 0.7,
+        y: e.transform.y + 0.8 + Math.random() * 1.2,
+        z: e.transform.pos.z + Math.sin(a) * 0.7,
+        size: [0.35, 0.6],
+        grow: 0.8,
+        life: [0.4, 0.7],
+        speed: [0.2, 0.6],
+        up: [0.6, 1.2],
+        additive: true,
+        color: 0x90ff9c,
+        opacity: 0.8,
+      });
     }
   }
 
@@ -737,10 +962,48 @@ export class MapFx {
         const a = this.now * 9 + j * Math.PI;
         const r = 1.3 - k * 0.6;
         const y = p.y + 0.2 + k * 2.4 + j * 0.3;
-        emit(fx, { tex: FX.twinkle, n: 1, x: p.pos.x + Math.cos(a) * r, y, z: p.pos.z + Math.sin(a) * r, size: [0.35, 0.55], life: [0.3, 0.5], speed: [0.2, 0.6], up: [1, 2], additive: true, color: 0xffe080 });
-        emit(fx, { tex: FX.swoosh, n: 1, x: p.pos.x + Math.cos(a + 1.6) * r, y: y - 0.3, z: p.pos.z + Math.sin(a + 1.6) * r, size: [0.6, 0.9], life: [0.25, 0.4], speed: [0.5, 1], up: [1.5, 2.5], additive: true, color: col });
+        emit(fx, {
+          tex: FX.twinkle,
+          n: 1,
+          x: p.pos.x + Math.cos(a) * r,
+          y,
+          z: p.pos.z + Math.sin(a) * r,
+          size: [0.35, 0.55],
+          life: [0.3, 0.5],
+          speed: [0.2, 0.6],
+          up: [1, 2],
+          additive: true,
+          color: 0xffe080,
+        });
+        emit(fx, {
+          tex: FX.swoosh,
+          n: 1,
+          x: p.pos.x + Math.cos(a + 1.6) * r,
+          y: y - 0.3,
+          z: p.pos.z + Math.sin(a + 1.6) * r,
+          size: [0.6, 0.9],
+          life: [0.25, 0.4],
+          speed: [0.5, 1],
+          up: [1.5, 2.5],
+          additive: true,
+          color: col,
+        });
       }
-      if (Math.random() < 0.4) emit(fx, { tex: FX.dust, n: 1, x: p.pos.x, y: p.y + 0.1, z: p.pos.z, size: [1.0, 1.6], grow: 1.5, life: [0.4, 0.7], speed: [1, 2], flatSpread: true, opacity: 0.5, jitter: 1.2 });
+      if (Math.random() < 0.4)
+        emit(fx, {
+          tex: FX.dust,
+          n: 1,
+          x: p.pos.x,
+          y: p.y + 0.1,
+          z: p.pos.z,
+          size: [1.0, 1.6],
+          grow: 1.5,
+          life: [0.4, 0.7],
+          speed: [1, 2],
+          flatSpread: true,
+          opacity: 0.5,
+          jitter: 1.2,
+        });
     }
   }
 
@@ -760,7 +1023,23 @@ export class MapFx {
       const z = Math.floor(c / W) + Math.random();
       if (z > front || z < tail) continue;
       const lead = front - z < 4;
-      emit(this.fx, { tex: FX.smoke, n: 1, x, y: Math.max(w.groundY(x, z), w.terrain.waterLevel) + 1.0 + Math.random() * 0.9, z, size: [3.8, 5.6], grow: 1.3, life: [2.4, 3.2], speed: [0.15, 0.5], dir: { x: 0, y: 0.05, z: 1 }, cone: 1.2, opacity: lead ? 0.3 : 0.22, color: 0xf2f6f8, depthTest: false, order: 5 });
+      emit(this.fx, {
+        tex: FX.smoke,
+        n: 1,
+        x,
+        y: Math.max(w.groundY(x, z), w.terrain.waterLevel) + 1.0 + Math.random() * 0.9,
+        z,
+        size: [3.8, 5.6],
+        grow: 1.3,
+        life: [2.4, 3.2],
+        speed: [0.15, 0.5],
+        dir: { x: 0, y: 0.05, z: 1 },
+        cone: 1.2,
+        opacity: lead ? 0.3 : 0.22,
+        color: 0xf2f6f8,
+        depthTest: false,
+        order: 5,
+      });
     }
   }
 
@@ -775,16 +1054,21 @@ export class MapFx {
     for (const slot of slots) {
       const alongX = slot.w >= slot.h;
       const thick = slot.line ? 0.5 : alongX ? slot.h : slot.w;
-      const [x0, z0, x1, z1] = slot.line ?? (alongX
-        ? [slot.x - 0.05, slot.z + slot.h / 2, slot.x + slot.w + 0.05, slot.z + slot.h / 2]
-        : [slot.x + slot.w / 2, slot.z - 0.05, slot.x + slot.w / 2, slot.z + slot.h + 0.05]);
+      const [x0, z0, x1, z1] =
+        slot.line ??
+        (alongX
+          ? [slot.x - 0.05, slot.z + slot.h / 2, slot.x + slot.w + 0.05, slot.z + slot.h / 2]
+          : [slot.x + slot.w / 2, slot.z - 0.05, slot.x + slot.w / 2, slot.z + slot.h + 0.05]);
       const cx = (x0 + x1) / 2;
       const cz = (z0 + z1) / 2;
       const len = Math.hypot(x1 - x0, z1 - z0) - 0.1;
       const ang = -Math.atan2(z1 - z0, x1 - x0);
       const y0 = w.groundY(cx, cz);
       const posts: [number, number, number][] = [];
-      for (const [px, pz] of [[x0, z0], [x1, z1]]) {
+      for (const [px, pz] of [
+        [x0, z0],
+        [x1, z1],
+      ]) {
         const g = new THREE.BoxGeometry(0.7, 3.4, thick + 0.3);
         g.rotateY(ang);
         g.translate(px, y0 + 1.5, pz);
@@ -811,7 +1095,10 @@ export class MapFx {
         r.translate(0, y, 0);
         bg.push(r);
       }
-      const merged = mergeGeometries(bg.map((g) => g.toNonIndexed()), false)!;
+      const merged = mergeGeometries(
+        bg.map((g) => g.toNonIndexed()),
+        false,
+      )!;
       bg.forEach((g) => g.dispose());
       const bars = new THREE.Mesh(merged, IRON);
       bars.position.set(cx, y0, cz);
@@ -823,7 +1110,10 @@ export class MapFx {
       this.gates.push({ slot, bars, y, posts });
     }
     if (postGeos.length) {
-      const m = mergeGeometries(postGeos.map((g) => g.toNonIndexed()), false)!;
+      const m = mergeGeometries(
+        postGeos.map((g) => g.toNonIndexed()),
+        false,
+      )!;
       postGeos.forEach((g) => g.dispose());
       this.root.add(new THREE.Mesh(m, stone));
     }
@@ -887,9 +1177,20 @@ export class MapFx {
             for (const y of [0.18, 1.18, 2.3]) {
               put(ironG, box(lw - 0.04, 0.13, 0.05, lx, y, side * 0.185), m, 0.6);
               const nr = Math.max(2, Math.round((lw - 0.2) / 0.32));
-              for (let r = 0; r < nr; r++) put(ironG, box(0.07, 0.07, 0.04, lx - (lw - 0.25) / 2 + ((lw - 0.25) * r) / (nr - 1), y, side * 0.215), m);
+              for (let r = 0; r < nr; r++)
+                put(
+                  ironG,
+                  box(0.07, 0.07, 0.04, lx - (lw - 0.25) / 2 + ((lw - 0.25) * r) / (nr - 1), y, side * 0.215),
+                  m,
+                );
             }
-            for (const e of [-1, 1]) put(ironG, box(0.12, LOCK_H - 0.1, 0.05, lx + e * (lw / 2 - 0.1), LOCK_H / 2 - 0.05, side * 0.185), m, 0.6);
+            for (const e of [-1, 1])
+              put(
+                ironG,
+                box(0.12, LOCK_H - 0.1, 0.05, lx + e * (lw / 2 - 0.1), LOCK_H / 2 - 0.05, side * 0.185),
+                m,
+                0.6,
+              );
             const ring = new THREE.TorusGeometry(0.13, 0.028, 4, 10);
             ring.translate(lx + (leaves === 2 ? (l ? -1 : 1) * (lw / 2 - 0.35) : 0), 1.05, side * 0.24);
             put(ironG, ring, m);
@@ -942,7 +1243,20 @@ export class MapFx {
         L.root.position.x = Math.sin(w.time * 47) * 0.012 * jig;
         if (L.acc > 0.5 - jig * 0.3) {
           L.acc = 0;
-          for (const [x, y, z] of L.mids) emit(this.fx, { tex: FX.dust, n: 1, x: x + (Math.random() - 0.5) * 1.5, y: y + 0.15, z: z + (Math.random() - 0.5) * 1.5, size: [0.5, 0.9], grow: 1.4, life: [0.4, 0.7], speed: [0.3, 0.8], up: [0.2, 0.6], opacity: 0.45 });
+          for (const [x, y, z] of L.mids)
+            emit(this.fx, {
+              tex: FX.dust,
+              n: 1,
+              x: x + (Math.random() - 0.5) * 1.5,
+              y: y + 0.15,
+              z: z + (Math.random() - 0.5) * 1.5,
+              size: [0.5, 0.9],
+              grow: 1.4,
+              life: [0.4, 0.7],
+              speed: [0.3, 0.8],
+              up: [0.2, 0.6],
+              opacity: 0.45,
+            });
         }
       }
       return;
@@ -964,8 +1278,21 @@ export class MapFx {
     L.acc = 0;
     for (const [x, y, z, dx, dz] of L.mids) {
       const u = Math.random() - 0.5;
-      emit(this.fx, { tex: FX.dust, n: 1, x: x + u * dx, y: y + 0.2, z: z + u * dz, size: [0.9, 1.5], grow: 1.6, life: [0.6, 1.0], speed: [0.6, 1.4], up: [0.4, 1.0], opacity: 0.65 });
-      if (Math.random() < 0.3) chunks(this.fx, 1, x + u * dx, y + 0.3, z + u * dz, { size: [0.06, 0.12], speed: [1, 2.5], up: [2, 3.5] });
+      emit(this.fx, {
+        tex: FX.dust,
+        n: 1,
+        x: x + u * dx,
+        y: y + 0.2,
+        z: z + u * dz,
+        size: [0.9, 1.5],
+        grow: 1.6,
+        life: [0.6, 1.0],
+        speed: [0.6, 1.4],
+        up: [0.4, 1.0],
+        opacity: 0.65,
+      });
+      if (Math.random() < 0.3)
+        chunks(this.fx, 1, x + u * dx, y + 0.3, z + u * dz, { size: [0.06, 0.12], speed: [1, 2.5], up: [2, 3.5] });
     }
   }
 
@@ -980,8 +1307,25 @@ export class MapFx {
       const cz = g.bars.position.z;
       g.bars.position.y = w.groundY(cx, cz) + g.y;
       const u = Math.random() - 0.5;
-      const [dx, dz] = g.slot.line ? [g.slot.line[2] - g.slot.line[0], g.slot.line[3] - g.slot.line[1]] : g.slot.w >= g.slot.h ? [g.slot.w, 0] : [0, g.slot.h];
-      if (this.fx && Math.random() < dt * 12) emit(this.fx, { tex: FX.dust, n: 1, x: cx + u * dx, y: w.groundY(cx, cz) + 0.2, z: cz + u * dz, size: [0.8, 1.3], grow: 1.5, life: [0.5, 0.9], speed: [0.4, 1.0], up: [0.5, 1.2], opacity: 0.6 });
+      const [dx, dz] = g.slot.line
+        ? [g.slot.line[2] - g.slot.line[0], g.slot.line[3] - g.slot.line[1]]
+        : g.slot.w >= g.slot.h
+          ? [g.slot.w, 0]
+          : [0, g.slot.h];
+      if (this.fx && Math.random() < dt * 12)
+        emit(this.fx, {
+          tex: FX.dust,
+          n: 1,
+          x: cx + u * dx,
+          y: w.groundY(cx, cz) + 0.2,
+          z: cz + u * dz,
+          size: [0.8, 1.3],
+          grow: 1.5,
+          life: [0.5, 0.9],
+          speed: [0.4, 1.0],
+          up: [0.5, 1.2],
+          opacity: 0.6,
+        });
     }
   }
 
@@ -996,7 +1340,22 @@ export class MapFx {
       const a = Math.PI / 4 + i * (Math.PI / 2);
       const x = f.x + Math.cos(a) * 4.75;
       const z = f.z + Math.sin(a) * 4.75;
-      emit(this.fx, { tex: FX.splash, n: 1, x, y: y + 1.9, z, size: [0.55, 0.85], grow: 1.3, life: [0.55, 0.75], speed: [2.6, 3.2], dir: { x: -Math.cos(a), y: 1.3, z: -Math.sin(a) }, cone: 0.12, gravity: 9, opacity: 0.8, color: 0xd8f0ff });
+      emit(this.fx, {
+        tex: FX.splash,
+        n: 1,
+        x,
+        y: y + 1.9,
+        z,
+        size: [0.55, 0.85],
+        grow: 1.3,
+        life: [0.55, 0.75],
+        speed: [2.6, 3.2],
+        dir: { x: -Math.cos(a), y: 1.3, z: -Math.sin(a) },
+        cone: 0.12,
+        gravity: 9,
+        opacity: 0.8,
+        color: 0xd8f0ff,
+      });
     }
   }
 
@@ -1004,8 +1363,33 @@ export class MapFx {
     if (ev.type === "horn") {
       const hv = ev as unknown as { x: number; y: number; z: number };
       if (this.fx) {
-        for (let k = 0; k < 3; k++) emit(this.fx, { tex: FX.shock, n: 1, x: hv.x, y: hv.y + 2, z: hv.z, size: [2 + k * 2, 2 + k * 2], grow: 3, life: [0.6 + k * 0.2, 0.6 + k * 0.2], speed: [0, 0], opacity: 0.5, color: 0xf0f4ff });
-        emit(this.fx, { tex: PUFF, n: 10, x: hv.x, y: hv.y + 2, z: hv.z, size: [1, 1.8], grow: 2, life: [1, 1.6], speed: [2, 5], opacity: 0.6, color: 0xf4f8ff });
+        for (let k = 0; k < 3; k++)
+          emit(this.fx, {
+            tex: FX.shock,
+            n: 1,
+            x: hv.x,
+            y: hv.y + 2,
+            z: hv.z,
+            size: [2 + k * 2, 2 + k * 2],
+            grow: 3,
+            life: [0.6 + k * 0.2, 0.6 + k * 0.2],
+            speed: [0, 0],
+            opacity: 0.5,
+            color: 0xf0f4ff,
+          });
+        emit(this.fx, {
+          tex: PUFF,
+          n: 10,
+          x: hv.x,
+          y: hv.y + 2,
+          z: hv.z,
+          size: [1, 1.8],
+          grow: 2,
+          life: [1, 1.6],
+          speed: [2, 5],
+          opacity: 0.6,
+          color: 0xf4f8ff,
+        });
         this.fx.shake = Math.max(this.fx.shake, 0.6);
       }
       return;
@@ -1014,24 +1398,110 @@ export class MapFx {
       const j = ev as unknown as { stage: string; x: number; y: number; z: number; windup: number };
       if (j.stage === "launch") this.pendingBursts.push({ at: this.world.time, x: j.x, y: j.y, z: j.z });
       else if (j.stage === "fail" && this.fx) {
-        emit(this.fx, { tex: FX.smoke, n: 5, x: j.x, y: j.y + 0.6, z: j.z, size: [0.8, 1.2], grow: 1.4, life: [0.5, 0.8], speed: [0.6, 1.4], up: [0.5, 1.2], opacity: 0.6, color: 0x908880 });
+        emit(this.fx, {
+          tex: FX.smoke,
+          n: 5,
+          x: j.x,
+          y: j.y + 0.6,
+          z: j.z,
+          size: [0.8, 1.2],
+          grow: 1.4,
+          life: [0.5, 0.8],
+          speed: [0.6, 1.4],
+          up: [0.5, 1.2],
+          opacity: 0.6,
+          color: 0x908880,
+        });
         chunks(this.fx, 3, j.x, j.y + 0.5, j.z, { size: [0.06, 0.12], speed: [1.5, 3], up: [1, 2] });
       } else if (j.stage === "land" && this.fx) {
-        emit(this.fx, { tex: FX.dust, n: 12, x: j.x, y: j.y + 0.2, z: j.z, size: [1.2, 2.0], grow: 1.6, life: [0.5, 0.9], speed: [3, 6], flatSpread: true, opacity: 0.8 });
+        emit(this.fx, {
+          tex: FX.dust,
+          n: 12,
+          x: j.x,
+          y: j.y + 0.2,
+          z: j.z,
+          size: [1.2, 2.0],
+          grow: 1.6,
+          life: [0.5, 0.9],
+          speed: [3, 6],
+          flatSpread: true,
+          opacity: 0.8,
+        });
         chunks(this.fx, 4, j.x, j.y + 0.3, j.z, { size: [0.1, 0.2], speed: [2, 4], up: [2, 4] });
         this.fx.shake = Math.max(this.fx.shake, 0.3);
       }
       return;
     }
     if (ev.type === "morph") {
-      const m = ev as unknown as { stage: string; id: number; team: number; x: number; y: number; z: number; seconds: number };
-      if (m.stage === "start") this.morphs.push({ id: m.id, start: this.now, until: this.now + m.seconds, team: m.team, acc: 0 });
+      const m = ev as unknown as {
+        stage: string;
+        id: number;
+        team: number;
+        x: number;
+        y: number;
+        z: number;
+        seconds: number;
+      };
+      if (m.stage === "start")
+        this.morphs.push({ id: m.id, start: this.now, until: this.now + m.seconds, team: m.team, acc: 0 });
       else if (this.fx) {
         const col = this.teamColors[m.team] ?? new THREE.Color(0xffd040);
-        emit(this.fx, { tex: FX.burst, n: 1, x: m.x, y: m.y + 1.2, z: m.z, size: [4.5, 4.5], grow: 1.6, life: [0.35, 0.35], speed: [0, 0], additive: true, color: 0xfff0c0 });
-        emit(this.fx, { tex: FX.streak, n: 10, x: m.x, y: m.y + 0.4, z: m.z, size: [0.5, 0.9], life: [0.5, 0.8], speed: [6, 10], dir: { x: 0, y: 1, z: 0 }, cone: 0.25, additive: true, color: 0xffe080, jitter: 0.8 });
-        emit(this.fx, { tex: FX.twinkle, n: 18, x: m.x, y: m.y + 1.2, z: m.z, size: [0.3, 0.6], life: [0.6, 1.1], speed: [3, 6], up: [1, 3], additive: true, color: col, gravity: 4 });
-        emit(this.fx, { tex: FX.smoke, n: 8, x: m.x, y: m.y + 0.4, z: m.z, size: [1.4, 2.2], grow: 1.6, life: [0.7, 1.1], speed: [2, 3.5], flatSpread: true, opacity: 0.7, color: 0xf0e8d8 });
+        emit(this.fx, {
+          tex: FX.burst,
+          n: 1,
+          x: m.x,
+          y: m.y + 1.2,
+          z: m.z,
+          size: [4.5, 4.5],
+          grow: 1.6,
+          life: [0.35, 0.35],
+          speed: [0, 0],
+          additive: true,
+          color: 0xfff0c0,
+        });
+        emit(this.fx, {
+          tex: FX.streak,
+          n: 10,
+          x: m.x,
+          y: m.y + 0.4,
+          z: m.z,
+          size: [0.5, 0.9],
+          life: [0.5, 0.8],
+          speed: [6, 10],
+          dir: { x: 0, y: 1, z: 0 },
+          cone: 0.25,
+          additive: true,
+          color: 0xffe080,
+          jitter: 0.8,
+        });
+        emit(this.fx, {
+          tex: FX.twinkle,
+          n: 18,
+          x: m.x,
+          y: m.y + 1.2,
+          z: m.z,
+          size: [0.3, 0.6],
+          life: [0.6, 1.1],
+          speed: [3, 6],
+          up: [1, 3],
+          additive: true,
+          color: col,
+          gravity: 4,
+        });
+        emit(this.fx, {
+          tex: FX.smoke,
+          n: 8,
+          x: m.x,
+          y: m.y + 0.4,
+          z: m.z,
+          size: [1.4, 2.2],
+          grow: 1.6,
+          life: [0.7, 1.1],
+          speed: [2, 3.5],
+          flatSpread: true,
+          opacity: 0.7,
+          color: 0xf0e8d8,
+        });
         this.fx.shake = Math.max(this.fx.shake, 0.25);
       }
       return;
@@ -1040,25 +1510,137 @@ export class MapFx {
       const l = ev as unknown as { stage: string; x: number; z: number; hero: number };
       if (l.stage === "taken" || l.stage === "fade") this.lanternEnd = { kind: l.stage, hero: l.hero };
       if (this.fx && l.stage === "taken") {
-        emit(this.fx, { tex: SUMMONER.burst, n: 1, x: l.x, y: this.lanternY, z: l.z, size: [2.4, 2.4], grow: 1.6, life: [0.4, 0.4], speed: [0, 0], additive: true, color: 0x9cff9c });
-        emit(this.fx, { tex: SUMMONER.ghost, n: 8, x: l.x, y: this.lanternY, z: l.z, size: [0.6, 1.0], life: [0.6, 1.0], speed: [2, 4], additive: true, color: 0xb0ffb8 });
-        emit(this.fx, { tex: SUMMONER.bones, n: 5, x: l.x, y: this.lanternY, z: l.z, size: [0.3, 0.5], life: [0.6, 0.9], speed: [2, 4], up: [1, 3], gravity: 9 });
+        emit(this.fx, {
+          tex: SUMMONER.burst,
+          n: 1,
+          x: l.x,
+          y: this.lanternY,
+          z: l.z,
+          size: [2.4, 2.4],
+          grow: 1.6,
+          life: [0.4, 0.4],
+          speed: [0, 0],
+          additive: true,
+          color: 0x9cff9c,
+        });
+        emit(this.fx, {
+          tex: SUMMONER.ghost,
+          n: 8,
+          x: l.x,
+          y: this.lanternY,
+          z: l.z,
+          size: [0.6, 1.0],
+          life: [0.6, 1.0],
+          speed: [2, 4],
+          additive: true,
+          color: 0xb0ffb8,
+        });
+        emit(this.fx, {
+          tex: SUMMONER.bones,
+          n: 5,
+          x: l.x,
+          y: this.lanternY,
+          z: l.z,
+          size: [0.3, 0.5],
+          life: [0.6, 0.9],
+          speed: [2, 4],
+          up: [1, 3],
+          gravity: 9,
+        });
       } else if (this.fx && l.stage === "rise") {
         const y = this.world.groundY(l.x, l.z);
-        emit(this.fx, { tex: FX.smoke, n: 5, x: l.x, y: y + 0.3, z: l.z, size: [1.2, 2.0], grow: 1.6, life: [0.9, 1.4], speed: [0.4, 1.2], up: [1, 2], opacity: 0.35, color: 0x6a9a78, jitter: 1.5 });
-        emit(this.fx, { tex: FX.dust, n: 8, x: l.x, y: y + 0.1, z: l.z, size: [0.8, 1.3], grow: 1.5, life: [0.5, 0.8], speed: [2, 3.5], flatSpread: true, opacity: 0.6 });
+        emit(this.fx, {
+          tex: FX.smoke,
+          n: 5,
+          x: l.x,
+          y: y + 0.3,
+          z: l.z,
+          size: [1.2, 2.0],
+          grow: 1.6,
+          life: [0.9, 1.4],
+          speed: [0.4, 1.2],
+          up: [1, 2],
+          opacity: 0.35,
+          color: 0x6a9a78,
+          jitter: 1.5,
+        });
+        emit(this.fx, {
+          tex: FX.dust,
+          n: 8,
+          x: l.x,
+          y: y + 0.1,
+          z: l.z,
+          size: [0.8, 1.3],
+          grow: 1.5,
+          life: [0.5, 0.8],
+          speed: [2, 3.5],
+          flatSpread: true,
+          opacity: 0.6,
+        });
         chunks(this.fx, 4, l.x, y + 0.2, l.z, { size: [0.08, 0.16], speed: [1.5, 3], up: [3, 5] });
-        emit(this.fx, { tex: SUMMONER.skull, n: 3, x: l.x, y: y + 0.6, z: l.z, size: [0.5, 0.8], life: [1.0, 1.4], speed: [0.3, 0.8], up: [1.5, 2.5], additive: true, color: 0x90ff9c, jitter: 1 });
+        emit(this.fx, {
+          tex: SUMMONER.skull,
+          n: 3,
+          x: l.x,
+          y: y + 0.6,
+          z: l.z,
+          size: [0.5, 0.8],
+          life: [1.0, 1.4],
+          speed: [0.3, 0.8],
+          up: [1.5, 2.5],
+          additive: true,
+          color: 0x90ff9c,
+          jitter: 1,
+        });
       } else if (this.fx && l.stage === "fade") {
-        emit(this.fx, { tex: SUMMONER.ghost, n: 6, x: l.x, y: this.lanternY, z: l.z, size: [0.6, 1.0], life: [0.8, 1.2], speed: [0.5, 1.5], up: [1, 2], opacity: 0.6, color: 0xc8ffd0 });
+        emit(this.fx, {
+          tex: SUMMONER.ghost,
+          n: 6,
+          x: l.x,
+          y: this.lanternY,
+          z: l.z,
+          size: [0.6, 1.0],
+          life: [0.8, 1.2],
+          speed: [0.5, 1.5],
+          up: [1, 2],
+          opacity: 0.6,
+          color: 0xc8ffd0,
+        });
       }
       return;
     }
     if (ev.type === "gates" && ev.lock) {
       const g = ev as unknown as { stage: "warn" | "shift" };
       if (this.lock && this.fx) {
-        for (const p of this.lock.posts) emit(this.fx, { tex: FX.twinkle, n: g.stage === "shift" ? 4 : 2, x: p[0], y: p[1], z: p[2], size: [0.5, 0.9], life: [0.6, 1.1], speed: [0.6, 1.8], up: [0.6, 1.4], additive: true, color: 0xffe080 });
-        if (g.stage === "shift") for (const [x, y, z] of this.lock.mids) emit(this.fx, { tex: FX.dust, n: 6, x, y: y + 0.3, z, size: [1.2, 2.0], grow: 1.6, life: [0.6, 1.0], speed: [2, 4], flatSpread: true, opacity: 0.7 });
+        for (const p of this.lock.posts)
+          emit(this.fx, {
+            tex: FX.twinkle,
+            n: g.stage === "shift" ? 4 : 2,
+            x: p[0],
+            y: p[1],
+            z: p[2],
+            size: [0.5, 0.9],
+            life: [0.6, 1.1],
+            speed: [0.6, 1.8],
+            up: [0.6, 1.4],
+            additive: true,
+            color: 0xffe080,
+          });
+        if (g.stage === "shift")
+          for (const [x, y, z] of this.lock.mids)
+            emit(this.fx, {
+              tex: FX.dust,
+              n: 6,
+              x,
+              y: y + 0.3,
+              z,
+              size: [1.2, 2.0],
+              grow: 1.6,
+              life: [0.6, 1.0],
+              speed: [2, 4],
+              flatSpread: true,
+              opacity: 0.7,
+            });
       }
       return;
     }
@@ -1066,12 +1648,32 @@ export class MapFx {
       const g = ev as unknown as { stage: "warn" | "shift" };
       if (g.stage === "warn" && this.fx) {
         this.ring = 1.6;
-        for (const gt of this.gates) for (const p of gt.posts) emit(this.fx, { tex: FX.twinkle, n: 2, x: p[0], y: p[1], z: p[2], size: [0.5, 0.8], life: [0.6, 1.0], speed: [0.5, 1.5], up: [0.5, 1], additive: true, color: 0xffe080 });
+        for (const gt of this.gates)
+          for (const p of gt.posts)
+            emit(this.fx, {
+              tex: FX.twinkle,
+              n: 2,
+              x: p[0],
+              y: p[1],
+              z: p[2],
+              size: [0.5, 0.8],
+              life: [0.6, 1.0],
+              speed: [0.5, 1.5],
+              up: [0.5, 1],
+              additive: true,
+              color: 0xffe080,
+            });
       }
       return;
     }
     if (ev.type !== "avalanche") return;
-    const e = ev as unknown as { stage: "warn" | "slide" | "settle"; rect: Rect; dx: number; dz: number; seconds: number };
+    const e = ev as unknown as {
+      stage: "warn" | "slide" | "settle";
+      rect: Rect;
+      dx: number;
+      dz: number;
+      seconds: number;
+    };
     if (e.stage === "settle") {
       let a = this.avas.find((v) => v.until === Infinity && v.rect.x === e.rect.x && v.rect.z === e.rect.z);
       if (!a) a = this.buildAva(e.rect, e.dx, e.dz, this.now - 2, 1.6);
@@ -1107,7 +1709,19 @@ export class MapFx {
       if (Math.floor((this.ring + dt) * 4) !== Math.floor(this.ring * 4)) {
         for (const gt of this.gates) {
           const p = gt.posts[Math.random() < 0.5 ? 0 : 1];
-          emit(this.fx, { tex: FX.twinkle, n: 1, x: p[0], y: p[1], z: p[2], size: [0.4, 0.7], life: [0.4, 0.7], speed: [0.3, 1], up: [0.6, 1.2], additive: true, color: 0xffe080 });
+          emit(this.fx, {
+            tex: FX.twinkle,
+            n: 1,
+            x: p[0],
+            y: p[1],
+            z: p[2],
+            size: [0.4, 0.7],
+            life: [0.4, 0.7],
+            speed: [0.3, 1],
+            up: [0.6, 1.2],
+            additive: true,
+            color: 0xffe080,
+          });
         }
       }
     }
@@ -1127,15 +1741,57 @@ export class MapFx {
       for (let n = 0; n < 2; n++) {
         const p = this.edge(r.rect, r.dx, r.dz, Math.random(), -1.5 + Math.random() * 2);
         const y = w.groundY(p.x, p.z);
-        emit(fx, { tex: PUFF, n: 1, x: p.x, y: y + 1.5, z: p.z, size: [1.4, 2.4], grow: 1.8, life: [0.8, 1.4], speed: [0.5, 1.6], dir: { x: r.dx, y: -0.2, z: r.dz }, cone: 0.6, opacity: 0.75, color: 0xf4f8ff });
+        emit(fx, {
+          tex: PUFF,
+          n: 1,
+          x: p.x,
+          y: y + 1.5,
+          z: p.z,
+          size: [1.4, 2.4],
+          grow: 1.8,
+          life: [0.8, 1.4],
+          speed: [0.5, 1.6],
+          dir: { x: r.dx, y: -0.2, z: r.dz },
+          cone: 0.6,
+          opacity: 0.75,
+          color: 0xf4f8ff,
+        });
       }
       if (Math.random() < 0.25 + k * 0.5) {
         const p = this.edge(r.rect, r.dx, r.dz, Math.random(), Math.random() * 1.5);
-        emit(fx, { tex: PUFF, n: 1 + Math.floor(k * 3), x: p.x, y: w.groundY(p.x, p.z) + 1.2, z: p.z, size: [0.3, 0.5], life: [0.6, 1.0], speed: [1.5, 3.5], dir: { x: r.dx, y: 0.6, z: r.dz }, cone: 0.5, gravity: 12, opacity: 0.95, color: 0xffffff });
+        emit(fx, {
+          tex: PUFF,
+          n: 1 + Math.floor(k * 3),
+          x: p.x,
+          y: w.groundY(p.x, p.z) + 1.2,
+          z: p.z,
+          size: [0.3, 0.5],
+          life: [0.6, 1.0],
+          speed: [1.5, 3.5],
+          dir: { x: r.dx, y: 0.6, z: r.dz },
+          cone: 0.5,
+          gravity: 12,
+          opacity: 0.95,
+          color: 0xffffff,
+        });
       }
       if (Math.random() < 0.15 + k * 0.3) {
         const p = this.edge(r.rect, r.dx, r.dz, Math.random(), Math.random() * 3);
-        emit(fx, { tex: PUFF, n: 1, x: p.x, y: w.groundY(p.x, p.z) + 0.2, z: p.z, size: [0.6, 1.0], grow: 1.6, life: [0.5, 0.8], speed: [1.5, 3], dir: { x: r.dx, y: 0.1, z: r.dz }, cone: 0.4, opacity: 0.7, color: 0xf8fbff });
+        emit(fx, {
+          tex: PUFF,
+          n: 1,
+          x: p.x,
+          y: w.groundY(p.x, p.z) + 0.2,
+          z: p.z,
+          size: [0.6, 1.0],
+          grow: 1.6,
+          life: [0.5, 0.8],
+          speed: [1.5, 3],
+          dir: { x: r.dx, y: 0.1, z: r.dz },
+          cone: 0.4,
+          opacity: 0.7,
+          color: 0xf8fbff,
+        });
       }
     }
     this.syncAvas(time, dt);
@@ -1145,7 +1801,8 @@ export class MapFx {
     const w = this.world;
     const span = dx !== 0 ? rect.w : rect.h;
     const cross = dx !== 0 ? rect.h : rect.w;
-    const alongOf = (x: number, z: number) => (dx > 0 ? x - rect.x : dx < 0 ? rect.x + rect.w - x : dz > 0 ? z - rect.z : rect.z + rect.h - z);
+    const alongOf = (x: number, z: number) =>
+      dx > 0 ? x - rect.x : dx < 0 ? rect.x + rect.w - x : dz > 0 ? z - rect.z : rect.z + rect.h - z;
     const crossOf = (x: number, z: number) => (dx !== 0 ? (z - rect.z) / rect.h : (x - rect.x) / rect.w);
     const ph = [Math.random() * 6, Math.random() * 6, Math.random() * 6, Math.random() * 6, Math.random() * 6];
     const m = 0.9;
@@ -1156,7 +1813,10 @@ export class MapFx {
       const e = ed * ed * (3 - 2 * ed);
       const a = alongOf(x, z);
       const u = crossOf(x, z);
-      const n = 0.5 + 0.3 * Math.sin(x * 0.9 + ph[0]) * Math.sin(z * 0.75 + ph[1]) + 0.2 * Math.sin(x * 0.37 + z * 0.53 + ph[2]);
+      const n =
+        0.5 +
+        0.3 * Math.sin(x * 0.9 + ph[0]) * Math.sin(z * 0.75 + ph[1]) +
+        0.2 * Math.sin(x * 0.37 + z * 0.53 + ph[2]);
       const fk = Math.max(0, Math.min(1, (a - span * 0.45) / (span * 0.55)));
       return e * (0.2 + 0.34 * n + 0.32 * fk * fk + 0.05 * Math.sin(a * 1.6 + u * 4 + ph[3])) - (1 - e) * 0.2;
     };
@@ -1186,10 +1846,11 @@ export class MapFx {
       }
     }
     const idx: number[] = [];
-    for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
-      const a = j * nx + i;
-      idx.push(a, a + nx, a + 1, a + 1, a + nx, a + nx + 1);
-    }
+    for (let j = 0; j < nz - 1; j++)
+      for (let i = 0; i < nx - 1; i++) {
+        const a = j * nx + i;
+        idx.push(a, a + nx, a + 1, a + 1, a + nx, a + nx + 1);
+      }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
@@ -1211,7 +1872,16 @@ export class MapFx {
       const geo = (p && lods.get(name)) ?? p?.geo ?? FALLBACK_GEO;
       if (!geo.boundingBox) geo.computeBoundingBox();
       const bb = geo.boundingBox!;
-      const s: PieceSet = { mesh: null, geo, mat: p ? (fallback < 2 ? brightMat(p.mat) : p.mat) : SNOW, items: [], w: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) || 1, h: bb.max.y - bb.min.y || 1, y0: bb.min.y, fallback };
+      const s: PieceSet = {
+        mesh: null,
+        geo,
+        mat: p ? (fallback < 2 ? brightMat(p.mat) : p.mat) : SNOW,
+        items: [],
+        w: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) || 1,
+        h: bb.max.y - bb.min.y || 1,
+        y0: bb.min.y,
+        fallback,
+      };
       sets.push(s);
       return s;
     };
@@ -1230,16 +1900,45 @@ export class MapFx {
         if (blocked(q.x, q.z)) continue;
         const r = Math.random();
         const t = r < 0.6 ? drift : r < 0.85 ? heap : rock;
-        const width = t === drift ? 3.4 + Math.random() * 1.6 : t === heap ? 2.0 + Math.random() * 0.9 : 1.2 + Math.random() * 0.6;
-        t.items.push({ u: cc, a: aa, s: width / t.w, sy: 0.7 + Math.random() * 0.3, rot: Math.random() * Math.PI * 2, sink: 0.12 + Math.random() * 0.12, melt: Math.random() * 0.5, roll: null });
+        const width =
+          t === drift ? 3.4 + Math.random() * 1.6 : t === heap ? 2.0 + Math.random() * 0.9 : 1.2 + Math.random() * 0.6;
+        t.items.push({
+          u: cc,
+          a: aa,
+          s: width / t.w,
+          sy: 0.7 + Math.random() * 0.3,
+          rot: Math.random() * Math.PI * 2,
+          sink: 0.12 + Math.random() * 0.12,
+          melt: Math.random() * 0.5,
+          roll: null,
+        });
       }
     }
     const nRock = Math.max(3, Math.round(cross / 3));
     const nHeap = Math.max(2, Math.round(cross / 3.6));
-    for (const [t, n, w0, w1] of [[rock, nRock, 1.2, 1.8], [heap, nHeap, 1.8, 2.5]] as [PieceSet, number, number, number][]) {
+    for (const [t, n, w0, w1] of [
+      [rock, nRock, 1.2, 1.8],
+      [heap, nHeap, 1.8, 2.5],
+    ] as [PieceSet, number, number, number][]) {
       for (let j = 0; j < n; j++) {
         const width = w0 + Math.random() * (w1 - w0);
-        t.items.push({ u: (j + 0.2 + Math.random() * 0.6) / n, a: span - 0.6 - Math.random() * 3.2, s: width / t.w, sy: 1, rot: Math.random() * Math.PI * 2, sink: 0.18, melt: 0.3 + Math.random() * 0.5, roll: { lag: Math.random() * 2.2 - 0.4, r: (width / 2) * 0.85, phase: Math.random() * 6, tilt: new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6)) } });
+        t.items.push({
+          u: (j + 0.2 + Math.random() * 0.6) / n,
+          a: span - 0.6 - Math.random() * 3.2,
+          s: width / t.w,
+          sy: 1,
+          rot: Math.random() * Math.PI * 2,
+          sink: 0.18,
+          melt: 0.3 + Math.random() * 0.5,
+          roll: {
+            lag: Math.random() * 2.2 - 0.4,
+            r: (width / 2) * 0.85,
+            phase: Math.random() * 6,
+            tilt: new THREE.Quaternion().setFromEuler(
+              new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
+            ),
+          },
+        });
       }
     }
     for (const s of sets) {
@@ -1252,7 +1951,22 @@ export class MapFx {
       group.add(im);
     }
     this.root.add(group);
-    const ava: Ava = { rect, dx, dz, span, start, sweep, until: Infinity, group, blanket, uni, sets, acc: 0, settled: false, hAt };
+    const ava: Ava = {
+      rect,
+      dx,
+      dz,
+      span,
+      start,
+      sweep,
+      until: Infinity,
+      group,
+      blanket,
+      uni,
+      sets,
+      acc: 0,
+      settled: false,
+      hAt,
+    };
     this.avas.push(ava);
     this.poseAva(ava, start);
     return ava;
@@ -1294,7 +2008,11 @@ export class MapFx {
         const gy = w.groundY(p.x, p.z) + Math.max(0, v.hAt(p.x, p.z)) * 0.7 * Math.max(0, Math.min(1, (front - a) / 3));
         const hs = s.h * it.s * it.sy;
         const sy = Math.max(0.001, g * (1 - mk * 0.85));
-        sc.set(it.s * Math.max(0.001, g) * (1 - mk * 0.3), it.s * it.sy * sy, it.s * Math.max(0.001, g) * (1 - mk * 0.3));
+        sc.set(
+          it.s * Math.max(0.001, g) * (1 - mk * 0.3),
+          it.s * it.sy * sy,
+          it.s * Math.max(0.001, g) * (1 - mk * 0.3),
+        );
         if (it.roll) {
           const rest = a >= it.a ? hs * it.sink : 0;
           cv.set(0, (s.y0 + s.h / 2) * sc.y, 0).applyQuaternion(q);
@@ -1334,20 +2052,88 @@ export class MapFx {
         for (let j = 0; j < n; j++) {
           const p = this.edge(v.rect, v.dx, v.dz, (j + Math.random()) / n, along);
           const y = w.groundY(p.x, p.z);
-          emit(fx, { tex: PUFF, n: 1, x: p.x, y: y + 1.6, z: p.z, size: [2.2, 3.4], grow: 1.7, life: [0.6, 1.0], speed: [3, 6], dir: { x: v.dx, y: 0.5, z: v.dz }, cone: 0.5, opacity: 0.6, color: 0xf8fbff });
-          emit(fx, { tex: PUFF, n: 1, x: p.x, y: y + 0.3, z: p.z, size: [1.2, 2.0], grow: 1.5, life: [0.4, 0.8], speed: [5, 8], dir: { x: v.dx, y: 0.7, z: v.dz }, cone: 0.7, opacity: 0.85, color: 0xf0f6ff, gravity: 6 });
-          if (Math.random() < 0.4) emit(fx, { tex: PUFF, n: 2, x: p.x, y: y + 0.8, z: p.z, size: [0.35, 0.6], life: [0.6, 0.9], speed: [4, 7], dir: { x: v.dx, y: 0.8, z: v.dz }, cone: 0.6, gravity: 14, opacity: 0.95, color: 0xffffff });
+          emit(fx, {
+            tex: PUFF,
+            n: 1,
+            x: p.x,
+            y: y + 1.6,
+            z: p.z,
+            size: [2.2, 3.4],
+            grow: 1.7,
+            life: [0.6, 1.0],
+            speed: [3, 6],
+            dir: { x: v.dx, y: 0.5, z: v.dz },
+            cone: 0.5,
+            opacity: 0.6,
+            color: 0xf8fbff,
+          });
+          emit(fx, {
+            tex: PUFF,
+            n: 1,
+            x: p.x,
+            y: y + 0.3,
+            z: p.z,
+            size: [1.2, 2.0],
+            grow: 1.5,
+            life: [0.4, 0.8],
+            speed: [5, 8],
+            dir: { x: v.dx, y: 0.7, z: v.dz },
+            cone: 0.7,
+            opacity: 0.85,
+            color: 0xf0f6ff,
+            gravity: 6,
+          });
+          if (Math.random() < 0.4)
+            emit(fx, {
+              tex: PUFF,
+              n: 2,
+              x: p.x,
+              y: y + 0.8,
+              z: p.z,
+              size: [0.35, 0.6],
+              life: [0.6, 0.9],
+              speed: [4, 7],
+              dir: { x: v.dx, y: 0.8, z: v.dz },
+              cone: 0.6,
+              gravity: 14,
+              opacity: 0.95,
+              color: 0xffffff,
+            });
         }
       } else if (melting) {
         if (v.acc < 0.12) continue;
         v.acc = 0;
         const p = this.edge(v.rect, v.dx, v.dz, Math.random(), Math.random() * v.span);
-        emit(fx, { tex: PUFF, n: 1, x: p.x, y: w.groundY(p.x, p.z) + 0.4, z: p.z, size: [1.2, 2.0], grow: 1.5, life: [1.0, 1.6], speed: [0.1, 0.3], up: [0.4, 0.8], opacity: 0.25, color: 0xeef6ff });
+        emit(fx, {
+          tex: PUFF,
+          n: 1,
+          x: p.x,
+          y: w.groundY(p.x, p.z) + 0.4,
+          z: p.z,
+          size: [1.2, 2.0],
+          grow: 1.5,
+          life: [1.0, 1.6],
+          speed: [0.1, 0.3],
+          up: [0.4, 0.8],
+          opacity: 0.25,
+          color: 0xeef6ff,
+        });
       } else {
         if (v.acc < 0.2) continue;
         v.acc = 0;
         const p = this.edge(v.rect, v.dx, v.dz, Math.random(), Math.random() * v.span);
-        emit(fx, { tex: FX.twinkle, n: 1, x: p.x, y: w.groundY(p.x, p.z) + 0.5, z: p.z, size: [0.2, 0.35], life: [0.3, 0.5], speed: [0, 0.1], additive: true, color: 0xd8f0ff });
+        emit(fx, {
+          tex: FX.twinkle,
+          n: 1,
+          x: p.x,
+          y: w.groundY(p.x, p.z) + 0.5,
+          z: p.z,
+          size: [0.2, 0.35],
+          life: [0.3, 0.5],
+          speed: [0, 0.1],
+          additive: true,
+          color: 0xd8f0ff,
+        });
       }
     }
   }

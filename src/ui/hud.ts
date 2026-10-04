@@ -14,8 +14,20 @@ import { perf } from "../perf";
 export const INK = "#0b0806";
 export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828", z: "#8a8a94", r: "#8a8a94" };
 
-const DIR_NAME: Record<Directive, string> = { push: "ATTACK", hold: "HOLD", follow: "FOLLOW", nearest: "HUNT", focus: "SIEGE", defend: "DEFEND" };
-const TYPE_NAME: Record<UnitType | "all", string> = { grunt: "GRUNTS", ranged: "ARCHERS", heavy: "BRUTES", all: "ARMY" };
+const DIR_NAME: Record<Directive, string> = {
+  push: "ATTACK",
+  hold: "HOLD",
+  follow: "FOLLOW",
+  nearest: "HUNT",
+  focus: "SIEGE",
+  defend: "DEFEND",
+};
+const TYPE_NAME: Record<UnitType | "all", string> = {
+  grunt: "GRUNTS",
+  ranged: "ARCHERS",
+  heavy: "BRUTES",
+  all: "ARMY",
+};
 const PLAYER_TAG = ["#8ab0ff", "#ff9a8a", "#70e0d0", "#ffd060"];
 const MARGIN_X = 14;
 const MARGIN_Y = 10;
@@ -78,7 +90,15 @@ export class UiCanvas {
   }
 }
 
-export function box(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fill: string, alpha = 0.92): void {
+export function box(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string,
+  alpha = 0.92,
+): void {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.fillStyle = INK;
@@ -98,7 +118,15 @@ export function box(ctx: CanvasRenderingContext2D, x: number, y: number, w: numb
   ctx.restore();
 }
 
-export function meter(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frac: number, color: string): void {
+export function meter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frac: number,
+  color: string,
+): void {
   const f = Math.max(0, Math.min(1, frac));
   ctx.save();
   ctx.fillStyle = INK;
@@ -128,7 +156,15 @@ export function meter(ctx: CanvasRenderingContext2D, x: number, y: number, w: nu
   ctx.restore();
 }
 
-export function padButton(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, label: string, dim = false): void {
+export function padButton(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  color: string,
+  label: string,
+  dim = false,
+): void {
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.beginPath();
@@ -226,9 +262,11 @@ function relicIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: numbe
     ctx.lineWidth = 2;
     ctx.strokeStyle = INK;
     horn(-1);
-    if (pass) ctx.fill(); else ctx.stroke();
+    if (pass) ctx.fill();
+    else ctx.stroke();
     horn(1);
-    if (pass) ctx.fill(); else ctx.stroke();
+    if (pass) ctx.fill();
+    else ctx.stroke();
   }
   ctx.fillStyle = INK;
   ctx.beginPath();
@@ -248,11 +286,16 @@ function relicIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: numbe
   ctx.restore();
 }
 
-
-
-
-
-function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hp: number, ward: number, now: number): void {
+function keepGem(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  team: string,
+  hp: number,
+  ward: number,
+  now: number,
+): void {
   const gem = (k: number) => {
     ctx.beginPath();
     ctx.moveTo(x, y - r * 1.25 - k);
@@ -264,7 +307,13 @@ function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.save();
   if (ward > 0) {
     const k = 2.6;
-    const pts: [number, number][] = [[x, y - r * 1.25 - k], [x + r * 0.8 + k, y], [x, y + r * 1.25 + k], [x - r * 0.8 - k, y], [x, y - r * 1.25 - k]];
+    const pts: [number, number][] = [
+      [x, y - r * 1.25 - k],
+      [x + r * 0.8 + k, y],
+      [x, y + r * 1.25 + k],
+      [x - r * 0.8 - k, y],
+      [x, y - r * 1.25 - k],
+    ];
     const seg = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
     const total = seg.reduce((a, b) => a + b, 0);
     const trace = (frac: number) => {
@@ -311,7 +360,11 @@ function keepGem(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.restore();
 }
 
-const stockUrls = import.meta.glob("../../assets/ui/costume_icons/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const stockUrls = import.meta.glob("../../assets/ui/costume_icons/*.png", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
 const stockIcons = new Map<string, HTMLImageElement>();
 for (const [p, url] of Object.entries(stockUrls)) {
   const im = new Image();
@@ -336,7 +389,11 @@ function stockIcon(hero: string, costume: string, grey = false): HTMLImageElemen
   return c;
 }
 
-const hudIconUrls = import.meta.glob("../../assets/ui/hud/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const hudIconUrls = import.meta.glob("../../assets/ui/hud/*.png", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
 const hudIcons = new Map<string, HTMLImageElement>();
 let hudIconGen = 0;
 for (const [p, url] of Object.entries(hudIconUrls)) {
@@ -410,7 +467,14 @@ function padIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.restore();
 }
 
-function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Directive, flip: boolean, tint?: string): void {
+function orderBadge(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  d: Directive,
+  flip: boolean,
+  tint?: string,
+): void {
   const r = 4.6;
   if (tint) {
     ctx.save();
@@ -424,10 +488,24 @@ function orderBadge(ctx: CanvasRenderingContext2D, x: number, y: number, d: Dire
     ctx.fill();
     ctx.restore();
   }
-  hudIcon(ctx, hudIcons.has(`order_${d}`) ? `order_${d}` : "order_blank", x, y, r * 2.2, flip && (d === "push" || d === "follow"));
+  hudIcon(
+    ctx,
+    hudIcons.has(`order_${d}`) ? `order_${d}` : "order_blank",
+    x,
+    y,
+    r * 2.2,
+    flip && (d === "push" || d === "follow"),
+  );
 }
 
-const ORDER_COL: Record<Directive, string> = { push: "#d83a28", follow: "#3a78e0", defend: "#3aa04a", hold: "#d8a020", nearest: "#e07020", focus: "#8a4ad0" };
+const ORDER_COL: Record<Directive, string> = {
+  push: "#d83a28",
+  follow: "#3a78e0",
+  defend: "#3aa04a",
+  hold: "#d8a020",
+  nearest: "#e07020",
+  focus: "#8a4ad0",
+};
 
 function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: string): void {
   const r = 7;
@@ -446,10 +524,40 @@ function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: 
   ctx.arc(x, y, r - 0.6, 0, Math.PI * 2);
   ctx.stroke();
   const pts: [number, number][] =
-    f === "column" ? [[0, -3.6], [0, -1.2], [0, 1.2], [0, 3.6]]
-    : f === "line" ? [[-3.6, -1.1], [-1.2, -1.1], [1.2, -1.1], [3.6, -1.1], [-2.4, 1.6], [0, 1.6], [2.4, 1.6]]
-    : f === "wedge" ? [[0, -3], [-1.6, -0.6], [1.6, -0.6], [-3.2, 1.8], [0, 1.8], [3.2, 1.8]]
-    : [[-1.8, -1.6], [1.6, -2], [0, 0], [-2.2, 1.8], [2, 1.4], [0.2, 3]];
+    f === "column"
+      ? [
+          [0, -3.6],
+          [0, -1.2],
+          [0, 1.2],
+          [0, 3.6],
+        ]
+      : f === "line"
+        ? [
+            [-3.6, -1.1],
+            [-1.2, -1.1],
+            [1.2, -1.1],
+            [3.6, -1.1],
+            [-2.4, 1.6],
+            [0, 1.6],
+            [2.4, 1.6],
+          ]
+        : f === "wedge"
+          ? [
+              [0, -3],
+              [-1.6, -0.6],
+              [1.6, -0.6],
+              [-3.2, 1.8],
+              [0, 1.8],
+              [3.2, 1.8],
+            ]
+          : [
+              [-1.8, -1.6],
+              [1.6, -2],
+              [0, 0],
+              [-2.2, 1.8],
+              [2, 1.4],
+              [0.2, 3],
+            ];
   ctx.fillStyle = "#fff4d8";
   for (const [px, py] of pts) {
     ctx.beginPath();
@@ -458,7 +566,6 @@ function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: 
   }
   ctx.restore();
 }
-
 
 function ringMeter(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, frac: number, color: string): void {
   ctx.save();
@@ -515,7 +622,10 @@ function coreIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 function fallenMark(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
   ctx.save();
   ctx.lineCap = "round";
-  for (const [c, lw] of [[INK, 3], ["#d83020", 1.4]] as const) {
+  for (const [c, lw] of [
+    [INK, 3],
+    ["#d83020", 1.4],
+  ] as const) {
     ctx.strokeStyle = c;
     ctx.lineWidth = lw;
     ctx.beginPath();
@@ -540,7 +650,11 @@ interface Cross {
   until: number;
 }
 
-const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
 const talentImgs = new Map<string, HTMLImageElement>();
 for (const [p, url] of Object.entries(talentUrls)) {
   const im = new Image();
@@ -570,7 +684,15 @@ function scaledIcon(id: string, im: HTMLImageElement, px: number): HTMLCanvasEle
   return c;
 }
 
-export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number, dim = false, low = false): void {
+export function talentIcon(
+  ctx: CanvasRenderingContext2D,
+  id: string,
+  x: number,
+  y: number,
+  size: number,
+  dim = false,
+  low = false,
+): void {
   const im = talentImgs.get(id);
   ctx.save();
   ctx.fillStyle = INK;
@@ -578,7 +700,9 @@ export function talentIcon(ctx: CanvasRenderingContext2D, id: string, x: number,
   texturedRect(ctx, "stone", x, y, size, size, dim ? "#5a5048" : "#b8a888", 0, 0.5);
   if (im?.complete && im.naturalWidth) {
     const a = dim ? 0.35 : 1;
-    const draw = low ? (f: (c: CanvasRenderingContext2D) => void) => f(ctx) : (f: (c: CanvasRenderingContext2D) => void) => onHiLayer(ctx, f);
+    const draw = low
+      ? (f: (c: CanvasRenderingContext2D) => void) => f(ctx)
+      : (f: (c: CanvasRenderingContext2D) => void) => onHiLayer(ctx, f);
     draw((c) => {
       c.save();
       c.globalAlpha *= a;
@@ -620,7 +744,11 @@ export class Hud {
   laneCount = 0;
   private shownGrain: number[] = [];
   private notices: { text: string; until: number }[] = Array.from({ length: 4 }, () => ({ text: "", until: 0 }));
-  private orders: { type: UnitType | "all"; dir: Directive; until: number }[] = Array.from({ length: 4 }, () => ({ type: "all" as const, dir: "follow" as Directive, until: 0 }));
+  private orders: { type: UnitType | "all"; dir: Directive; until: number }[] = Array.from({ length: 4 }, () => ({
+    type: "all" as const,
+    dir: "follow" as Directive,
+    until: 0,
+  }));
   private shownCoin = [0, 0, 0, 0];
   private fall: { team: number; at: number; until: number } | null = null;
 
@@ -643,10 +771,26 @@ export class Hud {
   minimap = true;
   zoomOut = 0;
   private lockCard: World | null = null;
-  private card: { title: string; sub: string; glyph: string; color: string; at: number; until: number; count: number } | null = null;
+  private card: {
+    title: string;
+    sub: string;
+    glyph: string;
+    color: string;
+    at: number;
+    until: number;
+    count: number;
+  } | null = null;
   private overlays = new Map<string, HTMLCanvasElement | null>();
 
-  private showCard(title: string, sub: string, glyph: string, now: number, color = "#8a1810", count = 0, seconds = 4): void {
+  private showCard(
+    title: string,
+    sub: string,
+    glyph: string,
+    now: number,
+    color = "#8a1810",
+    count = 0,
+    seconds = 4,
+  ): void {
     this.card = { title, sub, glyph, color, at: now, until: now + Math.max(seconds, count + 0.6), count };
   }
 
@@ -654,29 +798,64 @@ export class Hud {
     const team = (t: number) => (t >= 0 ? this.teamColors[t] : "#8a1810");
     if (ev.type === "avalanche") {
       const arm = w.ffa ? ["WEST", "NORTH", "EAST", "SOUTH"][ev.arm] + " ARM" : "";
-      if (ev.stage === "warn") this.showCard("AVALANCHE!", `THE ${arm} RUMBLES · GET OUT OF THE LANE`, "peak", now, "#8a1810", ev.seconds);
-      else if (ev.stage === "slide") this.showCard("AVALANCHE!", `SNOW COMING DOWN THE ${arm}`, "peak", now, "#8a1810", 0, 2.5);
+      if (ev.stage === "warn")
+        this.showCard("AVALANCHE!", `THE ${arm} RUMBLES · GET OUT OF THE LANE`, "peak", now, "#8a1810", ev.seconds);
+      else if (ev.stage === "slide")
+        this.showCard("AVALANCHE!", `SNOW COMING DOWN THE ${arm}`, "peak", now, "#8a1810", 0, 2.5);
     } else if (ev.type === "gates" && ev.lock) {
-      if (ev.stage !== "warn") this.showCard("THE GATES OPEN", "EVERY KEEP IS OPEN · TO WAR!", "bell", now, "#8a5a10", 0, 3.5);
+      if (ev.stage !== "warn")
+        this.showCard("THE GATES OPEN", "EVERY KEEP IS OPEN · TO WAR!", "bell", now, "#8a5a10", 0, 3.5);
     } else if (ev.type === "gates") {
       const court = ev.pattern === 1;
-      if (ev.stage === "warn") this.showCard("THE BELLS RING", court ? "THE COURT OPENS · THE OUTER GATES SEAL" : "THE COURT SEALS · THE OUTER GATES OPEN", "bell", now, "#8a5a10", ev.seconds);
+      if (ev.stage === "warn")
+        this.showCard(
+          "THE BELLS RING",
+          court ? "THE COURT OPENS · THE OUTER GATES SEAL" : "THE COURT SEALS · THE OUTER GATES OPEN",
+          "bell",
+          now,
+          "#8a5a10",
+          ev.seconds,
+        );
     } else if (ev.type === "mist") {
-      if (ev.stage === "warn") this.showCard("MIST ON THE RIVER", "ANYTHING IN THE MIST IS HIDDEN", "river", now, "#4a5a6a", ev.seconds);
-      else if (ev.stage === "out") this.showCard("THE MIST LIFTS", "THE RIVERS ARE CLEAR AGAIN", "river", now, "#4a5a6a", 0, 3);
+      if (ev.stage === "warn")
+        this.showCard("MIST ON THE RIVER", "ANYTHING IN THE MIST IS HIDDEN", "river", now, "#4a5a6a", ev.seconds);
+      else if (ev.stage === "out")
+        this.showCard("THE MIST LIFTS", "THE RIVERS ARE CLEAR AGAIN", "river", now, "#4a5a6a", 0, 3);
     } else if (ev.type === "lantern") {
-      if (ev.stage === "rise") this.showCard("THE DEAD STIR", "A BONE LANTERN RISES FROM THE PIT", "hex", now, "#2a6a2a");
-      else if (ev.stage === "fade") this.showCard("THE LANTERN GOES OUT", "IT WILL RISE AGAIN", "hex", now, "#2a6a2a", 0, 3);
+      if (ev.stage === "rise")
+        this.showCard("THE DEAD STIR", "A BONE LANTERN RISES FROM THE PIT", "hex", now, "#2a6a2a");
+      else if (ev.stage === "fade")
+        this.showCard("THE LANTERN GOES OUT", "IT WILL RISE AGAIN", "hex", now, "#2a6a2a", 0, 3);
       else if (ev.stage === "taken") {
         const h = w.getAny(ev.hero);
         const lt = w.mapEvents.lanternDef;
         const name = h ? w.teamName(h.team) : "SOMEONE";
-        this.showCard(`${name} IS HAUNTED`, lt ? `+${Math.round((lt.damageMul - 1) * 100)}% DAMAGE · +${Math.round((lt.speedMul - 1) * 100)}% SPEED · ${lt.hauntSeconds}S` : "", "hex", now, team(h?.team ?? -1));
+        this.showCard(
+          `${name} IS HAUNTED`,
+          lt
+            ? `+${Math.round((lt.damageMul - 1) * 100)}% DAMAGE · +${Math.round((lt.speedMul - 1) * 100)}% SPEED · ${lt.hauntSeconds}S`
+            : "",
+          "hex",
+          now,
+          team(h?.team ?? -1),
+        );
       }
     } else if (ev.type === "horn") {
-      this.showCard(`${w.teamName(ev.team)} BLOWS THE HORN`, `THE ${["WEST", "NORTH", "EAST", "SOUTH"][ev.arm]} ARM IS GETTING BURIED`, "peak", now, team(ev.team));
+      this.showCard(
+        `${w.teamName(ev.team)} BLOWS THE HORN`,
+        `THE ${["WEST", "NORTH", "EAST", "SOUTH"][ev.arm]} ARM IS GETTING BURIED`,
+        "peak",
+        now,
+        team(ev.team),
+      );
     } else if (ev.type === "tide") {
-      this.showCard(ev.high ? "HIGH TIDE" : "LOW TIDE", ev.high ? "THE FLATS FLOOD · EVERYONE ON THEM IS SLOWED" : "THE FLATS DRAIN · PUSH NOW", "tide", now, "#2a4a8a");
+      this.showCard(
+        ev.high ? "HIGH TIDE" : "LOW TIDE",
+        ev.high ? "THE FLATS FLOOD · EVERYONE ON THEM IS SLOWED" : "THE FLATS DRAIN · PUSH NOW",
+        "tide",
+        now,
+        "#2a4a8a",
+      );
     }
   }
 
@@ -716,7 +895,15 @@ export class Hud {
     }
     if (w.mapEvents.locked && this.lockCard !== w && w.time < 3) {
       this.lockCard = w;
-      this.showCard("THE GATES ARE SHUT", `NO ONE GETS IN OR OUT FOR ${Math.ceil(w.mapEvents.lockUntil - w.time)}S · BUILD UP`, "bell", now, "#8a5a10", 0, 4.5);
+      this.showCard(
+        "THE GATES ARE SHUT",
+        `NO ONE GETS IN OR OUT FOR ${Math.ceil(w.mapEvents.lockUntil - w.time)}S · BUILD UP`,
+        "bell",
+        now,
+        "#8a5a10",
+        0,
+        4.5,
+      );
     }
     for (const ev of w.events) {
       if (ev.type === "hit" && ev.id !== undefined) {
@@ -784,7 +971,14 @@ export class Hud {
     }
   }
 
-  private drawFfa(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
+  private drawFfa(
+    ctx: CanvasRenderingContext2D,
+    W: number,
+    H: number,
+    w: World,
+    ui: (MapperUi | null)[],
+    now: number,
+  ): void {
     const k = this.split >= 3 ? 0.74 : this.split === 2 ? 0.86 : 1;
     this.dense = k < 1;
     const Wk = W / k;
@@ -801,7 +995,10 @@ export class Hud {
     mine.forEach((t, j) => {
       const pl = locals.find((p) => p.team === t)!.player;
       const r = this.split >= 2 ? this.rectOf?.(pl) : null;
-      frames.set(t, r ? { x: r.x * Wk, y: r.y * Hk, w: r.w * Wk, h: r.h * Hk, right: r.x + r.w / 2 > 0.5 } : quad(j, mine.length));
+      frames.set(
+        t,
+        r ? { x: r.x * Wk, y: r.y * Hk, w: r.w * Wk, h: r.h * Hk, right: r.x + r.w / 2 > 0.5 } : quad(j, mine.length),
+      );
     });
     ctx.save();
     if (k !== 1) ctx.scale(k, k);
@@ -809,13 +1006,27 @@ export class Hud {
     const rest = w.teams.map((_, t) => t).filter((t) => !frames.has(t));
     if (rest.length) {
       const single = frames.size === 1 && this.split < 2;
-      this.drawStandings(ctx, single ? Wk - MARGIN_X - 74 : Wk / 2 - 37, single ? MARGIN_Y + 2 : MARGIN_Y + 40, w, rest, single);
+      this.drawStandings(
+        ctx,
+        single ? Wk - MARGIN_X - 74 : Wk / 2 - 37,
+        single ? MARGIN_Y + 2 : MARGIN_Y + 40,
+        w,
+        rest,
+        single,
+      );
     }
     for (const [t, F] of frames) {
       if (!w.teams[t].out || !mine.includes(t)) continue;
       const msg = "YOUR KEEP FELL · SPECTATING";
       const s = 0.9;
-      drawText(ctx, msg, Math.round(F.x + F.w / 2 - textWidth(msg, s) / 2), Math.round(F.y + F.h * 0.8), Math.floor(now * 2) % 2 ? "#ffd0a0" : "#ffffff", s);
+      drawText(
+        ctx,
+        msg,
+        Math.round(F.x + F.w / 2 - textWidth(msg, s) / 2),
+        Math.round(F.y + F.h * 0.8),
+        Math.floor(now * 2) % 2 ? "#ffd0a0" : "#ffffff",
+        s,
+      );
     }
     ctx.restore();
     const f = this.fall;
@@ -825,15 +1036,34 @@ export class Hud {
       const s = 2.4 * (age < 0.12 ? 1.3 - (age / 0.12) * 0.3 : 1);
       ctx.save();
       ctx.globalAlpha = Math.min(1, (f.until - now) * 4);
-      drawNum(ctx, name, Math.round((W - textWidth(name, s, true)) / 2), Math.round(H * 0.3), this.teamColors[f.team] ?? "#ffffff", s);
+      drawNum(
+        ctx,
+        name,
+        Math.round((W - textWidth(name, s, true)) / 2),
+        Math.round(H * 0.3),
+        this.teamColors[f.team] ?? "#ffffff",
+        s,
+      );
       ctx.restore();
     }
   }
 
-  private drawStandings(ctx: CanvasRenderingContext2D, x: number, y: number, w: World, teams: number[], right: boolean): void {
+  private drawStandings(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: World,
+    teams: number[],
+    right: boolean,
+  ): void {
     const rows = teams.map((t) => {
       const core = w.core(t);
-      return { t, out: !!w.teams[t].out, hp: core?.alive ? core.hp / core.maxHp : 0, shield: !!core?.structure?.shielded && !w.isSudden() };
+      return {
+        t,
+        out: !!w.teams[t].out,
+        hp: core?.alive ? core.hp / core.maxHp : 0,
+        shield: !!core?.structure?.shielded && !w.isSudden(),
+      };
     });
     const bw = 74;
     const rh = 10;
@@ -858,9 +1088,21 @@ export class Hud {
   private dense = false;
   rectOf: ((player: number) => { x: number; y: number; w: number; h: number } | null) | null = null;
 
-  private memos = new Map<string, { low: HTMLCanvasElement; hi: HTMLCanvasElement; key: string; out: number; at: number[] }>();
+  private memos = new Map<
+    string,
+    { low: HTMLCanvasElement; hi: HTMLCanvasElement; key: string; out: number; at: number[] }
+  >();
 
-  private memo(ctx: CanvasRenderingContext2D, id: string, key: string, x: number, y: number, w: number, h: number, draw: (c: CanvasRenderingContext2D) => number): number {
+  private memo(
+    ctx: CanvasRenderingContext2D,
+    id: string,
+    key: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    draw: (c: CanvasRenderingContext2D) => number,
+  ): number {
     const L = textLayer();
     const m = ctx.getTransform();
     if (ctx !== L.low || !L.hi || m.b || m.c || ctx.globalAlpha !== 1) return draw(ctx);
@@ -916,7 +1158,17 @@ export class Hud {
     return c.out;
   }
 
-  private panelKey(w: World, e: Entity, x0: number, y0: number, blockW: number, right: boolean, now: number, local: boolean, tag: string): string {
+  private panelKey(
+    w: World,
+    e: Entity,
+    x0: number,
+    y0: number,
+    blockW: number,
+    right: boolean,
+    now: number,
+    local: boolean,
+    tag: string,
+  ): string {
     const h = e.hero!;
     const cd = (k: "b" | "r") => Math.ceil((h.cooldowns[k] ?? 0) - w.time);
     const frac = h.meter / w.data.heroes.baseline.superMax;
@@ -925,13 +1177,33 @@ export class Hud {
     const nx = cfgXp?.levels[h.level];
     const pv = cfgXp?.levels[h.level - 1] ?? 0;
     const xq = nx === undefined ? 240 : Math.floor(((h.xp - pv) / (nx - pv)) * 240);
-    const talents = (["r", "b", "a", "z"] as const).map((slot) => {
-      const id = learned(w, e, slot)[0]?.id ?? "";
-      return id + (talentImgs.get(id)?.complete ? "+" : "-");
-    }).join(",");
+    const talents = (["r", "b", "a", "z"] as const)
+      .map((slot) => {
+        const id = learned(w, e, slot)[0]?.id ?? "";
+        return id + (talentImgs.get(id)?.complete ? "+" : "-");
+      })
+      .join(",");
     return [
-      x0, y0, blockW, right, local, tag, h.dead, h.dead ? Math.ceil(h.respawnAt - w.time) : 0, cd("b"), cd("r"), frac >= 1 ? 240 : Math.floor(frac * 240), frac >= 1 ? Math.floor(now * 5) % 2 : 0,
-      !!cfgXp, commander, h.level, xq, talents, local && h.picks.length ? Math.floor(now * 3) % 3 : -1, h.pip ? 1 : 0, this.vantageOn(w, e) ? 1 : 0,
+      x0,
+      y0,
+      blockW,
+      right,
+      local,
+      tag,
+      h.dead,
+      h.dead ? Math.ceil(h.respawnAt - w.time) : 0,
+      cd("b"),
+      cd("r"),
+      frac >= 1 ? 240 : Math.floor(frac * 240),
+      frac >= 1 ? Math.floor(now * 5) % 2 : 0,
+      !!cfgXp,
+      commander,
+      h.level,
+      xq,
+      talents,
+      local && h.picks.length ? Math.floor(now * 3) % 3 : -1,
+      h.pip ? 1 : 0,
+      this.vantageOn(w, e) ? 1 : 0,
     ].join("|");
   }
 
@@ -941,7 +1213,18 @@ export class Hud {
     return !!hk.vantageMul && !h.dead && w.time - (h.stillAt ?? -99) >= (hk.vantageStill ?? 1);
   }
 
-  private drawPlayerPanel(ctx: CanvasRenderingContext2D, w: World, e: Entity, x0: number, y0: number, blockW: number, right: boolean, now: number, local: boolean, tag: string): number {
+  private drawPlayerPanel(
+    ctx: CanvasRenderingContext2D,
+    w: World,
+    e: Entity,
+    x0: number,
+    y0: number,
+    blockW: number,
+    right: boolean,
+    now: number,
+    local: boolean,
+    tag: string,
+  ): number {
     const h = e.hero!;
     const ax = (dx: number, width = 0) => (right ? x0 + blockW - dx - width : x0 + dx);
     const y = y0;
@@ -957,7 +1240,10 @@ export class Hud {
       drawText(ctx, lab, right ? ax(px, textWidth(lab, 0.7)) : ax(px), y + 1.5, "#ffb8a0", 0.7);
       px += Math.max(40, textWidth(lab, 0.7) + 4);
     } else {
-      const keys: ["b" | "r", string][] = [["b", PAD.b], ["r", PAD.r]];
+      const keys: ["b" | "r", string][] = [
+        ["b", PAD.b],
+        ["r", PAD.r],
+      ];
       keys.forEach(([k, c], i) => {
         const left = (h.cooldowns[k] ?? 0) - w.time;
         const bxx = ax(px + 5 + i * 12);
@@ -987,11 +1273,19 @@ export class Hud {
         const vx = ax(px + 39);
         ctx.fillStyle = INK;
         ctx.beginPath();
-        ctx.moveTo(vx, y + 1); ctx.lineTo(vx + 3.2, y + 5); ctx.lineTo(vx, y + 9); ctx.lineTo(vx - 3.2, y + 5); ctx.closePath();
+        ctx.moveTo(vx, y + 1);
+        ctx.lineTo(vx + 3.2, y + 5);
+        ctx.lineTo(vx, y + 9);
+        ctx.lineTo(vx - 3.2, y + 5);
+        ctx.closePath();
         ctx.fill();
         ctx.fillStyle = "#ffe070";
         ctx.beginPath();
-        ctx.moveTo(vx, y + 2); ctx.lineTo(vx + 2.2, y + 5); ctx.lineTo(vx, y + 8); ctx.lineTo(vx - 2.2, y + 5); ctx.closePath();
+        ctx.moveTo(vx, y + 2);
+        ctx.lineTo(vx + 2.2, y + 5);
+        ctx.lineTo(vx, y + 8);
+        ctx.lineTo(vx - 2.2, y + 5);
+        ctx.closePath();
         ctx.fill();
       }
       px += 42;
@@ -1081,7 +1375,11 @@ export class Hud {
     ctx.restore();
   }
 
-  private overlay(key: string, w: World, make: (c: CanvasRenderingContext2D, W: number, D: number) => boolean): HTMLCanvasElement | null {
+  private overlay(
+    key: string,
+    w: World,
+    make: (c: CanvasRenderingContext2D, W: number, D: number) => boolean,
+  ): HTMLCanvasElement | null {
     if (this.overlays.has(key)) return this.overlays.get(key)!;
     const t = w.terrain;
     const c = document.createElement("canvas");
@@ -1130,7 +1428,10 @@ export class Hud {
         g.fillRect(x + 1, y + sz + 1, (sz - 2) * hp, 1.4);
         if (dead[i]) {
           g.lineCap = "round";
-          for (const [lw, col] of [[2.6, INK], [1.5, "#e02818"]] as const) {
+          for (const [lw, col] of [
+            [2.6, INK],
+            [1.5, "#e02818"],
+          ] as const) {
             g.lineWidth = lw;
             g.strokeStyle = col;
             g.beginPath();
@@ -1147,7 +1448,14 @@ export class Hud {
     });
   }
 
-  private drawMinimap(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number, ui: (MapperUi | null)[] = []): void {
+  private drawMinimap(
+    ctx: CanvasRenderingContext2D,
+    W: number,
+    H: number,
+    w: World,
+    now: number,
+    ui: (MapperUi | null)[] = [],
+  ): void {
     const t = w.terrain;
     const idx = this.mapIndex?.() ?? -1;
     const solo = this.split < 2;
@@ -1267,13 +1575,14 @@ export class Hud {
         g.fill();
       }
       if (w.mapEvents.locked) {
-        for (const lg of w.mapEvents.lockGates) for (const c of lg.cells) {
-          const [gx, gy] = P(c % t.width, Math.floor(c / t.width));
-          g.fillStyle = INK;
-          g.fillRect(gx - 0.4, gy - 0.4, s + 0.8, s + 0.8);
-          g.fillStyle = "#c08a40";
-          g.fillRect(gx, gy, s, s);
-        }
+        for (const lg of w.mapEvents.lockGates)
+          for (const c of lg.cells) {
+            const [gx, gy] = P(c % t.width, Math.floor(c / t.width));
+            g.fillStyle = INK;
+            g.fillRect(gx - 0.4, gy - 0.4, s + 0.8, s + 0.8);
+            g.fillStyle = "#c08a40";
+            g.fillRect(gx, gy, s, s);
+          }
       }
       for (const gt of w.mapEvents.gateList) {
         if (!gt.shut) continue;
@@ -1507,7 +1816,14 @@ export class Hud {
 
   private bannerLineY = MARGIN_Y + 19;
 
-  private drawRelic(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, now: number, hideLine = false): void {
+  private drawRelic(
+    ctx: CanvasRenderingContext2D,
+    W: number,
+    H: number,
+    w: World,
+    now: number,
+    hideLine = false,
+  ): void {
     const r = w.arena.relic;
     const cfg = w.data.match.arena.relic;
     let text: string;
@@ -1520,19 +1836,34 @@ export class Hud {
     else if (r.state === "carried") {
       const c = w.getAny(r.carrier);
       col = c ? this.teamColors[c.team] : col;
-      text = r.channel > 0 ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}` : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
+      text =
+        r.channel > 0
+          ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}`
+          : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
     } else if (r.state === "shrined") {
       const s = w.get(r.shrineId);
-      const where = s?.structure?.type === "core" ? "KEEP" : s?.structure && w.data.structures.types[s.structure.type as "barracks"]?.class === "production" ? "OUTPOST" : "TOWER";
+      const where =
+        s?.structure?.type === "core"
+          ? "KEEP"
+          : s?.structure && w.data.structures.types[s.structure.type as "barracks"]?.class === "production"
+            ? "OUTPOST"
+            : "TOWER";
       col = this.teamColors[r.team] ?? col;
-      text = r.channel > 0 ? `STEALING THE GRUDGE · ${Math.ceil(cfg.stealSeconds - r.channel)}` : `${w.teamName(r.team)} HOLDS THE GRUDGE · ${where}`;
+      text =
+        r.channel > 0
+          ? `STEALING THE GRUDGE · ${Math.ceil(cfg.stealSeconds - r.channel)}`
+          : `${w.teamName(r.team)} HOLDS THE GRUDGE · ${where}`;
     } else {
       const left = Math.max(0, Math.ceil(cfg.returnSeconds - (w.time - r.since)));
       text = `GRUDGE LOOSE · ${left}`;
     }
     const y = MARGIN_Y + (w.match.phase === "sudden" || (w.mapEvents.locked && !w.training) ? 35 : 19);
-    const flash = r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0) ? Math.floor(now * 3) % 2 === 0 : false;
-    if (!hideLine && !w.training) drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
+    const flash =
+      r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0)
+        ? Math.floor(now * 3) % 2 === 0
+        : false;
+    if (!hideLine && !w.training)
+      drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
     if (r.state === "waiting" || !this.locate) return;
     const lift = r.state === "carried" ? 4.5 : r.state === "shrined" ? 6 : 1.5;
     const sp = this.locate(r.x, r.y + lift, r.z);
@@ -1624,7 +1955,15 @@ export class Hud {
     }
   }
 
-  private drawGateLock(ctx: CanvasRenderingContext2D, x: number, y: number, w: World, locked: boolean, since: number, now: number): void {
+  private drawGateLock(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: World,
+    locked: boolean,
+    since: number,
+    now: number,
+  ): void {
     const total = Math.max(1, w.data.match.lockdown?.seconds ?? 30);
     const left = Math.max(0, w.mapEvents.lockUntil - w.time);
     const frac = locked ? left / total : 0;
@@ -1651,11 +1990,26 @@ export class Hud {
     const shake = locked && left <= 5 ? Math.sin(now * 40) * 0.6 * (1 - left / 5) : 0;
     const pop = locked ? 0 : Math.min(1, since * 4);
     ctx.translate(shake, 0);
-    hudIcon(ctx, locked ? "lock_closed" : "lock_open", x, y - pop * 0.6, r * 1.75 * (1 + pop * 0.15 * Math.max(0, 1 - since)));
+    hudIcon(
+      ctx,
+      locked ? "lock_closed" : "lock_open",
+      x,
+      y - pop * 0.6,
+      r * 1.75 * (1 + pop * 0.15 * Math.max(0, 1 - since)),
+    );
     ctx.restore();
   }
 
-  private drawTeam(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], t: number, now: number, F: Frame | null = null): void {
+  private drawTeam(
+    ctx: CanvasRenderingContext2D,
+    W: number,
+    H: number,
+    w: World,
+    ui: (MapperUi | null)[],
+    t: number,
+    now: number,
+    F: Frame | null = null,
+  ): void {
     const right = F ? F.right : t === 1;
     const col = this.teamColors[t];
     const blockW = 104;
@@ -1675,7 +2029,8 @@ export class Hud {
     const hpFrac = core && !out ? core.hp / core.maxHp : 0;
     const wardFrac = ward > 0 && !sudden ? ward / w.wardMax : 0;
     const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
-    this.shownGrain[t] = (this.shownGrain[t] ?? ts.grain) + (ts.grain - (this.shownGrain[t] ?? ts.grain)) * Math.min(1, 0.25);
+    this.shownGrain[t] =
+      (this.shownGrain[t] ?? ts.grain) + (ts.grain - (this.shownGrain[t] ?? ts.grain)) * Math.min(1, 0.25);
     const grain = String(Math.round(this.shownGrain[t]));
     const grainy = !!w.data.match.economy.grain;
     const rate = grainy ? `+${w.grainOf(t).toFixed(1)}/S` : `+${w.incomeOf(t).toFixed(1)}/S`;
@@ -1687,7 +2042,28 @@ export class Hud {
       if (s2?.alive && s2.team === t) pads++;
     }
     const padHot = now - (this.padHitAt[t] ?? -99) < 0.7;
-    const headKey = [x0, y00, right, col, Math.round(hpFrac * 200), Math.round(wardFrac * 200), lowPulse, coin, grain, army, capped, out, rate, kx, ky, px2, py2, pads, padHot, hudIconGen].join("|");
+    const headKey = [
+      x0,
+      y00,
+      right,
+      col,
+      Math.round(hpFrac * 200),
+      Math.round(wardFrac * 200),
+      lowPulse,
+      coin,
+      grain,
+      army,
+      capped,
+      out,
+      rate,
+      kx,
+      ky,
+      px2,
+      py2,
+      pads,
+      padHot,
+      hudIconGen,
+    ].join("|");
     let y = this.memo(ctx, `head${t}`, headKey, x0 - 48, y00 - 6, blockW + 96, 40, (c) => {
       const y = y00;
       const gx = ax(8);
@@ -1700,7 +2076,9 @@ export class Hud {
       }
       const tx = textWidth("×", 0.9) + 1.5;
       const cw = 8 + tx + textWidth(coin, 1.15, true);
-      const gw = grainy ? 6 + 9 + tx + textWidth(grain, 1.15, true) + 3 + textWidth(rate, 0.6) : 4 + textWidth(rate, 0.6);
+      const gw = grainy
+        ? 6 + 9 + tx + textWidth(grain, 1.15, true) + 3 + textWidth(rate, 0.6)
+        : 4 + textWidth(rate, 0.6);
       const aw = 9 + textWidth("×", 0.9) + 1.5 + textWidth(army, 1.15, true);
       let cx = right ? ax(20, cw + gw) : ax(20);
       coinIcon(c, cx + 3, y + 5, 3.8);
@@ -1747,7 +2125,14 @@ export class Hud {
       if (relic) relicIcon(ctx, x + 5, y + 6.5, 3.6);
       else bombIcon(ctx, x + 5, y + 7, 3.6, now);
       if (tag) drawText(ctx, tag, x + 12, y + 3, "#d8d0c0", 0.7);
-      drawText(ctx, lab, x + 12 + tw, y + 3, relic ? (Math.floor(now * 3) % 2 ? "#ffe890" : "#ffffff") : "#ffc0a0", 0.7);
+      drawText(
+        ctx,
+        lab,
+        x + 12 + tw,
+        y + 3,
+        relic ? (Math.floor(now * 3) % 2 ? "#ffe890" : "#ffffff") : "#ffc0a0",
+        0.7,
+      );
       bxc += bw + 6;
     }
     if (bxc > 0) y += 14;
@@ -1768,7 +2153,16 @@ export class Hud {
       const py0 = r ? (r.y < 2 ? y + 2 : r.y + MARGIN_Y + 2) : y + 2;
       const local = !!ui[p.player];
       const tag = shown.length > 1 || teamHeroes.length > 1 ? `P${p.player + 1}` : "";
-      const h = this.memo(ctx, `pp${p.player}`, this.panelKey(w, e, px0, py0, blockW, right, now, local, tag), px0 - 10, py0 - 6, blockW + 20, 64, (c) => this.drawPlayerPanel(c, w, e, px0, py0, blockW, right, now, local, tag));
+      const h = this.memo(
+        ctx,
+        `pp${p.player}`,
+        this.panelKey(w, e, px0, py0, blockW, right, now, local, tag),
+        px0 - 10,
+        py0 - 6,
+        blockW + 20,
+        64,
+        (c) => this.drawPlayerPanel(c, w, e, px0, py0, blockW, right, now, local, tag),
+      );
       this.panelAt[p.player] = { x: right ? px0 + blockW : px0, y: py0 + h, right };
       if (!r) y = py0 + h;
     }
@@ -1820,7 +2214,14 @@ export class Hud {
       const left = Math.max(0, Math.ceil(aimer.hero.aim.until - w.time));
       const l1 = `AIM THE CANNON · ${left}`;
       const l2 = "A FIRE · B CANCEL";
-      drawText(ctx, l1, Math.round(crossX - textWidth(l1, 0.85) / 2), crossY - 8, Math.floor(now * 4) % 2 ? "#ffd870" : "#ffffff", 0.85);
+      drawText(
+        ctx,
+        l1,
+        Math.round(crossX - textWidth(l1, 0.85) / 2),
+        crossY - 8,
+        Math.floor(now * 4) % 2 ? "#ffd870" : "#ffffff",
+        0.85,
+      );
       drawText(ctx, l2, Math.round(crossX - textWidth(l2, 0.72) / 2), crossY + 6, "#e8e0d0", 0.72);
       return;
     }
@@ -1842,12 +2243,21 @@ export class Hud {
       ctx.fill();
       ctx.restore();
       ringMeter(ctx, x, yy, r - 0.8, k, "#ffd040");
-      waxSeal(ctx, x, yy, r * 0.62, ui[pl.player]!.morphBack ? "#6a4a2a" : col, ui[pl.player]!.morphBack ? "combo" : "banner");
+      waxSeal(
+        ctx,
+        x,
+        yy,
+        r * 0.62,
+        ui[pl.player]!.morphBack ? "#6a4a2a" : col,
+        ui[pl.player]!.morphBack ? "combo" : "banner",
+      );
       onHiLayer(ctx, (c) => {
         padButton(c, x + r * 0.72, yy + r * 0.72, 3.6, "#5a5a66", "X");
       });
     }
-    for (const learner of w.players.filter((p) => p.team === t && ui[p.player]?.learnReady && ui[p.player]!.buildMenu === "closed")) {
+    for (const learner of w.players.filter(
+      (p) => p.team === t && ui[p.player]?.learnReady && ui[p.player]!.buildMenu === "closed",
+    )) {
       const at = this.panelAt[learner.player];
       if (at) this.drawLearnCards(ctx, W, at.x, at.y + 2, w, learner.heroId, at.right, now);
     }
@@ -1865,7 +2275,8 @@ export class Hud {
     const group = picker?.group ?? "all";
     this.drawOrders(ctx, W, H, w, t, right, now, picker ? group : null, F);
     if (!picker) {
-      if (now < o.until) this.orderCross(ctx, crossX, crossY, w, t, o.type, right, Math.min(1, (o.until - now) * 2.5), now, false);
+      if (now < o.until)
+        this.orderCross(ctx, crossX, crossY, w, t, o.type, right, Math.min(1, (o.until - now) * 2.5), now, false);
       return;
     }
     const recent = Math.max(picker.lastOrderAt, picker.groupAt);
@@ -1876,12 +2287,35 @@ export class Hud {
     void cui;
   }
 
-  private orderCross(ctx: CanvasRenderingContext2D, x: number, y: number, w: World, t: number, group: UnitType | "all", right: boolean, alpha: number, now: number, groupHint: boolean): void {
+  private orderCross(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: World,
+    t: number,
+    group: UnitType | "all",
+    right: boolean,
+    alpha: number,
+    now: number,
+    groupHint: boolean,
+  ): void {
     const ts = w.teams[t];
     const order: Directive[] = ["push", "follow", "defend", "hold"];
-    const cur = group === "all" ? (UNIT_TYPES.every((k) => ts.directives[k] === ts.directives.grunt) ? ts.directives.grunt : null) : ts.directives[group];
+    const cur =
+      group === "all"
+        ? UNIT_TYPES.every((k) => ts.directives[k] === ts.directives.grunt)
+          ? ts.directives.grunt
+          : null
+        : ts.directives[group];
     const lit = cur ? order.indexOf(cur) : -1;
-    this.drawCross(ctx, x, y, { title: `ORDER ${TYPE_NAME[group]}`, items: order.map((d) => [DIR_NAME[d], ""]), lit, until: 0 }, right, alpha);
+    this.drawCross(
+      ctx,
+      x,
+      y,
+      { title: `ORDER ${TYPE_NAME[group]}`, items: order.map((d) => [DIR_NAME[d], ""]), lit, until: 0 },
+      right,
+      alpha,
+    );
     if (groupHint) {
       const hint = "D-PAD LEFT / RIGHT: WHO OBEYS";
       ctx.save();
@@ -1893,7 +2327,17 @@ export class Hud {
 
   portraits: Portraits | null = null;
 
-  private drawOrders(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, t: number, right: boolean, now: number, selected: UnitType | "all" | null, F: Frame | null = null): void {
+  private drawOrders(
+    ctx: CanvasRenderingContext2D,
+    W: number,
+    H: number,
+    w: World,
+    t: number,
+    right: boolean,
+    now: number,
+    selected: UnitType | "all" | null,
+    F: Frame | null = null,
+  ): void {
     const ts = w.teams[t];
     const o = this.orders[t];
     const counts: Record<UnitType, number> = { grunt: 0, ranged: 0, heavy: 0 };
@@ -1906,7 +2350,18 @@ export class Hud {
     const flash = now < o.until - 1.2;
     const form = ts.formation ?? "mass";
     const showForm = form !== "mass" || w.players.some((q) => q.team === t && q.commander);
-    const key = [x0, y0, right, selected, flash, o.type, showForm ? form : "", ts.attackTeam ?? -1, ts.lane ?? -1, ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`)].join("|");
+    const key = [
+      x0,
+      y0,
+      right,
+      selected,
+      flash,
+      o.type,
+      showForm ? form : "",
+      ts.attackTeam ?? -1,
+      ts.lane ?? -1,
+      ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`),
+    ].join("|");
     const s = this.split >= 3 ? 0.5 : 1;
     const ax = right ? x0 + pw : x0;
     const ay = y0 + ph;
@@ -1924,7 +2379,21 @@ export class Hud {
     ctx.restore();
   }
 
-  private drawOrdersBody(ctx: CanvasRenderingContext2D, x0: number, y0: number, pw: number, ph: number, cw: number, t: number, ts: World["teams"][number], o: { type: UnitType | "all"; until: number }, counts: Record<UnitType, number>, selected: UnitType | "all" | null, flash: boolean, right = false): void {
+  private drawOrdersBody(
+    ctx: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    pw: number,
+    ph: number,
+    cw: number,
+    t: number,
+    ts: World["teams"][number],
+    o: { type: UnitType | "all"; until: number },
+    counts: Record<UnitType, number>,
+    selected: UnitType | "all" | null,
+    flash: boolean,
+    right = false,
+  ): void {
     void pw;
     void ph;
     const r = 9.5;
@@ -1958,7 +2427,14 @@ export class Hud {
       ctx.arc(x, y, r - 0.6, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
-      orderBadge(ctx, x + r * 0.74, y - r * 0.74, ts.directives[k], t === 1 || right, ts.directives[k] === "push" && (ts.attackTeam ?? -1) >= 0 ? this.teamColors[ts.attackTeam!] : undefined);
+      orderBadge(
+        ctx,
+        x + r * 0.74,
+        y - r * 0.74,
+        ts.directives[k],
+        t === 1 || right,
+        ts.directives[k] === "push" && (ts.attackTeam ?? -1) >= 0 ? this.teamColors[ts.attackTeam!] : undefined,
+      );
       if (ts.directives[k] === "push" && (ts.lane ?? -1) >= 0 && this.laneCount > 0) {
         const lx = x + r * 0.74 + (right || t === 1 ? -7.5 : 7.5);
         const n = this.laneCount;
@@ -1984,7 +2460,16 @@ export class Hud {
   private mini: { x: number; y: number; w: number; h: number } | null = null;
   private panelAt: Record<number, { x: number; y: number; right: boolean }> = {};
 
-  private drawLearnCards(ctx: CanvasRenderingContext2D, W: number, ax0: number, top: number, w: World, heroId: number, right: boolean, now: number): void {
+  private drawLearnCards(
+    ctx: CanvasRenderingContext2D,
+    W: number,
+    ax0: number,
+    top: number,
+    w: World,
+    heroId: number,
+    right: boolean,
+    now: number,
+  ): void {
     const hero = w.getAny(heroId);
     const opt = hero?.alive ? options(w, hero) : null;
     if (!opt || !hero?.hero) return;
@@ -2044,7 +2529,14 @@ export class Hud {
     if (hero.hero.pickSince !== undefined) {
       const left = Math.max(0, Math.ceil(w.autoPickSeconds - (w.time - hero.hero.pickSince)));
       const tx = String(left);
-      drawNum(ctx, tx, Math.round(x0 + tw / 2 - textWidth(tx, 0.7, true) / 2), Math.round(yc - 3), left <= 3 ? "#ff9070" : "#f0e4c8", 0.7);
+      drawNum(
+        ctx,
+        tx,
+        Math.round(x0 + tw / 2 - textWidth(tx, 0.7, true) / 2),
+        Math.round(yc - 3),
+        left <= 3 ? "#ff9070" : "#f0e4c8",
+        0.7,
+      );
     }
   }
 
@@ -2053,42 +2545,151 @@ export class Hud {
     if (!hero?.alive) return null;
     if (mui.buildMenu === "learn") {
       const opt = options(w, hero);
-      if (!opt) return { title: "NOTHING TO LEARN", items: [["", ""], ["", ""], ["", ""], ["LATER", ""]], lit: -1, until: 0 };
-      return { title: `EVOLVE ${opt.slot.toUpperCase()}`, items: [["", ""], [opt.list[0]?.name ?? "", ""], [opt.list[1]?.name ?? "", ""], ["LATER", ""]], lit: -1, until: 0 };
+      if (!opt)
+        return {
+          title: "NOTHING TO LEARN",
+          items: [
+            ["", ""],
+            ["", ""],
+            ["", ""],
+            ["LATER", ""],
+          ],
+          lit: -1,
+          until: 0,
+        };
+      return {
+        title: `EVOLVE ${opt.slot.toUpperCase()}`,
+        items: [
+          ["", ""],
+          [opt.list[0]?.name ?? "", ""],
+          [opt.list[1]?.name ?? "", ""],
+          ["LATER", ""],
+        ],
+        lit: -1,
+        until: 0,
+      };
     }
     if (mui.buildMenu === "shop") {
       const sh = w.data.match.arena.shop;
       const ts = w.teams[team];
       const k = (n: number) => String(Math.round(n * w.costMul()));
       const wardWait = Math.ceil(ts.wardReadyAt - w.time);
-      return { title: "KEEP SHOP", items: [["BOMB", k(sh.bomb.cost)], ["SHIELD", wardWait > 0 ? `${wardWait}S` : k(sh.ward.cost)], ["CANNON", k(sh.cannon.cost)], ["CANCEL", ""]], lit: -1, until: 0 };
+      return {
+        title: "KEEP SHOP",
+        items: [
+          ["BOMB", k(sh.bomb.cost)],
+          ["SHIELD", wardWait > 0 ? `${wardWait}S` : k(sh.ward.cost)],
+          ["CANNON", k(sh.cannon.cost)],
+          ["CANCEL", ""],
+        ],
+        lit: -1,
+        until: 0,
+      };
     }
     const pad = padNear(w, hero);
-    if (!pad) return { title: "NO PAD HERE", items: [["", ""], ["", ""], ["", ""], ["", ""]], lit: -1, until: 0 };
+    if (!pad)
+      return {
+        title: "NO PAD HERE",
+        items: [
+          ["", ""],
+          ["", ""],
+          ["", ""],
+          ["", ""],
+        ],
+        lit: -1,
+        until: 0,
+      };
     const c = (k: Parameters<typeof buildCost>[1]) => String(buildCost(w, k, false, team));
     const st = pad.structureId ? w.get(pad.structureId) : undefined;
     if (mui.buildMenu === "spec" && st?.structure && st.team === team && canSpec(w, st)) {
       const specs = w.data.structures.types[st.structure.type as Parameters<typeof buildCost>[1]].specs ?? [];
       const cost = String(specCost(w, st.structure.type as Parameters<typeof buildCost>[1], team));
-      return { title: "LEVEL 3", items: [[specs[0]?.name ?? "", cost], [specs[1]?.name ?? "", cost], [specs[2]?.name ?? "", cost], ["CANCEL", ""]], lit: -1, until: 0 };
+      return {
+        title: "LEVEL 3",
+        items: [
+          [specs[0]?.name ?? "", cost],
+          [specs[1]?.name ?? "", cost],
+          [specs[2]?.name ?? "", cost],
+          ["CANCEL", ""],
+        ],
+        lit: -1,
+        until: 0,
+      };
     }
     if (st?.structure && st.team === team) {
-      const up = st.structure.level < 2 ? String(buildCost(w, st.structure.type as Parameters<typeof buildCost>[1], true, team)) : "";
-      return { title: st.structure.level < 2 ? "UPGRADE" : "MAX LEVEL", items: [[up ? "UPGRADE" : "", up], ["", ""], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 };
+      const up =
+        st.structure.level < 2
+          ? String(buildCost(w, st.structure.type as Parameters<typeof buildCost>[1], true, team))
+          : "";
+      return {
+        title: st.structure.level < 2 ? "UPGRADE" : "MAX LEVEL",
+        items: [
+          [up ? "UPGRADE" : "", up],
+          ["", ""],
+          ["", ""],
+          ["CANCEL", ""],
+        ],
+        lit: -1,
+        until: 0,
+      };
     }
     return mui.buildMenu === "tower"
-      ? { title: "TOWERS", items: [["DAMAGE", c("damage")], ["CONTROL", c("control")], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 }
+      ? {
+          title: "TOWERS",
+          items: [
+            ["DAMAGE", c("damage")],
+            ["CONTROL", c("control")],
+            ["", ""],
+            ["CANCEL", ""],
+          ],
+          lit: -1,
+          until: 0,
+        }
       : w.terrain.outposts
-        ? { title: "OUTPOSTS", items: [["OUTPOST", c("outpost")], ["", ""], ["", ""], ["CANCEL", ""]], lit: -1, until: 0 }
-        : { title: "OUTPOSTS", items: [["RANGE", c("range")], ["BARRACKS", c("barracks")], ["FOUNDRY", c("foundry")], ["CANCEL", ""]], lit: -1, until: 0 };
+        ? {
+            title: "OUTPOSTS",
+            items: [
+              ["OUTPOST", c("outpost")],
+              ["", ""],
+              ["", ""],
+              ["CANCEL", ""],
+            ],
+            lit: -1,
+            until: 0,
+          }
+        : {
+            title: "OUTPOSTS",
+            items: [
+              ["RANGE", c("range")],
+              ["BARRACKS", c("barracks")],
+              ["FOUNDRY", c("foundry")],
+              ["CANCEL", ""],
+            ],
+            lit: -1,
+            until: 0,
+          };
   }
 
   private crossN = 0;
 
-  private drawCross(ctx: CanvasRenderingContext2D, x: number, y: number, c: Cross, right: boolean, alpha: number): void {
+  private drawCross(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    c: Cross,
+    right: boolean,
+    alpha: number,
+  ): void {
     const key = [x, y, c.title, c.items.flat().join(","), c.lit, alpha].join("|");
-    const side = (i: number) => Math.max(textWidth(c.items[i][0], 0.75), c.items[i][1] ? textWidth(c.items[i][1], 0.8, true) : 0);
-    const half = Math.max(textWidth(c.title, 0.8) / 2, textWidth(c.items[0][0], 0.75) / 2, textWidth(c.items[3][0], 0.75) / 2, 9 + 4.6 + 3 + Math.max(side(1), side(2))) + 6;
+    const side = (i: number) =>
+      Math.max(textWidth(c.items[i][0], 0.75), c.items[i][1] ? textWidth(c.items[i][1], 0.8, true) : 0);
+    const half =
+      Math.max(
+        textWidth(c.title, 0.8) / 2,
+        textWidth(c.items[0][0], 0.75) / 2,
+        textWidth(c.items[3][0], 0.75) / 2,
+        9 + 4.6 + 3 + Math.max(side(1), side(2)),
+      ) + 6;
     const top = 9 + (c.items[0][1] ? 32 : 23) + 6;
     this.memo(ctx, `cross${this.crossN++}`, key, x - half, y - top, half * 2, top + 9 + 5 + 8 + 12 + 6, (g) => {
       this.drawCrossBody(g, x, y, c, right, alpha);
@@ -2096,12 +2697,24 @@ export class Hud {
     });
   }
 
-  private drawCrossBody(ctx: CanvasRenderingContext2D, x: number, y: number, c: Cross, right: boolean, alpha: number): void {
+  private drawCrossBody(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    c: Cross,
+    right: boolean,
+    alpha: number,
+  ): void {
     ctx.save();
     ctx.globalAlpha = alpha;
     const r = 4.6;
     const d = 9;
-    const pos: [number, number, number][] = [[0, -d, -Math.PI / 2], [-d, 0, Math.PI], [d, 0, 0], [0, d, Math.PI / 2]];
+    const pos: [number, number, number][] = [
+      [0, -d, -Math.PI / 2],
+      [-d, 0, Math.PI],
+      [d, 0, 0],
+      [0, d, Math.PI / 2],
+    ];
     const tw = textWidth(c.title, 0.8);
     drawText(ctx, c.title, x - tw / 2, y - d - (c.items[0][1] ? 32 : 23), "#ffffff", 0.8);
     pos.forEach(([dx, dy, ang], i) => {

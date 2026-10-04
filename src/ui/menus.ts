@@ -1,5 +1,29 @@
 import { drawPlain, drawText, onHiLayer, textWidth } from "./font";
-import { artTitle, hiImage, boardBg, band, banner, beam, boardTitle, card, drawLogo, fieldShade, goldArrow, inset, nameImage, paintedText, pin, plank, shadowText, tag, texturedRect, waxSeal, windowCut, woodDisc, woodFloor } from "./n64ui";
+import {
+  artTitle,
+  hiImage,
+  boardBg,
+  band,
+  banner,
+  beam,
+  boardTitle,
+  card,
+  drawLogo,
+  fieldShade,
+  goldArrow,
+  inset,
+  nameImage,
+  paintedText,
+  pin,
+  plank,
+  shadowText,
+  tag,
+  texturedRect,
+  waxSeal,
+  windowCut,
+  woodDisc,
+  woodFloor,
+} from "./n64ui";
 import { padButton, PAD, talentIcon } from "./hud";
 import { learned } from "../sim/talents";
 import { buildCodex, type CodexArt, type CodexEntry } from "./codex";
@@ -7,9 +31,19 @@ import { prompt, promptWidth, wrap } from "./screens";
 import type { Hit } from "./cursor";
 import type { Portraits } from "./portraits";
 import type { World } from "../sim/world";
-import { DEFAULT_OPTIONS, DEFAULT_RULES, OPTION_ROWS, RULE_ROWS, cycle, winRate, type Row, type Save } from "../game/save";
+import {
+  DEFAULT_OPTIONS,
+  DEFAULT_RULES,
+  OPTION_ROWS,
+  RULE_ROWS,
+  cycle,
+  winRate,
+  type Row,
+  type Save,
+} from "../game/save";
 
-export type Page = "main" | "training" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls" | "codex";
+export type Page =
+  "main" | "training" | "players" | "network" | "browse" | "rules" | "options" | "records" | "controls" | "codex";
 export interface RoomInfo {
   id: number;
   name: string;
@@ -42,11 +76,31 @@ const LIGHT = "#f8e8c0";
 const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24"];
 const HOUSE = ["BLUE", "RED", "YELLOW", "GREEN"];
 const ITEMS = [
-  { art: "m_fight", label: "FIGHT", blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, TWO AGAINST TWO, OR FOUR HOUSES IN A FREE FOR ALL." },
-  { art: "!TRAINING", label: "TRAINING", blurb: "PICK A CHAMPION AND BEAT ON A DUMMY THAT CAN'T DIE. A DPS METER COUNTS EVERY HIT. FREE GOLD, NO CLOCK." },
-  { art: "!PLAYERS", label: "PLAYERS", blurb: "WHO IS PLAYING ON THIS MACHINE: CONTROLLERS, KEYBOARD AND MOUSE. FREE A SEAT OR TURN THE KEYBOARD OFF." },
-  { art: "m_network", label: "VERSUS ONLINE", blurb: "PLAY OVER THE HOUSE NETWORK. ONE MACHINE HOSTS, FRIENDS OPEN ITS PAGE AND JOIN." },
-  { art: "!CODEX", label: "CODEX", blurb: "EVERY CHAMPION, EVERY EVOLUTION, EVERY TRICK FOR YOUR ARMY AND BASE. ALSO SOME LIES ABOUT A TREE." },
+  {
+    art: "m_fight",
+    label: "FIGHT",
+    blurb: "CHOOSE CHAMPIONS AND SETTLE A GRUDGE. ONE AGAINST ONE, TWO AGAINST TWO, OR FOUR HOUSES IN A FREE FOR ALL.",
+  },
+  {
+    art: "!TRAINING",
+    label: "TRAINING",
+    blurb: "PICK A CHAMPION AND BEAT ON A DUMMY THAT CAN'T DIE. A DPS METER COUNTS EVERY HIT. FREE GOLD, NO CLOCK.",
+  },
+  {
+    art: "!PLAYERS",
+    label: "PLAYERS",
+    blurb: "WHO IS PLAYING ON THIS MACHINE: CONTROLLERS, KEYBOARD AND MOUSE. FREE A SEAT OR TURN THE KEYBOARD OFF.",
+  },
+  {
+    art: "m_network",
+    label: "VERSUS ONLINE",
+    blurb: "PLAY OVER THE HOUSE NETWORK. ONE MACHINE HOSTS, FRIENDS OPEN ITS PAGE AND JOIN.",
+  },
+  {
+    art: "!CODEX",
+    label: "CODEX",
+    blurb: "EVERY CHAMPION, EVERY EVOLUTION, EVERY TRICK FOR YOUR ARMY AND BASE. ALSO SOME LIES ABOUT A TREE.",
+  },
   { art: "m_rules", label: "RULES", blurb: "SET THE TERMS OF COMBAT: TIME, GOLD, SOLDIERS AND MERCY." },
   { art: "m_records", label: "RECORDS", blurb: "EVERY VICTORY AND DEFEAT, WRITTEN DOWN BY NAME AND BY CHAMPION." },
   { art: "m_options", label: "OPTIONS", blurb: "MUSIC, SOUND, SCREEN SHAKE AND BUTTON HINTS." },
@@ -65,7 +119,15 @@ const MAIN_GLYPHS = ["combo", "rank", "rally", "banner", "hex", "works", "castle
 const PAGES: Page[] = ["main", "training", "players", "network", "codex", "rules", "records", "options", "controls"];
 const TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
 
-function artWord(ctx: CanvasRenderingContext2D, key: string, fallback: string, cx: number, y: number, h: number, alpha = 1): number {
+function artWord(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  fallback: string,
+  cx: number,
+  y: number,
+  h: number,
+  alpha = 1,
+): number {
   const im = nameImage(key);
   ctx.globalAlpha = alpha;
   if (!im) {
@@ -82,7 +144,14 @@ function artWord(ctx: CanvasRenderingContext2D, key: string, fallback: string, c
   return w;
 }
 
-function num(ctx: CanvasRenderingContext2D, s: string | number, rx: number, y: number, color = BROWN, scale = 0.7): void {
+function num(
+  ctx: CanvasRenderingContext2D,
+  s: string | number,
+  rx: number,
+  y: number,
+  color = BROWN,
+  scale = 0.7,
+): void {
   const t = String(s);
   drawPlain(ctx, t, rx - textWidth(t, scale, true), y, color, scale, true);
 }
@@ -94,7 +163,14 @@ function dateOf(ms: number): string {
 
 const PAUSE_ITEMS = ["RESUME", "CONTROLS", "QUIT MATCH"];
 const TRAIN_ITEMS = ["RESUME", "LEVEL UP", "RESET COOLDOWNS", "RESET METER", "CHANGE CHAMPION", "QUIT TRAINING"];
-const TRAIN_BLURB = ["BACK TO THE DUMMY.", "GAIN A LEVEL. PICK THE EVOLUTION ON THE ORDERS STICK AS USUAL.", "EVERY COOLDOWN READY AND THE SUPER METER FULL.", "ZERO THE DPS METER.", "BACK TO CHAMPION SELECT TO SWAP HEROES.", "LEAVE TRAINING AND RETURN TO THE MENU."];
+const TRAIN_BLURB = [
+  "BACK TO THE DUMMY.",
+  "GAIN A LEVEL. PICK THE EVOLUTION ON THE ORDERS STICK AS USUAL.",
+  "EVERY COOLDOWN READY AND THE SUPER METER FULL.",
+  "ZERO THE DPS METER.",
+  "BACK TO CHAMPION SELECT TO SWAP HEROES.",
+  "LEAVE TRAINING AND RETURN TO THE MENU.",
+];
 const TRAIN_GLYPHS = ["dash", "rank", "repair", "size", "combo", "quake"];
 const TEAM_CLOTH = ["#2a4ab8", "#b02a1c", "#c89a14", "#2a8a3a"];
 
@@ -115,7 +191,11 @@ export class Menus {
     return this.training ? TRAIN_ITEMS : PAUSE_ITEMS;
   }
 
-  updatePause(nav: Nav, ptr: Pointer, sound: (k: "move" | "ok" | "back") => void): "resume" | "quit" | "level" | "cooldowns" | "meter" | "champion" | null {
+  updatePause(
+    nav: Nav,
+    ptr: Pointer,
+    sound: (k: "move" | "ok" | "back") => void,
+  ): "resume" | "quit" | "level" | "cooldowns" | "meter" | "champion" | null {
     let act = "";
     if (ptr.moved || ptr.click) {
       const h = this.at(ptr.x, ptr.y);
@@ -189,7 +269,9 @@ export class Menus {
     const m = w.data.match;
     const left = Math.max(0, w.matchLength - w.time);
     const sudden = w.match.phase === "sudden";
-    const clock = sudden ? "SUDDEN DEATH" : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")}`;
+    const clock = sudden
+      ? "SUDDEN DEATH"
+      : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")}`;
     card(ctx, px, py, pw, ph, -0.012, null, () => {
       const iw = pw - 20;
       const ih = 46;
@@ -231,7 +313,13 @@ export class Menus {
         }
         const ts = w.teams[team];
         const core = w.core(team);
-        const stats: [string, string][] = [["KEEP", core ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-"], ["GOLD", String(Math.floor(ts.resource))], ["GRAIN", String(Math.floor(ts.grain))], ["SOLDIERS", String(ts.unitCount)], ["HERO KILLS", String(ts.heroKills)]];
+        const stats: [string, string][] = [
+          ["KEEP", core ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-"],
+          ["GOLD", String(Math.floor(ts.resource))],
+          ["GRAIN", String(Math.floor(ts.grain))],
+          ["SOLDIERS", String(ts.unitCount)],
+          ["HERO KILLS", String(ts.heroKills)],
+        ];
         const sy = ph - 10 - stats.length * 8;
         band(ctx, x, sy - 3, colW, 1, "#6a4424", 0.5);
         stats.forEach(([k, v], q) => {
@@ -257,10 +345,30 @@ export class Menus {
         drawPlain(ctx, text, 27, chh / 2 - 3, sel ? "#8a1810" : BROWN, 0.72, true);
       });
     });
-    const blurb = this.training ? TRAIN_BLURB[this.pauseFocus] : this.pauseFocus === 0 ? "BACK TO THE FIGHT." : this.pauseFocus === 1 ? "EVERY BUTTON, FOR PADS AND FOR KEYBOARDS." : this.pauseConfirm ? "PRESS A AGAIN TO ABANDON THE MATCH." : "LEAVE THE MATCH AND RETURN TO THE MENU.";
-    wrap(blurb, cw, 0.55).forEach((l, j) => shadowText(ctx, l, cx0 + cw / 2 - textWidth(l, 0.55) / 2, 30 + n * (chh + gap) + 4 + j * 8, this.pauseConfirm && this.pauseFocus === 2 ? "#ffb090" : "#f0e4c8", 0.55));
+    const blurb = this.training
+      ? TRAIN_BLURB[this.pauseFocus]
+      : this.pauseFocus === 0
+        ? "BACK TO THE FIGHT."
+        : this.pauseFocus === 1
+          ? "EVERY BUTTON, FOR PADS AND FOR KEYBOARDS."
+          : this.pauseConfirm
+            ? "PRESS A AGAIN TO ABANDON THE MATCH."
+            : "LEAVE THE MATCH AND RETURN TO THE MENU.";
+    wrap(blurb, cw, 0.55).forEach((l, j) =>
+      shadowText(
+        ctx,
+        l,
+        cx0 + cw / 2 - textWidth(l, 0.55) / 2,
+        30 + n * (chh + gap) + 4 + j * 8,
+        this.pauseConfirm && this.pauseFocus === 2 ? "#ffb090" : "#f0e4c8",
+        0.55,
+      ),
+    );
     void now;
-    const p: [string, string][] = [["A", "CHOOSE"], ["B", "RESUME"]];
+    const p: [string, string][] = [
+      ["A", "CHOOSE"],
+      ["B", "RESUME"],
+    ];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
   private drawPauseHouses(ctx: CanvasRenderingContext2D, w: World, colW: number, ih: number, ph: number): void {
@@ -298,7 +406,13 @@ export class Menus {
       }
       const core = w.core(team);
       const keep = core?.alive && !out ? `${Math.round((core.hp / core.maxHp) * 100)}%` : "-";
-      const stats: [string, string][] = [["KEEP", keep], ["GOLD", String(Math.floor(ts.resource))], ["GRAIN", String(Math.floor(ts.grain))], ["ARMY", String(ts.unitCount)], ["KILLS", String(ts.heroKills)]];
+      const stats: [string, string][] = [
+        ["KEEP", keep],
+        ["GOLD", String(Math.floor(ts.resource))],
+        ["GRAIN", String(Math.floor(ts.grain))],
+        ["ARMY", String(ts.unitCount)],
+        ["KILLS", String(ts.heroKills)],
+      ];
       band(ctx, x, y - 1, colW, 1, "#6a4424", 0.5);
       const half = Math.floor((colW - 8) / 2);
       stats.forEach(([k, v], q) => {
@@ -351,7 +465,12 @@ export class Menus {
     if (this.page === "rules") return RULE_ROWS.length + 1;
     if (this.page === "options") return OPTION_ROWS.length + 2;
     if (this.page === "codex") return this.codexEntries().length;
-    if (this.page === "records") return this.tab === 0 ? this.roster.length : this.tab === 1 ? this.save.tagNames().length : this.save.data.log.length;
+    if (this.page === "records")
+      return this.tab === 0
+        ? this.roster.length
+        : this.tab === 1
+          ? this.save.tagNames().length
+          : this.save.data.log.length;
     return 0;
   }
 
@@ -370,7 +489,8 @@ export class Menus {
       if (ptr.click && this.hover) act = this.hover;
     }
     if (nav.dy && n && this.page === "players") {
-      this.focus = nav.dy > 0 ? (this.focus < 4 ? 4 : this.focus === 4 ? 5 : 0) : this.focus < 4 ? 5 : this.focus === 5 ? 4 : 0;
+      this.focus =
+        nav.dy > 0 ? (this.focus < 4 ? 4 : this.focus === 4 ? 5 : 0) : this.focus < 4 ? 5 : this.focus === 5 ? 4 : 0;
       sound("move");
     } else if (nav.dy && n && this.page !== "network") {
       this.focus = (this.focus + nav.dy + n) % n;
@@ -565,8 +685,15 @@ export class Menus {
       if (this.page === "players") this.drawPlayers(ctx, W, H, now);
       else if (this.page === "network") this.drawNetwork(ctx, W, H, now);
       else if (this.page === "browse") this.drawBrowse(ctx, W, H, now);
-      else if (this.page === "rules") this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, ["RESTORE DEFAULTS"]);
-      else if (this.page === "options") this.drawRows(ctx, W, H, "m_options", "OPTIONS", OPTION_ROWS as Row<object>[], this.save.data.options, ["RESTORE DEFAULTS", "ERASE ALL RECORDS"]);
+      else if (this.page === "rules")
+        this.drawRows(ctx, W, H, "t_rules", "RULES OF COMBAT", RULE_ROWS as Row<object>[], this.save.data.rules, [
+          "RESTORE DEFAULTS",
+        ]);
+      else if (this.page === "options")
+        this.drawRows(ctx, W, H, "m_options", "OPTIONS", OPTION_ROWS as Row<object>[], this.save.data.options, [
+          "RESTORE DEFAULTS",
+          "ERASE ALL RECORDS",
+        ]);
       else if (this.page === "records") this.drawRecords(ctx, W, H);
       else if (this.page === "codex") this.drawCodex(ctx, W, H);
       else this.drawControls(ctx, W, H);
@@ -595,7 +722,9 @@ export class Menus {
           t.drawImage(nm, 14, ih + 20, w, h);
         });
       } else drawPlain(ctx, it.label, 14, ih + 20, BROWN, 1.3, true);
-      wrap(it.blurb, pw - 70, 0.6).slice(0, 3).forEach((l, j) => drawPlain(ctx, l, 14, ih + 42 + j * 8, "#4a3018", 0.6));
+      wrap(it.blurb, pw - 70, 0.6)
+        .slice(0, 3)
+        .forEach((l, j) => drawPlain(ctx, l, 14, ih + 42 + j * 8, "#4a3018", 0.6));
       if (this.focus === 0) {
         const r = this.save.data.rules;
         const t = `${r.minutes} MIN  ·  ${r.popCap} SOLDIERS  ·  GOLD X ${r.goldRate}${r.mercy ? "" : "  ·  NO MERCY"}`;
@@ -617,7 +746,10 @@ export class Menus {
         drawPlain(ctx, item.label, 24, chh / 2 - 3, sel ? "#8a1810" : BROWN, 0.72, true);
       });
     });
-    const p: [string, string][] = [["A", "SELECT"], ["B", "BACK"]];
+    const p: [string, string][] = [
+      ["A", "SELECT"],
+      ["B", "BACK"],
+    ];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
@@ -635,8 +767,20 @@ export class Menus {
   private drawNetwork(ctx: CanvasRenderingContext2D, W: number, H: number, now: number): void {
     boardTitle(ctx, W, "m_network", "VERSUS ONLINE");
     const opts: [string, string, string, string, string][] = [
-      ["t_host", "HOST A BATTLE", "castle", "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS.", "#a8141a"],
-      ["t_join", "JOIN A BATTLE", "banner", "SEE EVERY BATTLE ON THIS SERVER AND TAKE A SEAT. YOU SEE THE HOST'S RULES BEFORE THE FIGHT.", "#1a3aa8"],
+      [
+        "t_host",
+        "HOST A BATTLE",
+        "castle",
+        "THIS MACHINE RUNS THE MATCH. FRIENDS JOIN FROM THEIR OWN SCREENS.",
+        "#a8141a",
+      ],
+      [
+        "t_join",
+        "JOIN A BATTLE",
+        "banner",
+        "SEE EVERY BATTLE ON THIS SERVER AND TAKE A SEAT. YOU SEE THE HOST'S RULES BEFORE THE FIGHT.",
+        "#1a3aa8",
+      ],
     ];
     const lines = [this.netStatus, ...this.netAddrs.map((a) => `FRIENDS OPEN  http://${a}`)].filter(Boolean);
     const cw = 118;
@@ -650,7 +794,10 @@ export class Menus {
       const y = cy - (hot ? 4 : 0);
       this.hit(`row:${k}`, x, y, cw, ch);
       card(ctx, x, y, cw, ch, hot ? 0 : k ? 0.06 : -0.06, hot ? "#c81818" : "#8a8a90", () => {
-        for (const [ox, oy, flip] of [[9, 10, false], [cw - 9, ch - 10, true]] as const) {
+        for (const [ox, oy, flip] of [
+          [9, 10, false],
+          [cw - 9, ch - 10, true],
+        ] as const) {
           ctx.save();
           ctx.translate(ox, oy);
           if (flip) ctx.rotate(Math.PI);
@@ -673,7 +820,11 @@ export class Menus {
             t.drawImage(nm, cw / 2 - w / 2, 84, w, hh);
           });
         } else drawPlain(ctx, label, cw / 2 - textWidth(label, 0.8, true) / 2, 84, BROWN, 0.8, true);
-        wrap(blurb, cw - 20, 0.5).slice(0, 4).forEach((l, j) => drawPlain(ctx, l, cw / 2 - textWidth(l, 0.5) / 2, 102 + j * 8, hot ? "#4a3018" : "#7a5a38", 0.5));
+        wrap(blurb, cw - 20, 0.5)
+          .slice(0, 4)
+          .forEach((l, j) =>
+            drawPlain(ctx, l, cw / 2 - textWidth(l, 0.5) / 2, 102 + j * 8, hot ? "#4a3018" : "#7a5a38", 0.5),
+          );
       });
     });
     if (lines.length) {
@@ -681,10 +832,24 @@ export class Menus {
       const sy = cy + ch + 8;
       const sh = 8 + lines.length * 9;
       card(ctx, x0, sy, pw, sh, 0.008, "#8a8a90", () => {
-        lines.forEach((l, j) => drawPlain(ctx, l, pw / 2 - textWidth(l, 0.58) / 2, 5 + j * 9, j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN, 0.58));
+        lines.forEach((l, j) =>
+          drawPlain(
+            ctx,
+            l,
+            pw / 2 - textWidth(l, 0.58) / 2,
+            5 + j * 9,
+            j === 0 && this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : BROWN,
+            0.58,
+          ),
+        );
       });
     }
-    const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "SELECT"], ["B", "BACK"]];
+    const p: [string, string][] = this.netBusy
+      ? [["B", "CANCEL"]]
+      : [
+          ["A", "SELECT"],
+          ["B", "BACK"],
+        ];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
@@ -704,7 +869,7 @@ export class Menus {
       const x = x0 + i * (cw + gap);
       const y = y0 - (sel ? 4 : 0);
       this.hit(`row:${i}`, x, y, cw, ch);
-      card(ctx, x, y, cw, ch, sel ? 0 : (i % 2 ? 0.03 : -0.03), sel ? "#c81818" : d ? SEAT[i] : "#8a8a90", () => {
+      card(ctx, x, y, cw, ch, sel ? 0 : i % 2 ? 0.03 : -0.03, sel ? "#c81818" : d ? SEAT[i] : "#8a8a90", () => {
         const t = `SEAT ${ROMAN[i]}`;
         drawPlain(ctx, t, cw / 2 - textWidth(t, 0.62, true) / 2, 9, "#8a5a2a", 0.62, true);
         const iw = cw - 14;
@@ -712,10 +877,19 @@ export class Menus {
         inset(ctx, 7, 20, iw, ih, d ? SEAT[i] : "#3a2a1c");
         texturedRect(ctx, "cloth", 7, 20, iw, ih, d ? SEAT[i] : "#4a3a2c", 0, 0.7);
         band(ctx, 7, 20, iw, ih, "#000000", d ? 0.15 : 0.45);
-        waxSeal(ctx, cw / 2, 20 + ih / 2, 16, d ? "#c8a020" : "#5a4a3a", d ? (d.includes("KEYBOARD") ? "pad" : "combo") : "none");
+        waxSeal(
+          ctx,
+          cw / 2,
+          20 + ih / 2,
+          16,
+          d ? "#c8a020" : "#5a4a3a",
+          d ? (d.includes("KEYBOARD") ? "pad" : "combo") : "none",
+        );
         paintedText(ctx, `P${i + 1}`, cw / 2, 20 + ih / 2 - 7, d ? "#fff4c8" : "#a89878", 1.0);
         const lines = d ? wrap(d, cw - 12, 0.5).slice(0, 3) : ["EMPTY SEAT", "PRESS ANY BUTTON", "TO JOIN"];
-        lines.forEach((l, j) => drawPlain(ctx, l, cw / 2 - textWidth(l, 0.5) / 2, 80 + j * 8, d ? BROWN : "#8a6a44", 0.5));
+        lines.forEach((l, j) =>
+          drawPlain(ctx, l, cw / 2 - textWidth(l, 0.5) / 2, 80 + j * 8, d ? BROWN : "#8a6a44", 0.5),
+        );
         if (d) {
           const f = "A: FREE SEAT";
           drawPlain(ctx, f, cw / 2 - textWidth(f, 0.48) / 2, ch - 11, sel ? "#8a1810" : "#8a6a44", 0.48);
@@ -724,14 +898,17 @@ export class Menus {
       if (sel) upArrow(ctx, x + cw / 2, y + ch + 8);
     }
     const kbmOn = !!this.save.data.options.kbm;
-    const rows: [string, string, string][] = [["KEYBOARD + MOUSE", kbmOn ? "ON" : "OFF", "pad"], ["FIND GAMECUBE / PRO PAD", "SEARCH", "rally"]];
+    const rows: [string, string, string][] = [
+      ["KEYBOARD + MOUSE", kbmOn ? "ON" : "OFF", "pad"],
+      ["FIND GAMECUBE / PRO PAD", "SEARCH", "rally"],
+    ];
     const tw = Math.floor((cw * 4 + gap * 3 - gap) / 2);
     rows.forEach(([l, v, g], k) => {
       const sel = this.focus === 4 + k;
       const x = x0 + k * (tw + gap);
       const y = y0 + ch + 14 - (sel ? 2 : 0);
       this.hit(`row:${4 + k}`, x, y, tw, 24);
-      card(ctx, x, y, tw, 24, sel ? 0 : (k ? 0.015 : -0.015), sel ? "#c81818" : "#8a8a90", () => {
+      card(ctx, x, y, tw, 24, sel ? 0 : k ? 0.015 : -0.015, sel ? "#c81818" : "#8a8a90", () => {
         waxSeal(ctx, 12, 13, 7, sel ? "#a8141a" : "#6a3a2a", g);
         drawPlain(ctx, l, 24, 9, sel ? "#8a1810" : BROWN, 0.6, true);
         drawPlain(ctx, v, tw - 8 - textWidth(v, 0.66, true), 9, v === "OFF" ? "#a01810" : "#2a6a18", 0.66, true);
@@ -740,7 +917,10 @@ export class Menus {
     const hint = "PLAYERS HERE PLAY FROM THIS MACHINE · ONLINE, EVERY ONE OF THEM TAKES A SEAT";
     shadowText(ctx, hint, W / 2 - textWidth(hint, 0.5) / 2, H - 31, "#f0e4c8", 0.5);
     void now;
-    const p: [string, string][] = [["A", this.focus < 4 ? "FREE SEAT" : "CHANGE"], ["B", "BACK"]];
+    const p: [string, string][] = [
+      ["A", this.focus < 4 ? "FREE SEAT" : "CHANGE"],
+      ["B", "BACK"],
+    ];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
@@ -759,9 +939,24 @@ export class Menus {
       waxSeal(ctx, qw / 2, 49, 20, qsel ? "#c8a020" : "#8a7a40", "dash");
       const t = "QUICK JOIN";
       drawPlain(ctx, t, qw / 2 - textWidth(t, 0.95, true) / 2, 92, qsel ? "#8a1810" : BROWN, 0.95, true);
-      wrap("TAKE THE FIRST OPEN SEAT ON THE SERVER.", qw - 16, 0.52).forEach((l, j) => drawPlain(ctx, l, qw / 2 - textWidth(l, 0.52) / 2, 108 + j * 8, "#4a3018", 0.52));
-      const st = this.netBusy ? this.netStatus : `${this.rooms.length} BATTLE${this.rooms.length === 1 ? "" : "S"} POSTED`;
-      wrap(st, qw - 14, 0.48).slice(0, 2).forEach((l, j) => drawPlain(ctx, l, qw / 2 - textWidth(l, 0.48) / 2, qh - 22 + j * 8, this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : "#8a5a2a", 0.48));
+      wrap("TAKE THE FIRST OPEN SEAT ON THE SERVER.", qw - 16, 0.52).forEach((l, j) =>
+        drawPlain(ctx, l, qw / 2 - textWidth(l, 0.52) / 2, 108 + j * 8, "#4a3018", 0.52),
+      );
+      const st = this.netBusy
+        ? this.netStatus
+        : `${this.rooms.length} BATTLE${this.rooms.length === 1 ? "" : "S"} POSTED`;
+      wrap(st, qw - 14, 0.48)
+        .slice(0, 2)
+        .forEach((l, j) =>
+          drawPlain(
+            ctx,
+            l,
+            qw / 2 - textWidth(l, 0.48) / 2,
+            qh - 22 + j * 8,
+            this.netBusy && Math.floor(now * 2) % 2 ? "#8a1810" : "#8a5a2a",
+            0.48,
+          ),
+        );
     });
     const gx = qx + qw + 16;
     const gw = W - gx - 12;
@@ -793,29 +988,52 @@ export class Menus {
       const drift = Math.sin(now * 0.8 + k * 1.7) * 0.012;
       this.hit(`row:${k + 1}`, x, y, nw, nh);
       const open = r.phase === "lobby" && r.humans < r.seats;
-      card(ctx, x, y - (sel ? 2 : 0), nw, nh, sel ? 0 : (k % 2 ? 0.02 : -0.02) + drift, sel ? "#c81818" : open ? "#3a9a30" : "#8a8a90", () => {
-        waxSeal(ctx, 12, 16, 8, open ? "#2a7a20" : "#6a6058", open ? "banner" : "castle");
-        const nm = r.name.length > 16 ? r.name.slice(0, 16) : r.name;
-        drawPlain(ctx, nm, 25, 8, sel ? "#8a1810" : BROWN, 0.72, true);
-        const map = (r.map || "-").replace(/^GRUDGE\w*\s*/, "");
-        drawPlain(ctx, `${r.mode}  ·  ${map.slice(0, 12)}`, 25, 19, "#6a4424", 0.5);
-        const age = r.age < 60 ? `${r.age}S AGO` : `${Math.floor(r.age / 60)} MIN AGO`;
-        drawPlain(ctx, age, 25, 29, "#8a5a2a", 0.45);
-        const st = r.phase === "match" ? "FIGHTING" : r.humans >= r.seats ? "FULL" : "OPEN";
-        const seats = `${r.humans}/${r.seats}`;
-        drawPlain(ctx, seats, nw - 8 - textWidth(seats, 0.8, true), 9, open ? "#2a6a18" : "#8a1810", 0.8, true);
-        drawPlain(ctx, st, nw - 8 - textWidth(st, 0.5, true), 27, open ? "#2a6a18" : "#8a1810", 0.5, true);
-      });
+      card(
+        ctx,
+        x,
+        y - (sel ? 2 : 0),
+        nw,
+        nh,
+        sel ? 0 : (k % 2 ? 0.02 : -0.02) + drift,
+        sel ? "#c81818" : open ? "#3a9a30" : "#8a8a90",
+        () => {
+          waxSeal(ctx, 12, 16, 8, open ? "#2a7a20" : "#6a6058", open ? "banner" : "castle");
+          const nm = r.name.length > 16 ? r.name.slice(0, 16) : r.name;
+          drawPlain(ctx, nm, 25, 8, sel ? "#8a1810" : BROWN, 0.72, true);
+          const map = (r.map || "-").replace(/^GRUDGE\w*\s*/, "");
+          drawPlain(ctx, `${r.mode}  ·  ${map.slice(0, 12)}`, 25, 19, "#6a4424", 0.5);
+          const age = r.age < 60 ? `${r.age}S AGO` : `${Math.floor(r.age / 60)} MIN AGO`;
+          drawPlain(ctx, age, 25, 29, "#8a5a2a", 0.45);
+          const st = r.phase === "match" ? "FIGHTING" : r.humans >= r.seats ? "FULL" : "OPEN";
+          const seats = `${r.humans}/${r.seats}`;
+          drawPlain(ctx, seats, nw - 8 - textWidth(seats, 0.8, true), 9, open ? "#2a6a18" : "#8a1810", 0.8, true);
+          drawPlain(ctx, st, nw - 8 - textWidth(st, 0.5, true), 27, open ? "#2a6a18" : "#8a1810", 0.5, true);
+        },
+      );
     }
     if (n > vis) {
       const t = `${this.scrollTop + 1}-${Math.min(n, this.scrollTop + vis)} OF ${n}`;
       shadowText(ctx, t, W - 14 - textWidth(t, 0.5), H - 31, "#f0e4c8", 0.5);
     }
-    const p: [string, string][] = this.netBusy ? [["B", "CANCEL"]] : [["A", "JOIN"], ["B", "BACK"]];
+    const p: [string, string][] = this.netBusy
+      ? [["B", "CANCEL"]]
+      : [
+          ["A", "JOIN"],
+          ["B", "BACK"],
+        ];
     prompt(ctx, Math.round((W - promptWidth(p, 0.7)) / 2), H - 13, p, 0.7);
   }
 
-  private drawRows(ctx: CanvasRenderingContext2D, W: number, H: number, art: string, fallback: string, rows: Row<object>[], obj: object, extra: string[]): void {
+  private drawRows(
+    ctx: CanvasRenderingContext2D,
+    W: number,
+    H: number,
+    art: string,
+    fallback: string,
+    rows: Row<object>[],
+    obj: object,
+    extra: string[],
+  ): void {
     boardTitle(ctx, W, art, fallback);
     const decree = this.page === "rules";
     const total = rows.length + extra.length;
@@ -866,11 +1084,15 @@ export class Menus {
     const dh = ph - 8;
     const dy0 = py + 2;
     const blurb =
-      f < rows.length ? rows[f].blurb
-      : f === rows.length ? "PUT EVERYTHING BACK AS IT WAS."
-      : this.confirm === "erase" ? "PRESS A AGAIN TO BURN EVERY RECORD. NAMES ARE KEPT."
-      : this.confirm === "erased" ? "THE RECORDS ARE ASHES."
-      : "FORGET EVERY WIN, LOSS AND MATCH.";
+      f < rows.length
+        ? rows[f].blurb
+        : f === rows.length
+          ? "PUT EVERYTHING BACK AS IT WAS."
+          : this.confirm === "erase"
+            ? "PRESS A AGAIN TO BURN EVERY RECORD. NAMES ARE KEPT."
+            : this.confirm === "erased"
+              ? "THE RECORDS ARE ASHES."
+              : "FORGET EVERY WIN, LOSS AND MATCH.";
     card(ctx, dx0, dy0, dw, dh, 0.02, "#c81818", () => {
       const head = f < rows.length ? (decree ? `ARTICLE ${ROMAN_N[f]}` : "SETTING") : "THE LEDGER";
       drawPlain(ctx, head, dw / 2 - textWidth(head, 0.55, true) / 2, 10, "#8a5a2a", 0.55, true);
@@ -896,7 +1118,13 @@ export class Menus {
             const a = -Math.PI * 0.8 + (Math.PI * 1.6 * q) / Math.max(1, nv - 1);
             ctx.fillStyle = q === idx ? "#f0c030" : "#2a1a0a";
             ctx.beginPath();
-            ctx.arc(dw / 2 + Math.sin(a) * (r0 - 5), cy - 12 - Math.cos(a) * (r0 - 5), q === idx ? 2.4 : 1.4, 0, Math.PI * 2);
+            ctx.arc(
+              dw / 2 + Math.sin(a) * (r0 - 5),
+              cy - 12 - Math.cos(a) * (r0 - 5),
+              q === idx ? 2.4 : 1.4,
+              0,
+              Math.PI * 2,
+            );
             ctx.fill();
           }
           const a = -Math.PI * 0.8 + (Math.PI * 1.6 * idx) / Math.max(1, nv - 1);
@@ -916,8 +1144,27 @@ export class Menus {
         const ay = decree ? 68 : cy + 32;
         goldArrow(ctx, 20, ay, -1, 6);
         goldArrow(ctx, dw - 20, ay, 1, 6);
-      } else waxSeal(ctx, dw / 2, cy - 12, 22, f === rows.length ? "#6a3a2a" : "#a8141a", f === rows.length ? "repair" : "quake");
-      wrap(blurb, dw - 20, 0.55).slice(0, 4).forEach((l, j) => drawPlain(ctx, l, dw / 2 - textWidth(l, 0.55) / 2, dh - 46 + j * 8, this.confirm === "erase" && f > rows.length ? "#a01810" : "#4a3018", 0.55));
+      } else
+        waxSeal(
+          ctx,
+          dw / 2,
+          cy - 12,
+          22,
+          f === rows.length ? "#6a3a2a" : "#a8141a",
+          f === rows.length ? "repair" : "quake",
+        );
+      wrap(blurb, dw - 20, 0.55)
+        .slice(0, 4)
+        .forEach((l, j) =>
+          drawPlain(
+            ctx,
+            l,
+            dw / 2 - textWidth(l, 0.55) / 2,
+            dh - 46 + j * 8,
+            this.confirm === "erase" && f > rows.length ? "#a01810" : "#4a3018",
+            0.55,
+          ),
+        );
       if (decree) waxSeal(ctx, dw - 16, dh - 14, 9, "#a8141a", "works");
     });
     if (f < rows.length) {
@@ -925,7 +1172,10 @@ export class Menus {
       this.hit(`dec:${f}`, dx0 + 8, ay - 10, 24, 20);
       this.hit(`inc:${f}`, dx0 + dw - 32, ay - 10, 24, 20);
     }
-    const p: [string, string][] = [["A", "CHANGE"], ["B", "DONE"]];
+    const p: [string, string][] = [
+      ["A", "CHANGE"],
+      ["B", "DONE"],
+    ];
     const hint = "STICK LEFT / RIGHT: CHANGE";
     const pwid = promptWidth(p, 0.7) + 14 + textWidth(hint, 0.6);
     const x0 = Math.round((W - pwid) / 2);
@@ -971,7 +1221,15 @@ export class Menus {
       ctx.lineTo(cx, by - 7 + len - 4);
       ctx.lineTo(cx + rw / 2, by - 7 + len);
       ctx.fill();
-      drawPlain(ctx, t, cx - textWidth(t, 0.5, true) / 2, by - 6 + (sel ? 3 : 0), sel ? "#fff4c8" : "#d8c8a8", 0.5, true);
+      drawPlain(
+        ctx,
+        t,
+        cx - textWidth(t, 0.5, true) / 2,
+        by - 6 + (sel ? 3 : 0),
+        sel ? "#fff4c8" : "#d8c8a8",
+        0.5,
+        true,
+      );
       this.hit(`tab:${k}`, cx - rw / 2, by - 9, rw, len + 3);
     });
     const rh = 15;
@@ -1008,12 +1266,14 @@ export class Menus {
     };
     if (this.tab === 0) {
       pageHead(lx, "CHAMPIONS");
-      this.roster.forEach((type, k) => rowAt(k, (y, sel) => {
-        icon(type, lx + 14, y - 3);
-        drawPlain(ctx, (this.heroNames[type] ?? type).toUpperCase(), lx + 30, y, sel ? "#8a1810" : BROWN, 0.72, true);
-        const s0 = this.save.data.heroes[type] ?? { picks: 0, w: 0, l: 0, d: 0 };
-        num(ctx, winRate(s0), lx + pgw - 10, y, "#8a1810", 0.7);
-      }));
+      this.roster.forEach((type, k) =>
+        rowAt(k, (y, sel) => {
+          icon(type, lx + 14, y - 3);
+          drawPlain(ctx, (this.heroNames[type] ?? type).toUpperCase(), lx + 30, y, sel ? "#8a1810" : BROWN, 0.72, true);
+          const s0 = this.save.data.heroes[type] ?? { picks: 0, w: 0, l: 0, d: 0 };
+          num(ctx, winRate(s0), lx + pgw - 10, y, "#8a1810", 0.7);
+        }),
+      );
       const type = this.roster[this.focus];
       if (type) {
         const s0 = this.save.data.heroes[type] ?? { picks: 0, w: 0, l: 0, d: 0 };
@@ -1022,7 +1282,12 @@ export class Menus {
         texturedRect(ctx, "cloth", R + RW / 2 - 28, pgy + 25, 56, 56, "#7a1a14", 0, 0.7);
         icon(type, R + RW / 2 - 30, pgy + 23, 60);
         let y = pgy + 90;
-        for (const [l, v] of [["PICKED", s0.picks], ["WON", s0.w], ["LOST", s0.l], ["DRAWN", s0.d]] as const) {
+        for (const [l, v] of [
+          ["PICKED", s0.picks],
+          ["WON", s0.w],
+          ["LOST", s0.l],
+          ["DRAWN", s0.d],
+        ] as const) {
           stat(l, String(v), y);
           y += 12;
         }
@@ -1035,13 +1300,17 @@ export class Menus {
       if (!names.length) {
         const a = "NO NAMES SIGNED YET.";
         drawPlain(ctx, a, lx + pgw / 2 - textWidth(a, 0.7, true) / 2, pgy + pgh / 2 - 8, "#6a4424", 0.7, true);
-        wrap("CLICK YOUR NAME PLATE ON THE CHAMPION BANNER TO SIGN ONE.", pgw - 24, 0.5).forEach((l, j) => drawPlain(ctx, l, lx + pgw / 2 - textWidth(l, 0.5) / 2, pgy + pgh / 2 + 6 + j * 8, "#8a5a2a", 0.5));
+        wrap("CLICK YOUR NAME PLATE ON THE CHAMPION BANNER TO SIGN ONE.", pgw - 24, 0.5).forEach((l, j) =>
+          drawPlain(ctx, l, lx + pgw / 2 - textWidth(l, 0.5) / 2, pgy + pgh / 2 + 6 + j * 8, "#8a5a2a", 0.5),
+        );
       }
-      names.forEach((name, k) => rowAt(k, (y, sel) => {
-        waxSeal(ctx, lx + 20, y + 3.5, 5, "#a8141a", "combo");
-        drawPlain(ctx, name, lx + 30, y, sel ? "#8a1810" : BROWN, 0.72, true);
-        num(ctx, winRate(this.save.data.tags[ids[k]]), lx + pgw - 10, y, "#8a1810", 0.7);
-      }));
+      names.forEach((name, k) =>
+        rowAt(k, (y, sel) => {
+          waxSeal(ctx, lx + 20, y + 3.5, 5, "#a8141a", "combo");
+          drawPlain(ctx, name, lx + 30, y, sel ? "#8a1810" : BROWN, 0.72, true);
+          num(ctx, winRate(this.save.data.tags[ids[k]]), lx + pgw - 10, y, "#8a1810", 0.7);
+        }),
+      );
       const name = names[this.focus];
       if (name) {
         const t = this.save.data.tags[ids[this.focus]];
@@ -1049,7 +1318,11 @@ export class Menus {
         const ns = Math.min(1.6, RW / Math.max(1, textWidth(name, 1, true)));
         drawPlain(ctx, name, R + RW / 2 - textWidth(name, ns, true) / 2, pgy + 22, "#3a2410", ns, true);
         let y = pgy + 50;
-        for (const [l, v] of [["WON", t.w], ["LOST", t.l], ["DRAWN", t.d]] as const) {
+        for (const [l, v] of [
+          ["WON", t.w],
+          ["LOST", t.l],
+          ["DRAWN", t.d],
+        ] as const) {
           stat(l, String(v), y);
           y += 12;
         }
@@ -1076,13 +1349,15 @@ export class Menus {
         const b = "FINISH A MATCH TO WRITE THE FIRST PAGE.";
         drawPlain(ctx, b, lx + pgw / 2 - textWidth(b, 0.5) / 2, pgy + pgh / 2 + 6, "#8a5a2a", 0.5);
       }
-      log.forEach((m, k) => rowAt(k, (y, sel) => {
-        drawPlain(ctx, dateOf(m.at), lx + 14, y, "#8a5a2a", 0.62, true);
-        const map = (this.mapNames[m.map] ?? m.map).toUpperCase().replace(/^GRUDGE\w*\s*/, "");
-        drawPlain(ctx, map.slice(0, 12), lx + 44, y, sel ? "#8a1810" : BROWN, 0.65, true);
-        const res = m.winner < 0 ? "DRAW" : HOUSE[m.winner] ?? "-";
-        num(ctx, res, lx + pgw - 10, y, m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], 0.65);
-      }));
+      log.forEach((m, k) =>
+        rowAt(k, (y, sel) => {
+          drawPlain(ctx, dateOf(m.at), lx + 14, y, "#8a5a2a", 0.62, true);
+          const map = (this.mapNames[m.map] ?? m.map).toUpperCase().replace(/^GRUDGE\w*\s*/, "");
+          drawPlain(ctx, map.slice(0, 12), lx + 44, y, sel ? "#8a1810" : BROWN, 0.65, true);
+          const res = m.winner < 0 ? "DRAW" : (HOUSE[m.winner] ?? "-");
+          num(ctx, res, lx + pgw - 10, y, m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], 0.65);
+        }),
+      );
       const m = log[this.focus];
       if (m) {
         const map = (this.mapNames[m.map] ?? m.map).toUpperCase();
@@ -1093,7 +1368,7 @@ export class Menus {
           for (const p of [...m.players].sort((a, b) => Number(b.team === m.winner) - Number(a.team === m.winner))) {
             icon(p.hero, R, y - 3, 14);
             drawPlain(ctx, HOUSE[p.team] ?? "", R + 17, y, TEAM_TEXT[p.team], 0.55, true);
-            const nm = `${p.cpu ? "CPU" : p.tag ?? "-"} · ${(this.heroNames[p.hero] ?? p.hero).toUpperCase()}`;
+            const nm = `${p.cpu ? "CPU" : (p.tag ?? "-")} · ${(this.heroNames[p.hero] ?? p.hero).toUpperCase()}`;
             drawPlain(ctx, nm, R + 17, y + 7, BROWN, 0.55, true);
             y += 17;
           }
@@ -1104,16 +1379,31 @@ export class Menus {
           y += 10;
           for (const p of m.players.filter((q) => q.team === team)) {
             icon(p.hero, R, y - 3, 14);
-            const nm = `${p.cpu ? "CPU" : p.tag ?? "-"} · ${(this.heroNames[p.hero] ?? p.hero).toUpperCase()}`;
+            const nm = `${p.cpu ? "CPU" : (p.tag ?? "-")} · ${(this.heroNames[p.hero] ?? p.hero).toUpperCase()}`;
             drawPlain(ctx, nm, R + 17, y, BROWN, 0.6, true);
             y += 13;
           }
           y += 4;
         }
         stat("LASTED", mm, y + 2);
-        const res = m.winner < 0 ? "DRAW" : HOUSE[m.winner] ?? "-";
-        waxSeal(ctx, R + RW - 14, pgy + pgh - 18, 12, m.winner < 0 ? "#8a7a60" : m.winner === 0 ? "#2a4ab8" : m.winner === 1 ? "#a8141a" : TEAM_CLOTH[m.winner], "combo");
-        drawPlain(ctx, res === "DRAW" ? "A DRAW" : `${res} WON`, R, pgy + pgh - 22, m.winner < 0 ? BROWN : TEAM_TEXT[m.winner], 0.85, true);
+        const res = m.winner < 0 ? "DRAW" : (HOUSE[m.winner] ?? "-");
+        waxSeal(
+          ctx,
+          R + RW - 14,
+          pgy + pgh - 18,
+          12,
+          m.winner < 0 ? "#8a7a60" : m.winner === 0 ? "#2a4ab8" : m.winner === 1 ? "#a8141a" : TEAM_CLOTH[m.winner],
+          "combo",
+        );
+        drawPlain(
+          ctx,
+          res === "DRAW" ? "A DRAW" : `${res} WON`,
+          R,
+          pgy + pgh - 22,
+          m.winner < 0 ? BROWN : TEAM_TEXT[m.winner],
+          0.85,
+          true,
+        );
       }
     }
     if (n > vis) {
@@ -1121,7 +1411,8 @@ export class Menus {
       drawPlain(ctx, t, lx + pgw - 8 - textWidth(t, 0.48, true), pgy + pgh - 9, "#8a5a2a", 0.48, true);
     }
     const p: [string, string][] = [["B", "DONE"]];
-    if (this.tab === 1 && this.save.tagNames().length) p.unshift(["Y", this.confirm.startsWith("strike:") ? "AGAIN TO STRIKE" : "STRIKE NAME"]);
+    if (this.tab === 1 && this.save.tagNames().length)
+      p.unshift(["Y", this.confirm.startsWith("strike:") ? "AGAIN TO STRIKE" : "STRIKE NAME"]);
     const hint = "STICK LEFT / RIGHT: BOOKMARK";
     const pwid = promptWidth(p, 0.7) + 14 + textWidth(hint, 0.6);
     const x0 = Math.round((W - pwid) / 2);
@@ -1151,7 +1442,7 @@ export class Menus {
 
   private codexArt(ctx: CanvasRenderingContext2D, art: CodexArt, x: number, y: number, w: number, h: number): void {
     inset(ctx, x, y, w, h, "#3a2a1c");
-    const bg = art.kind === "seal" ? art.color ?? "#7a1a14" : "#7a1a14";
+    const bg = art.kind === "seal" ? (art.color ?? "#7a1a14") : "#7a1a14";
     if (art.kind !== "map") texturedRect(ctx, "cloth", x, y, w, h, bg, 0, 0.7);
     const P = this.portraits;
     if (art.kind === "portrait" && P) {
@@ -1217,7 +1508,10 @@ export class Menus {
             const dl = wrap(desc, colW, 0.5).slice(0, 4);
             dl.forEach((l, j) => drawPlain(ctx, l, cx, py2 + j * 7, "#4a3018", 0.5));
             py2 += dl.length * 7 + 2;
-            if (pk.combo) wrap(pk.combo, colW, 0.5).slice(0, 3).forEach((l, j) => drawPlain(ctx, l, cx, py2 + j * 7, "#a8141a", 0.5));
+            if (pk.combo)
+              wrap(pk.combo, colW, 0.5)
+                .slice(0, 3)
+                .forEach((l, j) => drawPlain(ctx, l, cx, py2 + j * 7, "#a8141a", 0.5));
           });
           y = ph - 22;
         }
@@ -1279,7 +1573,8 @@ export class Menus {
       texturedRect(ctx, "parch", x, y, cw, th, sel ? "#f0d8a0" : null, 0, 1);
       if (sel) goldArrow(ctx, x - 6, y + th / 2, -1, 4.5);
       if ((e2.cat === "CHAMPIONS" || e2.cat === "HERALD") && this.portraits) {
-        const id = e2.cat === "HERALD" ? "herald" : this.roster.find((h) => (this.heroNames[h] ?? h).toUpperCase() === e2.title);
+        const id =
+          e2.cat === "HERALD" ? "herald" : this.roster.find((h) => (this.heroNames[h] ?? h).toUpperCase() === e2.title);
         const im = id ? this.portraits.icon(id) : null;
         if (im) hiImage(ctx, im, x + 1, y, th, th);
       } else waxSeal(ctx, x + 7, y + th / 2, 4.5, sel ? "#a8141a" : "#6a3a2a", e2.glyph);
@@ -1301,7 +1596,10 @@ export class Menus {
       ctx.fillRect(sx - 1, tY - 1, 6, tH + 2);
       texturedRect(ctx, "gold", sx, tY, 4, tH, null, 0, 1);
     }
-    const p: [string, string][] = [["A", "TURN PAGE"], ["B", "BACK"]];
+    const p: [string, string][] = [
+      ["A", "TURN PAGE"],
+      ["B", "BACK"],
+    ];
     const hint = "UP / DOWN: ENTRY · LEFT / RIGHT: PAGE";
     const pwid = promptWidth(p, 0.7) + 14 + textWidth(hint, 0.6);
     const x0 = Math.round((W - pwid) / 2);
@@ -1323,20 +1621,73 @@ export class Menus {
 }
 
 const PAD_GROUPS: [string, [string, string][]][] = [
-  ["FIGHT", [["STICK", "MOVE"], ["A", "ATTACK · HOLD TO CHARGE · WITH A BOMB: THROW"], ["B", "SECONDARY · HOLD TO CHARGE OR AIM"], ["R", "SPECIAL · HOLD TO AIM WHERE IT LANDS"], ["Z", "SUPER WHEN THE METER IS FULL"], ["L", "BLOCK · L+A SHOVE · L+X DODGE · CANCELS AN AIM · DROPS THE GRUDGE"]]],
-  ["COMMAND", [["C", "ORDERS: UP ATTACK (AGAIN: PICK LANE) · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD · LEVEL UP: LEFT / RIGHT"], ["D-PAD", "LEFT / RIGHT: WHO OBEYS · UP / DOWN: ZOOM"]]],
-  ["BUILD", [["X", "AT A PAD: OUTPOSTS · 2V2: HOLD AWAY FROM A PAD TO BECOME THE HERALD"], ["Y", "AT A PAD: TOWERS · KEEP: SHOP · ELSEWHERE: RECALL (ONCE PER LIFE)"], ["START", "PAUSE"]]],
+  [
+    "FIGHT",
+    [
+      ["STICK", "MOVE"],
+      ["A", "ATTACK · HOLD TO CHARGE · WITH A BOMB: THROW"],
+      ["B", "SECONDARY · HOLD TO CHARGE OR AIM"],
+      ["R", "SPECIAL · HOLD TO AIM WHERE IT LANDS"],
+      ["Z", "SUPER WHEN THE METER IS FULL"],
+      ["L", "BLOCK · L+A SHOVE · L+X DODGE · CANCELS AN AIM · DROPS THE GRUDGE"],
+    ],
+  ],
+  [
+    "COMMAND",
+    [
+      ["C", "ORDERS: UP ATTACK (AGAIN: PICK LANE) · LEFT FOLLOW · RIGHT DEFEND · DOWN HOLD · LEVEL UP: LEFT / RIGHT"],
+      ["D-PAD", "LEFT / RIGHT: WHO OBEYS · UP / DOWN: ZOOM"],
+    ],
+  ],
+  [
+    "BUILD",
+    [
+      ["X", "AT A PAD: OUTPOSTS · 2V2: HOLD AWAY FROM A PAD TO BECOME THE HERALD"],
+      ["Y", "AT A PAD: TOWERS · KEEP: SHOP · ELSEWHERE: RECALL (ONCE PER LIFE)"],
+      ["START", "PAUSE"],
+    ],
+  ],
 ];
 const KEY_GROUPS: [string, [string, string][]][] = [
-  ["FIGHT", [["WASD", "MOVE"], ["E", "ATTACK · HOLD TO CHARGE"], ["Q", "SECONDARY · HOLD TO CHARGE"], ["X", "SPECIAL · HOLD + WASD TO AIM"], ["C", "SUPER · HOLD + WASD TO AIM"], ["Z", "BLOCK · Z + E: SHOVE · CANCELS AN AIM · DROPS THE GRUDGE"], ["SPACE", "DODGE"]]],
-  ["COMMAND", [["ARROWS", "ORDERS · UP AGAIN PICKS A LANE · LEFT / RIGHT LEARNS ON LEVEL UP"], ["3 / 4", "WHO OBEYS"], ["1 / 2", "ZOOM"]]],
-  ["BUILD", [["F / L-MOUSE", "OUTPOSTS AT A PAD · 2V2: HOLD F ELSEWHERE TO BECOME THE HERALD"], ["R / R-MOUSE", "TOWERS · SHOP AT THE KEEP · ELSEWHERE: RECALL"], ["ENTER", "PAUSE"]]],
+  [
+    "FIGHT",
+    [
+      ["WASD", "MOVE"],
+      ["E", "ATTACK · HOLD TO CHARGE"],
+      ["Q", "SECONDARY · HOLD TO CHARGE"],
+      ["X", "SPECIAL · HOLD + WASD TO AIM"],
+      ["C", "SUPER · HOLD + WASD TO AIM"],
+      ["Z", "BLOCK · Z + E: SHOVE · CANCELS AN AIM · DROPS THE GRUDGE"],
+      ["SPACE", "DODGE"],
+    ],
+  ],
+  [
+    "COMMAND",
+    [
+      ["ARROWS", "ORDERS · UP AGAIN PICKS A LANE · LEFT / RIGHT LEARNS ON LEVEL UP"],
+      ["3 / 4", "WHO OBEYS"],
+      ["1 / 2", "ZOOM"],
+    ],
+  ],
+  [
+    "BUILD",
+    [
+      ["F / L-MOUSE", "OUTPOSTS AT A PAD · 2V2: HOLD F ELSEWHERE TO BECOME THE HERALD"],
+      ["R / R-MOUSE", "TOWERS · SHOP AT THE KEEP · ELSEWHERE: RECALL"],
+      ["ENTER", "PAUSE"],
+    ],
+  ],
 ];
 
 export function drawControlSheet(ctx: CanvasRenderingContext2D, px: number, py: number, pw: number, ph: number): void {
   const gap = 12;
   const cw = Math.floor((pw - gap) / 2);
-  ([[PAD_GROUPS, "CONTROLLER", "pad"], [KEY_GROUPS, "KEYBOARD AND MOUSE", "works"]] as const).forEach(([groups, title, glyph], c) => {
+  (
+    [
+      [PAD_GROUPS, "CONTROLLER", "pad"],
+      [KEY_GROUPS, "KEYBOARD AND MOUSE", "works"],
+    ] as const
+  ).forEach(([groups, title, glyph], c) => {
     const x = px + c * (cw + gap);
     card(ctx, x, py, cw, ph, c ? 0.012 : -0.012, "#8a8a90", () => {
       waxSeal(ctx, 13, 12, 7, "#a8141a", glyph);
@@ -1346,8 +1697,10 @@ export function drawControlSheet(ctx: CanvasRenderingContext2D, px: number, py: 
       const textW = cw - keyW - 18;
       let S = 0.5;
       let LH = 7;
-      const build = () => groups.map(([g, rows]) => ({ g, rows: rows.map(([k, v]) => ({ k, lines: wrap(v, textW, S) })) }));
-      const measure = (bl: ReturnType<typeof build>) => bl.reduce((a, b) => a + 10 + b.rows.reduce((q, r) => q + r.lines.length * LH + 2, 0), 0);
+      const build = () =>
+        groups.map(([g, rows]) => ({ g, rows: rows.map(([k, v]) => ({ k, lines: wrap(v, textW, S) })) }));
+      const measure = (bl: ReturnType<typeof build>) =>
+        bl.reduce((a, b) => a + 10 + b.rows.reduce((q, r) => q + r.lines.length * LH + 2, 0), 0);
       let blocks = build();
       while (measure(blocks) > ph - 30 && S > 0.4) {
         S -= 0.03;
@@ -1363,7 +1716,18 @@ export function drawControlSheet(ctx: CanvasRenderingContext2D, px: number, py: 
         y += 10;
         for (const r of b.rows) {
           if (c === 0) {
-            const col = r.k === "A" ? PAD.a : r.k === "B" ? PAD.b : r.k === "C" || r.k === "X" || r.k === "Y" ? PAD.c : r.k === "Z" || r.k === "R" || r.k === "L" ? PAD.z : r.k === "START" ? PAD.start : "";
+            const col =
+              r.k === "A"
+                ? PAD.a
+                : r.k === "B"
+                  ? PAD.b
+                  : r.k === "C" || r.k === "X" || r.k === "Y"
+                    ? PAD.c
+                    : r.k === "Z" || r.k === "R" || r.k === "L"
+                      ? PAD.z
+                      : r.k === "START"
+                        ? PAD.start
+                        : "";
             if (col) padButton(ctx, 16, y + 3, 4.2, col, r.k === "START" ? "S" : r.k);
             else drawPlain(ctx, r.k, 16 - textWidth(r.k, 0.42, true) / 2, y + 0.5, "#6a4424", 0.42, true);
           } else drawPlain(ctx, r.k, 8, y, "#6a1c10", 0.48, true);

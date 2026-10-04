@@ -2,7 +2,11 @@ import * as THREE from "three";
 import type { HeroModels } from "../render/heroModels";
 import type { UnitModels } from "../render/unitModels";
 
-const paintedUrls = import.meta.glob("../../assets/ui/portraits/*.jpg", { query: "?url", import: "default", eager: true }) as Record<string, string>;
+const paintedUrls = import.meta.glob("../../assets/ui/portraits/*.jpg", {
+  query: "?url",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const painted = new Map<string, HTMLImageElement>();
 for (const [path, url] of Object.entries(paintedUrls)) {
   const im = new Image();
@@ -39,7 +43,10 @@ export class Portraits {
   private thumbs = new Map<number, HTMLCanvasElement>();
   private liveCanvas = document.createElement("canvas");
 
-  constructor(private heroes: HeroModels, private teamColors: THREE.Color[]) {
+  constructor(
+    private heroes: HeroModels,
+    private teamColors: THREE.Color[],
+  ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(1);
     this.renderer.setClearColor(0x000000, 0);
@@ -49,7 +56,19 @@ export class Portraits {
     this.scene.add(sun, new THREE.HemisphereLight("#b8d4ff", "#6a5a3a", 1.6));
   }
 
-  private pose(type: string, team: THREE.Color, costume?: string): { root: THREE.Group; body: THREE.Object3D; mixer?: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; height: number; center: THREE.Vector3; top: number } {
+  private pose(
+    type: string,
+    team: THREE.Color,
+    costume?: string,
+  ): {
+    root: THREE.Group;
+    body: THREE.Object3D;
+    mixer?: THREE.AnimationMixer;
+    actions: Map<string, THREE.AnimationAction>;
+    height: number;
+    center: THREE.Vector3;
+    top: number;
+  } {
     const inst = this.heroes.create(type, team, "", team, team, costume);
     const root = new THREE.Group();
     root.add(inst.body);
@@ -70,7 +89,15 @@ export class Portraits {
         center.set(hp.x, (box.min.y + crown) / 2, hp.z);
       }
     }
-    return { root, body: inst.body, mixer: inst.mixer, actions: inst.actions, height: Math.max(0.5, top - box.min.y), center, top };
+    return {
+      root,
+      body: inst.body,
+      mixer: inst.mixer,
+      actions: inst.actions,
+      height: Math.max(0.5, top - box.min.y),
+      center,
+      top,
+    };
   }
 
   private shoot(root: THREE.Object3D, w: number, h: number, out: HTMLCanvasElement): void {
@@ -271,7 +298,15 @@ export class Portraits {
     this.tops?.clear();
   }
 
-  private shootMap(i: number, w: number, h: number, yaw: number, pitchDeg: number, zoom: number, out: HTMLCanvasElement): void {
+  private shootMap(
+    i: number,
+    w: number,
+    h: number,
+    yaw: number,
+    pitchDeg: number,
+    zoom: number,
+    out: HTMLCanvasElement,
+  ): void {
     const m = this.maps[i];
     if (!m) return;
     const c = new THREE.Vector3(m.w / 2, 0, m.d / 2);
@@ -279,7 +314,11 @@ export class Portraits {
     const p = THREE.MathUtils.degToRad(pitchDeg);
     const dist = size * zoom;
     this.camera.fov = 30;
-    this.camera.position.set(c.x + Math.sin(yaw) * Math.cos(p) * dist, Math.sin(p) * dist, c.z + Math.cos(yaw) * Math.cos(p) * dist);
+    this.camera.position.set(
+      c.x + Math.sin(yaw) * Math.cos(p) * dist,
+      Math.sin(p) * dist,
+      c.z + Math.cos(yaw) * Math.cos(p) * dist,
+    );
     this.camera.lookAt(c.x, 0, c.z);
     this.camera.near = dist * 0.1;
     this.camera.far = dist * 4;

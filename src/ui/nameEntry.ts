@@ -15,7 +15,16 @@ const COLS = 6;
 const KEY_ROWS = KEYS.length / COLS;
 const INK = "#0b0806";
 
-export function drawSigning(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, typing: boolean, text: string, now: number): void {
+export function drawSigning(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  typing: boolean,
+  text: string,
+  now: number,
+): void {
   band(ctx, x, y, w, h, INK, 0.82);
   const head = "SIGNING NAME";
   const hs = Math.min(0.5, (w - 8) / Math.max(1, textWidth(head, 1, true)));
@@ -51,7 +60,12 @@ export class NameEntry {
   private refusedAt = -99;
   private rep = { dir: "", at: 0 };
 
-  constructor(private current: string | null | undefined, private tags: () => TagRow[], private create: (name: string) => TagRef | null, private max: number) {
+  constructor(
+    private current: string | null | undefined,
+    private tags: () => TagRow[],
+    private create: (name: string) => TagRef | null,
+    private max: number,
+  ) {
     const k = this.items().findIndex((it) => it.kind === "tag" && it.row.name === current);
     this.sel = k >= 0 ? k : 0;
   }
@@ -97,7 +111,13 @@ export class NameEntry {
   }
 
   key(code: string, now: number): TagResult | null | false {
-    const ch = /^Key[A-Z]$/.test(code) ? code.slice(3) : /^Digit[0-9]$/.test(code) ? code.slice(5) : code === "Minus" ? "-" : "";
+    const ch = /^Key[A-Z]$/.test(code)
+      ? code.slice(3)
+      : /^Digit[0-9]$/.test(code)
+        ? code.slice(5)
+        : code === "Minus"
+          ? "-"
+          : "";
     if (this.mode === "list") {
       if (code === "ArrowUp" || code === "KeyW") this.step(-1);
       else if (code === "ArrowDown" || code === "KeyS") this.step(1);
@@ -127,7 +147,16 @@ export class NameEntry {
   private moveDir(p: PadState, now: number): string {
     const sx = p.stickX + (p.held.right ? 1 : 0) - (p.held.left ? 1 : 0);
     const sy = p.stickY + (p.held.down ? 1 : 0) - (p.held.up ? 1 : 0);
-    const dir = Math.max(Math.abs(sx), Math.abs(sy)) < 0.55 ? "" : Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? "r" : "l") : sy > 0 ? "d" : "u";
+    const dir =
+      Math.max(Math.abs(sx), Math.abs(sy)) < 0.55
+        ? ""
+        : Math.abs(sx) > Math.abs(sy)
+          ? sx > 0
+            ? "r"
+            : "l"
+          : sy > 0
+            ? "d"
+            : "u";
     if (dir !== this.rep.dir) {
       this.rep = { dir, at: now + 0.35 };
       return dir;
@@ -310,7 +339,15 @@ export class NameEntry {
     hl(x + pad, cy, w - pad * 2, this.row === 0);
     const refused = now - this.refusedAt < 1.2;
     const nl = refused ? "NAME TAKEN" : "< SAVED NAMES";
-    drawPlain(ctx, nl, x + w / 2 - textWidth(nl, ts * 0.9, true) / 2, mid(cy, ts * 0.9), refused ? "#ff9070" : this.row === 0 ? "#fff4c8" : "#c8b898", ts * 0.9, true);
+    drawPlain(
+      ctx,
+      nl,
+      x + w / 2 - textWidth(nl, ts * 0.9, true) / 2,
+      mid(cy, ts * 0.9),
+      refused ? "#ff9070" : this.row === 0 ? "#fff4c8" : "#c8b898",
+      ts * 0.9,
+      true,
+    );
     cy += rowH + 1;
     const cw = (w - pad * 2) / COLS;
     for (let r = 0; r < KEY_ROWS; r++) {
@@ -329,7 +366,15 @@ export class NameEntry {
       const bx = x + pad + c * bw;
       const on = this.row === KEY_ROWS + 1 && this.col === c;
       hl(bx + 0.5, cy, bw - 1, on);
-      drawPlain(ctx, t, bx + bw / 2 - textWidth(t, ts, true) / 2, mid(cy, ts), on ? "#fff4c8" : c === 2 ? "#a0e080" : "#e8dcc0", ts, true);
+      drawPlain(
+        ctx,
+        t,
+        bx + bw / 2 - textWidth(t, ts, true) / 2,
+        mid(cy, ts),
+        on ? "#fff4c8" : c === 2 ? "#a0e080" : "#e8dcc0",
+        ts,
+        true,
+      );
     });
     cy += rowH + 1;
     if (cy + 6 < y + h) {

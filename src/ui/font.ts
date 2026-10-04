@@ -75,7 +75,8 @@ function rgba(color: string): [number, number, number, number] {
   parseCtx.fillStyle = "#000";
   parseCtx.fillStyle = color;
   const v = parseCtx.fillStyle as string;
-  if (v.startsWith("#")) return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16), 1];
+  if (v.startsWith("#"))
+    return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16), 1];
   const m = v.match(/[\d.]+/g)!.map(Number);
   return [m[0], m[1], m[2], m[3] ?? 1];
 }
@@ -89,7 +90,17 @@ function stamp(g: CanvasRenderingContext2D, src: HTMLCanvasElement, s: string, d
   let pen = dx;
   for (const ch of s) {
     const gl = glyph(ch);
-    g.drawImage(src, gl.x * HK, gl.y * HK, gl.w * HK, meta.h * HK, Math.round((pen - gl.ox) * HK), dy * HK, gl.w * HK, meta.h * HK);
+    g.drawImage(
+      src,
+      gl.x * HK,
+      gl.y * HK,
+      gl.w * HK,
+      meta.h * HK,
+      Math.round((pen - gl.ox) * HK),
+      dy * HK,
+      gl.w * HK,
+      meta.h * HK,
+    );
     pen += gl.adv + TRACK;
   }
 }
@@ -109,7 +120,15 @@ function scratchCtx(i: number, w: number, h: number): CanvasRenderingContext2D {
   return g;
 }
 
-function layer(w: number, h: number, src: HTMLCanvasElement, s: string, dx: number, dy: number, fill: string | CanvasGradient): HTMLCanvasElement {
+function layer(
+  w: number,
+  h: number,
+  src: HTMLCanvasElement,
+  s: string,
+  dx: number,
+  dy: number,
+  fill: string | CanvasGradient,
+): HTMLCanvasElement {
   const g = scratchCtx(1, w, h);
   const c = scratch[1];
   stamp(g, src, s, dx, dy);
@@ -151,7 +170,17 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
   const col = rgba(color);
   if (shadow || soft) {
     g.globalAlpha = (soft ? 0.28 : 0.55) * col[3];
-    g.drawImage(layer(w, h, edge ? lineMask! : fillMask!, s, PADX + (soft ? 1 : 2), PADY + (soft ? 1 : 2), INK), 0, 0, w, h, 0, 0, w, h);
+    g.drawImage(
+      layer(w, h, edge ? lineMask! : fillMask!, s, PADX + (soft ? 1 : 2), PADY + (soft ? 1 : 2), INK),
+      0,
+      0,
+      w,
+      h,
+      0,
+      0,
+      w,
+      h,
+    );
     g.globalAlpha = 1;
   }
   if (edge) g.drawImage(layer(w, h, lineMask!, s, PADX, PADY, INK), 0, 0, w, h, 0, 0, w, h);
@@ -187,7 +216,14 @@ let lowK = 1;
 let hiDx = 0;
 let hiDy = 0;
 
-export function setTextLayer(low: CanvasRenderingContext2D, hi: CanvasRenderingContext2D, hk: number, lk: number, dx = 0, dy = 0): void {
+export function setTextLayer(
+  low: CanvasRenderingContext2D,
+  hi: CanvasRenderingContext2D,
+  hk: number,
+  lk: number,
+  dx = 0,
+  dy = 0,
+): void {
   lowCtx = low;
   hiCtx = hi;
   hiK = hk;
@@ -200,7 +236,14 @@ export function fontLoaded(): boolean {
   return !!fillMask;
 }
 
-export function textLayer(): { low: CanvasRenderingContext2D | null; hi: CanvasRenderingContext2D | null; hk: number; lk: number; dx: number; dy: number } {
+export function textLayer(): {
+  low: CanvasRenderingContext2D | null;
+  hi: CanvasRenderingContext2D | null;
+  hk: number;
+  lk: number;
+  dx: number;
+  dy: number;
+} {
   return { low: lowCtx, hi: hiCtx, hk: hiK, lk: lowK, dx: hiDx, dy: hiDy };
 }
 
@@ -217,7 +260,6 @@ export function onHiLayer(ctx: CanvasRenderingContext2D, fn: (c: CanvasRendering
   fn(hiCtx);
   hiCtx.restore();
 }
-
 
 function sized(b: Baked, pw: number, ph: number): HTMLCanvasElement {
   if (pw <= 0 || ph <= 0 || pw >= b.c.width || ph >= b.c.height) return b.c;
@@ -242,7 +284,16 @@ function sized(b: Baked, pw: number, ph: number): HTMLCanvasElement {
   return c;
 }
 
-function blit(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale: number, edge: boolean, shadow: boolean): void {
+function blit(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  color: string,
+  scale: number,
+  edge: boolean,
+  shadow: boolean,
+): void {
   if (!fillMask || !s) return;
   scale = eff(scale);
   const k = (BASE * scale) / meta.px;
@@ -255,21 +306,50 @@ function blit(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, co
     const dw = (b.w / HK) * k;
     const dh = (b.h / HK) * k;
     const m = t.getTransform();
-    t.drawImage(m.b || m.c ? b.c : sized(b, Math.round(dw * m.a), Math.round(dh * m.d)), x - PADX * k, y - PADY * k - 0.5 * scale, dw, dh);
+    t.drawImage(
+      m.b || m.c ? b.c : sized(b, Math.round(dw * m.a), Math.round(dh * m.d)),
+      x - PADX * k,
+      y - PADY * k - 0.5 * scale,
+      dw,
+      dh,
+    );
     t.imageSmoothingEnabled = smooth;
     t.imageSmoothingQuality = q;
   });
 }
 
-export function drawText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale = 1, outline: string | boolean = false): void {
+export function drawText(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  color: string,
+  scale = 1,
+  outline: string | boolean = false,
+): void {
   blit(ctx, s, x, y, color, scale, !!outline, true);
 }
 
-export function drawNum(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale = 1): void {
+export function drawNum(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  color: string,
+  scale = 1,
+): void {
   blit(ctx, s, x, y, color, scale, true, true);
 }
 
-export function drawPlain(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: string, scale = 1, _num = false): void {
+export function drawPlain(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  color: string,
+  scale = 1,
+  _num = false,
+): void {
   blit(ctx, s, x, y, color, scale, false, false);
 }
 

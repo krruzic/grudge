@@ -25,7 +25,7 @@ export function chasmIce(t: Terrain): THREE.Group | null {
       const pit = !Number.isFinite(t.heightAt(x, z));
       if (pit && t.styles[t.index(cx, cz)] !== "rim") continue;
       let h = (cx * 73856093) ^ (cz * 19349663);
-      const rnd = () => ((h = (h * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      const rnd = () => (h = (h * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
       const r = rnd();
       const kind = pit ? (r < 0.1 ? "S" : r < 0.18 ? "C" : "") : r < 0.2 ? "s" : r < 0.36 ? "c" : "";
       if (!kind) continue;
@@ -34,7 +34,11 @@ export function chasmIce(t: Terrain): THREE.Group | null {
       const spike = kind.toLowerCase() === "s";
       e.set((rnd() - 0.5) * (spike ? 0.35 : 0.6), rnd() * Math.PI * 2, (rnd() - 0.5) * (spike ? 0.35 : 0.6));
       q.setFromEuler(e);
-      m.compose(new THREE.Vector3(x + (rnd() - 0.5) * 0.6, g - 0.25, z + (rnd() - 0.5) * 0.6), q, new THREE.Vector3(big, big * (spike ? 0.8 + rnd() * 0.5 : 1), big));
+      m.compose(
+        new THREE.Vector3(x + (rnd() - 0.5) * 0.6, g - 0.25, z + (rnd() - 0.5) * 0.6),
+        q,
+        new THREE.Vector3(big, big * (spike ? 0.8 + rnd() * 0.5 : 1), big),
+      );
       const key = `${kind}${cx < W / 2 ? 0 : 1}${cz < D / 2 ? 0 : 1}`;
       const list = buckets.get(key) ?? [];
       list.push(m.clone());
