@@ -173,15 +173,16 @@ function drawOpenHint(s: Screens, ctx: CanvasRenderingContext2D, W: number): voi
 }
 
 /** "THE GRUDGE IS SWORN!" swallowtail banner hung from a rod over a dimmed screen; clicking it starts. */
-function drawReadyBanner(s: Screens, ctx: CanvasRenderingContext2D, W: number, H: number, blink: boolean): void {
+function drawReadyBanner(s: Screens, ctx: CanvasRenderingContext2D, W: number, _H: number, blink: boolean): void {
   const bw = Math.min(250, W - 70);
   const bx = W / 2 - bw / 2;
-  const by = 118;
+  // Like Smash: the banner (and its dimming) covers only the champion row, so seat cards stay usable below it.
+  const by = 36;
   const bh = 46;
   s.hit("go", bx, by, bw, bh);
   ctx.save();
-  ctx.fillStyle = "rgba(10, 6, 2, 0.32)";
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(10, 6, 2, 0.42)";
+  ctx.fillRect(0, 20, W, 72);
   const cloth = () => {
     ctx.beginPath();
     ctx.moveTo(bx, by);
