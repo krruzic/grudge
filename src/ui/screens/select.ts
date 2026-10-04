@@ -294,8 +294,12 @@ function drawSeatCard(
   const tagHot = !sl.cpu && !commander && hovered(s, `tag:${i}`);
   const iy = 30;
   const ih = h - iy - 34;
-  // A human who hasn't placed their seal yet sees an empty card.
-  const blank = human && !commander && !sl.ready && !naming;
+  // A human who hasn't placed their seal yet sees an empty card, unless their own cursor (chip in hand) is
+  // hovering a champion: then that champion is previewed, see-through, until the seal is placed.
+  const unsealed = human && !commander && !sl.ready && !naming;
+  const preview =
+    unsealed && !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:"));
+  const blank = unsealed && !preview;
   card(ctx, x, y, w, h, 0, sl.ready ? "#c8a020" : TEAM_BRIGHT[team], () => {
     const ls = tagged ? Math.min(0.95, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 0.95;
     drawPlain(ctx, label, w / 2 - textWidth(label, ls, true) / 2, 7, tagHot ? "#c81818" : ink, ls, true);
@@ -355,7 +359,7 @@ function drawSeatCard(
   const fx = x + 5;
   const fy = y + iy;
   const fw = w - 10;
-  drawStage(s, ctx, i, sl, team, fx, fy, fw, ih);
+  drawStage(s, ctx, i, sl, team, fx, fy, fw, ih, preview);
   if (!commander && hasTree(sl.hero)) {
     const tw = w >= 100 ? 1 : 0.7;
     ctx.save();
@@ -435,6 +439,7 @@ function drawStage(
   fy: number,
   fw: number,
   ih: number,
+  ghost = false,
 ): void {
   if (!s.portraits) return;
   const cv = s.portraits.stage(i, sl.hero, team, sl.ready, sl.costume);
@@ -465,6 +470,7 @@ function drawStage(
     ctx.lineWidth = 2;
     ctx.strokeRect(fx + 1, fy + 1, fw - 2, ih - 2);
   }
+  if (ghost) ctx.globalAlpha = 0.45;
   ctx.drawImage(cv, fx + (fw - dw) / 2, fy + ih - dh + 3, dw, dh);
   ctx.restore();
 }
