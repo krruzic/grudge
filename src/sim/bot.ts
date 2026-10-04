@@ -12,6 +12,7 @@ import { think } from "./bot/think.ts";
 import { pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
+import { duelistReflex } from "./bot/tactics.ts";
 
 /** Pad hold timing (mirrors src/input/commands.ts): a hold counts as charging after TAP, full power after +FULL. */
 const CHARGE_TAP = 0.2;
@@ -72,6 +73,8 @@ export class Bot {
   /** Only let go while the aim target is within this distance (keeps holding at full power until in reach). */
   chargeRange = Infinity;
   holdSlot: "a" | "b" | null = null;
+  /** Last enemy swing the per-tick reflex rolled for (bot/tactics.ts). */
+  reflexKey = 0;
   holdAt = -1;
 
   // Team play (bot/strategy.ts)
@@ -189,6 +192,7 @@ export class Bot {
       cmd.place = { dx: this.wantPlace.x, dz: this.wantPlace.z };
       if (!this.wantB && !this.wantR) this.wantPlace = null;
     }
+    if (w.heroDef(me.hero!.type).abilities.r.kind === "parry") duelistReflex(this, w, me);
     this.chargeInput(w, cmd);
     cmd.attack = this.wantAttack;
     cmd.secondary = this.wantB;

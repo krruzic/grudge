@@ -186,6 +186,45 @@ export function summonerFight(bot: Bot, w: World, me: Entity, target: Entity | u
   }
 }
 
+/**
+ * Francois: Lunge held to full power (x1.6) through the exchange; Blade Flurry on a stunned champion (x1.4, e.g. right
+ * after a parry) as soon as the meter allows. Z otherwise stays with the generic rule. Parries: duelistReflex.
+ */
+export function duelistFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  const h = me.hero!;
+  const ab = abilities(w, me);
+  if (!target?.alive || !target.hero) return;
+  chargeB(bot, w, me, target, (ab.b.range ?? 6) - 0.5, 9);
+  if (
+    h.meter >= w.data.heroes.baseline.superMax &&
+    !h.action &&
+    w.time < target.status.stunUntil &&
+    w.dist(me, target) < (ab.z.range ?? 3.2) + 0.5
+  ) {
+    bot.wantZ = true;
+    aimAt(bot, me, target);
+  }
+}
+
+/**
+ * Francois' parry read, checked every tick (bot.ts) with a human-like 0.15 s reaction: a champion's swing that started
+ * at least 0.15 s ago and lands within 0.35 s gets parried (counter 85, 0.8 s stun, Lunge reset, next hit x1.5).
+ * Swings faster than that can't be read. One skill roll per swing.
+ */
+export function duelistReflex(bot: Bot, w: World, me: Entity): void {
+  const h = me.hero!;
+  if (h.action || (h.cooldowns.r ?? 0) > w.time) return;
+  for (const o of foesNear(w, me, 5)) {
+    const a = o.hero!.action;
+    if (!a || a.fired || a.name === "dodge" || a.kind === "parry" || a.t < 0.15 || a.hitAt - a.t > 0.35) continue;
+    const key = o.id * 100000 + Math.round((w.time - a.t) * 30);
+    if (key === bot.reflexKey) return;
+    bot.reflexKey = key;
+    if (bot.rand() < 0.9 * bot.skill) bot.wantR = true;
+    return;
+  }
+}
+
 /** Warlord HEAVE direction: into a friendly tower near the victim, else toward the own core. */
 export function heaveDir(w: World, me: Entity, victim: Entity): Vec2 {
   const ep = victim.transform.pos;

@@ -22,6 +22,7 @@ import {
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
 import {
+  duelistFight,
   engineerFight,
   heaveDir,
   raiderFight,
@@ -330,6 +331,8 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (hk.heaveRange) warlordFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Engineer: charged Repair as a fight nuke.
   if (ab.b.kind === "repair") engineerFight(bot, w, me, ehAlive ? enemyHero : undefined);
+  // Duelist: parry reads, charged lunge, flurry on the stunned.
+  if (ab.r.kind === "parry") duelistFight(bot, w, me, ehAlive ? enemyHero : undefined);
   if (
     hk.heaveRange &&
     rdy("heave") &&
@@ -379,7 +382,7 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
     )
       bot.wantR = true;
   }
-  if (rdy("r") && ab.r.bot !== "fight" && useHint("r", dHero)) bot.wantR = true;
+  if (rdy("r") && ab.r.bot !== "fight" && ab.r.kind !== "parry" && useHint("r", dHero)) bot.wantR = true;
   if (rdy("b") && (ab.b.bot === "repair" || ab.b.bot === "banner" || ab.b.bot === "heal") && useHint("b", 0))
     bot.wantB = true;
   if (plan.healer && rdy("r") && ab.r.bot === "fight" && clumpScore(w, me) >= 3 && bot.rand() < 0.5) bot.wantR = true;
