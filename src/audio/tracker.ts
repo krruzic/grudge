@@ -13,13 +13,57 @@ import { place, type Hearing } from "./spatial";
 
 /** Map beds: [sample id, level]. Critters: [id, min gap s, max gap s]. */
 const BEDS: Record<string, { beds: [string, number][]; critters?: [string, number, number][] }> = {
-  crossing: { beds: [["bed.meadow", 0.8], ["bed.river", 0.35]], critters: [["bird.chirp", 6, 14]] },
-  ruins: { beds: [["bed.wind", 0.55], ["bed.grass", 0.3]], critters: [["crow", 9, 20]] },
-  shoals: { beds: [["bed.surf", 0.8], ["bed.gulls", 0.35]] },
-  frostcross: { beds: [["bed.gale", 0.55], ["bed.wind", 0.35]], critters: [["whistle.wind", 14, 28]] },
-  gardens: { beds: [["bed.birds", 0.7], ["bed.meadow", 0.35]] },
-  hollow: { beds: [["bed.grass", 0.6], ["bed.forest", 0.35]], critters: [["owl", 12, 26], ["crow", 15, 30]] },
-  spires: { beds: [["bed.wind", 0.45], ["bed.crickets", 0.45], ["bed.insects", 0.3]], critters: [["owl", 16, 32]] },
+  crossing: {
+    beds: [
+      ["bed.meadow", 0.8],
+      ["bed.river", 0.35],
+    ],
+    critters: [["bird.chirp", 6, 14]],
+  },
+  ruins: {
+    beds: [
+      ["bed.wind", 0.55],
+      ["bed.grass", 0.3],
+    ],
+    critters: [["crow", 9, 20]],
+  },
+  shoals: {
+    beds: [
+      ["bed.surf", 0.8],
+      ["bed.gulls", 0.35],
+    ],
+  },
+  frostcross: {
+    beds: [
+      ["bed.gale", 0.55],
+      ["bed.wind", 0.35],
+    ],
+    critters: [["whistle.wind", 14, 28]],
+  },
+  gardens: {
+    beds: [
+      ["bed.birds", 0.7],
+      ["bed.meadow", 0.35],
+    ],
+  },
+  hollow: {
+    beds: [
+      ["bed.grass", 0.6],
+      ["bed.forest", 0.35],
+    ],
+    critters: [
+      ["owl", 12, 26],
+      ["crow", 15, 30],
+    ],
+  },
+  spires: {
+    beds: [
+      ["bed.wind", 0.45],
+      ["bed.crickets", 0.45],
+      ["bed.insects", 0.3],
+    ],
+    critters: [["owl", 16, 32]],
+  },
 };
 
 /** Footstep feel per champion: metres per step, rate, level, extra layer. */

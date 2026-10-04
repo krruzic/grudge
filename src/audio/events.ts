@@ -308,7 +308,8 @@ function hit(a: Audio, ev: Extract<SimEvent, { type: "hit" }>, w: World): void {
   }
   let id = "hit.flesh";
   if (src?.hero) id = WEAPON[src.hero.type]?.hit ?? id;
-  else if (src?.unit) id = src.unit.type === "heavy" ? "hit.blunt" : src.unit.type === "ranged" ? "arrow.hit" : "hit.flesh";
+  else if (src?.unit)
+    id = src.unit.type === "heavy" ? "hit.blunt" : src.unit.type === "ranged" ? "arrow.hit" : "hit.flesh";
   else if (src?.structure) id = "arrow.hit";
   if (victim?.structure) {
     a.play(id === "arrow.hit" ? "hit.wood" : "hit.structure", 0.65);

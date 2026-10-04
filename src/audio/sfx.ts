@@ -237,7 +237,16 @@ export class Audio {
       this.vocalAt.set(key, now + (o.gap ?? (line === "attack" ? 1.6 : 1.1)));
   }
 
-  tone(type: OscillatorType, f0: number, f1: number, dur: number, gain: number, pan = 0, at = 0, bus?: AudioNode): void {
+  tone(
+    type: OscillatorType,
+    f0: number,
+    f1: number,
+    dur: number,
+    gain: number,
+    pan = 0,
+    at = 0,
+    bus?: AudioNode,
+  ): void {
     const c = this.ctx!;
     const t = c.currentTime + at;
     const o = c.createOscillator();
