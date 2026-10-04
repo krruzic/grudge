@@ -1,3 +1,5 @@
+// Runtime props (assets/props/*.glb): prop() clones a prop as an object tree, propParts() returns merged
+// geometry+material for instancing. Both prefer the costume version (<name>@<costume>.glb) when it exists.
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { dyeColor, toLambert } from "./heroModels";

@@ -1,3 +1,7 @@
+// Thorn's (warden) reusable FX pieces, shared by his kit, the hazard views (wall blocks rising and crumbling,
+// bramble sprouts, the bramble cast) and CombatFx (the reach slap). Root and vine tubes are drawn with
+// tubeBundle(): several tubes merged into one mesh whose shader reveals each tube along its length (uShown) and
+// sinks it (uSink), so roots can grow and retract without rebuilding geometry. Sun Totem swaps bark for cactus.
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { chunks } from "../fx/chunks";

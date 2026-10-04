@@ -1,3 +1,5 @@
+// Structure models (keep, towers, outposts...): team-tinted Lambert copies, plus baked part lists and a texture-
+// array material used by the structure batch.
 import { markModel } from "./models/markers";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";

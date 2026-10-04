@@ -1,3 +1,4 @@
+// Grim (raider) kit: poison-knife hits, dashes and leaps with afterimages, blink smoke, reach and slam effects.
 import { RAIDER, FX } from "../fx/atlas";
 import { emit } from "../fx/parts";
 import { decal } from "../fx/decals";

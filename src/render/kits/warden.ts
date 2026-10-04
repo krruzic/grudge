@@ -1,3 +1,5 @@
+// Thorn (warden) kit: thorn pricks, the Snap vines and the kit registration (hits, root slams, telegraphs).
+// His reusable growth pieces (hit leaves, reach arm, walls, sprouts, bramble cast) are in wardenParts.ts.
 import * as THREE from "three";
 import { activeCostume, FX, WARDEN } from "../fx/atlas";
 import { cactusMat, isDesert } from "./desert";

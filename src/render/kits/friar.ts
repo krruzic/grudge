@@ -1,3 +1,6 @@
+// Maddock (friar) kit: ale splash hits, keg throws/landings/explosions (kegBoom), keg rocket, Brewfest, Last
+// Call and Plenty effects, and the ale/brewfest/tar zone decals used by the hazard zones (ZONE_DECALS). The kegs,
+// cask and keg rocket models themselves are drawn by heroProps/friar.ts.
 import * as THREE from "three";
 import { composite, FRIAR, FX } from "../fx/atlas";
 import { type FxHost, emit } from "../fx/parts";

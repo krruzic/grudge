@@ -1,3 +1,6 @@
+// Skinned instancing for soldiers: every soldier with the same merged mesh and team is one instanced draw. Bone
+// matrices of all members are packed into a float DataTexture (one row block per instance) and the vertex shader
+// skins from it (iSlot = the instance's block), so dozens of animated units cost one draw plus a silhouette draw.
 import * as THREE from "three";
 
 const MAX = 128;

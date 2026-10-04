@@ -1,3 +1,6 @@
+// Hero models: glTF heroes per costume (assets/heroes/<hero>[@costume].glb) converted to Lambert, merged into one
+// skinned draw, team-dyed, with optional ink outlines (smoothed-normal hulls) and per-instance animation mixers.
+// Also patches Skeleton.update to run once per frame (FRAME.id) however many views draw a skeleton.
 import * as THREE from "three";
 import { mergedMaterial, mergeParts } from "./models/mergedModel";
 import { costumeModel, costumeTexture } from "./costumes";

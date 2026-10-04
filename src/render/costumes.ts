@@ -1,3 +1,6 @@
+// Costumes: which costumes each hero has (texture repaints in assets/costumes/<hero>/<costume>/ and model costumes
+// assets/heroes/<hero>@<costume>.glb), costume texture lookup, and the per-match player -> costume table that
+// costumeOfPlayer/costumeOfEntity read (summons and structures resolve to their owner's costume).
 import * as THREE from "three";
 import { preloadCostumeFx } from "./fx/atlas";
 

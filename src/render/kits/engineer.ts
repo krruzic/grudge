@@ -1,3 +1,4 @@
+// Stig (engineer) kit: wrench hits with weld sparks, slam, repair, works (build site) and ballista effects.
 import { ENGINEER } from "../fx/atlas";
 import { emit } from "../fx/parts";
 import { decal } from "../fx/decals";

@@ -1,3 +1,5 @@
+// Standalone model viewer (viewer.html): renders hero or unit models side by side for checking rigs,
+// clips and outlines. URL params: set (heroes/units), only, costume, team, clip, t (clip time), yaw, outline.
 import * as THREE from "three";
 import { HeroModels, outlineConfig } from "./render/heroModels";
 import { UnitModels } from "./render/unitModels";

@@ -1,3 +1,4 @@
+// Primitive placeholder models for soldiers and structures, used when a model asset hasn't loaded.
 import * as THREE from "three";
 
 const matCache = new Map<string, THREE.MeshLambertMaterial>();

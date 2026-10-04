@@ -1,3 +1,4 @@
+// Ice shards and chunks scattered down the chasm walls on chasm maps (instanced, with low-poly variants).
 import * as THREE from "three";
 import type { Terrain } from "../sim/terrain";
 import { propParts } from "./props";

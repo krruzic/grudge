@@ -1,3 +1,6 @@
+// Map loading: the map glTF (props converted to vertex-coloured Lambert, swaying tall grass, props merged by
+// material), the terrain and water meshes (map/terrainMesh.ts) and fx_/pad_/core_ marker positions. MapView.update
+// animates grass sway and the tide on the water plane.
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -10,7 +13,6 @@ import gravelUrl from "../../assets/textures/gravel.png?url";
 import pavIdUrl from "../../assets/textures/cobble_id.png?url";
 import crackUrl from "../../assets/textures/cobble_crack.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
-import { stripMesh } from "./map/stripMesh";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./map/terrainMesh";
 import { cacheCanvas } from "../ui/cacheCanvas";
 
@@ -208,36 +210,6 @@ function mergeProps(scene: THREE.Object3D): void {
   }
 }
 
-function stripMap(root: THREE.Object3D, t: Terrain): void {
-  const field = new THREE.Box3(new THREE.Vector3(-6, -1e3, -6), new THREE.Vector3(t.width + 6, 1e3, t.depth + 6));
-  const list: THREE.Mesh[] = [];
-  root.traverse((o) => {
-    if (
-      !(o instanceof THREE.Mesh) ||
-      o instanceof THREE.InstancedMesh ||
-      o instanceof THREE.SkinnedMesh ||
-      Array.isArray(o.material)
-    )
-      return;
-    if (
-      o.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender ||
-      Object.keys(o.geometry.morphAttributes).length ||
-      o.material.transparent
-    )
-      return;
-    list.push(o);
-  });
-  root.updateMatrixWorld(true);
-  for (const m of list) {
-    const parent = m.parent!;
-    const box = field.clone().applyMatrix4(parent.matrixWorld.clone().invert());
-    const out = stripMesh(m, 12, 48, box);
-    if (out === m) continue;
-    parent.add(out);
-    m.removeFromParent();
-  }
-}
-
 export async function loadMap(
   url: string,
   terrain: Terrain,
@@ -292,7 +264,6 @@ export async function loadMap(
   });
 
   mergeProps(gltf.scene);
-  void stripMap;
 
   return {
     root,

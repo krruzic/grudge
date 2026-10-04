@@ -1,3 +1,5 @@
+// Wren's props: Pip (costume prop or a procedural robin fallback; flaps, orbits and pecks a latched target, rides
+// the shoulder on the way back) and the vantage sparkle when she has stood still long enough.
 import * as THREE from "three";
 import { model, RED, CREAM, BEAK, BLACK, RED_DARK, normalized, UP } from "../kits/shared";
 import { prop } from "../props";

@@ -1,3 +1,5 @@
+// Map ambience: flickering torch/glow sprites (with point lights) placed from the map's fx_ markers, drifting
+// dust motes over the field, and the sky dome.
 import * as THREE from "three";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 

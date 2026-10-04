@@ -1,3 +1,6 @@
+// Helpers shared by the hero kits: ground height lookups, a generic "core" hit (flash + shock + sparkles in the
+// kit's colours), streak lines, and the plain prop materials (wood, iron, brass...) used by kegs, barrels, arrows
+// and Pip. Materials flagged with keep() / geometry with model() are shared and never disposed by effects.
 import * as THREE from "three";
 import { FX, tint } from "../fx/atlas";
 import { type FxHost, emit } from "../fx/parts";

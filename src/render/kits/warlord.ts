@@ -1,3 +1,6 @@
+// Warlord kit: heavy melee hits (slabs and dust), ground slam and Earthquake (fissures, crack rings, rock spikes
+// that rise and sink), charge, War Cry rings, Challenge chains and Bloodroar. spikeBatch() is shared with
+// CombatFx (big slams, the rolling-rock missile) and is keyed per costume (Colossus pistons).
 import * as THREE from "three";
 import { activeCostume, cm, FX, RAIDER, WARLORD } from "../fx/atlas";
 

@@ -1,3 +1,4 @@
+// Soldier and ogre models (assets/units/*.glb): merged, team-dyed instances with shared skeleton data.
 import { markModel } from "./models/markers";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";

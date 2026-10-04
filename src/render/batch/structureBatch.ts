@@ -1,3 +1,5 @@
+// Structure batching: baked structure parts are drawn with one THREE.BatchedMesh per team (team-tinted texture
+// array material from StructureModels); fillFrame() copies matrices, fillView() applies per-view visibility.
 import * as THREE from "three";
 import { layerTexture } from "../models/mergedModel";
 import { partsMaterial, type StructureModels } from "../structureModels";

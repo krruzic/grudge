@@ -1,3 +1,5 @@
+// Small shared markers attached to models: blob shadows and foot rings (drawn through instanced batches by
+// EntityViews), player name tags, markModel() for flagging model geometry as shared, and the Warlord placeholder.
 import * as THREE from "three";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 

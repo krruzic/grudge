@@ -1,3 +1,6 @@
+// Wren (marksman) kit: arrow hits, long-arrow and skyshot projectiles, Pip's launch/latch/peck/rake/home events,
+// Volley (instanced rain arrows; Starfall uses its silver arrow meshes), Power Shot, Heartseeker and ricochets.
+// Pip's persistent model and Wren's vantage glow are drawn by heroProps/marksman.ts.
 import * as THREE from "three";
 import { activeCostume, composite, tint, FX, WREN } from "../fx/atlas";
 import { FEATHER_MAT, ground, IRON, keep, model, UP, WOOD } from "./shared";

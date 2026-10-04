@@ -1,3 +1,5 @@
+// Sun Totem (desert) theming for Thorn's procedural growth: a ribbed cactus material with pale spines and
+// flowers replaces vines and roots for costumes in DESERT_COSTUMES.
 import * as THREE from "three";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 

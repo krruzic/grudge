@@ -1,3 +1,6 @@
+// Static mesh batching: meshes with the same geometry+material key are drawn as one InstancedMesh, hiding the
+// originals (moved to a hidden layer) and copying their world matrices each frame; `flash` tints an instance
+// for hit flashes.
 import * as THREE from "three";
 
 const HIDDEN_LAYER = 31;

@@ -1,3 +1,6 @@
+// HeroPropViews: persistent hero props that live outside the hero model: Wren's Pip (flying, latched, returning)
+// and vantage glow, Maddock's thrown kegs and the keg he rides during Keg Rocket. Synced once per frame by
+// GameRenderer after the entity views, each under its owner's costume.
 import * as THREE from "three";
 import type { World } from "../../sim/world";
 import type { Entity } from "../../sim/types";

@@ -1,3 +1,11 @@
+// Terrain mesh for a map: one grid mesh over the play field (1 m vertices) plus the surround (the decorative
+// land outside the walls, coarser further out; see sim/surround.ts), and the water plane.
+//
+// Texturing is splatted in the shader from per-vertex weights computed here: grass/dirt/rock/cobble (+ sand or
+// snow for the surround style, lakebed under tide cells, and ruined paving with moss and missing stones on
+// "ground_ruined" maps). Rock is triplanar on steep slopes. When `light` is given the material is unlit
+// (MeshBasic) and lighting is baked into vertex colours: sun with cast shadows from walls, cliffs and props
+// (PROP_SHADOW footprints), sky/ground ambient and multi-radius ambient occlusion.
 import * as THREE from "three";
 import heroesData from "../../../data/heroes.json";
 import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../../sim/terrain";
@@ -35,6 +43,7 @@ function vnoise(x: number, z: number): number {
   return (a + (b - a) * sx) * (1 - sz) + (c + (d - c) * sx) * sz;
 }
 
+/** Height of the plain fallback rim around maps without a surround: noise rising away from the field. */
 export function outerHeight(t: Terrain, x: number, z: number): number {
   const dx = Math.max(0 - x, 0, x - t.width);
   const dz = Math.max(0 - z, 0, z - t.depth);
@@ -124,6 +133,7 @@ const WALK_SLOPE = heroesData.baseline.maxSlope;
 const AO_NEAR = [1, 2, 3, 5, 8];
 const AO_FAR = [1, 3, 8];
 
+/** Vertex coordinates along one axis: 1 m on the field, stepping 1/2/4/8 m further out into the surround. */
 function axis(n: number, sur: Surround | null): number[] {
   if (!sur) {
     const out: number[] = [];
@@ -145,6 +155,7 @@ function axis(n: number, sur: Surround | null): number[] {
   return [...lo.reverse(), ...mid, ...hi];
 }
 
+/** Index of the coordinate in sorted `arr` nearest to v. */
 function locate(arr: number[], v: number): number {
   let a = 0;
   let b = arr.length - 1;
@@ -177,6 +188,7 @@ export function buildTerrainMesh(
   const hAt = (x: number, z: number) =>
     inside(x, z) ? t.vertexHeight(x, z) : sur ? sur.ground(x, z) : outerHeight(t, x, z);
 
+  // ── Grid ──
   for (let j = 0; j <= nz; j++) {
     for (let i = 0; i <= nx; i++) {
       const x = xs[i];
@@ -218,6 +230,7 @@ export function buildTerrainMesh(
   geo.computeVertexNormals();
   const nrm = geo.getAttribute("normal") as THREE.BufferAttribute;
 
+  // ── Splat weights and baked lighting: sampling helpers ──
   const splat = new Float32Array(count * 4);
   const sandW = new Float32Array(count);
   const lakeW = tex.lake ? new Float32Array(count) : null;
@@ -273,6 +286,7 @@ export function buildTerrainMesh(
     return heights[locate(zs, z) * vw + locate(xs, x)];
   };
 
+  // Sun shadow casters: height field (walls raised), plus props bucketed in 4 m cells as cylinders.
   const L = new THREE.Vector3(...(light?.sunDir ?? [0, 1, 0])).normalize();
   const sunC = new THREE.Color(light?.sunColor ?? "#ffffff").convertSRGBToLinear();
   const amb0 = new THREE.Color(light?.ambientGround ?? "#444444").convertSRGBToLinear();
@@ -331,6 +345,7 @@ export function buildTerrainMesh(
     return 0.25 + 0.75 * lit;
   };
 
+  // ── Per-vertex weights and colour ──
   for (let j = 0; j <= nz; j++) {
     for (let i = 0; i <= nx; i++) {
       const k = j * vw + i;
@@ -524,6 +539,7 @@ export function buildTerrainMesh(
   if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
+  // ── Material: splat shader injected into a basic (baked light) or Lambert material ──
   const mat = light
     ? new THREE.MeshBasicMaterial({ vertexColors: true })
     : new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -590,6 +606,7 @@ diffuseColor.rgb *= tsum;`,
   return mesh;
 }
 
+/** Water plane at the map's water level (extended far out when the surround is sea); UVs tile every 10 m. */
 export function buildWaterMesh(t: Terrain, material: THREE.Material, sur: Surround | null = null): THREE.Mesh {
   const pad = sur?.water ? 1400 : 0;
   const w = t.width + pad * 2;

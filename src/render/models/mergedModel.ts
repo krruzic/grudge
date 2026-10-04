@@ -1,3 +1,5 @@
+// Merged models: the skinned parts of a loaded model that share a parent are merged into one skinned mesh whose
+// material samples a texture array (layerTexture) by a per-vertex layer index, so a hero or soldier is one draw.
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { cacheCanvas } from "../../ui/cacheCanvas";

@@ -1,3 +1,5 @@
+// Maddock's props: keg models (costume props, or procedural barrels), the cask structure body, the keg he rolls
+// on during Keg Rocket, and thrown kegs (ballistic arc, then the powder keg's fuse ring and sparks until it blows).
 import * as THREE from "three";
 import { IRON, BRASS, model, WOOD_DARK, WOOD, normalized, FUSE, keep } from "../kits/shared";
 import type { Entity, Keg } from "../../sim/types";

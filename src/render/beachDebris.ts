@@ -1,3 +1,4 @@
+// Shells, pebbles and driftwood scattered over tide cells (one instanced mesh from a painted debris sheet).
 import * as THREE from "three";
 import type { Terrain } from "../sim/terrain";
 import beachUrl from "../../assets/fx/beach.png?url";

@@ -1,3 +1,5 @@
+// Francois (duelist) kit: rapier hits with clash sparkles, dash and flurry streaks, parry flashes, blink and
+// reach effects.
 import { DUELIST } from "../fx/atlas";
 import { emit, tumblers } from "../fx/parts";
 import { shockwave } from "../fx/shockwave";

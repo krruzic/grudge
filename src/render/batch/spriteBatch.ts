@@ -1,3 +1,6 @@
+// Sprite batching: three.js Sprites (overhead marks, hints, zone sprites...) are collected into instanced
+// billboard batches that sample up to MAPS textures each, replacing hundreds of sprite draws with a few. The
+// originals stay as anchors on a hidden layer; fill(camera) copies position/scale/rotation/opacity per view.
 import * as THREE from "three";
 
 const HIDDEN_LAYER = 31;

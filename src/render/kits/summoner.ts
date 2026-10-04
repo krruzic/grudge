@@ -1,3 +1,5 @@
+// Remnil (summoner) kit: hex hits, magic orb projectiles with trails, telegraphed curses, the hex idol prop and
+// Gravewalk (summoning circle at the start, tombs rising at the destination; costume props for Shadow Play).
 import * as THREE from "three";
 import { costumeOfPlayer } from "../costumes";
 import { SUMMONER, FX, tint } from "../fx/atlas";

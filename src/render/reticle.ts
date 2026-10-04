@@ -1,3 +1,5 @@
+// Aim reticles for local players holding an aimed ability: range ring, area marker, wall preview dots, Remnil's
+// Gravewalk spot markers, plus a cursor. GameRenderer syncs them from ReticleReqs every frame.
 import * as THREE from "three";
 import type { World } from "../sim/world";
 import { abilities } from "../sim/talents";

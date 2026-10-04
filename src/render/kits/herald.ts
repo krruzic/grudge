@@ -1,3 +1,4 @@
+// Herald kit: radiant hits, War Cry, Rally (laurel/crown decals drawn as 3D models) and banner placement.
 import { HERALD, FX } from "../fx/atlas";
 import { emit } from "../fx/parts";
 import { decal } from "../fx/decals";
