@@ -10,7 +10,7 @@ import type { Terrain } from "../sim/terrain";
 import type { MapView } from "./mapView";
 import { Effects, makeSky } from "./map/ambience";
 import { FRAME, outlineConfig, type HeroModels } from "./heroModels";
-import { silScene, syncSilhouettes } from "./entities/entityViews";
+import { syncSilhouettes, silScene } from "./entities/silhouettes";
 import { EntityViews } from "./entities/entityViews";
 import { CombatFx } from "./combat/combatFx";
 import { HazardViews } from "./hazards/hazardViews";
@@ -637,15 +637,6 @@ export class GameRenderer {
   }
 
   private viewNo = 0;
-  private corner = new THREE.Vector3();
-
-  private skySeen(cam: THREE.PerspectiveCamera): boolean {
-    for (let i = 0; i < 4; i++) {
-      this.corner.set(i & 1 ? 1 : -1, i & 2 ? 1 : -1, 1).unproject(cam);
-      if (this.corner.y - cam.position.y > -1e-3 * cam.far) return true;
-    }
-    return false;
-  }
 
   // ── Frame ──
 

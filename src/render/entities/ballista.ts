@@ -1,3 +1,6 @@
+// Stig's ballista (siege structure): the costume's prop when there is one, else a procedural wooden ballista
+// whose static parts are merged into one mesh drawing wood/iron from a texture array (aLayer per vertex).
+// syncBallista turns it to its target and animates the string and bolt on each shot.
 import * as THREE from "three";
 import woodUrl from "../../../assets/textures/wood.png?url";
 import ironUrl from "../../../assets/textures/iron.png?url";
@@ -44,6 +47,7 @@ function ready(t: THREE.Texture): boolean {
   const im = t.image as HTMLImageElement | undefined;
   return !!im && im.complete !== false && (im.width ?? 0) > 0;
 }
+/** The texture-array material for merged static parts; null until both textures have loaded. */
 function sharedParts(): THREE.MeshLambertMaterial | null {
   if (partsMat) return partsMat;
   if (!ready(woodTex) || !ready(ironTex)) return null;
@@ -80,6 +84,7 @@ function tagParts(geo: THREE.BufferGeometry, mat: THREE.MeshLambertMaterial): TH
   return geo;
 }
 
+/** Merges the unnamed (non-animated) meshes under `parent` into one mesh per material. */
 function mergeStatic(parent: THREE.Object3D): void {
   const by = new Map<THREE.Material, THREE.BufferGeometry[]>();
   const parts = sharedParts();

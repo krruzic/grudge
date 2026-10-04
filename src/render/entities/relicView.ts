@@ -1,3 +1,6 @@
+// The grudge relic (arena objective): its altar at home, the relic itself in each state (home, carried over the
+// carrier's head, dropped with a pointer arrow, shrined on a tower/keep with a team ring that flashes red while
+// being stolen), plus the shop bombs heroes carry overhead and their fuse smoke.
 import * as THREE from "three";
 import type { World } from "../../sim/world";
 import type { StructureModels } from "../structureModels";
@@ -74,7 +77,6 @@ function blob(radius: number, opacity: number): THREE.Mesh {
 export class RelicView {
   readonly root = new THREE.Group();
   private relic = new THREE.Group();
-  private altar: THREE.Object3D | null = null;
   private arrow: THREE.Mesh;
   private shadow = blob(0.5, 0.45);
   private ring: THREE.Mesh;
@@ -115,7 +117,6 @@ export class RelicView {
     const hy = world.groundY(home.x, home.z);
     if (altar) {
       altar.position.set(home.x, hy, home.z);
-      this.altar = altar;
       this.root.add(altar);
     }
     const cone = new THREE.ConeGeometry(0.28, 0.5, 4);
@@ -140,6 +141,7 @@ export class RelicView {
     this.root.add(this.relic, this.arrow, this.shadow, this.ring);
   }
 
+  /** Carried shop bombs (and aim markers) for every live hero. */
   private syncExtras(alpha: number): void {
     const w = this.world;
     const seen = new Set<number>();

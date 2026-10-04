@@ -725,17 +725,6 @@ export class HazardViews {
       for (const s of [...fis.children]) if (!(s as THREE.Mesh).isMesh) fis.remove(s);
     }
     const grows: { o: THREE.Object3D; d: number }[] = [];
-    const scatter = (n: number, make: () => THREE.Mesh, lift = 0) => {
-      for (let i = 0; i < n; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const d = Math.sqrt(Math.random()) * r * 0.9;
-        const x = Math.cos(a) * d;
-        const z = Math.sin(a) * d;
-        const m = make();
-        m.position.set(x, gy(x, z) + lift, z);
-        g.add(m);
-      }
-    };
     if (style === "bramble") {
       decal.material = new THREE.MeshBasicMaterial({
         map: hd(BRAMBLE_DECAL),
