@@ -119,6 +119,17 @@ vec3 hexTex(sampler2D t, vec2 uv, vec2 dx, vec2 dy) {
   return mean + (blend - mean) * min(1.4, inversesqrt(dot(w, w)));
 }`;
 
+// Dirt slot on alpine maps: snow (vSand) is hex-tiled with a slow cool/warm and brightness drift; dirt is only
+// sampled where some shows through.
+const SNOW_DIRT = `vec3 cd = vec3(0.0);
+  if (vSand < 1.0) cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;
+  if (vSand > 0.0) {
+    vec3 cs = hexTex(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0);
+    float sm = rNoise(wuv * 0.045 + 5.3);
+    cs *= mix(vec3(0.95, 0.98, 1.03), vec3(1.03, 1.01, 0.97), sm) * (0.95 + 0.08 * rNoise(wuv * 0.13 + 2.0));
+    cd = mix(cd, cs, vSand);
+  }`;
+
 const RUIN_HEAD = `
 uniform sampler2D tCrack; varying vec4 vRuin;`;
 
@@ -591,6 +602,9 @@ export function buildTerrainMesh(
   if (hasSand) geo.setAttribute("aSand", new THREE.BufferAttribute(sandW, 1));
   if (ruinW) geo.setAttribute("aRuin", new THREE.BufferAttribute(ruinW, 4));
   const hasLake = !!lakeW && lakeW.some((v) => v > 0);
+  // Alpine snow takes over every grass vertex (altFromGrass), so it covers as much ground as grass does elsewhere
+  // and gets the same hex-tile + drift treatment. The grass branch never runs there, so the cost matches.
+  const hexAlt = hasSand && sur?.style === "alpine";
   if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
@@ -642,7 +656,7 @@ if (sw.x > 0.0) {
   tsum += cg * sw.x;
 }
 if (sw.y > 0.0) {
-  vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}
+  ${hexAlt ? SNOW_DIRT : `vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}`}
 ${hasLake ? "  if (vLake > 0.0) {\n    vec3 lk = textureGrad(tLake, wuv / 8.0, dpx.xz / 8.0, dpy.xz / 8.0).rgb;\n    lk = mix(vec3(0.6, 0.56, 0.5), lk, 0.5);\n    float salt = textureGrad(tLake, wuv / 29.0 + 0.37, dpx.xz / 29.0, dpy.xz / 29.0).r;\n    lk *= 0.82 + salt * 0.38;\n    cd = mix(cd, lk * vec3(1.24, 1.0, 0.72), vLake);\n  }" : ""}
   tsum += cd * sw.y;
 }
@@ -658,7 +672,8 @@ diffuseColor.rgb *= tsum;`,
       );
   };
 
-  mat.customProgramCacheKey = () => `terrain${hasSand ? "-sand" : ""}${ruined ? "-ruin" : ""}${hasLake ? "-lake" : ""}`;
+  mat.customProgramCacheKey = () =>
+    `terrain${hasSand ? "-sand" : ""}${hexAlt ? "-snow" : ""}${ruined ? "-ruin" : ""}${hasLake ? "-lake" : ""}`;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = "Terrain";
   mesh.receiveShadow = true;
