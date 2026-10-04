@@ -190,17 +190,22 @@ const SWIPE_SEGS = 40;
 function swipeFx(h: FxHost, x: number, y: number, z: number, dx: number, dz: number, reach: number): void {
   const gy = ground(h, x, z, y);
   const n = SWIPE_SEGS + 1;
-  const pos = new Float32Array(n * 2 * 3);
-  const col = new Float32Array(n * 2 * 3);
+  const pos = new Float32Array(n * 3 * 3);
+  const col = new Float32Array(n * 3 * 3);
   const idx: number[] = [];
-  const r0 = reach * 0.38;
   for (let i = 0; i < n; i++) {
     const a = -SWIPE_ARC + (i / SWIPE_SEGS) * SWIPE_ARC * 2;
     const s = Math.sin(a);
     const c = Math.cos(a);
     const hy = a < 0 ? 0.9 - a * 0.5 : 0.9 + a * 0.1;
-    pos.set([s * r0, hy + 0.25, c * r0, s * reach, hy - 0.1, c * reach], i * 6);
-    if (i < SWIPE_SEGS) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    const r0 = reach * 0.3;
+    const r1 = reach * 0.8;
+    pos.set([s * r0, hy + 0.3, c * r0, s * r1, hy, c * r1, s * reach, hy - 0.1, c * reach], i * 9);
+    if (i < SWIPE_SEGS)
+      for (let j = 0; j < 2; j++) {
+        const v = i * 3 + j;
+        idx.push(v, v + 1, v + 3, v + 1, v + 4, v + 3);
+      }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -227,8 +232,8 @@ function swipeFx(h: FxHost, x: number, y: number, z: number, dx: number, dz: num
     const fade = t < 0.16 ? 1 : Math.max(0, 1 - (t - 0.16) / (life - 0.16));
     for (let i = 0; i < n; i++) {
       const a = -SWIPE_ARC + (i / SWIPE_SEGS) * SWIPE_ARC * 2;
-      const b = a > lead ? 0 : Math.exp(-(lead - a) / 1.6) * fade;
-      col.set([b * 0.15, b * 0.15, b * 0.15, b, b, b], i * 6);
+      const b = a > lead ? 0 : Math.exp(-(lead - a) / 2.2) * fade;
+      col.set([0, 0, 0, b * 0.35, b * 0.35, b * 0.35, b * 1.6, b * 1.6, b * 1.6], i * 9);
     }
     colAttr.needsUpdate = true;
   });
