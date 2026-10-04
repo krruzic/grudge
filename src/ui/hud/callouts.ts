@@ -104,7 +104,7 @@ export class Callouts {
       if (ev.stage === "warn")
         this.showCard(
           "THE BELLS RING",
-          court ? "THE COURT OPENS · THE OUTER GATES SEAL" : "THE COURT SEALS · THE OUTER GATES OPEN",
+          court ? "THE COURT OPENS · THE BORDER LANES SEAL" : "THE COURT SEALS · THE BORDER LANES OPEN",
           "bell",
           now,
           BELL,
