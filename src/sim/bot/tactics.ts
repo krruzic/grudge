@@ -127,6 +127,16 @@ export function warlordFight(bot: Bot, w: World, me: Entity, target: Entity | un
   if (target?.alive) chargeB(bot, w, me, target, 2.8 + target.radius, 6);
 }
 
+/**
+ * Stig: Repair is also a 6 m blast (60 to every foe); held to full power it hits for 96, heals the towers he fights
+ * beside and (Overhaul) his troops. Used as a fight nuke whenever a champion is inside the blast.
+ */
+export function engineerFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  if (!target?.alive) return;
+  const r = abilities(w, me).b.radius ?? 6;
+  chargeB(bot, w, me, target, r * 0.75 + target.radius, r + 3);
+}
+
 /** Warlord HEAVE direction: into a friendly tower near the victim, else toward the own core. */
 export function heaveDir(w: World, me: Entity, victim: Entity): Vec2 {
   const ep = victim.transform.pos;

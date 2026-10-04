@@ -21,7 +21,7 @@ import {
   ok,
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
-import { heaveDir, warlordFight, wrenAbilities, wrenShoot } from "./tactics.ts";
+import { engineerFight, heaveDir, warlordFight, wrenAbilities, wrenShoot } from "./tactics.ts";
 
 /** What the bot knows about the fight this think. */
 interface Senses {
@@ -316,6 +316,8 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   const zDecided = ab.b.kind === "pip" && wrenAbilities(bot, w, me);
   // Warlord: charged slam (bot/tactics.ts).
   if (hk.heaveRange) warlordFight(bot, w, me, ehAlive ? enemyHero : undefined);
+  // Engineer: charged Repair as a fight nuke.
+  if (ab.b.kind === "repair") engineerFight(bot, w, me, ehAlive ? enemyHero : undefined);
   if (
     hk.heaveRange &&
     rdy("heave") &&

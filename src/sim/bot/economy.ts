@@ -123,6 +123,21 @@ export function pickBuild(bot: Bot, w: World, me: Entity): void {
       o.structure &&
       w.data.structures.types[o.structure.type as StructureType]?.class === "production",
   ).length;
+  // Cheap upgrades (Stig pays 60%): upgrade each building as soon as it stands, and specialise towers early.
+  const cheap = (w.heroDef(me.hero!.type).hooks.upgradeCostMul ?? 1) < 1;
+  if (cheap) {
+    for (const pad of pads) {
+      const st = pad.structureId ? w.get(pad.structureId) : undefined;
+      if (!st || st.team !== me.team || !st.structure!.ready || st.structure!.upgrading) continue;
+      const type = st.structure!.type as StructureType;
+      if (st.structure!.level < 2 && res >= buildCost(w, type, true, me.team) + 40) {
+        bot.buildPad = pad;
+        bot.buildType = type;
+        bot.buildSpec = null;
+        return;
+      }
+    }
+  }
   const placed = new Map<string, number>();
   for (const item of PLAN) {
     const key = `${item.zone}|${item.type}`;
@@ -149,7 +164,7 @@ export function pickBuild(bot: Bot, w: World, me: Entity): void {
     return;
   }
   bot.buildSpec = null;
-  if (w.time > 150 && res >= 420) {
+  if ((w.time > 150 && res >= 420) || cheap) {
     for (const pad of pads) {
       const st = pad.structureId ? w.get(pad.structureId) : undefined;
       if (
@@ -158,7 +173,7 @@ export function pickBuild(bot: Bot, w: World, me: Entity): void {
         canSpec(w, st) &&
         st.structure!.ready &&
         !st.structure!.upgrading &&
-        res >= specCost(w, st.structure!.type as StructureType, me.team) + 170
+        res >= specCost(w, st.structure!.type as StructureType, me.team) + (cheap ? 60 : 170)
       ) {
         bot.buildPad = pad;
         bot.buildType = st.structure!.type as StructureType;
