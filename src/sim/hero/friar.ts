@@ -427,7 +427,8 @@ export function onZoneEnd(w: World, z: Zone): void {
   }
 }
 
-function inOwnPuddle(w: World, e: Entity): boolean {
+/** Standing in one of his own ale puddles (KEG ROCKET is available). */
+export function inOwnPuddle(w: World, e: Entity): boolean {
   return w.zones.some(
     (z) =>
       z.ownerId === e.id &&

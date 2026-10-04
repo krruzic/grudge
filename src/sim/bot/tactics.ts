@@ -7,6 +7,7 @@ import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
 import { abilities } from "../talents.ts";
+import { inOwnPuddle } from "../hero/friar.ts";
 
 const isMelee = (w: World, o: Entity): boolean => !!o.hero && (w.heroDef(o.hero.type).botRange ?? 1.8) <= 3;
 
@@ -233,6 +234,48 @@ export function duelistReflex(bot: Bot, w: World, me: Entity): void {
 export function wardenFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
   if (!target?.alive || !target.hero) return;
   chargeB(bot, w, me, target, (abilities(w, me).b.range ?? 8.5) - 0.8, 3.5);
+}
+
+/**
+ * Maddock while retreating from a champion within 5 m: Healing Keg at his own feet (110 heal + a puddle), then KEG
+ * ROCKET out of the puddle toward home (10 m cc-immune roll that bowls the chaser aside). Returns true when it acted.
+ */
+export function friarEscape(bot: Bot, w: World, me: Entity, home: Vec2): boolean {
+  const h = me.hero!;
+  const chaser = foesNear(w, me, 5)[0];
+  if (!chaser || h.action) return false;
+  const p = me.transform.pos;
+  if (inOwnPuddle(w, me) && (h.cooldowns.dodge ?? 0) <= w.time) {
+    const dx = home.x - p.x;
+    const dz = home.z - p.z;
+    const l = Math.hypot(dx, dz) || 1;
+    bot.wantDodge = true;
+    bot.wantFace = { x: dx / l, z: dz / l };
+    return true;
+  }
+  if ((h.cooldowns.b ?? 0) <= w.time && (h.cooldowns.dodge ?? 0) <= w.time + 0.6) {
+    bot.wantB = true;
+    bot.wantPlace = { x: 0, z: 0 };
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Maddock's Powder Keg (1.35 s from throw to blast) only where it will land: on a champion that is stunned, slowed,
+ * mid-swing or toe to toe with him, else on a clump of soldiers. Replaces the generic "throw it at whoever" rule.
+ */
+export function friarPowder(bot: Bot, w: World, me: Entity, target: Entity | undefined, clump: number): void {
+  const h = me.hero!;
+  if ((h.cooldowns.r ?? 0) > w.time || h.action) return;
+  const range = abilities(w, me).r.range ?? 8;
+  const t = target?.alive && target.hero && w.dist(me, target) < range + 0.5 ? target : undefined;
+  const stuck =
+    !!t && (w.time < t.status.stunUntil || (w.time < t.status.slowUntil && t.status.slowMul < 0.8) || !!t.hero!.action);
+  if (t && (stuck || w.dist(me, t) < 2.5)) {
+    bot.wantR = true;
+    bot.wantPlace = { x: t.transform.pos.x - me.transform.pos.x, z: t.transform.pos.z - me.transform.pos.z };
+  } else if (clump >= 3) bot.wantR = true;
 }
 
 /** Warlord HEAVE direction: into a friendly tower near the victim, else toward the own core. */

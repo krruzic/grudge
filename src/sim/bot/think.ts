@@ -24,6 +24,8 @@ import { pickBuild, shop } from "./economy.ts";
 import {
   duelistFight,
   engineerFight,
+  friarEscape,
+  friarPowder,
   heaveDir,
   raiderFight,
   summonerFight,
@@ -239,6 +241,8 @@ function retreat(bot: Bot, w: World, s: Senses, swarm: number, graveReady: boole
     if (esc === "b") bot.wantB = true;
     else bot.wantR = true;
   }
+  // Friar: keg at his feet, then KEG ROCKET home (bot/tactics.ts).
+  if (w.heroDef(h.type).abilities.b.kind === "keg" && friarEscape(bot, w, me, sp)) return;
   if (plan.healer && (h.cooldowns.b ?? 0) <= w.time && healSpotScore(w, me) >= 80) bot.wantB = true;
   const cover = ehAlive ? grassCover(bot, w, me, enemyHero!, dHero) : null;
   if (cover) bot.goal = cover;
@@ -388,7 +392,9 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (rdy("r") && ab.r.bot !== "fight" && ab.r.kind !== "parry" && useHint("r", dHero)) bot.wantR = true;
   if (rdy("b") && (ab.b.bot === "repair" || ab.b.bot === "banner" || ab.b.bot === "heal") && useHint("b", 0))
     bot.wantB = true;
-  if (plan.healer && rdy("r") && ab.r.bot === "fight" && clumpScore(w, me) >= 3 && bot.rand() < 0.5) bot.wantR = true;
+  if (ab.r.kind === "powderkeg") friarPowder(bot, w, me, ehAlive ? enemyHero : undefined, clumpScore(w, me));
+  else if (plan.healer && rdy("r") && ab.r.bot === "fight" && clumpScore(w, me) >= 3 && bot.rand() < 0.5)
+    bot.wantR = true;
   return false;
 }
 
@@ -498,7 +504,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     bot.rand() < 0.3 * bot.skill
   )
     bot.wantB = true;
-  if (rdy("r") && ab.r.bot === "fight" && useHint("r", d) && bot.rand() < 0.35) bot.wantR = true;
+  if (rdy("r") && ab.r.bot === "fight" && ab.r.kind !== "powderkeg" && useHint("r", d) && bot.rand() < 0.35)
+    bot.wantR = true;
   if (target.hero?.action?.name === "a" && d < 2.8 && bot.rand() < 0.25 * bot.skill) bot.wantBlock = true;
   if (prefer > 3) {
     const tx = fx - p.x;
