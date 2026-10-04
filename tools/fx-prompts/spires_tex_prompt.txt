@@ -1,0 +1,8 @@
+The FIRST image shows three tileable ground textures from our hand-painted fantasy game (grass, path, earth bank), the exact painting style and level of detail to match. Paint a NEW sheet of 6 SEAMLESS TILEABLE square textures in exactly that hand-painted style, for a DESERT CANYON OF SANDSTONE RUINS under a cool BLUE MOONLIT NIGHT (paint them in neutral daylight colours; the game lights them), arranged as a 3 columns x 2 rows grid with thin black gutters, each texture filling its square edge to edge, flat top-down unless noted, low contrast, no large single features, no repeating shapes:
+1. DESERT FLOOR: packed warm ochre hardpan earth with fine cracks, tiny pebbles and a few sparse dry grey-green scrub tufts.
+2. DUNE SAND: soft pale golden sand with gentle wind ripples running diagonally, a few darker ripple shadows.
+3. SANDSTONE CLIFF: a vertical canyon wall of layered red-orange and cream sandstone strata with horizontal bands and erosion grooves (side view, tileable both ways).
+4. SANDSTONE FLAGSTONES: large worn cream sandstone paving slabs with sand drifted into the joints, a few cracks.
+5. DRY RIVERBED: cracked dried clay mud plates, ochre with darker edges.
+6. RUINED MOSAIC: faded ancient floor mosaic of turquoise, terracotta and cream tiles with a sun motif, partly covered by sand (decorative).
+No text, no letters, no numbers, no frames other than the thin gutters.

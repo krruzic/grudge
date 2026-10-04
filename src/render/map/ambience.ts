@@ -68,9 +68,9 @@ export class Effects {
   private leaves: THREE.Points | null = null;
   private leafVel = new Float32Array(0);
 
-  constructor(bounds: THREE.Box3, leaves = false) {
+  constructor(bounds: THREE.Box3, drift: "leaves" | "sand" | null = null) {
     this.bounds = bounds;
-    if (leaves) this.makeLeaves();
+    if (drift) this.makeLeaves(drift);
     const count = 260;
     const pos = new Float32Array(count * 3);
     this.moteVel = new Float32Array(count * 3);
@@ -100,7 +100,8 @@ export class Effects {
   }
 
   /** Falling autumn leaves over the field: slow fall, sideways drift and flutter; recycled at the top. */
-  private makeLeaves(): void {
+  private makeLeaves(kind: "leaves" | "sand"): void {
+    const sand = kind === "sand";
     const b = this.bounds;
     const count = 180;
     const pos = new Float32Array(count * 3);
@@ -111,10 +112,10 @@ export class Effects {
       pos[i * 3] = THREE.MathUtils.lerp(b.min.x, b.max.x, Math.random());
       pos[i * 3 + 1] = Math.random() * 9;
       pos[i * 3 + 2] = THREE.MathUtils.lerp(b.min.z, b.max.z, Math.random());
-      this.leafVel[i * 3] = 0.4 + Math.random() * 0.5;
-      this.leafVel[i * 3 + 1] = -(0.45 + Math.random() * 0.45);
+      this.leafVel[i * 3] = sand ? 2.2 + Math.random() * 1.6 : 0.4 + Math.random() * 0.5;
+      this.leafVel[i * 3 + 1] = sand ? -(0.05 + Math.random() * 0.15) : -(0.45 + Math.random() * 0.45);
       this.leafVel[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
-      c.setHex(LEAF_COLORS[i % LEAF_COLORS.length]);
+      c.setHex(sand ? 0xf0dcb4 : LEAF_COLORS[i % LEAF_COLORS.length]);
       col.set([c.r, c.g, c.b], i * 3);
     }
     const geo = new THREE.BufferGeometry();
@@ -122,14 +123,23 @@ export class Effects {
     geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
     this.leaves = new THREE.Points(
       geo,
-      new THREE.PointsMaterial({
-        map: leafTex,
-        size: 0.42,
-        vertexColors: true,
-        transparent: true,
-        alphaTest: 0.3,
-        depthWrite: false,
-      }),
+      sand
+        ? new THREE.PointsMaterial({
+            map: moteTex,
+            size: 0.22,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.55,
+            depthWrite: false,
+          })
+        : new THREE.PointsMaterial({
+            map: leafTex,
+            size: 0.42,
+            vertexColors: true,
+            transparent: true,
+            alphaTest: 0.3,
+            depthWrite: false,
+          }),
     );
     this.root.add(this.leaves);
   }

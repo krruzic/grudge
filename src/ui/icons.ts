@@ -283,6 +283,31 @@ const STROKES: Record<string, Draw> = {
     c.lineTo(-0.12, -0.72);
     c.closePath();
   },
+  serpent: (c) => {
+    // A serpent head rearing out of three dune ripples.
+    c.moveTo(-0.15, 0.3);
+    c.quadraticCurveTo(-0.45, -0.1, -0.15, -0.45);
+    c.quadraticCurveTo(0.05, -0.7, 0.45, -0.62);
+    c.lineTo(0.75, -0.5);
+    c.lineTo(0.42, -0.42);
+    c.quadraticCurveTo(0.15, -0.38, 0.05, -0.2);
+    c.quadraticCurveTo(-0.05, 0.05, 0.15, 0.3);
+    c.closePath();
+    c.moveTo(-0.95, 0.42);
+    c.quadraticCurveTo(-0.5, 0.25, 0, 0.42);
+    c.quadraticCurveTo(0.5, 0.58, 0.95, 0.42);
+    c.lineTo(0.95, 0.58);
+    c.quadraticCurveTo(0.5, 0.74, 0, 0.58);
+    c.quadraticCurveTo(-0.5, 0.42, -0.95, 0.58);
+    c.closePath();
+    c.moveTo(-0.7, 0.75);
+    c.quadraticCurveTo(-0.2, 0.62, 0.3, 0.75);
+    c.quadraticCurveTo(0.6, 0.85, 0.85, 0.78);
+    c.lineTo(0.85, 0.9);
+    c.quadraticCurveTo(0.55, 0.98, 0.3, 0.88);
+    c.quadraticCurveTo(-0.2, 0.76, -0.7, 0.88);
+    c.closePath();
+  },
   apple: (c) => {
     c.moveTo(0, -0.42);
     c.bezierCurveTo(0.35, -0.75, 0.95, -0.55, 0.85, 0.05);

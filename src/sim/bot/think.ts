@@ -111,6 +111,19 @@ export function think(bot: Bot, w: World, me: Entity): void {
     bot.goal = { x: lan.x, z: lan.z };
     return;
   }
+  // Dune serpent: get out of a breach warning circle.
+  const sp = w.mapEvents.serpent;
+  if (sp && sp.mode === "warn") {
+    const r = (w.mapEvents.serpentDef?.breachRadius ?? 3) + 1.5;
+    const dx = s.p.x - sp.x;
+    const dz = s.p.z - sp.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd < r) {
+      const k = (r + 1) / (dd || 1);
+      bot.goal = { x: sp.x + dx * k, z: sp.z + dz * k };
+      return;
+    }
+  }
   // Cider wells: when nearby wells are about to erupt, step onto one whose landing point is closer to the enemy
   // keep than we are (a free flank), unless we're in a fight.
   const ev = w.mapEvents;

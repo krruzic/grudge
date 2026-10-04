@@ -7,6 +7,7 @@
 //   avalanche  horns that, when captured, send an avalanche down one of four rotated lanes (frostcross)
 //   fountain   a healing fountain
 //   geysers    cider wells that erupt in turn and fling whoever stands on them (russet hollow)
+//   serpent    a dune serpent circling the sand sea, breaching on a timer and hunting the Grudge carrier
 // Implementation per feature lives in src/sim/mapEvents/*; this class holds the state and delegates.
 import { Kind } from "./terrain.ts";
 import type { World } from "./world.ts";
@@ -18,6 +19,7 @@ import { applyGates, gateSlots, updateGates, type GateSlot, type GatesDef } from
 import { updateMist, type MistDef } from "./mapEvents/mist.ts";
 import { findPits, updateLantern, type Lantern, type LanternDef } from "./mapEvents/lantern.ts";
 import { geyserWells, updateGeysers, type GeyserWell, type GeysersDef } from "./mapEvents/geysers.ts";
+import { makeSerpent, updateSerpent, type Serpent, type SerpentDef } from "./mapEvents/serpent.ts";
 import {
   avalancheLanes,
   updateAvalanche,
@@ -42,6 +44,7 @@ export interface FountainDef {
 }
 
 export type { GeysersDef, GeyserWell } from "./mapEvents/geysers.ts";
+export type { Serpent, SerpentDef } from "./mapEvents/serpent.ts";
 
 export class MapEvents {
   // Cider wells (mapEvents/geysers.ts): the group that erupts next and when
@@ -50,6 +53,9 @@ export class MapEvents {
   geyserGroup: "a" | "b" = "a";
   geyserAt = Infinity;
   geyserWarned = false;
+  // Dune serpent (mapEvents/serpent.ts)
+  serpentDef?: SerpentDef;
+  serpent: Serpent | null = null;
   // Avalanche + horns (mapEvents/avalanche.ts)
   av?: AvalancheDef;
   lanes: Lane[] = [];
@@ -188,6 +194,8 @@ export class MapEvents {
       this.geyserWells = geyserWells(this, this.geysers);
       this.geyserAt = this.geysers.firstSeconds;
     }
+    this.serpentDef = w.terrain.serpent as SerpentDef | undefined;
+    if (this.serpentDef) this.serpent = makeSerpent(this, this.serpentDef);
     this.gates = w.terrain.gates as GatesDef | undefined;
     if (this.gates) {
       const t = w.terrain;
@@ -269,6 +277,7 @@ export class MapEvents {
     if (this.av) updateAvalanche(this, this.av);
     if (this.gates) updateGates(this, this.gates);
     if (this.geysers) updateGeysers(this, this.geysers);
+    if (this.serpentDef) updateSerpent(this, this.serpentDef);
     if (this.fountain && this.w.tick % 6 === 0) this.updateFountain(this.fountain);
   }
 

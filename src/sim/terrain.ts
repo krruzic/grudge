@@ -88,6 +88,7 @@ export interface MapData {
   avalanche?: unknown;
   gates?: unknown;
   geysers?: unknown;
+  serpent?: unknown;
   palette?: string;
   atmosphere?: Record<string, unknown>;
   fountain?: unknown;
@@ -160,6 +161,7 @@ export class Terrain {
   readonly avalanche?: unknown;
   readonly gates?: unknown;
   readonly geysers?: unknown;
+  readonly serpent?: unknown;
   /** Ground texture palette for the renderer ("autumn"); default by surround style. */
   readonly palette?: string;
   /** Render-only lighting/sky overrides for this map (see GameRenderer.applyAtmosphere). */
@@ -221,6 +223,7 @@ export class Terrain {
     this.avalanche = data.avalanche;
     this.gates = data.gates;
     this.geysers = data.geysers;
+    this.serpent = data.serpent;
     this.palette = data.palette;
     this.atmosphere = data.atmosphere as Record<string, string | number | boolean> | undefined;
     this.fountain = data.fountain;

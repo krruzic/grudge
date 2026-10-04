@@ -12,6 +12,9 @@ import snowUrl from "../../assets/textures/snow.png?url";
 import gravelUrl from "../../assets/textures/gravel.png?url";
 import pavIdUrl from "../../assets/textures/paving_id.png?url";
 import crackUrl from "../../assets/textures/paving_crack.jpg?url";
+import desertFloorUrl from "../../assets/textures/desert_floor.png?url";
+import desertDuneUrl from "../../assets/textures/desert_dune.png?url";
+import desertCliffUrl from "../../assets/textures/desert_cliff.png?url";
 import autumnGrassUrl from "../../assets/textures/autumn_grass.png?url";
 import autumnPathUrl from "../../assets/textures/autumn_path.png?url";
 import autumnBankUrl from "../../assets/textures/autumn_bank.png?url";
@@ -215,6 +218,7 @@ function mergeProps(scene: THREE.Object3D): void {
 
 const PALETTES: Record<string, Partial<Record<"grass" | "dirt" | "rock", string>>> = {
   autumn: { grass: autumnGrassUrl, dirt: autumnPathUrl, rock: autumnBankUrl },
+  desert: { grass: desertFloorUrl, dirt: desertDuneUrl, rock: desertCliffUrl },
 };
 
 export async function loadMap(

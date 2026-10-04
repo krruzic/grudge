@@ -72,7 +72,17 @@ TRIPO = {
     "pumpkins": {"size": (1.7, 1.7, 0.85), "faces": 600, "maps": ("hollow",)},
     "haycart": {"size": (2.8, 1.7, 1.7), "faces": 700, "maps": ("hollow",)},
 }
-ORCHARD = ("appletree", "press", "ciderwell", "barrels", "pumpkins", "haycart")
+# Emberdune Spires (moonlit desert canyon).
+TRIPO.update({
+    "spire": {"size": (2.4, 2.4, 6.2), "faces": 700, "lo": 260, "maps": ("spires",)},
+    "ribcage": {"size": (4.6, 6.5, 3.4), "faces": 900, "maps": ("spires",)},
+    "colossus": {"size": (4.2, 3.6, 3.4), "faces": 1000, "maps": ("spires",)},
+    "obelisk": {"size": (1.4, 1.4, 4.4), "faces": 500, "maps": ("spires",)},
+    "tent": {"size": (2.8, 2.6, 2.2), "faces": 800, "maps": ("spires",)},
+    "cactus": {"size": (1.8, 1.8, 2.2), "faces": 700, "lo": 260, "maps": ("spires",)},
+})
+ORCHARD = ("appletree", "press", "ciderwell", "barrels", "pumpkins", "haycart",
+           "spire", "ribcage", "colossus", "obelisk", "tent", "cactus")
 ROCKS = ("rock_a", "rock_b", "rock_c")
 
 
@@ -197,9 +207,27 @@ class Builder:
 # Map palettes for the Blender-side materials: Russet Hollow swaps canopy leaves for autumn foliage and warms the
 # tall grass to golden windfall straw.
 AUTUMN = MAP_NAME == "hollow"
+DESERT = MAP_NAME == "spires"
 
 
 def autumn_image(name, img):
+    if DESERT and img is not None and name in ("ruinstone", "brick", "ruin_a", "ruin_b", "ruin_c", "ruin_d", "ruintop", "rubble"):
+        # Grey castle stone -> warm banded sandstone for the canyon ruins.
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            lum = 0.3 * px[i] + 0.55 * px[i + 1] + 0.15 * px[i + 2]
+            px[i], px[i + 1], px[i + 2] = min(1.0, lum * 1.32 + 0.1), lum * 1.0 + 0.05, lum * 0.7
+        img.pixels.foreach_set(px)
+        return img
+    if DESERT and name == "tallgrass" and img is not None:
+        # Dry pale desert scrub.
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            r, g, b = px[i], px[i + 1], px[i + 2]
+            lum = 0.3 * r + 0.55 * g + 0.15 * b
+            px[i], px[i + 1], px[i + 2] = min(1.0, lum * 1.25 + 0.08), lum * 1.1 + 0.05, lum * 0.72
+        img.pixels.foreach_set(px)
+        return img
     if not AUTUMN:
         return img
     if name in ("leaves", "pine"):
@@ -1346,7 +1374,14 @@ class MapBuilder:
                 base = min(self.ground_h(x + dx, z + dz) for dx in (-0.6, 0.6) for dz in (-0.6, 0.6))
                 if t == "ciderwell":
                     base = self.ground_h(x, z)
-                self.place_tripo(t, x, base - 0.08, z, s if t != "appletree" else s * r.uniform(0.9, 1.1), r)
+                if t in ("ribcage", "colossus", "tent"):
+                    rot = math.radians(p.get("rot", 0))
+                    tpl = self.tpl[t]
+                    m = Matrix.Translation(G(x, base - 0.15, z)) @ Matrix.Rotation(rot, 4, "Z") @ Matrix.Scale(s, 4)
+                    for pts, uvs in tpl["hi"]:
+                        self.props.face([m @ q for q in pts], tpl["mat"], uvs=uvs)
+                else:
+                    self.place_tripo(t, x, base - 0.08, z, s * (r.uniform(0.9, 1.1) if t in ("appletree", "spire", "cactus") else 1), r)
             elif t == "tree":
                 self.tree(x, y, z, s, seed)
             elif t == "pine":
@@ -1574,6 +1609,14 @@ def main():
             surround_kit.BUILDERS["topiary"] = lambda m, f: m.topiary(f, lo=True)
             surround_kit.BUILDERS["flowers"] = lambda m, f: m.flowerbed(f, lo=True)
             surround_kit.BUILDERS["urn"] = lambda m, f: m.urn_flowers(f)
+        if DESERT and "spire" in mb.tpl:
+            # Desert surround: spires and cacti stand in for trees and bushes.
+            def desert_tree(m, f):
+                r = random.Random(f["seed"])
+                name = "spire" if f["t"] in ("pine", "tree") and r.random() < 0.6 else "cactus"
+                m.place_tripo(name, f["x"], f["y"] - 0.1, f["z"], f.get("s", 1.0) * r.uniform(0.8, 1.25), r, lo=True)
+            for k in ("pine", "tree", "bush"):
+                surround_kit.BUILDERS[k] = desert_tree
         missing = surround_kit.build(mb, mb.sur["features"])
         if missing:
             print("surround: no builder for", missing)

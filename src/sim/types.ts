@@ -587,6 +587,7 @@ export type SimEvent =
   | { type: "lantern"; stage: "rise" | "taken" | "fade"; x: number; y: number; z: number; id: number; hero: number }
   | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number; lock?: boolean }
   | { type: "geyser"; stage: "warn" | "erupt"; id: number; x: number; y: number; z: number; seconds: number }
+  | { type: "serpent"; stage: "warn" | "breach"; x: number; y: number; z: number; seconds: number }
   | {
       type: "avalanche";
       stage: "warn" | "slide" | "settle";

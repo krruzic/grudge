@@ -35,6 +35,7 @@ PROPS = {
     "event_boulder": {"static": True, "height": 1.0, "tex": 256},
     "event_drift": {"static": True, "height": 1.0, "tex": 256},
     "event_heap": {"static": True, "height": 1.0, "tex": 256},
+    "serpent": {"static": True, "height": 5.2, "tex": 1024, "tris": 2500},
     "keg": {"static": True, "height": 0.5, "tex": 256, "lathe": {"axis": 0, "mirror": (1, 1), "segs": 20}},
     "powderkeg": {"static": True, "height": 0.62, "tex": 256, "lathe": {"axis": 1, "extra_tris": 140, "extra_up": True, "extra_t": (0.6, 1.2), "extra_r": 1.04, "extra_lat": 0.25, "mirror": (0, 1), "segs": 20}},
     "bigkeg": {"static": True, "height": 2.3, "tex": 512, "tris": 2000, "barrel": {"axis": 0, "push": (1,), "zmin": -0.25}},

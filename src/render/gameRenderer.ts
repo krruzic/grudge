@@ -297,7 +297,7 @@ export class GameRenderer {
     Object.assign(this.sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half, near: 1, far: 200 });
     this.sun.shadow.camera.updateProjectionMatrix();
     const bounds = new THREE.Box3(new THREE.Vector3(1, 0, 1), new THREE.Vector3(t.width - 1, 6, t.depth - 1));
-    this.effects = new Effects(bounds, !!t.atmosphere?.leaves);
+    this.effects = new Effects(bounds, t.atmosphere?.leaves ? "leaves" : t.atmosphere?.sand ? "sand" : null);
     this.scene.add(this.effects.root);
     for (const f of map.fx) {
       if (f.name === "fx_torch") this.effects.addTorch(f.position, true);
@@ -674,7 +674,8 @@ export class GameRenderer {
         ev.type === "morph" ||
         ev.type === "jumppad" ||
         ev.type === "horn" ||
-        ev.type === "geyser"
+        ev.type === "geyser" ||
+        ev.type === "serpent"
       )
         this.hazards.handle(ev);
       if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {
@@ -809,7 +810,7 @@ export class GameRenderer {
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
     }
-    if (this.world.ffa && !this.cinematic) {
+    if (this.world.ffa && !this.cinematic && !this.overview) {
       const pts = this.entityViews.heroPoints();
       if (pts.length) {
         const pick = pts[Math.floor(this.time / 12) % pts.length];
