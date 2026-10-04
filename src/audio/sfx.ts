@@ -1,6 +1,7 @@
 // Audio: procedural WebAudio sound effects for sim events (hits, deaths, abilities, buildings, notices), UI
 // blips, and looping music tracks per screen. handle() reads a frame's SimEvents and pans / attenuates each
-// sound by its on-screen position (toScreen); setMusic() picks the track and update() fades between tracks (duck = pause volume).
+// sound by its on-screen position (toScreen); setMusic() picks the track (duck = pause volume) and update()
+// fades between tracks.
 // Nothing plays until unlock() after the first user input (browser autoplay rules).
 import type { SimEvent } from "../sim/types";
 

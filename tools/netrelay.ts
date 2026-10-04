@@ -1,6 +1,6 @@
 // Network relay for online play (WebSocket at /net/ws plus /net/info and /net/stats HTTP endpoints). Used by the
 // Vite dev/preview servers (netRelayPlugin) and by the standalone static server (tools/server.ts). Lockstep game
-// logic lives in the clients (src/net, src/main.ts); the relay only routes messages between host and peers.
+// logic lives in the clients (src/net, src/app/net.ts); the relay only routes messages between host and peers.
 import { networkInterfaces } from "node:os";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
