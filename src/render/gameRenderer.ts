@@ -4,7 +4,7 @@
 // The 2D UI is a separate canvas on top (see UiCanvas in src/ui/hud.ts).
 import * as THREE from "three";
 import { RelicView } from "./entities/relicView";
-import { HeroPropViews } from "./kits/newHeroes";
+import { HeroPropViews } from "./heroProps/heroPropViews";
 import type { World } from "../sim/world";
 import type { Terrain } from "../sim/terrain";
 import type { MapView } from "./mapView";

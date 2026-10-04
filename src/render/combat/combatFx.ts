@@ -21,7 +21,7 @@ import {
 } from "../fx/atlas";
 import { costumeOfEntity } from "../costumes";
 import { spikeBatch } from "../kits/warlord";
-import { wardenSlap } from "../kits/warden";
+import { wardenSlap } from "../kits/wardenParts";
 import { towerProjectile, towerProjectileTick, towerPulse } from "./towers";
 import { KITS, type HeroKit } from "../kits/registry";
 import { Particles } from "../fx/particles";

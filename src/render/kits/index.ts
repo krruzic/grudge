@@ -1,5 +1,9 @@
 import "./warden";
 import "./warlord";
-import "./roster";
-import "./newHeroes";
+import "./raider";
+import "./duelist";
+import "./summoner";
+import "./engineer";
+import "./herald";
+import "../heroProps/heroPropViews";
 import "../fx/costumeSkins";

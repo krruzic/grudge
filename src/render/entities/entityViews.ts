@@ -20,7 +20,7 @@ import { StructureBatch } from "../batch/structureBatch";
 import { SpriteBatches } from "../batch/spriteBatch";
 import { FxBatch, type FxInst } from "../fx/instances";
 import { ballistaMesh, syncBallista } from "./ballista";
-import { caskMesh, syncCask } from "../kits/newHeroes";
+import { syncCask, caskMesh } from "../heroProps/friar";
 import { drawText, fontReady, textWidth } from "../../ui/font";
 import { padButton } from "../../ui/hud";
 import outpostIcon from "../../../assets/ui/talents/p_outpost.png?url";

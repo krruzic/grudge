@@ -24,11 +24,11 @@ import {
 } from "../fx/atlas";
 import { CACTUS, SPINE, isDesert } from "../kits/desert";
 import type { FxHost } from "../fx/parts";
-import { wardenBrambleCast, wardenSprout, wardenWallBlock, wardenWallCrumble } from "../kits/warden";
+import { wardenBrambleCast, wardenSprout, wardenWallCrumble, wardenWallBlock } from "../kits/wardenParts";
 import { zoneFissures } from "../fx/parts";
 import { SpriteBatches } from "../batch/spriteBatch";
 import { MapFx } from "../map/mapFx";
-import { BUBBLE, FOAM, ZONE_DECALS } from "../kits/newHeroes";
+import { ZONE_DECALS, FOAM, BUBBLE } from "../kits/friar";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 
 const loader = new THREE.TextureLoader();
