@@ -295,6 +295,7 @@ export interface HeroData {
       cooldown: number;
       dur: number;
       hitAt: number;
+      splatDamage?: number;
     };
   };
   heroes: Record<string, HeroDef>;

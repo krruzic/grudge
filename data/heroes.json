@@ -44,8 +44,9 @@
       "range": 2.3,
       "arcDeg": 120,
       "damage": 12,
-      "knockback": 15,
+      "knockback": 19,
       "stun": 0.45,
+      "splatDamage": 30,
       "cooldown": 2.5,
       "dur": 0.42,
       "hitAt": 0.14

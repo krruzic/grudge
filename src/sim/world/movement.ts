@@ -333,6 +333,68 @@ export function faceToward(w: World, e: Entity, dx: number, dz: number, rate: nu
 // ---------------------------------------------------------------------------------------------------------------
 
 /**
+ * Pits (map holes, style "pit") are solid to walking but not to being knocked: an entity whose knockback carries its
+ * leading edge over a pit cell falls in and dies, credited to whoever last hurt it within 6 s.
+ */
+function knockedIntoPit(w: World, e: Entity, dx: number, dz: number, step: number): boolean {
+  if (e.hero?.jump || e.neutral) return false;
+  const t = w.terrain;
+  const x = e.transform.pos.x + dx * (step + 0.3);
+  const z = e.transform.pos.z + dz * (step + 0.3);
+  const cx = Math.floor(x);
+  const cz = Math.floor(z);
+  if (cx < 0 || cz < 0 || cx >= t.width || cz >= t.depth || t.styles[cz * t.width + cx] !== "pit") return false;
+  const by =
+    e.status.hurtBy !== undefined && w.time - (e.status.hurtAt ?? -99) < 6 ? w.get(e.status.hurtBy) : undefined;
+  e.transform.pos.x = x;
+  e.transform.pos.z = z;
+  w.emit({ type: "fall", x, y: e.transform.y, z });
+  w.kill(e, by && by.alive ? by : null);
+  return true;
+}
+
+/**
+ * Wall splat: a shoved target whose knockback is stopped short by a wall or cliff (not a pit) takes extra damage and
+ * double the shove stun, once per shove.
+ */
+function wallSplat(w: World, e: Entity, x0: number, z0: number, mx: number, mz: number): boolean {
+  const want = Math.hypot(mx, mz);
+  if (want < 0.05) return false;
+  // Progress along the knockback direction (sliding along the wall doesn't count).
+  const got = ((e.transform.pos.x - x0) * mx + (e.transform.pos.z - z0) * mz) / want;
+  if (got > want * 0.4) return false;
+  const s = e.status;
+  const sv = w.data.heroes.baseline.shove;
+  s.shovedUntil = 0;
+  const src = s.shovedBy !== undefined ? w.get(s.shovedBy) : undefined;
+  s.kvx = s.kvz = 0;
+  w.damage(src ?? null, e, (sv.splatDamage ?? 30) * (src ? w.damageMulOf(src) : 1), {
+    stun: sv.stun * 2,
+    fromX: x0,
+    fromZ: z0,
+    big: true,
+  });
+  w.emit({
+    type: "callout",
+    x: e.transform.pos.x,
+    y: e.transform.y,
+    z: e.transform.pos.z,
+    team: src?.team ?? -1,
+    text: "WALL SPLAT!",
+    owner: e.id,
+  });
+  w.emit({
+    type: "slam",
+    x: e.transform.pos.x,
+    y: e.transform.y,
+    z: e.transform.pos.z,
+    radius: 1.2,
+    team: src?.team ?? -1,
+  });
+  return true;
+}
+
+/**
  * Integrate knockback velocity (exponential decay, 8/s). Strong knockback may carry entities off ledges; a big
  * enough drop deals fall damage and stuns.
  */
@@ -346,9 +408,14 @@ export function applyKnockback(w: World, dt: number): void {
       continue;
     }
     const y0 = e.transform.y;
-    w.knocked = Math.hypot(s.kvx, s.kvz) >= pos.knockDropMin;
+    const speed = Math.hypot(s.kvx, s.kvz);
+    w.knocked = speed >= pos.knockDropMin;
+    if (w.knocked && knockedIntoPit(w, e, s.kvx / speed, s.kvz / speed, speed * dt)) continue;
+    const x0 = e.transform.pos.x;
+    const z0 = e.transform.pos.z;
     w.moveBy(e, s.kvx * dt, s.kvz * dt);
     w.knocked = false;
+    if (w.time < (s.shovedUntil ?? 0) && wallSplat(w, e, x0, z0, s.kvx * dt, s.kvz * dt)) continue;
     const drop = y0 - e.transform.y;
     if (drop >= pos.fallMin) {
       e.transform.prevY = y0;

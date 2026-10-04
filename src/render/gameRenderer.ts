@@ -664,6 +664,38 @@ export class GameRenderer {
       this.combatFx.handle(ev);
     }
     this.world.events.length = 0;
+    this.shoveHints();
+  }
+
+  private shoveHintAt = new Map<number, number>();
+
+  /**
+   * Button hint (local only, with hints on): when a local human's hero stands next to an enemy champion who keeps
+   * blocking, float "L+A · BREAK GUARD" over the blocker (at most every 6 s per blocker).
+   */
+  private shoveHints(): void {
+    const w = this.world;
+    if (!this.hints || w.match.phase === "over") return;
+    for (const p of w.players) {
+      if (!this.humanList[p.player]) continue;
+      const me = w.heroForPlayer(p.player);
+      if (!me?.alive || me.hero?.dead) continue;
+      for (const o of w.entities) {
+        if (!o.alive || !o.hero || o.hero.dead || o.team === me.team || !o.hero.blocking) continue;
+        if (w.dist(me, o) > 3.2 || this.time - (this.shoveHintAt.get(o.id) ?? -99) < 6) continue;
+        this.shoveHintAt.set(o.id, this.time);
+        const t = o.transform;
+        this.combatFx.handle({
+          type: "callout",
+          x: t.pos.x,
+          y: t.y,
+          z: t.pos.z,
+          team: me.team,
+          text: "L+A · BREAK GUARD",
+          owner: o.id,
+        });
+      }
+    }
   }
 
   /** Draws the scene once for `cam` into whatever viewport/scissor is current. */

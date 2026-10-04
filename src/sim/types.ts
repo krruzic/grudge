@@ -63,6 +63,9 @@ export interface Status {
   bleedUntil: number;
   bleedOwner: number;
   /** Lingering heal-over-time (friar ale): hp/s until hotUntil, paused while still standing in the zone. */
+  /** Set by a shove for its knockback window: who shoved (for wall-splat credit) and until when. */
+  shovedBy?: number;
+  shovedUntil?: number;
   hotHps?: number;
   hotUntil?: number;
   hotOwner?: number;

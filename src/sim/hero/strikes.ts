@@ -94,8 +94,11 @@ export function shoveHit(w: World, e: Entity, a: HeroAction): void {
     if (d - o.radius > sv.range) continue;
     if (d > 0.3 && (dx * a.dirX + dz * a.dirZ) / d < cosArc) continue;
     if (Math.abs(o.transform.y - t.y) > 2) continue;
+    const guarded = !!o.hero?.blocking;
     if (o.hero) o.hero.blocking = false;
     const heavy = o.neutral ? 0.35 : 1;
+    o.status.shovedBy = e.id;
+    o.status.shovedUntil = w.time + 0.5;
     w.damage(e, o, sv.damage * w.damageMulOf(e), {
       knockback: sv.knockback * heavy,
       fromX: t.pos.x - a.dirX,
@@ -103,6 +106,16 @@ export function shoveHit(w: World, e: Entity, a: HeroAction): void {
       stun: sv.stun * heavy,
       big: true,
     });
+    if (guarded)
+      w.emit({
+        type: "callout",
+        x: o.transform.pos.x,
+        y: o.transform.y,
+        z: o.transform.pos.z,
+        team: e.team,
+        text: "GUARD BROKEN!",
+        owner: o.id,
+      });
     any = true;
   }
   w.emit({ type: "shove", x: t.pos.x + a.dirX, y: t.y, z: t.pos.z + a.dirZ, team: any ? e.team : -1, src: e.id });
