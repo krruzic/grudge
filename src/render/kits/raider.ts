@@ -1,5 +1,8 @@
 import { RAIDER, FX } from "../fx/atlas";
-import { emit, decal, shockwave, chunks } from "../fx/parts";
+import { emit } from "../fx/parts";
+import { decal } from "../fx/decals";
+import { shockwave } from "../fx/shockwave";
+import { chunks } from "../fx/chunks";
 import { KITS } from "./registry";
 import { near, core, ground, streakLine, UP } from "./shared";
 

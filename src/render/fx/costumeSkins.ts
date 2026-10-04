@@ -1,8 +1,25 @@
+// Per-costume FX theming, registered at load: colour remaps (setCostumeTints), weapon trail colours
+// (setCostumeTrail), common-cell swaps (setCostumeSwap) and procedural skins (COSTUME_SKIN: chunk geometry and
+// colours, fissure materials/styles, per-texture decal overrides). Classic costumes have no entry.
 import * as THREE from "three";
 import ironUrl from "../../../assets/textures/iron.png?url";
 import seamUrl from "../../../assets/fx/colossus_seam.png?url";
-import { cv, DUELIST, ENGINEER, FRIAR, FX, RAIDER, setCostumeSwap, setCostumeTints, setCostumeTrail, SUMMONER, WARDEN, WARLORD, WREN } from "./atlas";
-import { COSTUME_SKIN, SHARED_CHUNK_GEOS } from "./parts";
+import {
+  cv,
+  DUELIST,
+  ENGINEER,
+  FRIAR,
+  FX,
+  RAIDER,
+  setCostumeSwap,
+  setCostumeTints,
+  setCostumeTrail,
+  SUMMONER,
+  WARDEN,
+  WARLORD,
+  WREN,
+} from "./atlas";
+import { COSTUME_SKIN, SHARED_CHUNK_GEOS } from "./chunks";
 
 const TINTS: Record<string, Record<number, number>> = {
   colossus: {

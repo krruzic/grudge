@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { chunks, decal, emit, shockwave, tumblers, type FxHost } from "../fx/parts";
+import { chunks } from "../fx/chunks";
+import { decal } from "../fx/decals";
+import { emit, tumblers, type FxHost } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import barkUrl from "../../../assets/textures/moss_bark.png?url";
 import { dirOf, ground } from "./shared";
 import { activeCostume, WARDEN, FX } from "../fx/atlas";

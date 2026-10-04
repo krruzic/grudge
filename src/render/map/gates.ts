@@ -8,7 +8,8 @@ import type { MapFx } from "./mapFx";
 import { blockUrl, texture, planksUrl, ironUrl } from "./textures";
 import { Kind } from "../../sim/terrain";
 import { FX } from "../fx/atlas";
-import { emit, chunks } from "../fx/parts";
+import { emit } from "../fx/parts";
+import { chunks } from "../fx/chunks";
 
 export interface Gate {
   slot: GateSlot;

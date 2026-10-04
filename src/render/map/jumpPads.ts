@@ -4,7 +4,8 @@ import * as THREE from "three";
 import type { MapFx } from "./mapFx";
 import { texture, woodUrl, ironUrl, cobbleUrl } from "./textures";
 import { FX } from "../fx/atlas";
-import { emit, chunks } from "../fx/parts";
+import { emit } from "../fx/parts";
+import { chunks } from "../fx/chunks";
 
 export function buildJumpPads(mf: MapFx): void {
   const w = mf.world;

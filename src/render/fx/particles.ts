@@ -1,3 +1,7 @@
+// Billboard particle system used by every FX helper (emit, sparks, flashes...). Particles are grouped into
+// slots by (texture, additive, depth test, draw order); slots with the same order share "lanes" of instanced
+// quad batches whose shader samples up to MAPS textures, so a busy fight stays at a handful of draw calls.
+// `budget` caps live particles; spawn() returns null once it's reached.
 import * as THREE from "three";
 
 export interface Particle {

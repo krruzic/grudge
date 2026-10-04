@@ -1,3 +1,8 @@
+// Instanced effect pieces. Many short-lived meshes of one geometry+material (debris, shards, rocks, decals,
+// rain arrows...) are drawn as one InstancedMesh per (host root, key). Effects spawn() an FxInst, a light
+// Object3D with colour/emissive/opacity, animate it like a mesh, and remove it from its parent when done; the
+// batch gathers live instances into the instance buffers lazily (on flush or first frustum test of the frame),
+// back-to-front sorted when translucent and `sort` is set.
 import * as THREE from "three";
 
 export class FxInst extends THREE.Object3D {
@@ -189,6 +194,7 @@ export class FxBatch {
 
 const sets = new WeakMap<THREE.Object3D, Map<string, FxBatch>>();
 
+/** The batch for `key` under `root`, created (and added to root) on first use. */
 export function fxBatch(root: THREE.Object3D, key: string, make: () => FxBatch): FxBatch {
   let m = sets.get(root);
   if (!m) sets.set(root, (m = new Map()));
@@ -201,6 +207,7 @@ export function fxBatch(root: THREE.Object3D, key: string, make: () => FxBatch):
   return b;
 }
 
+/** Uploads every batch under `root` (CombatFx.update calls this once per frame). */
 export function flushFxBatches(root: THREE.Object3D): void {
   const m = sets.get(root);
   if (m) for (const b of m.values()) b.flush();

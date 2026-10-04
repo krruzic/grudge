@@ -3,7 +3,8 @@ import { model, RED, CREAM, BEAK, BLACK, RED_DARK, normalized, UP } from "../kit
 import { prop } from "../props";
 import type { Entity } from "../../sim/types";
 import { FX, WREN } from "../fx/atlas";
-import { shockwave, emit } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
+import { emit } from "../fx/parts";
 import type { HeroPropViews } from "./heroPropViews";
 import { costumeOfPlayer } from "../costumes";
 

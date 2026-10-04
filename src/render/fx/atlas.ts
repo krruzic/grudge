@@ -1,3 +1,21 @@
+// FX texture atlases and costume resolution.
+//
+// Every hero has a painted 4x4 atlas of 128 px FX cells (assets/fx/<hero>.png) plus the shared common sheet; each
+// cell is cut into its own CanvasTexture. Model costumes can ship a themed sheet (assets/fx/<atlas>@<costume>.png)
+// with the same cell layout, and big ground/burst cells can have dedicated 512-1024 px paintings
+// (assets/fx/hq/<atlas>.<key>[@costume].png).
+//
+// The "active costume" is a module-level setting (useCostume/withCostume) that callers set around anything that
+// builds or draws FX for a hero: CombatFx.handle (event source), projectile/missile sync, hero prop views, zones.
+// Resolution helpers, all cached and falling back to the base texture while a variant is still loading:
+//   hero atlas getters  WARDEN.leaf etc. are getters returning the active costume's cell (FX.* are plain cells)
+//   cv(tex)    costume variant of any texture: costume swap (setCostumeSwap) -> atlas cell variant -> composite
+//              redrawn from variant cells (only if it actually uses one)
+//   cm(mat)    a per-costume clone of a material whose map has a variant
+//   hd(tex)    base cell -> costume variant -> HQ painting once loaded (themed HQ only when the costume has its own
+//              atlas, so a costume never shows another theme's HQ)
+//   baseTex(t) maps any variant/HQ texture back to its base cell (used for registry lookups such as DECAL_3D)
+//   tint(col) / trailOf(costume)  per-costume colour remaps and weapon-trail colours (tables in costumeSkins.ts)
 import * as THREE from "three";
 import commonUrl from "../../../assets/fx/common.png?url";
 import wardenUrl from "../../../assets/fx/warden.png?url";
@@ -10,6 +28,8 @@ import heraldUrl from "../../../assets/fx/herald.png?url";
 import wrenUrl from "../../../assets/fx/wren.png?url";
 import friarUrl from "../../../assets/fx/friar.png?url";
 import { cacheCanvas } from "../../ui/cacheCanvas";
+
+// ── Sheets and cells ──
 
 const CELL = 128;
 const COLS = 4;
@@ -60,17 +80,23 @@ function sheet(url: string): THREE.CanvasTexture[] {
   return out;
 }
 
+// ── Costume variants ──
+
 interface Atlas {
   name: string;
   base: THREE.CanvasTexture[];
   vars: Map<string, THREE.CanvasTexture[] | null | "loading">;
 }
+/** Base cell -> its atlas and index. */
 const CELL_OF = new Map<THREE.Texture, { a: Atlas; i: number }>();
+/** Any variant / HQ / redrawn composite -> the base texture it stands in for. */
 const BASE_OF = new Map<THREE.Texture, THREE.Texture>();
 let active = "";
+// Set while redrawing a composite: did it use a loaded variant cell (touched) / one still loading (missed)?
 let touched = false;
 let missed = false;
 
+/** The costume's cells for an atlas, starting the lazy load on first request; null if none or still loading. */
 function variant(a: Atlas, c: string): THREE.CanvasTexture[] | null {
   let v = a.vars.get(c);
   if (v === undefined) {
@@ -93,6 +119,7 @@ function variant(a: Atlas, c: string): THREE.CanvasTexture[] | null {
   return v;
 }
 
+/** A hero atlas: named getters that return the active costume's cell, falling back to the base cell. */
 function atlas<K extends string>(name: string, url: string, keys: readonly K[]): Record<K, THREE.CanvasTexture> {
   const a: Atlas = { name, base: sheet(url), vars: new Map() };
   a.base.forEach((t, i) => CELL_OF.set(t, { a, i }));
@@ -104,6 +131,7 @@ function atlas<K extends string>(name: string, url: string, keys: readonly K[]):
   return o;
 }
 
+/** Sets the active costume and returns the previous one (for callers that restore it themselves). */
 export function useCostume(c: string | undefined): string {
   const prev = active;
   active = c ?? "";
@@ -123,12 +151,16 @@ export function activeCostume(): string {
   return active;
 }
 
+/** Starts loading the atlas variants and HQ paintings of the match's costumes. */
 export function preloadCostumeFx(list: string[]): void {
   for (const c of list) if (c) for (const t of CELL_OF.keys()) cv(t, c);
   for (const { id } of HQ_ID.values()) for (const c of list) if (c) hqTex(`${id}@${c}`);
 }
 
+// ── HQ paintings ──
+
 const HQ_ID = new Map<THREE.Texture, { atlas: string; id: string }>();
+/** Registers `t` as having an HQ painting `id` (only if a base or @costume file for that id exists). */
 export function hdAlias(t: THREE.Texture, atlas: string, id: string): void {
   for (const k of HQ_URL.keys()) if (k === id || k.startsWith(`${id}@`)) return void HQ_ID.set(t, { atlas, id });
 }
@@ -168,6 +200,10 @@ export function hd<T extends THREE.Texture>(t: T, c = active): T {
 export function baseTex(t: THREE.Texture): THREE.Texture {
   return BASE_OF.get(t) ?? t;
 }
+
+// ── Composites ──
+// Canvas textures painted from atlas cells (zone decals, rings...). They paint once the base sheets load, and
+// are redrawn per costume on demand (compVariant) when the drawing touched a costume variant cell.
 
 interface Comp {
   size: number;
@@ -215,7 +251,28 @@ function compVariant(base: THREE.Texture, comp: Comp, c: string): THREE.Texture 
   return base;
 }
 
+/** A canvas texture painted by `draw` from atlas cells (via `img`), costume-aware through cv(). */
+export function composite(
+  size: number,
+  draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void,
+  repeat = false,
+  res = 256,
+): THREE.CanvasTexture {
+  const { t, g } = paint(size, repeat, res);
+  COMPS.set(t, { size, draw, repeat, res, vars: new Map() });
+  void fxReady.then(() => {
+    const prev = useCostume("");
+    draw(g, (x) => x.image as CanvasImageSource);
+    active = prev;
+    t.needsUpdate = true;
+  });
+  return t;
+}
+
+// ── Costume swaps, tints, trails (filled by costumeSkins.ts) ──
+
 const SWAPS: Record<string, Map<THREE.Texture, THREE.Texture>> = {};
+/** While `c` is active, the common cell `from` is drawn as the themed cell `to` (e.g. dust -> steam). */
 export function setCostumeSwap(c: string, from: THREE.Texture, to: THREE.Texture): void {
   (SWAPS[c] ??= new Map()).set(from, to);
 }
@@ -234,6 +291,7 @@ export function cv<T extends THREE.Texture>(t: T, c = active): T {
   return t;
 }
 
+/** Per-material, per-costume clones (kept: shared by every effect that uses the material). */
 const MAT_VARS = new WeakMap<THREE.Material, Map<string, THREE.Material>>();
 export function cm<M extends THREE.Material>(m: M, c = active): M {
   const map = (m as unknown as { map?: THREE.Texture | null }).map;
@@ -270,24 +328,9 @@ export function trailOf(c: string | undefined, slot = "trail"): number | undefin
   return c ? TRAILS[c]?.[slot] : undefined;
 }
 
-const C = sheet(commonUrl);
+// ── Atlases ──
 
-export function composite(
-  size: number,
-  draw: (g: CanvasRenderingContext2D, img: (t: THREE.Texture) => CanvasImageSource) => void,
-  repeat = false,
-  res = 256,
-): THREE.CanvasTexture {
-  const { t, g } = paint(size, repeat, res);
-  COMPS.set(t, { size, draw, repeat, res, vars: new Map() });
-  void fxReady.then(() => {
-    const prev = useCostume("");
-    draw(g, (x) => x.image as CanvasImageSource);
-    active = prev;
-    t.needsUpdate = true;
-  });
-  return t;
-}
+const C = sheet(commonUrl);
 
 export const FX = {
   burst: C[0],
@@ -480,6 +523,7 @@ export const FRIAR = atlas("friar", friarUrl, [
   "hopRing",
 ] as const);
 
+/** Resolves once every base sheet has loaded; composites paint and base HQ paintings start loading then. */
 export const fxReady = Promise.all(waits).then(() => {
   baseReady = true;
   for (const { id } of HQ_ID.values()) hqTex(id);

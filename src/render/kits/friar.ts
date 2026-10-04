@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { composite, FRIAR, FX } from "../fx/atlas";
-import { type FxHost, decal, chunks, emit, shockwave } from "../fx/parts";
+import { type FxHost, emit } from "../fx/parts";
+import { decal } from "../fx/decals";
+import { chunks } from "../fx/chunks";
+import { shockwave } from "../fx/shockwave";
 import { ground, near, UP } from "./shared";
 import { KITS } from "./registry";
 

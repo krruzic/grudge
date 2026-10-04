@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { activeCostume, composite, tint, FX, WREN } from "../fx/atlas";
 import { FEATHER_MAT, ground, IRON, keep, model, UP, WOOD } from "./shared";
-import { decal, emit, shockwave, tumblers, type FxHost } from "../fx/parts";
+import { decal } from "../fx/decals";
+import { emit, tumblers, type FxHost } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { fxBatch, FxBatch } from "../fx/instances";
 import { KITS } from "./registry";

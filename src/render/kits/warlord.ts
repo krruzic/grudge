@@ -2,7 +2,10 @@ import * as THREE from "three";
 import { activeCostume, cm, FX, RAIDER, WARLORD } from "../fx/atlas";
 
 const RAIDER_DROP = RAIDER.drop;
-import { chunks, decal, emit, shockwave, type FxHost } from "../fx/parts";
+import { chunks } from "../fx/chunks";
+import { decal } from "../fx/decals";
+import { emit, type FxHost } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import { FxBatch, fxBatch } from "../fx/instances";
 import { KITS } from "./registry";
 import { hasCostumeProp, propParts } from "../props";

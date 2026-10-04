@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { FX, tint } from "../fx/atlas";
-import { type FxHost, emit, shockwave } from "../fx/parts";
+import { type FxHost, emit } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import type { HitEvent } from "./registry";
 
 export const UP = new THREE.Vector3(0, 1, 0);

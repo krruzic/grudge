@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { activeCostume, FX, WARDEN } from "../fx/atlas";
 import { cactusMat, isDesert } from "./desert";
-import { decal, emit, shockwave, tumblers, type FxHost } from "../fx/parts";
+import { decal } from "../fx/decals";
+import { emit, tumblers, type FxHost } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import { KITS } from "./registry";
 import { ground } from "./shared";
 import { barkTex, LEAVES, tubeBundle, wardenHit } from "./wardenParts";

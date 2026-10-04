@@ -7,7 +7,8 @@ import { FX, SUMMONER } from "../fx/atlas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { propParts } from "../props";
 import type { MapFx } from "./mapFx";
-import { chunks, emit } from "../fx/parts";
+import { chunks } from "../fx/chunks";
+import { emit } from "../fx/parts";
 
 export const BONE = new THREE.MeshLambertMaterial({ color: 0xe8dcc0 });
 BONE.userData.keep = true;

@@ -1,5 +1,6 @@
 import { DUELIST } from "../fx/atlas";
-import { emit, tumblers, shockwave } from "../fx/parts";
+import { emit, tumblers } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import { KITS } from "./registry";
 import { near, core, ground, UP, streakLine } from "./shared";
 

@@ -1,5 +1,7 @@
 import { ENGINEER } from "../fx/atlas";
-import { emit, decal, shockwave } from "../fx/parts";
+import { emit } from "../fx/parts";
+import { decal } from "../fx/decals";
+import { shockwave } from "../fx/shockwave";
 import { KITS } from "./registry";
 import { near, core, ground, UP } from "./shared";
 

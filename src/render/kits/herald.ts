@@ -1,5 +1,6 @@
 import { HERALD, FX } from "../fx/atlas";
-import { emit, decal } from "../fx/parts";
+import { emit } from "../fx/parts";
+import { decal } from "../fx/decals";
 import { KITS } from "./registry";
 import { near, core, ground } from "./shared";
 

@@ -16,7 +16,11 @@ import { activeCostume, ENGINEER, FX, HERALD, RAIDER, WARDEN, WARLORD, withCostu
 import { costumeOfEntity } from "../costumes";
 import { Particles } from "../fx/particles";
 import "../kits"; // registers every hero kit in KITS
-import { DECAL_3D, emit, FISSURE_TEX, Ribbon, SHARED_CHUNK_GEOS, SHARED_PLANE_GEOS, type FxHost } from "../fx/parts";
+import { DECAL_3D } from "../fx/decals";
+import { emit, type FxHost, SHARED_PLANE_GEOS } from "../fx/parts";
+import { FISSURE_TEX } from "../fx/fissures";
+import { Ribbon } from "../fx/ribbon";
+import { SHARED_CHUNK_GEOS } from "../fx/chunks";
 import { FxBatch, fxBatch, flushFxBatches, FxInst } from "../fx/instances";
 import { chunkGeo, quadGeo, ringGeo, SHARED_GEO, SHARED_MAT, WHITE } from "./assets";
 import { glowTex, puffTex, streakTex } from "./textures";

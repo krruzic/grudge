@@ -2,7 +2,10 @@
 // well, pierce, fireburst), modelled tower projectiles (spears, bolts, clay pots) and idle ambience per tower spec.
 import * as THREE from "three";
 import { FX, RAIDER, SUMMONER, WARLORD } from "../fx/atlas";
-import { chunks, decal, emit, shockwave, type FxHost } from "../fx/parts";
+import { chunks } from "../fx/chunks";
+import { decal } from "../fx/decals";
+import { emit, type FxHost } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import { FxBatch, fxBatch } from "../fx/instances";
 import { ground, UP } from "../kits/shared";
 

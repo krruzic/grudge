@@ -3,7 +3,8 @@
 // and the charged-attack release, relic smoke, regen pluses, build/spawn puffs.
 import * as THREE from "three";
 import { FX, RAIDER, SUMMONER } from "../fx/atlas";
-import { emit, shockwave } from "../fx/parts";
+import { emit } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import type { CombatFx } from "./combatFx";
 import { starTex, puffTex, glowTex, plusTex } from "./textures";
 
