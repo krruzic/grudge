@@ -65,7 +65,7 @@ export function updateUnit(w: World, e: Entity): void {
       goal = { x: post.x + off.x, z: post.z + off.z };
     } else if (directive === "hold") {
       const hp = team.directives.holdPoint[u.type];
-      const fo = w.formationOffset(e, hp, "hold");
+      const fo = w.formationOffset(e, hp);
       const off = fo ?? slotOffset(u.slot, 1.0);
       anchor = hp;
       leash = dirs.holdLeash * (fo?.leash ?? 1);
@@ -73,14 +73,14 @@ export function updateUnit(w: World, e: Entity): void {
     } else if (directive === "follow") {
       const rp = w.rallyPoint(e.team);
       if (rp) {
-        const fo = w.formationOffset(e, rp, "follow");
+        const fo = w.formationOffset(e, rp);
         const off = fo ?? slotOffset(u.slot, 2.2);
         anchor = rp;
         goal = { x: rp.x + off.x, z: rp.z + off.z };
         leash = dirs.followLeash * (fo?.leash ?? 1);
       } else if (heroAlive) {
         anchor = { x: hero!.transform.pos.x, z: hero!.transform.pos.z };
-        const fo = w.formationOffset(e, anchor, "follow");
+        const fo = w.formationOffset(e, anchor);
         const off = fo ?? slotOffset(u.slot, 2.2);
         goal = { x: anchor.x + off.x, z: anchor.z + off.z };
         leash = dirs.followLeash * (fo?.leash ?? 1);
