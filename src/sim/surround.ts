@@ -57,18 +57,21 @@ export interface Spot {
 
 export class Surround {
   readonly style: SurroundStyle;
+  /** How far the surround extends past the map edge. */
   readonly far = 400;
   readonly features: SFeature[] = [];
   readonly water: boolean;
   readonly exits: Exit[];
   W: number;
   D: number;
+  // Layout produced by the style's design step (shared with surround/styles/*).
   rivers: Line[] = [];
   roads: Line[] = [];
   lakes: { x: number; z: number; rx: number; rz: number }[] = [];
   fields: Field[] = [];
   clearings: Spot[] = [];
   islands: Spot[] = [];
+  /** Noise seed derived from the map size. */
   seed: number;
 
   constructor(
@@ -90,11 +93,13 @@ export class Surround {
     else designSea(this);
   }
 
+  /** Scenery props (trees, rocks, buildings...), placed lazily on first request. */
   buildFeatures(): SFeature[] {
     if (!this.features.length) this.placeFeatures();
     return this.features;
   }
 
+  /** All symmetric copies of a point under the map's mirror mode (the input point first). */
   sym(x: number, z: number): [number, number][] {
     const { W, D } = this;
     if (this.mirror === "x")
@@ -122,18 +127,21 @@ export class Surround {
     return [[x, z]];
   }
 
+  /** A polyline plus its mirrored copies. */
   symLine(ctrl: [number, number][], w0: number, w1 = w0): Line[] {
     const sets: [number, number][][] = [[], [], [], []];
     for (const [x, z] of ctrl) this.sym(x, z).forEach((m, k) => sets[k].push(m));
     return sets.filter((s) => s.length).map((s) => line(s, w0, w1));
   }
 
+  /** Distance from the map rectangle (0 inside). */
   boxDist(x: number, z: number): number {
     const dx = Math.max(0 - x, 0, x - this.W);
     const dz = Math.max(0 - z, 0, z - this.D);
     return Math.hypot(dx, dz);
   }
 
+  /** Point `out` units beyond the map edge at an exit (negative = inside). */
   exitPoint(e: Exit, out: number): [number, number] {
     if (e.edge === "n") return [e.at, -out];
     if (e.edge === "s") return [e.at, this.D + out];
@@ -147,6 +155,7 @@ export class Surround {
 
   canal = 11;
 
+  /** Too close to a river, road or lake to place a prop. */
   blocked(x: number, z: number, pad: number): boolean {
     for (const r of this.rivers) if (near(r, x, z, pad + 10).d < pad + r.w1) return true;
     for (const r of this.roads) if (near(r, x, z, pad + 4).d < pad) return true;
@@ -154,6 +163,7 @@ export class Surround {
     return false;
   }
 
+  /** Farm field containing (x, z) with field-local coords. */
   fieldAt(x: number, z: number): { f: Field; u: number; v: number } | null {
     for (const f of this.fields) {
       const dx = x - f.cx;
@@ -168,6 +178,7 @@ export class Surround {
     return null;
   }
 
+  /** Raw surround terrain height for the current style. */
   height(x: number, z: number): number {
     const d = this.boxDist(x, z);
     let h: number;
@@ -179,6 +190,7 @@ export class Surround {
     return h;
   }
 
+  /** Height blended into the map's own edge heights over the first 7 units outside the map. */
   ground(x: number, z: number): number {
     const d = this.boxDist(x, z);
     const L = this.height(x, z);
@@ -198,6 +210,7 @@ export class Surround {
     return best;
   }
 
+  /** Carve river beds and lakes (with a small island) into h; `vale` widens a valley around rivers. */
   carveWater(x: number, z: number, h: number, bed: number, bank: number, vale = 0): number {
     if (vale > 0) {
       const dr = this.riverDist(x, z, vale + 4);
@@ -225,6 +238,7 @@ export class Surround {
     return h;
   }
 
+  /** Ground texture weights + tint for the current style. */
   paint(x: number, z: number, h: number, slope: number): Paint {
     const d = this.boxDist(x, z);
     if (this.style === "valley") return valleyPaint(this, x, z, h, slope, d);
@@ -234,6 +248,7 @@ export class Surround {
     return seaPaint(this, x, z, h, slope, d);
   }
 
+  /** Add a feature and its mirrored copies, mirroring rotation and (optionally) team side. */
   add(f: Omit<SFeature, "y" | "side"> & { side?: number }, mirrorSide = true, single = false): void {
     const pts = single ? [[f.x, f.z] as [number, number]] : this.sym(f.x, f.z);
     pts.forEach(([x, z], i) => {
@@ -258,6 +273,7 @@ export class Surround {
     });
   }
 
+  /** Place up to n props at random spots that pass `ok` (own LCG from `seed`, max 30n tries). */
   scatter(
     n: number,
     area: (r: () => number) => [number, number],
@@ -281,6 +297,7 @@ export class Surround {
     }
   }
 
+  /** Point lies in the map's fundamental (unmirrored) region, so features are placed once then mirrored. */
   canonical(x: number, z: number): boolean {
     if (this.mirror === "x") return x <= this.W / 2;
     if (this.mirror === "diag") return x <= z;
@@ -297,6 +314,7 @@ export class Surround {
     else seaFeatures(this);
   }
 
+  /** Random point in an elliptical band d0..d1 outside the map. */
   ring(r: () => number, d0: number, d1: number): [number, number] {
     const a = r() * Math.PI * 2;
     const d = d0 + (d1 - d0) * Math.sqrt(r());
@@ -306,6 +324,7 @@ export class Surround {
   }
 }
 
+/** Surround for a terrain, or null when the map has none. */
 export function surroundFor(t: Terrain): Surround | null {
   return t.surround ? new Surround(t, t.surround as SurroundStyle, t.symmetry) : null;
 }
