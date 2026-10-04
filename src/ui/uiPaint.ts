@@ -1,7 +1,7 @@
 // UI paint kit: the shared hand-painted building blocks every menu, screen and HUD panel is made of
-// (textured rects, parchment cards, wood beams and buttons, wax seals, ribbons, shields, banners, painted titles
+// (textured rects, parchment cards, wood beams and plates, wax seals, ribbons, pins, painted titles
 // from the title font, framed windows onto the live 3D view). Everything draws in UI layout units into the one
-// UI canvas (see UiCanvas in hud.ts); expensive plates are baked once per device scale and cached.
+// UI canvas (see UiCanvas in hud/canvas.ts); expensive plates are baked once per device scale and cached.
 import stoneUrl from "../../assets/textures/ui_stone.png?url";
 import ridgeUrl from "../../assets/textures/ui_ridge.png?url";
 import goldUrl from "../../assets/textures/gold.png?url";
@@ -637,7 +637,7 @@ export function inset(
 
 export const liveWindow: { rect: [number, number, number, number] | null } = { rect: null };
 
-/** Records a framed rect (in layout units) where the 3D scene should render this frame; read by main.ts. */
+/** Records a framed rect (in layout units) where the 3D scene should render this frame; read by app/loop.ts. */
 export function markWindow(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
   const m = ctx.getTransform();
   const cw = ctx.canvas.width;

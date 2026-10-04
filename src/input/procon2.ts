@@ -1,3 +1,5 @@
+// Switch 2 Pro Controller over WebHID: decodes input reports (buttons, sticks with RANGE calibration) for each
+// opened controller. The controller only sends HID reports after the USB wake-up in procon2wake.ts.
 interface HIDInputReportEvent extends Event {
   reportId: number;
   data: DataView;

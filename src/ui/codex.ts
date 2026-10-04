@@ -1,3 +1,7 @@
+// Codex content: builds the CODEX entries (champions with one page per ability and its evolutions, the Herald,
+// army, buildings and towers, map events, maps, the Grudge relic, tips) from the game data JSON plus the
+// hand-written text below. Pages carry their art: a portrait, unit, map or seal, or a live demo ("shot" = one
+// hero ability, "scene" = a scripted situation) that app/demo.ts plays in the page's window.
 import heroJson from "../../data/heroes.json";
 import talentJson from "../../data/talents.json";
 import unitJson from "../../data/units.json";

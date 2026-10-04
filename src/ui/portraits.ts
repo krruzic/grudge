@@ -1,3 +1,7 @@
+// Portraits: a small offscreen three.js renderer for every 3D picture the 2D UI shows - hero icons, action
+// shots (codex), unit icons (army HUD), the live posed heroes on champion-select cards (stage / renderStages),
+// map thumbnails, the top-down minimap image and the live field-select preview.
+// Static pictures are rendered once into cacheCanvas (CPU) canvases; per-frame ones stay GPU-backed.
 import * as THREE from "three";
 import type { HeroModels } from "../render/heroModels";
 import type { UnitModels } from "../render/unitModels";

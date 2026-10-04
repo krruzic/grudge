@@ -1,3 +1,5 @@
+// Vector ability icons: an engraved glyph per ability kind (STROKES are line art, FILLS solid shapes, tinted per
+// kind), used as the fallback on champion-select cards until the painted glyph sheets load.
 const INK = "#0b0806";
 
 type Draw = (ctx: CanvasRenderingContext2D) => void;

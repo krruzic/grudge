@@ -1,3 +1,14 @@
+// Menu cursors: one hand cursor per seat on champion / field select (stick-driven, or the mouse for the
+// keyboard seat), plus the seat chips (seals) they carry and place on hero cards.
+//
+// update() moves the cursors, hit-tests them against the targets the screens registered while drawing (hits),
+// and returns CursorActions: hover a hero while holding a chip, place / pick up a chip, click a button, back.
+// The `canHold` callback passed by the app decides which chips a cursor may grab (ownership rules live in
+// app/select.ts and app/lobby.ts). Cursors in `frozen` (signing a name) ignore their pad.
+//
+// Online, cursors are mirrored as "ghosts": wire() packs a cursor as a HandWire relative to the target it is
+// over, so it lands on the same button on another machine whatever its screen aspect; cleanHand() sanitises a
+// received one.
 import type { PadState } from "../input/gamepads";
 import { cacheCanvas } from "./cacheCanvas";
 const spriteUrls = import.meta.glob("../../assets/ui/{chip,glove,tag}_*.png", {
@@ -43,6 +54,10 @@ export type CursorAction =
   | { type: "button"; id: string; by: number }
   | { type: "back"; by: number };
 
+/**
+ * A cursor on the wire: [target id under it, x and y within that target (0-63), x from screen centre and y in
+ * layout units (used when over no target), held chip seat (-1 none), pose (0 point, 1 open, 2 grab)].
+ */
 export type HandWire = [string, number, number, number, number, number, number];
 
 export interface Ghost {

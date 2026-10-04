@@ -1,3 +1,5 @@
+// Switch 2 Pro Controller wake-up over WebUSB: sends the vendor init sequence (WAKE) and the player LED command
+// so the controller starts reporting as a HID gamepad (then procon2.ts or the browser's gamepad API reads it).
 interface USBEndpointLike {
   endpointNumber: number;
   direction: "in" | "out";

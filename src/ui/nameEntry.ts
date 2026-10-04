@@ -1,3 +1,7 @@
+// Name signing: the on-card keyboard a seat opens from its name plate to pick a saved name or sign a new one.
+// Pads move over a letter grid (or a list of saved names); the keyboard seat types directly (key()).
+// update() returns a TagResult when the entry closes: a chosen / created tag, null to clear the name, or
+// undefined when cancelled. wire() is the [caps, text] shown to other machines online, drawn by drawSigning().
 import { drawPlain, textWidth } from "./font";
 import { band, texturedRect, waxSeal } from "./uiPaint";
 import type { PadState } from "../input/gamepads";

@@ -1,3 +1,6 @@
+// GameCube controller adapter (WUP-028) over WebHID: opens the adapter, starts polling, and decodes its 37-byte
+// reports into four ports (buttons, sticks, analog triggers). Used when no OS driver exposes the ports as
+// gamepads (see tools/gc-adapter for the Linux driver).
 interface HIDInputReportEvent extends Event {
   reportId: number;
   data: DataView;

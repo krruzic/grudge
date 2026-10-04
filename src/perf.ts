@@ -1,3 +1,6 @@
+// `?perf` profiler overlay: CPU ms per labelled section, GPU ms per view via EXT_disjoint_timer_query_webgl2,
+// draw calls / triangles, and counters (HUD memo repaints, text bakes), averaged and shown in a corner; the
+// latest snapshot is also on window.grudgePerf. Without the flag every call is a cheap no-op.
 import type * as THREE from "three";
 
 type Timer = {

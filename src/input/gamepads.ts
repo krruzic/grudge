@@ -1,3 +1,13 @@
+// Gamepads: maps every input device onto the 4 local seats and polls them into PadState each frame.
+//
+// Devices: standard browser gamepads (matched to a profile in data/input.json by id), the keyboard + mouse as
+// one virtual pad (KEYBOARD), GameCube adapter ports read over WebHID (GC_BASE - port; skipped when the OS
+// driver already exposes them as gamepads) and Switch 2 Pro controllers over WebHID (PRO_BASE - index).
+// slots[seat] holds the device index sitting in that seat (null = empty).
+//
+// Joining: a device takes the first free seat when one of its buttons is pressed (keyboard: any mapped key, or
+// using the mouse while no real pad is connected). A released device must let go of every button before it
+// can rejoin (waitRelease), so the press that freed it doesn't immediately take a seat again.
 import { GcAdapter } from "./gcadapter";
 import { PRO2_PRODUCT, PRO2_VENDOR, ProCon2 } from "./procon2";
 import { ProCon2Waker } from "./procon2wake";
@@ -185,10 +195,12 @@ export class Gamepads {
     }
   }
 
+  /** Seat the keyboard + mouse sit in, or -1. */
   keyboardSlot(): number {
     return this.slots.indexOf(KEYBOARD);
   }
 
+  /** Mouse use with no other pad connected: seat the keyboard + mouse (released again once a real pad joins). */
   claimKeyboard(): void {
     if (!this.kbHold && this.kbmEnabled && !this.slots.includes(KEYBOARD)) this.kbByMouse = true;
     if (!this.kbHold && this.kbmEnabled) this.keyTouched = true;
@@ -211,6 +223,7 @@ export class Gamepads {
   private kbByMouse = false;
   private waitRelease = new Set<number>();
 
+  /** Moves the device in seat `from` to the empty seat `to` ("SIT HERE"). */
   move(from: number, to: number): boolean {
     if (from === to || this.slots[from] === null || this.slots[to] !== null) return false;
     this.slots[to] = this.slots[from];
@@ -220,6 +233,7 @@ export class Gamepads {
     return true;
   }
 
+  /** Frees a seat; the device must release all buttons (keyboard: be touched again) before it can rejoin. */
   release(slot: number): void {
     const idx = this.slots[slot];
     if (idx === null || idx === undefined) return;
@@ -234,6 +248,7 @@ export class Gamepads {
     this.players[slot] = emptyState();
   }
 
+  /** A name entry has the keyboard: only mouse bindings stay live. */
   typing = false;
 
   private keyDown(codes: string[] | undefined): boolean {
@@ -353,6 +368,7 @@ export class Gamepads {
     return true;
   }
 
+  /** Drops disconnected devices from their seats, then seats any device pressing a button (see header). */
   private assignSlots(pads: (Gamepad | null)[]): void {
     for (let s = 0; s < this.slots.length; s++) {
       const idx = this.slots[s];
@@ -363,6 +379,7 @@ export class Gamepads {
       if (isGc(idx) && !this.gc.ports[GC_BASE - idx!]?.connected) this.slots[s] = null;
       if (isPro(idx) && !this.pro.pads[PRO_BASE - idx!]?.connected) this.slots[s] = null;
     }
+    // With the OS driver loaded the adapter ports already appear as gamepads; don't seat them twice.
     const nativeGc = pads.some((pad) => !!pad?.connected && /gamecube (adapter port|controller)|wup-028/i.test(pad.id));
     this.gc.ports.forEach((gp, p) => {
       if (nativeGc || !gp.connected || this.slots.includes(GC_BASE - p)) return;
@@ -386,6 +403,7 @@ export class Gamepads {
     }
     for (const pad of pads) {
       if (!pad?.connected || this.slots.includes(pad.index)) continue;
+      // A raw Switch 2 Pro pad is read over WebHID (procon2.ts), not through the gamepad API.
       if (/product: 2069/i.test(pad.id) && !/virtual/i.test(pad.id)) continue;
       const anyInput = pad.buttons.some((b) => b.pressed);
       if (this.held(pad.index, anyInput)) continue;
@@ -398,6 +416,7 @@ export class Gamepads {
     const pads = navigator.getGamepads();
     this.assignSlots(pads);
     const kb = this.slots.indexOf(KEYBOARD);
+    // A keyboard seat claimed only by mouse use gives way as soon as a real pad joins.
     if (kb >= 0 && this.kbByMouse && this.slots.some((s) => s !== null && s !== KEYBOARD)) {
       this.kbByMouse = false;
       this.release(kb);

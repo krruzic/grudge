@@ -1,3 +1,6 @@
+// Save data (localStorage "grudge.save.v1"): match rules, options, signed names (tags) with their records,
+// per-hero records and the recent match log. Also the rule / option row definitions shown by the RULES and
+// OPTIONS pages, and applyRules(), which derives the GameData a match runs on from the base data and the rules.
 import type { GameData } from "../sim/config";
 
 export interface Rules {

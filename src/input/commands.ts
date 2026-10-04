@@ -1,3 +1,12 @@
+// CommandMapper: turns one local pad's state into the sim's per-tick Command for that player, and exposes the
+// UI state the HUD draws for it (MapperUi: open build menu, order group, charge, aim reticle, morph meter).
+//
+// Buttons are edge-triggered into a pending Command that take() hands to the sim once per tick (then clears
+// the one-shot flags). Tap vs hold: A/B shorter than TAP are taps, holding charges (CHARGE_FULL = full);
+// specials can be held to aim a placement reticle. The C-stick (or arrows) flicks give army orders, or pick
+// entries in an open build / shop / learn cross. Smash-dodge: a fast stick flick (smash.from -> smash.to
+// within smash.within s) dodges. Commanders (2v2 Herald) use the same mapper; their block button cycles the
+// army formation instead.
 import type { PadState } from "./gamepads";
 import type { Command, Directive, ShopItem, StructureType, UnitType } from "../sim/types";
 
