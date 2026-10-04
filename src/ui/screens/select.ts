@@ -470,7 +470,7 @@ function drawStage(
     ctx.lineWidth = 2;
     ctx.strokeRect(fx + 1, fy + 1, fw - 2, ih - 2);
   }
-  if (ghost) ctx.globalAlpha = 0.45;
+  if (ghost) ctx.globalAlpha = 0.72;
   ctx.drawImage(cv, fx + (fw - dw) / 2, fy + ih - dh + 3, dw, dh);
   ctx.restore();
 }
