@@ -106,6 +106,54 @@ export function wrenAbilities(bot: Bot, w: World, me: Entity): boolean {
   return true;
 }
 
+/**
+ * Hold B through the melee exchange (A swings are actions, so holding costs no speed while swinging) and let it go at
+ * full power (x1.6 damage) once the target is within `reach`. Returns true while charging.
+ */
+function chargeB(bot: Bot, w: World, me: Entity, target: Entity, reach: number, start: number): boolean {
+  const h = me.hero!;
+  if (!target.hero || (h.cooldowns.b ?? 0) > w.time + 0.8 || w.dist(me, target) > start) return false;
+  bot.wantCharge = "b";
+  bot.chargeAimId = target.id;
+  bot.chargeRange = reach;
+  return true;
+}
+
+/**
+ * Warlord: charged Ground Slam (x1.6 damage; it stuns 0.5 s, which sets up HEAVE). Z stays with the generic rule:
+ * holding Quake for a slowed/stunned target (x1.3, +0.6 s stun) tested worse than using it on sight.
+ */
+export function warlordFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  if (target?.alive) chargeB(bot, w, me, target, 2.8 + target.radius, 6);
+}
+
+/** Warlord HEAVE direction: into a friendly tower near the victim, else toward the own core. */
+export function heaveDir(w: World, me: Entity, victim: Entity): Vec2 {
+  const ep = victim.transform.pos;
+  let tx = 0;
+  let tz = 0;
+  let bd = 13;
+  for (const o of w.entities) {
+    if (!o.alive || o.team !== me.team || o.structure?.type !== "damage" || !o.structure.ready) continue;
+    const d = Math.hypot(o.transform.pos.x - ep.x, o.transform.pos.z - ep.z);
+    if (d < bd && d > 3) {
+      bd = d;
+      tx = o.transform.pos.x;
+      tz = o.transform.pos.z;
+    }
+  }
+  if (bd === 13) {
+    const core = w.core(me.team);
+    tx = core ? core.transform.pos.x : me.transform.pos.x * 2 - ep.x;
+    tz = core ? core.transform.pos.z : me.transform.pos.z * 2 - ep.z;
+  }
+  // The throw lands 10 m from the Warlord along the stick.
+  const dx = tx - me.transform.pos.x;
+  const dz = tz - me.transform.pos.z;
+  const l = Math.hypot(dx, dz) || 1;
+  return { x: dx / l, z: dz / l };
+}
+
 /** A standing spot `r` from the target, near the bot, preferring ground at least 1 m above the target. */
 function vantageSpot(w: World, me: Entity, t: Entity, r: number): Vec2 | null {
   const p = me.transform.pos;

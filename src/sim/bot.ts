@@ -69,6 +69,8 @@ export class Bot {
   wantCharge: "a" | "b" | null = null;
   /** Entity the charged release should be aimed at. */
   chargeAimId = 0;
+  /** Only let go while the aim target is within this distance (keeps holding at full power until in reach). */
+  chargeRange = Infinity;
   holdSlot: "a" | "b" | null = null;
   holdAt = -1;
 
@@ -211,7 +213,7 @@ export class Bot {
     const me = w.heroForPlayer(this.player)!;
     const h = me.hero!;
     const want = this.wantCharge;
-    if (!this.holdSlot && want && !h.action) {
+    if (!this.holdSlot && want && (want === "b" || !h.action)) {
       this.holdSlot = want;
       this.holdAt = w.time;
     }
@@ -219,7 +221,9 @@ export class Bot {
     if (!slot) return;
     const held = w.time - this.holdAt;
     const k = Math.min(1, Math.max(0, (held - CHARGE_TAP) / CHARGE_FULL));
-    const ready = (h.cooldowns[slot] ?? 0) <= w.time && !h.action;
+    const t = this.chargeAimId ? w.get(this.chargeAimId) : undefined;
+    const inReach = !t?.alive || w.dist(me, t) <= this.chargeRange;
+    const ready = (h.cooldowns[slot] ?? 0) <= w.time && !h.action && inReach;
     // Holding a button means it can't be tapped meanwhile.
     if (slot === "a") this.wantAttack = false;
     else this.wantB = false;
@@ -231,7 +235,6 @@ export class Bot {
     if (slot === "a") this.wantAttack = true;
     else this.wantB = true;
     if (held > CHARGE_TAP) cmd.charge = k;
-    const t = this.chargeAimId ? w.get(this.chargeAimId) : undefined;
     if (t?.alive && !this.wantDodge) {
       const dx = t.transform.pos.x - me.transform.pos.x;
       const dz = t.transform.pos.z - me.transform.pos.z;

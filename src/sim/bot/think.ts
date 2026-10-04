@@ -21,7 +21,7 @@ import {
   ok,
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
-import { wrenAbilities, wrenShoot } from "./tactics.ts";
+import { heaveDir, warlordFight, wrenAbilities, wrenShoot } from "./tactics.ts";
 
 /** What the bot knows about the fight this think. */
 interface Senses {
@@ -57,6 +57,7 @@ interface Kit {
 export function think(bot: Bot, w: World, me: Entity): void {
   // A held charge is let go unless this think wants it held again.
   bot.wantCharge = null;
+  bot.chargeRange = Infinity;
   const s = sense(bot, w, me);
   if (shop(bot, w, me, !!s.ehAlive && s.dHero < 8)) return;
   if (objectives(bot, w, s)) return;
@@ -311,8 +312,10 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   const { me, p, h, enemyHero, ehAlive, dHero, plan, lowHp } = s;
   const { nearby, ab, prefer, rdy, useHint } = k;
   // Marksman: expert Pip/SKYSHOT/RAKE/interrupt rules, and Heartseeker held for kills (bot/tactics.ts).
-  const zDecided = ab.b.kind === "pip" && wrenAbilities(bot, w, me);
   const hk = w.heroDef(h.type).hooks;
+  const zDecided = ab.b.kind === "pip" && wrenAbilities(bot, w, me);
+  // Warlord: charged slam (bot/tactics.ts).
+  if (hk.heaveRange) warlordFight(bot, w, me, ehAlive ? enemyHero : undefined);
   if (
     hk.heaveRange &&
     rdy("heave") &&
@@ -321,15 +324,10 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
     w.time < enemyHero!.status.stunUntil &&
     dHero < hk.heaveRange + 0.6
   ) {
-    // Warlord: heave a stunned hero back toward our side (away from their core).
-    const core = w.core(me.team);
-    const ep = enemyHero!.transform.pos;
-    const dx = core ? core.transform.pos.x - ep.x : -(ep.x - p.x);
-    const dz = core ? core.transform.pos.z - ep.z : -(ep.z - p.z);
-    const l = Math.hypot(dx, dz) || 1;
+    // Warlord: heave a stunned hero into a friendly tower, else back toward our core.
     bot.wantAttack = true;
     bot.wantBlock = true;
-    bot.wantFace = { x: dx / l, z: dz / l };
+    bot.wantFace = heaveDir(w, me, enemyHero!);
   }
   const full = h.meter >= w.data.heroes.baseline.superMax;
   const siegeHero = ab.z.kind === "ballista";
