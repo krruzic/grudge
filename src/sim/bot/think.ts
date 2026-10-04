@@ -315,6 +315,25 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
     if (diver && h.pip?.phase === "on" && h.pip.target === diver.id && rdy("dodge") && bot.rand() < 0.6 * bot.skill)
       bot.wantDodge = true;
   }
+  const hk = w.heroDef(h.type).hooks;
+  if (
+    hk.heaveRange &&
+    rdy("heave") &&
+    !h.action &&
+    ehAlive &&
+    w.time < enemyHero!.status.stunUntil &&
+    dHero < hk.heaveRange + 0.6
+  ) {
+    // Warlord: heave a stunned hero back toward our side (away from their core).
+    const core = w.core(me.team);
+    const ep = enemyHero!.transform.pos;
+    const dx = core ? core.transform.pos.x - ep.x : -(ep.x - p.x);
+    const dz = core ? core.transform.pos.z - ep.z : -(ep.z - p.z);
+    const l = Math.hypot(dx, dz) || 1;
+    bot.wantAttack = true;
+    bot.wantBlock = true;
+    bot.wantFace = { x: dx / l, z: dz / l };
+  }
   const full = h.meter >= w.data.heroes.baseline.superMax;
   const siegeHero = ab.z.kind === "ballista";
   const zTarget = plan.zBelow === undefined || (ehAlive && enemyHero!.hp < enemyHero!.maxHp * plan.zBelow);

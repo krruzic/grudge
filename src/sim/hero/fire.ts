@@ -73,6 +73,10 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
     return;
   }
   if (a.name === "dodge" || a.name === "hit") return;
+  if (a.kind === "heave") {
+    fireHeave(w, e, a, mul);
+    return;
+  }
 
   const def = ab[a.name];
   switch (a.kind) {
@@ -201,4 +205,39 @@ function fireBombThrow(w: World, e: Entity, a: HeroAction): void {
     range = Math.min(range, Math.max(1, along - o.radius * 0.5));
   }
   w.arena.throwBomb(e, t.pos.x + a.dirX * range, t.pos.z + a.dirZ * range);
+}
+
+/** Warlord HEAVE throw: hurl the grabbed (stunned) enemy along the action direction. */
+function fireHeave(w: World, e: Entity, a: HeroAction, mul: number): void {
+  const o = a.targetId !== undefined ? w.get(a.targetId) : undefined;
+  if (!o || !o.alive) return;
+  const hk = w.heroDef(e.hero!.type).hooks;
+  const t = e.transform;
+  const dist = hk.heaveDistance ?? 10;
+  const tx = t.pos.x + a.dirX * dist;
+  const tz = t.pos.z + a.dirZ * dist;
+  const dmg = (hk.heaveDamage ?? 90) * mul;
+  const land = () => {
+    if (!o.alive) return;
+    const p = o.transform.pos;
+    w.damage(e, o, dmg, { fromX: p.x, fromZ: p.z, stun: hk.heaveStun ?? 1, big: true });
+    w.emit({ type: "slam", x: p.x, y: o.transform.y, z: p.z, radius: 2.2, team: e.team, src: e.id });
+    for (const n of w.entities.slice()) {
+      if (n === o || !n.alive || n.team === e.team || n.structure) continue;
+      if (Math.hypot(n.transform.pos.x - p.x, n.transform.pos.z - p.z) - n.radius > 2.2) continue;
+      w.damage(e, n, dmg * 0.5, { fromX: p.x, fromZ: p.z, knockback: 6, big: true });
+    }
+  };
+  if (o.hero && w.startJump(o, tx, tz, 0.7, 3.2)) {
+    o.status.stunUntil = Math.max(o.status.stunUntil, w.time + 0.75);
+    w.later(0.7, land);
+    return;
+  }
+  w.damage(e, o, dmg, {
+    fromX: t.pos.x - a.dirX,
+    fromZ: t.pos.z - a.dirZ,
+    knockback: 48,
+    stun: hk.heaveStun ?? 1,
+    big: true,
+  });
 }

@@ -8,6 +8,42 @@ import { isMarksman, skyshot } from "./marksman.ts";
 import { startKegRocket } from "./friar.ts";
 import { begin, callout, ready } from "./common.ts";
 
+/** Warlord HEAVE target: the nearest stunned enemy (hero or soldier) within reach in front of him. */
+function heaveTarget(w: World, e: Entity, reach: number): Entity | null {
+  const t = e.transform;
+  let best: Entity | null = null;
+  let bd = Infinity;
+  for (const o of w.entities) {
+    if (!o.alive || o.team === e.team || o.structure || o.neutral || !(o.hero || o.unit)) continue;
+    if (w.time >= o.status.stunUntil || o.hero?.jump) continue;
+    const d = Math.hypot(o.transform.pos.x - t.pos.x, o.transform.pos.z - t.pos.z) - o.radius;
+    if (d > reach || Math.abs(o.transform.y - t.y) > 1.5) continue;
+    if (d < bd) {
+      bd = d;
+      best = o;
+    }
+  }
+  return best;
+}
+
+/**
+ * Warlord HEAVE (hidden combo, L+A next to a stunned enemy): he grabs them overhead, then hurls them toward the stick
+ * direction at the throw frame. Heroes fly in a jump arc and crash down (damage + stun + splash on landing);
+ * soldiers are launched with a huge knockback. Resolved in fireHeave (fire.ts) at the action's hit frame.
+ */
+function startHeave(w: World, e: Entity, cmd: Command, mx: number, mz: number): boolean {
+  const hk = w.heroDef(e.hero!.type).hooks;
+  if (!hk.heaveRange || !cmd.attack || !cmd.block || e.hero!.action || !ready(e, "heave", w.time)) return false;
+  const o = heaveTarget(w, e, hk.heaveRange);
+  if (!o) return false;
+  const a = begin(e, "a", "heave", 0.62, 0.34, mx, mz);
+  a.targetId = o.id;
+  o.status.stunUntil = Math.max(o.status.stunUntil, w.time + 0.5);
+  e.hero!.cooldowns.heave = w.time + (hk.heaveCooldown ?? 6);
+  callout(w, e, "HEAVE!");
+  return true;
+}
+
 export function combo(w: World, e: Entity, cmd: Command): boolean {
   const h = e.hero!;
   const t = e.transform;
@@ -16,6 +52,7 @@ export function combo(w: World, e: Entity, cmd: Command): boolean {
   const mx = mag > 0.2 ? cmd.moveX / mag : Math.sin(t.facing);
   const mz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);
   const ab = abilities(w, e);
+  if (startHeave(w, e, cmd, mx, mz)) return true;
   const cr = h.crack;
   if (cr && cmd.secondary && w.time - cr.at < 0.9 && ready(e, "b", w.time) && (!act || act.name === "a")) {
     h.crack = undefined;

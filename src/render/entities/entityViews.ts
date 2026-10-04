@@ -349,7 +349,9 @@ export class EntityViews {
 
   /** Plays a clip (attack_* falls back to attack_a), cross-fading from the current one; false if the view lacks it. */
   play(v: View, name: string, timeScale = 1, restart = false, fade = 0.1): boolean {
-    const next = v.actions.get(name) ?? (name.startsWith("attack_") ? v.actions.get("attack_a") : undefined);
+    const next =
+      v.actions.get(name) ??
+      (name.startsWith("attack_") ? v.actions.get("attack_a") : name === "heave" ? v.actions.get("slam") : undefined);
     if (!next) return false;
     next.timeScale = timeScale;
     if (v.current === name && !restart) return true;

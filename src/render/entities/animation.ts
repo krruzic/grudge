@@ -28,6 +28,7 @@ export const ANIM_FALLBACK: Record<string, string> = {
 export const KIND_ANIM: Record<string, string> = {
   pip: "cast",
   rake: "cast",
+  heave: "heave",
   volley: "volley",
   heartseeker: "heartseeker",
   keg: "throw",

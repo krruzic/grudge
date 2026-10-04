@@ -37,7 +37,6 @@ FISSURE_TEX.set(WARLORD.crackRing, "crack");
 FISSURE_TEX.set(WARLORD.lavaCrack, "lava");
 FISSURE_TEX.set(WARDEN.mossCrack, "moss");
 FISSURE_TEX.set(WARDEN.roots, "moss");
-DECAL_3D.set(WARLORD.rune, "crest");
 DECAL_3D.set(HERALD.halo, "crown");
 DECAL_3D.set(HERALD.laurel, "laurel");
 DECAL_3D.set(WARLORD.ring, "ring");
