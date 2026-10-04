@@ -230,6 +230,22 @@ def autumn_image(name, img):
         return img
     if not AUTUMN:
         return img
+    if name in HEDGES and img is not None:
+        # Hedgerows turn with the orchard: each hedge texture onto its own autumn ramp (luminance kept, so the
+        # painted leaf detail survives) - rust, amber-ochre and a deep russet - and the variants mix per patch.
+        ramps = {"hedge": ((0.2, 0.07, 0.03), (0.92, 0.46, 0.17)), "hedge_b": ((0.22, 0.09, 0.03), (0.95, 0.55, 0.2)),
+                 "hedge_c": ((0.19, 0.06, 0.03), (0.86, 0.38, 0.15))}
+        lo, hi = ramps[name]
+        img = img.copy()
+        img.name = name + "_fall"
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            lum = min(1.0, (0.3 * px[i] + 0.55 * px[i + 1] + 0.15 * px[i + 2]) * 1.7)
+            for k in range(3):
+                px[i + k] = lo[k] + (hi[k] - lo[k]) * lum
+        img.pixels.foreach_set(px)
+        img.pack()
+        return img
     if name in ("leaves", "pine"):
         fall = bpy.data.images.get("leaves_fall") or texgen.load_photo("leaves_fall", os.path.join(ROOT, "assets", "textures"))
         if name == "leaves":
@@ -909,18 +925,27 @@ class MapBuilder:
 
     def hedge_pt(self, px, py, pz, top):
         d, out = self.hedge_edge(px, pz)
-        r = 0.42
+        # Russet Hollow's hedgerows are wild and overgrown (round shoulders, big lumps); Bellwick's stay clipped.
+        wild = AUTUMN
+        r = 0.75 if wild else 0.42
         e = min(d, r)
         drop = r - math.sqrt(max(0.0, r * r - (r - e) ** 2))
         n1 = vnoise3(px * 2.3, py * 2.3, pz * 2.3)
         n2 = vnoise3(px * 0.7 + 7, py * 0.7, pz * 0.7 + 3)
         lump = (n1 - 0.5) * 0.2 + (n2 - 0.5) * 0.16
+        if wild:
+            n3 = vnoise3(px * 0.35 + 2, 0.5, pz * 0.35 - 4)
+            lump = lump * 1.9 + (n3 - 0.5) * 0.5
         y = min(py, top - drop)
         k = 1.0 - min(1.0, d / r)
         push = (lump - 0.07) * k
         return Vector((px + out.x * push, -(pz + out.y * push), y + (lump * 0.8 if py >= top - drop - 1e-6 else 0.0)))
 
     def hedge_mat(self, x, z):
+        if AUTUMN:
+            # Long soft runs of one texture: per-cell switches read as stripes on a wild hedgerow.
+            n = vnoise3(x * 0.07 + 3.7, 1.3, z * 0.07 + 8.1)
+            return HEDGES[0 if n < 0.45 else 1 if n < 0.6 else 2]
         n = vnoise3(x * 0.16 + 3.7, 1.3, z * 0.16 + 8.1) * 0.8 + hsh(x // 3, z // 3, 41) * 0.2
         return HEDGES[0 if n < 0.44 else 1 if n < 0.56 else 2]
 
@@ -930,10 +955,14 @@ class MapBuilder:
         n2 = vnoise3(p.x * 0.9 + 5, 1.7, p.y * 0.9 - 2)
         k = (0.8 + 0.16 * n1 + 0.08 * n2) * (0.62 + 0.38 * t)
         warm = vnoise3(p.x * 0.13 + 11, 7.0, p.y * 0.13) - 0.5
+        if AUTUMN:
+            # Big soft patches of lighter / darker turning leaves hide the texture repeat.
+            k *= 0.8 + 0.45 * vnoise3(p.x * 0.3 - 4, 2.2, p.y * 0.3 + 9)
+            warm *= 1.8
         return (min(1.0, k * (1.0 + warm * 0.35)), min(1.0, k * (1.0 + warm * 0.06)), min(1.0, k * (0.92 - warm * 0.3)))
 
     def hedge_uv(self, pts, top):
-        m = TEX_METERS["hedge"]
+        m = TEX_METERS["hedge"] * (1.6 if AUTUMN else 1.0)
         if top:
             ca, sa = math.cos(0.65), math.sin(0.65)
             return [((p.x * ca - p.y * sa) / m, (p.x * sa + p.y * ca) / m) for p in pts]
@@ -946,7 +975,7 @@ class MapBuilder:
         P = self.props
         base = min(c) - 0.3
         top = max(c) + 1.75
-        steps = (0.0, 0.25, 0.75, 1.0)
+        steps = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0) if AUTUMN else (0.0, 0.25, 0.75, 1.0)
         tops = {}
         mat = self.hedge_mat(x, z)
 
@@ -967,7 +996,7 @@ class MapBuilder:
                     q.reverse()
                 P.face(q, mat, uvs=self.hedge_uv(q, True), cols=[col(p) for p in q])
         sides = (((0, -1), lambda t: (t, 0.0)), ((1, 0), lambda t: (1.0, t)), ((0, 1), lambda t: (1 - t, 1.0)), ((-1, 0), lambda t: (0.0, 1 - t)))
-        hs = (0.0, 0.6)
+        hs = (0.0, 0.35, 0.65, 0.85) if AUTUMN else (0.0, 0.6)
         for (dx, dz), at in sides:
             if self.is_hedge(x + dx, z + dz):
                 continue
