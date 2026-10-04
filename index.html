@@ -28,14 +28,10 @@
       #boot .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: bootin 0.5s steps(5) both; }
       #boot .logo { position: absolute; left: 50%; top: 2.5%; width: 34%; transform: translateX(-50%); animation: bootin 0.5s 0.15s steps(5) both; }
       #boot .load { position: absolute; right: 4%; bottom: 5%; height: 11%; display: flex; align-items: center; gap: 1.2vh; }
-      #boot .load img { height: 80%; animation: nowblink 1.4s steps(1) infinite; filter: drop-shadow(0.4vh 0.4vh 0 #0b0806); }
-      #boot .coin { height: 90%; aspect-ratio: 1; perspective: 30vh; }
-      #boot .coin i { display: block; width: 100%; height: 100%; border-radius: 50%; box-sizing: border-box;
-        background: url(/loading/gold.png) center / 180% auto; border: 0.55vh solid #3a2206;
-        box-shadow: inset 0 0 0 0.5vh #c89830, inset 0 0 0 0.9vh #6a4410, 0.4vh 0.4vh 0 #0b0806;
-        animation: coin 1.1s steps(16) infinite; }
-      @keyframes nowblink { 70% { opacity: 0; } }
-      @keyframes coin { to { transform: rotateY(360deg); } }
+      #boot .load .now { position: relative; height: 80%; filter: drop-shadow(0.4vh 0.4vh 0 #0b0806); }
+      #boot .load .now img { display: block; height: 100%; }
+      #boot .load .now .dim { filter: grayscale(1) brightness(0.32); }
+      #boot .load .now .lit { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--p, 0) * 100%) 0 0); }
       @keyframes bootin { from { opacity: 0; } }
     </style>
   </head>
@@ -44,7 +40,7 @@
       <div class="frame">
         <img class="art" src="/loading/art.jpg" alt="" />
         <img class="logo" src="/loading/logo.png" alt="Grudge" />
-        <div class="load"><div class="coin"><i></i></div><img src="/loading/now.png" alt="Now loading" /></div>
+        <div class="load"><div class="now"><img class="dim" src="/loading/now.png" alt="Now loading" /><img class="lit" src="/loading/now.png" alt="" /></div></div>
       </div>
     </div>
     <div id="ui"></div>
