@@ -1,3 +1,6 @@
+// NetLink: browser WebSocket client for the online relay (tools/netrelay.ts). A client is either the host (owns
+// the room, broadcasts to peers) or a peer (talks only to the host). Incoming messages are queued and drained by
+// the game loop each frame.
 export type NetMsg = { t: string; [k: string]: unknown };
 
 export class NetLink {

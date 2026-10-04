@@ -1,3 +1,6 @@
+// Bake a map (npm run bake-map -- <name> [--ascii]): builds the Terrain and Surround for data/maps/<name>.json and
+// writes the derived grid (heights, kinds, flags, decks, styles, props, sampled surround heights + features) to
+// assets/maps/<name>.grid.json. --ascii also prints a cell-kind sketch of the map.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Terrain, type MapData } from "../src/sim/terrain.ts";

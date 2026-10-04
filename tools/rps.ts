@@ -1,3 +1,4 @@
+// Unit rock-paper-scissors check: equal-gold armies of two unit types fight on crossing; prints the net result.
 import { readFileSync } from "node:fs";
 const { World } = await import("../src/sim/world.ts");
 const { spawnUnit } = await import("../src/sim/structures.ts");

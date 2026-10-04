@@ -1,15 +1,11 @@
-import { readFileSync } from "node:fs";
+// 1v1 round robin of all hero pairs on three maps (both sides, N seeds) with per-hero stats (wins, deaths,
+// early deaths, soldier damage taken, ability usage). Args: [hero,hero|pairAB] [seeds] [json]. Env PLAN_<hero> /
+// PICKS_<hero> override bot plans / talent picks.
 import { World } from "../src/sim/world.ts";
 import { Bot } from "../src/sim/bot.ts";
+import { loadGameData, loadMap } from "./gamedata.ts";
 
-const json = (p: string) => JSON.parse(readFileSync(p, "utf8"));
-const data: any = {
-  talents: json("data/talents.json"),
-  heroes: json("data/heroes.json"),
-  units: json("data/units.json"),
-  structures: json("data/structures.json"),
-  match: json("data/match.json"),
-};
+const data: any = loadGameData();
 for (const [k, v] of Object.entries(process.env))
   if (k.startsWith("PLAN_")) data.heroes.heroes[k.slice(5)].botPlan = JSON.parse(v!);
 for (const [k, v] of Object.entries(process.env))
@@ -46,7 +42,7 @@ for (let a = 0; a < H.length; a++)
       for (let sd = 0; sd < seeds; sd++)
         for (const flip of [0, 1]) {
           const types = flip ? [H[b], H[a]] : [H[a], H[b]];
-          const w = new World(json(`data/maps/${map}.json`), data, 1000 + sd * 17 + a * 3 + b);
+          const w = new World(loadMap(map), data, 1000 + sd * 17 + a * 3 + b);
           types.forEach((t, p) => w.spawnHero(t, p, p));
           const bots = [new Bot(0, 0.8, sd * 7 + 1), new Bot(1, 0.8, sd * 7 + 2)];
           const hero = (p: number) => w.heroForPlayer(p)!;

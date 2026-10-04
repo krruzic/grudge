@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
+// Headless bot-vs-bot balance runner (npm run sim -- --a <hero> --b <hero> [--matches N] [--map M] [--mode 2v2]
+// [--partners heroes] [--pickA 0101] [--pickB ...] [--verbose]). Alternates sides per seed and reports win rates,
+// match length, end reasons and how often an early lead converts.
 import { World } from "../src/sim/world.ts";
 import { Bot } from "../src/sim/bot.ts";
+import { loadGameData, loadMap } from "./gamedata.ts";
 import type { GameData } from "../src/sim/config.ts";
-import type { MapData } from "../src/sim/terrain.ts";
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: string) => {
@@ -16,15 +18,8 @@ const mapName = opt("map", "crossing");
 const verbose = args.includes("--verbose");
 const twoVtwo = opt("mode", "1v1") === "2v2";
 
-const json = (p: string) => JSON.parse(readFileSync(p, "utf8"));
-const data: GameData = {
-  talents: json("data/talents.json"),
-  heroes: json("data/heroes.json"),
-  units: json("data/units.json"),
-  structures: json("data/structures.json"),
-  match: json("data/match.json"),
-};
-const map = json(`data/maps/${mapName}.json`) as MapData;
+const data: GameData = loadGameData();
+const map = loadMap(mapName);
 
 interface Result {
   winner: number;

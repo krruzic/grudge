@@ -1,3 +1,5 @@
+// Movement robustness test: drops a hero at random walkable spots, steers it randomly and reports how often it
+// gets stuck or trapped. Usage: node --experimental-transform-types tools/movement-test.ts [hero] (MAP env).
 import { readFileSync } from "node:fs";
 import { World } from "../src/sim/world.ts";
 import type { GameData } from "../src/sim/config.ts";

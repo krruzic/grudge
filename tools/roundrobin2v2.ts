@@ -1,15 +1,10 @@
-import { readFileSync } from "node:fs";
+// 2v2 round robin of all hero pairings (sharded: args <shard> <of>), printing JSON results. Env OVR deep-merges a
+// JSON override into the game data for what-if balance runs.
 import { World } from "../src/sim/world.ts";
 import { Bot } from "../src/sim/bot.ts";
+import { loadGameData, loadMap } from "./gamedata.ts";
 
-const json = (p: string) => JSON.parse(readFileSync(p, "utf8"));
-const data: any = {
-  talents: json("data/talents.json"),
-  heroes: json("data/heroes.json"),
-  units: json("data/units.json"),
-  structures: json("data/structures.json"),
-  match: json("data/match.json"),
-};
+const data: any = loadGameData();
 const deepSet = (a: any, b: any) => {
   for (const k in b) {
     if (b[k] && typeof b[k] === "object" && !Array.isArray(b[k])) deepSet((a[k] ??= {}), b[k]);
@@ -33,7 +28,7 @@ jobs.forEach(([a, b, map, flip], k) => {
   if (only && !teams[a].includes(only) && !teams[b].includes(only)) return;
   const A = flip ? teams[b] : teams[a],
     B = flip ? teams[a] : teams[b];
-  const w = new World(json(`data/maps/${map}.json`), data, 500 + k);
+  const w = new World(loadMap(map), data, 500 + k);
   w.spawnHero(A[0], 0, 0);
   w.spawnHero(B[0], 1, 1);
   w.spawnHero(A[1], 2, 0);

@@ -1,9 +1,16 @@
+// Network relay for online play (WebSocket at /net/ws plus /net/info and /net/stats HTTP endpoints). Used by the
+// Vite dev/preview servers (netRelayPlugin) and by the standalone static server (tools/server.ts). Lockstep game
+// logic lives in the clients (src/net, src/main.ts); the relay only routes messages between host and peers.
 import { networkInterfaces } from "node:os";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import type { Duplex } from "node:stream";
+import { WebSocketServer, type WebSocket } from "ws";
 
 const URL_FILE = join(process.cwd(), ".online-url");
 
+/** Public URL to advertise (PUBLIC_URL env or the .online-url file written by tools/online.mjs). */
 export function publicUrl(): string {
   if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL;
   try {
@@ -12,9 +19,6 @@ export function publicUrl(): string {
     return "";
   }
 }
-import type { IncomingMessage, Server, ServerResponse } from "node:http";
-import type { Duplex } from "node:stream";
-import { WebSocketServer, type WebSocket } from "ws";
 
 interface Peer {
   ws: WebSocket;
@@ -22,6 +26,7 @@ interface Peer {
   name: string;
 }
 
+/** host:port for each LAN IPv4 interface (skipping Docker bridge ranges). */
 export function lanAddresses(port: number): string[] {
   const out: string[] = [];
   for (const list of Object.values(networkInterfaces())) {
@@ -80,6 +85,7 @@ const word = (v: unknown, n: number) =>
     .slice(0, n);
 const int = (v: unknown, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
 
+/** Persistent match-result counters (JSON file), served at /net/stats. */
 export class StatsStore {
   private data: StatsFile = { tags: {}, matches: [] };
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -197,6 +203,10 @@ export class StatsStore {
 
 const MAX_ROOMS = 32;
 
+/**
+ * Room relay. A host opens a room; peers join it. The relay never runs the game: peer messages ("up") are
+ * forwarded to the host, host messages ("send") to one or all peers, and room meta is kept for the lobby list.
+ */
 export class NetRelay {
   private wss = new WebSocketServer({ noServer: true });
   private rooms = new Map<number, Room>();
@@ -359,6 +369,7 @@ export class NetRelay {
   }
 }
 
+/** Vite plugin mounting the relay on the dev/preview server. */
 export function netRelayPlugin() {
   const relay = new NetRelay();
   const route = (req: IncomingMessage, res: ServerResponse, next: () => void) => {

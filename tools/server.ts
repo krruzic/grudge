@@ -1,3 +1,5 @@
+// Standalone production server (npm run serve): serves the built game from STATIC_DIR (default ./release) on PORT
+// and hosts the online relay (tools/netrelay.ts).
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createReadStream, statSync } from "node:fs";
 import { extname, join, normalize, resolve, sep } from "node:path";

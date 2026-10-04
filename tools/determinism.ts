@@ -2,19 +2,14 @@
 // Refactors must not change these hashes (lockstep netplay depends on identical sim results).
 // Usage: npm run determinism            (prints hashes)
 //        npm run determinism -- --check (compares against tools/determinism.baseline.json)
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { writeFileSync, existsSync } from "node:fs";
 import { World } from "../src/sim/world.ts";
 import { Bot } from "../src/sim/bot.ts";
 import { worldHash } from "../src/net/session.ts";
+import { loadGameData, loadMap, readJson } from "./gamedata.ts";
 
-const json = (p: string) => JSON.parse(readFileSync(p, "utf8"));
-const data: any = {
-  talents: json("data/talents.json"),
-  heroes: json("data/heroes.json"),
-  units: json("data/units.json"),
-  structures: json("data/structures.json"),
-  match: json("data/match.json"),
-};
+const json = readJson;
+const data = loadGameData();
 
 const CASES: { map: string; heroes: string[]; seed: number; seconds: number }[] = [
   { map: "crossing", heroes: ["warlord", "marksman"], seed: 11, seconds: 120 },
@@ -25,7 +20,7 @@ const CASES: { map: string; heroes: string[]; seed: number; seconds: number }[] 
 
 const out: Record<string, number> = {};
 for (const c of CASES) {
-  const w = new World(json(`data/maps/${c.map}.json`), data, c.seed);
+  const w = new World(loadMap(c.map), data, c.seed);
   c.heroes.forEach((h, p) => w.spawnHero(h, p, p));
   const bots = c.heroes.map((_, p) => new Bot(p, 0.8, c.seed * 7 + p));
   while (w.match.phase !== "over" && w.time < c.seconds) w.step(bots.map((b) => b.command(w)));

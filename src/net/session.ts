@@ -1,3 +1,7 @@
+// Lockstep session helpers. Every client runs the same deterministic World; only per-tick Commands travel over the
+// network (Frame = tick number + every player's command). packCommand/mergeCommands normalise inputs,
+// mathPrint fingerprints the platform's Math so peers with divergent floating-point results can be detected, and
+// worldHash is the cheap state checksum compared between peers (and by tools/determinism.ts).
 import type { Command } from "../sim/types";
 import type { World } from "../sim/world";
 import type { MatchMode, Rules } from "../game/save";
@@ -22,6 +26,7 @@ export interface Frame {
   c: Command[];
 }
 
+/** Quantise stick input so tiny float noise doesn't bloat or desync commands. */
 const round = (v: number) => Math.round(v * 1000) / 1000;
 
 export function mathPrint(): string {
@@ -43,6 +48,7 @@ export function mathPrint(): string {
   return (h >>> 0).toString(36);
 }
 
+/** Compact a command for the wire: rounded stick, falsy fields dropped. */
 export function packCommand(c: Command): Command {
   const out: Command = { moveX: round(c.moveX) + 0, moveZ: round(c.moveZ) + 0 };
   for (const [k, v] of Object.entries(c)) {
@@ -52,6 +58,10 @@ export function packCommand(c: Command): Command {
   return out;
 }
 
+/**
+ * Collapse several queued local inputs into one tick's command: newest stick/block/charging state, and the first
+ * occurrence of every one-shot action (attack, build, ...) so presses between ticks are not lost.
+ */
 export function mergeCommands(queue: Command[], last: Command): Command {
   if (!queue.length) return { moveX: last.moveX, moveZ: last.moveZ, block: last.block, charging: last.charging };
   const newest = queue[queue.length - 1];

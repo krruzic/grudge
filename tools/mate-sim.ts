@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
+// Bot teammate check: 2v2 bot matches where player 0 is a bot or a scripted "home" human and bot 2 is (optionally)
+// linked to it as a mate; prints winners and the role/chat lines of the mate bot.
+// Usage: node --experimental-transform-types tools/mate-sim.ts [--map M] [--human home] [--unlinked] [--heroes a,b,c,d]
 import { World } from "../src/sim/world.ts";
 import { Bot } from "../src/sim/bot.ts";
+import { loadGameData, loadMap } from "./gamedata.ts";
 import type { GameData } from "../src/sim/config.ts";
-import type { MapData } from "../src/sim/terrain.ts";
 import type { Command } from "../src/sim/types.ts";
 
 const args = process.argv.slice(2);
@@ -10,15 +12,8 @@ const opt = (name: string, def: string) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 ? args[i + 1] : def;
 };
-const json = (p: string) => JSON.parse(readFileSync(p, "utf8"));
-const data: GameData = {
-  talents: json("data/talents.json"),
-  heroes: json("data/heroes.json"),
-  units: json("data/units.json"),
-  structures: json("data/structures.json"),
-  match: json("data/match.json"),
-};
-const map = json(`data/maps/${opt("map", "crossing")}.json`) as MapData;
+const data: GameData = loadGameData();
+const map = loadMap(opt("map", "crossing"));
 const human = opt("human", "bot");
 const linked = !args.includes("--unlinked");
 const heroes = opt("heroes", "warlord,duelist,warden,raider").split(",");
