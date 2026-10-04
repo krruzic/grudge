@@ -1,21 +1,7 @@
 import * as THREE from "three";
 import ironUrl from "../../../assets/textures/iron.png?url";
 import seamUrl from "../../../assets/fx/colossus_seam.png?url";
-import {
-  cv,
-  DUELIST,
-  ENGINEER,
-  FRIAR,
-  FX,
-  RAIDER,
-  setCostumeSwap,
-  setCostumeTints,
-  setCostumeTrail,
-  SUMMONER,
-  WARDEN,
-  WARLORD,
-  WREN,
-} from "./atlas";
+import { cv, DUELIST, ENGINEER, FRIAR, FX, RAIDER, setCostumeSwap, setCostumeTints, setCostumeTrail, SUMMONER, WARDEN, WARLORD, WREN } from "./atlas";
 import { COSTUME_SKIN, SHARED_CHUNK_GEOS } from "./parts";
 
 const TINTS: Record<string, Record<number, number>> = {

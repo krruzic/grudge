@@ -11,7 +11,7 @@ import { ballistaMesh } from "./ballista";
 import { unitPlaceholder, structurePlaceholder } from "../models/placeholders";
 import { blobShadow } from "../models/markers";
 import { caskMesh } from "../heroProps/friar";
-import { teslaCoil } from "../hazards/hazardViews";
+import { teslaCoil } from "../hazards/tesla";
 import { costumeOfPlayer } from "../costumes";
 import type { Entity } from "../../sim/types";
 
