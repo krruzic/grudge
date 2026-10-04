@@ -1,948 +1,136 @@
-// HUD: the in-match overlay (clock, team panels, army orders, build cross, minimap, cards and banners), plus
-// UiCanvas, the single 2D canvas every screen, menu and HUD element is painted into.
+// HUD: the in-match overlay painted into the UI canvas each frame.
+//
+// update() runs once per frame after the sim stepped and digests World.events into callouts (banners, cards,
+// notices), last orders, panel hit-shakes and the training DPS log. draw() then paints, in order: split-screen
+// dividers, the clock (or training meter), the relic line, the minimap with stock icons, event cards, and per
+// team the resource head, player panels, notices, morph / learn prompts, the build or order cross and the army
+// panel. Panels that rarely change are memo bitmaps (hud/memo.ts).
+//
+// Layout: in 1v1 / 2v2 team 0 is on the left and team 1 mirrored on the right; with 3+ players (or 3-4 split
+// views) both team blocks shrink. In split screen each local player's panel and crosses move into their own
+// view rect (rectOf). FFA lays each local house out in its own frame and lists the others as standings.
+// Modules: hud/canvas (UiCanvas), paint (primitives), icons, memo, callouts, clock, relic, minimap, panels,
+// orders, buildMenu.
 import type { World } from "../sim/world";
-import { fontLoaded } from "./font";
-import { TEAM_NAMES, UNIT_TYPES, type Directive, type Entity, type UnitType } from "../sim/types";
-import type { Portraits } from "./portraits";
-import { parchment, texturedRect, uiImagesReady, waxSeal } from "./uiPaint";
-import { learned, options } from "../sim/talents";
 import type { MapperUi } from "../input/commands";
-import { costumeOfPlayer } from "../render/costumes";
-import { buildCost, canSpec, padNear, specCost } from "../sim/structures";
-import { drawNum, drawPlain, drawText, textWidth } from "./font";
-import { perf } from "../perf";
-import { cacheCanvas } from "./cacheCanvas";
+import type { Portraits } from "./portraits";
+import { drawText, textWidth } from "./font";
+import { buildCross, drawCross } from "./hud/buildMenu";
+import { Callouts } from "./hud/callouts";
+import { drawClock, drawTraining, newTrainer, trackTraining } from "./hud/clock";
+import { Memo } from "./hud/memo";
+import { Minimap } from "./hud/minimap";
+import { drawOrderCross, drawOrders, type LastOrder } from "./hud/orders";
+import { INK, MARGIN_X, MARGIN_Y, type Frame } from "./hud/paint";
+import {
+  BLOCK_W,
+  drawCarriers,
+  drawLearnCards,
+  drawMorphRing,
+  drawPlayerPanel,
+  drawStandings,
+  drawTeamHead,
+  type TeamHeadState,
+} from "./hud/panels";
+import { drawRelic } from "./hud/relic";
 
-export const INK = "#0b0806";
-export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828", z: "#8a8a94", r: "#8a8a94" };
+export { LOGICAL_H, UiCanvas } from "./hud/canvas";
+export { INK, PAD, meter, padButton } from "./hud/paint";
+export { talentIcon } from "./hud/icons";
 
-const DIR_NAME: Record<Directive, string> = {
-  push: "ATTACK",
-  hold: "HOLD",
-  follow: "FOLLOW",
-  nearest: "HUNT",
-  focus: "SIEGE",
-  defend: "DEFEND",
-};
-const TYPE_NAME: Record<UnitType | "all", string> = {
-  grunt: "GRUNTS",
-  ranged: "ARCHERS",
-  heavy: "BRUTES",
-  all: "ARMY",
-};
-const PLAYER_TAG = ["#8ab0ff", "#ff9a8a", "#70e0d0", "#ffd060"];
-const MARGIN_X = 14;
-const MARGIN_Y = 10;
-
-type Frame = { x: number; y: number; w: number; h: number; right: boolean };
-
-// ── UI canvas ──
-// One canvas over the WebGL view at native resolution (CSS size × DPR, capped). All layout code works in a
-// logical space LOGICAL_H units tall (width follows the window aspect); begin() sets the context transform that
-// maps those units to device pixels, so shapes, images and text all rasterise at full resolution.
-// The backing store is re-fitted from the window size on every begin() (no resize events, nothing stale), and
-// nothing ever reads pixels back from it, so the browser keeps it GPU-accelerated.
-
-/** Logical UI height in layout units. */
-export const LOGICAL_H = 240;
-/** Highest backing-store height in device pixels (4K); beyond that the extra fill cost buys nothing visible. */
-const MAX_UI_PX = 2160;
-
-export class UiCanvas {
-  readonly canvas: HTMLCanvasElement;
-  readonly ctx: CanvasRenderingContext2D;
-  /** Logical size in layout units. */
-  w = 427;
-  h = LOGICAL_H;
-
-  constructor(parent: HTMLElement) {
-    this.canvas = document.createElement("canvas");
-    this.canvas.className = "hudui";
-    parent.appendChild(this.canvas);
-    this.ctx = this.canvas.getContext("2d")!;
-  }
-
-  /** Fits the backing store to the window, clears it and returns the context in layout units. */
-  begin(): CanvasRenderingContext2D {
-    const dpr = window.devicePixelRatio || 1;
-    const ph = Math.max(1, Math.min(MAX_UI_PX, Math.round(window.innerHeight * dpr)));
-    const pw = Math.max(1, Math.round((ph * window.innerWidth) / window.innerHeight));
-    this.h = LOGICAL_H;
-    this.w = Math.round((LOGICAL_H * window.innerWidth) / window.innerHeight);
-    if (this.canvas.width !== pw || this.canvas.height !== ph) {
-      this.canvas.width = pw;
-      this.canvas.height = ph;
-    }
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.globalAlpha = 1;
-    this.ctx.globalCompositeOperation = "source-over";
-    this.ctx.clearRect(0, 0, pw, ph);
-    this.ctx.setTransform(pw / this.w, 0, 0, ph / this.h, 0, 0);
-    this.ctx.imageSmoothingEnabled = true;
-    return this.ctx;
-  }
-}
-
-// ── Shared HUD primitives: boxes, meters, controller buttons ──
-
-export function box(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  fill: string,
-  alpha = 0.92,
-): void {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.roundRect(x - 1, y - 1, w + 2, h + 2, 3);
-  ctx.fill();
-  ctx.fillStyle = fill;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(220,228,255,0.85)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(x + 1.5, y + 1.5, w - 3, h - 3, 1.5);
-  ctx.stroke();
-  ctx.restore();
-}
-
-export function meter(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  frac: number,
-  color: string,
-): void {
-  const f = Math.max(0, Math.min(1, frac));
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.roundRect(x - 1.5, y - 1.5, w + 3, h + 3, (h + 3) / 2);
-  ctx.fill();
-  ctx.strokeStyle = "#e8e4dc";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(x - 0.5, y - 0.5, w + 1, h + 1, (h + 1) / 2);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(20,18,24,0.85)";
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, h / 2);
-  ctx.fill();
-  if (f > 0) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, h / 2);
-    ctx.clip();
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, w * f, h);
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
-    ctx.fillRect(x, y, w * f, 1);
-    ctx.restore();
-  }
-  ctx.restore();
-}
-
-export function padButton(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  color: string,
-  label: string,
-  dim = false,
-): void {
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.beginPath();
-  ctx.arc(x + 1, y + 1, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.arc(x, y, r + 0.8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  if (dim) {
-    ctx.fillStyle = "rgba(16,14,20,0.82)";
-    ctx.beginPath();
-    ctx.arc(x, y, r - 1.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.fillStyle = "rgba(255,255,255,0.3)";
-  ctx.beginPath();
-  ctx.ellipse(x - r * 0.15, y - r * 0.45, r * 0.6, r * 0.32, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-  if (label) {
-    const s = (r * 1.45) / 10;
-    drawText(ctx, label, x - textWidth(label, s) / 2, y - r * 0.68, dim ? "#a8a8b0" : "#ffffff", s);
-  }
-}
-
-// ── Icons ──
-
-function cArrow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, ang: number, lit: boolean): void {
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.arc(x, y, r + 0.8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = lit ? PAD.c : "#6a5a20";
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.translate(x, y);
-  ctx.rotate(ang);
-  ctx.fillStyle = lit ? "#3a2c00" : "#2a2410";
-  ctx.beginPath();
-  ctx.moveTo(r * 0.55, 0);
-  ctx.lineTo(-r * 0.3, -r * 0.45);
-  ctx.lineTo(-r * 0.3, r * 0.45);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-function bombIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, now: number): void {
-  ctx.save();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.6;
-  ctx.beginPath();
-  ctx.moveTo(x + r * 0.5, y - r * 0.6);
-  ctx.quadraticCurveTo(x + r * 1.1, y - r * 1.4, x + r * 1.3, y - r * 1.2);
-  ctx.stroke();
-  ctx.strokeStyle = "#d8c088";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.arc(x, y, r + 0.9, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#3a3a44";
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#8a8a98";
-  ctx.beginPath();
-  ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  const on = Math.floor(now * 10) % 2 === 0;
-  ctx.fillStyle = on ? "#fff0a0" : "#ff7020";
-  ctx.beginPath();
-  ctx.arc(x + r * 1.3, y - r * 1.2, on ? 1.6 : 1.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function relicIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  ctx.save();
-  const horn = (s: number) => {
-    ctx.beginPath();
-    ctx.moveTo(x + s * r * 0.45, y - r * 0.3);
-    ctx.quadraticCurveTo(x + s * r * 1.5, y - r * 0.4, x + s * r * 1.3, y - r * 1.4);
-    ctx.quadraticCurveTo(x + s * r * 1.05, y - r * 0.75, x + s * r * 0.4, y - r * 0.75);
-    ctx.closePath();
-  };
-  for (const pass of [0, 1]) {
-    ctx.fillStyle = pass ? "#f0d070" : INK;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = INK;
-    horn(-1);
-    if (pass) ctx.fill();
-    else ctx.stroke();
-    horn(1);
-    if (pass) ctx.fill();
-    else ctx.stroke();
-  }
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.ellipse(x, y, r * 0.75 + 0.9, r + 0.9, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#a8682a";
-  ctx.beginPath();
-  ctx.ellipse(x, y, r * 0.75, r, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#e8a850";
-  ctx.beginPath();
-  ctx.ellipse(x - r * 0.2, y - r * 0.3, r * 0.25, r * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = INK;
-  ctx.fillRect(x - r * 0.45, y + r * 0.35, r * 0.25, r * 0.2);
-  ctx.fillRect(x + r * 0.2, y + r * 0.35, r * 0.25, r * 0.2);
-  ctx.restore();
-}
-
-function keepGem(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  team: string,
-  hp: number,
-  ward: number,
-  now: number,
-): void {
-  const gem = (k: number) => {
-    ctx.beginPath();
-    ctx.moveTo(x, y - r * 1.25 - k);
-    ctx.lineTo(x + r * 0.8 + k, y);
-    ctx.lineTo(x, y + r * 1.25 + k);
-    ctx.lineTo(x - r * 0.8 - k, y);
-    ctx.closePath();
-  };
-  ctx.save();
-  if (ward > 0) {
-    const k = 2.6;
-    const pts: [number, number][] = [
-      [x, y - r * 1.25 - k],
-      [x + r * 0.8 + k, y],
-      [x, y + r * 1.25 + k],
-      [x - r * 0.8 - k, y],
-      [x, y - r * 1.25 - k],
-    ];
-    const seg = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
-    const total = seg.reduce((a, b) => a + b, 0);
-    const trace = (frac: number) => {
-      let left = total * Math.min(1, frac);
-      ctx.beginPath();
-      ctx.moveTo(pts[0][0], pts[0][1]);
-      for (let i = 0; i < 4 && left > 0; i++) {
-        const f = Math.min(1, left / seg[i]);
-        ctx.lineTo(pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f);
-        left -= seg[i];
-      }
-    };
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    trace(ward);
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    trace(ward);
-    ctx.strokeStyle = "#aee8ff";
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
-  }
-  ctx.fillStyle = INK;
-  gem(1);
-  ctx.fill();
-  ctx.fillStyle = "#2a2226";
-  gem(0);
-  ctx.fill();
-  ctx.save();
-  gem(0);
-  ctx.clip();
-  const top = y + r * 1.25 - r * 2.5 * Math.max(0, Math.min(1, hp));
-  ctx.fillStyle = hp < 0.25 && Math.floor(now * 4) % 2 === 0 ? "#ff6a50" : team;
-  ctx.fillRect(x - r, top, r * 2, y + r * 1.3 - top);
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.beginPath();
-  ctx.moveTo(x, y - r * 1.25);
-  ctx.lineTo(x - r * 0.8, y);
-  ctx.lineTo(x - r * 0.25, y);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-  ctx.restore();
-}
-
-const stockUrls = import.meta.glob("../../assets/ui/costume_icons/*.png", {
-  eager: true,
-  query: "?url",
-  import: "default",
-}) as Record<string, string>;
-const stockIcons = new Map<string, HTMLImageElement>();
-for (const [p, url] of Object.entries(stockUrls)) {
-  const im = new Image();
-  im.src = url;
-  stockIcons.set(p.split("/").pop()!.replace(".png", ""), im);
-}
-const stockGrey = new Map<HTMLImageElement, HTMLCanvasElement>();
-function stockIcon(hero: string, costume: string, grey = false): HTMLImageElement | HTMLCanvasElement | null {
-  const im = stockIcons.get(`${hero}_${costume || "classic"}`) ?? stockIcons.get(`${hero}_classic`);
-  if (!im?.complete || !im.naturalWidth) return null;
-  if (!grey) return im;
-  let c = stockGrey.get(im);
-  if (!c) {
-    c = cacheCanvas();
-    c.width = im.naturalWidth;
-    c.height = im.naturalHeight;
-    const g = c.getContext("2d")!;
-    g.filter = "grayscale(1) brightness(0.55)";
-    g.drawImage(im, 0, 0);
-    stockGrey.set(im, c);
-  }
-  return c;
-}
-
-const hudIconUrls = import.meta.glob("../../assets/ui/hud/*.png", {
-  eager: true,
-  query: "?url",
-  import: "default",
-}) as Record<string, string>;
-const hudIcons = new Map<string, HTMLImageElement>();
-let hudIconGen = 0;
-for (const [p, url] of Object.entries(hudIconUrls)) {
-  const im = new Image();
-  im.onload = () => hudIconGen++;
-  im.src = url;
-  hudIcons.set(p.split("/").pop()!.replace(".png", ""), im);
-}
-
-function hudIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number, flip = false): void {
-  const im = hudIcons.get(id);
-  if (!im?.complete || !im.naturalWidth) return;
-  ctx.save();
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.translate(x, y);
-  if (flip) ctx.scale(-1, 1);
-  ctx.drawImage(im, -size / 2, -size / 2, size, size);
-  ctx.restore();
-}
-
-const tinted = new Map<string, HTMLCanvasElement>();
-function tintedIcon(id: string, color: string): HTMLCanvasElement | null {
-  const im = hudIcons.get(id);
-  if (!im?.complete || !im.naturalWidth) return null;
-  const key = `${id}|${color}`;
-  let c = tinted.get(key);
-  if (!c) {
-    c = cacheCanvas();
-    c.width = im.naturalWidth;
-    c.height = im.naturalHeight;
-    const g = c.getContext("2d")!;
-    g.drawImage(im, 0, 0);
-    g.globalCompositeOperation = "multiply";
-    g.fillStyle = color;
-    g.fillRect(0, 0, c.width, c.height);
-    g.globalCompositeOperation = "destination-in";
-    g.drawImage(im, 0, 0);
-    tinted.set(key, c);
-  }
-  return c;
-}
-
-function coinIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  hudIcon(ctx, "coin", x, y, r * 2.6);
-}
-
-function grainIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  hudIcon(ctx, "grain", x, y - r * 0.15, r * 2.9);
-}
-
-function armyIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string): void {
-  const pl = tintedIcon("plume", team);
-  if (pl) {
-    const s = r * 1.9;
-    ctx.save();
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(pl, x - s * 0.42, y - r * 1.75, s, s);
-    ctx.restore();
-  }
-  hudIcon(ctx, "helmet", x, y + r * 0.1, r * 2.7);
-}
-
-function padIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, hot: boolean): void {
-  const c = tintedIcon("pad", hot ? "#ff5040" : team);
-  if (!c) return;
-  const s = r * 2.6;
-  ctx.save();
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(c, x - s / 2, y - s / 2, s, s);
-  ctx.restore();
-}
-
-function orderBadge(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  d: Directive,
-  flip: boolean,
-  tint?: string,
-): void {
-  const r = 4.6;
-  if (tint) {
-    ctx.save();
-    ctx.fillStyle = INK;
-    ctx.beginPath();
-    ctx.arc(x, y, r + 1.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = tint;
-    ctx.beginPath();
-    ctx.arc(x, y, r + 1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-  hudIcon(
-    ctx,
-    hudIcons.has(`order_${d}`) ? `order_${d}` : "order_blank",
-    x,
-    y,
-    r * 2.2,
-    flip && (d === "push" || d === "follow"),
-  );
-}
-
-const ORDER_COL: Record<Directive, string> = {
-  push: "#d83a28",
-  follow: "#3a78e0",
-  defend: "#3aa04a",
-  hold: "#d8a020",
-  nearest: "#e07020",
-  focus: "#8a4ad0",
-};
-
-function formationBadge(ctx: CanvasRenderingContext2D, x: number, y: number, f: string): void {
-  const r = 7;
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.arc(x, y, r + 1.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#2a1c12";
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.lineWidth = 0.9;
-  ctx.strokeStyle = "#c89a40";
-  ctx.beginPath();
-  ctx.arc(x, y, r - 0.6, 0, Math.PI * 2);
-  ctx.stroke();
-  const pts: [number, number][] =
-    f === "column"
-      ? [
-          [0, -3.6],
-          [0, -1.2],
-          [0, 1.2],
-          [0, 3.6],
-        ]
-      : f === "line"
-        ? [
-            [-3.6, -1.1],
-            [-1.2, -1.1],
-            [1.2, -1.1],
-            [3.6, -1.1],
-            [-2.4, 1.6],
-            [0, 1.6],
-            [2.4, 1.6],
-          ]
-        : f === "wedge"
-          ? [
-              [0, -3],
-              [-1.6, -0.6],
-              [1.6, -0.6],
-              [-3.2, 1.8],
-              [0, 1.8],
-              [3.2, 1.8],
-            ]
-          : [
-              [-1.8, -1.6],
-              [1.6, -2],
-              [0, 0],
-              [-2.2, 1.8],
-              [2, 1.4],
-              [0.2, 3],
-            ];
-  ctx.fillStyle = "#fff4d8";
-  for (const [px, py] of pts) {
-    ctx.beginPath();
-    ctx.arc(x + px, y + py, 0.95, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function ringMeter(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, frac: number, color: string): void {
-  ctx.save();
-  ctx.lineWidth = 2.4;
-  ctx.strokeStyle = INK;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.lineWidth = 1.3;
-  ctx.strokeStyle = "#3a3038";
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.stroke();
-  if (frac > 0) {
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, frac));
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function coreIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: string, shield: boolean): void {
-  ctx.save();
-  const gem = (k: number) => {
-    ctx.beginPath();
-    ctx.moveTo(x, y - r * 1.25 - k);
-    ctx.lineTo(x + r * 0.8 + k, y);
-    ctx.lineTo(x, y + r * 1.25 + k);
-    ctx.lineTo(x - r * 0.8 - k, y);
-    ctx.closePath();
-  };
-  if (shield) {
-    ctx.fillStyle = "rgba(174,232,255,0.6)";
-    gem(2.2);
-    ctx.fill();
-  }
-  ctx.fillStyle = INK;
-  gem(0.9);
-  ctx.fill();
-  ctx.fillStyle = team;
-  gem(0);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.beginPath();
-  ctx.moveTo(x, y - r * 1.25);
-  ctx.lineTo(x - r * 0.8, y);
-  ctx.lineTo(x - r * 0.2, y);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-function fallenMark(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  ctx.save();
-  ctx.lineCap = "round";
-  for (const [c, lw] of [
-    [INK, 3],
-    ["#d83020", 1.4],
-  ] as const) {
-    ctx.strokeStyle = c;
-    ctx.lineWidth = lw;
-    ctx.beginPath();
-    ctx.moveTo(x - r, y - r);
-    ctx.lineTo(x + r, y + r);
-    ctx.moveTo(x + r, y - r);
-    ctx.lineTo(x - r, y + r);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function times(ctx: CanvasRenderingContext2D, x: number, y: number): number {
-  drawText(ctx, "×", x, y + 1, "#b8c4e8", 0.9);
-  return textWidth("×", 0.9) + 1.5;
-}
-
-interface Cross {
-  title: string;
-  items: [string, string][];
-  lit: number;
-  until: number;
-}
-
-const talentUrls = import.meta.glob("../../assets/ui/talents/*.png", {
-  eager: true,
-  query: "?url",
-  import: "default",
-}) as Record<string, string>;
-const talentImgs = new Map<string, HTMLImageElement>();
-for (const [p, url] of Object.entries(talentUrls)) {
-  const im = new Image();
-  im.src = url;
-  talentImgs.set(p.split("/").pop()!.replace(".png", ""), im);
-}
-
-const iconBakes = new Map<string, HTMLCanvasElement>();
-function scaledIcon(id: string, im: HTMLImageElement, px: number): HTMLCanvasElement | HTMLImageElement {
-  if (px >= im.naturalWidth) return im;
-  const key = `${id}|${px}`;
-  let c = iconBakes.get(key);
-  if (!c) {
-    c = cacheCanvas();
-    c.width = c.height = px;
-    const g = c.getContext("2d")!;
-    g.imageSmoothingEnabled = true;
-    g.imageSmoothingQuality = "high";
-    g.drawImage(im, 0, 0, px, px);
-    iconBakes.set(key, c);
-    if (iconBakes.size > 300) {
-      const old = iconBakes.keys().next().value!;
-      iconBakes.get(old)!.width = 0;
-      iconBakes.delete(old);
-    }
-  }
-  return c;
-}
-
-export function talentIcon(
-  ctx: CanvasRenderingContext2D,
-  id: string,
-  x: number,
-  y: number,
-  size: number,
-  dim = false,
-): void {
-  const im = talentImgs.get(id);
-  ctx.save();
-  ctx.fillStyle = INK;
-  ctx.fillRect(x - 1, y - 1, size + 2, size + 2);
-  texturedRect(ctx, "stone", x, y, size, size, dim ? "#5a5048" : "#b8a888", 0, 0.5);
-  if (im?.complete && im.naturalWidth) {
-    ctx.globalAlpha *= dim ? 0.35 : 1;
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    const m = ctx.getTransform();
-    const px = Math.round(size * Math.hypot(m.a, m.b));
-    ctx.drawImage(px > 0 && !m.b && !m.c ? scaledIcon(id, im, px) : im, x, y, size, size);
-  } else {
-    ctx.fillStyle = dim ? "#6a6058" : "#ffe890";
-    ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size * 0.22, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function hudWrap(s: string, width: number, scale: number): string[] {
-  const out: string[] = [];
-  let line = "";
-  for (const word of s.split(" ")) {
-    const next = line ? `${line} ${word}` : word;
-    if (textWidth(next, scale) > width && line) {
-      out.push(line);
-      line = word;
-    } else line = next;
-  }
-  if (line) out.push(line);
-  return out;
-}
-
-// ── Hud ──
-// update() digests sim events into banners/cards/notices; draw() paints the whole overlay each frame.
+type ViewRect = { x: number; y: number; w: number; h: number };
 
 export class Hud {
-  private visible = false;
-  private banner = "";
-  private bannerAt = 0;
-  private bannerUntil = 0;
-  laneCount = 0;
-  private shownGrain: number[] = [];
-  private notices: { text: string; until: number }[] = Array.from({ length: 4 }, () => ({ text: "", until: 0 }));
-  private orders: { type: UnitType | "all"; dir: Directive; until: number }[] = Array.from({ length: 4 }, () => ({
-    type: "all" as const,
-    dir: "follow" as Directive,
-    until: 0,
-  }));
-  private shownCoin = [0, 0, 0, 0];
-  private fall: { team: number; at: number; until: number } | null = null;
+  // ── Set by the app each frame ──
+  /** Number of split views (0/1 = shared view). */
+  split = 0;
+  /** Zoom-out of the shared camera (0-1); shrinks the minimap. */
+  zoomOut = 0;
+  /** World -> CSS-pixel projection in the shared view (null in split screen). */
+  locate: ((x: number, y: number, z: number) => { x: number; y: number }) | null = null;
+  /** Normalised view rect of a player's split view, or null when that player has none. */
+  rectOf: ((player: number) => ViewRect | null) | null = null;
+  /** Map index for the minimap image. */
+  mapIndex: (() => number) | null = null;
+  minimap = true;
+  portraits: Portraits | null = null;
+  trainer = newTrainer();
 
-  constructor(private teamColors: string[]) {}
+  private visible = false;
+  private readonly memo = new Memo();
+  private readonly callouts: Callouts;
+  private readonly mini: Minimap;
+  private readonly head: TeamHeadState = { shownCoin: [0, 0, 0, 0], shownGrain: [], keepHitAt: [], padHitAt: [] };
+  private orders: LastOrder[] = Array.from({ length: 4 }, () => ({ type: "all" as const, dir: "follow", until: 0 }));
+  /** Lanes on the map (0 in FFA). */
+  private laneCount = 0;
+  /** 3+ heroes or 3-4 views: team blocks are scaled down and order crosses only show right after input. */
+  private dense = false;
+  /** Bottom-left (or bottom-right) corner under each player's panel, for morph rings and learn cards. */
+  private panelAt: Record<number, { x: number; y: number; right: boolean }> = {};
+  /** Memo ids for crosses are numbered per frame. */
+  private crossN = 0;
+
+  constructor(private teamColors: string[]) {
+    this.callouts = new Callouts(teamColors);
+    this.mini = new Minimap(teamColors);
+  }
 
   show(on: boolean): void {
     this.visible = on;
   }
 
-  private bannerBig = false;
-
+  /** Shows a banner line (or a big centred word with `big`) for `seconds`. */
   banner_(text: string, now: number, seconds = 2.2, big = false): void {
-    this.bannerBig = big;
-    this.banner = text;
-    this.bannerAt = now;
-    this.bannerUntil = now + seconds;
+    this.callouts.showBanner(text, now, seconds, big);
   }
 
-  mapIndex: (() => number) | null = null;
-  minimap = true;
-  zoomOut = 0;
-  private lockCard: World | null = null;
-  private card: {
-    title: string;
-    sub: string;
-    glyph: string;
-    color: string;
-    at: number;
-    until: number;
-    count: number;
-  } | null = null;
-  private overlays = new Map<string, HTMLCanvasElement | null>();
-
-  private showCard(
-    title: string,
-    sub: string,
-    glyph: string,
-    now: number,
-    color = "#8a1810",
-    count = 0,
-    seconds = 4,
-  ): void {
-    this.card = { title, sub, glyph, color, at: now, until: now + Math.max(seconds, count + 0.6), count };
-  }
-
-  private mapEvent(w: World, ev: World["events"][number], now: number): void {
-    const team = (t: number) => (t >= 0 ? this.teamColors[t] : "#8a1810");
-    if (ev.type === "avalanche") {
-      const arm = w.ffa ? ["WEST", "NORTH", "EAST", "SOUTH"][ev.arm] + " ARM" : "";
-      if (ev.stage === "warn")
-        this.showCard("AVALANCHE!", `THE ${arm} RUMBLES · GET OUT OF THE LANE`, "peak", now, "#8a1810", ev.seconds);
-      else if (ev.stage === "slide")
-        this.showCard("AVALANCHE!", `SNOW COMING DOWN THE ${arm}`, "peak", now, "#8a1810", 0, 2.5);
-    } else if (ev.type === "gates" && ev.lock) {
-      if (ev.stage !== "warn")
-        this.showCard("THE GATES OPEN", "EVERY KEEP IS OPEN · TO WAR!", "bell", now, "#8a5a10", 0, 3.5);
-    } else if (ev.type === "gates") {
-      const court = ev.pattern === 1;
-      if (ev.stage === "warn")
-        this.showCard(
-          "THE BELLS RING",
-          court ? "THE COURT OPENS · THE OUTER GATES SEAL" : "THE COURT SEALS · THE OUTER GATES OPEN",
-          "bell",
-          now,
-          "#8a5a10",
-          ev.seconds,
-        );
-    } else if (ev.type === "mist") {
-      if (ev.stage === "warn")
-        this.showCard("MIST ON THE RIVER", "ANYTHING IN THE MIST IS HIDDEN", "river", now, "#4a5a6a", ev.seconds);
-      else if (ev.stage === "out")
-        this.showCard("THE MIST LIFTS", "THE RIVERS ARE CLEAR AGAIN", "river", now, "#4a5a6a", 0, 3);
-    } else if (ev.type === "lantern") {
-      if (ev.stage === "rise")
-        this.showCard("THE DEAD STIR", "A BONE LANTERN RISES FROM THE PIT", "hex", now, "#2a6a2a");
-      else if (ev.stage === "fade")
-        this.showCard("THE LANTERN GOES OUT", "IT WILL RISE AGAIN", "hex", now, "#2a6a2a", 0, 3);
-      else if (ev.stage === "taken") {
-        const h = w.getAny(ev.hero);
-        const lt = w.mapEvents.lanternDef;
-        const name = h ? w.teamName(h.team) : "SOMEONE";
-        this.showCard(
-          `${name} IS HAUNTED`,
-          lt
-            ? `+${Math.round((lt.damageMul - 1) * 100)}% DAMAGE · +${Math.round((lt.speedMul - 1) * 100)}% SPEED · ${lt.hauntSeconds}S`
-            : "",
-          "hex",
-          now,
-          team(h?.team ?? -1),
-        );
-      }
-    } else if (ev.type === "horn") {
-      this.showCard(
-        `${w.teamName(ev.team)} BLOWS THE HORN`,
-        `THE ${["WEST", "NORTH", "EAST", "SOUTH"][ev.arm]} ARM IS GETTING BURIED`,
-        "peak",
-        now,
-        team(ev.team),
-      );
-    } else if (ev.type === "tide") {
-      this.showCard(
-        ev.high ? "HIGH TIDE" : "LOW TIDE",
-        ev.high ? "THE FLATS FLOOD · EVERYONE ON THEM IS SLOWED" : "THE FLATS DRAIN · PUSH NOW",
-        "tide",
-        now,
-        "#2a4a8a",
-      );
-    }
-  }
-
-  private keepHitAt: number[] = [];
-  private padHitAt: number[] = [];
-
-  private shakeOf(at: number | undefined, now: number, amp: number): [number, number] {
-    const age = now - (at ?? -99);
-    if (age > 0.7) return [0, 0];
-    const k = amp * (1 - age / 0.7);
-    return [Math.round(Math.sin(now * 71) * k * 2) / 2, Math.round(Math.cos(now * 53) * k * 2) / 2];
+  resetTrainer(): void {
+    this.trainer = newTrainer();
   }
 
   update(w: World, _ui: (MapperUi | null)[], now: number): void {
     this.laneCount = w.ffa ? 0 : w.terrain.lanes.length;
-    if (w.training) {
-      for (const ev of w.events) {
-        if (ev.type !== "hit" || ev.id === undefined || !ev.amount) continue;
-        const tg = w.getAny(ev.id);
-        if (!tg?.dummy || tg.structure) continue;
-        const from = ev.src !== undefined ? w.getAny(ev.src) : undefined;
-        if (!from || from.team !== 0) continue;
-        const T = this.trainer;
-        if (w.time - T.lastAt > 2.5) {
-          T.burst = 0;
-          T.burstStart = w.time;
-        }
-        T.lastAt = w.time;
-        T.burst += ev.amount;
-        T.total += ev.amount;
-        T.hits++;
-        T.max = Math.max(T.max, ev.amount);
-        T.log.push([w.time, ev.amount]);
-      }
-      const cut = w.time - 5;
-      while (this.trainer.log.length && this.trainer.log[0][0] < cut) this.trainer.log.shift();
-    }
-    if (w.mapEvents.locked && this.lockCard !== w && w.time < 3) {
-      this.lockCard = w;
-      this.showCard(
-        "THE GATES ARE SHUT",
-        `NO ONE GETS IN OR OUT FOR ${Math.ceil(w.mapEvents.lockUntil - w.time)}S · BUILD UP`,
-        "bell",
-        now,
-        "#8a5a10",
-        0,
-        4.5,
-      );
-    }
+    if (w.training) trackTraining(this.trainer, w);
+    this.callouts.checkLockdown(w, now);
     for (const ev of w.events) {
       if (ev.type === "hit" && ev.id !== undefined) {
         const tg = w.getAny(ev.id);
         const st = tg?.structure;
         if (st && tg) {
-          if (st.type === "core") this.keepHitAt[tg.team] = now;
-          else if (st.padIndex >= 0) this.padHitAt[tg.team] = now;
+          if (st.type === "core") this.head.keepHitAt[tg.team] = now;
+          else if (st.padIndex >= 0) this.head.padHitAt[tg.team] = now;
         }
       }
-      this.mapEvent(w, ev, now);
-      if (ev.type === "notice") {
-        if (ev.team < 0) this.banner_(ev.text, now);
-        else if (this.notices[ev.team]) this.notices[ev.team] = { text: ev.text, until: now + 2 };
-      } else if (ev.type === "directive" && ev.team >= 0 && ev.team < this.orders.length) {
+      this.callouts.digest(w, ev, now);
+      if (ev.type === "directive" && ev.team >= 0 && ev.team < this.orders.length)
         this.orders[ev.team] = { type: ev.unitType, dir: ev.dir, until: now + 2.2 };
-      } else if (ev.type === "eliminated") {
-        this.fall = { team: ev.team, at: now, until: now + 3.5 };
-      }
     }
   }
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
     this.crossN = 0;
-    if (this.split >= 2) {
-      // Split dividers: exactly one device pixel wide.
-      const m = ctx.getTransform();
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.fillStyle = INK;
-      const pw = Math.round(W * m.a);
-      const ph = Math.round(H * m.d);
-      ctx.fillRect(Math.floor(pw / 2), 0, 1, ph);
-      if (this.split >= 3) ctx.fillRect(0, Math.floor(ph / 2), pw, 1);
-      ctx.restore();
-    }
-    const bannerOn = !!this.banner && now < this.bannerUntil;
-    this.bannerLineY = MARGIN_Y + (w.match.phase === "sudden" || (w.mapEvents.locked && !w.training) ? 27 : 19);
-    if (bannerOn && (this.bannerBig || !this.visible)) this.drawBanner(ctx, W, now);
+    if (this.split >= 2) this.drawDividers(ctx, W, H);
+    const C = this.callouts;
+    const bannerOn = C.bannerOn(now);
+    const clockTall = w.match.phase === "sudden" || (w.mapEvents.locked && !w.training);
+    C.bannerLineY = MARGIN_Y + (clockTall ? 27 : 19);
+    // Big banners ("FIGHT!", winner) and every banner while the HUD is hidden draw first / alone.
+    if (bannerOn && (C.big || !this.visible)) C.drawBanner(ctx, W, now);
     if (!this.visible) return;
-    if (w.training) this.drawTraining(ctx, W, w);
-    else this.drawClock(ctx, W, w, now);
-    this.drawRelic(ctx, W, H, w, now, bannerOn && !this.bannerBig);
-    if (bannerOn && !this.bannerBig) this.drawBanner(ctx, W, now);
-    this.mini = null;
-    if (this.minimap) this.drawMinimap(ctx, W, H, w, now, ui);
-    if (this.mini) this.drawStocks(ctx, w);
-    if (this.card && now < this.card.until) this.drawCard(ctx, W, w, now);
+    if (w.training) drawTraining(ctx, W, w, this.trainer);
+    else drawClock(ctx, W, w, now);
+    // A small banner replaces the relic line while it shows.
+    const smallBanner = bannerOn && !C.big;
+    drawRelic(ctx, W, H, w, now, this.teamColors, this.locate, smallBanner);
+    if (smallBanner) C.drawBanner(ctx, W, now);
+    this.mini.rect = null;
+    if (this.minimap) {
+      const opts = { split: this.split, zoomOut: this.zoomOut, mapIndex: this.mapIndex?.() ?? -1 };
+      this.mini.draw(ctx, W, H, w, now, ui, { ...opts, portraits: this.portraits });
+    }
+    if (this.mini.rect) this.mini.drawStocks(ctx, w, this.split);
+    if (C.cardOn(now)) C.drawCard(ctx, W, w, now);
     if (w.ffa) {
       this.drawFfa(ctx, W, H, w, ui, now);
       return;
@@ -961,6 +149,20 @@ export class Hud {
     }
   }
 
+  /** Split dividers: exactly one device pixel wide, drawn in device space. */
+  private drawDividers(ctx: CanvasRenderingContext2D, W: number, H: number): void {
+    const m = ctx.getTransform();
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = INK;
+    const pw = Math.round(W * m.a);
+    const ph = Math.round(H * m.d);
+    ctx.fillRect(Math.floor(pw / 2), 0, 1, ph);
+    if (this.split >= 3) ctx.fillRect(0, Math.floor(ph / 2), pw, 1);
+    ctx.restore();
+  }
+
+  /** FFA: each local house gets a frame (its split view, or a screen quadrant); the rest become standings. */
   private drawFfa(
     ctx: CanvasRenderingContext2D,
     W: number,
@@ -985,10 +187,10 @@ export class Hud {
     mine.forEach((t, j) => {
       const pl = locals.find((p) => p.team === t)!.player;
       const r = this.split >= 2 ? this.rectOf?.(pl) : null;
-      frames.set(
-        t,
-        r ? { x: r.x * Wk, y: r.y * Hk, w: r.w * Wk, h: r.h * Hk, right: r.x + r.w / 2 > 0.5 } : quad(j, mine.length),
-      );
+      const frame = r
+        ? { x: r.x * Wk, y: r.y * Hk, w: r.w * Wk, h: r.h * Hk, right: r.x + r.w / 2 > 0.5 }
+        : quad(j, mine.length);
+      frames.set(t, frame);
     });
     ctx.save();
     if (k !== 1) ctx.scale(k, k);
@@ -996,983 +198,24 @@ export class Hud {
     const rest = w.teams.map((_, t) => t).filter((t) => !frames.has(t));
     if (rest.length) {
       const single = frames.size === 1 && this.split < 2;
-      this.drawStandings(
-        ctx,
-        single ? Wk - MARGIN_X - 74 : Wk / 2 - 37,
-        single ? MARGIN_Y + 2 : MARGIN_Y + 40,
-        w,
-        rest,
-        single,
-      );
+      const x = single ? Wk - MARGIN_X - 74 : Wk / 2 - 37;
+      const y = single ? MARGIN_Y + 2 : MARGIN_Y + 40;
+      drawStandings(ctx, this.memo, this.teamColors, x, y, w, rest, single);
     }
     for (const [t, F] of frames) {
       if (!w.teams[t].out || !mine.includes(t)) continue;
       const msg = "YOUR KEEP FELL · SPECTATING";
       const s = 0.9;
-      drawText(
-        ctx,
-        msg,
-        Math.round(F.x + F.w / 2 - textWidth(msg, s) / 2),
-        Math.round(F.y + F.h * 0.8),
-        Math.floor(now * 2) % 2 ? "#ffd0a0" : "#ffffff",
-        s,
-      );
+      const x = Math.round(F.x + F.w / 2 - textWidth(msg, s) / 2);
+      drawText(ctx, msg, x, Math.round(F.y + F.h * 0.8), Math.floor(now * 2) % 2 ? "#ffd0a0" : "#ffffff", s);
     }
     ctx.restore();
-    const f = this.fall;
-    if (f && now < f.until && w.match.phase !== "over") {
-      const name = `${TEAM_NAMES[f.team] ?? ""} HOUSE FALLS`;
-      const age = now - f.at;
-      const s = 2.4 * (age < 0.12 ? 1.3 - (age / 0.12) * 0.3 : 1);
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, (f.until - now) * 4);
-      drawNum(
-        ctx,
-        name,
-        Math.round((W - textWidth(name, s, true)) / 2),
-        Math.round(H * 0.3),
-        this.teamColors[f.team] ?? "#ffffff",
-        s,
-      );
-      ctx.restore();
-    }
+    this.callouts.drawFall(ctx, W, H, w, now);
   }
 
-  // ── Panels: standings, player panels, banners, cards, stocks ──
+  // ── Team block ──
 
-  private drawStandings(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: World,
-    teams: number[],
-    right: boolean,
-  ): void {
-    const rows = teams.map((t) => {
-      const core = w.core(t);
-      return {
-        t,
-        out: !!w.teams[t].out,
-        hp: core?.alive ? core.hp / core.maxHp : 0,
-        shield: !!core?.structure?.shielded && !w.isSudden(),
-      };
-    });
-    const bw = 74;
-    const rh = 10;
-    const key = [x, y, right, ...rows.map((r) => `${r.t}${r.out}${r.hp.toFixed(3)}${r.shield}`)].join("|");
-    this.memo(ctx, "standings", key, x - 8, y - 6, bw + 16, rows.length * rh + 10, (c) => {
-      rows.forEach((r, i) => {
-        const ry = y + i * rh;
-        const col = this.teamColors[r.t];
-        const gx = right ? x + bw - 4 : x + 4;
-        const mx = right ? x : x + 11;
-        coreIcon(c, gx, ry + 3, 3.2, r.out ? "#5a5048" : col, r.shield && !r.out);
-        if (r.out) {
-          fallenMark(c, gx, ry + 3, 4);
-          const lab = "FALLEN";
-          drawText(c, lab, right ? x + bw - 11 - textWidth(lab, 0.6) : mx, ry - 0.5, "#ffb8a0", 0.6);
-        } else meter(c, mx, ry + 1, bw - 11, 4, r.hp, col);
-      });
-      return 0;
-    });
-  }
-
-  private dense = false;
-  rectOf: ((player: number) => { x: number; y: number; w: number; h: number } | null) | null = null;
-
-  // ── Memo ──
-  // Panels whose content changes rarely (team panels, standings) are painted once into their own canvas at the
-  // UI canvas's device scale and blitted 1:1 until their key changes. Skipped when the context is rotated or
-  // faded, where a 1:1 blit would not line up.
-  private memos = new Map<string, { c: HTMLCanvasElement; key: string; out: number }>();
-
-  private memo(
-    ctx: CanvasRenderingContext2D,
-    id: string,
-    key: string,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    draw: (c: CanvasRenderingContext2D) => number,
-  ): number {
-    const m = ctx.getTransform();
-    if (m.b || m.c || ctx.globalAlpha !== 1) return draw(ctx);
-    const px = Math.floor(m.a * x + m.e);
-    const py = Math.floor(m.d * y + m.f);
-    const pw = Math.ceil(m.a * w) + 2;
-    const ph = Math.ceil(m.d * h) + 2;
-    const full = `${key}|${m.a},${m.d},${m.e},${m.f},${x},${y}|${fontLoaded()}|${uiImagesReady()}`;
-    let c = this.memos.get(id);
-    if (!c) {
-      c = { c: document.createElement("canvas"), key: "", out: 0 };
-      this.memos.set(id, c);
-    }
-    if (c.key !== full) {
-      perf.stat("hud.memo", 1);
-      if (c.c.width !== pw || c.c.height !== ph) {
-        c.c.width = pw;
-        c.c.height = ph;
-      }
-      const g = c.c.getContext("2d")!;
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.clearRect(0, 0, pw, ph);
-      g.imageSmoothingEnabled = ctx.imageSmoothingEnabled;
-      g.setTransform(m.a, 0, 0, m.d, m.e - px, m.f - py);
-      c.out = draw(g);
-      c.key = full;
-    }
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(c.c, px, py);
-    ctx.restore();
-    return c.out;
-  }
-
-  private panelKey(
-    w: World,
-    e: Entity,
-    x0: number,
-    y0: number,
-    blockW: number,
-    right: boolean,
-    now: number,
-    local: boolean,
-    tag: string,
-  ): string {
-    const h = e.hero!;
-    const cd = (k: "b" | "r") => Math.ceil((h.cooldowns[k] ?? 0) - w.time);
-    const frac = h.meter / w.data.heroes.baseline.superMax;
-    const cfgXp = w.data.talents?.xp;
-    const commander = !!w.players.find((p) => p.heroId === e.id)?.commander;
-    const nx = cfgXp?.levels[h.level];
-    const pv = cfgXp?.levels[h.level - 1] ?? 0;
-    const xq = nx === undefined ? 240 : Math.floor(((h.xp - pv) / (nx - pv)) * 240);
-    const talents = (["r", "b", "a", "z"] as const)
-      .map((slot) => {
-        const id = learned(w, e, slot)[0]?.id ?? "";
-        return id + (talentImgs.get(id)?.complete ? "+" : "-");
-      })
-      .join(",");
-    return [
-      x0,
-      y0,
-      blockW,
-      right,
-      local,
-      tag,
-      h.dead,
-      h.dead ? Math.ceil(h.respawnAt - w.time) : 0,
-      cd("b"),
-      cd("r"),
-      frac >= 1 ? 240 : Math.floor(frac * 240),
-      frac >= 1 ? Math.floor(now * 5) % 2 : 0,
-      !!cfgXp,
-      commander,
-      h.level,
-      xq,
-      talents,
-      local && h.picks.length ? Math.floor(now * 3) % 3 : -1,
-      h.pip ? 1 : 0,
-      this.vantageOn(w, e) ? 1 : 0,
-    ].join("|");
-  }
-
-  private vantageOn(w: World, e: Entity): boolean {
-    const h = e.hero!;
-    const hk = w.heroDef(h.type).hooks;
-    return !!hk.vantageMul && !h.dead && w.time - (h.stillAt ?? -99) >= (hk.vantageStill ?? 1);
-  }
-
-  private drawPlayerPanel(
-    ctx: CanvasRenderingContext2D,
-    w: World,
-    e: Entity,
-    x0: number,
-    y0: number,
-    blockW: number,
-    right: boolean,
-    now: number,
-    local: boolean,
-    tag: string,
-  ): number {
-    const h = e.hero!;
-    const ax = (dx: number, width = 0) => (right ? x0 + blockW - dx - width : x0 + dx);
-    const y = y0;
-    let px = 0;
-    if (tag) {
-      const tw = textWidth(tag, 0.62, true);
-      drawText(ctx, tag, right ? ax(0, tw) : ax(0), y + 2, PLAYER_TAG[e.hero!.player] ?? "#d8d0c0", 0.62, true);
-      px = tw + 4;
-    }
-    if (h.dead) {
-      const n = Math.max(0, Math.ceil(h.respawnAt - w.time));
-      const lab = `RESPAWN ${n}`;
-      drawText(ctx, lab, right ? ax(px, textWidth(lab, 0.7)) : ax(px), y + 1.5, "#ffb8a0", 0.7);
-      px += Math.max(40, textWidth(lab, 0.7) + 4);
-    } else {
-      const keys: ["b" | "r", string][] = [
-        ["b", PAD.b],
-        ["r", PAD.r],
-      ];
-      keys.forEach(([k, c], i) => {
-        const left = (h.cooldowns[k] ?? 0) - w.time;
-        const bxx = ax(px + 5 + i * 12);
-        const ready = left <= 0;
-        padButton(ctx, bxx, y + 5, 4.8, c, ready ? k.toUpperCase() : "", !ready);
-        if (!ready) {
-          const n = String(Math.ceil(left));
-          drawNum(ctx, n, bxx - textWidth(n, 0.72, true) / 2 - 0.5, y + 1.2, "#ffffff", 0.72);
-        }
-        if (k === "b" && h.pip) {
-          ctx.fillStyle = INK;
-          ctx.beginPath();
-          ctx.arc(bxx + 4, y + 1.2, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "#ff4a30";
-          ctx.beginPath();
-          ctx.arc(bxx + 4, y + 1.2, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      });
-      const frac = h.meter / w.data.heroes.baseline.superMax;
-      const full = frac >= 1;
-      const zx = ax(px + 30);
-      ringMeter(ctx, zx, y + 5, 6.4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
-      padButton(ctx, zx, y + 5, 4.4, full ? "#e8c030" : PAD.z, "Z", !full);
-      if (this.vantageOn(w, e)) {
-        const vx = ax(px + 39);
-        ctx.fillStyle = INK;
-        ctx.beginPath();
-        ctx.moveTo(vx, y + 1);
-        ctx.lineTo(vx + 3.2, y + 5);
-        ctx.lineTo(vx, y + 9);
-        ctx.lineTo(vx - 3.2, y + 5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = "#ffe070";
-        ctx.beginPath();
-        ctx.moveTo(vx, y + 2);
-        ctx.lineTo(vx + 2.2, y + 5);
-        ctx.lineTo(vx, y + 8);
-        ctx.lineTo(vx - 2.2, y + 5);
-        ctx.closePath();
-        ctx.fill();
-      }
-      px += 42;
-    }
-    const cfgXp = w.data.talents?.xp;
-    if (!cfgXp || w.players.find((p) => p.heroId === e.id)?.commander) return 12;
-    const next = cfgXp.levels[h.level];
-    const prev = cfgXp.levels[h.level - 1] ?? 0;
-    const xf = next === undefined ? 1 : (h.xp - prev) / (next - prev);
-    const lx = ax(px + 5);
-    ringMeter(ctx, lx, y + 5, 5.4, xf, next === undefined ? "#ffd040" : "#8ad8ff");
-    ctx.fillStyle = "#2a2226";
-    ctx.beginPath();
-    ctx.arc(lx, y + 5, 4.2, 0, Math.PI * 2);
-    ctx.fill();
-    const lv = String(h.level);
-    drawNum(ctx, lv, lx - textWidth(lv, 0.72, true) / 2 - 0.3, y + 1.3, "#ffe890", 0.72);
-    px += 13;
-    const isz = 9;
-    for (const slot of ["r", "b", "a", "z"] as const) {
-      const got = learned(w, e, slot);
-      const ix = right ? ax(px, isz) : ax(px);
-      if (got[0]) talentIcon(ctx, got[0].id, ix, y + 0.5, isz);
-      else {
-        ctx.fillStyle = INK;
-        ctx.fillRect(ix - 1, y - 0.5, isz + 2, isz + 2);
-        ctx.fillStyle = "#2a2430";
-        ctx.fillRect(ix, y + 0.5, isz, isz);
-      }
-      px += isz + 2;
-    }
-    void local;
-    return 13;
-  }
-
-  private drawBanner(ctx: CanvasRenderingContext2D, W: number, now: number): void {
-    const age = now - this.bannerAt;
-    const left = this.bannerUntil - now;
-    const pop = age < 0.12 ? 1.4 - (age / 0.12) * 0.4 : 1;
-    const big = this.bannerBig;
-    const base = big ? 3.6 : 0.72;
-    const s = base * pop;
-    if (!big) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, left * 5);
-      const ss = 0.72 * (age < 0.12 ? 1.15 - (age / 0.12) * 0.15 : 1);
-      drawText(ctx, this.banner, Math.round((W - textWidth(this.banner, ss)) / 2), this.bannerLineY, "#ffffff", ss);
-      ctx.restore();
-      return;
-    }
-    const tw = textWidth(this.banner, s, true);
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, left * 5);
-    const y = big ? 96 - (s - base) * 5 : this.bannerLineY - (s - base) * 4;
-    drawNum(ctx, this.banner, Math.round((W - tw) / 2), y, "#ffffff", s);
-    ctx.restore();
-  }
-
-  split = 0;
-  locate: ((x: number, y: number, z: number) => { x: number; y: number }) | null = null;
-
-  private drawCard(ctx: CanvasRenderingContext2D, W: number, w: World, now: number): void {
-    const c = this.card!;
-    const age = now - c.at;
-    const left = c.until - now;
-    const drop = age < 0.18 ? (1 - age / 0.18) * -8 : 0;
-    const left2 = c.count > 0 ? Math.ceil(c.count - age) : 0;
-    const title = left2 > 0 ? `${c.title} ${left2}` : c.title;
-    const ts = 0.95;
-    const ss = 0.55;
-    const bw = Math.round(Math.max(textWidth(title, ts), textWidth(c.sub, ss)) + 34);
-    const bh = c.sub ? 25 : 17;
-    const x = Math.round(W / 2 - bw / 2);
-    const y = Math.round(MARGIN_Y + (w.match.phase === "sudden" || w.mapEvents.locked ? 52 : 46) + drop);
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, left * 4, age * 8);
-    ctx.fillStyle = INK;
-    ctx.fillRect(x - 1, y - 1, bw + 2, bh + 2);
-    parchment(ctx, x, y, bw, bh);
-    ctx.fillStyle = c.color;
-    ctx.fillRect(x, y, 3, bh);
-    ctx.fillRect(x + bw - 3, y, 3, bh);
-    waxSeal(ctx, x + 13, y + bh / 2, 7, c.color, c.glyph);
-    const flash = left2 > 0 && Math.floor(now * 4) % 2 === 0;
-    drawPlain(ctx, title, x + 24, y + 3, flash ? "#d02010" : c.color, ts, true);
-    if (c.sub) drawPlain(ctx, c.sub, x + 24, y + 15, "#3a2410", ss);
-    ctx.restore();
-  }
-
-  private overlay(
-    key: string,
-    w: World,
-    make: (c: CanvasRenderingContext2D, W: number, D: number) => boolean,
-  ): HTMLCanvasElement | null {
-    if (this.overlays.has(key)) return this.overlays.get(key)!;
-    const t = w.terrain;
-    const c = cacheCanvas();
-    c.width = t.width;
-    c.height = t.depth;
-    const ok = make(c.getContext("2d")!, t.width, t.depth);
-    this.overlays.set(key, ok ? c : null);
-    return ok ? c : null;
-  }
-
-  private drawStocks(ctx: CanvasRenderingContext2D, w: World): void {
-    const m = this.mini!;
-    const list = [...w.players].sort((a, b) => a.team - b.team || a.player - b.player);
-    if (!list.length) return;
-    const sz = this.split >= 2 ? 11 : 12;
-    const gap = 2;
-    const total = list.length * sz + (list.length - 1) * gap;
-    let x = Math.round(m.x + m.w / 2 - total / 2);
-    const y = Math.round(m.y - sz - 3);
-    const dead = list.map((p) => {
-      const e = w.getAny(p.heroId);
-      return !e || !e.alive || !!e.hero?.dead;
-    });
-    ctx.save();
-    list.forEach((p, i) => {
-      const im = stockIcon(p.heroType, costumeOfPlayer(p.player), dead[i]);
-      ctx.save();
-      ctx.fillStyle = "rgba(12,8,6,0.55)";
-      ctx.beginPath();
-      ctx.arc(x + sz / 2, y + sz / 2, sz / 2 + 0.6, 0, Math.PI * 2);
-      ctx.fill();
-      if (im) {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        if (dead[i]) ctx.globalAlpha *= 0.85;
-        ctx.drawImage(im, x, y, sz, sz);
-      }
-      ctx.globalAlpha = 1;
-      const he = w.getAny(p.heroId);
-      const hp = dead[i] || !he ? 0 : Math.max(0, Math.min(1, he.hp / he.maxHp));
-      ctx.fillStyle = INK;
-      ctx.fillRect(x + 0.5, y + sz + 0.6, sz - 1, 2.2);
-      ctx.fillStyle = "rgba(60,50,40,0.9)";
-      ctx.fillRect(x + 1, y + sz + 1, sz - 2, 1.4);
-      ctx.fillStyle = this.teamColors[p.team] ?? "#9a9068";
-      ctx.fillRect(x + 1, y + sz + 1, (sz - 2) * hp, 1.4);
-      if (dead[i]) {
-        ctx.lineCap = "round";
-        for (const [lw, col] of [
-          [2.6, INK],
-          [1.5, "#e02818"],
-        ] as const) {
-          ctx.lineWidth = lw;
-          ctx.strokeStyle = col;
-          ctx.beginPath();
-          ctx.moveTo(x + 2, y + 2);
-          ctx.lineTo(x + sz - 2, y + sz - 2);
-          ctx.moveTo(x + sz - 2, y + 2);
-          ctx.lineTo(x + 2, y + sz - 2);
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-      x += sz + gap;
-    });
-    ctx.restore();
-  }
-
-  // ── Minimap ──
-
-  private drawMinimap(
-    ctx: CanvasRenderingContext2D,
-    W: number,
-    H: number,
-    w: World,
-    now: number,
-    ui: (MapperUi | null)[] = [],
-  ): void {
-    const t = w.terrain;
-    const idx = this.mapIndex?.() ?? -1;
-    const solo = this.split < 2;
-    const k = solo ? 0.62 - 0.17 * this.zoomOut : 1;
-    const s = Math.min(68 / t.width, 50 / t.depth) * k;
-    const mw = t.width * s;
-    const mh = t.depth * s;
-    const x0 = Math.round(W / 2 - mw / 2);
-    const y0 = Math.round(this.split >= 2 ? H / 2 - mh / 2 : H - mh - 4);
-    this.mini = { x: x0 - 4, y: y0 - 4, w: mw + 8, h: mh + 8 };
-    const img = idx >= 0 ? this.portraits?.mapTop(idx, Math.round(t.width * 6), Math.round(t.depth * 6)) : null;
-    const tc = (team: number) => this.teamColors[team] ?? this.teamColors[4] ?? "#9a9068";
-    const P = (x: number, z: number): [number, number] => [x0 + x * s, y0 + z * s];
-    const tide = this.overlay(`tide:${idx}`, w, (g) => {
-      if (!t.tideCells.length) return false;
-      g.fillStyle = "rgba(70,140,230,0.7)";
-      for (const i of t.tideCells) g.fillRect(i % t.width, Math.floor(i / t.width), 1, 1);
-      return true;
-    });
-    const mist = this.overlay(`mist:${idx}`, w, (g, Wd) => {
-      const m = w.mapEvents.mistMask;
-      if (!m) return false;
-      g.fillStyle = "rgba(225,232,240,0.55)";
-      for (let i = 0; i < m.length; i++) if (m[i]) g.fillRect(i % Wd, Math.floor(i / Wd), 1, 1);
-      return true;
-    });
-    ctx.save();
-    ctx.globalAlpha *= solo ? 0.36 : 0.5;
-    ctx.fillStyle = INK;
-    ctx.fillRect(x0 - 3.5, y0 - 3.5, mw + 7, mh + 7);
-    texturedRect(ctx, "wood", x0 - 2.5, y0 - 2.5, mw + 5, mh + 5, "#7a5636", 0, 0.5);
-    ctx.fillStyle = INK;
-    ctx.fillRect(x0 - 0.8, y0 - 0.8, mw + 1.6, mh + 1.6);
-    if (img) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(img, x0, y0, mw, mh);
-    } else {
-      ctx.fillStyle = "#4a6a3a";
-      ctx.fillRect(x0, y0, mw, mh);
-    }
-    ctx.fillStyle = "rgba(10,8,6,0.06)";
-    ctx.fillRect(x0, y0, mw, mh);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x0, y0, mw, mh);
-    ctx.clip();
-    ctx.imageSmoothingEnabled = false;
-    if (tide && w.tideHigh) {
-      ctx.globalAlpha *= 0.75;
-      ctx.drawImage(tide, x0, y0, mw, mh);
-      ctx.globalAlpha /= 0.75;
-    }
-    if (mist) {
-      const [tail, front] = w.mapEvents.mistBand(w.time);
-      if (front > tail) {
-        const z0 = Math.max(0, tail);
-        const z1 = Math.min(t.depth, front);
-        if (z1 > z0) ctx.drawImage(mist, 0, z0, t.width, z1 - z0, x0, y0 + z0 * s, mw, (z1 - z0) * s);
-      }
-    }
-    const av = w.mapEvents.avalancheNow;
-    if (av) {
-      const r = av.lane.rect;
-      const [ax, ay] = P(r.x, r.z);
-      if (av.stage === "warn") {
-        ctx.strokeStyle = Math.floor(now * 5) % 2 ? "#ff4030" : "#ffffff";
-        ctx.lineWidth = 0.9;
-        ctx.strokeRect(ax, ay, r.w * s, r.h * s);
-      } else {
-        ctx.fillStyle = "rgba(240,248,255,0.85)";
-        const k = av.k;
-        const { dx, dz } = av.lane;
-        if (dx > 0) ctx.fillRect(ax, ay, r.w * s * k, r.h * s);
-        else if (dx < 0) ctx.fillRect(ax + r.w * s * (1 - k), ay, r.w * s * k, r.h * s);
-        else if (dz > 0) ctx.fillRect(ax, ay, r.w * s, r.h * s * k);
-        else ctx.fillRect(ax, ay + r.h * s * (1 - k), r.w * s, r.h * s * k);
-      }
-    }
-    for (const hn of w.mapEvents.horns) {
-      const [hx, hy] = P(hn.x, hn.z);
-      const ready = w.time >= hn.readyAt;
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.moveTo(hx, hy - 2.6);
-      ctx.lineTo(hx + 2.3, hy + 1.6);
-      ctx.lineTo(hx - 2.3, hy + 1.6);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = ready ? (Math.floor(now * 2) % 2 ? "#f4f8ff" : "#c8d8ff") : "#6a7080";
-      ctx.beginPath();
-      ctx.moveTo(hx, hy - 1.7);
-      ctx.lineTo(hx + 1.5, hy + 1.0);
-      ctx.lineTo(hx - 1.5, hy + 1.0);
-      ctx.closePath();
-      ctx.fill();
-    }
-    for (const jp of w.jumpPads) {
-      const [ax, ay] = P(jp.x, jp.z);
-      const [bx, by] = P(jp.tx, jp.tz);
-      ctx.save();
-      ctx.setLineDash([1.2, 1.2]);
-      ctx.lineWidth = 0.5;
-      ctx.strokeStyle = "rgba(255,232,150,0.75)";
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
-      ctx.stroke();
-      ctx.restore();
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.arc(ax, ay, 1.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = w.time < jp.readyAt ? "#6a6458" : "#e8b830";
-      ctx.beginPath();
-      ctx.arc(ax, ay, 0.95, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    if (w.mapEvents.locked) {
-      for (const lg of w.mapEvents.lockGates)
-        for (const c of lg.cells) {
-          const [gx, gy] = P(c % t.width, Math.floor(c / t.width));
-          ctx.fillStyle = INK;
-          ctx.fillRect(gx - 0.4, gy - 0.4, s + 0.8, s + 0.8);
-          ctx.fillStyle = "#c08a40";
-          ctx.fillRect(gx, gy, s, s);
-        }
-    }
-    for (const gt of w.mapEvents.gateList) {
-      if (!gt.shut) continue;
-      const [gx, gy] = P(gt.slot.x, gt.slot.z);
-      ctx.fillStyle = INK;
-      ctx.fillRect(gx - 0.4, gy - 0.4, gt.slot.w * s + 0.8, gt.slot.h * s + 0.8);
-      ctx.fillStyle = "#9aa0b0";
-      ctx.fillRect(gx, gy, gt.slot.w * s, gt.slot.h * s);
-    }
-    for (const sh of w.arena.shots) {
-      const [cx, cy] = P(sh.x, sh.z);
-      ctx.strokeStyle = Math.floor(now * 6) % 2 ? "#ff3020" : "#ffd040";
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      ctx.arc(cx, cy, Math.max(1.2, sh.radius * s), 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    const dot = (cx: number, cy: number, r: number, fill: string, ring = INK, lw = 0.5) => {
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fillStyle = fill;
-      ctx.fill();
-      ctx.lineWidth = lw;
-      ctx.strokeStyle = ring;
-      ctx.stroke();
-    };
-    for (const e of w.entities) {
-      if (!e.alive || !e.unit || e.neutral || !w.spottedByAll(e)) continue;
-      const [ux, uy] = P(e.transform.pos.x, e.transform.pos.z);
-      ctx.fillStyle = tc(e.team);
-      ctx.fillRect(ux - 0.45, uy - 0.45, 0.9, 0.9);
-    }
-    for (const pad of w.pads) {
-      const [px, py] = P(pad.x, pad.z);
-      const st = pad.structureId ? w.get(pad.structureId) : undefined;
-      if (!st?.alive || !st.structure) {
-        const rubble = w.time < pad.rubbleUntil;
-        ctx.lineWidth = 0.6;
-        ctx.strokeStyle = INK;
-        ctx.beginPath();
-        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.lineWidth = 0.45;
-        ctx.strokeStyle = rubble ? "#7a7064" : pad.zone === "neutral" ? "#f4ecd8" : tc(pad.side);
-        ctx.beginPath();
-        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-        ctx.stroke();
-        continue;
-      }
-      if (st.structure.type === "core") continue;
-      const def = w.data.structures.types[st.structure.type];
-      const col = tc(st.team);
-      ctx.save();
-      if (!st.structure.ready) ctx.globalAlpha *= 0.55;
-      const gold = st.structure.level > 1;
-      if (def.class === "production") {
-        ctx.fillStyle = INK;
-        ctx.fillRect(px - 1.9, py - 1.9, 3.8, 3.8);
-        ctx.fillStyle = gold ? "#ffd040" : col;
-        ctx.fillRect(px - 1.45, py - 1.45, 2.9, 2.9);
-        if (gold) {
-          ctx.fillStyle = col;
-          ctx.fillRect(px - 0.95, py - 0.95, 1.9, 1.9);
-        }
-      } else {
-        ctx.fillStyle = INK;
-        ctx.beginPath();
-        ctx.moveTo(px, py - 2.4);
-        ctx.lineTo(px + 2.1, py + 1.5);
-        ctx.lineTo(px - 2.1, py + 1.5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = gold ? "#ffd040" : col;
-        ctx.beginPath();
-        ctx.moveTo(px, py - 1.6);
-        ctx.lineTo(px + 1.45, py + 1.05);
-        ctx.lineTo(px - 1.45, py + 1.05);
-        ctx.closePath();
-        ctx.fill();
-        if (gold) dot(px, py, 0.55, col, col, 0.1);
-      }
-      ctx.restore();
-    }
-    for (let team = 0; team < w.teamCount; team++) {
-      const c = w.core(team);
-      const co = t.cores.find((k) => (k.team ?? 0) === team);
-      if (!co) continue;
-      const [kx, ky] = P(co.x, co.z);
-      const out = !c?.alive || w.teams[team].out;
-      ctx.fillStyle = INK;
-      ctx.fillRect(kx - 3, ky - 3, 6, 6);
-      ctx.fillStyle = out ? "#3a3430" : "#ffd040";
-      ctx.fillRect(kx - 2.5, ky - 2.5, 5, 5);
-      ctx.fillStyle = out ? "#5a524a" : tc(team);
-      ctx.fillRect(kx - 1.9, ky - 1.9, 3.8, 3.8);
-      if (out) {
-        ctx.strokeStyle = "#ff4030";
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(kx - 2, ky - 2);
-        ctx.lineTo(kx + 2, ky + 2);
-        ctx.moveTo(kx + 2, ky - 2);
-        ctx.lineTo(kx - 2, ky + 2);
-        ctx.stroke();
-      } else if (c) {
-        const f = Math.max(0, c.hp / c.maxHp);
-        ctx.fillStyle = INK;
-        ctx.fillRect(kx - 3, ky + 3.4, 6, 1.4);
-        ctx.fillStyle = f > 0.5 ? "#6ae04a" : f > 0.25 ? "#ffd040" : "#ff4030";
-        ctx.fillRect(kx - 2.6, ky + 3.7, 5.2 * f, 0.8);
-      }
-    }
-    const lan = w.mapEvents.lantern;
-    if (lan) {
-      const [lx, ly] = P(lan.x, lan.z);
-      const pulse = 1.4 + Math.sin(now * 6) * 0.35;
-      dot(lx, ly, pulse + 0.9, "rgba(90,255,110,0.35)", "rgba(0,0,0,0)", 0);
-      dot(lx, ly, 1.3, "#7aff8a", INK, 0.5);
-    }
-    const og = w.arena.ogreId ? w.get(w.arena.ogreId) : undefined;
-    if (og?.alive) {
-      const [ox, oy] = P(og.transform.pos.x, og.transform.pos.z);
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.moveTo(ox - 2.4, oy - 2.6);
-      ctx.lineTo(ox - 1.2, oy - 1.4);
-      ctx.lineTo(ox + 1.2, oy - 1.4);
-      ctx.lineTo(ox + 2.4, oy - 2.6);
-      ctx.lineTo(ox + 2.1, oy + 0.4);
-      ctx.arc(ox, oy + 0.4, 2.1, 0, Math.PI);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#8a9a4a";
-      ctx.beginPath();
-      ctx.arc(ox, oy + 0.2, 1.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#f4ecd8";
-      ctx.fillRect(ox - 1.9, oy - 2.1, 0.7, 0.9);
-      ctx.fillRect(ox + 1.2, oy - 2.1, 0.7, 0.9);
-    }
-    const r = w.arena.relic;
-    if (r.state !== "waiting") {
-      const carrier = r.state === "carried" ? w.getAny(r.carrier) : undefined;
-      const [rx, ry] = carrier ? P(carrier.transform.pos.x, carrier.transform.pos.z) : P(r.x, r.z);
-      const ry2 = carrier ? ry - 3.2 : ry;
-      const k = 1.9 + (r.state === "carried" || r.state === "dropped" ? Math.sin(now * 8) * 0.35 : 0);
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.moveTo(rx, ry2 - k - 0.7);
-      ctx.lineTo(rx + k + 0.6, ry2);
-      ctx.lineTo(rx, ry2 + k + 0.7);
-      ctx.lineTo(rx - k - 0.6, ry2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = r.state === "shrined" ? tc(r.team) : "#ffd040";
-      ctx.beginPath();
-      ctx.moveTo(rx, ry2 - k);
-      ctx.lineTo(rx + k, ry2);
-      ctx.lineTo(rx, ry2 + k);
-      ctx.lineTo(rx - k, ry2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#fff4c8";
-      ctx.fillRect(rx - 0.35, ry2 - k * 0.55, 0.7, 0.7);
-    } else {
-      const [rx, ry] = P(w.arena.home.x, w.arena.home.z);
-      ctx.strokeStyle = "rgba(255,216,112,0.6)";
-      ctx.lineWidth = 0.6;
-      ctx.beginPath();
-      ctx.arc(rx, ry, 1.6, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    for (const e of w.entities) {
-      if (!e.alive || !e.hero || e.hero.dead || !w.spottedByAll(e)) continue;
-      const [hx, hy] = P(e.transform.pos.x, e.transform.pos.z);
-      const a = e.transform.facing;
-      const fx = Math.sin(a);
-      const fz = Math.cos(a);
-      const R = 2.5;
-      if (w.time < (e.status.hauntUntil ?? 0)) dot(hx, hy, R + 0.9, "rgba(90,255,110,0.4)", "rgba(0,0,0,0)", 0);
-      const tri = (k: number) => {
-        ctx.beginPath();
-        ctx.moveTo(hx + fx * R * k, hy + fz * R * k);
-        ctx.lineTo(hx - fx * R * 0.7 * k - fz * R * 0.75 * k, hy - fz * R * 0.7 * k + fx * R * 0.75 * k);
-        ctx.lineTo(hx - fx * R * 0.3 * k, hy - fz * R * 0.3 * k);
-        ctx.lineTo(hx - fx * R * 0.7 * k + fz * R * 0.75 * k, hy - fz * R * 0.7 * k - fx * R * 0.75 * k);
-        ctx.closePath();
-      };
-      tri(1.35);
-      ctx.fillStyle = INK;
-      ctx.fill();
-      tri(1.05);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-      tri(0.72);
-      ctx.fillStyle = tc(e.team);
-      ctx.fill();
-    }
-    for (const u of ui) {
-      const rt = u?.reticle;
-      if (!rt?.at) continue;
-      const [sx, sy] = P(rt.at.x, rt.at.z);
-      const [fx, fy] = P(rt.at.x - rt.dx, rt.at.z - rt.dz);
-      ctx.save();
-      ctx.setLineDash([1.4, 1]);
-      ctx.lineDashOffset = -now * 6;
-      ctx.lineWidth = 0.7;
-      ctx.strokeStyle = "rgba(216,160,255,0.95)";
-      ctx.beginPath();
-      ctx.moveTo(fx, fy);
-      ctx.lineTo(sx, sy);
-      ctx.stroke();
-      ctx.restore();
-      const pr = 3.6 + Math.sin(now * 8) * 0.5;
-      ctx.lineWidth = 1.4;
-      ctx.strokeStyle = INK;
-      ctx.beginPath();
-      ctx.arc(sx, sy, pr, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineWidth = 0.8;
-      ctx.strokeStyle = Math.floor(now * 6) % 2 ? "#e0b0ff" : "#ffffff";
-      ctx.stroke();
-    }
-    ctx.restore();
-    ctx.strokeStyle = "rgba(255,216,112,0.55)";
-    ctx.lineWidth = 0.4;
-    ctx.strokeRect(x0 + 0.2, y0 + 0.2, mw - 0.4, mh - 0.4);
-    ctx.restore();
-  }
-
-  private bannerLineY = MARGIN_Y + 19;
-
-  private drawRelic(
-    ctx: CanvasRenderingContext2D,
-    W: number,
-    H: number,
-    w: World,
-    now: number,
-    hideLine = false,
-  ): void {
-    const r = w.arena.relic;
-    const cfg = w.data.match.arena.relic;
-    let text: string;
-    let col = "#ffd870";
-    if (r.state === "waiting") {
-      const left = Math.ceil(r.since - w.time);
-      text = `THE GRUDGE WAKES IN ${left}`;
-      col = "#c8b890";
-    } else if (r.state === "home") text = "THE GRUDGE AWAITS";
-    else if (r.state === "carried") {
-      const c = w.getAny(r.carrier);
-      col = c ? this.teamColors[c.team] : col;
-      text =
-        r.channel > 0
-          ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}`
-          : `P${(c?.hero?.player ?? 0) + 1} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
-    } else if (r.state === "shrined") {
-      const s = w.get(r.shrineId);
-      const where =
-        s?.structure?.type === "core"
-          ? "KEEP"
-          : s?.structure && w.data.structures.types[s.structure.type as "barracks"]?.class === "production"
-            ? "OUTPOST"
-            : "TOWER";
-      col = this.teamColors[r.team] ?? col;
-      text =
-        r.channel > 0
-          ? `STEALING THE GRUDGE · ${Math.ceil(cfg.stealSeconds - r.channel)}`
-          : `${w.teamName(r.team)} HOLDS THE GRUDGE · ${where}`;
-    } else {
-      const left = Math.max(0, Math.ceil(cfg.returnSeconds - (w.time - r.since)));
-      text = `GRUDGE LOOSE · ${left}`;
-    }
-    const y = MARGIN_Y + (w.match.phase === "sudden" || (w.mapEvents.locked && !w.training) ? 35 : 19);
-    const flash =
-      r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0)
-        ? Math.floor(now * 3) % 2 === 0
-        : false;
-    if (!hideLine && !w.training)
-      drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
-    if (r.state === "waiting" || !this.locate) return;
-    const lift = r.state === "carried" ? 4.5 : r.state === "shrined" ? 6 : 1.5;
-    const sp = this.locate(r.x, r.y + lift, r.z);
-    const k = W / window.innerWidth;
-    const sx = sp.x * k;
-    const sy = sp.y * (H / window.innerHeight);
-    const pad = 12;
-    if (sx >= pad && sx <= W - pad && sy >= pad + 24 && sy <= H - pad) return;
-    const cx = W / 2;
-    const cy = H / 2;
-    const dx = sx - cx;
-    const dy = sy - cy;
-    const s = Math.min((W / 2 - pad) / Math.max(1e-3, Math.abs(dx)), (H / 2 - pad) / Math.max(1e-3, Math.abs(dy)));
-    const ex = cx + dx * s;
-    const ey = Math.max(pad + 24, cy + dy * s);
-    const ang = Math.atan2(dy, dx);
-    const bob = Math.sin(now * 8) * 1.5;
-    ctx.save();
-    ctx.translate(ex - Math.cos(ang) * bob, ey - Math.sin(ang) * bob);
-    ctx.rotate(ang);
-    ctx.beginPath();
-    ctx.moveTo(7, 0);
-    ctx.lineTo(-5, -6);
-    ctx.lineTo(-2, 0);
-    ctx.lineTo(-5, 6);
-    ctx.closePath();
-    ctx.fillStyle = INK;
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = INK;
-    ctx.stroke();
-    ctx.fillStyle = col;
-    ctx.fill();
-    ctx.restore();
-  }
-
-  trainer = { log: [] as [number, number][], burst: 0, burstStart: 0, lastAt: -99, total: 0, max: 0, hits: 0 };
-
-  resetTrainer(): void {
-    this.trainer = { log: [], burst: 0, burstStart: 0, lastAt: -99, total: 0, max: 0, hits: 0 };
-  }
-
-  private drawTraining(ctx: CanvasRenderingContext2D, W: number, w: World): void {
-    const T = this.trainer;
-    const span = Math.max(1, Math.min(5, w.time - (T.log[0]?.[0] ?? w.time) + 0.5));
-    const dps = T.log.reduce((s, [, a]) => s + a, 0) / (T.log.length ? span : 1);
-    const live = w.time - T.lastAt < 2.5;
-    const dur = Math.max(0.1, T.lastAt - T.burstStart);
-    const rows: [string, string][] = [
-      ["DPS", T.log.length ? String(Math.round(dps)) : "-"],
-      ["COMBO", T.burst ? `${Math.round(T.burst)} IN ${dur.toFixed(1)}S` : "-"],
-      ["BIGGEST HIT", T.max ? String(Math.round(T.max)) : "-"],
-      ["TOTAL", `${Math.round(T.total)} · ${T.hits} HITS`],
-    ];
-    const pw = 132;
-    const x = Math.round(W / 2 - pw / 2);
-    const y = MARGIN_Y - 3;
-    const ph = 12 + rows.length * 9 + 3;
-    ctx.fillStyle = INK;
-    ctx.fillRect(x - 1, y - 1, pw + 2, ph + 2);
-    texturedRect(ctx, "parch", x, y, pw, ph, "#d8c098", 0, 1);
-    const title = "TRAINING GROUND";
-    drawPlain(ctx, title, x + pw / 2 - textWidth(title, 0.62, true) / 2, y + 2, "#8a1810", 0.62, true);
-    rows.forEach(([k, v], i) => {
-      const ry = y + 12 + i * 9;
-      drawPlain(ctx, k, x + 6, ry, "#5a3a1c", 0.55, true);
-      drawPlain(ctx, v, x + pw - 6 - textWidth(v, 0.6, true), ry, i === 0 && live ? "#a81810" : "#3a2410", 0.6, true);
-    });
-  }
-
-  private drawClock(ctx: CanvasRenderingContext2D, W: number, w: World, now: number): void {
-    const m = w.data.match;
-    const sudden = w.match.phase === "sudden";
-    const remain = sudden ? w.matchLength + m.suddenDeathSeconds - w.time : w.matchLength - w.time;
-    const lockAt = w.mapEvents.lockUntil;
-    const r = Math.max(0, Math.ceil(sudden ? remain : Math.min(remain, w.matchLength - lockAt)));
-    const txt = `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
-    const s = 1.7;
-    const low = r <= 30 && Math.floor(now * 2) % 2 === 0;
-    const locked = w.mapEvents.locked;
-    const col = sudden ? "#ff5a3a" : locked ? "#d8ccb0" : low ? "#ffd040" : "#ffffff";
-    const tw = textWidth(txt, s, true);
-    const tx = Math.round((W - tw) / 2);
-    drawNum(ctx, txt, tx, MARGIN_Y - 1, col, s);
-    const since = w.time - lockAt;
-    if (lockAt > 0 && (locked || since < 2.5)) this.drawGateLock(ctx, tx - 13, MARGIN_Y + 7.5, w, locked, since, now);
-    if (sudden) {
-      const lab = "SUDDEN DEATH";
-      drawText(ctx, lab, Math.round((W - textWidth(lab, 0.8)) / 2), MARGIN_Y + 17, "#ff9a7a", 0.8);
-    }
-  }
-
-  private drawGateLock(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: World,
-    locked: boolean,
-    since: number,
-    now: number,
-  ): void {
-    const total = Math.max(1, w.data.match.lockdown?.seconds ?? 30);
-    const left = Math.max(0, w.mapEvents.lockUntil - w.time);
-    const frac = locked ? left / total : 0;
-    const r = 8.5;
-    ctx.save();
-    ctx.globalAlpha = locked ? 1 : Math.max(0, 1 - since / 2.5);
-    ctx.fillStyle = "rgba(24,16,8,0.72)";
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineCap = "round";
-    ctx.lineWidth = 2.2;
-    ctx.strokeStyle = "#4a3820";
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.stroke();
-    if (frac > 0) {
-      const warn = left <= 5;
-      ctx.strokeStyle = warn ? (Math.floor(now * 4) % 2 ? "#ffe070" : "#ff9a40") : "#e8b040";
-      ctx.beginPath();
-      ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
-      ctx.stroke();
-    }
-    const shake = locked && left <= 5 ? Math.sin(now * 40) * 0.6 * (1 - left / 5) : 0;
-    const pop = locked ? 0 : Math.min(1, since * 4);
-    ctx.translate(shake, 0);
-    hudIcon(
-      ctx,
-      locked ? "lock_closed" : "lock_open",
-      x,
-      y - pop * 0.6,
-      r * 1.75 * (1 + pop * 0.15 * Math.max(0, 1 - since)),
-    );
-    ctx.restore();
-  }
-
-  // ── Team block: resources, player panels, army orders, build cross, talent picks ──
-
+  /** Team t's whole HUD block, in its corner of the screen or of frame F (FFA). */
   private drawTeam(
     ctx: CanvasRenderingContext2D,
     W: number,
@@ -1985,131 +228,20 @@ export class Hud {
   ): void {
     const right = F ? F.right : t === 1;
     const col = this.teamColors[t];
-    const blockW = 104;
-    const x0 = F ? (right ? F.x + F.w - MARGIN_X - blockW : F.x + MARGIN_X) : right ? W - MARGIN_X - blockW : MARGIN_X;
-    const ax = (dx: number, width = 0) => (right ? x0 + blockW - dx - width : x0 + dx);
-    const ts = w.teams[t];
-    const core = w.core(t);
-    const shield = !!core?.structure?.shielded && !w.isSudden();
+    const x0 = F
+      ? right
+        ? F.x + F.w - MARGIN_X - BLOCK_W
+        : F.x + MARGIN_X
+      : right
+        ? W - MARGIN_X - BLOCK_W
+        : MARGIN_X;
     const y00 = (F ? F.y : 0) + MARGIN_Y + 2;
-    const ward = core?.structure?.ward ?? 0;
-    const sudden = w.isSudden();
-    this.shownCoin[t] += (ts.resource - this.shownCoin[t]) * Math.min(1, 0.25);
-    const coin = String(Math.round(this.shownCoin[t]));
-    const army = `${ts.unitCount}/${w.popCap}`;
-    const capped = ts.unitCount >= w.popCap;
-    const out = !!ts.out;
-    const hpFrac = core && !out ? core.hp / core.maxHp : 0;
-    const wardFrac = ward > 0 && !sudden ? ward / w.wardMax : 0;
-    const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
-    this.shownGrain[t] =
-      (this.shownGrain[t] ?? ts.grain) + (ts.grain - (this.shownGrain[t] ?? ts.grain)) * Math.min(1, 0.25);
-    const grain = String(Math.round(this.shownGrain[t]));
-    const grainy = !!w.data.match.economy.grain;
-    const rate = grainy ? `+${w.grainOf(t).toFixed(1)}/S` : `+${w.incomeOf(t).toFixed(1)}/S`;
-    const [kx, ky] = this.shakeOf(this.keepHitAt[t], now, 4.5);
-    const [px2, py2] = this.shakeOf(this.padHitAt[t], now, 3);
-    let pads = 0;
-    for (const pd of w.pads) {
-      const s2 = pd.structureId ? w.get(pd.structureId) : undefined;
-      if (s2?.alive && s2.team === t) pads++;
-    }
-    const padHot = now - (this.padHitAt[t] ?? -99) < 0.7;
-    const headKey = [
-      x0,
-      y00,
-      right,
-      col,
-      Math.round(hpFrac * 200),
-      Math.round(wardFrac * 200),
-      lowPulse,
-      coin,
-      grain,
-      army,
-      capped,
-      out,
-      rate,
-      kx,
-      ky,
-      px2,
-      py2,
-      pads,
-      padHot,
-      hudIconGen,
-    ].join("|");
-    let y = this.memo(ctx, `head${t}`, headKey, x0 - 48, y00 - 6, blockW + 96, 40, (c) => {
-      const y = y00;
-      const gx = ax(8);
-      keepGem(c, gx + kx, y + 10 + ky, 7.2, col, hpFrac, wardFrac, now);
-      if (out) {
-        fallenMark(c, gx, y + 10, 7);
-        const lab = `${TEAM_NAMES[t] ?? ""} HOUSE FELL`;
-        drawText(c, lab, right ? ax(20, textWidth(lab, 0.62)) : ax(20), y + 6, "#ffb8a0", 0.62);
-        return y + 24;
-      }
-      const tx = textWidth("×", 0.9) + 1.5;
-      const cw = 8 + tx + textWidth(coin, 1.15, true);
-      const gw = grainy
-        ? 6 + 9 + tx + textWidth(grain, 1.15, true) + 3 + textWidth(rate, 0.6)
-        : 4 + textWidth(rate, 0.6);
-      const aw = 9 + textWidth("×", 0.9) + 1.5 + textWidth(army, 1.15, true);
-      let cx = right ? ax(20, cw + gw) : ax(20);
-      coinIcon(c, cx + 3, y + 5, 3.8);
-      cx += 8;
-      cx += times(c, cx, y + 1);
-      drawNum(c, coin, cx, y, "#ffd848", 1.15);
-      cx += textWidth(coin, 1.15, true);
-      if (grainy) {
-        cx += 6;
-        grainIcon(c, cx + 4, y + 5, 3.6);
-        cx += 9;
-        cx += times(c, cx, y + 1);
-        drawNum(c, grain, cx, y, "#f0d8a0", 1.15);
-        cx += textWidth(grain, 1.15, true) + 3;
-      } else cx += 4;
-      drawText(c, rate, Math.round(cx), y + 3, "#c8b070", 0.6);
-      let bx = right ? ax(20, aw) : ax(20);
-      armyIcon(c, bx + 3.5, y + 15, 3.6, col);
-      bx += 9;
-      bx += times(c, bx, y + 11);
-      drawNum(c, army, bx, y + 10, capped ? "#ff8a6a" : "#ffffff", 1.15);
-      const ps = String(pads);
-      const pw2 = 10 + textWidth("×", 0.9) + 1.5 + textWidth(ps, 1.15, true);
-      let qx = (right ? bx - 9 - textWidth("×", 0.9) - 1.5 - 8 - pw2 : bx + textWidth(army, 1.15, true) + 8) + px2;
-      padIcon(c, qx + 4, y + 15 + py2, 4, col, padHot && Math.floor(now * 10) % 2 === 0);
-      qx += 10;
-      qx += times(c, qx, y + 11 + py2);
-      drawNum(c, ps, qx, y + 10 + py2, padHot ? "#ff9070" : "#f0e4c8", 1.15);
-      return y + 24;
-    });
+    let y = drawTeamHead(ctx, this.memo, this.head, w, t, col, x0, y00, right, now);
+    y += drawCarriers(ctx, w, t, x0, y, right, now);
+    if (w.teams[t].out) return;
 
-    let bxc = 0;
-    for (const p of w.players) {
-      const e = w.getAny(p.heroId);
-      if (!e?.hero || e.team !== t || !e.alive) continue;
-      const relic = w.arena.carrying(e);
-      if (!relic && !e.hero.bomb) continue;
-      const lab = relic ? "GRUDGE" : "A THROW";
-      const lw = textWidth(lab, 0.7);
-      const tag = w.players.filter((q) => q.team === t).length > 1 ? `P${p.player + 1} ` : "";
-      const tw = tag ? textWidth(tag, 0.7) : 0;
-      const bw = 12 + tw + lw;
-      const x = right ? ax(bxc, bw) : ax(bxc);
-      if (relic) relicIcon(ctx, x + 5, y + 6.5, 3.6);
-      else bombIcon(ctx, x + 5, y + 7, 3.6, now);
-      if (tag) drawText(ctx, tag, x + 12, y + 3, "#d8d0c0", 0.7);
-      drawText(
-        ctx,
-        lab,
-        x + 12 + tw,
-        y + 3,
-        relic ? (Math.floor(now * 3) % 2 ? "#ffe890" : "#ffffff") : "#ffc0a0",
-        0.7,
-      );
-      bxc += bw + 6;
-    }
-    if (bxc > 0) y += 14;
-    if (out) return;
+    // Player panels: every local hero (and, in split screen, every hero with a view); with no local player on
+    // this team just its first hero. Commanders are only listed when local or viewed.
     const anyLocal = ui.some(Boolean);
     const viewed = (pl: number) => this.split >= 2 && !F && !!this.rectOf?.(pl);
     const teamHeroes = w.players.filter((p) => p.team === t && (!p.commander || !!ui[p.player] || viewed(p.player)));
@@ -2122,603 +254,89 @@ export class Hud {
       const e = w.getAny(p.heroId);
       if (!e?.hero) continue;
       const r = rectPx(p.player);
-      const px0 = r ? (right ? r.x + r.w - MARGIN_X - blockW : r.x + MARGIN_X) : x0;
+      const px0 = r ? (right ? r.x + r.w - MARGIN_X - BLOCK_W : r.x + MARGIN_X) : x0;
+      // Views on the top row share the team head's line; lower views start at their own top.
       const py0 = r ? (r.y < 2 ? y + 2 : r.y + MARGIN_Y + 2) : y + 2;
       const local = !!ui[p.player];
       const tag = shown.length > 1 || teamHeroes.length > 1 ? `P${p.player + 1}` : "";
-      const h = this.memo(
-        ctx,
-        `pp${p.player}`,
-        this.panelKey(w, e, px0, py0, blockW, right, now, local, tag),
-        px0 - 10,
-        py0 - 6,
-        blockW + 20,
-        64,
-        (c) => this.drawPlayerPanel(c, w, e, px0, py0, blockW, right, now, local, tag),
-      );
-      this.panelAt[p.player] = { x: right ? px0 + blockW : px0, y: py0 + h, right };
+      const h = drawPlayerPanel(ctx, this.memo, p.player, w, e, px0, py0, right, now, local, tag);
+      this.panelAt[p.player] = { x: right ? px0 + BLOCK_W : px0, y: py0 + h, right };
       if (!r) y = py0 + h;
     }
+
+    // Crosses sit in the bottom corner of the team's area (or of the acting player's split view).
     const crossOf = (pl: number | undefined): [number, number] => {
       if (F) return [right ? F.x + F.w - MARGIN_X - 62 : F.x + MARGIN_X + 62, F.y + F.h - 58];
       const r = pl === undefined ? null : rectPx(pl);
       if (!r) return [right ? W - MARGIN_X - 62 : MARGIN_X + 62, H - 58];
       return [right ? r.x + r.w - MARGIN_X - 62 : r.x + MARGIN_X + 62, r.y + r.h - 58];
     };
-    const slot = w.players.find((p) => p.team === t && !p.commander);
-    const cmd = w.players.find((p) => p.team === t && p.commander);
-    const mui = slot ? ui[slot.player] : null;
-    const cui = cmd ? ui[cmd.player] : null;
     const opener = w.players.find((p) => p.team === t && ui[p.player] && ui[p.player]!.buildMenu !== "closed");
-    const menuUi = opener ? ui[opener.player] : null;
-    const menuHero = opener?.heroId;
     const firstLocal = w.players.find((p) => p.team === t && ui[p.player]);
     let [crossX, crossY] = crossOf(opener?.player ?? firstLocal?.player);
-    if (!firstLocal && ui.some(Boolean)) return;
-    const nt = this.notices[t];
-    if (now < nt.until) {
-      const age = 2 - (nt.until - now);
-      const jolt = age < 0.25 ? Math.sin(age * 60) * (1 - age / 0.25) * 2.5 : 0;
-      const money = nt.text.startsWith("NEED");
-      const s = money ? 1 : 0.85;
-      const tw = textWidth(nt.text, s);
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, (nt.until - now) * 3);
-      if (money) {
-        const cw = 9;
-        const bx = Math.round(crossX - (tw + cw) / 2 + jolt);
-        coinIcon(ctx, bx + 3.5, crossY - 43.5, 3.5);
-        drawText(ctx, nt.text, bx + cw, crossY - 48, "#ff7060", s);
-      } else {
-        const maxW = Math.min(150, W / 2 - 12);
-        const lines = hudWrap(nt.text, maxW, s);
-        lines.forEach((ln, k) => {
-          const lw = textWidth(ln, s);
-          const lo = F ? F.x + 4 : right ? W / 2 + 4 : 4;
-          const hi = F ? F.x + F.w - 4 : right ? W : W / 2;
-          const lx = Math.max(lo, Math.min(hi - (F ? 0 : 4) - lw, crossX - lw / 2 + jolt));
-          drawText(ctx, ln, Math.round(lx), crossY - 48 - (lines.length - 1 - k) * 9, "#ffd0a0", s);
-        });
-      }
-      ctx.restore();
-    }
+    // Other players' teams show nothing below the panels when someone local is playing.
+    if (!firstLocal && anyLocal) return;
+    this.callouts.drawNotice(ctx, t, W, crossX, crossY, right, F, now);
+
+    // Aiming the keep cannon replaces everything else.
     const aimer = w.players.map((p) => w.getAny(p.heroId)).find((e) => e?.team === t && e.hero?.aim);
     if (aimer?.hero?.aim) {
       const left = Math.max(0, Math.ceil(aimer.hero.aim.until - w.time));
       const l1 = `AIM THE CANNON · ${left}`;
       const l2 = "A FIRE · B CANCEL";
-      drawText(
-        ctx,
-        l1,
-        Math.round(crossX - textWidth(l1, 0.85) / 2),
-        crossY - 8,
-        Math.floor(now * 4) % 2 ? "#ffd870" : "#ffffff",
-        0.85,
-      );
+      const blink = Math.floor(now * 4) % 2 ? "#ffd870" : "#ffffff";
+      drawText(ctx, l1, Math.round(crossX - textWidth(l1, 0.85) / 2), crossY - 8, blink, 0.85);
       drawText(ctx, l2, Math.round(crossX - textWidth(l2, 0.72) / 2), crossY + 6, "#e8e0d0", 0.72);
       return;
     }
     for (const pl of w.players.filter((p) => p.team === t && (ui[p.player]?.morph ?? 0) > 0)) {
       const at = this.panelAt[pl.player];
-      if (!at) continue;
-      const k = ui[pl.player]!.morph;
-      const r = 11;
-      const x = at.right ? at.x - r - 2 : at.x + r + 2;
-      const yy = at.y + r + 4;
-      ctx.save();
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.arc(x, yy, r + 1.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#2a1c12";
-      ctx.beginPath();
-      ctx.arc(x, yy, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      ringMeter(ctx, x, yy, r - 0.8, k, "#ffd040");
-      waxSeal(
-        ctx,
-        x,
-        yy,
-        r * 0.62,
-        ui[pl.player]!.morphBack ? "#6a4a2a" : col,
-        ui[pl.player]!.morphBack ? "combo" : "banner",
-      );
-      ctx.save();
-      padButton(ctx, x + r * 0.72, yy + r * 0.72, 3.6, "#5a5a66", "X");
-      ctx.restore();
+      const pu = ui[pl.player]!;
+      if (at) drawMorphRing(ctx, at, pu.morph, !!pu.morphBack, col);
     }
     for (const learner of w.players.filter(
       (p) => p.team === t && ui[p.player]?.learnReady && ui[p.player]!.buildMenu === "closed",
     )) {
       const at = this.panelAt[learner.player];
-      if (at) this.drawLearnCards(ctx, W, at.x, at.y + 2, w, learner.heroId, at.right, now);
+      if (at) drawLearnCards(ctx, W, at.x, at.y + 2, w, learner.heroId, at.right, now);
     }
-    if (menuUi && menuHero !== undefined) {
-      const c = this.buildCross(w, t, menuHero, menuUi);
-      if (c) this.drawCross(ctx, crossX, crossY, c, right, 1);
 
+    // An open build menu replaces the army HUD.
+    const menuUi = opener ? ui[opener.player] : null;
+    if (menuUi && opener) {
+      const c = buildCross(w, t, opener.heroId, menuUi);
+      if (c) drawCross(ctx, this.memo, `cross${this.crossN++}`, crossX, crossY, c, 1);
       return;
     }
+
+    // Army: the orders panel, plus the order cross for whoever commands (the commander first in 2v2).
     const o = this.orders[t];
     const team = w.players.filter((p) => p.team === t).sort((a, b) => Number(b.commander) - Number(a.commander));
     const pickerP = team.find((p) => !!ui[p.player]);
     const picker = pickerP ? ui[pickerP.player] : null;
     if (pickerP) [crossX, crossY] = crossOf(pickerP.player);
     const group = picker?.group ?? "all";
-    this.drawOrders(ctx, W, H, w, t, right, now, picker ? group : null, F);
+    const env = {
+      memo: this.memo,
+      teamColors: this.teamColors,
+      portraits: this.portraits,
+      split: this.split,
+      laneCount: this.laneCount,
+    };
+    drawOrders(ctx, env, W, H, w, t, right, now, o, picker ? group : null, F);
+    const crossId = () => `cross${this.crossN++}`;
     if (!picker) {
-      if (now < o.until)
-        this.orderCross(ctx, crossX, crossY, w, t, o.type, right, Math.min(1, (o.until - now) * 2.5), now, false);
+      // Nobody local commands this team: flash its last order briefly.
+      if (now < o.until) {
+        const alpha = Math.min(1, (o.until - now) * 2.5);
+        drawOrderCross(ctx, this.memo, crossId(), crossX, crossY, w, t, o.type, alpha, now, false);
+      }
       return;
     }
     const recent = Math.max(picker.lastOrderAt, picker.groupAt);
     const fresh = now - recent < 1.6;
     if (this.dense && !fresh) return;
-    this.orderCross(ctx, crossX, crossY, w, t, group, right, fresh ? 1 : 0.5, now, now - picker.groupAt < 1.6);
-    void mui;
-    void cui;
-  }
-
-  private orderCross(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: World,
-    t: number,
-    group: UnitType | "all",
-    right: boolean,
-    alpha: number,
-    now: number,
-    groupHint: boolean,
-  ): void {
-    const ts = w.teams[t];
-    const order: Directive[] = ["push", "follow", "defend", "hold"];
-    const cur =
-      group === "all"
-        ? UNIT_TYPES.every((k) => ts.directives[k] === ts.directives.grunt)
-          ? ts.directives.grunt
-          : null
-        : ts.directives[group];
-    const lit = cur ? order.indexOf(cur) : -1;
-    this.drawCross(
-      ctx,
-      x,
-      y,
-      { title: `ORDER ${TYPE_NAME[group]}`, items: order.map((d) => [DIR_NAME[d], ""]), lit, until: 0 },
-      right,
-      alpha,
-    );
-    if (groupHint) {
-      const hint = "D-PAD LEFT / RIGHT: WHO OBEYS";
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, alpha + 0.2) * (Math.floor(now * 4) % 2 ? 1 : 0.85);
-      drawText(ctx, hint, Math.round(x - textWidth(hint, 0.6) / 2), y + 22, "#ffe070", 0.6);
-      ctx.restore();
-    }
-  }
-
-  portraits: Portraits | null = null;
-
-  private drawOrders(
-    ctx: CanvasRenderingContext2D,
-    W: number,
-    H: number,
-    w: World,
-    t: number,
-    right: boolean,
-    now: number,
-    selected: UnitType | "all" | null,
-    F: Frame | null = null,
-  ): void {
-    const ts = w.teams[t];
-    const o = this.orders[t];
-    const counts: Record<UnitType, number> = { grunt: 0, ranged: 0, heavy: 0 };
-    for (const e of w.entities) if (e.alive && e.unit && e.team === t) counts[e.unit.type]++;
-    const cw = 25;
-    const pw = cw * 3;
-    const ph = 26;
-    const x0 = F ? (right ? F.x + F.w - MARGIN_X - pw : F.x + MARGIN_X) : right ? W - MARGIN_X - pw : MARGIN_X;
-    const y0 = (F ? F.y + F.h : H) - ph - 6;
-    const flash = now < o.until - 1.2;
-    const form = ts.formation ?? "mass";
-    const showForm = form !== "mass" || w.players.some((q) => q.team === t && q.commander);
-    const key = [
-      x0,
-      y0,
-      right,
-      selected,
-      flash,
-      o.type,
-      showForm ? form : "",
-      ts.attackTeam ?? -1,
-      ts.lane ?? -1,
-      ...UNIT_TYPES.map((k) => `${counts[k]}${ts.directives[k]}${!!this.portraits?.unitIcon(k, t)}`),
-    ].join("|");
-    const s = this.split >= 3 ? 0.5 : 1;
-    const ax = right ? x0 + pw : x0;
-    const ay = y0 + ph;
-    ctx.save();
-    if (s !== 1) {
-      ctx.translate(ax, ay);
-      ctx.scale(s, s);
-      ctx.translate(-ax, -ay);
-    }
-    this.memo(ctx, `orders${t}`, key, x0 - 24, y0 - 6, pw + 48, ph + 12, (c) => {
-      this.drawOrdersBody(c, x0, y0, pw, ph, cw, t, ts, o, counts, selected, flash, right);
-      if (showForm) formationBadge(c, right ? x0 - 9 : x0 + pw + 9, y0 + 10.5, form);
-      return 0;
-    });
-    ctx.restore();
-  }
-
-  private drawOrdersBody(
-    ctx: CanvasRenderingContext2D,
-    x0: number,
-    y0: number,
-    pw: number,
-    ph: number,
-    cw: number,
-    t: number,
-    ts: World["teams"][number],
-    o: { type: UnitType | "all"; until: number },
-    counts: Record<UnitType, number>,
-    selected: UnitType | "all" | null,
-    flash: boolean,
-    right = false,
-  ): void {
-    void pw;
-    void ph;
-    const r = 9.5;
-    const order = right ? [...UNIT_TYPES].reverse() : UNIT_TYPES;
-    order.forEach((k, i) => {
-      const x = x0 + cw / 2 + i * cw;
-      const y = y0 + r + 1;
-      const sel = !!selected && (selected === "all" || selected === k);
-      const hit = flash && (o.type === "all" || o.type === k);
-      ctx.save();
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.arc(x, y, r + 1.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#2a1c12";
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      const icon = this.portraits?.unitIcon(k, t);
-      if (icon) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r - 1.2, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(icon, x - r - 1, y - r - 2, r * 2 + 2, r * 2 + 2);
-        ctx.restore();
-      }
-      ctx.lineWidth = sel || hit ? 1.8 : 1.1;
-      ctx.strokeStyle = hit ? "#fff4c0" : sel ? "#ffd040" : "#a07a34";
-      ctx.beginPath();
-      ctx.arc(x, y, r - 0.6, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-      orderBadge(
-        ctx,
-        x + r * 0.74,
-        y - r * 0.74,
-        ts.directives[k],
-        t === 1 || right,
-        ts.directives[k] === "push" && (ts.attackTeam ?? -1) >= 0 ? this.teamColors[ts.attackTeam!] : undefined,
-      );
-      if (ts.directives[k] === "push" && (ts.lane ?? -1) >= 0 && this.laneCount > 0) {
-        const lx = x + r * 0.74 + (right || t === 1 ? -7.5 : 7.5);
-        const n = this.laneCount;
-        const top = y - r * 0.74 - (n * 3.4) / 2;
-        ctx.fillStyle = INK;
-        ctx.fillRect(Math.round(lx - 2), Math.round(top - 1), 4, Math.round(n * 3.4 + 1.6));
-        for (let q = 0; q < n; q++) {
-          ctx.fillStyle = q === ts.lane ? "#ffd848" : "#5a4a3a";
-          ctx.fillRect(Math.round(lx - 1), Math.round(top + q * 3.4), 2, 2.4);
-        }
-      }
-      const n = String(counts[k]);
-      const nw = textWidth(n, 0.6, true);
-      const pw2 = Math.max(7, nw + 4);
-      ctx.fillStyle = INK;
-      ctx.fillRect(Math.round(x - pw2 / 2 - 1), Math.round(y + r - 3), Math.round(pw2 + 2), 9);
-      ctx.fillStyle = "#3a2a1a";
-      ctx.fillRect(Math.round(x - pw2 / 2), Math.round(y + r - 2), Math.round(pw2), 7);
-      drawNum(ctx, n, Math.round(x - nw / 2), Math.round(y + r - 2), counts[k] ? "#fff4d8" : "#9a8a70", 0.6);
-    });
-  }
-
-  private mini: { x: number; y: number; w: number; h: number } | null = null;
-  private panelAt: Record<number, { x: number; y: number; right: boolean }> = {};
-
-  private drawLearnCards(
-    ctx: CanvasRenderingContext2D,
-    W: number,
-    ax0: number,
-    top: number,
-    w: World,
-    heroId: number,
-    right: boolean,
-    now: number,
-  ): void {
-    const hero = w.getAny(heroId);
-    const opt = hero?.alive ? options(w, hero) : null;
-    if (!opt || !hero?.hero) return;
-    const owned = new Set((["r", "b", "a", "z"] as const).flatMap((sl) => learned(w, hero, sl).map((t) => t.id)));
-    const r = 12;
-    const gap = 8;
-    const tw = r * 4 + gap;
-    const x0 = right ? Math.min(W - 4, ax0) - tw : Math.max(4, ax0);
-    const yc = Math.round(top + r + 2);
-    const bob = Math.sin(now * 4) * 0.8;
-    opt.list.forEach((o, k) => {
-      const x = x0 + r + k * (r * 2 + gap);
-      const y = yc + (k ? -bob : bob);
-      const syn = (o.with ?? []).some((q) => owned.has(q.id));
-      ctx.save();
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.arc(x, y, r + 1.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#2a1c12";
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = syn ? 2 : 1.1;
-      ctx.strokeStyle = syn ? (Math.floor(now * 4) % 2 ? "#ff3a2a" : "#c81810") : "#c89a40";
-      ctx.beginPath();
-      ctx.arc(x, y, r - (syn ? 0.6 : 0.9), 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-      const im = talentImgs.get(o.id);
-      if (im?.complete && im.naturalWidth) {
-        const sz = r * 1.45;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r - 1.6, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(im, x - sz / 2, y - sz / 2, sz, sz);
-        ctx.restore();
-      }
-      const bx = x + (k ? r * 0.72 : -r * 0.72);
-      const by = y + r * 0.72;
-      ctx.save();
-      padButton(ctx, bx, by, 3.6, "#e8c030", "");
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      const d = k ? 1 : -1;
-      ctx.moveTo(bx + d * 1.9, by);
-      ctx.lineTo(bx - d * 1.2, by - 1.7);
-      ctx.lineTo(bx - d * 1.2, by + 1.7);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    });
-    if (hero.hero.pickSince !== undefined) {
-      const left = Math.max(0, Math.ceil(w.autoPickSeconds - (w.time - hero.hero.pickSince)));
-      const tx = String(left);
-      drawNum(
-        ctx,
-        tx,
-        Math.round(x0 + tw / 2 - textWidth(tx, 0.7, true) / 2),
-        Math.round(yc - 3),
-        left <= 3 ? "#ff9070" : "#f0e4c8",
-        0.7,
-      );
-    }
-  }
-
-  private buildCross(w: World, team: number, heroId: number, mui: MapperUi): Cross | null {
-    const hero = w.getAny(heroId);
-    if (!hero?.alive) return null;
-    if (mui.buildMenu === "learn") {
-      const opt = options(w, hero);
-      if (!opt)
-        return {
-          title: "NOTHING TO LEARN",
-          items: [
-            ["", ""],
-            ["", ""],
-            ["", ""],
-            ["LATER", ""],
-          ],
-          lit: -1,
-          until: 0,
-        };
-      return {
-        title: `EVOLVE ${opt.slot.toUpperCase()}`,
-        items: [
-          ["", ""],
-          [opt.list[0]?.name ?? "", ""],
-          [opt.list[1]?.name ?? "", ""],
-          ["LATER", ""],
-        ],
-        lit: -1,
-        until: 0,
-      };
-    }
-    if (mui.buildMenu === "shop") {
-      const sh = w.data.match.arena.shop;
-      const ts = w.teams[team];
-      const k = (n: number) => String(Math.round(n * w.costMul()));
-      const wardWait = Math.ceil(ts.wardReadyAt - w.time);
-      return {
-        title: "KEEP SHOP",
-        items: [
-          ["BOMB", k(sh.bomb.cost)],
-          ["SHIELD", wardWait > 0 ? `${wardWait}S` : k(sh.ward.cost)],
-          ["CANNON", k(sh.cannon.cost)],
-          ["CANCEL", ""],
-        ],
-        lit: -1,
-        until: 0,
-      };
-    }
-    const pad = padNear(w, hero);
-    if (!pad)
-      return {
-        title: "NO PAD HERE",
-        items: [
-          ["", ""],
-          ["", ""],
-          ["", ""],
-          ["", ""],
-        ],
-        lit: -1,
-        until: 0,
-      };
-    const c = (k: Parameters<typeof buildCost>[1]) => String(buildCost(w, k, false, team));
-    const st = pad.structureId ? w.get(pad.structureId) : undefined;
-    if (mui.buildMenu === "spec" && st?.structure && st.team === team && canSpec(w, st)) {
-      const specs = w.data.structures.types[st.structure.type as Parameters<typeof buildCost>[1]].specs ?? [];
-      const cost = String(specCost(w, st.structure.type as Parameters<typeof buildCost>[1], team));
-      return {
-        title: "LEVEL 3",
-        items: [
-          [specs[0]?.name ?? "", cost],
-          [specs[1]?.name ?? "", cost],
-          [specs[2]?.name ?? "", cost],
-          ["CANCEL", ""],
-        ],
-        lit: -1,
-        until: 0,
-      };
-    }
-    if (st?.structure && st.team === team) {
-      const up =
-        st.structure.level < 2
-          ? String(buildCost(w, st.structure.type as Parameters<typeof buildCost>[1], true, team))
-          : "";
-      return {
-        title: st.structure.level < 2 ? "UPGRADE" : "MAX LEVEL",
-        items: [
-          [up ? "UPGRADE" : "", up],
-          ["", ""],
-          ["", ""],
-          ["CANCEL", ""],
-        ],
-        lit: -1,
-        until: 0,
-      };
-    }
-    return mui.buildMenu === "tower"
-      ? {
-          title: "TOWERS",
-          items: [
-            ["DAMAGE", c("damage")],
-            ["CONTROL", c("control")],
-            ["", ""],
-            ["CANCEL", ""],
-          ],
-          lit: -1,
-          until: 0,
-        }
-      : w.terrain.outposts
-        ? {
-            title: "OUTPOSTS",
-            items: [
-              ["OUTPOST", c("outpost")],
-              ["", ""],
-              ["", ""],
-              ["CANCEL", ""],
-            ],
-            lit: -1,
-            until: 0,
-          }
-        : {
-            title: "OUTPOSTS",
-            items: [
-              ["RANGE", c("range")],
-              ["BARRACKS", c("barracks")],
-              ["FOUNDRY", c("foundry")],
-              ["CANCEL", ""],
-            ],
-            lit: -1,
-            until: 0,
-          };
-  }
-
-  private crossN = 0;
-
-  private drawCross(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    c: Cross,
-    right: boolean,
-    alpha: number,
-  ): void {
-    const key = [x, y, c.title, c.items.flat().join(","), c.lit, alpha].join("|");
-    const side = (i: number) =>
-      Math.max(textWidth(c.items[i][0], 0.75), c.items[i][1] ? textWidth(c.items[i][1], 0.8, true) : 0);
-    const half =
-      Math.max(
-        textWidth(c.title, 0.8) / 2,
-        textWidth(c.items[0][0], 0.75) / 2,
-        textWidth(c.items[3][0], 0.75) / 2,
-        9 + 4.6 + 3 + Math.max(side(1), side(2)),
-      ) + 6;
-    const top = 9 + (c.items[0][1] ? 32 : 23) + 6;
-    this.memo(ctx, `cross${this.crossN++}`, key, x - half, y - top, half * 2, top + 9 + 5 + 8 + 12 + 6, (g) => {
-      this.drawCrossBody(g, x, y, c, right, alpha);
-      return 0;
-    });
-  }
-
-  private drawCrossBody(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    c: Cross,
-    right: boolean,
-    alpha: number,
-  ): void {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    const r = 4.6;
-    const d = 9;
-    const pos: [number, number, number][] = [
-      [0, -d, -Math.PI / 2],
-      [-d, 0, Math.PI],
-      [d, 0, 0],
-      [0, d, Math.PI / 2],
-    ];
-    const tw = textWidth(c.title, 0.8);
-    drawText(ctx, c.title, x - tw / 2, y - d - (c.items[0][1] ? 32 : 23), "#ffffff", 0.8);
-    pos.forEach(([dx, dy, ang], i) => {
-      cArrow(ctx, x + dx, y + dy, r, ang, c.lit < 0 || c.lit === i);
-      const [label, cost] = c.items[i];
-      if (!label) return;
-      const lit = c.lit < 0 || c.lit === i;
-      const col = lit ? "#ffffff" : "#8a8478";
-      const lw = textWidth(label, 0.75);
-      let lx: number;
-      let ly: number;
-      if (i === 0) {
-        lx = x - lw / 2;
-        ly = y - d - 13;
-      } else if (i === 3) {
-        lx = x - lw / 2;
-        ly = y + d + 5;
-      } else if (i === 1) {
-        lx = x - d - r - 3 - lw;
-        ly = y - 4;
-      } else {
-        lx = x + d + r + 3;
-        ly = y - 4;
-      }
-      drawText(ctx, label, lx, ly, col, 0.75);
-      if (cost) {
-        const cw = textWidth(cost, 0.8, true);
-        const cx = i === 1 ? lx + lw - cw : i === 2 ? lx : lx + lw / 2 - cw / 2;
-        const cy = i === 3 ? ly + 8 : i === 0 ? ly - 9 : ly + 8;
-        drawNum(ctx, cost, cx, cy, "#ffd848", 0.8);
-      }
-    });
-    void right;
-    ctx.restore();
+    const groupHint = now - picker.groupAt < 1.6;
+    drawOrderCross(ctx, this.memo, crossId(), crossX, crossY, w, t, group, fresh ? 1 : 0.5, now, groupHint);
   }
 }

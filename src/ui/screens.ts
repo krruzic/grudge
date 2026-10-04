@@ -2,7 +2,7 @@ import type { World } from "../sim/world";
 import { CAMERA_NAMES, RULE_ROWS, type Row, type Rules } from "../game/save";
 import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, Kind, Terrain, type MapData } from "../sim/terrain";
 import { drawNum, drawPlain, drawText, textWidth } from "./font";
-import { box, padButton, PAD } from "./hud";
+import { padButton, PAD } from "./hud";
 import { abilityIcon } from "./icons";
 import { costumesOf } from "../render/costumes";
 import glyphUrl from "../../assets/ui/abilities.png?url";
