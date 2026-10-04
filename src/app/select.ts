@@ -219,7 +219,7 @@ export function installKeyboardNaming(app: App): void {
       if (r) nameDone(app, ed[0], r, app.pads.keyboardSlot());
       e.preventDefault();
       e.stopImmediatePropagation();
-      app.audio.ui("move");
+      app.audio.ui("key");
     },
     true,
   );
@@ -292,7 +292,7 @@ export function runNaming(app: App, padOf: (slot: number) => number, now: number
     if (r?.done) {
       app.closedNow.add(k);
       nameDone(app, slot, r, k);
-    } else if (Object.values(p.pressed).some(Boolean)) app.audio.ui("move");
+    } else if (Object.values(p.pressed).some(Boolean)) app.audio.ui("key");
   }
 }
 
@@ -375,10 +375,10 @@ export function updateSelect(app: App, now: number, dt: number): void {
     } else if (act.type === "place") {
       slots[act.slot].hero = act.hero;
       slots[act.slot].ready = true;
-      app.audio.ui("ok");
+      app.audio.ui("seal");
     } else if (act.type === "pick") {
       slots[act.slot].ready = false;
-      app.audio.ui("move");
+      app.audio.ui("peel");
     } else if (act.type === "button") selectButton(app, act.id, act.by);
     else if (act.type === "back") selectBack(app, act.by);
   }

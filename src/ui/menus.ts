@@ -335,7 +335,7 @@ export class Menus {
       const np = Math.max(0, Math.min(pages - 1, this.codexPage + flip));
       if (np !== this.codexPage) {
         this.codexPage = np;
-        sound("move");
+        sound("page");
       }
     }
     return null;

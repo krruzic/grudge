@@ -302,6 +302,7 @@ export function checkMatchOver(app: App, now: number): void {
   if (app.overAt < 0) {
     app.overAt = now;
     app.hud.banner_(w.match.winner < 0 ? "DRAW" : `${w.teamName(w.match.winner)} WINS`, now, 3, true);
+    app.audio.announce(w.match.winner < 0 ? "its_a_tie" : "winner");
     return;
   }
   if (now - app.overAt <= 3) return;

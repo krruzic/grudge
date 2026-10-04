@@ -55,8 +55,10 @@ export function startLoop(app: App, onFirstFrame: () => void): void {
     pft = perf.cpu("hudUpdate", pft);
     if (app.state === "match") {
       trackEliminations(app);
-      app.audio.handle(app.world.events, (x, y, z) => app.view.worldToScreen(x, y, z));
-    }
+      const hearing = app.view.listeners();
+      app.audio.handle(app.world.events, hearing, app.world);
+      app.audio.track(app.world, hearing, maps[app.mapIndex].id, dt);
+    } else if (app.state !== "paused") app.audio.quiet();
     updateMusic(app);
 
     const s = app.state;

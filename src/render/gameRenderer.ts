@@ -90,6 +90,18 @@ void main() {
 /** Highest devicePixelRatio the 3D view honours; beyond 2x the extra pixels are not visible at game distance. */
 const MAX_DPR = 2;
 
+/** An audio listener (see GameRenderer.listeners). */
+export interface Listener {
+  x: number;
+  z: number;
+  /** Metres the view sees across. */
+  width: number;
+  cam: THREE.Camera;
+  /** The view's horizontal slice of the screen, as fractions. */
+  left: number;
+  span: number;
+}
+
 export class GameRenderer {
   // ── Scene and render target ──
   readonly renderer: THREE.WebGLRenderer;
@@ -892,6 +904,36 @@ export class GameRenderer {
       this.drawScene(cam, viewer);
     });
     this.renderer.setScissorTest(false);
+  }
+
+  /**
+   * Audio listeners: one per live view (the full camera, or each split view) - where it looks, how wide it sees,
+   * its camera and its horizontal slice of the screen (0..1) - plus the local humans' hero ids.
+   */
+  listeners(): { views: Listener[]; own: Set<number> } {
+    const own = new Set<number>();
+    for (const p of this.world.players) if (this.humanList[p.player] && p.heroId) own.add(p.heroId);
+    if (this.splitViews.length > 1) {
+      const tw = this.target.width || 1;
+      const rects = this.splitRects(tw, this.target.height || 1);
+      return {
+        views: this.splitViews.map((sv, i) => ({
+          x: sv.st.focus.x,
+          z: sv.st.focus.z,
+          width: sv.st.width,
+          cam: sv.cam,
+          left: rects[i][0] / tw,
+          span: rects[i][2] / tw,
+        })),
+        own,
+      };
+    }
+    const sv = this.splitViews[0];
+    const f = sv && !this.overview ? sv.st : { focus: this.camFocus, width: this.camWidth };
+    return {
+      views: [{ x: f.focus.x, z: f.focus.z, width: f.width, cam: sv?.cam ?? this.camera, left: 0, span: 1 }],
+      own,
+    };
   }
 
   worldToScreen(x: number, y: number, z: number): { x: number; y: number } {

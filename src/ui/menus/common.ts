@@ -39,7 +39,7 @@ export interface Pointer {
 /** What the app should do after a menu update. "options" = settings changed, re-apply them. */
 export type MenuResult = "fight" | "training" | "title" | "options" | "host" | "join" | "browse" | "leave" | null;
 
-export type Sound = (k: "move" | "ok" | "back") => void;
+export type Sound = (k: "move" | "ok" | "back" | "page") => void;
 
 /**
  * Mouse targets registered while drawing a page (ids like "row:3", "dec:1", "tab:0", "cpg:-1"); the next

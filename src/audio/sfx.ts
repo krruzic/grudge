@@ -1,11 +1,16 @@
-// Audio: procedural WebAudio sound effects for sim events (hits, deaths, abilities, buildings, notices), UI
-// blips, and looping music tracks per screen. handle() reads a frame's SimEvents and pans / attenuates each
-// sound by its on-screen position (toScreen); setMusic() picks the track (duck = pause volume) and update()
-// fades between tracks.
-// Nothing plays until unlock() after the first user input (browser autoplay rules).
+// Audio: the WebAudio engine. Sound effects are mostly CC0 samples (bank.ts) with a few synth recipes (tone/hiss)
+// for UI ticks, chimes and pitch-following loops; music is looping tracks per screen.
+//   handle()  places each SimEvent of a frame in 3D (spatial.ts) and plays its recipe (events.ts)
+//   track()   per-frame world watching: status changes, footsteps, map ambience (tracker.ts, ambience.ts)
+//   ui()      menu sounds; setMusic()/update() pick and cross-fade the music track
+// Buses: sfx (effects, voices, UI) and ambience under the sound level, music under the music level, all into
+// one compressor. Nothing plays until unlock() after the first user input (browser autoplay rules).
 import type { SimEvent } from "../sim/types";
-
-type Screen = (x: number, y: number, z: number) => { x: number; y: number };
+import type { World } from "../sim/world";
+import { Bank } from "./bank";
+import { playEvent } from "./events";
+import { CENTER, lean, place, type Hearing, type Place } from "./spatial";
+import { Tracker } from "./tracker";
 
 import menuUrl from "../../assets/music/menu.mp3?url";
 import selectUrl from "../../assets/music/select.mp3?url";
@@ -28,13 +33,60 @@ const LOOP_SECONDS: Record<string, number> = {
   results: 41.795,
 };
 
+/** Events heard everywhere regardless of distance (map-wide happenings, match flow, orders). */
+const GLOBAL = new Set(["gates", "horn", "avalanche", "tide", "mist", "notice", "directive", "eliminated"]);
+/** Global events that still lean toward where they happened. */
+const LEAN = new Set(["relic"]);
+/** Most sample voices at once; past this only priority sounds start. */
+const MAX_VOICES = 56;
+
+export type UiSound =
+  | "move"
+  | "ok"
+  | "back"
+  | "start"
+  | "seal"
+  | "peel"
+  | "key"
+  | "page"
+  | "error"
+  | "open"
+  | "close"
+  | "join"
+  | "leave"
+  | "tick";
+
+export interface PlayOpts {
+  rate?: number;
+  /** Seconds from now. */
+  at?: number;
+  /** Random pitch spread (default ±5%). */
+  jitter?: number;
+  /** Plays even when the voice budget is full. */
+  priority?: boolean;
+  /** Footsteps and other bed-level detail (ducked under everything else, never extends the busy window). */
+  quiet?: boolean;
+  loop?: boolean;
+  bus?: AudioNode;
+}
+
 export class Audio {
-  private ctx: AudioContext | null = null;
+  ctx: AudioContext | null = null;
   private master!: GainNode;
   private sfxBus!: GainNode;
+  ambBus!: GainNode;
   private musicBus!: GainNode;
   private noise!: AudioBuffer;
   private budget = new Map<string, number>();
+  readonly bank = new Bank();
+  private tracker = new Tracker();
+  private voices = 0;
+  /** Dev builds: plays per sample id (+1000 per request for a missing id), for playtest tooling. */
+  readonly log = new Map<string, number>();
+  /** ctx time until which "something loud" is playing (footsteps duck under it). */
+  busyUntil = 0;
+  /** Per champion + voice line: earliest next line (voices would otherwise chatter). */
+  private vocalAt = new Map<string, number>();
 
   private musicLevel = 0.5;
   private sfxLevel = 1;
@@ -44,6 +96,7 @@ export class Audio {
     this.sfxLevel = sound;
     if (this.musicBus) this.musicBus.gain.value = this.musicLevel;
     if (this.sfxBus) this.sfxBus.gain.value = this.sfxLevel;
+    if (this.ambBus) this.ambBus.gain.value = this.sfxLevel * 0.45;
   }
 
   constructor(private volume = 0.7) {
@@ -67,6 +120,9 @@ export class Audio {
       this.sfxBus = c.createGain();
       this.sfxBus.gain.value = this.sfxLevel;
       this.sfxBus.connect(this.master);
+      this.ambBus = c.createGain();
+      this.ambBus.gain.value = this.sfxLevel * 0.45;
+      this.ambBus.connect(this.master);
       this.musicBus = c.createGain();
       this.musicBus.gain.value = this.musicLevel;
       this.musicBus.connect(this.master);
@@ -74,6 +130,7 @@ export class Audio {
       this.noise = c.createBuffer(1, len, c.sampleRate);
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this.bank.load(c);
     }
     if (this.ctx.state === "suspended") void this.ctx.resume();
   }
@@ -82,10 +139,49 @@ export class Audio {
     return !!this.ctx && this.ctx.state === "running";
   }
 
-  private allow(key: string, max: number): boolean {
+  get now(): number {
+    return this.ctx?.currentTime ?? 0;
+  }
+
+  /** At most `max` sounds of this key per frame. */
+  allow(key: string, max: number): boolean {
     const n = this.budget.get(key) ?? 0;
     if (n >= max) return false;
     this.budget.set(key, n + 1);
+    return true;
+  }
+
+  // ── Routing ──
+
+  /** Where the current event's voices go (set per event by begin(); the sfx bus otherwise). */
+  private dest: AudioNode | null = null;
+
+  /** Routes the next voices through one placed chain: gain -> (off-screen lowpass) -> pan -> sfx bus. */
+  begin(p: Place, bus?: AudioNode): void {
+    const c = this.ctx!;
+    const g = c.createGain();
+    g.gain.value = p.gain;
+    const pan = c.createStereoPanner();
+    pan.pan.value = Math.max(-1, Math.min(1, p.pan));
+    if (p.muffle) {
+      const f = c.createBiquadFilter();
+      f.type = "lowpass";
+      f.frequency.value = 1200;
+      g.connect(f).connect(pan);
+    } else g.connect(pan);
+    pan.connect(bus ?? this.sfxBus);
+    this.dest = g;
+  }
+
+  end(): void {
+    this.dest = null;
+  }
+
+  /** Placed chain for a sound at a world point (null when nobody hears it). */
+  at(h: Hearing, x: number, y: number, z: number, owner?: number): boolean {
+    const p = place(h, x, y, z, owner);
+    if (!p) return false;
+    this.begin(p);
     return true;
   }
 
@@ -93,22 +189,55 @@ export class Audio {
     const c = this.ctx!;
     const g = c.createGain();
     g.gain.value = gain;
+    if (!pan) {
+      g.connect(bus ?? this.dest ?? this.sfxBus);
+      return g;
+    }
     const p = c.createStereoPanner();
     p.pan.value = Math.max(-1, Math.min(1, pan));
-    g.connect(p).connect(bus ?? this.sfxBus);
+    g.connect(p).connect(bus ?? this.dest ?? this.sfxBus);
     return g;
   }
 
-  private tone(
-    type: OscillatorType,
-    f0: number,
-    f1: number,
-    dur: number,
-    gain: number,
-    pan = 0,
-    at = 0,
-    bus?: AudioNode,
-  ): void {
+  // ── Voices ──
+
+  /** Plays a random variant of a sample id through the current chain. */
+  play(id: string, gain = 1, o: PlayOpts = {}): AudioBufferSourceNode | null {
+    if (!this.ctx || gain <= 0.001) return null;
+    if (this.voices >= MAX_VOICES && !o.priority) return null;
+    const buf = this.bank.pick(id);
+    if (import.meta.env.DEV) this.log.set(id, (this.log.get(id) ?? 0) + (buf ? 1 : 1000));
+    if (!buf) return null;
+    const c = this.ctx;
+    const t = c.currentTime + (o.at ?? 0);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const j = o.jitter ?? 0.05;
+    src.playbackRate.value = (o.rate ?? 1) * (1 + (Math.random() * 2 - 1) * j);
+    src.loop = !!o.loop;
+    const g = this.out(0, gain, o.bus);
+    src.connect(g);
+    src.start(t);
+    this.voices++;
+    src.onended = () => {
+      this.voices--;
+      g.disconnect();
+    };
+    if (!o.quiet && gain > 0.15) this.busyUntil = Math.max(this.busyUntil, t + Math.min(0.5, buf.duration));
+    return src;
+  }
+
+  /** A champion's voice line (attack / big / hurt / death / taunt / order), rate-limited per champion. */
+  vocal(hero: string | undefined, line: string, gain = 0.8, o: PlayOpts & { id?: number; gap?: number } = {}): void {
+    if (!hero) return;
+    const key = `${o.id ?? hero}:${line === "death" ? "d" : "v"}`;
+    const now = this.now;
+    if ((this.vocalAt.get(key) ?? 0) > now) return;
+    if (this.play(`vo.${hero}.${line}`, gain, { jitter: 0.03, ...o }))
+      this.vocalAt.set(key, now + (o.gap ?? (line === "attack" ? 1.6 : 1.1)));
+  }
+
+  tone(type: OscillatorType, f0: number, f1: number, dur: number, gain: number, pan = 0, at = 0, bus?: AudioNode): void {
     const c = this.ctx!;
     const t = c.currentTime + at;
     const o = c.createOscillator();
@@ -124,7 +253,7 @@ export class Audio {
     o.stop(t + dur + 0.02);
   }
 
-  private hiss(
+  hiss(
     freq: number,
     q: number,
     dur: number,
@@ -152,268 +281,75 @@ export class Audio {
     src.stop(t + dur + 0.02);
   }
 
-  ui(kind: "move" | "ok" | "back" | "start"): void {
+  // ── UI ──
+
+  ui(kind: UiSound): void {
     if (!this.ready) return;
+    this.dest = null;
+    const id: Record<UiSound, string> = {
+      move: "ui.move",
+      ok: "ui.ok",
+      back: "ui.back",
+      start: "ann.fight",
+      seal: "ui.seal",
+      peel: "ui.peel",
+      key: "ui.key",
+      page: "ui.page",
+      error: "ui.error",
+      open: "ui.open",
+      close: "ui.close",
+      join: "ui.join",
+      leave: "ui.leave",
+      tick: "ui.tick",
+    };
+    const gain = kind === "move" || kind === "key" ? 0.35 : kind === "start" ? 0.9 : 0.5;
+    if (this.play(id[kind], gain, { jitter: 0.02, priority: true })) return;
+    // Samples still decoding: the old synth blips.
     if (kind === "move") this.tone("square", 660, 660, 0.06, 0.08);
-    else if (kind === "ok") {
-      this.tone("square", 520, 520, 0.08, 0.1);
-      this.tone("square", 780, 780, 0.12, 0.1, 0, 0.08);
-    } else if (kind === "back") this.tone("square", 400, 260, 0.12, 0.1);
-    else {
-      [392, 523, 659, 784].forEach((f, i) => this.tone("square", f, f, 0.16, 0.12, 0, i * 0.09));
-    }
+    else if (kind === "back") this.tone("square", 400, 260, 0.12, 0.1);
+    else this.tone("square", 520, 780, 0.1, 0.1);
   }
 
-  handle(events: SimEvent[], toScreen: Screen): void {
+  /** An announcer line (global, centred). */
+  announce(line: string, gain = 0.9): void {
+    if (!this.ready) return;
+    this.dest = null;
+    this.play(`ann.${line}`, gain, { jitter: 0, priority: true });
+  }
+
+  // ── Match ──
+
+  handle(events: SimEvent[], hearing: Hearing, w: World): void {
     if (!this.ready) return;
     this.budget.clear();
-    const W = window.innerWidth;
     for (const ev of events) {
-      const pan = "x" in ev && "z" in ev ? (toScreen(ev.x, ev.y, ev.z).x / W) * 2 - 1 : 0;
-      switch (ev.type) {
-        case "hit":
-          if (!this.allow("hit", 4)) break;
-          if (ev.blocked) {
-            this.tone("triangle", 1400, 900, 0.12, 0.12, pan);
-            this.hiss(3000, 2, 0.06, 0.1, pan, "bandpass");
-          } else if (ev.big) {
-            this.tone("sine", 140, 45, 0.22, 0.5, pan);
-            this.hiss(1200, 0.7, 0.18, 0.4, pan);
-          } else {
-            this.tone("sine", 190, 70, 0.1, 0.3, pan);
-            this.hiss(1800, 0.8, 0.07, 0.22, pan);
-          }
-          break;
-        case "avalanche":
-          if (ev.stage === "warn") {
-            this.hiss(90, 0.7, 2.5, 0.35, 0, "lowpass", 0, 160);
-            this.tone("sine", 42, 38, 2.5, 0.25);
-          } else if (ev.stage === "slide") {
-            this.hiss(400, 0.6, 2.2, 0.5, 0, "lowpass", 0, 120);
-            this.tone("sawtooth", 55, 30, 1.8, 0.18);
-          }
-          break;
-        case "gates":
-          if (ev.stage === "warn")
-            [0, 0.9, 1.8].forEach((at) => {
-              this.tone("sine", 392, 390, 1.2, 0.16, 0, at);
-              this.tone("sine", 988, 980, 0.8, 0.06, 0, at);
-            });
-          else {
-            this.tone("square", 110, 70, 0.5, 0.12);
-            this.hiss(700, 1.5, 0.6, 0.12, 0, "bandpass");
-          }
-          break;
-        case "horn":
-          this.tone("sawtooth", 98, 92, 1.6, 0.22);
-          this.tone("sawtooth", 147, 140, 1.6, 0.12);
-          this.tone("sine", 196, 180, 1.4, 0.1, 0, 0.1);
-          break;
-        case "jumppad":
-          if (ev.stage === "charge") this.tone("square", 110, 70, 0.9, 0.06, pan);
-          else if (ev.stage === "launch") {
-            this.tone("sine", 220, 720, 0.35, 0.16, pan);
-            this.hiss(1800, 0.8, 0.3, 0.08, pan, "bandpass", 0, 400);
-          } else if (ev.stage === "fail") this.tone("triangle", 300, 120, 0.25, 0.12, pan);
-          else {
-            this.tone("sine", 120, 50, 0.25, 0.3, pan);
-            this.hiss(900, 0.7, 0.25, 0.2, pan);
-          }
-          break;
-        case "tide":
-          this.hiss(ev.high ? 500 : 900, 0.6, 2.4, 0.22, 0, "lowpass", 0, ev.high ? 200 : 1600);
-          break;
-        case "mist":
-          if (ev.stage === "warn") this.hiss(600, 0.5, 3, 0.12, 0, "lowpass", 0, 250);
-          break;
-        case "lantern":
-          if (ev.stage === "rise") {
-            this.tone("sine", 300, 620, 1.6, 0.12, pan);
-            this.tone("sine", 310, 600, 1.6, 0.08, pan, 0.15);
-          } else if (ev.stage === "taken")
-            [523, 659, 784, 1046].forEach((f, i) => this.tone("triangle", f, f, 0.3, 0.1, pan, i * 0.07));
-          break;
-        case "miss":
-          if (this.allow("miss", 2)) this.hiss(2500, 1, 0.18, 0.12, pan, "bandpass", 0, 700);
-          break;
-        case "shot":
-          if (!this.allow("shot", 3)) break;
-          if (ev.style === "ballista") {
-            this.tone("sine", 180, 60, 0.18, 0.4, pan);
-            this.hiss(900, 1.5, 0.12, 0.2, pan);
-          } else if (ev.style === "arrow") this.hiss(3500, 3, 0.09, 0.1, pan, "bandpass", 0, 1500);
-          else if (ev.style === "longarrow" || ev.style === "skyshot") {
-            this.tone("triangle", 260, 140, 0.08, 0.08, pan);
-            this.hiss(3200, 3, 0.12, 0.11, pan, "bandpass", 0, 1400);
-          } else if (ev.style === "powershot") {
-            this.tone("triangle", 200, 90, 0.15, 0.14, pan);
-            this.hiss(2600, 2.5, 0.25, 0.16, pan, "bandpass", 0, 900);
-          } else if (ev.style === "orb") {
-            this.tone("sawtooth", 300, 120, 0.35, 0.1, pan);
-            this.tone("sine", 700, 250, 0.35, 0.09, pan);
-          } else if (ev.style === "magic") {
-            this.tone("sawtooth", 900, 300, 0.2, 0.07, pan);
-            this.tone("sine", 1200, 600, 0.2, 0.08, pan);
-          } else this.tone("square", 1200, 200, 0.15, 0.06, pan);
-          break;
-        case "death":
-          if (!this.allow("death", 3)) break;
-          if (ev.kind === "unit") {
-            this.hiss(900, 0.6, 0.25, 0.25, pan, "lowpass", 0, 200);
-            this.tone("square", 300, 90, 0.18, 0.05, pan);
-          } else if (ev.kind === "hero") {
-            this.tone("sawtooth", 300, 60, 0.7, 0.2, pan);
-            this.hiss(700, 0.5, 0.6, 0.35, pan, "lowpass", 0, 100);
-          } else {
-            this.tone("sine", 90, 30, 1.0, 0.7, pan);
-            this.hiss(1500, 0.4, 1.1, 0.6, pan, "lowpass", 0, 120);
-          }
-          break;
-        case "slam":
-          if (this.allow("slam", 2)) {
-            this.tone("sine", 80, 30, 0.45, 0.7, pan);
-            this.hiss(500, 0.5, 0.4, 0.45, pan, "lowpass", 0, 80);
-          }
-          break;
-        case "banner":
-          this.tone("sine", 160, 60, 0.15, 0.4, pan);
-          this.tone("triangle", 392, 392, 0.2, 0.08, pan, 0.08);
-          this.tone("triangle", 523, 523, 0.3, 0.08, pan, 0.2);
-          break;
-        case "rally":
-          [262, 330, 392, 523].forEach((f, i) => this.tone("sawtooth", f, f * 1.01, 0.5, 0.07, pan, i * 0.06));
-          break;
-        case "warcry":
-          if (this.allow("warcry", 1)) {
-            this.tone("sawtooth", 220, 330, 0.5, 0.12, pan);
-            this.tone("sawtooth", 277, 415, 0.5, 0.1, pan);
-          }
-          break;
-        case "pulse":
-          if (this.allow("pulse", 1)) this.tone("sine", 600, 120, 0.4, 0.15, pan);
-          break;
-        case "heal":
-          if (this.allow("heal", 1)) this.tone("triangle", 880, 1320, 0.15, 0.05, pan);
-          break;
-        case "build":
-          if (this.allow("build", 1)) {
-            this.tone("square", 392, 392, 0.1, 0.1, pan);
-            this.tone("square", 587, 587, 0.18, 0.1, pan, 0.1);
-            this.hiss(600, 0.7, 0.3, 0.2, pan);
-          }
-          break;
-        case "spawn":
-          if (this.allow("spawn", 1)) this.tone("triangle", 500, 800, 0.08, 0.04, pan);
-          break;
-        case "parry":
-          this.tone("triangle", 2000, 1800, 0.4, 0.2, pan);
-          this.tone("sine", 3000, 2900, 0.3, 0.1, pan);
-          break;
-        case "telegraph":
-          this.tone("sawtooth", 200, 600, ev.seconds, 0.05, pan);
-          break;
-        case "blink":
-          this.hiss(4000, 1, 0.3, 0.15, pan, "highpass");
-          break;
-        case "cannonWarn": {
-          if (!this.allow("cannonWarn", 2)) break;
-          const fly = Math.min(1.3, ev.seconds * 0.6);
-          this.tone("square", 70, 70, 0.08, 0.12, pan);
-          this.hiss(300, 0.6, 0.25, 0.35, pan, "lowpass", 0.02, 90);
-          this.tone("sine", 2400, 700, fly, 0.06, pan, ev.seconds - fly);
-          break;
-        }
-        case "cannonHit":
-          if (!this.allow("cannonHit", 2)) break;
-          this.tone("sine", 110, 28, 0.9, 0.8, pan);
-          this.hiss(900, 0.4, 1.1, 0.7, pan, "lowpass", 0, 90);
-          this.hiss(3000, 0.8, 0.25, 0.25, pan, "bandpass", 0.02, 600);
-          break;
-        case "bomb":
-          if (ev.state === "planted") {
-            this.tone("square", 900, 900, 0.05, 0.08, pan);
-            this.hiss(5000, 1.5, ev.fuse, 0.08, pan, "highpass");
-            for (let i = 1; i < ev.fuse * 2; i++)
-              this.tone("square", 1200 + i * 60, 1200 + i * 60, 0.04, 0.06, pan, i * 0.5 * (1 - i / (ev.fuse * 6)));
-          }
-          break;
-        case "reach":
-          this.hiss(900, 1, 0.18, 0.2, pan, "bandpass", 0, 300);
-          if (ev.hit) this.tone("sine", 220, 80, 0.18, 0.4, pan, 0.1);
-          break;
-        case "shove":
-          this.hiss(700, 0.8, 0.14, ev.team >= 0 ? 0.35 : 0.15, pan, "lowpass", 0, 200);
-          if (ev.team >= 0) this.tone("sine", 160, 60, 0.15, 0.3, pan);
-          break;
-        case "heroFx":
-          if (ev.name === "pipLaunch" || ev.name === "pipLatch")
-            [1800, 2400, 2100].forEach((f, i) => this.tone("sine", f, f * 1.25, 0.06, 0.05, pan, i * 0.07));
-          else if (ev.name === "pipRake") {
-            [2600, 3100].forEach((f, i) => this.tone("sawtooth", f, f * 0.6, 0.12, 0.08, pan, i * 0.05));
-            this.hiss(4000, 2, 0.18, 0.3, pan, "bandpass");
-          } else if (ev.name === "pipPeck" && this.allow("peck", 2)) this.tone("square", 2600, 1800, 0.03, 0.04, pan);
-          else if (ev.name === "heartseeker") {
-            this.tone("sawtooth", 160, 50, 0.5, 0.18, pan);
-            this.hiss(2200, 2, 0.4, 0.3, pan, "bandpass", 0, 500);
-          } else if (ev.name === "volley") this.hiss(3000, 2, 0.6, 0.12, pan, "bandpass", 0.1, 1200);
-          else if (ev.name === "volleyWave" && this.allow("volleyWave", 1))
-            this.hiss(1800, 1.5, 0.15, 0.12, pan, "bandpass");
-          else if (ev.name === "kegSplash" || ev.name === "kegSplashSmall") {
-            this.hiss(900, 0.8, 0.35, ev.name === "kegSplash" ? 0.3 : 0.15, pan, "lowpass", 0, 300);
-            this.tone("sine", 320, 520, 0.2, 0.06, pan, 0.05);
-          } else if (ev.name === "kegBoom" || ev.name === "kegPop" || ev.name === "lastCall") {
-            this.tone("sine", 90, 30, 0.6, ev.name === "kegPop" ? 0.35 : 0.75, pan);
-            this.hiss(1200, 0.4, 0.7, 0.55, pan, "lowpass", 0, 90);
-          } else if (ev.name === "kegLand") {
-            this.tone("square", 140, 90, 0.08, 0.1, pan);
-            this.hiss(6000, 1.5, 0.9, 0.06, pan, "highpass");
-          } else if (ev.name === "brewfest") {
-            this.tone("sine", 70, 40, 0.5, 0.6, pan);
-            [392, 494, 587].forEach((f, i) => this.tone("triangle", f, f, 0.25, 0.08, pan, 0.15 + i * 0.08));
-          } else if (ev.name === "kegRocket") this.tone("sawtooth", 180, 420, 0.4, 0.1, pan);
-          break;
-        case "fall":
-          this.tone("triangle", 700, 150, 0.3, 0.08, pan);
-          this.tone("sine", 90, 40, 0.2, 0.4, pan, 0.28);
-          break;
-        case "squad":
-          [196, 262, 330].forEach((f, i) => this.tone("square", f, f, 0.14, 0.07, pan, i * 0.08));
-          this.hiss(500, 0.6, 0.35, 0.18, pan, "lowpass", 0.1);
-          break;
-        case "relic":
-          if (ev.state === "taken")
-            [523, 659, 784, 1047].forEach((f, i) => this.tone("triangle", f, f, 0.18, 0.1, pan, i * 0.06));
-          else if (ev.state === "dropped")
-            [784, 622, 523, 392].forEach((f, i) => this.tone("triangle", f, f * 0.98, 0.16, 0.1, pan, i * 0.06));
-          else if (ev.state === "home") this.tone("sine", 392, 784, 0.6, 0.08, pan);
-          else if (ev.state === "stolen") {
-            [659, 523, 440, 330].forEach((f, i) => this.tone("sawtooth", f, f * 0.97, 0.22, 0.07, pan, i * 0.08));
-            this.hiss(900, 0.6, 0.5, 0.3, pan, "lowpass", 0, 200);
-          } else {
-            this.tone("sine", 70, 25, 1.4, 0.8, pan);
-            this.hiss(700, 0.4, 1.4, 0.6, pan, "lowpass", 0, 80);
-            [262, 330, 392, 523, 659].forEach((f, i) => this.tone("sawtooth", f, f, 0.5, 0.06, 0, 0.3 + i * 0.07));
-          }
-          break;
-        case "mod":
-          this.hiss(300, 0.5, 0.4, 0.3, 0, "lowpass");
-          this.tone("square", 120, 90, 0.3, 0.06, 0);
-          break;
-        case "directive":
-          if (this.allow("directive", 1)) {
-            this.tone("square", 587, 587, 0.07, 0.07, ev.team ? 0.6 : -0.6);
-            this.tone("square", 880, 880, 0.1, 0.07, ev.team ? 0.6 : -0.6, 0.07);
-          }
-          break;
-        case "notice":
-          if (ev.team < 0) {
-            this.tone("sawtooth", 196, 196, 0.6, 0.15);
-            this.tone("sawtooth", 294, 294, 0.6, 0.12, 0, 0.15);
-          } else if (this.allow("notice", 1)) this.tone("square", 220, 180, 0.15, 0.06, ev.team ? 0.6 : -0.6);
-          break;
+      let where: Place | null = CENTER;
+      if (GLOBAL.has(ev.type) || !("x" in ev && "z" in ev)) where = CENTER;
+      else if (LEAN.has(ev.type)) where = lean(hearing, ev.x, ev.y, ev.z);
+      else {
+        const e = ev as { src?: number; id?: number };
+        where = place(hearing, ev.x, ev.y, ev.z, e.id !== undefined && hearing.own.has(e.id) ? e.id : e.src);
       }
+      if (!where) continue;
+      this.begin(where);
+      playEvent(this, ev, w);
     }
+    this.dest = null;
   }
+
+  /** Per-frame world watching (statuses, footsteps, ambience); `mapId` picks the ambience beds. */
+  track(w: World, hearing: Hearing, mapId: string, dt: number): void {
+    if (!this.ready) return;
+    this.tracker.update(this, w, hearing, mapId, dt);
+    this.dest = null;
+  }
+
+  /** Silences the map ambience (menus, results). */
+  quiet(): void {
+    this.tracker.stop(this);
+  }
+
+  // ── Music ──
 
   private tracks = new Map<string, { buf: AudioBuffer | null; loading: boolean }>();
   private playing: { name: string; src: AudioBufferSourceNode; gain: GainNode } | null = null;
@@ -483,6 +419,19 @@ export class Audio {
       this.playedDuck = this.duck;
       this.playing.gain.gain.cancelScheduledValues(now);
       this.playing.gain.gain.setTargetAtTime(this.duck, now, 0.25);
+    }
+  }
+
+  /** Briefly dips the music and ambience under a huge impact (core falls, serpent breach, avalanche). */
+  impact(): void {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    for (const b of [this.musicBus, this.ambBus]) {
+      const base = b === this.musicBus ? this.musicLevel : this.sfxLevel * 0.45;
+      b.gain.cancelScheduledValues(now);
+      b.gain.setValueAtTime(b.gain.value, now);
+      b.gain.linearRampToValueAtTime(base * 0.6, now + 0.05);
+      b.gain.setTargetAtTime(base, now + 0.6, 0.5);
     }
   }
 }

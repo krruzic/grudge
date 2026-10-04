@@ -1,0 +1,14 @@
+All sound effects are CC0 / public domain, cut and processed by tools/sfx/build.py from the sources listed in
+tools/sfx/manifest.py (re-download with tools/sfx/fetch.sh). Credit is appreciated, not required:
+
+Kenney (kenney.nl): Impact Sounds, RPG Audio, Interface Sounds, UI Audio, Voiceover Pack: Fighter, Music Jingles
+rubberduck (OpenGameArt): 80 CC0 RPG SFX, 80 CC0 creature SFX (1 & 2), 100 CC0 SFX (1 & 2), 25 CC0 bang/mud SFX,
+  40 CC0 water/splash/slime SFX, 30 CC0 SFX loops, 75 CC0 breaking/falling/hit SFX, 100 CC0 wood & metal SFX
+artisticdude (OpenGameArt): RPG Sound Pack
+Voices: Warrior Voice Pack and Orc Voice Pack; Cici Fyre - RPG Voice Starter Pack (female, type 3);
+  Voice Clip Pack - Male Adventurer RPG; Zombie / Skeleton / Monster voice effects; Steampunk Fantasy Voices
+Micro Pack - Organic Wooshes; NIIIEMAND's explosion sfx; Free Sound Assets; Free SFX for anything;
+  FREE SFX PACK vol 1 & 2; Magic Sound Effects; beast_or_animal; Warfork (CC0 assets)
+  (via the cc0-sounds.exi.software mirror of OpenGameArt collections)
+BigSoundBank (bigsoundbank.com, Joseph Sardin): ambiences, birds, insects, sea, wind, fire, bells, whooshes, archery,
+  splashes and foley (sound numbers in tools/sfx/manifest.py)
