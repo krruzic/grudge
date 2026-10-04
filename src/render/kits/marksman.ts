@@ -11,8 +11,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { fxBatch, FxBatch } from "../fx/instances";
 import { KITS } from "./registry";
 
-export const HEART = WREN.heart;
-export const BEAM = composite(128, (g) => {
+const HEART = WREN.heart;
+const BEAM = composite(128, (g) => {
   const gr = g.createLinearGradient(0, 0, 0, 128);
   gr.addColorStop(0, "rgba(255,200,120,0)");
   gr.addColorStop(0.35, "rgba(255,170,90,0.7)");
@@ -22,19 +22,19 @@ export const BEAM = composite(128, (g) => {
   g.fillStyle = gr;
   g.fillRect(0, 0, 128, 128);
 });
-export const MARK_RING = WREN.markRing;
-export const VOLLEY_RING = WREN.arrowRing;
-export const HEART_RING = WREN.spiral;
+const MARK_RING = WREN.markRing;
+const VOLLEY_RING = WREN.arrowRing;
+const HEART_RING = WREN.spiral;
 export const shaftGeo = model(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 5).rotateX(Math.PI / 2));
 export const tipGeo = model(new THREE.ConeGeometry(0.075, 0.26, 4).rotateX(Math.PI / 2).translate(0, 0, 0.86));
-export const fletchGeo = model(new THREE.PlaneGeometry(0.16, 0.3).translate(0, 0, -0.6));
-export const fletch2 = model(fletchGeo.clone().rotateZ(Math.PI / 2));
-export const STAR_SHAFT = keep(new THREE.MeshLambertMaterial({ color: 0xc8cce0, flatShading: true }));
-export const STAR_TIP = keep(new THREE.MeshBasicMaterial({ color: 0xd8c8ff }));
-export const STAR_FLETCH = keep(
+const fletchGeo = model(new THREE.PlaneGeometry(0.16, 0.3).translate(0, 0, -0.6));
+const fletch2 = model(fletchGeo.clone().rotateZ(Math.PI / 2));
+const STAR_SHAFT = keep(new THREE.MeshLambertMaterial({ color: 0xc8cce0, flatShading: true }));
+const STAR_TIP = keep(new THREE.MeshBasicMaterial({ color: 0xd8c8ff }));
+const STAR_FLETCH = keep(
   new THREE.MeshLambertMaterial({ color: 0x9a4ad8, emissive: 0x3a1060, flatShading: true, side: THREE.DoubleSide }),
 );
-export function arrowMesh(scale: number, glow?: number): THREE.Group {
+function arrowMesh(scale: number, glow?: number): THREE.Group {
   const g = new THREE.Group();
   const star = activeCostume() === "starfall";
   g.add(
@@ -131,7 +131,7 @@ export function beam(
     g.scale.set(1, 1 + k * 0.6, 1 + k * 0.6);
   });
 }
-export function flyingArrow(
+function flyingArrow(
   h: FxHost,
   x0: number,
   y0: number,
@@ -148,8 +148,8 @@ export function flyingArrow(
   a.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
   h.add(a, dur, (k) => a.position.set(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k, z0 + (z1 - z0) * k));
 }
-export let rainGeo: THREE.BufferGeometry | null = null;
-export function rainArrowGeo(): THREE.BufferGeometry {
+let rainGeo: THREE.BufferGeometry | null = null;
+function rainArrowGeo(): THREE.BufferGeometry {
   if (rainGeo) return rainGeo;
   const parts: [THREE.BufferGeometry, THREE.MeshLambertMaterial][] = [
     [shaftGeo, WOOD],
@@ -168,7 +168,7 @@ export function rainArrowGeo(): THREE.BufferGeometry {
   rainGeo = model(mergeGeometries(geos, false)!);
   return rainGeo;
 }
-export function rainArrow(h: FxHost, x: number, gy: number, z: number, lean: number): void {
+function rainArrow(h: FxHost, x: number, gy: number, z: number, lean: number): void {
   const a: THREE.Object3D =
     activeCostume() === "starfall"
       ? arrowMesh(1.05)

@@ -22,7 +22,7 @@ export type Range = [number, number];
 export const rr = (r: Range) => r[0] + Math.random() * (r[1] - r[0]);
 export const UP = new THREE.Vector3(0, 1, 0);
 
-export interface EmitOpts {
+interface EmitOpts {
   tex: THREE.Texture;
   n: number;
   x: number;
@@ -49,7 +49,7 @@ export interface EmitOpts {
   order?: number;
 }
 
-export function randomDir(dir: THREE.Vector3 | null, cone: number, flat: boolean): THREE.Vector3 {
+function randomDir(dir: THREE.Vector3 | null, cone: number, flat: boolean): THREE.Vector3 {
   if (flat) {
     const a = Math.random() * Math.PI * 2;
     return new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
@@ -146,7 +146,7 @@ export function emit(h: FxHost, o: EmitOpts): void {
   }
 }
 
-export const leafGeo = new THREE.PlaneGeometry(1, 1);
+const leafGeo = new THREE.PlaneGeometry(1, 1);
 export function tumblers(
   h: FxHost,
   texes: THREE.Texture[],

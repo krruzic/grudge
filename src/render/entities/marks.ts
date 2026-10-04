@@ -11,7 +11,7 @@ import upgradeIcon from "../../../assets/ui/talents/p_upgrade.png?url";
 import shopIcon from "../../../assets/ui/talents/p_shop.png?url";
 import { SHARED_VIEW_MATS } from "./view";
 
-export function hintTex(cells: [string, string][]): THREE.CanvasTexture {
+function hintTex(cells: [string, string][]): THREE.CanvasTexture {
   const cv = cacheCanvas();
   cv.width = 128 * cells.length;
   cv.height = 128;
@@ -70,7 +70,7 @@ export const HINTS = {
   shop: new THREE.SpriteMaterial({ map: hintTex([["Y", shopIcon]]), depthTest: false, transparent: true }),
 };
 
-export function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
+function markTex(draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const cv = cacheCanvas();
   cv.width = cv.height = 128;
   const c = cv.getContext("2d")!;
@@ -372,7 +372,7 @@ export const MARKS: Record<string, THREE.SpriteMaterial> = {
 };
 for (const m of [...Object.values(HINTS), ...Object.values(MARKS), gearMat]) SHARED_VIEW_MATS.add(m);
 
-export function rankTex(rank: number): THREE.CanvasTexture {
+function rankTex(rank: number): THREE.CanvasTexture {
   const c = cacheCanvas();
   c.width = c.height = 128;
   const ctx = c.getContext("2d")!;

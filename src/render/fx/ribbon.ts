@@ -1,7 +1,7 @@
 // Ribbon: a fading triangle-strip trail between two moving points (weapon trails); CombatFx.handTrail owns them.
 import * as THREE from "three";
 
-export interface Sample {
+interface Sample {
   a: THREE.Vector3;
   b: THREE.Vector3;
   t: number;

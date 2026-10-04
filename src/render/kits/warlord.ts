@@ -26,9 +26,9 @@ function dirOf(dx: number, dz: number): THREE.Vector3 {
 const slabGeo = new THREE.BoxGeometry(1, 0.35, 0.8);
 slabGeo.userData.model = true;
 const slabMat = new THREE.MeshLambertMaterial({ map: WARLORD.slab, flatShading: true });
-export const spikeGeo = new THREE.ConeGeometry(0.42, 1.6, 5);
+const spikeGeo = new THREE.ConeGeometry(0.42, 1.6, 5);
 spikeGeo.userData.model = true;
-export const spikeMat = new THREE.MeshLambertMaterial({ map: WARLORD.slab, color: 0xd8c8b0, flatShading: true });
+const spikeMat = new THREE.MeshLambertMaterial({ map: WARLORD.slab, color: 0xd8c8b0, flatShading: true });
 slabMat.userData.keep = spikeMat.userData.keep = true;
 
 function slabs(h: FxHost, x: number, z: number, r: number, n: number, up: number, life: number): void {
@@ -107,7 +107,7 @@ function spikes(h: FxHost, x: number, z: number, r: number, n: number, life: num
   }
 }
 
-export function warlordHit(h: FxHost, x: number, y: number, z: number, dx: number, dz: number, big: boolean): void {
+function warlordHit(h: FxHost, x: number, y: number, z: number, dx: number, dz: number, big: boolean): void {
   const n = dirOf(dx, dz);
   const px = x - n.x * 0.35;
   const pz = z - n.z * 0.35;

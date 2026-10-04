@@ -14,7 +14,7 @@ function partLook(name: string, team: THREE.Color): { color: THREE.Color | null;
   };
 }
 
-export function tintedLambert(m: THREE.Material, team: THREE.Color): THREE.MeshLambertMaterial {
+function tintedLambert(m: THREE.Material, team: THREE.Color): THREE.MeshLambertMaterial {
   const s = m as THREE.MeshStandardMaterial;
   if (s.map) s.map.colorSpace = THREE.SRGBColorSpace;
   const mat = new THREE.MeshLambertMaterial({ name: m.name, map: s.map ?? null, vertexColors: true });
@@ -37,7 +37,7 @@ interface Baked {
   maps: (THREE.Texture | null)[];
 }
 
-export interface BakedKind {
+interface BakedKind {
   kind: string;
   parts: string[];
   maps: (THREE.Texture | null)[];

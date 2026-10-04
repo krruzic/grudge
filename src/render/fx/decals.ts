@@ -26,8 +26,8 @@ export function mergeParts(parts: THREE.Mesh[]): THREE.BufferGeometry {
   return g;
 }
 
-export let laurelShape: THREE.BufferGeometry | null = null;
-export function laurelGeo(): THREE.BufferGeometry {
+let laurelShape: THREE.BufferGeometry | null = null;
+function laurelGeo(): THREE.BufferGeometry {
   if (laurelShape) return laurelShape;
   const parts: THREE.Mesh[] = [];
   const leaf = new THREE.OctahedronGeometry(1, 0);
@@ -89,8 +89,8 @@ export function laurelGeo(): THREE.BufferGeometry {
   return laurelShape;
 }
 
-export let crownShape: THREE.BufferGeometry | null = null;
-export function crownGeo(): THREE.BufferGeometry {
+let crownShape: THREE.BufferGeometry | null = null;
+function crownGeo(): THREE.BufferGeometry {
   if (crownShape) return crownShape;
   const parts: THREE.Mesh[] = [new THREE.Mesh(new THREE.CylinderGeometry(1, 1.04, 0.16, 48, 1, true))];
   parts[0].position.y = 0.08;
@@ -122,8 +122,8 @@ export function crownGeo(): THREE.BufferGeometry {
   return crownShape;
 }
 
-export let crestShape: THREE.BufferGeometry | null = null;
-export function crestGeo(): THREE.BufferGeometry {
+let crestShape: THREE.BufferGeometry | null = null;
+function crestGeo(): THREE.BufferGeometry {
   if (crestShape) return crestShape;
   const parts: THREE.Mesh[] = [];
   const band = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 0.92, 0.1, 7, 1, true));
@@ -165,20 +165,20 @@ export function crestGeo(): THREE.BufferGeometry {
   return crestShape;
 }
 
-export const LAUREL_MAT = new THREE.MeshLambertMaterial({
+const LAUREL_MAT = new THREE.MeshLambertMaterial({
   color: 0xe0b840,
   emissive: 0x3a2400,
   flatShading: true,
   transparent: true,
 });
-export const CREST_MAT = new THREE.MeshLambertMaterial({
+const CREST_MAT = new THREE.MeshLambertMaterial({
   color: 0x4a403a,
   emissive: 0x1a0800,
   flatShading: true,
   transparent: true,
 });
 for (const m of [LAUREL_MAT, CREST_MAT]) m.userData.keep = true;
-export const glowRingGeo = new THREE.TorusGeometry(1, 0.06, 4, 40);
+const glowRingGeo = new THREE.TorusGeometry(1, 0.06, 4, 40);
 glowRingGeo.userData.model = true;
 
 export function model3d(
@@ -257,7 +257,7 @@ export function model3d(
   });
 }
 
-export const gearShape = (() => {
+const gearShape = (() => {
   const sh = new THREE.Shape();
   const teeth = 10;
   for (let i = 0; i < teeth * 4; i++) {
@@ -272,13 +272,13 @@ export const gearShape = (() => {
   sh.holes.push(hole);
   return sh;
 })();
-export const gearGeo = new THREE.ExtrudeGeometry(gearShape, { depth: 0.18, bevelEnabled: false, curveSegments: 8 });
+const gearGeo = new THREE.ExtrudeGeometry(gearShape, { depth: 0.18, bevelEnabled: false, curveSegments: 8 });
 gearGeo.rotateX(-Math.PI / 2);
 gearGeo.userData.model = true;
-export const GEAR_MAT = new THREE.MeshLambertMaterial({ color: 0xd0a030, flatShading: true });
+const GEAR_MAT = new THREE.MeshLambertMaterial({ color: 0xd0a030, flatShading: true });
 GEAR_MAT.userData.keep = true;
 
-export function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: number, spin: number): void {
+function gear3d(h: FxHost, x: number, y: number, z: number, r: number, life: number, spin: number): void {
   const m = new THREE.Mesh(gearGeo, GEAR_MAT);
   m.position.set(x, y, z);
   h.root.add(m);

@@ -40,15 +40,15 @@ export function silMat(team: number, skinned: boolean): THREE.MeshBasicMaterial 
   }
   return m;
 }
-export interface SilEntry {
+interface SilEntry {
   proxy: THREE.Mesh;
   src: THREE.Mesh;
 }
 export const silScene = new THREE.Scene();
 silScene.matrixWorldAutoUpdate = false;
 silScene.matrixAutoUpdate = false;
-export const SIL_ORDER = 1000;
-export const silList: SilEntry[] = [];
+const SIL_ORDER = 1000;
+const silList: SilEntry[] = [];
 /** Copies each proxy's world matrix from its source, hides it with its source, drops proxies of removed meshes. */
 export function syncSilhouettes(scene: THREE.Object3D): void {
   for (let i = silList.length - 1; i >= 0; i--) {

@@ -6,7 +6,7 @@ import { cacheCanvas } from "../../ui/cacheCanvas";
 import { FX } from "../fx/atlas";
 
 /** A `size` x `size` logical canvas drawn at roughly `res` px (scaled up by an integer factor). */
-export function canvasTex(
+function canvasTex(
   size: number,
   draw: (ctx: CanvasRenderingContext2D, s: number) => void,
   res = 256,
@@ -327,12 +327,12 @@ export const pillarTex = canvasTex(64, (ctx, s) => {
     ctx.fillRect(Math.random() * s, Math.random() * s, 2, 6);
   }
 });
-export const talentUrls = import.meta.glob("../../../assets/ui/talents/*.png", {
+const talentUrls = import.meta.glob("../../../assets/ui/talents/*.png", {
   eager: true,
   query: "?url",
   import: "default",
 }) as Record<string, string>;
-export const talentTex = new Map<string, THREE.Texture>();
+const talentTex = new Map<string, THREE.Texture>();
 export function talentTexture(id: string): THREE.Texture | null {
   const hit = talentTex.get(id);
   if (hit) return hit;

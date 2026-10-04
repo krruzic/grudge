@@ -5,7 +5,7 @@ import { FxBatch, fxBatch } from "./instances";
 import { tint } from "./atlas";
 import { type FxHost } from "./parts";
 
-export const torusGeo = new THREE.TorusGeometry(1, 0.05, 4, 36);
+const torusGeo = new THREE.TorusGeometry(1, 0.05, 4, 36);
 torusGeo.userData.model = true;
 export function shockwave(
   h: FxHost,

@@ -10,7 +10,7 @@ import type * as THREE from "three";
 import type { Entity, SimEvent } from "../../sim/types";
 import type { FxHost } from "../fx/parts";
 
-export type ActEvent = Extract<SimEvent, { type: "act" }>;
+type ActEvent = Extract<SimEvent, { type: "act" }>;
 export type HitEvent = Extract<SimEvent, { type: "hit" }>;
 
 export interface HeroKit {

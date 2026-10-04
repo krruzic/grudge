@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 
-export const DESERT_COSTUMES = new Set(["suntotem"]);
+const DESERT_COSTUMES = new Set(["suntotem"]);
 
 export function isDesert(costume: string | undefined): boolean {
   return !!costume && DESERT_COSTUMES.has(costume);
@@ -51,7 +51,7 @@ function cactusTexture(): THREE.CanvasTexture {
   return t;
 }
 
-export const CACTUS_TEX = cactusTexture();
+const CACTUS_TEX = cactusTexture();
 
 const mats = new Map<string, THREE.MeshLambertMaterial>();
 export function cactusMat(repeat: [number, number] = [4, 1]): THREE.MeshLambertMaterial {

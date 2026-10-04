@@ -10,26 +10,26 @@ import { COSTUME_SKIN } from "./chunks";
 
 export type FissureStyle = "crack" | "lava" | "moss";
 export const FISSURE_TEX = new Map<THREE.Texture, FissureStyle>();
-export const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 boxGeo.userData.model = true;
-export const FIS_MAT: Record<FissureStyle, THREE.Material> = {
+const FIS_MAT: Record<FissureStyle, THREE.Material> = {
   crack: new THREE.MeshLambertMaterial({ color: 0x1c140c, flatShading: true }),
   lava: new THREE.MeshLambertMaterial({ color: 0x24140a, flatShading: true }),
   moss: new THREE.MeshLambertMaterial({ color: 0x1e2a10, flatShading: true }),
 };
-export const lavaTex = new THREE.TextureLoader().load(lavaUrl);
+const lavaTex = new THREE.TextureLoader().load(lavaUrl);
 lavaTex.colorSpace = THREE.SRGBColorSpace;
-export const crackPlane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+const crackPlane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 crackPlane.userData.model = true;
-export const LAVA_CORE = new THREE.MeshBasicMaterial({
+const LAVA_CORE = new THREE.MeshBasicMaterial({
   map: lavaTex,
   alphaTest: 0.4,
   side: THREE.DoubleSide,
   polygonOffset: true,
   polygonOffsetFactor: -2,
 });
-export const LIP_MAT = new THREE.MeshLambertMaterial({ color: 0x6a5238, flatShading: true });
-export const MOSS_LIP = new THREE.MeshLambertMaterial({ color: 0x3a5a1c, flatShading: true });
+const LIP_MAT = new THREE.MeshLambertMaterial({ color: 0x6a5238, flatShading: true });
+const MOSS_LIP = new THREE.MeshLambertMaterial({ color: 0x3a5a1c, flatShading: true });
 for (const m of [...Object.values(FIS_MAT), LAVA_CORE, LIP_MAT, MOSS_LIP]) m.userData.keep = true;
 
 export function buildFissures(
@@ -93,7 +93,7 @@ export function buildFissures(
   return { group, parts };
 }
 
-export const SKIN_MATS = new Map<string, THREE.Material>();
+const SKIN_MATS = new Map<string, THREE.Material>();
 export function zoneFissures(
   gy: (x: number, z: number) => number,
   r: number,
@@ -117,7 +117,7 @@ export function zoneFissures(
   return group;
 }
 
-export const FIS_KEYS = new Map<THREE.Material, string>([
+const FIS_KEYS = new Map<THREE.Material, string>([
   [FIS_MAT.crack, "fc"],
   [FIS_MAT.lava, "fl"],
   [FIS_MAT.moss, "fm"],

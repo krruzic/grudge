@@ -17,7 +17,7 @@ export const barkTex = new THREE.TextureLoader().load(barkUrl);
 barkTex.wrapS = barkTex.wrapT = THREE.RepeatWrapping;
 barkTex.colorSpace = THREE.SRGBColorSpace;
 
-export const TUBE_MAX = 12;
+const TUBE_MAX = 12;
 export function tubeBundle(
   h: FxHost,
   geos: THREE.BufferGeometry[],
@@ -59,8 +59,8 @@ export function tubeBundle(
   h.root.add(mesh);
   h.add(mesh, life, (k) => tick(k, shown, sink));
 }
-export const handMat = () => new THREE.MeshLambertMaterial({ map: barkTex, color: 0xfff0d8, flatShading: true });
-export function woodHand(): THREE.Group {
+const handMat = () => new THREE.MeshLambertMaterial({ map: barkTex, color: 0xfff0d8, flatShading: true });
+function woodHand(): THREE.Group {
   const mat = handMat();
   const g = new THREE.Group();
   const palm = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.75), mat);

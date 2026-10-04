@@ -13,7 +13,7 @@ import { KITS } from "./registry";
 export const BUBBLE = FRIAR.bubble;
 export const FOAM = FRIAR.foam;
 export const ALE_DROP = FRIAR.drop;
-export const ALE_SPLASH = FRIAR.splash;
+const ALE_SPLASH = FRIAR.splash;
 export function disc(draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   return composite(
     256,
@@ -29,7 +29,7 @@ export function disc(draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasT
     512,
   );
 }
-export function speckle(
+function speckle(
   g: CanvasRenderingContext2D,
   n: number,
   rMin: number,
@@ -105,7 +105,7 @@ export const ZONE_DECALS: Record<string, THREE.Texture> = {
 ZONE_DECALS.ale = FRIAR.puddle;
 ZONE_DECALS.brewfest = FRIAR.hopRing;
 ZONE_DECALS.aletrail = ZONE_DECALS.ale;
-export function aleSplash(h: FxHost, x: number, gy: number, z: number, r: number, big: boolean): void {
+function aleSplash(h: FxHost, x: number, gy: number, z: number, r: number, big: boolean): void {
   emit(h, {
     tex: ALE_SPLASH,
     n: 1,

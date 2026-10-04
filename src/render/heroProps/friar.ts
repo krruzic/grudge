@@ -10,7 +10,7 @@ import { prop } from "../props";
 import { costumeOfPlayer } from "../costumes";
 import { emit } from "../fx/parts";
 
-export const barrelGeo = model(
+const barrelGeo = model(
   (() => {
     const pts: THREE.Vector2[] = [];
     for (let i = 0; i <= 8; i++) {
@@ -21,10 +21,10 @@ export const barrelGeo = model(
     return g;
   })(),
 );
-export const capGeo = model(new THREE.CircleGeometry(0.37, 12));
-export const bandGeo = model(new THREE.TorusGeometry(0.4, 0.025, 4, 14));
-export const fuseGeo = model(new THREE.CylinderGeometry(0.02, 0.025, 0.3, 4));
-export function barrel(dark: boolean, big = false): THREE.Group {
+const capGeo = model(new THREE.CircleGeometry(0.37, 12));
+const bandGeo = model(new THREE.TorusGeometry(0.4, 0.025, 4, 14));
+const fuseGeo = model(new THREE.CylinderGeometry(0.02, 0.025, 0.3, 4));
+function barrel(dark: boolean, big = false): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(barrelGeo, dark ? WOOD_DARK : WOOD);
   g.add(body);
@@ -44,7 +44,7 @@ export function barrel(dark: boolean, big = false): THREE.Group {
   }
   return g;
 }
-export function kegModel(kind: Keg["kind"], costume: string): THREE.Object3D {
+function kegModel(kind: Keg["kind"], costume: string): THREE.Object3D {
   const powder = kind === "powder" || kind === "minipowder";
   const mini = kind === "minipowder" || kind === "miniheal";
   const size = (powder ? 0.95 : 0.9) * (mini ? 0.55 : 1) * 1.25;

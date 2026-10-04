@@ -6,7 +6,7 @@ import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.j
 import { dyeColor, shareSkeletons, toLambert } from "./heroModels";
 import { mergedMaterial, mergeParts } from "./models/mergedModel";
 
-export interface UnitInstance {
+interface UnitInstance {
   body: THREE.Object3D;
   mixer: THREE.AnimationMixer;
   actions: Map<string, THREE.AnimationAction>;

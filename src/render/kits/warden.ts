@@ -10,7 +10,7 @@ import { KITS } from "./registry";
 import { ground } from "./shared";
 import { barkTex, LEAVES, tubeBundle, wardenHit } from "./wardenParts";
 
-export function wardenPrick(h: FxHost, x: number, y: number, z: number): void {
+function wardenPrick(h: FxHost, x: number, y: number, z: number): void {
   const gy = ground(h, x, z, y);
   const thorn = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
@@ -54,7 +54,7 @@ export function wardenPrick(h: FxHost, x: number, y: number, z: number): void {
   });
 }
 
-export function wardenSnap(h: FxHost, x: number, y: number, z: number, r: number): void {
+function wardenSnap(h: FxHost, x: number, y: number, z: number, r: number): void {
   const gy = ground(h, x, z, y);
   const mat = isDesert(activeCostume())
     ? cactusMat([4, 1])

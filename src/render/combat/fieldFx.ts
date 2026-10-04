@@ -9,7 +9,7 @@ import type { World } from "../../sim/world";
 import { targetTex, fillTex, puffTex, starTex, scorchTex, glowTex, plusTex, gearTex } from "./textures";
 import type { SimEvent } from "../../sim/types";
 
-export function makeBanner(cfx: CombatFx, team: number): THREE.Group {
+function makeBanner(cfx: CombatFx, team: number): THREE.Group {
   const g = new THREE.Group();
   const wood = new THREE.MeshLambertMaterial({ color: 0x6a4424, flatShading: true });
   const gold = new THREE.MeshLambertMaterial({ color: 0xc8a040, flatShading: true });

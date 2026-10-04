@@ -19,10 +19,10 @@ export interface Gate {
 }
 export const IRON = new THREE.MeshLambertMaterial({ color: 0x3a3a40 });
 IRON.userData.keep = true;
-export const BAR_H = 2.7;
-export const LOCK_H = 2.75;
-export const LOCK_SINK = LOCK_H + 1.2;
-export function planarUv(g: THREE.BufferGeometry, tile: number): void {
+const BAR_H = 2.7;
+const LOCK_H = 2.75;
+const LOCK_SINK = LOCK_H + 1.2;
+function planarUv(g: THREE.BufferGeometry, tile: number): void {
   const pos = g.getAttribute("position");
   const nrm = g.getAttribute("normal");
   const uv = g.getAttribute("uv");

@@ -7,9 +7,9 @@ import stoneUrl from "../../../assets/textures/stone.png?url";
 import { type FxHost, type Range, rr } from "./parts";
 import type { FissureStyle } from "./fissures";
 
-export const stoneTex = new THREE.TextureLoader().load(stoneUrl);
+const stoneTex = new THREE.TextureLoader().load(stoneUrl);
 stoneTex.colorSpace = THREE.SRGBColorSpace;
-export const chunkGeos = [0, 1, 2].map((s) => {
+const chunkGeos = [0, 1, 2].map((s) => {
   const g = new THREE.DodecahedronGeometry(0.5, 0);
   const p = g.getAttribute("position");
   for (let i = 0; i < p.count; i++) {
@@ -21,8 +21,8 @@ export const chunkGeos = [0, 1, 2].map((s) => {
 });
 export const SHARED_CHUNK_GEOS = new Set<THREE.BufferGeometry>(chunkGeos);
 
-export type Decal3D = "laurel" | "crown" | "crest" | "ring" | "gear" | "smoke";
-export interface CostumeSkin {
+type Decal3D = "laurel" | "crown" | "crest" | "ring" | "gear" | "smoke";
+interface CostumeSkin {
   chunk?: { geos: THREE.BufferGeometry[]; colors: number[]; tex?: THREE.Texture | null };
   fissure?: Partial<Record<FissureStyle, FissureStyle>>;
   fisMat?: Partial<Record<"cut" | "lip" | "core", () => THREE.Material>>;

@@ -524,7 +524,7 @@ export const FRIAR = atlas("friar", friarUrl, [
 ] as const);
 
 /** Resolves once every base sheet has loaded; composites paint and base HQ paintings start loading then. */
-export const fxReady = Promise.all(waits).then(() => {
+const fxReady = Promise.all(waits).then(() => {
   baseReady = true;
   for (const { id } of HQ_ID.values()) hqTex(id);
 });

@@ -38,7 +38,7 @@ export interface Piece {
   melt: number;
   roll: { lag: number; r: number; phase: number; tilt: THREE.Quaternion } | null;
 }
-export interface PieceSet {
+interface PieceSet {
   mesh: THREE.InstancedMesh | null;
   geo: THREE.BufferGeometry;
   mat: THREE.Material;
@@ -67,13 +67,13 @@ export interface Ava {
 export const SNOW = new THREE.MeshLambertMaterial({ color: 0xdfe6f2, vertexColors: true });
 SNOW.userData.keep = true;
 export const UP = new THREE.Vector3(0, 1, 0);
-export const MELT = 3.5;
-export const FALLBACK_GEO = new THREE.IcosahedronGeometry(0.5, 1);
+const MELT = 3.5;
+const FALLBACK_GEO = new THREE.IcosahedronGeometry(0.5, 1);
 FALLBACK_GEO.translate(0, 0.5, 0);
 FALLBACK_GEO.deleteAttribute("uv");
 FALLBACK_GEO.userData.model = true;
-export let snowCache: THREE.Texture | null = null;
-export function snowTex(): THREE.Texture {
+let snowCache: THREE.Texture | null = null;
+function snowTex(): THREE.Texture {
   if (snowCache) return snowCache;
   const t = new THREE.TextureLoader().load(snowUrl);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -81,7 +81,7 @@ export function snowTex(): THREE.Texture {
   snowCache = t;
   return t;
 }
-export function blanketMat(uni: { uFront: { value: number }; uMelt: { value: number } }): THREE.Material {
+function blanketMat(uni: { uFront: { value: number }; uMelt: { value: number } }): THREE.Material {
   const m = new THREE.MeshLambertMaterial({ map: snowTex(), vertexColors: true });
   m.onBeforeCompile = (s) => {
     s.uniforms.uFront = uni.uFront;
@@ -99,7 +99,7 @@ export function blanketMat(uni: { uFront: { value: number }; uMelt: { value: num
   m.customProgramCacheKey = () => "snowBlanket";
   return m;
 }
-export function puffTexture(): THREE.Texture {
+function puffTexture(): THREE.Texture {
   const c = cacheCanvas();
   c.width = c.height = 128;
   const g = c.getContext("2d")!;
@@ -128,7 +128,7 @@ export function puffTexture(): THREE.Texture {
   return t;
 }
 export const PUFF = puffTexture();
-export const lods = new Map<string, THREE.BufferGeometry>();
+const lods = new Map<string, THREE.BufferGeometry>();
 export function prepLods(): void {
   for (const n of ["event_drift", "event_heap", "event_boulder"]) {
     const p = propParts(n);
@@ -146,7 +146,7 @@ export function prepLods(): void {
   }
 }
 export const bright = new Map<THREE.Material, THREE.Material>();
-export function brightMat(src: THREE.Material): THREE.Material {
+function brightMat(src: THREE.Material): THREE.Material {
   let m = bright.get(src);
   if (!m) {
     const c = (src as THREE.MeshLambertMaterial).clone();
@@ -256,7 +256,7 @@ export function syncRuns(mf: MapFx, time: number, dt: number): void {
     }
   }
 }
-export function buildAva(mf: MapFx, rect: Rect, dx: number, dz: number, start: number, sweep: number): Ava {
+function buildAva(mf: MapFx, rect: Rect, dx: number, dz: number, start: number, sweep: number): Ava {
   const w = mf.world;
   const span = dx !== 0 ? rect.w : rect.h;
   const cross = dx !== 0 ? rect.h : rect.w;
@@ -428,7 +428,7 @@ export function buildAva(mf: MapFx, rect: Rect, dx: number, dz: number, start: n
   poseAva(mf, ava, start);
   return ava;
 }
-export function poseAva(mf: MapFx, v: Ava, time: number): void {
+function poseAva(mf: MapFx, v: Ava, time: number): void {
   const w = mf.world;
   const k = Math.min(1, (time - v.start) / v.sweep);
   const front = k * (v.span + 4) - 2;

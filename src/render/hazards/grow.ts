@@ -14,9 +14,9 @@ export type GrowU = {
   uGrowMul: { value: THREE.Vector2 };
   uSway: { value: THREE.Vector2 };
 };
-export const GROW_HEAD =
+const GROW_HEAD =
   "attribute vec3 aGrowCenter;\nattribute vec2 aGrowDelay;\nuniform float uGrowT;\nuniform vec2 uGrowIn;\nuniform vec2 uGrowMul;\nuniform vec2 uSway;\n";
-export const GROW_BODY = `
+const GROW_BODY = `
 float gT = uGrowT - aGrowDelay.x;
 float gK = gT / 0.3 - 1.0;
 float gE = gT <= 0.0 ? 0.001 : gT >= 0.3 ? 1.0 : 1.0 + 2.7 * gK * gK * gK + 1.7 * gK * gK;
@@ -29,7 +29,7 @@ float gA = uSway.x * sin(uSway.y + aGrowCenter.x);
 gD.xy = vec2(cos(gA) * gD.x - sin(gA) * gD.y, sin(gA) * gD.x + cos(gA) * gD.y);
 transformed = aGrowCenter + vec3(gC * gD.x + gN * gD.z, gD.y, -gN * gD.x + gC * gD.z);
 `;
-export function growMat(base: THREE.Material, u: GrowU): THREE.Material {
+function growMat(base: THREE.Material, u: GrowU): THREE.Material {
   const m = base.clone();
   m.userData.keep = false;
   m.onBeforeCompile = (s) => {

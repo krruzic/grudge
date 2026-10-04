@@ -12,7 +12,7 @@ import type { HazardViews } from "./hazardViews";
 import { mergeInto, meshesOf } from "./grow";
 
 /** Deck plank whose top-face UVs are in world units so planks line up across cells. */
-export function deckBox(x: number, z: number, h: number): THREE.BoxGeometry {
+function deckBox(x: number, z: number, h: number): THREE.BoxGeometry {
   const g = worldBox(1, h, 1);
   const uv = g.getAttribute("uv") as THREE.BufferAttribute;
   const pos = g.getAttribute("position") as THREE.BufferAttribute;
@@ -20,7 +20,7 @@ export function deckBox(x: number, z: number, h: number): THREE.BoxGeometry {
   return g;
 }
 /** Box with UVs scaled to its size (texture density independent of dimensions). */
-export function worldBox(w: number, h: number, d: number): THREE.BoxGeometry {
+function worldBox(w: number, h: number, d: number): THREE.BoxGeometry {
   const g = new THREE.BoxGeometry(w, h, d);
   const uv = g.getAttribute("uv") as THREE.BufferAttribute;
   const dims: [number, number][] = [
@@ -40,20 +40,20 @@ export function worldBox(w: number, h: number, d: number): THREE.BoxGeometry {
   return g;
 }
 /** Max cells per wall (uniform array size); hidden cells collapse to their origin. */
-export const WALL_CELLS = 64;
-export const WALL_HIDDEN = -100;
-export const WALL_HEAD = `attribute vec4 aCellO;\nuniform vec2 uCell[${WALL_CELLS}];\n`;
-export const WALL_NORMAL = `
+const WALL_CELLS = 64;
+const WALL_HIDDEN = -100;
+const WALL_HEAD = `attribute vec4 aCellO;\nuniform vec2 uCell[${WALL_CELLS}];\n`;
+const WALL_NORMAL = `
 vec2 wN = uCell[int(aCellO.w)];
 objectNormal.xy = vec2(cos(wN.y) * objectNormal.x - sin(wN.y) * objectNormal.y, sin(wN.y) * objectNormal.x + cos(wN.y) * objectNormal.y);
 `;
-export const WALL_BODY = `
+const WALL_BODY = `
 vec2 wC = uCell[int(aCellO.w)];
 vec3 wD = transformed - aCellO.xyz;
 wD.xy = vec2(cos(wC.y) * wD.x - sin(wC.y) * wD.y, sin(wC.y) * wD.x + cos(wC.y) * wD.y);
 transformed = wC.x < ${WALL_HIDDEN / 2}.0 ? aCellO.xyz : aCellO.xyz + vec3(0.0, wC.x, 0.0) + wD;
 `;
-export function wallMat(base: THREE.Material, u: { value: Float32Array }): THREE.Material {
+function wallMat(base: THREE.Material, u: { value: Float32Array }): THREE.Material {
   const m = base.clone();
   m.onBeforeCompile = (s) => {
     s.uniforms.uCell = u;
@@ -66,7 +66,7 @@ export function wallMat(base: THREE.Material, u: { value: Float32Array }): THREE
   m.customProgramCacheKey = () => "wallcells";
   return m;
 }
-export function mergeWall(g: THREE.Group, cells: THREE.Object3D[]): void {
+function mergeWall(g: THREE.Group, cells: THREE.Object3D[]): void {
   const u = { value: new Float32Array(WALL_CELLS * 2) };
   for (let k = 0; k < cells.length; k++) u.value[k * 2] = WALL_HIDDEN;
   g.userData.cellU = u;
@@ -108,7 +108,7 @@ export function syncWall(o: THREE.Object3D): void {
     a[k * 2 + 1] = c.rotation.z;
   });
 }
-export function mergeFlat(parent: THREE.Object3D): void {
+function mergeFlat(parent: THREE.Object3D): void {
   mergeInto(
     parent,
     meshesOf(parent).map((mesh) => ({ mesh })),

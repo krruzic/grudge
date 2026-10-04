@@ -69,7 +69,7 @@ export function disc(
     g.restore();
   });
 }
-export const ZONE_DECAL: Record<string, THREE.Texture> = {
+const ZONE_DECAL: Record<string, THREE.Texture> = {
   sinkhole: disc((g, img) => {
     const gr = g.createRadialGradient(128, 128, 8, 128, 128, 126);
     gr.addColorStop(0, "rgba(6,4,2,1)");
@@ -132,7 +132,7 @@ export const ZONE_DECAL: Record<string, THREE.Texture> = {
     g.drawImage(img(WARDEN.rune), 0, 0, 256, 256);
   }),
 };
-export function groundTex(draw: (c: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
+function groundTex(draw: (c: CanvasRenderingContext2D, s: number) => void): THREE.CanvasTexture {
   const cv = cacheCanvas();
   cv.width = cv.height = 512;
   const c = cv.getContext("2d")!;
@@ -142,7 +142,7 @@ export function groundTex(draw: (c: CanvasRenderingContext2D, s: number) => void
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-export const blot = (c: CanvasRenderingContext2D, s: number, colors: string[], n: number) => {
+const blot = (c: CanvasRenderingContext2D, s: number, colors: string[], n: number) => {
   for (let k = 0; k < n; k++) {
     const a = Math.random() * Math.PI * 2;
     const r = Math.pow(Math.random(), 0.7) * (s / 2 - 6);
@@ -156,7 +156,7 @@ export const blot = (c: CanvasRenderingContext2D, s: number, colors: string[], n
     );
   }
 };
-export const ZONE_TEX: Record<string, THREE.CanvasTexture> = {
+const ZONE_TEX: Record<string, THREE.CanvasTexture> = {
   bramble: groundTex((c, s) => blot(c, s, ["rgba(40,28,14,0.8)", "rgba(58,40,20,0.7)", "rgba(50,70,28,0.75)"], 160)),
   sinkhole: groundTex((c, s) => {
     const g = c.createRadialGradient(s / 2, s / 2, 4, s / 2, s / 2, s / 2 - 4);

@@ -4,7 +4,7 @@
 // `budget` caps live particles; spawn() returns null once it's reached.
 import * as THREE from "three";
 
-export interface Particle {
+interface Particle {
   x: number;
   y: number;
   z: number;

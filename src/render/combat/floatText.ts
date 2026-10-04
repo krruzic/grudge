@@ -10,19 +10,19 @@ import { fontReady, onTextLost, drawNum, textWidth, drawText } from "../../ui/fo
 // Slots are refcounted per live floater and keyed by (scale, y, colour, text); when the atlas is full the least
 // recently used idle slot is reused. Text bakes at TK x the logical size so it stays sharp at native resolution.
 
-export const TK = 3;
-export const SLOT_LW = 128;
-export const SLOT_LH = 32;
-export const SLOT_W = SLOT_LW * TK;
-export const SLOT_TEX_H = SLOT_LH * TK;
-export const SLOT_H = 40 * TK;
-export const SLOT_PAD = 4 * TK;
-export const ATLAS_H = 8192;
-export const SLOT_N = Math.floor(ATLAS_H / SLOT_H);
+const TK = 3;
+const SLOT_LW = 128;
+const SLOT_LH = 32;
+const SLOT_W = SLOT_LW * TK;
+const SLOT_TEX_H = SLOT_LH * TK;
+const SLOT_H = 40 * TK;
+const SLOT_PAD = 4 * TK;
+const ATLAS_H = 8192;
+const SLOT_N = Math.floor(ATLAS_H / SLOT_H);
 
 export const numText = (n: number): string => String(Math.max(1, Math.round(n)));
 
-export class TextAtlas {
+class TextAtlas {
   readonly tex: THREE.DataTexture;
   private keys: (string | null)[] = new Array(SLOT_N).fill(null);
   private specs: ([string, string, number, number] | null)[] = new Array(SLOT_N).fill(null);
@@ -111,7 +111,7 @@ export const textAtlas = new TextAtlas();
 // ── Floating quads ──
 // One instanced quad per floater: iPos (world position, billboarded in view space), iSize (world size),
 // iTex = (slot row, alpha). The vertex shader maps the quad's uv into that slot's row of the atlas.
-export const FLOAT_VERT = `
+const FLOAT_VERT = `
 attribute vec3 iPos;
 attribute vec2 iSize;
 attribute vec2 iTex;
@@ -127,7 +127,7 @@ void main() {
   gl_Position = projectionMatrix * mvPosition;
   #include <fog_vertex>
 }`;
-export const FLOAT_FRAG = `
+const FLOAT_FRAG = `
 uniform sampler2D map;
 varying vec2 vUv;
 varying float vAlpha;
@@ -251,7 +251,7 @@ export interface NumState {
 // ── Callouts ──
 // Ability callouts and level/talent banners are short-lived sprites with their own canvas, cached per
 // (text, colour) and rebuilt when the font atlas is lost.
-export const calloutCache = new Map<string, { tex: THREE.CanvasTexture; aspect: number }>();
+const calloutCache = new Map<string, { tex: THREE.CanvasTexture; aspect: number }>();
 export function calloutTex(text: string, color: string): { tex: THREE.CanvasTexture; aspect: number } {
   const key = `${text}|${color}`;
   const hit = calloutCache.get(key);

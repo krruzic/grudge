@@ -16,7 +16,7 @@ export function dyeColor(team: THREE.Color): THREE.Color {
   return new THREE.Color().setHSL(hsl.h, hsl.s * 0.72, hsl.l * 0.82);
 }
 
-export interface HeroInstance {
+interface HeroInstance {
   root: THREE.Group;
   body: THREE.Object3D;
   mixer?: THREE.AnimationMixer;

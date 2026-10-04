@@ -14,7 +14,7 @@ function tex(url: string): THREE.Texture {
   return t;
 }
 export const woodTex = tex(woodUrl);
-export const plankTex = tex(planksUrl);
+const plankTex = tex(planksUrl);
 export const WOOD = new THREE.MeshLambertMaterial({ map: plankTex, color: 0xffffff });
 export const WOOD_DARK = new THREE.MeshLambertMaterial({ map: plankTex, color: 0xb89c84 });
 export const MOSS_STONE = new THREE.MeshLambertMaterial({
@@ -87,7 +87,7 @@ export const stakeGeo = (() => {
 export const STAKE = new THREE.MeshLambertMaterial({ map: woodTex, color: 0xe8c8a0, flatShading: true });
 export const ROPE = new THREE.MeshLambertMaterial({ color: 0x8a6a40, flatShading: true });
 export const KEEP_GEO = new Set<THREE.BufferGeometry>([thornGeo, thornBig, chunkGeo, stakeGeo]);
-export const KEEP_MAT = new Set<THREE.Material>([
+const KEEP_MAT = new Set<THREE.Material>([
   STONE_CHUNK,
   STAKE,
   ROPE,

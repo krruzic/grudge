@@ -263,7 +263,7 @@ export function slamFx(cfx: CombatFx, x: number, y: number, z: number, radius: n
   }
   cfx.shake = Math.max(cfx.shake, radius > 4 ? 0.6 : 0.3);
 }
-export function floatSprite(
+function floatSprite(
   cfx: CombatFx,
   tex: THREE.Texture,
   aspect: number,
@@ -290,7 +290,7 @@ export function floatSprite(
     },
   });
 }
-export function pillar(cfx: CombatFx, x: number, y: number, z: number): void {
+function pillar(cfx: CombatFx, x: number, y: number, z: number): void {
   const mat = cfx.pooled(
     "pillar",
     () =>

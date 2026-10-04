@@ -322,7 +322,7 @@ export function applySlap(ents: EntityViews, e: Entity, v: View, dt: number): vo
 }
 
 /** Weapon trail ribbon from whichever hand moved most since last frame, in the kit/costume trail colour. */
-export function swingTrail(ents: EntityViews, e: Entity, v: View): void {
+function swingTrail(ents: EntityViews, e: Entity, v: View): void {
   if (!v.hands) {
     v.hands = [];
     for (const side of ["R", "L"]) {

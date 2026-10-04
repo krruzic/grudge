@@ -88,7 +88,7 @@ export function foamBatch(max: number): THREE.InstancedMesh {
   return im;
 }
 
-export function ripple(
+function ripple(
   h: FxHost,
   x: number,
   y: number,

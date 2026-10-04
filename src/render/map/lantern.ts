@@ -12,7 +12,7 @@ import { emit } from "../fx/parts";
 
 export const BONE = new THREE.MeshLambertMaterial({ color: 0xe8dcc0 });
 BONE.userData.keep = true;
-export const SOUL = new THREE.MeshBasicMaterial({
+const SOUL = new THREE.MeshBasicMaterial({
   color: 0x40ff60,
   transparent: true,
   opacity: 0.85,
@@ -20,9 +20,9 @@ export const SOUL = new THREE.MeshBasicMaterial({
   blending: THREE.AdditiveBlending,
 });
 SOUL.userData.keep = true;
-export const LANTERN_SCALE = 1.45;
-export const LANTERN_GLOW = { value: 1 };
-export function glowTexture(): THREE.Texture {
+const LANTERN_SCALE = 1.45;
+const LANTERN_GLOW = { value: 1 };
+function glowTexture(): THREE.Texture {
   const c = cacheCanvas();
   c.width = c.height = 256;
   const g = c.getContext("2d")!;
@@ -38,7 +38,7 @@ export function glowTexture(): THREE.Texture {
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-export const HALO = new THREE.SpriteMaterial({
+const HALO = new THREE.SpriteMaterial({
   map: glowTexture(),
   color: 0x70ff80,
   transparent: true,
@@ -46,7 +46,7 @@ export const HALO = new THREE.SpriteMaterial({
   blending: THREE.AdditiveBlending,
 });
 HALO.userData.keep = true;
-export const DECAL = new THREE.MeshBasicMaterial({
+const DECAL = new THREE.MeshBasicMaterial({
   map: SUMMONER.circle,
   color: 0x70ff80,
   transparent: true,
@@ -65,10 +65,10 @@ export const CHAIN = new THREE.MeshBasicMaterial({
   blending: THREE.AdditiveBlending,
 });
 CHAIN.userData.keep = true;
-export const coreGeo = new THREE.IcosahedronGeometry(0.16, 1);
-export const decalGeo = new THREE.PlaneGeometry(1, 1);
-export let chainCache: THREE.BufferGeometry | null = null;
-export function chainGeo(): THREE.BufferGeometry {
+const coreGeo = new THREE.IcosahedronGeometry(0.16, 1);
+const decalGeo = new THREE.PlaneGeometry(1, 1);
+let chainCache: THREE.BufferGeometry | null = null;
+function chainGeo(): THREE.BufferGeometry {
   if (chainCache) return chainCache;
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 9; i++) {
@@ -92,9 +92,9 @@ export function chainGeo(): THREE.BufferGeometry {
   LANTERN_GEOS.add(m);
   return m;
 }
-export const LANTERN_GEOS = new Set<THREE.BufferGeometry>([coreGeo, decalGeo]);
-export const lanternMats = new Map<THREE.Material, THREE.Material>();
-export function lanternMat(src: THREE.Material): THREE.Material {
+const LANTERN_GEOS = new Set<THREE.BufferGeometry>([coreGeo, decalGeo]);
+const lanternMats = new Map<THREE.Material, THREE.Material>();
+function lanternMat(src: THREE.Material): THREE.Material {
   let m = lanternMats.get(src);
   if (m) return m;
   const c = (src as THREE.MeshLambertMaterial).clone();
@@ -113,7 +113,7 @@ export function lanternMat(src: THREE.Material): THREE.Material {
   m = c;
   return m;
 }
-export function buildLantern(): THREE.Group {
+function buildLantern(): THREE.Group {
   const p = propParts("event_lantern");
   if (!p) return buildOldLantern();
   if (!p.geo.boundingBox) p.geo.computeBoundingBox();
@@ -153,7 +153,7 @@ export function buildLantern(): THREE.Group {
   g.add(ring);
   return g;
 }
-export function buildOldLantern(): THREE.Group {
+function buildOldLantern(): THREE.Group {
   const g = new THREE.Group();
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 6; i++) {
@@ -192,7 +192,7 @@ export function buildOldLantern(): THREE.Group {
   g.scale.setScalar(1.5);
   return g;
 }
-export function syncLanternOut(mf: MapFx, time: number): void {
+function syncLanternOut(mf: MapFx, time: number): void {
   for (let i = mf.lanternOut.length - 1; i >= 0; i--) {
     const o = mf.lanternOut[i];
     const taken = o.kind === "taken";

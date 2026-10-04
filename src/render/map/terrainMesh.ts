@@ -44,7 +44,7 @@ function vnoise(x: number, z: number): number {
 }
 
 /** Height of the plain fallback rim around maps without a surround: noise rising away from the field. */
-export function outerHeight(t: Terrain, x: number, z: number): number {
+function outerHeight(t: Terrain, x: number, z: number): number {
   const dx = Math.max(0 - x, 0, x - t.width);
   const dz = Math.max(0 - z, 0, z - t.depth);
   const d = Math.hypot(dx, dz);

@@ -284,7 +284,7 @@ function structureParts(
   return { body, bar };
 }
 
-export function batchable(body: THREE.Object3D): THREE.SkinnedMesh | null {
+function batchable(body: THREE.Object3D): THREE.SkinnedMesh | null {
   const meshes: THREE.Mesh[] = [];
   body.traverse((o) => {
     if (o instanceof THREE.Mesh) meshes.push(o);
@@ -299,7 +299,7 @@ export function batchable(body: THREE.Object3D): THREE.SkinnedMesh | null {
     return null;
   return m;
 }
-export function batchMaterial(src: THREE.SkinnedMesh, team: number): THREE.Material {
+function batchMaterial(src: THREE.SkinnedMesh, team: number): THREE.Material {
   const base = src.material as THREE.MeshLambertMaterial;
   const m = base.clone();
   m.onBeforeCompile = base.onBeforeCompile;

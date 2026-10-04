@@ -13,7 +13,7 @@ export interface Bar {
   holdUntil: number;
   drop?: number;
 }
-export const BAR_MAX = 1536;
+const BAR_MAX = 1536;
 export class BarBatch {
   readonly mesh: THREE.Mesh;
   private rect: THREE.InstancedBufferAttribute;
@@ -116,8 +116,8 @@ void main() {
   }
 }
 
-export const BAR_BG = new THREE.Color(0x101010);
-export const BAR_GHOST = new THREE.Color(0xfff0d0);
+const BAR_BG = new THREE.Color(0x101010);
+const BAR_GHOST = new THREE.Color(0xfff0d0);
 export const red = new THREE.Color(1, 0.15, 0.1);
 export function makeBar(width: number, color: THREE.Color, y: number, drop = 0): Bar {
   const group = new THREE.Group();

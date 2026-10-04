@@ -10,7 +10,7 @@ import { emit } from "../fx/parts";
 import type { HeroPropViews } from "./heroPropViews";
 import { costumeOfPlayer } from "../costumes";
 
-export function pipFallback(): THREE.Group {
+function pipFallback(): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(model(new THREE.SphereGeometry(0.16, 8, 6)), RED);
   body.scale.set(0.9, 0.85, 1.35);
@@ -40,7 +40,7 @@ export function pipFallback(): THREE.Group {
   }
   return g;
 }
-export function pipModel(costume: string): { obj: THREE.Group; wings: THREE.Object3D[]; base: number[] } {
+function pipModel(costume: string): { obj: THREE.Group; wings: THREE.Object3D[]; base: number[] } {
   const p = prop("pip", undefined, { hero: "marksman", costume });
   const obj = p ? normalized(p, 1.7) : pipFallback();
   if (!p) obj.scale.setScalar(2.7);
