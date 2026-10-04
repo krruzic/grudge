@@ -166,6 +166,26 @@ export function raiderFight(bot: Bot, w: World, me: Entity, target: Entity | und
   return false;
 }
 
+/**
+ * Remnil: Hex held to full power (x1.6) and dropped from just inside its 8 m reach; between hexes she kites at
+ * ~10.5 m, inside her 13 m bolts and out of most reach, instead of the default 8.
+ */
+export function summonerFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  if (!target?.alive || !target.hero) return;
+  const ab = abilities(w, me);
+  const range = ab.b.range ?? 8;
+  const d = w.dist(me, target);
+  const charged = chargeB(bot, w, me, target, range - 0.8, 14) && bot.holdSlot === "b" && w.time - bot.holdAt > 1;
+  if (d < 14 && w.canSee(me, target) && !foesNear(w, me, 4).length) {
+    // Step in to drop a full-power hex, otherwise hold at bolt range.
+    const want = charged && (me.hero!.cooldowns.b ?? 0) <= w.time ? range - 1.5 : 10.5;
+    const p = me.transform.pos;
+    const tp = target.transform.pos;
+    const l = Math.hypot(p.x - tp.x, p.z - tp.z) || 1;
+    bot.goal = { x: tp.x + ((p.x - tp.x) / l) * want, z: tp.z + ((p.z - tp.z) / l) * want };
+  }
+}
+
 /** Warlord HEAVE direction: into a friendly tower near the victim, else toward the own core. */
 export function heaveDir(w: World, me: Entity, victim: Entity): Vec2 {
   const ep = victim.transform.pos;

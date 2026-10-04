@@ -21,7 +21,15 @@ import {
   ok,
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
-import { engineerFight, heaveDir, raiderFight, warlordFight, wrenAbilities, wrenShoot } from "./tactics.ts";
+import {
+  engineerFight,
+  heaveDir,
+  raiderFight,
+  summonerFight,
+  warlordFight,
+  wrenAbilities,
+  wrenShoot,
+} from "./tactics.ts";
 
 /** What the bot knows about the fight this think. */
 interface Senses {
@@ -499,6 +507,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     if ((bot.wantAttack || bot.wantB || bot.wantR) && !bot.wantDodge) bot.wantFace = { x: tx / tl, z: tz / tl };
     // Marksman: charged Vantage power shots instead of tapping A (bot/tactics.ts).
     if (ab.b.kind === "pip") wrenShoot(bot, w, me, target);
+    // Summoner: charged hex, bolt-range spacing.
+    if (ab.b.kind === "hex") summonerFight(bot, w, me, target);
   }
   if (plan.healer && ab.a.kind === "combo") {
     // Melee healer: keep swinging at whatever is in reach.
