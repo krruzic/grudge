@@ -315,8 +315,9 @@ export function bombIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r:
   ctx.restore();
 }
 
-/** The Grudge relic: a horned mask. */
+/** The Grudge relic: the painted bull-head bust (assets/ui/hud/grudge.png; a vector horned mask until it loads). */
 export function relicIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  if (ready(hudIcons.get("grudge"))) return hudIcon(ctx, "grudge", x, y - r * 0.15, r * 2.9);
   ctx.save();
   const horn = (s: number) => {
     ctx.beginPath();

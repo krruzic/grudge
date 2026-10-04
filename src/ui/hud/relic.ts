@@ -54,7 +54,9 @@ export function drawRelic(
   const y = MARGIN_Y + (clockTall ? 35 : 19);
   const moving = r.state === "carried" || r.state === "dropped" || (r.state === "shrined" && r.channel > 0);
   const flash = moving ? Math.floor(now * 3) % 2 === 0 : false;
-  if (!hideLine && !w.training)
+  // A held Grudge shows as its icon on the holder's keep gem instead of a standing line (steals still announce).
+  const held = r.state === "shrined" && r.channel <= 0;
+  if (!hideLine && !w.training && !held)
     drawText(ctx, text, Math.round((W - textWidth(text, 0.72)) / 2), y, flash ? "#ffffff" : col, 0.72);
   if (r.state === "waiting" || !locate) return;
   drawOffscreenArrow(ctx, W, H, r, now, col, locate);

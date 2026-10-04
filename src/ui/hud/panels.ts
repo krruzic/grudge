@@ -90,7 +90,13 @@ export function drawTeamHead(
     if (s2?.alive && s2.team === t) pads++;
   }
   const padHot = now - (S.padHitAt[t] ?? -99) < 0.7;
+  // This house holds the Grudge (enshrined, not mid-steal): its icon sits on the keep gem.
+  const rl = w.arena.relic;
+  const holds = rl.state === "shrined" && rl.team === t;
+  const stolen = holds && rl.channel > 0 ? Math.floor(now * 4) % 2 : 0;
   const key = [
+    holds,
+    stolen,
     x0,
     y00,
     right,
@@ -116,6 +122,7 @@ export function drawTeamHead(
     const y = y00;
     const gx = ax(8);
     keepGem(c, gx + kx, y + 10 + ky, 7.2, col, hpFrac, wardFrac, now);
+    if (holds && !stolen) relicIcon(c, gx + kx, y + 12 + ky, 5.4);
     if (out) {
       fallenMark(c, gx, y + 10, 7);
       const lab = `${TEAM_NAMES[t] ?? ""} HOUSE FELL`;
