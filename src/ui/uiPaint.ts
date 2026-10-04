@@ -644,9 +644,11 @@ export function markWindow(ctx: CanvasRenderingContext2D, x: number, y: number, 
   const ch = ctx.canvas.height;
   const cx = m.a * (x + w / 2) + m.c * (y + h / 2) + m.e;
   const cy = m.b * (x + w / 2) + m.d * (y + h / 2) + m.f;
-  const sx = Math.hypot(m.a, m.b);
-  const sy = Math.hypot(m.c, m.d);
-  liveWindow.rect = [(cx - (w * sx) / 2) / cw, (cy - (h * sy) / 2) / ch, (w * sx) / cw, (h * sy) / ch];
+  // Axis-aligned bounds of the (possibly tilted) hole, so the 3D view fills it corner to corner; the paper drawn
+  // around the hole covers the overflow.
+  const hw = (Math.abs(m.a) * w + Math.abs(m.c) * h) / 2 + 2;
+  const hh = (Math.abs(m.b) * w + Math.abs(m.d) * h) / 2 + 2;
+  liveWindow.rect = [(cx - hw) / cw, (cy - hh) / ch, (hw * 2) / cw, (hh * 2) / ch];
 }
 
 export function windowCut(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {

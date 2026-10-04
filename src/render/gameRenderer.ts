@@ -152,6 +152,8 @@ export class GameRenderer {
 
   /** Draw the shared camera into this screen sub-rect only. */
   windowRect: [number, number, number, number] | null = null;
+  /** Pause / results backdrop: frame the whole field, never shake. */
+  overview = false;
 
   shakeMul = 1;
   hints = true;
@@ -763,8 +765,15 @@ export class GameRenderer {
         this.camWidth = st.width;
         this.camInit = st.init;
       }
+    } else if (this.overview) {
+      // Pause / results: a still, wide shot of the whole field (no shake, no smoothing - dt is 0 while paused).
+      const t = this.world.terrain;
+      const corners = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(t.width, 0, t.depth)];
+      const st = { focus: this.camFocus, width: this.camWidth, init: false };
+      aimCamera(this.cfg, t, this.camera, st, corners, 1, t.width, Infinity, 0);
+      this.camWidth = st.width;
     } else this.updateCamera(this.entityViews.heroPoints(), dt);
-    this.shake(this.camera);
+    if (!this.overview) this.shake(this.camera);
     this.renderer.setViewport(x, y, w, h);
     this.renderer.setScissor(x, y, w, h);
     this.drawScene(this.camera);

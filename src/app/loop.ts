@@ -68,6 +68,7 @@ export function startLoop(app: App, onFirstFrame: () => void): void {
     pft = perf.cpu("render", pft);
     // Menus mark where they cut a window onto the live 3D view during the previous UI paint.
     app.view.windowRect = liveWindow.rect;
+    app.view.overview = s === "paused" || s === "results";
     liveWindow.rect = null;
 
     drawUi(app, now, pft, fps, nowMs);
