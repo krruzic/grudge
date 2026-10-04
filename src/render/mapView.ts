@@ -10,8 +10,8 @@ import { surroundFor } from "../sim/surround";
 import sandUrl from "../../assets/textures/sand.png?url";
 import snowUrl from "../../assets/textures/snow.png?url";
 import gravelUrl from "../../assets/textures/gravel.png?url";
-import pavIdUrl from "../../assets/textures/cobble_id.png?url";
-import crackUrl from "../../assets/textures/cobble_crack.png?url";
+import pavIdUrl from "../../assets/textures/paving_id.png?url";
+import crackUrl from "../../assets/textures/paving_crack.jpg?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./map/terrainMesh";
 import { cacheCanvas } from "../ui/cacheCanvas";
@@ -213,7 +213,7 @@ function mergeProps(scene: THREE.Object3D): void {
 export async function loadMap(
   url: string,
   terrain: Terrain,
-  textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake">, string>,
+  textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake" | "pavId">, string>,
   light?: TerrainLight,
 ): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
@@ -227,15 +227,15 @@ export async function loadMap(
   const altUrl = terrain.surround === "alpine" ? snowUrl : terrain.surround === "garden" ? gravelUrl : sandUrl;
   const ruined = !!gltf.scene.getObjectByName("ground_ruined");
   const [sand, pavId, crack] = await Promise.all(
-    [altUrl, ...(ruined ? [pavIdUrl, crackUrl] : [])].map((u) => texLoader.loadAsync(u)),
+    [altUrl, pavIdUrl, ...(ruined ? [crackUrl] : [])].map((u) => texLoader.loadAsync(u)),
   );
   const root = new THREE.Group();
   root.add(gltf.scene);
   const sur = surroundFor(terrain);
-  const ruin = ruined ? { id: pavId, crack } : undefined;
+  const ruin = ruined ? { crack } : undefined;
   const lake = terrain.tideCells.length ? await texLoader.loadAsync(lakeUrl) : undefined;
   if (lake) lake.anisotropy = ANISO;
-  root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water, sand, ruin, lake }, light, sur));
+  root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water, sand, pavId, ruin, lake }, light, sur));
   for (const t of [grass, dirt, rock, cobble, sand, ...(ruined ? [crack] : [])]) t.anisotropy = ANISO;
   const waterMesh = buildWaterMesh(terrain, waterMaterial(water), sur);
   root.add(waterMesh);

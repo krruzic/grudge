@@ -18,7 +18,9 @@ export interface TerrainTextures {
   cobble: THREE.Texture;
   water: THREE.Texture;
   sand?: THREE.Texture;
-  ruin?: { id: THREE.Texture; crack: THREE.Texture };
+  /** Per-stone id map of the paving texture (see tools/pavinggen.py). */
+  pavId: THREE.Texture;
+  ruin?: { crack: THREE.Texture };
   lake?: THREE.Texture;
 }
 
@@ -63,35 +65,88 @@ function prepare(tex: THREE.Texture): THREE.Texture {
   return tex;
 }
 
+/** The id map is sampled with mipmaps: averaged ids are just other random values, and that beats shimmer. */
 function rawData(tex: THREE.Texture): THREE.Texture {
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.NoColorSpace;
   tex.magFilter = THREE.LinearFilter;
-  tex.minFilter = THREE.LinearFilter;
-  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearMipmapNearestFilter;
+  tex.generateMipmaps = true;
   tex.needsUpdate = true;
   return tex;
 }
 
-const RUIN_HEAD = `
-uniform sampler2D tPavId; uniform sampler2D tCrack; varying vec4 vRuin;
+/** Metres per repeat of the paving texture (1024 px, ~0.5 m stones). */
+const PAVING_M = 16;
+
+// Shared fragment helpers. hexTex is hex-tile stochastic sampling (Heitz & Neyret / Mikkelsen's practical
+// variant): the plane is split into a triangle grid, each vertex gets a random rotation and offset of the texture,
+// and the three nearest vertices' samples are blended with sharpened barycentric weights, so a repeating texture
+// shows no tile grid. 3 samples, gradients rotated with the uv so mip selection stays right.
+const TERRAIN_HEAD = `
+uniform sampler2D tPavId;
 float rHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float rNoise(vec2 p) {
   vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(rHash(i), rHash(i + vec2(1.0, 0.0)), f.x), mix(rHash(i + vec2(0.0, 1.0)), rHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+vec3 hexTap(sampler2D t, vec2 uv, vec2 dx, vec2 dy, vec2 v) {
+  float a = rHash(v) * 6.2831853;
+  vec2 cs = vec2(cos(a), sin(a));
+  mat2 r = mat2(cs.x, cs.y, -cs.y, cs.x);
+  vec2 c = vec2(v.x + 0.5 * v.y, 0.8660254 * v.y) * 0.2886751;
+  vec2 o = vec2(rHash(v + 17.3), rHash(v - 9.1));
+  return textureGrad(t, r * (uv - c) + c + o, r * dx, r * dy).rgb;
+}
+vec3 hexTex(sampler2D t, vec2 uv, vec2 dx, vec2 dy) {
+  vec2 st = uv * 3.4641016;
+  vec2 sk = vec2(st.x - 0.57735027 * st.y, 1.15470054 * st.y);
+  vec2 b = floor(sk);
+  vec3 f = vec3(fract(sk), 0.0);
+  f.z = 1.0 - f.x - f.y;
+  float s = step(0.0, -f.z);
+  float s2 = 2.0 * s - 1.0;
+  vec3 w = vec3(-f.z * s2, s - f.y * s2, s - f.x * s2);
+  vec3 c1 = hexTap(t, uv, dx, dy, b + vec2(s, s));
+  vec3 c2 = hexTap(t, uv, dx, dy, b + vec2(s, 1.0 - s));
+  vec3 c3 = hexTap(t, uv, dx, dy, b + vec2(1.0 - s, s));
+  vec3 lw = vec3(dot(c1, vec3(0.3, 0.59, 0.11)), dot(c2, vec3(0.3, 0.59, 0.11)), dot(c3, vec3(0.3, 0.59, 0.11)));
+  w = w * w * w * (0.6 + lw);
+  w = w * w;
+  w /= w.x + w.y + w.z;
+  vec3 mean = textureLod(t, vec2(0.5), 12.0).rgb;
+  vec3 blend = c1 * w.x + c2 * w.y + c3 * w.z;
+  return mean + (blend - mean) * min(1.4, inversesqrt(dot(w, w)));
 }`;
 
-const RUIN_PAVING = `if (sw.w > 0.0) {
-  vec2 pu = wuv / 4.0;
-  vec2 pdx = dpx.xz / 4.0; vec2 pdy = dpy.xz / 4.0;
-  vec4 pid = textureLod(tPavId, pu, 0.0);
+const RUIN_HEAD = `
+uniform sampler2D tCrack; varying vec4 vRuin;`;
+
+// Per-stone random values from the id map: every stone of every repeat gets its own (r1, r2, r3).
+const PAVING_ID = `vec2 pu = wuv / ${PAVING_M}.0;
+  vec2 pdx = dpx.xz / ${PAVING_M}.0; vec2 pdy = dpy.xz / ${PAVING_M}.0;
+  vec4 pid = textureGrad(tPavId, pu, pdx, pdy);
   float code = floor(pid.b * 8.0 + 0.5);
   vec2 cell = floor(pu) + vec2(floor(code / 3.0) - 1.0, mod(code, 3.0) - 1.0);
   float r1 = fract(sin(dot(cell, vec2(12.9898, 78.233)) + pid.r * 91.7) * 43758.5453);
   float r2 = fract(r1 * 13.37 + pid.r * 7.13);
   float r3 = fract(r1 * 31.71 + pid.r * 3.3);
   float sm = pid.g;
-  float fn = rNoise(wuv * 1.3) * 0.6 + rNoise(wuv * 3.1 + 7.0) * 0.4;
+  float fn = rNoise(wuv * 1.3) * 0.6 + rNoise(wuv * 3.1 + 7.0) * 0.4;`;
+
+// Plain paving: per-stone tint and brightness plus a slow large-scale colour drift.
+const PAVING = `if (sw.w > 0.0) {
+  ${PAVING_ID}
+  vec3 cs = textureGrad(tCobble, pu, pdx, pdy).rgb;
+  vec3 stoneTint = mix(vec3(0.9, 0.94, 1.0), vec3(1.05, 1.0, 0.9), r3) * (0.86 + 0.24 * r2);
+  cs = mix(cs, cs * stoneTint, sm);
+  float mac = rNoise(wuv * 0.06 + 31.0);
+  cs *= mix(vec3(0.95, 0.97, 1.02), vec3(1.04, 1.0, 0.93), mac) * (0.93 + 0.12 * rNoise(wuv * 0.17 - 5.0));
+  tsum += cs * sw.w;
+}`;
+
+const RUIN_PAVING = `if (sw.w > 0.0) {
+  ${PAVING_ID}
   vec3 cs = r2 < 0.1 + vRuin.x * 0.3 ? textureGrad(tCrack, pu, pdx, pdy).rgb : textureGrad(tCobble, pu, pdx, pdy).rgb;
   vec3 stoneTint = mix(vec3(0.84, 0.88, 0.94), vec3(1.07, 1.0, 0.86), r3) * (0.8 + 0.32 * r2);
   cs = mix(cs, cs * stoneTint, sm);
@@ -549,7 +604,7 @@ export function buildTerrainMesh(
     tRock: { value: prepare(tex.rock) },
     tCobble: { value: prepare(tex.cobble) },
     tSand: { value: hasSand ? prepare(tex.sand!) : null },
-    tPavId: { value: tex.ruin ? rawData(tex.ruin.id) : null },
+    tPavId: { value: rawData(tex.pavId) },
     tCrack: { value: tex.ruin ? prepare(tex.ruin.crack) : null },
     tLake: { value: hasLake ? prepare(tex.lake!) : null },
   };
@@ -569,7 +624,7 @@ export function buildTerrainMesh(
         "#include <common>",
         `#include <common>
 uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tRock; uniform sampler2D tCobble;
-varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}${hasLake ? "\nuniform sampler2D tLake; varying float vLake;" : ""}`,
+varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${TERRAIN_HEAD}${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}${hasLake ? "\nuniform sampler2D tLake; varying float vLake;" : ""}`,
       )
       .replace(
         "#include <map_fragment>",
@@ -580,7 +635,12 @@ vec3 an = abs(normalize(vWNrm));
 an = pow(an, vec3(4.0)); an /= (an.x + an.y + an.z);
 vec4 sw = vSplat / max(0.001, vSplat.x + vSplat.y + vSplat.z + vSplat.w);
 vec3 tsum = vec3(0.0);
-if (sw.x > 0.0) tsum += textureGrad(tGrass, wuv / 7.0, dpx.xz / 7.0, dpy.xz / 7.0).rgb * sw.x;
+if (sw.x > 0.0) {
+  vec3 cg = hexTex(tGrass, wuv / 7.0, dpx.xz / 7.0, dpy.xz / 7.0);
+  float gm = rNoise(wuv * 0.045 + 3.7);
+  cg *= mix(vec3(0.92, 0.97, 1.06), vec3(1.07, 1.02, 0.84), gm) * (0.92 + 0.14 * rNoise(wuv * 0.13 - 11.0));
+  tsum += cg * sw.x;
+}
 if (sw.y > 0.0) {
   vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}
 ${hasLake ? "  if (vLake > 0.0) {\n    vec3 lk = textureGrad(tLake, wuv / 8.0, dpx.xz / 8.0, dpy.xz / 8.0).rgb;\n    lk = mix(vec3(0.6, 0.56, 0.5), lk, 0.5);\n    float salt = textureGrad(tLake, wuv / 29.0 + 0.37, dpx.xz / 29.0, dpy.xz / 29.0).r;\n    lk *= 0.82 + salt * 0.38;\n    cd = mix(cd, lk * vec3(1.24, 1.0, 0.72), vLake);\n  }" : ""}
@@ -593,7 +653,7 @@ if (sw.z > 0.0) {
   if (an.z > 0.0) cr += textureGrad(tRock, vWPos.xy / 5.0, dpx.xy / 5.0, dpy.xy / 5.0).rgb * an.z;
   tsum += cr * sw.z;
 }
-${ruined ? RUIN_PAVING : "if (sw.w > 0.0) tsum += textureGrad(tCobble, wuv / 4.0, dpx.xz / 4.0, dpy.xz / 4.0).rgb * sw.w;"}
+${ruined ? RUIN_PAVING : PAVING}
 diffuseColor.rgb *= tsum;`,
       );
   };

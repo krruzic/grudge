@@ -13,7 +13,7 @@ import grassTex from "../../assets/textures/grass.png?url";
 import dirtTex from "../../assets/textures/dirt.png?url";
 import sandTex from "../../assets/textures/sand.png?url";
 import cliffTex from "../../assets/textures/cliff.png?url";
-import cobbleTex from "../../assets/textures/cobble.png?url";
+import pavingTex from "../../assets/textures/paving.jpg?url";
 import waterTex from "../../assets/textures/water.png?url";
 import type { GameData } from "../sim/config";
 import { Terrain, type MapData } from "../sim/terrain";
@@ -112,7 +112,7 @@ export async function loadAssets(): Promise<Assets> {
     grass: grassTex,
     dirt: dirtTex,
     rock: cliffTex,
-    cobble: cobbleTex,
+    cobble: pavingTex,
     water: waterTex,
     sand: sandTex,
   };
