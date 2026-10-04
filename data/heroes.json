@@ -514,7 +514,8 @@
       "botRange": 1.8,
       "hooks": {
         "heroDamageMul": 1.05,
-        "maxHits": 2
+        "maxHits": 2,
+        "structureMul": 0.55
       },
       "abilities": {
         "a": {

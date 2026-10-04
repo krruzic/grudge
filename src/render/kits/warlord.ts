@@ -1,8 +1,8 @@
 // Warlord kit: heavy melee hits (slabs and dust), ground slam and Earthquake (fissures, crack rings, rock spikes
-// that rise and sink), charge, War Cry rings, Challenge chains and Bloodroar. spikeBatch() is shared with
-// CombatFx (big slams, the rolling-rock missile) and is keyed per costume (Colossus pistons).
+// that rise and sink), charge, the 260° swipe swoosh and HEAVE dust, War Cry rings, Challenge chains and Bloodroar.
+// spikeBatch() is shared with CombatFx (big slams, the rolling-rock missile) and is keyed per costume (Colossus pistons).
 import * as THREE from "three";
-import { activeCostume, cm, FX, RAIDER, WARLORD } from "../fx/atlas";
+import { activeCostume, cm, FX, RAIDER, trailOf, WARLORD } from "../fx/atlas";
 
 const RAIDER_DROP = RAIDER.drop;
 import { chunks } from "../fx/chunks";
@@ -181,6 +181,117 @@ function warlordHit(h: FxHost, x: number, y: number, z: number, dx: number, dz: 
     chunks(h, 4, x, gy + 0.3, z, { size: [0.14, 0.26], speed: [2, 4], up: [4, 7] });
   }
   h.shake = Math.max(h.shake, big ? 0.35 : 0.14);
+}
+
+const SWIPE_ARC = (130 * Math.PI) / 180;
+const SWIPE_SEGS = 40;
+
+/** Combo hit 2: a 260° swoosh around his front, revealed right-to-left with the club (the hit lands mid-front). */
+function swipeFx(h: FxHost, x: number, y: number, z: number, dx: number, dz: number, reach: number): void {
+  const gy = ground(h, x, z, y);
+  const n = SWIPE_SEGS + 1;
+  const pos = new Float32Array(n * 2 * 3);
+  const col = new Float32Array(n * 2 * 3);
+  const idx: number[] = [];
+  const r0 = reach * 0.38;
+  for (let i = 0; i < n; i++) {
+    const a = -SWIPE_ARC + (i / SWIPE_SEGS) * SWIPE_ARC * 2;
+    const s = Math.sin(a);
+    const c = Math.cos(a);
+    const hy = a < 0 ? 0.9 - a * 0.5 : 0.9 + a * 0.1;
+    pos.set([s * r0, hy + 0.25, c * r0, s * reach, hy - 0.1, c * reach], i * 6);
+    if (i < SWIPE_SEGS) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const colAttr = new THREE.BufferAttribute(col, 3);
+  geo.setAttribute("color", colAttr);
+  geo.setIndex(idx);
+  const tint = new THREE.Color(trailOf(activeCostume()) ?? 0xffb070).lerp(new THREE.Color(1, 1, 1), 0.35);
+  const mat = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    color: tint,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, gy, z);
+  m.rotation.y = Math.atan2(dx, dz);
+  const life = 0.42;
+  h.add(m, life, (k) => {
+    const t = k * life;
+    // The leading edge starts mid-front (the hit frame) and runs on to behind his left; the tail glows behind it.
+    const lead = SWIPE_ARC * (1 - Math.pow(1 - Math.min(1, t / 0.16), 2));
+    const fade = t < 0.16 ? 1 : Math.max(0, 1 - (t - 0.16) / (life - 0.16));
+    for (let i = 0; i < n; i++) {
+      const a = -SWIPE_ARC + (i / SWIPE_SEGS) * SWIPE_ARC * 2;
+      const b = a > lead ? 0 : Math.exp(-(lead - a) / 1.6) * fade;
+      col.set([b * 0.15, b * 0.15, b * 0.15, b, b, b], i * 6);
+    }
+    colAttr.needsUpdate = true;
+  });
+  for (let i = 0; i < 7; i++) {
+    const a = -SWIPE_ARC + (i / 6) * SWIPE_ARC * 2;
+    const f = Math.atan2(dx, dz) + a;
+    const ux = Math.sin(f);
+    const uz = Math.cos(f);
+    h.after(Math.max(0, (a / SWIPE_ARC) * 0.1), () =>
+      emit(h, {
+        tex: WARLORD.dust,
+        n: 1,
+        x: x + ux * reach * 0.75,
+        y: gy + 0.4,
+        z: z + uz * reach * 0.75,
+        size: [0.9, 1.3],
+        grow: 1.8,
+        life: [0.45, 0.7],
+        speed: [1.5, 2.8],
+        dir: { x: ux * 0.6 + uz * 0.8, y: 0.1, z: uz * 0.6 - ux * 0.8 },
+        cone: 0.4,
+        drag: 3,
+        opacity: 0.8,
+      }),
+    );
+  }
+  h.shake = Math.max(h.shake, 0.22);
+}
+
+/** HEAVE throw: a dusty heave-ho at his feet and a gust thrown along the throw direction. */
+function heaveFx(h: FxHost, x: number, y: number, z: number, dx: number, dz: number): void {
+  const gy = ground(h, x, z, y);
+  emit(h, {
+    tex: WARLORD.dust,
+    n: 6,
+    x,
+    y: gy + 0.3,
+    z,
+    size: [1, 1.4],
+    grow: 1.8,
+    life: [0.5, 0.8],
+    speed: [1.5, 3],
+    flatSpread: true,
+    drag: 3,
+    opacity: 0.85,
+  });
+  emit(h, {
+    tex: WARLORD.dust,
+    n: 3,
+    x: x + dx * 1.2,
+    y: gy + 1.8,
+    z: z + dz * 1.2,
+    size: [0.9, 1.3],
+    grow: 1.6,
+    life: [0.35, 0.5],
+    speed: [5, 8],
+    dir: { x: dx, y: 0.25, z: dz },
+    cone: 0.3,
+    drag: 4,
+    opacity: 0.6,
+  });
+  chunks(h, 3, x, gy + 0.3, z, { size: [0.1, 0.2], speed: [1.5, 3], up: [3, 5] });
+  h.shake = Math.max(h.shake, 0.25);
 }
 
 function slamFx(h: FxHost, x: number, z: number, r: number, heavy: boolean, costume?: string): void {
@@ -524,6 +635,12 @@ KITS.warlord = {
     return false;
   },
   act(h, ev, src) {
+    if (ev.phase === "fire" && ev.kind === "combo" && ev.combo === 1) {
+      const def = h.world && src.hero ? h.world.heroDef(src.hero.type).abilities.a : undefined;
+      const range = (def as { hits?: { range?: number }[] } | undefined)?.hits?.[1]?.range ?? 3.4;
+      swipeFx(h, ev.x, ev.y, ev.z, ev.dirX, ev.dirZ, range * 0.95);
+    }
+    if (ev.phase === "fire" && ev.kind === "heave") heaveFx(h, ev.x, ev.y, ev.z, ev.dirX, ev.dirZ);
     if (ev.phase === "start" && ev.kind === "quake") {
       const gy = ground(h, ev.x, ev.z, ev.y);
       emit(h, {
@@ -569,6 +686,5 @@ KITS.warlord = {
         jitter: 0.6,
       });
     }
-    void src;
   },
 };

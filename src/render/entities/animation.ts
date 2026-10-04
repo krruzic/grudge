@@ -7,6 +7,7 @@ export const ONE_SHOT = new Set([
   "attack_b",
   "attack_c",
   "slam",
+  "heave",
   "cast",
   "shoot",
   "hit",
