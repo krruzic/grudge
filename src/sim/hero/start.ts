@@ -10,7 +10,6 @@ import { placeRange } from "./placement.ts";
 import { graveBegin } from "./gravewalk.ts";
 
 export function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
-  const h = e.hero!;
   const def = abilities(w, e)[slot];
   let [dx, dz] = aim(w, e, cmd, reachOf(def) + (def.fx?.charge?.range ?? 0) + 1);
   const mag = Math.hypot(cmd.moveX, cmd.moveZ);
