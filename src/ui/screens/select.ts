@@ -294,9 +294,9 @@ function drawSeatCard(
   const tagHot = !sl.cpu && !commander && hovered(s, `tag:${i}`);
   const iy = 30;
   const ih = h - iy - 34;
-  // A human who hasn't placed their seal yet sees an empty card, unless their own cursor (chip in hand) is
-  // hovering a champion: then that champion is previewed, see-through, until the seal is placed.
-  const unsealed = human && !commander && !sl.ready && !naming;
+  // An unsealed card (a human's, or a CPU's whose chip someone picked up) is empty, unless the cursor holding its
+  // chip is hovering a champion: then that champion is previewed, see-through, until the seal is placed.
+  const unsealed = (human || sl.cpu) && !commander && !sl.ready && !naming;
   const preview =
     unsealed && !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:"));
   const blank = unsealed && !preview;
