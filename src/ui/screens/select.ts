@@ -29,7 +29,7 @@ import {
 } from "../uiPaint";
 import type { SelectSlot, Screens } from "../screens";
 import { BROWN, INK, MODE_NAME, TEAM_BRIGHT, TEAM_CLOTH, TEAM_FIELD, TEAM_TEXT, center } from "./common";
-import { costumeIcon, drawTree, hasTree, heroGlyph, stageArt, uiGlyph } from "./selectArt";
+import { classGlyph, costumeIcon, drawTree, hasTree, heroGlyph, stageArt, uiGlyph } from "./selectArt";
 import { chipColor } from "../cursor";
 
 /** A cursor (local, or an online player's mirrored one) is hovering mouse target `id`. */
@@ -158,6 +158,13 @@ function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): nu
       ctx.drawImage(icon as CanvasImageSource, 0, (ih - sh) * 0.3, sw, sh, x, y, tw, th);
       ctx.restore();
     }
+    // Class glyph in the tile's bottom-left corner.
+    const gs = Math.max(7, Math.round(tw * 0.24));
+    ctx.fillStyle = "rgba(18,12,8,0.55)";
+    ctx.beginPath();
+    ctx.arc(x + gs / 2 + 1.5, y + th - gs / 2 - 1.5, gs * 0.62, 0, Math.PI * 2);
+    ctx.fill();
+    classGlyph(ctx, s.heroes[type]?.class, x + gs / 2 + 1.5, y + th - gs / 2 - 1.5, gs, "#f4e2b0");
     // Border: one stripe per colour around the tile.
     if (ring.length) {
       ring.forEach((c, j) => {
@@ -505,9 +512,14 @@ function drawSeatCard(
       );
       return;
     }
+    // Name under the stage, with the class glyph in front of it.
     const name = (def?.name ?? sl.hero).toUpperCase();
-    const ns = Math.min(0.8, (w - 10) / Math.max(1, textWidth(name, 1, true)));
-    drawPlain(ctx, name, w / 2 - textWidth(name, ns, true) / 2, iy + ih + 5, BROWN, ns, true);
+    const cls = commander ? undefined : def?.class;
+    const gw = cls ? 10 : 0;
+    const ns = Math.min(0.8, (w - 10 - gw) / Math.max(1, textWidth(name, 1, true)));
+    const nx = w / 2 - (textWidth(name, ns, true) + gw) / 2 + gw;
+    drawPlain(ctx, name, nx, iy + ih + 5, BROWN, ns, true);
+    classGlyph(ctx, cls, nx - 5.5, iy + ih + 8.5, 8, BROWN, "rgba(0,0,0,0)");
   });
   const sitHere = sl.cpu && !commander && (s.peer || !!s.cursors?.cursors.some((c) => c.active));
   /** Little X box in the card's corner. */

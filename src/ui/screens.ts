@@ -39,7 +39,7 @@ export interface SelectSlot {
   costume?: string;
 }
 
-type HeroInfo = { name: string; blurb: string; abilities?: Record<string, { kind: string }> };
+type HeroInfo = { name: string; blurb: string; class?: string; abilities?: Record<string, { kind: string }> };
 
 /** A host seat as sent to guests. `remote`: peer id seated there, 0 = the host's own pad, -1 = nobody. */
 export interface LobbySlot {

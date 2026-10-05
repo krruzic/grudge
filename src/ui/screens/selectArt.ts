@@ -121,6 +121,24 @@ export function uiGlyph(
   ctx.restore();
 }
 
+/**
+ * A champion's class glyph (assets/ui/glyphs/class_<class>.png: bruiser, tank, assassin, marksman, caster, support,
+ * builder), centred at (x, y) with a 1 px dark drop shadow so it reads over a portrait.
+ */
+export function classGlyph(
+  ctx: CanvasRenderingContext2D,
+  cls: string | undefined,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  shadow = "#120c08",
+) {
+  if (!cls) return;
+  uiGlyph(ctx, `class_${cls}`, x + 0.8, y + 0.8, size, shadow);
+  uiGlyph(ctx, `class_${cls}`, x, y, size, color);
+}
+
 // ── Evolution tree ──
 
 type TreeNode = { id: string; next?: TreeNode[] };
