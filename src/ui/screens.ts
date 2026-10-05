@@ -113,6 +113,8 @@ export class Screens {
   fieldMode: MatchMode = "1v1";
   /** Guest watching the host pick. */
   fieldWatch = false;
+  /** Online guest on the results: only the host moves on, so show a waiting note instead of the A prompt. */
+  resultsWait = false;
   /** Online field vote: [seat, card index] for every vote in, and whole seconds left (-1 before the first). */
   votes: [number, number][] = [];
   voteLeft = -1;

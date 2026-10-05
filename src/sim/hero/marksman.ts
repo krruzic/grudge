@@ -281,7 +281,20 @@ export function updatePip(w: World, e: Entity): void {
     }
   }
   if (p.phase === "on") {
-    if (!alive || w.time >= p.until || tgt!.status.pipOwner !== e.id) {
+    // A dodge roll shakes Pip off.
+    const rolled = alive && tgt!.hero?.action?.name === "dodge";
+    if (rolled) {
+      w.emit({
+        type: "callout",
+        x: tgt!.transform.pos.x,
+        y: tgt!.transform.y,
+        z: tgt!.transform.pos.z,
+        team: tgt!.team,
+        text: "SHOOK OFF PIP!",
+        owner: tgt!.id,
+      });
+    }
+    if (!alive || rolled || w.time >= p.until || tgt!.status.pipOwner !== e.id) {
       if (tgt && tgt.status.pipOwner === e.id) tgt.status.pipUntil = 0;
       p.phase = "back";
     } else {

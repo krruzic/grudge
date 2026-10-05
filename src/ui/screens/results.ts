@@ -18,7 +18,8 @@ import {
   woodFloor,
 } from "../uiPaint";
 import type { Screens } from "../screens";
-import { TEAM_BRIGHT, TEAM_CLOTH, TEAM_TEXT } from "./common";
+import { TEAM_CLOTH, TEAM_TEXT } from "./common";
+import { chipColor } from "../cursor";
 
 const PLACE = ["1ST", "2ND", "3RD", "4TH"];
 
@@ -56,7 +57,18 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
   const ffa = w.ffa;
   const place = (t: number) => s.placing.indexOf(t);
   const withSlot = listed.map((p, i) => ({ ...p, slot: i }));
-  const ps = ffa ? withSlot.sort((a, b) => place(a.team) - place(b.team)) : withSlot;
+  const tdm = w.tdm;
+  const heroOf = (slot: number) => w.players.find((q) => q.player === slot)?.heroId ?? -1;
+  const kills = (slot: number) => tdm?.kills.get(heroOf(slot)) ?? 0;
+  const deaths = (slot: number) => tdm?.deaths.get(heroOf(slot)) ?? 0;
+  // Deathmatch: the winning house first, each house by kills (a scoreboard).
+  const ps = ffa
+    ? withSlot.sort((a, b) => place(a.team) - place(b.team))
+    : tdm
+      ? withSlot.sort(
+          (a, b) => Number(b.team === win) - Number(a.team === win) || a.team - b.team || kills(b.slot) - kills(a.slot),
+        )
+      : withSlot;
   const t = w.teams;
   const pw = Math.min(250, Math.round(W * 0.6));
   const ph = H - 52;
@@ -80,13 +92,22 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
   const sub = `${reason}  ·  ${mm}`;
   shadowText(ctx, sub, 12 + iw / 2 - textWidth(sub, 0.6) / 2, 12 + ih - 11, "#fff0c8", 0.6);
   waxSeal(ctx, pw - 26, ih + 10, 17, win < 0 ? "#8a7a60" : TEAM_CLOTH[win], win < 0 ? "none" : "castle");
-  const rows: [string, (i: number) => number][] = [
-    ["KEEP DAMAGE", (i) => Math.round(t[i].coreDamageDealt)],
-    ["HERO KILLS", (i) => t[i].heroKills],
-    ["SOLDIERS SLAIN", (i) => t[i].kills],
-    ["BUILT", (i) => t[i].structuresBuilt],
-    ["LOST", (i) => t[i].structuresLost],
-  ];
+  const teamDeaths = (i: number) =>
+    w.players.filter((q) => q.team === i).reduce((n, q) => n + (tdm?.deaths.get(q.heroId) ?? 0), 0);
+  const rows: [string, (i: number) => number][] = tdm
+    ? [
+        ["KILLS", (i) => tdm.score[i] ?? 0],
+        ["DEATHS", teamDeaths],
+        ["GRUDGE HELD (SEC)", (i) => Math.round(tdm.held[i] ?? 0)],
+        ["POWER-UPS", (i) => tdm.taken[i] ?? 0],
+      ]
+    : [
+        ["KEEP DAMAGE", (i) => Math.round(t[i].coreDamageDealt)],
+        ["HERO KILLS", (i) => t[i].heroKills],
+        ["SOLDIERS SLAIN", (i) => t[i].kills],
+        ["BUILT", (i) => t[i].structuresBuilt],
+        ["LOST", (i) => t[i].structuresLost],
+      ];
   const ry = ih + 22;
   const rh = Math.min(18, (ph - ry - 8) / rows.length);
   if (ffa) drawFfaRows(s, ctx, pw, ry + 14, Math.min(rh, (ph - ry - 20) / rows.length), rows, w);
@@ -112,23 +133,35 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     texturedRect(ctx, "cloth", 5, 5, chh - 8, chh - 8, TEAM_CLOTH[p.team], 0, 0.7);
     const icon = s.portraits?.icon(p.hero);
     if (icon) smoothImage(ctx, icon, 5, 5, chh - 8, chh - 8);
+    const small = chh < 30;
     const nm = p.cpu ? "CPU" : (p.tag ?? `P${p.slot + 1}`);
-    const nmRoom = cw - chh - 6 - (won ? 22 : ffa ? 30 : 4);
-    const nms = Math.min(0.72, nmRoom / Math.max(1, textWidth(nm, 1, true)));
-    drawPlain(ctx, nm, chh + 2, chh / 2 - 9, TEAM_TEXT[p.team], nms, true);
+    const kd = tdm ? `${kills(p.slot)} / ${deaths(p.slot)}` : "";
+    const kdW = kd ? textWidth(kd, small ? 0.6 : 0.72, true) + 6 : 0;
+    const sealR = Math.min(8, chh / 2 - 1);
+    const nmRoom = cw - chh - 6 - (won ? sealR * 2 + 6 : ffa ? 30 : 4) - kdW;
+    const nms = Math.min(small ? 0.55 : 0.72, nmRoom / Math.max(1, textWidth(nm, 1, true)));
+    drawPlain(ctx, nm, chh + 2, small ? 1 : chh / 2 - 9, TEAM_TEXT[p.team], nms, true);
     const hero = (s.heroes[p.hero]?.name ?? p.hero).toUpperCase();
-    drawPlain(ctx, hero, chh + 2, chh / 2 + 2, "#4a3018", 0.55, true);
-    if (won) waxSeal(ctx, cw - 12, chh / 2, 8, "#c8a020", "combo");
+    drawPlain(ctx, hero, chh + 2, small ? chh / 2 + 1 : chh / 2 + 2, "#4a3018", small ? 0.42 : 0.55, true);
+    // Deathmatch: kills / deaths, right-aligned (left of the winner's seal).
+    if (kd) {
+      const kx = cw - (won ? sealR * 2 + 8 : 6) - kdW + 6;
+      drawPlain(ctx, kd, kx, chh / 2 - (small ? 3.5 : 5), "#4a3018", small ? 0.6 : 0.72, true);
+    }
+    if (won) waxSeal(ctx, cw - sealR - 4, chh / 2, sealR, TEAM_CLOTH[p.team], "combo");
     else if (ffa) {
       const pl = PLACE[place(p.team)] ?? "";
       drawPlain(ctx, pl, cw - 6 - textWidth(pl, 0.62, true), chh / 2 - 9, "#6a4424", 0.62, true);
       if (w.teams[p.team]?.out)
         drawPlain(ctx, "FALLEN", cw - 6 - textWidth("FALLEN", 0.45, true), chh / 2 + 2, "#8a1810", 0.45, true);
     }
-    pin(ctx, cw / 2, 3, won ? "#c8a020" : TEAM_BRIGHT[p.team]);
+    pin(ctx, cw / 2, 3, chipColor(p.slot, p.cpu));
     ctx.restore();
   });
-  if (blink) bottomPrompt(ctx, W, H, [["A", "CONTINUE"]]);
+  if (s.resultsWait) {
+    const t = "WAITING FOR THE HOST";
+    if (blink) shadowText(ctx, t, W / 2 - textWidth(t, 0.7) / 2, H - 14, "#f0e4c8", 0.7);
+  } else if (blink) bottomPrompt(ctx, W, H, [["A", "CONTINUE"]]);
 }
 
 /** Blue vs red: both values with the higher one coloured, and a split bar. */

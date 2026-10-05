@@ -67,6 +67,9 @@ export class Tdm {
   readonly kills = new Map<number, number>();
   readonly deaths = new Map<number, number>();
   readonly powerups: PowerUp[] = [];
+  /** Scoreboard extras per team: seconds the Grudge was carried, power-ups taken. */
+  readonly held: number[];
+  readonly taken: number[];
   /** Per champion id: power-up effects running until these times. */
   readonly might = new Map<number, number>();
   readonly haste = new Map<number, number>();
@@ -80,6 +83,8 @@ export class Tdm {
   constructor(readonly w: World) {
     this.cfg = w.data.match.tdm as TdmConfig;
     this.score = Array.from({ length: w.teamCount }, () => 0);
+    this.held = Array.from({ length: w.teamCount }, () => 0);
+    this.taken = Array.from({ length: w.teamCount }, () => 0);
     this.nextChaos = this.cfg.chaos.firstSeconds;
     // Map cannon and ogre only come as chaos events here.
     w.arena.nextCannon = Infinity;
@@ -141,6 +146,7 @@ export class Tdm {
       e.status.shieldUntil = w.time + c.shieldSeconds;
     }
     w.emit({ type: "powerup", stage: "take", id: p.id, kind: p.kind, x: p.x, y: p.y, z: p.z, by: e.id });
+    if (this.taken[e.team] !== undefined) this.taken[e.team]++;
     if (p.temp) this.powerups.splice(this.powerups.indexOf(p), 1);
     else p.readyAt = w.time + c.respawnSeconds;
   }
@@ -182,6 +188,7 @@ export class Tdm {
       st.powerSpeedMul = (carry ? r.speedMul : 1) * (haste ? this.cfg.powerups.hasteMul : 1);
       st.powerTakenMul = carry ? r.takenMul : 1;
       if (carry && e.hp < e.maxHp) w.heal(e, r.regen * w.dt);
+      if (carry && this.held[e.team] !== undefined) this.held[e.team] += w.dt;
     }
   }
 

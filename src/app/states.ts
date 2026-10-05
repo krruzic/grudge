@@ -10,7 +10,7 @@ import type { App } from "./app";
 import { readNav } from "./nav";
 import { enterSelect, setMode } from "./select";
 import { beginAttract, resetAttractWorld, setPaused, toMenu } from "./match";
-import { enterLobby, leaveNet } from "./net";
+import { leaveNet } from "./net";
 
 export function updateTitle(app: App): void {
   if (app.anyPressed("start") || app.anyPressed("a") || app.cursors.takeClick()) {
@@ -177,13 +177,14 @@ export function updatePaused(app: App, now: number): void {
 
 // ── Results ──
 
-/** A / Start leaves results: guests return to the host's lobby, everyone else to select keeping their picks. */
+/**
+ * A / Start leaves results back to select (keeping picks). Online only the host decides: guests wait on the
+ * results until the host's lobby comes back (net.ts then moves them to it).
+ */
 export function updateResults(app: App): void {
+  app.screens.resultsWait = app.net.mode === "peer";
+  if (app.net.mode === "peer") return;
   if (!app.anyPressed("a") && !app.anyPressed("start")) return;
-  if (app.net.mode === "peer") {
-    enterLobby(app);
-    return;
-  }
   app.state = "select";
   enterSelect(app, true);
   app.screens.set("select");

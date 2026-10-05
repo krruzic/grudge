@@ -253,6 +253,10 @@ export class PauseMenu {
     drawPlain(ctx, `${HOUSE[team]} HOUSE`, x, y, TEAM_TEXT[team], 0.68, true);
     waxSeal(ctx, x + colW - 7, y + 3, 6, TEAM_CLOTH[team], "castle");
     y += 12;
+    if (w.tdm) {
+      this.tdmTeam(ctx, w, team, x, y, colW, ph);
+      return;
+    }
     for (const p of w.players.filter((q) => q.team === team)) if (this.heroRow(ctx, w, p, x, y, colW, false)) y += 27;
     const ts = w.teams[team];
     const core = w.core(team);
@@ -262,6 +266,52 @@ export class PauseMenu {
       ["GRAIN", String(Math.floor(ts.grain))],
       ["SOLDIERS", String(ts.unitCount)],
       ["HERO KILLS", String(ts.heroKills)],
+    ];
+    const sy = ph - 10 - stats.length * 8;
+    band(ctx, x, sy - 3, colW, 1, "#6a4424", 0.5);
+    stats.forEach(([k, v], q) => {
+      drawPlain(ctx, k, x, sy + q * 8, "#6a4424", 0.5, true);
+      drawPlain(ctx, v, x + colW - textWidth(v, 0.55, true), sy + q * 8, BROWN, 0.55, true);
+    });
+  }
+
+  /** Team deathmatch column: one slim row per champion (kills / deaths, HP), then the house's score lines. */
+  private tdmTeam(
+    ctx: CanvasRenderingContext2D,
+    w: World,
+    team: number,
+    x: number,
+    y: number,
+    colW: number,
+    ph: number,
+  ): void {
+    const tdm = w.tdm!;
+    const list = w.players
+      .filter((q) => q.team === team)
+      .sort((a, b) => (tdm.kills.get(b.heroId) ?? 0) - (tdm.kills.get(a.heroId) ?? 0));
+    for (const p of list) {
+      const e = w.getAny(p.heroId);
+      if (!e?.hero) continue;
+      inset(ctx, x + 1, y, 16, 16, "#3a2a1c");
+      const icon = this.host.portraits?.icon(p.heroType);
+      if (icon) smoothImage(ctx, icon, x + 1, y, 16, 16);
+      const kd = `${tdm.kills.get(p.heroId) ?? 0} / ${tdm.deaths.get(p.heroId) ?? 0}`;
+      const kw = textWidth(kd, 0.55, true);
+      const nm = `${playerLabel(p.player)} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
+      const ns = Math.min(0.5, (colW - 22 - kw - 4) / Math.max(1, textWidth(nm, 1, true)));
+      drawPlain(ctx, nm, x + 21, y, BROWN, ns, true);
+      drawPlain(ctx, kd, x + colW - kw, y, "#8a1810", 0.55, true);
+      const fr = e.alive ? Math.max(0, e.hp / e.maxHp) : 0;
+      const bw = colW - 23;
+      ctx.fillStyle = "#3a2410";
+      ctx.fillRect(x + 21, y + 9, bw + 2, 5);
+      ctx.fillStyle = e.alive ? (fr > 0.35 ? "#4a9a30" : "#c83020") : "#8a7a60";
+      ctx.fillRect(x + 22, y + 10, Math.round(bw * fr), 3);
+      y += 19;
+    }
+    const stats: [string, string][] = [
+      ["KILLS", `${tdm.score[team] ?? 0} / ${tdm.limit}`],
+      ["GRUDGE HELD", `${Math.round(tdm.held[team] ?? 0)}S`],
     ];
     const sy = ph - 10 - stats.length * 8;
     band(ctx, x, sy - 3, colW, 1, "#6a4424", 0.5);
