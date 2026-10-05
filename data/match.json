@@ -42,7 +42,12 @@
       "unitBountyMul": 1,
       "surplus": 150,
       "surplusMul": 0.7,
-      "starvedMul": 2.5
+      "starvedMul": 2.5,
+      "upkeep": {
+        "grunt": 0.5,
+        "ranged": 0.65,
+        "heavy": 1.3
+      }
     },
     "respawnCooldownPenalty": 2,
     "respawnBigMul": 1.667,

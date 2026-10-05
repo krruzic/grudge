@@ -107,7 +107,9 @@ export function drawTeamHead(
   S.shownGrain[t] = prevGrain + (ts.grain - prevGrain) * Math.min(1, 0.25);
   const grain = String(Math.round(S.shownGrain[t]));
   const grainy = !!w.data.match.economy.grain;
-  const rate = grainy ? `+${w.grainOf(t).toFixed(1)}/S` : `+${w.incomeOf(t).toFixed(1)}/S`;
+  // Grain shown net of the army's upkeep (it goes negative when the soldiers eat more than the buildings grow).
+  const net = grainy ? w.grainOf(t) - (ts.upkeep ?? 0) : w.incomeOf(t);
+  const rate = `${net < 0 ? "-" : "+"}${Math.abs(net).toFixed(1)}/S`;
   const [kx, ky] = shakeOf(S.keepHitAt[t], now, 4.5);
   const [px2, py2] = shakeOf(S.padHitAt[t], now, 3);
   let pads = 0;
@@ -183,10 +185,10 @@ export function drawTeamHead(
         drawGrain(cx);
         cx += grainW + 3;
       } else cx += 4;
-      drawText(c, rate, Math.round(cx), y + 3, "#c8b070", 0.6);
+      drawText(c, rate, Math.round(cx), y + 3, rate.startsWith("-") ? "#ff8a6a" : "#c8b070", 0.6);
     } else {
       let cx = ax(20, cw + gw);
-      drawText(c, rate, Math.round(cx), y + 3, "#c8b070", 0.6);
+      drawText(c, rate, Math.round(cx), y + 3, rate.startsWith("-") ? "#ff8a6a" : "#c8b070", 0.6);
       cx += textWidth(rate, 0.6) + (grainy ? 3 : 4);
       if (grainy) {
         drawGrain(cx);

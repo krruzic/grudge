@@ -455,6 +455,8 @@ export interface MatchData {
       unitBountyMul?: number;
       surplus?: number;
       surplusMul?: number;
+      /** Grain per second each living soldier eats. */
+      upkeep?: Partial<Record<"grunt" | "ranged" | "heavy", number>>;
       starvedMul?: number;
     };
     padIncome?: Record<string, number>;

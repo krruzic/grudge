@@ -12,6 +12,10 @@ export function updateEconomy(w: World, dt: number): void {
     const tithe = w.arena.heldBy(team) ? w.data.match.arena.relic.incomeMul : 1;
     t.resource += w.incomeOf(team) * (1 + t.catchUp * cu.incomeBoost) * tithe * dt;
     t.grain += w.grainOf(team) * (1 + t.catchUp * cu.incomeBoost) * dt;
+    // Soldiers eat: upkeep comes out of the grain store (never below zero). With the store empty, outposts can't
+    // pay for new soldiers, so an army settles at what the team's buildings can feed - lose buildings (or have
+    // your champion down, which halts outposts) and it shrinks as soldiers die and aren't replaced.
+    if (t.upkeep) t.grain = Math.max(0, t.grain - t.upkeep * dt);
   });
 }
 
@@ -44,8 +48,18 @@ function updateCatchUp(w: World): void {
     me.catchUp = Math.max(0, Math.min(1, deficit));
   }
   const units = new Array(n).fill(0);
-  for (const e of w.entities) if (e.alive && e.unit && !e.unit.guard && e.team < n) units[e.team]++;
-  for (let t = 0; t < n; t++) w.teams[t].unitCount = units[t];
+  const eat = new Array(n).fill(0);
+  const up = w.data.match.economy.grain?.upkeep;
+  for (const e of w.entities) {
+    if (!e.alive || !e.unit || e.unit.guard || e.team >= n || e.team < 0) continue;
+    units[e.team]++;
+    // Summoned / raised soldiers are free.
+    if (up && !e.unit.raised && e.expiresAt === undefined) eat[e.team] += up[e.unit.type] ?? 0;
+  }
+  for (let t = 0; t < n; t++) {
+    w.teams[t].unitCount = units[t];
+    w.teams[t].upkeep = eat[t];
+  }
 }
 
 /** Grain per second: base + per-level income of each built pad + a share of outposts' unit upkeep. */

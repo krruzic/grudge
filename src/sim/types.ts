@@ -492,6 +492,8 @@ export const TEAM_NAMES = ["BLUE", "RED", "YELLOW", "GREEN", "PURPLE", "ORANGE",
 /** Per-team economy, directives, stats and timers. */
 export interface TeamState {
   out?: boolean;
+  /** Grain per second the living soldiers eat (world/economy.ts). */
+  upkeep?: number;
   resource: number;
   grain: number;
   starvedAt?: number;
