@@ -1,7 +1,7 @@
 """Bake Brindle's costume repaints (2x2 sheets: front, left, back, right) onto his body texture.
 Run from anywhere after tools/costume/exp.py made /tmp/opencode/costume/harpooner_body_{mesh.npz,orig.png}:
   python3 tools/costume/harpooner_bake.py
-SKIP lists views Nano Banana got wrong (it painted the front again in the back cell for admiral and bog); texels only
+SKIP lists views Nano Banana got wrong (it painted the front again in the back cell for tideadmiral and bogtoad); texels only
 those views saw take colours learned from the rest (bake2's original->new colour lookup)."""
 import os
 import sys
@@ -18,8 +18,8 @@ from PIL import Image  # noqa: E402
 C = "/tmp/opencode/costume/"
 F = "/tmp/opencode/harpooner/cos/"
 G = os.path.join(HERE, "..", "..", "assets", "costumes", "harpooner")
-VIEWS_WRONG = {"admiral": {2}, "bog": {2}, "abyss": set()}
-for cid in sys.argv[1:] or ["admiral", "bog", "abyss"]:
+VIEWS_WRONG = {"tideadmiral": {2}, "bogtoad": {2}, "deepglow": set()}
+for cid in sys.argv[1:] or ["tideadmiral", "bogtoad", "deepglow"]:
     SKIP.clear()
     SKIP.update(VIEWS_WRONG.get(cid, set()))
     os.makedirs(os.path.join(G, cid), exist_ok=True)

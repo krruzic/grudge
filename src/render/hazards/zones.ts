@@ -26,6 +26,7 @@ import { cacheCanvas } from "../../ui/cacheCanvas";
 import { zoneFissures } from "../fx/fissures";
 import { isDesert } from "../kits/desert";
 import { ZONE_DECALS, BUBBLE, FOAM } from "../kits/friar";
+import { PUDDLE_DECAL, RIPTIDE_DECAL, TIDE_BUBBLE, TIDE_FOAM } from "../kits/harpooner";
 import { propParts } from "../props";
 import type { HazardViews } from "./hazardViews";
 import type { Zone } from "../../sim/types";
@@ -608,6 +609,31 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"),
     );
     ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));
+  } else if (style === "riptide" || style === "puddle") {
+    // Brindle: the Riptide whirlpool ring (spins) and his slide puddles.
+    const rip = style === "riptide";
+    const disc = new THREE.Mesh(
+      new THREE.PlaneGeometry(r * 2.15, r * 2.15),
+      new THREE.MeshBasicMaterial({
+        map: hd(rip ? RIPTIDE_DECAL : PUDDLE_DECAL),
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        opacity: rip ? 0.85 : 0.75,
+      }),
+    );
+    disc.rotation.x = -Math.PI / 2;
+    const spin = new THREE.Group();
+    spin.name = "spin";
+    spin.position.y = 0.13;
+    spin.add(disc);
+    g.add(spin);
+    ring(Math.round(r * (rip ? 2.5 : 1.5)), [0.1, 0.9], (x, z) =>
+      sprite(TIDE_BUBBLE, 0.18 + Math.random() * 0.14, x, z, -0.05, false, "bubble"),
+    );
+    if (rip)
+      ring(Math.round(r * 2), [0.85, 1], (x, z) => sprite(TIDE_FOAM, 0.6 + Math.random() * 0.4, x, z, -0.2, false, "foam"));
   } else if (style === "grove") {
     ring(Math.round(r * 2.2), [0.1, 0.95], (x, z) => {
       const f = crossQuad(cm(FLOWER), 0.35 + Math.random() * 0.15, 0.35);
@@ -669,8 +695,12 @@ export function animateZone(hz: HazardViews, z: Zone, o: THREE.Object3D, time: n
   }
   const spin = o.getObjectByName("spin");
   if (spin) {
-    spin.rotation.y += dt * (z.style === "sinkhole" ? 1.6 : 0.2);
+    spin.rotation.y += dt * (z.style === "sinkhole" ? 1.6 : z.style === "riptide" ? -1.3 : 0.2);
     spin.scale.setScalar(z.style === "sinkhole" ? 0.6 + 0.4 * (left % 1) : 1);
+    if (z.style === "riptide" || z.style === "puddle") {
+      const m = (spin.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      m.opacity = (z.style === "riptide" ? 0.85 : 0.75) * Math.min(1, left / 0.6);
+    }
   }
   const life = Math.min(1, (time - (o.userData.born ?? time)) * 3, left / 0.6);
   for (const c of o.children) {

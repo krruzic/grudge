@@ -1,7 +1,7 @@
 import numpy as np, os, sys
 from PIL import Image, ImageDraw, ImageFilter
 sheet, out = sys.argv[1], sys.argv[2]
-names = ["harpooner_classic", "harpooner_admiral", "harpooner_bog", "harpooner_abyss"]
+names = ["harpooner_classic", "harpooner_tideadmiral", "harpooner_bogtoad", "harpooner_deepglow"]
 im = Image.open(sheet).convert("RGB")
 a = np.asarray(im).astype(np.float32)
 H, W = a.shape[:2]

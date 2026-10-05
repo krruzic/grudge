@@ -64,6 +64,10 @@ const TINTS: Record<string, Record<number, number>> = {
     0xe0ffb0: 0xe8d0ff,
   },
   celadon: { 0xffc860: 0x9fe0b0, 0xffe6a0: 0xd8f0ff, 0xffd070: 0xa8d8ff, 0xfff0c0: 0xe8f4ff, 0xffe0a0: 0xe0f0ff },
+  // Brindle (harpooner): his sea-water shockwaves and glints.
+  tideadmiral: { 0xb8f4ff: 0xffe08a },
+  bogtoad: { 0xb8f4ff: 0xc8d090 },
+  deepglow: { 0xb8f4ff: 0xc890ff },
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
@@ -75,6 +79,9 @@ const TRAILS: Record<string, number> = {
   suntotem: 0xffe0a0,
   starfall: 0xd890ff,
   celadon: 0x7fb0ff,
+  tideadmiral: 0xffd060,
+  bogtoad: 0xa8b060,
+  deepglow: 0xb070ff,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);
@@ -223,6 +230,9 @@ COSTUME_SKIN.starfall = {
     colors: [0xe0d0ff, 0xb080ff, 0xffffff],
     tex: null,
   },
+};
+COSTUME_SKIN.bogtoad = {
+  chunk: { geos: [...SHARED_CHUNK_GEOS], colors: [0x5a4a2a, 0x6a6a30, 0x3a3018] },
 };
 COSTUME_SKIN.celadon = {
   chunk: {
