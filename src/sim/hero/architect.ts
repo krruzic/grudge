@@ -402,7 +402,9 @@ export function fireLookout(w: World, e: Entity, a: HeroAction, def: AbilityDef)
   const lo = -Math.floor((size - 1) / 2);
   const cx = bx + 0.5 + lo + (size - 1) / 2;
   const cz = bz + 0.5 + lo + (size - 1) / 2;
-  for (const m of w.mods) if (m.style === "lookout" && m.owner === e.id) m.until = Math.min(m.until, w.time);
+  // Up to `max` lookouts stand at once (oldest falls first).
+  const mine = w.mods.filter((m) => m.style === "lookout" && m.owner === e.id && m.until > w.time);
+  for (const m of mine.slice(0, Math.max(0, mine.length - ((def.max ?? 1) - 1)))) m.until = Math.min(m.until, w.time);
   const m: TerrainMod = {
     id: w.newId(),
     kind: "works",
@@ -547,6 +549,8 @@ export function domeBlocks(w: World, src: Entity | null, target: Entity): boolea
     const inS = Math.hypot(sx - zn.x, sz - zn.z) <= zn.radius;
     const inT = Math.hypot(tx - zn.x, tz - zn.z) <= zn.radius;
     if (inS === inT || Math.hypot(sx - tx, sz - tz) <= 3.2) continue;
+    // One-way ice: the dome's own house shoots out of it (and into it) freely; only the enemy is walled off.
+    if (src.team === zn.team) continue;
     // Where the shot meets the rim, for the ice-spark effect.
     let k = 0;
     for (; k < 1; k += 0.05) {

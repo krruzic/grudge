@@ -597,8 +597,12 @@ export function architectFight(bot: Bot, w: World, me: Entity, lowHp: boolean): 
   const soldiers = w.enemiesNear(me, 4, (o) => !!o.unit && o.unit.type !== "ranged").length;
   if (!h.action && t) {
     const d = w.dist(me, t);
-    if (!lk && rdy("r") && ((d < 5 && isMelee(w, t)) || soldiers >= 4) && bot.rand() < 0.8) bot.wantR = true;
-    else if (lk && !perched && rdy("dodge") && d < 10 && Math.hypot(lk.cx! - p.x, lk.cz! - p.z) < 6) {
+    // A lookout within hop reach to climb back onto, else raise one (he can keep two): against a melee champion up
+    // close, a crowd of soldiers, or a ranged champion in a shootout (Vantage + nothing below can swing back).
+    const lkNear = !!lk && Math.hypot(lk.cx! - p.x, lk.cz! - p.z) < 6;
+    const want = (d < 5 && isMelee(w, t)) || soldiers >= 4 || (!isMelee(w, t) && d < 11);
+    if (!perched && !lkNear && rdy("r") && want && bot.rand() < 0.8) bot.wantR = true;
+    else if (lk && !perched && rdy("dodge") && d < 10 && lkNear) {
       bot.wantDodge = true;
       const l = Math.hypot(lk.cx! - p.x, lk.cz! - p.z) || 1;
       bot.wantFace = { x: (lk.cx! - p.x) / l, z: (lk.cz! - p.z) / l };
@@ -731,7 +735,9 @@ export function vintnerFight(bot: Bot, w: World, me: Entity, target: Entity | un
     // Headbutt into a wall (2.5 m behind them at most), or chase down a low runner.
     const wall = wallBehind(w, target, dx / l, dz / l, 2.5);
     const runner = target.hp < target.maxHp * 0.3 && d > 2.5;
-    const gap = d > 3.2 && bot.rand() < 0.12;
+    // Out of swing reach: close the gap - always against a ranged champion backing off, sometimes otherwise.
+    const kiter = !isMelee(w, target) && d > 3;
+    const gap = d > 3.2 && (kiter || bot.rand() < 0.25);
     if (
       rdy("b") &&
       !h.action &&
@@ -743,8 +749,16 @@ export function vintnerFight(bot: Bot, w: World, me: Entity, target: Entity | un
       aimAt(bot, me, target);
       return;
     }
-    // Alone and winning: juke a fleeing champion back past him (toward our side of the fight).
-    if (!ally && rdy("r") && !h.action && d > 3 && d < (ab.r.range ?? 8) * 0.7 && target.hp < target.maxHp * 0.35) {
+    // Alone: swap places with a champion he can't reach (a kiter out of Headbutt range, or a fleeing one) - it pulls
+    // them into his reach, dazed.
+    if (
+      !ally &&
+      rdy("r") &&
+      !h.action &&
+      d > 3 &&
+      d < (ab.r.range ?? 8) * 0.9 &&
+      (target.hp < target.maxHp * 0.35 || (kiter && !rdy("b")))
+    ) {
       bot.wantR = true;
       aimAt(bot, me, target);
       return;
