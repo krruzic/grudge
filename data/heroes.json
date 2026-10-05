@@ -1038,7 +1038,7 @@
         "sweetRadius": 7,
         "sweetHero": 0.007,
         "sweetUnit": 0.02,
-        "sweetSelf": 0.007,
+        "sweetSelf": 0.009,
         "sweetHighMul": 2,
         "sweetRise": 0.75,
         "flingDamage": 55,
@@ -1058,7 +1058,7 @@
           "kind": "combo",
           "hits": [
             {
-              "damage": 48,
+              "damage": 50,
               "range": 2.5,
               "arcDeg": 140,
               "dur": 0.38,
@@ -1067,7 +1067,7 @@
               "knockback": 1.2
             },
             {
-              "damage": 68,
+              "damage": 72,
               "range": 2.7,
               "arcDeg": 200,
               "dur": 0.56,

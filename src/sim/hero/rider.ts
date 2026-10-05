@@ -256,7 +256,8 @@ export function tickWing(w: World, e: Entity, cmd: Command): boolean {
   // The sim height never drops below the take-off height (no chasm deaths mid-air), and rises over walls.
   wg.y = Math.max(wg.y, w.groundY(t.pos.x, t.pos.z));
   t.y = wg.y;
-  const done = w.time >= wg.until || (cmd.special && w.time >= wg.minUntil);
+  // Picking up the Grudge on the way (outside deathmatch) brings her straight down: no flying it over walls.
+  const done = w.time >= wg.until || (cmd.special && w.time >= wg.minUntil) || (w.arena.carrying(e) && !w.tdm);
   if (!done) return true;
   return !land(w, e);
 }
