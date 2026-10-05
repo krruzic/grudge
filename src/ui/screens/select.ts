@@ -712,17 +712,17 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
   cx = Math.round(cx);
   const dummy = s.training && sl.cpu;
   const label = dummy ? "DUMMY" : sl.cpu ? "CPU" : !s.championSeat(i) ? "COMMANDER" : "PLAYER";
-  const pw = Math.max(sl.cpu ? 20 : 26, textWidth(label, 0.5, true) + (sl.cpu ? 6 : 10));
+  const pw = Math.max(26, textWidth(label, 0.5, true) + 10);
   const camPl = !sl.cpu && s.cameraMode !== 0 && s.championSeat(i);
   const lvW = 21;
   const camW = 11;
   const extra = sl.cpu && !dummy ? lvW + 3 : camPl ? camW + 3 : 0;
-  // Humans get a pencil on the left: sign your name. A CPU seat gets SIT there instead (a local pad moves onto it,
-  // or an online guest takes it over) - its own button in the row, so it never covers the stage or costumes.
+  // Humans get a pencil on the left: sign your name. A CPU seat gets a stool there instead (SIT: a local pad moves
+  // onto it), or a chair for an online guest (TAKE: they take the seat over) - its own button in the row, like the
+  // pencil, so it never covers the stage or costumes.
   const pen = !sl.cpu && s.championSeat(i);
   const sit = sl.cpu && !dummy && (s.peer || !!s.cursors?.cursors.some((c) => c.active));
-  const sitW = textWidth("SIT", 0.5, true) + 5;
-  const lead = pen ? camW + 3 : sit ? sitW + 2 : 0;
+  const lead = pen || sit ? camW + 3 : 0;
   const x0 = Math.round(cx - (pw + extra + lead) / 2) + lead;
   if (pen) {
     const zx = x0 - lead;
@@ -739,10 +739,10 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
     const bid = s.peer ? `take:${i}` : `sit:${i}`;
     const hl = hovered(s, bid);
     ctx.fillStyle = INK;
-    ctx.fillRect(zx - 1, y - 1, sitW + 2, 10);
-    texturedRect(ctx, "parch", zx, y, sitW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
-    drawPlain(ctx, "SIT", zx + sitW / 2 - textWidth("SIT", 0.5, true) / 2, y + 1.6, BROWN, 0.5, true);
-    s.hit(bid, zx - 2, y - 2, sitW + 4, 12);
+    ctx.fillRect(zx - 1, y - 1, camW + 2, 10);
+    texturedRect(ctx, "parch", zx, y, camW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
+    uiGlyph(ctx, s.peer ? "take" : "sit", zx + camW / 2, y + 4, 9, BROWN);
+    s.hit(bid, zx - 2, y - 2, camW + 4, 12);
     if (hl) {
       const t = s.peer ? "TAKE THIS SEAT" : "SIT HERE · PLAY THIS SEAT";
       shadowText(ctx, t, cx - textWidth(t, 0.42) / 2, y - 24, "#f8e8c0", 0.42);

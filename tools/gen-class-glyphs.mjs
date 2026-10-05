@@ -16,25 +16,30 @@ if (existsSync(join(root, ".env"))) {
 const KEY = process.env.FAL_KEY;
 if (!KEY) throw new Error("FAL_KEY missing (.env)");
 
-const SHEETS = [
-  {
-    aspect: "21:9",
-    items: [
-      ["BRUISER", "a big clenched gauntlet fist smashing down with a few impact cracks"],
-      ["TANK", "a heavy round-topped tower shield with rivets and a thick rim"],
-      ["ASSASSIN", "a curved dagger held point-down with a small crescent moon behind it"],
-      ["MARKSMAN", "a drawn longbow with an arrow nocked, pointing up and to the right"],
-    ],
-  },
-  {
-    aspect: "16:9",
-    items: [
-      ["CASTER", "a gnarled wizard staff topped with a glowing orb and two small sparkles"],
-      ["SUPPORT", "a round heart with a bold plus sign cut out of its centre"],
-      ["BUILDER", "a claw hammer crossed over a spanner wrench in front of a small brick wall"],
-    ],
-  },
-];
+// Optional CLI override: `node tools/gen-class-glyphs.mjs <tag> "NAME:description" ...` draws one sheet of those
+// glyphs instead (assets/generated/glyphs_<tag>_raw.png), e.g. one-off UI glyphs like the SIT chair.
+const cli = process.argv[2] && process.argv[3] ? process.argv.slice(3).map((a) => a.split(/:(.*)/s).slice(0, 2)) : null;
+const SHEETS = cli
+  ? [{ aspect: cli.length > 2 ? "16:9" : "4:3", items: cli, file: `glyphs_${process.argv[2]}_raw.png` }]
+  : [
+      {
+        aspect: "21:9",
+        items: [
+          ["BRUISER", "a big clenched gauntlet fist smashing down with a few impact cracks"],
+          ["TANK", "a heavy round-topped tower shield with rivets and a thick rim"],
+          ["ASSASSIN", "a curved dagger held point-down with a small crescent moon behind it"],
+          ["MARKSMAN", "a drawn longbow with an arrow nocked, pointing up and to the right"],
+        ],
+      },
+      {
+        aspect: "16:9",
+        items: [
+          ["CASTER", "a gnarled wizard staff topped with a glowing orb and two small sparkles"],
+          ["SUPPORT", "a round heart with a bold plus sign cut out of its centre"],
+          ["BUILDER", "a claw hammer crossed over a spanner wrench in front of a small brick wall"],
+        ],
+      },
+    ];
 
 const ref = `data:image/png;base64,${readFileSync(join(root, "assets/generated/ui_glyphs_raw.png")).toString("base64")}`;
 
@@ -67,9 +72,9 @@ async function falRun(model, input) {
   return data;
 }
 
-const only = process.argv[2] !== undefined ? Number(process.argv[2]) : undefined;
+const only = !cli && process.argv[2] !== undefined ? Number(process.argv[2]) : undefined;
 await Promise.all(
-  SHEETS.map(async ({ aspect, items }, n) => {
+  SHEETS.map(async ({ aspect, items, file: name }, n) => {
     if (only !== undefined && only !== n) return;
     const r = await falRun("fal-ai/nano-banana-pro/edit", {
       prompt: prompt(items),
@@ -79,7 +84,7 @@ await Promise.all(
       output_format: "png",
     });
     const img = await fetch(r.images[0].url);
-    const file = join(root, "assets/generated", `class_glyphs_${n}_raw.png`);
+    const file = join(root, "assets/generated", name ?? `class_glyphs_${n}_raw.png`);
     writeFileSync(file, Buffer.from(await img.arrayBuffer()));
     console.log(file, items.map(([id]) => id).join(","));
   }),

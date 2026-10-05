@@ -3,12 +3,16 @@
 transparent, 96 px square, like the other UI glyphs (tinted at draw time by uiGlyph in src/ui/screens/selectArt.ts).
 Each panel: drop the separator lines, keep the icon above the label (the label is the last block of ink rows)."""
 import os
+import sys
 import numpy as np
 from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 SHEETS = [("class_glyphs_0_raw.png", ["bruiser", "tank", "assassin", "marksman"]),
           ("class_glyphs_1_raw.png", ["caster", "support", "builder"])]
+# Or any sheet: `slice-class-glyphs.py <raw.png> <out_id> ...` (e.g. glyphs_sit_raw.png sit take) -> <out_id>.png.
+if len(sys.argv) > 2:
+    SHEETS = [(sys.argv[1], sys.argv[2:])]
 SIZE = 96
 
 for name, ids in SHEETS:
@@ -38,6 +42,6 @@ for name, ids in SHEETS:
         al = Image.fromarray(np.clip(sq, 0, 255).astype(np.uint8)).resize((SIZE, SIZE), Image.LANCZOS)
         out = Image.new("RGBA", (SIZE, SIZE), (255, 255, 255, 0))
         out.putalpha(al)
-        path = os.path.join(ROOT, "assets/ui/glyphs", f"class_{id}.png")
+        path = os.path.join(ROOT, "assets/ui/glyphs", f"{id}.png" if len(sys.argv) > 2 else f"class_{id}.png")
         out.save(path)
         print(path)
