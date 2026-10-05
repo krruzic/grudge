@@ -341,14 +341,19 @@ function swingPivot(w: World, e: Entity, reach: number): { x: number; z: number;
   const p = e.transform.pos;
   let best: { x: number; z: number; r: number } | null = null;
   let bd = reach;
+  const structs: Entity[] = [];
   for (const o of w.entities) {
     if (!o.alive || !o.structure) continue;
+    structs.push(o);
     const d = w.dist(e, o) - o.radius;
     if (d < bd) {
       bd = d;
       best = { x: o.transform.pos.x, z: o.transform.pos.z, r: o.radius };
     }
   }
+  // A building wins over the blocked cells it stands on (and any tree or rock only counts when no building is in
+  // reach), so she swings round the whole thing rather than one corner of it.
+  if (best) return best;
   const cx = Math.floor(p.x);
   const cz = Math.floor(p.z);
   const R = Math.ceil(reach);
@@ -358,6 +363,8 @@ function swingPivot(w: World, e: Entity, reach: number): { x: number; z: number;
       const z = cz + dz;
       const i = w.nav.index(x, z);
       if (i < 0 || w.nav.open(i) || !Number.isFinite(w.terrain.heightAt(x + 0.5, z + 0.5))) continue;
+      if (structs.some((o) => Math.hypot(o.transform.pos.x - x - 0.5, o.transform.pos.z - z - 0.5) < o.radius + 1))
+        continue;
       const d = Math.hypot(x + 0.5 - p.x, z + 0.5 - p.z) - 0.5;
       if (d < bd) {
         bd = d;
@@ -388,10 +395,17 @@ export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
   const sz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);
   const sign = rx * sz - rz * sx >= 0 ? 1 : -1;
   const base = Math.atan2(rz, rx);
-  for (const deg of [150, 120, 175, 95]) {
+  for (const [deg, rr] of [
+    [150, rad],
+    [120, rad],
+    [150, rad + 0.8],
+    [175, rad],
+    [95, rad],
+    [120, rad + 0.8],
+  ]) {
     const ang = base + sign * ((deg * Math.PI) / 180);
-    const x = pv.x + Math.cos(ang) * rad;
-    const z = pv.z + Math.sin(ang) * rad;
+    const x = pv.x + Math.cos(ang) * rr;
+    const z = pv.z + Math.sin(ang) * rr;
     if (
       !Number.isFinite(w.terrain.heightAt(x, z)) ||
       !w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) ||
@@ -415,14 +429,14 @@ export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
       toZ: z,
       fromX2: base,
       fromZ2: (deg * Math.PI) / 180,
-      chargeRange: rad,
+      chargeRange: rr,
     };
     h.action = a;
     h.blocking = false;
     e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + dur);
     h.cooldowns.dodge = w.time + dur + w.data.heroes.baseline.dodgeCooldown + 0.3;
     callout(w, e, "CHAIN SWING");
-    fx(w, "chainSwing", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: pv.x, tz: pv.z, seconds: dur, radius: rad });
+    fx(w, "chainSwing", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: pv.x, tz: pv.z, seconds: dur, radius: rr });
     return true;
   }
   return false;

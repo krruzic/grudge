@@ -14,7 +14,7 @@ world/              commands (per-player input), damage pipeline, death/bounties
 heroes.ts           public hero API (re-exports from hero/)
 hero/               update.ts (hero controller), start.ts (begin an ability), fire.ts (ability effects dispatch),
                     kinds/* (per ability kind), strikes.ts (hit shapes), combos.ts, gravewalk.ts, placement.ts,
-                    boomerangs.ts, marksman.ts + friar.ts (per-hero mechanics)
+                    boomerangs.ts, marksman.ts + friar.ts + wreckwitch.ts (per-hero mechanics)
 talents.ts          talent trees, xp/levels, effective abilities (hero.ab); talents/ effects, missiles, triggers
 units.ts            soldier AI                       structures.ts  pads/build/upgrade/spawnUnit
 structures/towers.ts tower behaviour                 arena.ts + arena/  relic, waves, shop/bombs, cannon, ogre
@@ -53,7 +53,7 @@ can be dropped or intercepted freely (the client and most tools clear `w.events`
 `data/*.json` -> `GameData` (read-only). A hero's `HeroDef` lists base abilities (`a` attack, `b` secondary,
 `r` special, `z` super). Learning talents rewrites ability fields (`set` / `add` / `mul`) and merges `fx` flags;
 `talents.recompute` caches the result in `hero.ab`, and gameplay code only ever calls `abilities(w, e)`. An
-ability's `kind` picks its implementation (`hero/kinds/*`, `marksman.ts`, `friar.ts`); `hooks` on the hero def
+ability's `kind` picks its implementation (`hero/kinds/*`, `marksman.ts`, `friar.ts`, `wreckwitch.ts`); `hooks` on the hero def
 are passive per-hero modifiers. Costumes/skins are purely client-side: the sim only knows hero types.
 
 ## Determinism (lockstep) rules
