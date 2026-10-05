@@ -4,6 +4,7 @@
 import type { World } from "../world.ts";
 import type { Entity } from "../types.ts";
 import { FLAG_GRASS, Kind } from "../terrain.ts";
+import { watched } from "../hero/architect.ts";
 
 /**
  * Step phase 2: per-tick status refresh. For units: hero damage auras, the herald's command aura (around the hero
@@ -73,7 +74,8 @@ function updateHidden(w: World, e: Entity, revealT: number): boolean {
   const inGrass = w.terrain.hasFlag(Math.floor(e.transform.pos.x), Math.floor(e.transform.pos.z), FLAG_GRASS);
   const cover = inGrass || w.mapEvents.misted(e.transform.pos.x, e.transform.pos.z);
   const smoked = w.time < s.stealthUntil;
-  const pipped = s.pipUntil !== undefined && w.time < s.pipUntil;
+  // Pinned by Pip, or in the watch of an enemy Watchtower lookout (Hoot): no hiding at all.
+  const pipped = (s.pipUntil !== undefined && w.time < s.pipUntil) || (!!e.hero && watched(w, e));
   s.hidden = !pipped && ((cover && w.time - s.lastAttackAt > revealT) || smoked);
   s.seenBy = 0;
   return s.hidden && !smoked;

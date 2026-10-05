@@ -30,15 +30,7 @@ function mend(w: World, e: Entity, o: Entity, amount: number, num = true): numbe
   return got;
 }
 
-/** Above the last enemy that hurt it (within 4 s) by at least `rise` m: Sweet Tooth's high-ground double heal. */
-export function abovePursuer(w: World, o: Entity, rise: number): boolean {
-  const s = o.status;
-  if (s.hurtBy === undefined || w.time - (s.hurtAt ?? -99) > 4) return false;
-  const by = w.get(s.hurtBy);
-  return !!by && by.alive && o.transform.y > by.transform.y + rise;
-}
-
-/** Passive Sweet Tooth, every 15 ticks: hurt allies within sweetRadius regenerate (x sweetHighMul on high ground). */
+/** Passive Sweet Tooth, every 15 ticks: hurt allies within sweetRadius regenerate. */
 export function sweetToothTick(w: World, e: Entity): void {
   const hk = hooksOf(w, e);
   const r = hk.sweetRadius;
@@ -48,15 +40,9 @@ export function sweetToothTick(w: World, e: Entity): void {
     if (!o.alive || o.team !== e.team || o.structure || o.hp >= o.maxHp || o === e) continue;
     if (Math.hypot(o.transform.pos.x - e.transform.pos.x, o.transform.pos.z - e.transform.pos.z) > r) continue;
     const frac = o.hero ? (hk.sweetHero ?? 0.006) : (hk.sweetUnit ?? 0.01);
-    const high = abovePursuer(w, o, hk.sweetRise ?? 0.75) ? (hk.sweetHighMul ?? 2) : 1;
-    if (healFrom(w, e, o, o.maxHp * frac * 0.5 * high) > 0) any = true;
-    if (high > 1 && o.hero && w.tick % 60 === 0)
-      fx(w, "sweetHigh", e, o.transform.pos.x, o.transform.y, o.transform.pos.z, { id: o.id });
+    if (healFrom(w, e, o, o.maxHp * frac * 0.5) > 0) any = true;
   }
-  if (hk.sweetSelf && e.hp < e.maxHp) {
-    const high = abovePursuer(w, e, hk.sweetRise ?? 0.75) ? (hk.sweetHighMul ?? 2) : 1;
-    healFrom(w, e, e, e.maxHp * hk.sweetSelf * 0.5 * high);
-  }
+  if (hk.sweetSelf && e.hp < e.maxHp) healFrom(w, e, e, e.maxHp * hk.sweetSelf * 0.5);
   if (any && w.tick % 60 === 0) fx(w, "sweet", e, e.transform.pos.x, e.transform.y, e.transform.pos.z, { radius: r });
 }
 
@@ -406,6 +392,7 @@ export function startBuzz(w: World, e: Entity, cmd: Command): boolean {
   const dz = mag > 0.2 ? cmd.moveZ / mag : -Math.sin(face);
   const dur = b.dodgeSeconds * (hk.buzzTime ?? 1.15);
   const a = begin(e, "dodge", "buzz", dur, 99, dx, dz);
+  a.hitIds = [];
   // combo: 1 when buzzing to her right (the render banks Mead that way).
   a.combo = dx * Math.cos(face) - dz * Math.sin(face) >= 0 ? 1 : 0;
   t.facing = face;
@@ -420,4 +407,29 @@ export function buzzTick(w: World, e: Entity, a: HeroAction): void {
   const face = e.transform.facing;
   w.moveBy(e, a.dirX * s * w.dt, a.dirZ * s * w.dt);
   e.transform.facing = face;
+  pollinate(w, e, a);
+}
+
+/**
+ * Passive Pollen: a friendly champion Mead buzzes past (within pollenRadius) is dusted once per buzz - pollenSpeed
+ * faster and pollenDamage harder for pollenSeconds. Dodging through her partner is a buff, not just an escape.
+ */
+function pollinate(w: World, e: Entity, a: HeroAction): void {
+  const hk = hooksOf(w, e);
+  if (!hk.pollenSeconds) return;
+  const r = hk.pollenRadius ?? 1.8;
+  const seen = (a.hitIds ??= []);
+  for (const p of w.players) {
+    if (p.team !== e.team || p.heroId === e.id || seen.includes(p.heroId)) continue;
+    const o = w.getAny(p.heroId);
+    if (!o?.alive || !o.hero || o.hero.dead || w.dist(o, e) > r) continue;
+    seen.push(o.id);
+    const st = o.status;
+    const on = w.time < st.buffUntil;
+    st.buffSpeedMul = Math.max(on ? st.buffSpeedMul : 1, hk.pollenSpeed ?? 1.2);
+    st.buffDamageMul = Math.max(on ? st.buffDamageMul : 1, hk.pollenDamage ?? 1.15);
+    st.buffUntil = Math.max(st.buffUntil, w.time + hk.pollenSeconds);
+    fx(w, "pollen", e, o.transform.pos.x, o.transform.y, o.transform.pos.z, { id: o.id });
+    callout(w, o, "POLLEN");
+  }
 }

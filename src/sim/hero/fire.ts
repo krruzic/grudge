@@ -229,7 +229,7 @@ function fireComboHit(w: World, e: Entity, a: HeroAction, mul: number): void {
   const range = hit.range * (1 + (pw - 1) * 0.3);
   const knockback = hit.knockback * (a.jab ? 0.5 : 1) * m.knockMul * pw;
   const big = fin || m.extra > 0 || pw > 1.3;
-  const targets = arcHit(w, e, a.dirX, a.dirZ, range, arc, dmg, knockback, big);
+  const targets = arcHit(w, e, a.dirX, a.dirZ, range, arc, dmg, knockback, big, undefined, ab.a.noFlinch);
   afterMelee(w, e, targets, dmg * targets.length, fin, a.dirX, a.dirZ, hit.range, !!a.jab);
   if (ab.a.fx?.tideOnHit) tideOnHit(w, e, targets);
   if (ab.a.chillSlow) chillTargets(w, e, targets);

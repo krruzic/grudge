@@ -973,8 +973,8 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       buzz(a, 0.3, 0.2);
       a.tone("triangle", 660, 990, 0.14, 0.05);
       return;
-    case "sweetHigh":
-      if (a.allow("sweetHigh", 1)) a.tone("sine", 880, 1320, 0.2, 0.04);
+    case "pollen":
+      if (a.allow("pollen", 0.3)) a.tone("sine", 880, 1320, 0.2, 0.04);
       return;
   }
   void w;

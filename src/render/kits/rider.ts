@@ -445,8 +445,21 @@ KITS.rider = {
         }
         return true;
       }
-      case "sweetHigh":
-        // High ground doubles Sweet Tooth: a little bee circles up over the ally.
+      case "pollen":
+        // Pollen: Mead brushed past a friend and dusted them gold - a puff of pollen and a bee circling up.
+        emit(h, {
+          tex: RIDER.pollen,
+          n: 10,
+          x: ev.x,
+          y: ev.y + 1,
+          z: ev.z,
+          size: [0.2, 0.34],
+          life: [0.6, 1],
+          speed: [0.6, 1.4],
+          up: [0.4, 1],
+          jitter: 0.7,
+          opacity: 0.9,
+        });
         emit(h, {
           tex: RIDER.bee,
           n: 1,

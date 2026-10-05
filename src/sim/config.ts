@@ -173,6 +173,8 @@ export interface AbilityDef {
   anim: string;
   hits?: HitDef[];
   comboWindow?: number;
+  /** Combo swings never flinch the target (Grim: a chain of stabs that can be walked out of). */
+  noFlinch?: boolean;
   damage?: number;
   structureDamage?: number;
   radius?: number;

@@ -735,10 +735,6 @@ export class World {
     return dmg.outnumbered(this, e);
   }
 
-  lone(e: Entity): boolean {
-    return dmg.lone(this, e);
-  }
-
   heal(target: Entity, amount: number): void {
     dmg.heal(this, target, amount);
   }

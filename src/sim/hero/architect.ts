@@ -28,7 +28,7 @@ export function isArchitect(w: World, e: Entity): boolean {
 const cellX = (w: World, i: number) => (i % w.terrain.width) + 0.5;
 const cellZ = (w: World, i: number) => Math.floor(i / w.terrain.width) + 0.5;
 
-/** One of this hero's lookouts that he is standing on top of. */
+/** One of his house's lookouts that this entity is standing on top of. */
 export function onLookout(w: World, e: Entity): TerrainMod | undefined {
   const i = w.terrain.index(Math.floor(e.transform.pos.x), Math.floor(e.transform.pos.z));
   return w.mods.find(
@@ -36,18 +36,35 @@ export function onLookout(w: World, e: Entity): TerrainMod | undefined {
   );
 }
 
-/** Vantage: x highGroundMul when at least highGroundHeight above the target (x perchMul more on his own lookout). */
+/**
+ * Watchtower, the vantage half: anyone of his house (him, his partner, soldiers) shooting or swinging from the top of
+ * one of his lookouts at something below hits x watchMul (x perchMul more for him with the Perch talent).
+ */
 export function highGroundMul(w: World, src: Entity, target: Entity): number {
-  if (!src.hero) return 1;
-  const hk = w.heroDef(src.hero.type).hooks;
-  if (!hk.highGroundMul || src.transform.y - target.transform.y < (hk.highGroundHeight ?? 0.9)) return 1;
-  const perch = abilities(w, src).r.perchMul;
-  return perch && onLookout(w, src) ? hk.highGroundMul * perch : hk.highGroundMul;
+  if (src.structure) return 1;
+  const m = onLookout(w, src);
+  if (!m || m.owner === undefined || src.transform.y - target.transform.y < 0.9) return 1;
+  const owner = w.getAny(m.owner);
+  const mul = owner?.hero ? (w.heroDef(owner.hero.type).hooks.watchMul ?? 1) : 1;
+  const perch = owner === src ? abilities(w, src).r.perchMul : undefined;
+  return perch ? mul * perch : mul;
+}
+
+/** Watchtower, the watch half: a foe within watchRadius of an enemy lookout is spotted (no hiding in grass / smoke). */
+export function watched(w: World, e: Entity): boolean {
+  for (const m of w.mods) {
+    if (m.style !== "lookout" || m.team === e.team || m.until <= w.time || m.owner === undefined || m.cx === undefined)
+      continue;
+    const owner = w.getAny(m.owner);
+    const r = owner?.hero ? w.heroDef(owner.hero.type).hooks.watchRadius : undefined;
+    if (r && Math.hypot(e.transform.pos.x - m.cx, e.transform.pos.z - m.cz!) <= r) return true;
+  }
+  return false;
 }
 
 /** Frostbite talent: chilled (slowed) foes take chillMul more from him. */
 export function chillMul(w: World, src: Entity, target: Entity): number {
-  if (!src.hero || !w.heroDef(src.hero.type).hooks.highGroundMul) return 1;
+  if (!isArchitect(w, src)) return 1;
   const m = abilities(w, src).a.chillMul;
   return m && w.time < target.status.slowUntil && target.status.slowMul < 1 ? m : 1;
 }

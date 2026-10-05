@@ -59,6 +59,7 @@ export function arcHit(
   knockback: number,
   big: boolean,
   vsStunnedMul?: number,
+  noFlinch?: boolean,
 ): Entity[] {
   const out: Entity[] = [];
   const cands: [Entity, number][] = [];
@@ -76,7 +77,7 @@ export function arcHit(
   }
   cands.sort((a, b) => (b[0].hero ? 1 : 0) - (a[0].hero ? 1 : 0) || a[1] - b[1]);
   for (const [o] of cands.slice(0, maxHits(w, e)))
-    if (w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul })) out.push(o);
+    if (w.damage(e, o, damage, { knockback, canMiss: true, big, vsStunnedMul, noFlinch })) out.push(o);
   return out;
 }
 

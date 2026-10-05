@@ -86,11 +86,11 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
   amount *= synergyMul(w, src, target, opts);
   if (src?.hero && !opts.tick) amount *= vantageMul(w, src, target);
   if (src) amount *= pipMarkMul(w, src, target);
-  if (src?.hero && !opts.tick) amount *= highGroundMul(w, src, target) * chillMul(w, src, target);
+  if (src && !opts.tick) amount *= highGroundMul(w, src, target) * chillMul(w, src, target);
   if (w.mods.length) amount *= fortCoverMul(w, src, target);
   let crit: boolean;
   [amount, crit] = rollVariance(w, src, amount, opts);
-  amount = defenderScaling(w, src, target, amount);
+  amount = defenderScaling(w, src, target, amount, opts);
 
   if (w.time < target.status.ccImmuneUntil) {
     opts = { ...opts, stun: undefined, knockback: 0 };
@@ -223,7 +223,8 @@ function attackerScaling(w: World, src: Entity | null, target: Entity, amount: n
   }
   if (src && src.kind !== "structure") {
     const hk = w.hooks(src);
-    if (hk.flankMul) {
+    // An execute (Grim's dash) scales off the target's missing health only: no backstab on top.
+    if (hk.flankMul && !opts.executeMul) {
       // Flankers: bonus vs undefended structures, or vs units/heroes hit from behind.
       if (target.structure) {
         const defended = w.entities.some((o) => o.alive && o.unit && o.team === target.team && w.dist(o, target) < 7);
@@ -293,14 +294,33 @@ function partnerMul(w: World, e: Entity, kind: "edge" | "guard"): number {
   return m;
 }
 
+/**
+ * Bastion (Stig's synergy, heroes.json synergy.bastion keyed by the partner's class): a partner fighting within 7 m
+ * of one of their house's buildings takes less - the engineer's works are cover for the back line.
+ */
+function bastionMul(w: World, e: Entity): number {
+  const cls = e.hero ? w.heroDef(e.hero.type).class : undefined;
+  if (!cls || w.tdm) return 1;
+  let k = 1;
+  for (const p of w.players) {
+    if (p.team !== e.team || p.heroId === e.id) continue;
+    const v = w.heroDef(p.heroType).synergy?.bastion?.[cls];
+    if (v !== undefined) k = Math.min(k, v);
+  }
+  if (k >= 1) return 1;
+  for (const o of w.entities) if (o.alive && o.structure && o.team === e.team && w.dist(o, e) - o.radius < 7) return k;
+  return 1;
+}
+
 /** Guard, the attacker's stealth-ambush opener (consumed here), marks, and armour effects. */
-function defenderScaling(w: World, src: Entity | null, target: Entity, amount: number): number {
+function defenderScaling(w: World, src: Entity | null, target: Entity, amount: number, opts: DamageOpts): number {
   if (w.time < target.status.guardUntil) amount *= target.status.guardMul;
-  if (target.hero) amount *= partnerMul(w, target, "guard");
+  if (target.hero) amount *= partnerMul(w, target, "guard") * bastionMul(w, target);
   if (src?.hero) amount *= partnerMul(w, src, "edge");
   if (src && src.kind !== "structure") {
     if (w.time < src.status.stealthUntil) {
-      amount *= src.status.ambushMul;
+      // The execute doesn't cash in the ambush either (it still breaks stealth).
+      if (!opts.executeMul) amount *= src.status.ambushMul;
       src.status.stealthUntil = 0;
     }
   }
@@ -387,25 +407,19 @@ function soakShield(w: World, src: Entity | null, target: Entity, amount: number
   return amount;
 }
 
-/** Hero hooks that depend on nearby allies/enemies (loneArmor, outnumberedArmor, outnumberedDamage). */
+/** Hero hooks that depend on the attacker or nearby allies/enemies (soldierTakenMul, outnumberedArmor, ...). */
 function matchupArmour(w: World, src: Entity | null, target: Entity, amount: number): number {
-  if (target.hero && src && !src.hero && w.lone(target))
-    amount *= 1 - (w.heroDef(target.hero.type).hooks.loneArmor ?? 0);
+  // Glass champions (Grim) take extra from soldiers, so wading through a wave costs him.
+  if (target.hero && src?.unit) amount *= w.heroDef(target.hero.type).hooks.soldierTakenMul ?? 1;
   if (target.hero && src?.hero) {
     const ua = w.heroDef(target.hero.type).hooks.outnumberedArmor;
     if (ua && w.outnumbered(target)) amount *= 1 - ua;
-  }
-  if (src?.hero && target.hero) {
-    const ud = w.heroDef(src.hero.type).hooks.outnumberedDamage;
-    if (ud && w.outnumbered(src)) amount *= ud;
   }
   return amount;
 }
 
 /** Side effects of hp actually lost: leech, jump cancel, xp, super meter, last-target memory, core damage stat. */
 function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number): void {
-  if (src?.hero && src.alive && target.hero && w.lone(src))
-    w.heal(src, amount * (w.heroDef(src.hero.type).hooks.loneLeech ?? 0));
   if (src?.hero?.tide && src.alive) w.heal(src, amount * tideLeech(w, src));
   if (target.hero?.jump && amount > 0) w.cancelJump(target);
   xpForDamage(w, src, target, amount);
@@ -526,17 +540,6 @@ export function outnumbered(w: World, e: Entity): boolean {
     if (o?.alive && w.dist(o, e) < 8) n++;
   }
   return n >= 2;
-}
-
-export function lone(w: World, e: Entity): boolean {
-  const r = e.hero ? w.heroDef(e.hero.type).hooks.loneRadius : undefined;
-  if (!r) return false;
-  for (const p of w.players) {
-    if (p.team !== e.team || p.heroId === e.id) continue;
-    const o = w.getAny(p.heroId);
-    if (o?.alive && w.dist(o, e) < r) return false;
-  }
-  return true;
 }
 
 export function heal(w: World, target: Entity, amount: number): void {

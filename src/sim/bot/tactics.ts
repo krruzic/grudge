@@ -147,22 +147,21 @@ export function engineerFight(bot: Bot, w: World, me: Entity, target: Entity | u
 
 /**
  * Grim: Leap is always held to full power (x1.6; his swings are actions, so the hold is free mid-combo) and let go
- * inside its 8 m reach. Execute Dash fires early when it lands the Smoke ambush (x2, consumed by the first hit), the
- * target is below 40% (x1.4) or it kills; otherwise the generic Z rule. (Keeping Z only for those cut his Z use by
- * two thirds and tested worse.) Returns false: the generic Z rule still applies.
+ * inside its 8 m reach. Execute Dash fires early when the target is below 40% (x1.4) or it kills; otherwise the
+ * generic Z rule. The dash doesn't take the Smoke ambush, so out of Smoke he opens with Leap or a stab instead.
+ * Returns false: the generic Z rule still applies.
  */
 export function raiderFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): boolean {
   const h = me.hero!;
   const ab = abilities(w, me);
   if (!target?.alive || !target.hero) return false;
   const d = w.dist(me, target);
-  const smoked = w.time < me.status.stealthUntil;
   const full = h.meter >= w.data.heroes.baseline.superMax && !h.action;
   const zRange = (ab.z.range ?? 10) * 0.85;
   if (full && d < zRange && w.canSee(me, target)) {
     const exec = target.hp < target.maxHp * (ab.z.executeBelow ?? 0.4);
-    const kill = target.hp < (ab.z.damage ?? 180) * w.damageMulOf(me) * (smoked ? 2 : 1) * 0.9;
-    if (smoked || exec || kill) {
+    const kill = target.hp < (ab.z.damage ?? 180) * w.damageMulOf(me) * 0.9;
+    if (exec || kill) {
       bot.wantZ = true;
       aimAt(bot, me, target);
     }
@@ -825,6 +824,18 @@ export function riderFight(bot: Bot, w: World, me: Entity, target: Entity | unde
   const ab = abilities(w, me);
   const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
   const foes = foesNear(w, me, 9);
+  // Pollen: buzz through a partner who is squaring up to an enemy champion and isn't already dusted.
+  const mate = bot.mate !== null ? w.heroForPlayer(bot.mate) : undefined;
+  if (mate?.alive && !mate.hero?.dead && rdy("dodge") && w.time >= mate.status.buffUntil && foes.some((f) => f.hero)) {
+    const dx = mate.transform.pos.x - me.transform.pos.x;
+    const dz = mate.transform.pos.z - me.transform.pos.z;
+    const l = Math.hypot(dx, dz);
+    if (l < 3.5 && foesNear(w, mate, 6).length && bot.rand() < 0.5) {
+      bot.wantDodge = true;
+      bot.wantFace = { x: dx / (l || 1), z: dz / (l || 1) };
+      return;
+    }
+  }
   if (h.meter >= w.data.heroes.baseline.superMax && foes.length) {
     const hurt =
       me.hp < me.maxHp * 0.55 ||

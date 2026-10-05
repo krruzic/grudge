@@ -71,7 +71,6 @@
         "marchAfter": 2.5,
         "outnumberedArmor": 0.4,
         "heroDamageMul": 1.33,
-        "outnumberedDamage": 1.3,
         "heaveRange": 2.6,
         "heaveCooldown": 6,
         "superGainMul": 0.9,
@@ -286,16 +285,16 @@
       },
       "class": "builder",
       "synergy": {
-        "edge": {
-          "assassin": 1.12,
-          "tank": 1.12,
-          "bruiser": 1.08
+        "bastion": {
+          "marksman": 0.85,
+          "caster": 0.85,
+          "support": 0.88
         }
       }
     },
     "raider": {
       "name": "Grim",
-      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Kills reset Leap. Alone (no friendly champion within 14 m) he heals for 30% of the damage he deals to champions and takes 30% less from soldiers and towers.",
+      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Vanish: a champion kill heals him 30% and readies Leap and Smoke. Fragile: soldiers hit him 15% harder.",
       "health": "low",
       "speed": "swift",
       "damage": "high",
@@ -307,9 +306,9 @@
         "maxSlope": 3.5,
         "killResetsB": 1,
         "speedMul": 1.07,
-        "loneRadius": 14,
-        "loneLeech": 0.3,
-        "loneArmor": 0.3
+        "soldierTakenMul": 1.15,
+        "killHeal": 0.3,
+        "killResetsR": 1
       },
       "abilities": {
         "a": {
@@ -357,7 +356,8 @@
           "bot": "fight",
           "crit": 0.12,
           "variance": 0.18,
-          "comboCooldown": 0.05
+          "comboCooldown": 0.05,
+          "noFlinch": true
         },
         "b": {
           "kind": "leap",
@@ -378,7 +378,7 @@
           "anim": "idle",
           "seconds": 4,
           "speedMul": 1.3,
-          "ambushMul": 2.0,
+          "ambushMul": 1.6,
           "dur": 0.3,
           "hitAt": 0.1,
           "cooldown": 14,
@@ -421,14 +421,7 @@
           0
         ]
       },
-      "class": "assassin",
-      "synergy": {
-        "edge": {
-          "bruiser": 1.1,
-          "tank": 1.1,
-          "assassin": 1.08
-        }
-      }
+      "class": "assassin"
     },
     "summoner": {
       "name": "Remnil",
@@ -992,12 +985,12 @@
       "botRange": 2.2,
       "hooks": {
         "featherFall": 1,
-        "highGroundMul": 1.2,
-        "highGroundHeight": 0.9,
         "squareDamage": 44,
         "squareRange": 9,
         "squareCooldown": 2.2,
-        "heroDamageMul": 1.12
+        "heroDamageMul": 1.12,
+        "watchMul": 1.2,
+        "watchRadius": 9
       },
       "abilities": {
         "a": {
@@ -1470,7 +1463,8 @@
       "class": "bruiser",
       "synergy": {
         "dredgeStack": {
-          "caster": 2
+          "bruiser": 2,
+          "tank": 2
         }
       }
     },
@@ -1604,8 +1598,6 @@
         "sweetHero": 0.007,
         "sweetUnit": 0.02,
         "sweetSelf": 0.009,
-        "sweetHighMul": 2,
-        "sweetRise": 0.75,
         "flingDamage": 55,
         "flingRange": 8.5,
         "flingSlow": 0.6,
@@ -1617,7 +1609,11 @@
         "buzzStrafe": 1,
         "buzzTime": 1.15,
         "buzzSpeed": 1.1,
-        "heroDamageMul": 1.1
+        "heroDamageMul": 1.1,
+        "pollenSeconds": 3,
+        "pollenSpeed": 1.2,
+        "pollenDamage": 1.15,
+        "pollenRadius": 1.8
       },
       "abilities": {
         "a": {

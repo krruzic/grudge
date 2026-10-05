@@ -179,11 +179,17 @@ function rubbleSeconds(w: World, zone: Pad["zone"]): number {
   return zone === "home" ? (s.rubbleHomeSeconds ?? s.rubbleSeconds) : s.rubbleSeconds;
 }
 
-/** Kill-triggered hero hooks: killResetsB, and hexed victims rising as temporary grunts for the hexer. */
+/** Kill-triggered hero hooks: killResetsB, Vanish (killHeal / killResetsR), and hexed victims rising as temporary grunts for the hexer. */
 function onKillSynergy(w: World, target: Entity, src: Entity | null): void {
   const t = w.time;
   if (src?.hero && w.heroDef(src.hero.type).hooks.killResetsB) {
     if (target.hero || target.structure) src.hero.cooldowns.b = t;
+  }
+  // Vanish (Grim): a champion kill patches him up and readies Smoke, to get out after the pick.
+  const hk = src?.hero ? w.heroDef(src.hero.type).hooks : undefined;
+  if (src?.hero && src.alive && target.hero && hk) {
+    if (hk.killHeal) w.heal(src, src.maxHp * hk.killHeal);
+    if (hk.killResetsR) src.hero.cooldowns.r = t;
   }
   if (target.kind !== "structure" && t < target.status.hexUntil) {
     const owner = w.get(target.status.hexOwner);
