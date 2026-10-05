@@ -224,7 +224,9 @@ const GLOW_SIZE: Record<string, number> = { arrow: 0.45, ballista: 0.8, magic: 1
  * Typed as a Sprite because the glow fallback is one; models only use the Object3D part.
  */
 function projectileView(cfx: CombatFx, world: World, p: Projectile): THREE.Sprite {
-  const tower = towerProjectile(p.style);
+  const src0 = world.getAny(p.sourceId);
+  const shot = p.style === "ballista" && costumeOfEntity(world, src0) === "calliope" ? "cannonball" : p.style;
+  const tower = towerProjectile(shot);
   if (tower) {
     cfx.root.add(tower);
     return tower as unknown as THREE.Sprite;

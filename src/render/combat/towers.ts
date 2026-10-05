@@ -327,8 +327,22 @@ for (const m of [woodMat, ironMat, featherMat, clayMat]) m.userData.keep = true;
  * Modelled projectile for tower shots (spear/arrow/firepot), tagged with userData.towerProj so the projectile sync
  * drives it with towerProjectileTick and never disposes the shared geometry/materials.
  */
+/** Calliope Stig's ballista lobs these instead of bolts. */
+const ballGeo = new THREE.IcosahedronGeometry(0.26, 2);
+const ballMat = new THREE.MeshLambertMaterial({ color: 0x1c1c22, emissive: 0x050508 });
+const ballGlint = new THREE.MeshBasicMaterial({ color: 0x8890a0 });
+const glintGeo = new THREE.SphereGeometry(0.06, 6, 4);
+
 export function towerProjectile(style: string): THREE.Object3D | null {
-  if (style === "spear" || style === "arrow") {
+  if (style === "cannonball") {
+    const g = new THREE.Group();
+    const glint = new THREE.Mesh(glintGeo, ballGlint);
+    glint.position.set(-0.1, 0.14, 0.12);
+    g.add(new THREE.Mesh(ballGeo, ballMat), glint);
+    g.userData.towerProj = style;
+    return g;
+  }
+  if (style === "spear" || style === "arrow" || style === "ballista") {
     const g = new THREE.Group();
     g.add(
       new THREE.Mesh(shaftGeo, woodMat),
@@ -336,7 +350,8 @@ export function towerProjectile(style: string): THREE.Object3D | null {
       new THREE.Mesh(finGeo, featherMat),
       new THREE.Mesh(fin2, featherMat),
     );
-    g.scale.setScalar(style === "spear" ? 1.25 : 0.55);
+    // Stig's ballista fires a heavy bolt, between a tower spear and a soldier's arrow.
+    g.scale.setScalar(style === "spear" ? 1.25 : style === "ballista" ? 0.95 : 0.55);
     g.userData.towerProj = style;
     return g;
   }
@@ -368,6 +383,22 @@ export function towerProjectileTick(h: FxHost, o: THREE.Object3D, x: number, y: 
         speed: [0, 0.3],
         up: [0.5, 1],
         additive: true,
+      });
+  } else if (o.userData.towerProj === "cannonball") {
+    // A little powder smoke trailing the ball.
+    if (Math.random() < 0.5)
+      emit(h, {
+        tex: FX.dust,
+        n: 1,
+        x,
+        y,
+        z,
+        size: [0.25, 0.4],
+        grow: 1.8,
+        life: [0.3, 0.5],
+        speed: [0, 0.2],
+        color: 0x6a6a70,
+        opacity: 0.5,
       });
   } else if (prev) {
     const d = new THREE.Vector3(x - prev.x, y - prev.y, z - prev.z);
