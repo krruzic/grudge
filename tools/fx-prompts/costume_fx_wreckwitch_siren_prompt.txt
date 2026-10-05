@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume DROWNED SIREN: Mother Kelp the sea-hag as a drowned siren with coral-red anemone hair, pearly lavender skin, pearl-white and coral-pink silk tatters and gold jewellery. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. The last three sprites are round and seen from directly above and must stay perfectly circular with empty magenta outside the circle. Left to right, top to bottom:
+1. a splash crown of clear turquoise lagoon water with pink-white foam tips and a pearl
+2. a single glistening pink pearl droplet
+3. a single iridescent rainbow soap-bubble with a white highlight
+4. a wavy strand of coral-red sea anemone ribbon
+5. a pink conch shell with a pearl
+6. a soft glittering cloud of pink-and-lavender sea mist with sparkles
+7. a horizontal spray of sparkling pink-lavender water, thick on the left spraying apart to the right
+8. a cracked broken pink coral heal plus symbol split in two, dripping lavender water
+9. a horizontal string of large pearls and small gold links spanning the whole cell width
+10. a single gold ring link with a pearl
+11. a thick coral-pink crescent swoosh arc with pearl droplets flying off it
+12. a curling turquoise wave crest with pink foam and pearls
+13. a pale lavender-blue siren hand with gold bangles reaching up out of a small swirl of turquoise water
+14. a swirling turquoise-and-pink whirlpool seen from directly above with pearly foam streaks
+15. a ring of churning turquoise water seen from directly above with pale lavender siren hands and pearls poking up all around the ring, empty centre
+16. a round tide-pool of clear turquoise water seen from directly above with a rim of pink coral and pearls
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

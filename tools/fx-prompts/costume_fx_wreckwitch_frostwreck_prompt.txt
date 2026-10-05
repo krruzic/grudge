@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume FROZEN WRECK: Mother Kelp the sea-hag frozen in a polar shipwreck, with frost-white icicle hair, frostbitten grey skin, slate-grey canvas glazed with hoarfrost and a cold cyan lantern. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. The last three sprites are round and seen from directly above and must stay perfectly circular with empty magenta outside the circle. Left to right, top to bottom:
+1. a splash crown of icy pale-cyan water freezing into ice shards
+2. a single pale icy-blue frozen droplet like a small icicle
+3. a single frosted ice bubble with a white highlight
+4. a frozen stiff strand of pale cyan kelp crusted with frost
+5. a small frosted white seashell with ice crystals
+6. a puffy cloud of freezing white-and-pale-blue frost mist with tiny snowflakes
+7. a horizontal spray of icy white-blue frost breath, thick on the left spraying apart to the right
+8. a cracked broken heal plus symbol made of ice split in two, with frost crystals
+9. a horizontal length of frosted iron chain glazed with ice, spanning the whole cell width
+10. a single frosted iron chain link with icicles
+11. a thick pale icy-cyan crescent swoosh arc with ice shards flying off it
+12. a curling frozen wave crest of pale blue ice with white frost
+13. a frostbitten grey-white hand with icy fingertips reaching up out of a small hole in cracked ice
+14. a swirling whirlpool of dark icy water and white sea-ice floes seen from directly above
+15. a ring of cracked white pack ice seen from directly above with frostbitten grey hands poking up all around the ring, empty centre
+16. a round frozen puddle of pale blue ice seen from directly above with white frost cracks and a snowy rim
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

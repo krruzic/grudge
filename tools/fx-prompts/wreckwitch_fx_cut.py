@@ -8,10 +8,10 @@ from PIL import Image
 CELL = 128
 src, dst = sys.argv[1], sys.argv[2]
 a = np.asarray(Image.open(src).convert("RGB")).astype(np.float32)
-bg = np.array([255, 0, 255], np.float32)
+bg = np.median(np.concatenate([a[:8, :8].reshape(-1, 3), a[-8:, -8:].reshape(-1, 3), a[:8, -8:].reshape(-1, 3), a[-8:, :8].reshape(-1, 3)]), 0)
 d = np.sqrt(((a - bg) ** 2).sum(-1))
-alpha = np.clip((d - 40) / 90, 0, 1)
-spill = np.clip(np.minimum(a[..., 0], a[..., 2]) - a[..., 1], 0, None) * (1 - alpha) ** 0.5
+alpha = np.clip((d - 34) / 80, 0, 1)
+spill = np.clip(np.minimum(a[..., 0], a[..., 2]) - a[..., 1] - (np.minimum(bg[0], bg[2]) - bg[1] - 255) * 0, 0, None) * (1 - alpha) ** 0.5
 a[..., 0] -= spill * 0.9
 a[..., 2] -= spill * 0.9
 H, W = alpha.shape

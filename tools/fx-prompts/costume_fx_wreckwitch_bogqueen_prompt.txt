@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume BOG QUEEN: Mother Kelp the sea-hag as a swamp bog queen with dry swamp-grass hair, cattails, mossy peat skin, moss-green burlap, toadstools and amber will-o-wisp light. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. The last three sprites are round and seen from directly above and must stay perfectly circular with empty magenta outside the circle. Left to right, top to bottom:
+1. a splash crown of murky brown peat-bog water with green duckweed
+2. a single murky brown-green swamp droplet
+3. a single amber glowing firefly orb with a soft halo
+4. a green cattail reed with a brown head
+5. a small orange toadstool mushroom
+6. a puffy cloud of yellow-green swamp gas with floating spores
+7. a horizontal spray of brown-green bog mud, thick on the left spraying apart to the right
+8. a cracked broken heal plus symbol made of dry bark split in two, dripping green slime
+9. a horizontal twisted vine of brown roots spanning the whole cell width
+10. a single knotted loop of brown root
+11. a thick moss-green crescent swoosh arc with mud clods flying off it
+12. a curling wave of brown bog water with green duckweed foam
+13. a mossy brown root-wrapped bog hand with long twig fingers reaching up out of a small puddle of peat water
+14. a swirling brown-and-green bog whirlpool seen from directly above with duckweed streaks
+15. a ring of churning dark peat water seen from directly above with mossy twig-fingered bog hands poking up all around the ring, empty centre
+16. a round puddle of murky green-brown bog water seen from directly above with a rim of moss, small toadstools and duckweed
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.
