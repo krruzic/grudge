@@ -8,7 +8,7 @@ import { Kind } from "../../terrain.ts";
 import { addShield, pullTo, zoneAt } from "../../talents.ts";
 
 /** Repair pulse: heal (and optionally shield/haste) own structures in radius, heal allies (overhaulHeal), hit enemies. */
-/** Deathmatch: champion-built turrets and ballistas are flimsier (tdm.buildHpMul); 1 elsewhere. */
+/** Deathmatch: Stig's siege tower (works) and ballista are flimsier (tdm.buildHpMul); 1 elsewhere. */
 function dmHp(w: World, kind: "tower" | "ballista"): number {
   return w.tdm?.cfg.buildHpMul?.[kind] ?? 1;
 }
@@ -87,7 +87,7 @@ export function fireTurret(w: World, e: Entity, a: HeroAction, def: AbilityDef):
   if (i < 0) return;
   const sx = (i % w.nav.w) + 0.5;
   const sz = Math.floor(i / w.nav.w) + 0.5;
-  const s = w.addEntity(e.team, "structure", 0.8, sx, sz, (def.hp ?? 400) * dmHp(w, "tower"));
+  const s = w.addEntity(e.team, "structure", 0.8, sx, sz, def.hp ?? 400);
   s.structure = {
     type: "damage",
     padIndex: -1,
@@ -189,7 +189,7 @@ export function fireWorks(w: World, e: Entity, a: HeroAction, def: AbilityDef): 
   }
   w.emit({ type: "mod", id: m.id });
   w.emit({ type: "slam", x: cx, y: top, z: cz, radius: 2, team: e.team, src: e.id });
-  const anchor = w.addEntity(e.team, "structure", half + 0.4, cx, cz, def.rampHp ?? 500);
+  const anchor = w.addEntity(e.team, "structure", half + 0.4, cx, cz, (def.rampHp ?? 500) * dmHp(w, "tower"));
   anchor.structure = {
     type: "damage",
     padIndex: -1,
@@ -209,7 +209,7 @@ export function fireWorks(w: World, e: Entity, a: HeroAction, def: AbilityDef): 
   w.emit({ type: "build", id: anchor.id, padIndex: -1, team: e.team, upgrade: false });
   if (def.fx?.tesla) {
     // Tesla talent: a turret on top of the platform that lives as long as the works.
-    const s = w.addEntity(e.team, "structure", 0.8, cx, cz, (def.hp ?? 400) * dmHp(w, "tower"));
+    const s = w.addEntity(e.team, "structure", 0.8, cx, cz, def.hp ?? 400);
     s.structure = {
       type: "damage",
       padIndex: -1,

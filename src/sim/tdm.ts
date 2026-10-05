@@ -35,7 +35,7 @@ export interface TdmConfig {
   safeDistance: number;
   relicFirstSeconds: number;
   /** FFA deathmatch only: per-champion hp / speed / damage multipliers (World.dmMod). */
-  /** Deathmatch hp multipliers for champion-built turrets (Stig's tesla / turret) and ballistas. */
+  /** Deathmatch hp multipliers for Stig's siege tower (works) and ballista. */
   buildHpMul?: { tower?: number; ballista?: number };
   /** Every champion's speed in deathmatch (smaller fights, more chasing for power-ups). */
   speedMul?: number;
