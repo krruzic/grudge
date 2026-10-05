@@ -19,10 +19,23 @@ for name, ids in SHEETS:
     im = Image.open(os.path.join(ROOT, "assets/generated", name)).convert("L")
     a = 255 - np.asarray(im, dtype=np.float32)
     h, w = a.shape
-    pw = w / len(ids)
+    # Panel edges: the drawn divider lines when there are the right number of them, else equal widths.
+    lines = np.where((a > 128).mean(0) > 0.6)[0]
+    groups = [g for g in np.split(lines, np.where(np.diff(lines) > 1)[0] + 1) if len(g)]
+    mids = [int(g.mean()) for g in groups if 5 < g.mean() < w - 5]
+    edges = [0, *mids, w] if len(mids) == len(ids) - 1 else [round(k * w / len(ids)) for k in range(len(ids) + 1)]
     for i, id in enumerate(ids):
-        x0, x1 = int(i * pw + pw * 0.03), int((i + 1) * pw - pw * 0.03)
-        p = a[int(h * 0.02):int(h * 0.98), x0:x1]
+        pw = edges[i + 1] - edges[i]
+        x0, x1 = int(edges[i] + pw * 0.03), int(edges[i + 1] - pw * 0.03)
+        p = a[int(h * 0.02):int(h * 0.98), x0:x1].copy()
+        # Panel divider lines (uneven panel widths put them inside the crop): drop full-height ink columns.
+        p[:, (p > 128).mean(0) > 0.6] = 0
+        # ...and any leftover thin vertical sliver of one (a few px wide, tall, at the crop's sides).
+        cols = (p > 128).sum(0)
+        for side in (range(0, int(p.shape[1] * 0.12)), range(int(p.shape[1] * 0.88), p.shape[1])):
+            for c in side:
+                if cols[c] > p.shape[0] * 0.25:
+                    p[:, max(0, c - 3):c + 4] = 0
         rows = (p > 128).sum(1) > 0
         # Last ink block (from the bottom) is the label; the icon is everything above the gap before it.
         ys = np.where(rows)[0]

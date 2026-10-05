@@ -10,7 +10,9 @@
 import { playerLabel } from "../../render/costumes";
 import type { World } from "../../sim/world";
 import { TEAM_NAMES, type Entity } from "../../sim/types";
-import { learned, options } from "../../sim/talents";
+import { abilities, learned, options } from "../../sim/talents";
+import { onLookout } from "../../sim/hero/architect";
+import { uiGlyph } from "../screens/selectArt";
 import { drawNum, drawText, textWidth } from "../font";
 import { waxSeal } from "../uiPaint";
 import {
@@ -304,8 +306,9 @@ function panelKey(
     talents,
     local && h.picks.length ? Math.floor(now * 3) % 3 : -1,
     h.pip ? 1 : 0,
-    vantageOn(w, e) ? 1 : 0,
-    gritStep(e),
+    passiveKey(w, e),
+    charges(w, e, "b"),
+    charges(w, e, "r"),
   ].join("|");
 }
 
@@ -362,6 +365,20 @@ function paintPlayerPanel(
         const n = String(Math.ceil(left));
         drawNum(ctx, n, bx - textWidth(n, 0.72, true) / 2 - 0.5, y + 1.2, "#ffffff", 0.72);
       }
+      // Charged abilities (Hoot): how many uses are banked, in a small gold badge on the button's corner.
+      const n = charges(w, e, k);
+      if (n >= 0) {
+        const s = String(n);
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.arc(bx + 4, y + 8.6, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = n > 0 ? "#e8b830" : "#5a5050";
+        ctx.beginPath();
+        ctx.arc(bx + 4, y + 8.6, 2, 0, Math.PI * 2);
+        ctx.fill();
+        drawNum(ctx, s, bx + 4 - textWidth(s, 0.5, true) / 2 - 0.2, y + 6.8, "#1a120a", 0.5);
+      }
       if (k === "b" && h.pip) {
         ctx.fillStyle = INK;
         ctx.beginPath();
@@ -379,9 +396,13 @@ function paintPlayerPanel(
     const zx = ax(px + 30);
     ringMeter(ctx, zx, y + 5, 6.4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
     padButton(ctx, zx, y + 5, 4.4, full ? "#e8c030" : PAD.z, "Z", !full);
-    if (vantageOn(w, e)) drawVantage(ctx, ax(px + 39), y);
-    else if (gritStep(e)) drawGrit(ctx, ax(px + 39), y, gritStep(e) / 4);
-    px += 42;
+    px += 38;
+    // The passive slot: a framed box for champions whose passive has a state worth watching.
+    const ps = passiveState(w, e);
+    if (ps) {
+      drawPassive(ctx, right ? ax(px, 11) : ax(px), y - 0.5, ps);
+      px += 14;
+    } else px += 4;
   }
   const cfgXp = w.data.talents?.xp;
   // Commanders don't level.
@@ -414,56 +435,70 @@ function paintPlayerPanel(
   return 13;
 }
 
-/** Gold diamond beside the Z ring. */
-function drawVantage(ctx: CanvasRenderingContext2D, vx: number, y: number): void {
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.moveTo(vx, y + 1);
-  ctx.lineTo(vx + 3.2, y + 5);
-  ctx.lineTo(vx, y + 9);
-  ctx.lineTo(vx - 3.2, y + 5);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = "#ffe070";
-  ctx.beginPath();
-  ctx.moveTo(vx, y + 2);
-  ctx.lineTo(vx + 2.2, y + 5);
-  ctx.lineTo(vx, y + 8);
-  ctx.lineTo(vx - 2.2, y + 5);
-  ctx.closePath();
-  ctx.fill();
+/** Banked uses of a charged ability (AbilityDef.charges > 1), else -1. */
+function charges(w: World, e: Entity, k: "b" | "r"): number {
+  const n = abilities(w, e)[k].charges ?? 1;
+  if (n < 2 || e.hero!.dead) return -1;
+  const stock = e.hero!.stock?.[k];
+  return stock ? stock.filter((t) => t <= w.time).length + Math.max(0, n - stock.length) : n;
+}
+
+/**
+ * A champion's passive, for the HUD slot after the Z ring: kind, fill 0..1 (or lit), and an optional count.
+ *   vantage (Wren): lit while it's on       grit (Gristle): Thick Skin fill
+ *   tide (Kelp): Tide Rising stacks          runes (Hollin): runes standing
+ *   watch (Hoot): lit while on a lookout, count = lookouts standing
+ */
+type Passive = { kind: "vantage" | "grit" | "tide" | "runes" | "watch"; k: number; n?: number };
+function passiveState(w: World, e: Entity): Passive | null {
+  const h = e.hero!;
+  if (h.dead) return null;
+  const hk = w.heroDef(h.type).hooks;
+  if (hk.vantageMul) return { kind: "vantage", k: vantageOn(w, e) ? 1 : 0 };
+  if (hk.gritMax) return { kind: "grit", k: gritStep(e) / 4 };
+  if (hk.tideMax) return { kind: "tide", k: (h.tide ?? 0) / hk.tideMax, n: h.tide ?? 0 };
+  if (hk.runeMax) {
+    const n = (h.runes ?? []).filter((r) => w.time < r.until).length;
+    return { kind: "runes", k: n / hk.runeMax, n };
+  }
+  if (hk.watchMul) {
+    const n = w.mods.filter((m) => m.style === "lookout" && m.owner === e.id && m.until > w.time).length;
+    return { kind: "watch", k: onLookout(w, e) ? 1 : 0, n };
+  }
+  return null;
+}
+function passiveKey(w: World, e: Entity): string {
+  const p = passiveState(w, e);
+  return p ? `${p.kind}${Math.round(p.k * 8)}:${p.n ?? ""}` : "";
+}
+
+/** The passive slot: dark framed box (gold frame when full / lit), the passive's glyph, a count in the corner. */
+function drawPassive(ctx: CanvasRenderingContext2D, x: number, y: number, p: Passive): void {
+  const S = 11;
+  const full = p.k >= 1;
+  ctx.fillStyle = full ? "#e8c030" : INK;
+  ctx.fillRect(x - 1, y - 1, S + 2, S + 2);
+  ctx.fillStyle = "#2a2430";
+  ctx.fillRect(x, y, S, S);
+  // Fill level as a warm wash rising from the bottom.
+  if (p.k > 0 && p.kind !== "vantage" && p.kind !== "watch") {
+    ctx.fillStyle = full ? "rgba(240,200,80,0.35)" : "rgba(200,190,170,0.22)";
+    const hh = Math.round(S * Math.min(1, p.k));
+    ctx.fillRect(x, y + S - hh, S, hh);
+  }
+  // Painted glyph (assets/ui/glyphs/passive_<kind>.png): bright when the passive is doing something, dim otherwise.
+  const on = p.k > 0;
+  uiGlyph(ctx, `passive_${p.kind}`, x + S / 2, y + S / 2, S - 1, full ? "#ffe070" : on ? "#f0e2c0" : "#7a7068");
+  if (p.n !== undefined) {
+    const s = String(p.n);
+    drawNum(ctx, s, x + S - textWidth(s, 0.5, true) + 0.5, y + S - 4.2, p.n > 0 ? "#fff0b0" : "#8a8070", 0.5);
+  }
 }
 
 /** Gristle's Grit in quarters (0 = none). */
 function gritStep(e: Entity): number {
   const g = e.hero?.grit;
   return g ? Math.ceil(g * 4 - 0.01) : 0;
-}
-
-/** Grey stone shield beside the Z ring, filling from the bottom with Gristle's Grit (gold rim when full). */
-function drawGrit(ctx: CanvasRenderingContext2D, vx: number, y: number, k: number): void {
-  const shield = (r: number) => {
-    ctx.beginPath();
-    ctx.moveTo(vx - r, y + 5 - r * 1.1);
-    ctx.lineTo(vx + r, y + 5 - r * 1.1);
-    ctx.lineTo(vx + r, y + 5 + r * 0.2);
-    ctx.lineTo(vx, y + 5 + r * 1.3);
-    ctx.lineTo(vx - r, y + 5 + r * 0.2);
-    ctx.closePath();
-  };
-  ctx.fillStyle = k >= 1 ? "#e8c030" : INK;
-  shield(3.4);
-  ctx.fill();
-  ctx.fillStyle = "#3a3438";
-  shield(2.5);
-  ctx.fill();
-  ctx.save();
-  shield(2.5);
-  ctx.clip();
-  ctx.fillStyle = k >= 1 ? "#f0e8d8" : "#c8c2b8";
-  const top = y + 5 + 2.5 * 1.3 - k * 2.5 * 2.4;
-  ctx.fillRect(vx - 3, top, 6, 8);
-  ctx.restore();
 }
 
 // ── Morph meter and learn cards (anchored under a player panel) ──
