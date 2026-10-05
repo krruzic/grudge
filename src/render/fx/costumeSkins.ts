@@ -5,6 +5,7 @@ import * as THREE from "three";
 import ironUrl from "../../../assets/textures/iron.png?url";
 import seamUrl from "../../../assets/fx/colossus_seam.png?url";
 import {
+  ARCHITECT,
   cv,
   DUELIST,
   ENGINEER,
@@ -64,6 +65,10 @@ const TINTS: Record<string, Record<number, number>> = {
     0xe0ffb0: 0xe8d0ff,
   },
   celadon: { 0xffc860: 0x9fe0b0, 0xffe6a0: 0xd8f0ff, 0xffd070: 0xa8d8ff, 0xfff0c0: 0xe8f4ff, 0xffe0a0: 0xe0f0ff },
+  // Professor Hoot (architect): his frost/ice kit colours per costume.
+  snowy: { 0xa8e8ff: 0xd8b8ff, 0xd8f4ff: 0xf2e6ff, 0xe8fbff: 0xf6eeff, 0xe8f6ff: 0xf2e8ff },
+  temple: { 0xa8e8ff: 0x58e0b8, 0xd8f4ff: 0xb8f0d8, 0xe8fbff: 0xd8fff0, 0xe8f6ff: 0xc8f0e0 },
+  clockwork: { 0xa8e8ff: 0xffb850, 0xd8f4ff: 0xffe0a0, 0xe8fbff: 0xfff0c8, 0xe8f6ff: 0xd8d0c8 },
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
@@ -75,6 +80,9 @@ const TRAILS: Record<string, number> = {
   suntotem: 0xffe0a0,
   starfall: 0xd890ff,
   celadon: 0x7fb0ff,
+  snowy: 0xd8b8ff,
+  temple: 0x58d8b8,
+  clockwork: 0xffc060,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);
@@ -112,6 +120,16 @@ const SWAPS: Record<string, [THREE.Texture, THREE.Texture][]> = {
     [FX.dust, WREN.gust],
     [FX.smoke, WREN.gust],
     [FX.twinkle, WREN.glint],
+  ],
+  snowy: [[FX.twinkle, ARCHITECT.twinkle]],
+  temple: [
+    [FX.dust, ARCHITECT.chalk],
+    [FX.splash, ARCHITECT.spray],
+  ],
+  clockwork: [
+    [FX.dust, ARCHITECT.chalk],
+    [FX.smoke, ARCHITECT.snow],
+    [FX.twinkle, ARCHITECT.twinkle],
   ],
   celadon: [
     [FX.dust, FRIAR.barley],
@@ -171,9 +189,7 @@ COSTUME_SKIN.colossus = {
       ),
   },
   lipFlat: 0.3,
-  decal: new Map([
-    [WARLORD.crackRing, "flat"],
-  ]),
+  decal: new Map([[WARLORD.crackRing, "flat"]]),
 };
 COSTUME_SKIN.calliope = {
   chunk: {
@@ -232,4 +248,25 @@ COSTUME_SKIN.celadon = {
   },
   fisMat: { lip: () => lambert(0xf0f4f8), cut: () => lambert(0x4a3018) },
   lipFlat: 0.35,
+};
+COSTUME_SKIN.snowy = {
+  chunk: {
+    geos: [geo(new THREE.OctahedronGeometry(0.45), 0.8, 1.1, 0.8), geo(new THREE.BoxGeometry(0.7, 0.5, 0.6))],
+    colors: [0xf4ecff, 0xd8c0ff, 0xffffff],
+    tex: null,
+  },
+};
+COSTUME_SKIN.temple = {
+  chunk: {
+    geos: [rock, geo(new THREE.ConeGeometry(0.3, 0.9, 6)), geo(new THREE.BoxGeometry(0.8, 0.45, 0.6))],
+    colors: [0x6a8a70, 0xe8d8b8, 0x4a6a5a],
+    tex: null,
+  },
+};
+COSTUME_SKIN.clockwork = {
+  chunk: {
+    geos: [cogGeo(), geo(new THREE.CylinderGeometry(0.32, 0.32, 0.28, 6)), geo(new THREE.BoxGeometry(0.9, 0.12, 0.6))],
+    colors: [0xe0b048, 0xc87a40, 0x8a8a90],
+    tex: ironTex,
+  },
 };

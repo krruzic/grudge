@@ -971,7 +971,7 @@
         "featherFall": 1,
         "highGroundMul": 1.2,
         "highGroundHeight": 0.9,
-        "squareDamage": 36,
+        "squareDamage": 44,
         "squareRange": 9,
         "squareCooldown": 2.2
       },
@@ -980,7 +980,7 @@
           "kind": "combo",
           "hits": [
             {
-              "damage": 46,
+              "damage": 50,
               "range": 2.5,
               "arcDeg": 120,
               "dur": 0.34,
@@ -989,7 +989,7 @@
               "knockback": 1.2
             },
             {
-              "damage": 46,
+              "damage": 50,
               "range": 2.5,
               "arcDeg": 130,
               "dur": 0.34,
@@ -998,7 +998,7 @@
               "knockback": 1.4
             },
             {
-              "damage": 78,
+              "damage": 84,
               "range": 2.8,
               "arcDeg": 170,
               "dur": 0.55,
@@ -1055,7 +1055,7 @@
           "hitAt": 0.5,
           "bot": "never",
           "botRange": 5,
-          "callout": "AVALANCHE DOME \u00b7 FROZEN, NO SHOTS IN OR OUT",
+          "callout": "AVALANCHE DOME \u00b7 NO SHOTS IN OR OUT",
           "variance": 0.1,
           "stunSeconds": 0.8
         }

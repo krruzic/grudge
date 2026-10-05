@@ -624,14 +624,13 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
     const pos = geo.getAttribute("position") as THREE.BufferAttribute;
     const uv = geo.getAttribute("uv") as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) uv.setXY(i, 0.5 + pos.getX(i) / (2 * r), 0.5 - pos.getZ(i) / (2 * r));
-    geo.scale(1, 0.55, 1);
+    geo.scale(1, 0.5, 1);
     const dome = new THREE.Mesh(
       geo,
       new THREE.MeshBasicMaterial({
         map: hd(ARCHITECT.iceCrack),
-        color: 0xe8f8ff,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.35,
         depthWrite: false,
       }),
     );

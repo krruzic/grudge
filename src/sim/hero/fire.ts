@@ -1,6 +1,6 @@
 // Ability "fire" dispatch: called by the hero controller (hero/update.ts) on the tick an action reaches its hitAt.
 // Emits the "act fire" event, computes the hero's damage multiplier once, and routes on the action kind to the
-// per-kind implementation in hero/kinds/* (or a per-hero module such as marksman.ts / friar.ts).
+// per-kind implementation in hero/kinds/* (or a per-hero module such as marksman.ts / friar.ts / architect.ts).
 import type { World } from "../world.ts";
 import type { Entity, HeroAction } from "../types.ts";
 import { abilities, afterMelee, meleeMods } from "../talents.ts";

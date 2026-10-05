@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume SUNKEN TEMPLE PROFESSOR HOOT: a slate grey-green owl archivist of a drowned temple in jade-teal robes painted with gold glyphs and waves, barnacles and coral at the hem, carrying mossy carved temple stones. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme so they are clearly different objects, not just recoloured. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a gold carved temple glyph rune, round, glowing softly
+2. a jagged shard of mossy green-grey carved temple stone
+3. a soft puff of sea spray and foam, white and sea-green
+4. a splash crown of sea-green water with white foam tips, side view
+5. a thin ring of rushing sea water seen face-on, teal and white
+6. a long sharp spiral seashell spike lying horizontally, pointing right, cream and coral
+7. a square carved temple stone block with moss and a gold glyph
+8. a puff of grey-green silt and sand with tiny shells
+9. a strip of brown kelp seaweed, wavy
+10. a thick teal-and-white water crescent swoosh arc with a gold wave pattern along its outer edge
+11. a sea-green water impact burst with white foam spikes
+12. a gold four-pointed twinkle with a teal centre
+13. a chunky barnacle-covered stone lump
+14. a single slate grey-green owl feather with sea-foam bars
+15. a glowing gold-and-teal temple compass circle seen from directly above, with carved glyphs around the rim
+16. a round pattern of cracked wet temple flagstones seen from directly above, teal water in the cracks
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

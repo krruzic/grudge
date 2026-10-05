@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume SNOWY PROFESSOR HOOT: a snow-white snowy owl scholar in a plum-burgundy velvet coat with gold quilting and white fur, silver goggles with violet lenses, carrying clear glittering ice blocks. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme so they are clearly different objects, not just recoloured. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a big six-pointed snowflake in white and pale violet with a gold glint
+2. a glittering violet-tinted ice crystal shard
+3. a soft round puff of sparkling white snow with a few violet glints
+4. a splash crown of white snow and violet frost glitter, side view
+5. a thin frost shockwave ring seen face-on, white and lilac
+6. a long clear icicle with a violet core, lying horizontally, pointing right
+7. a clear glittering ice block cube with frosty edges and a violet sheen
+8. a puff of white snowy-owl down feathers drifting
+9. a scrap of plum-burgundy velvet ribbon with gold stitching
+10. a thick white-and-lilac crescent swoosh arc with tiny gold ruler ticks along its outer edge
+11. a white and violet frost impact starburst with sharp crystal spikes
+12. a lilac four-pointed ice twinkle with a gold centre
+13. a chunky packed-snow brick with a violet frost sheen
+14. a single white snowy-owl feather with black-brown chevron flecks
+15. a glowing pale-violet drafting circle seen from directly above, with compass circles and ruler ticks
+16. a round pattern of cracked frosty ice seen from directly above, white cracks on pale lilac
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

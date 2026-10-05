@@ -165,16 +165,18 @@ export function fortCrumble(h: FxHost, x: number, y: number, z: number): void {
 function avalanche(h: FxHost, x: number, gy: number, z: number, r: number): void {
   emit(h, {
     tex: ARCHITECT.spray,
-    n: 3,
+    n: 2,
     x,
-    y: gy + 1.2,
+    y: gy + 1,
     z,
-    size: [r * 0.9, r * 1.2],
-    grow: 1.5,
-    life: [0.5, 0.8],
+    size: [Math.min(3.2, r * 0.6), Math.min(4, r * 0.75)],
+    grow: 1.3,
+    life: [0.35, 0.55],
     speed: [1, 2.5],
     up: [0.5, 1.2],
     drag: 2,
+    opacity: 0.9,
+    jitter: r * 0.3,
     order: 5,
   });
   snowPuff(h, x, gy, z, r, 8);

@@ -261,6 +261,10 @@
     "relicCarrySeconds": 15,
     "relicRewakeSeconds": 8,
     "ffaHeroMods": {
+      "architect": {
+        "hp": 1.1,
+        "damage": 1.15
+      },
       "friar": {
         "hp": 1.2,
         "speed": 1.28,
