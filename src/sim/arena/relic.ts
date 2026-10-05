@@ -26,6 +26,20 @@ export function updateRelic(arena: Arena): void {
       arena.drop(c, c.transform.pos.x + c.status.kvx * 0.12, c.transform.pos.z + c.status.kvz * 0.12);
       return;
     }
+    // Deathmatch: nobody keeps the Grudge for long - after carrySeconds it goes back to sleep in the middle and
+    // wakes again a few seconds later (the last carrier can't snatch it straight back).
+    const td = w.tdm?.cfg;
+    if (td?.relicCarrySeconds && w.time - r.since >= td.relicCarrySeconds) {
+      r.state = "waiting";
+      r.since = w.time + (td.relicRewakeSeconds ?? 8);
+      r.carrier = 0;
+      r.channel = 0;
+      r.lockId = c.id;
+      r.lockUntil = r.since + 10;
+      w.emit({ type: "relic", state: "home", team: -1, player: -1, x: arena.home.x, y: r.y, z: arena.home.z });
+      w.emit({ type: "notice", team: -1, text: "THE GRUDGE SLIPS AWAY · BACK TO THE MIDDLE" });
+      return;
+    }
     r.x = c.transform.pos.x;
     r.z = c.transform.pos.z;
     r.y = c.transform.y;

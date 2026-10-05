@@ -233,6 +233,8 @@ function nearPowerup(w: World, me: Entity, range: number, potion = false): Vec2 
   let bd = range;
   for (const p of w.tdm?.powerups ?? []) {
     if (w.time < p.readyAt || (potion && p.kind !== "potion")) continue;
+    // A potion can't be drunk at full health: standing on it waiting is how CPUs got parked in corners.
+    if (p.kind === "potion" && me.hp >= me.maxHp) continue;
     const d = Math.hypot(p.x - me.transform.pos.x, p.z - me.transform.pos.z);
     if (d < bd) {
       bd = d;

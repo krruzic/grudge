@@ -254,7 +254,9 @@
       "bloodMul": 1.5,
       "seconds": 15,
       "rain": 6
-    }
+    },
+    "relicCarrySeconds": 15,
+    "relicRewakeSeconds": 8
   },
   "respawnSlam": {
     "radius": 10,

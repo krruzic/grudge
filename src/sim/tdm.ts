@@ -34,6 +34,9 @@ export interface TdmConfig {
   /** Respawn spots try to stay at least this far from every living enemy champion. */
   safeDistance: number;
   relicFirstSeconds: number;
+  /** Seconds a champion may carry the Grudge before it returns to the middle (asleep relicRewakeSeconds). */
+  relicCarrySeconds?: number;
+  relicRewakeSeconds?: number;
   relic: { damageMul: number; takenMul: number; speedMul: number; regen: number };
   powerups: {
     count: number;
