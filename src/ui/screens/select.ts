@@ -370,8 +370,12 @@ function drawCompactSeat(
   if (showHero) drawStage(s, ctx, i, sl, team, x + 4, y + 4, ps, ps, preview);
   else s.portraits?.drop(i);
   if (sl.ready && human) waxSeal(ctx, x + ps, y + ps - 2, 5, "#a8141a", "combo");
-  // Costumes: always on show as small clickable icons under the name (the C-stick flicks them too).
-  const cl = showHero ? costumesOf(sl.hero) : [];
+  // Costumes: small clickable icons under the name for a human's own card, while their hand is over it or they
+  // flick the C-stick (CPU cards keep that spot for SIT HERE).
+  const own = s.cursors?.cursors[i];
+  const ownHand = !!own?.active && own.x >= x && own.x <= x + w && own.y >= y && own.y <= y + h;
+  const flicking = performance.now() / 1000 < (s.costumeShownUntil[i] ?? 0);
+  const cl = showHero && !sl.cpu && (ownHand || flicking) ? costumesOf(sl.hero) : [];
   if (cl.length > 1) {
     const rx = x + ps + 8;
     const sz = Math.min(11, (w - ps - 11) / cl.length - 1.5);
@@ -396,11 +400,8 @@ function drawCompactSeat(
     });
   }
   kindPlaque(s, ctx, i, x + w / 2, y + h - 11, sl);
-  // SIT HERE only while a hand is over the card (it would cover the costumes otherwise).
-  const handOver = !!s.cursors?.cursors.some(
-    (c) => c.active && c.holding < 0 && c.x >= x && c.x <= x + w && c.y >= y && c.y <= y + h,
-  );
-  if (sl.cpu && !s.peer && handOver) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
+  if (sl.cpu && !s.peer && !!s.cursors?.cursors.some((c) => c.active))
+    woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
 }
 
 // ── Seat card ──
