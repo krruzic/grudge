@@ -107,7 +107,11 @@ export function updateMatchInput(app: App, now: number): void {
       !!h?.hero?.picks.length,
       h?.alive && h.hero ? placeRanges(w, h) : null,
     );
-    if (view.camMode !== 0 && !m.ui.commander) {
+    // FFA, house fallen: the d-pad (or stick flick) / A switches who this player spectates.
+    const fallen = w.ffa && !!ws && !!w.teams[ws.team]?.out;
+    if (fallen && (p.pressed.right || p.pressed.a)) view.spectate(i, 1);
+    else if (fallen && p.pressed.left) view.spectate(i, -1);
+    if (view.camMode !== 0 && !m.ui.commander && !fallen) {
       if (p.pressed.down) view.zoomStep(i, 1);
       if (p.pressed.up) view.zoomStep(i, -1);
     }

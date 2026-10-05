@@ -369,7 +369,13 @@ function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: num
   if (src && src.alive && src.status.stealUntil && w.time < src.status.stealUntil)
     w.heal(src, amount * (src.status.stealMul ?? 0));
   const b = w.data.heroes.baseline;
-  if (src?.hero) src.hero.meter = Math.min(b.superMax, src.hero.meter + amount * b.superPerDamageDealt);
+  // Super meter: a super's own hits never refill it (no chaining supers off a crowd), and some champions charge
+  // slower (hooks.superGainMul: the Warlord's quake hits everything).
+  if (src?.hero && src.hero.action?.name !== "z")
+    src.hero.meter = Math.min(
+      b.superMax,
+      src.hero.meter + amount * b.superPerDamageDealt * (w.heroDef(src.hero.type).hooks.superGainMul ?? 1),
+    );
   if (target.hero && target.hp > 0)
     target.hero.meter = Math.min(b.superMax, target.hero.meter + amount * b.superPerDamageTaken);
   if (src?.hero) {

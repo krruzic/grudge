@@ -72,6 +72,7 @@
         "outnumberedDamage": 1.3,
         "heaveRange": 2.6,
         "heaveCooldown": 6,
+        "superGainMul": 0.9,
         "heaveDistance": 10,
         "heaveDamage": 90,
         "heaveStun": 1.0

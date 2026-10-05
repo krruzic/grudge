@@ -464,6 +464,27 @@ export class GameRenderer {
   /** Per player: who the spectator camera follows once the player's team is out. */
   private watching = new Map<number, number>();
 
+  /**
+   * FFA spectating (player's house is out): step who `player`'s view follows to the next / previous standing
+   * champion (by seat). Player -1 is the shared all-CPU camera. Returns the followed player index, or -1.
+   */
+  spectate(player: number, dir: number): number {
+    const w = this.world;
+    const list = w.players.filter((p) => w.standing(p.team) && w.getAny(p.heroId));
+    if (!list.length) return -1;
+    const cur = list.findIndex((p) => p.heroId === this.watching.get(player));
+    const k = cur < 0 ? (dir > 0 ? 0 : list.length - 1) : (cur + dir + list.length) % list.length;
+    this.watching.set(player, list[k].heroId);
+    // A single shared view (and the all-CPU camera) follows whoever switched last.
+    this.watching.set(-1, list[k].heroId);
+    return list[k].player;
+  }
+
+  /** The champion a spectating player's view follows (0 = none yet). */
+  watched(player: number): number {
+    return this.watching.get(player) ?? 0;
+  }
+
   /** A player's split viewport as screen fractions (top-left origin), for the HUD; null without split screen. */
   viewRectOf(player: number): { x: number; y: number; w: number; h: number } | null {
     if (this.splitViews.length < 2) return null;
@@ -542,8 +563,10 @@ export class GameRenderer {
     }
     const ownN = pts.length;
     if (heroes.length && heroes.every((h) => w.teams[h.team]?.out)) {
-      let id = this.watching.get(sv.player) ?? 0;
-      const ok = (e: { alive: boolean; team: number } | undefined) => !!e?.alive && w.standing(e.team);
+      let id = (this.splitViews.length > 1 ? this.watching.get(sv.player) : this.watching.get(-1)) ?? 0;
+      // A picked champion is followed through their respawns; only a fallen house drops them.
+      const ok = (e: { alive: boolean; team: number; hero?: unknown } | undefined) =>
+        !!e && (e.alive || !!e.hero) && w.standing(e.team);
       if (!ok(w.getAny(id))) {
         const sp = w.spawnPoint(heroes[0].team);
         const near = w.players
@@ -555,7 +578,7 @@ export class GameRenderer {
               Math.hypot(b!.transform.pos.x - sp.x, b!.transform.pos.z - sp.z),
           )[0];
         id = near?.id ?? 0;
-        this.watching.set(sv.player, id);
+        this.watching.set(this.splitViews.length > 1 ? sv.player : -1, id);
       }
       const p = id ? this.entityViews.heroPoint(id) : null;
       if (p) {
@@ -862,7 +885,9 @@ export class GameRenderer {
     if (this.world.ffa && !this.cinematic && !this.overview) {
       const pts = this.entityViews.heroPoints();
       if (pts.length) {
-        const pick = pts[Math.floor(this.time / 12) % pts.length];
+        const fixed = this.watching.get(-1);
+        const fp = fixed ? this.entityViews.heroPoint(fixed) : null;
+        const pick = fp ?? pts[Math.floor(this.time / 12) % pts.length];
         const near = pts.filter((q) => q.distanceTo(pick) < 18);
         const st = { focus: this.camFocus, width: this.camWidth, init: this.camInit };
         aimCamera(this.cfg, this.world.terrain, this.camera, st, near, dt, this.cfg.minViewWidth, 34);

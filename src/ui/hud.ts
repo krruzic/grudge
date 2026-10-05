@@ -205,7 +205,7 @@ export class Hud {
     }
     for (const [t, F] of frames) {
       if (!w.teams[t].out || !mine.includes(t)) continue;
-      const msg = "YOUR KEEP FELL · SPECTATING";
+      const msg = "YOUR KEEP FELL · SPECTATING · LEFT / RIGHT TO SWITCH";
       const s = 0.9;
       const x = Math.round(F.x + F.w / 2 - textWidth(msg, s) / 2);
       drawText(ctx, msg, x, Math.round(F.y + F.h * 0.8), Math.floor(now * 2) % 2 ? "#ffd0a0" : "#ffffff", s);

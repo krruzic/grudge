@@ -98,10 +98,10 @@
       "class": "tower",
       "cost": 100,
       "upgradeCost": 75,
-      "hp": 850,
-      "rangeMul": 0.72,
-      "damage": 14,
-      "cooldown": 2.4,
+      "hp": 950,
+      "rangeMul": 0.78,
+      "damage": 18,
+      "cooldown": 2.1,
       "grainPerShot": 2,
       "slowMul": 0.5,
       "slowSeconds": 2.0,
@@ -110,7 +110,7 @@
         "grunt": 1.2,
         "ranged": 1.2,
         "heavy": 0.8,
-        "hero": 0.8,
+        "hero": 0.95,
         "structure": 0
       },
       "upgrade": {

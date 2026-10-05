@@ -203,7 +203,7 @@ export function createStructure(w: World, team: number, pad: Pad, type: Structur
   return e;
 }
 
-/** Construction speed from nearby allied heroes and units (bonus for 2+ heroes), capped. */
+/** Construction speed from nearby allied heroes and units (bonus for 2+ heroes), capped; FFA never stalls. */
 export function builderRate(w: World, e: Entity): number {
   const sd = w.data.structures;
   const r = sd.builderRates;
@@ -216,6 +216,8 @@ export function builderRate(w: World, e: Entity): number {
     rate += o.hero ? r.hero : r.unit;
   }
   if (heroes >= 2) rate += r.teamwork * (heroes - 1);
+  // Free for all: a lone champion can't babysit every site, so building always goes at least at one hero's pace.
+  if (w.ffa) rate = Math.max(rate, r.hero);
   return Math.min(r.max, rate);
 }
 
