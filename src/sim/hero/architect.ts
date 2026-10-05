@@ -8,7 +8,7 @@ import type { AbilityDef, HeroClass } from "../config.ts";
 import type { Command, Entity, HeroAction, TerrainMod, Zone } from "../types.ts";
 import { Kind } from "../terrain.ts";
 import { abilities } from "../talents.ts";
-import { callout, ready } from "./common.ts";
+import { callout, ready, refundCharge } from "./common.ts";
 
 const fx = (
   w: World,
@@ -268,7 +268,7 @@ export function fireFort(w: World, e: Entity, a: HeroAction, def: AbilityDef, mu
   const cells = fortCells(w, cx, cz, a.dirX, a.dirZ, def.length ?? 5).filter((i) => buildable(w, e, i));
   if (cells.length < 2) {
     w.emit({ type: "notice", team: e.team, text: "NO ROOM FOR A FORT" });
-    e.hero!.cooldowns.b = w.time + 2;
+    refundCharge(w, e, "b", 2);
     return;
   }
   const mine = w.mods.filter((m) => m.style === "ice" && m.owner === e.id && m.until > w.time);
@@ -290,7 +290,7 @@ export function fireFort(w: World, e: Entity, a: HeroAction, def: AbilityDef, mu
   };
   if (!w.applyModIfOpen(m)) {
     w.emit({ type: "notice", team: e.team, text: "WOULD BLOCK THE ROAD" });
-    e.hero!.cooldowns.b = w.time + 1;
+    refundCharge(w, e, "b", 1);
     return;
   }
   const y = w.groundY(cx, cz);
@@ -392,7 +392,7 @@ export function fireLookout(w: World, e: Entity, a: HeroAction, def: AbilityDef)
   }
   if (!cells) {
     w.emit({ type: "notice", team: e.team, text: "NO ROOM TO BUILD" });
-    e.hero!.cooldowns.r = w.time + 3;
+    refundCharge(w, e, "r", 3);
     return;
   }
   let base = -Infinity;
@@ -422,7 +422,7 @@ export function fireLookout(w: World, e: Entity, a: HeroAction, def: AbilityDef)
   };
   if (!w.applyModIfOpen(m)) {
     w.emit({ type: "notice", team: e.team, text: "WOULD BLOCK THE ROAD" });
-    e.hero!.cooldowns.r = w.time + 3;
+    refundCharge(w, e, "r", 3);
     return;
   }
   // Allies on the footprint ride up with it; enemies are shoved off the edge.

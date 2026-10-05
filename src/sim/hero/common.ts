@@ -8,6 +8,34 @@ import type { AbilityDef } from "../config.ts";
 export type Slot = "a" | "b" | "r" | "z";
 
 /** Cooldowns are stored as the absolute time the key becomes usable again. */
+/**
+ * Spend one charge of a charged ability (AbilityDef.charges > 1) just used, recharging in `cd` s on its own; the
+ * slot's cooldown becomes "when the next charge is ready" (now, if another is banked). No-op for normal abilities.
+ */
+export function spendCharge(w: World, e: Entity, slot: "b" | "r", cd: number): void {
+  const n = abilities(w, e)[slot].charges ?? 1;
+  if (n < 2) return;
+  const h = e.hero!;
+  const stock = ((h.stock ??= {})[slot] ??= new Array<number>(n).fill(0));
+  while (stock.length < n) stock.push(0);
+  let i = stock.findIndex((t) => t <= w.time);
+  if (i < 0) i = stock.indexOf(Math.min(...stock));
+  stock[i] = w.time + cd;
+  h.cooldowns[slot] = Math.min(...stock);
+}
+
+/** A charged ability that fizzled: give the charge back after `after` s. */
+export function refundCharge(w: World, e: Entity, slot: "b" | "r", after: number): void {
+  const stock = e.hero!.stock?.[slot];
+  if (!stock?.length) {
+    e.hero!.cooldowns[slot] = w.time + after;
+    return;
+  }
+  const i = stock.indexOf(Math.max(...stock));
+  stock[i] = w.time + after;
+  e.hero!.cooldowns[slot] = Math.min(...stock);
+}
+
 export function ready(e: Entity, key: string, time: number): boolean {
   return (e.hero!.cooldowns[key] ?? 0) <= time;
 }

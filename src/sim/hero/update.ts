@@ -13,7 +13,7 @@ import { chainSwingTick, tideTick, whirlTick } from "./wreckwitch.ts";
 import { squareInput, toppleLookout } from "./architect.ts";
 import { crushTick, curlTick, gritTick, headbuttTick, startPound } from "./vintner.ts";
 import { buzzTick, honeyPartners, maybeFling, stuckInHoney, sweetToothTick, tickWing } from "./rider.ts";
-import { aim, begin, callout, chaining, ready } from "./common.ts";
+import { aim, begin, callout, chaining, ready, spendCharge } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
 import { combo, onWorks } from "./combos.ts";
@@ -151,6 +151,7 @@ function respawn(w: World, e: Entity): void {
   for (const k of Object.keys(h.cooldowns)) h.cooldowns[k as keyof typeof h.cooldowns] = w.time;
   if (frozen.z !== undefined) h.cooldowns.z = w.time + frozen.z;
   h.frozenCd = undefined;
+  h.stock = undefined;
   w.emit({ type: "spawn", id: e.id });
   if (!w.tdm) keepLanding(w, e);
 }
@@ -416,6 +417,7 @@ function startFromInput(
   } else if (cmd.special && ready(e, "r", w.time) && !act && !(ab.r.kind === "takewing" && w.arena.carrying(e))) {
     startAbility(w, e, "r", cmd);
     h.cooldowns.r = w.time + (ab.r.cooldown ?? 10);
+    spendCharge(w, e, "r", ab.r.cooldown ?? 10);
     if (ab.r.kind === "erratum") manuscriptRecast(w, e, "r");
     if (ab.r.resetB && ab.r.kind !== "warcry") {
       h.cooldowns.b = w.time;
@@ -429,6 +431,7 @@ function startFromInput(
     startAbility(w, e, "b", cmd);
     onBUse(w, e);
     h.cooldowns.b = bCooldown(w, e);
+    spendCharge(w, e, "b", h.cooldowns.b - w.time);
     if (ab.b.kind === "swarm") manuscriptRecast(w, e, "b");
   } else if (cmd.attack && !act && def.hooks.wrenchDamage && onWorks(w, e) && ready(e, "wrench", w.time)) {
     const [dx, dz] = aim(w, e, cmd, def.hooks.wrenchRange ?? 10);

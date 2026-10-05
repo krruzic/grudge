@@ -229,6 +229,8 @@ export interface HeroState {
   respawnAt: number;
   morphAt?: number;
   frozenCd?: Record<string, number>;
+  /** Abilities with charges (AbilityDef.charges): when each charge is ready again, per slot (hero/common.ts). */
+  stock?: Partial<Record<"b" | "r", number[]>>;
   pickSince?: number;
   jump?: {
     fx: number;

@@ -8,7 +8,7 @@
 import type { World } from "./world.ts";
 import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./types.ts";
 import { learned as learnedOf, options } from "./talents.ts";
-import { think } from "./bot/think.ts";
+import { meleeReflex, think } from "./bot/think.ts";
 import { pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
@@ -176,6 +176,7 @@ export class Bot {
     if (w.time >= this.thinkAt) {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;
       think(this, w, me);
+      meleeReflex(this, w, me);
     }
     if (w.time >= this.roleCheckAt && !w.tdm) {
       this.roleCheckAt = w.time + 1;

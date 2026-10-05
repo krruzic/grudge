@@ -1067,3 +1067,35 @@ function macro(bot: Bot, w: World, s: Senses): void {
   const hold = w.teams[me.team].directives.holdPoint.grunt;
   bot.goal = army.length < 3 ? { x: hold.x, z: hold.z + (bot.player ? 2 : -2) } : frontTarget(bot, w, me);
 }
+
+/**
+ * Melee reflex, after every think: a melee champion with nothing else to do (no swing, ability, charge or dodge
+ * decided, not running home to heal) hits the nearest enemy soldier or champion in swing reach - chasing a kiter,
+ * walking to an objective or a siege, it doesn't stroll past soldiers in its face.
+ */
+export function meleeReflex(bot: Bot, w: World, me: Entity): void {
+  const h = me.hero;
+  if (!h || h.action || bot.healing) return;
+  if (bot.wantAttack || bot.wantB || bot.wantR || bot.wantZ || bot.wantCharge || bot.wantDodge) return;
+  const def = w.heroDef(h.type);
+  const a = (h.ab ?? def.abilities).a;
+  if ((def.botRange ?? 1.8) > 3 || a.kind !== "combo") return;
+  const reach = (a.hits?.[0].range ?? 2.4) - 0.1;
+  let best: Entity | undefined;
+  let bd = Infinity;
+  for (const o of w.entities) {
+    if (!o.alive || o.team === me.team || o.team < 0 || o.structure || (!o.unit && !o.hero)) continue;
+    if (o.hero?.dead) continue;
+    const d = w.dist(me, o) - o.radius;
+    if (d < reach && d < bd) {
+      bd = d;
+      best = o;
+    }
+  }
+  if (!best || bot.rand() > bot.skill) return;
+  const dx = best.transform.pos.x - me.transform.pos.x;
+  const dz = best.transform.pos.z - me.transform.pos.z;
+  const l = Math.hypot(dx, dz) || 1;
+  bot.wantAttack = true;
+  bot.wantFace = { x: dx / l, z: dz / l };
+}

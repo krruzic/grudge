@@ -1048,10 +1048,11 @@
           "coverMul": 0.6,
           "dur": 0.6,
           "hitAt": 0.33,
-          "cooldown": 6,
+          "cooldown": 8,
           "bot": "never",
           "callout": "SNOW FORT",
-          "stunSeconds": 0.5
+          "stunSeconds": 0.5,
+          "charges": 2
         },
         "r": {
           "kind": "lookout",
@@ -1062,10 +1063,11 @@
           "hp": 300,
           "dur": 0.6,
           "hitAt": 0.33,
-          "cooldown": 9,
+          "cooldown": 12,
           "bot": "never",
           "callout": "LOOKOUT",
-          "max": 2
+          "max": 2,
+          "charges": 2
         },
         "z": {
           "kind": "dome",
