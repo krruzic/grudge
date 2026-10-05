@@ -215,7 +215,8 @@ function updateFieldScreen(app: App): void {
     );
   screens.fieldWatch = !!watched;
   // Online, the field is a vote (see updateFieldSelect): pins show who voted for what, the note counts down.
-  const voting = !!watched || (net.mode === "host" && app.state === "map" && net.peerNames.size > 0);
+  const humans = app.slots.filter((sl, i) => app.slotActive(i) && !sl.cpu && !sl.open).length;
+  const voting = !!watched || (app.state === "map" && humans > 1);
   if (watched) {
     const mine = new Map(net.guestVotes);
     for (const [seat, k] of net.myVotes) mine.set(seat, k);

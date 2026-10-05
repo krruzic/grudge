@@ -461,7 +461,13 @@ function selectButton(app: App, buttonId: string, by: number): void {
     slots[i].level = (slots[i].level % 3) + 1;
     app.net.lobbySentAt = 0;
     audio.ui("move");
-  } else if (id === "tag" && !slots[i].cpu && !app.commanderSlot(i) && by === i && !app.screens.naming.has(i)) {
+  } else if (
+    (id === "tag" || id === "pen") &&
+    !slots[i].cpu &&
+    !app.commanderSlot(i) &&
+    by === i &&
+    !app.screens.naming.has(i)
+  ) {
     // Only the card's owner signs its name.
     openNaming(app, i, slots[i].tag);
   } else if (id === "go" && selectReady(app) && !app.screens.naming.size) {
@@ -551,9 +557,9 @@ function holdToBack(app: App, dt: number, eligible: (i: number) => boolean): boo
 /** Seconds after the first vote before an online field vote is settled with whatever's in. */
 const VOTE_SECONDS = 5;
 
-/** Online with guests: the field is a vote of every human seat (host's pads and guests'). */
+/** The field is a vote of every human seat (local pads, and online the guests too); one human settles it alone. */
 export function fieldVoting(app: App): boolean {
-  return app.net.mode === "host" && app.net.peerNames.size > 0;
+  return app.net.mode !== "peer";
 }
 
 export function updateFieldSelect(app: App, now: number, dt: number): void {

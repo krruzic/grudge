@@ -398,7 +398,7 @@ function drawSeatCard(
   if (sitHere) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
   if (sl.ready && !commander && human) {
     ctx.save();
-    waxSeal(ctx, fx + fw - 12, fy + ih - 13, 10, "#a8141a", "combo");
+    waxSeal(ctx, fx + fw - 9, fy + ih - 8, 7, "#a8141a", "combo");
     ctx.restore();
   }
 }
@@ -537,7 +537,36 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
   const lvW = 21;
   const camW = 11;
   const extra = sl.cpu && !dummy ? lvW + 3 : camPl ? camW + 3 : 0;
-  const x0 = Math.round(cx - (pw + extra) / 2);
+  // Humans get a pencil on the left: sign your name (same as clicking the P# label).
+  const pen = !sl.cpu && s.championSeat(i);
+  const lead = pen ? camW + 3 : 0;
+  const x0 = Math.round(cx - (pw + extra + lead) / 2) + lead;
+  if (pen) {
+    const zx = x0 - lead;
+    const hl = hovered(s, `pen:${i}`);
+    ctx.fillStyle = INK;
+    ctx.fillRect(zx - 1, y - 1, camW + 2, 10);
+    texturedRect(ctx, "parch", zx, y, camW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
+    // A pencil, tip at the bottom-left: yellow body, pink eraser, brown point.
+    ctx.save();
+    ctx.translate(zx + camW / 2, y + 4);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = BROWN;
+    ctx.fillRect(-4.6, -1.3, 9.2, 2.6);
+    ctx.fillStyle = "#e8b830";
+    ctx.fillRect(-2.2, -0.9, 5.4, 1.8);
+    ctx.fillStyle = "#e07a8a";
+    ctx.fillRect(3.2, -0.9, 1.1, 1.8);
+    ctx.fillStyle = "#e8d0a0";
+    ctx.beginPath();
+    ctx.moveTo(-2.2, -0.9);
+    ctx.lineTo(-4.2, 0);
+    ctx.lineTo(-2.2, 0.9);
+    ctx.fill();
+    ctx.restore();
+    s.hit(`pen:${i}`, zx - 2, y - 2, camW + 4, 12);
+    if (hl) shadowText(ctx, "SIGN YOUR NAME", cx - textWidth("SIGN YOUR NAME", 0.42) / 2, y - 24, "#f8e8c0", 0.42);
+  }
   const px = x0 + pw / 2;
   ctx.fillStyle = INK;
   ctx.fillRect(px - pw / 2 - 1, y - 1, pw + 2, 10);
