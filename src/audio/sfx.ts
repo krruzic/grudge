@@ -34,7 +34,7 @@ const LOOP_SECONDS: Record<string, number> = {
 };
 
 /** Events heard everywhere regardless of distance (map-wide happenings, match flow, orders). */
-const GLOBAL = new Set(["gates", "horn", "avalanche", "tide", "mist", "notice", "directive", "eliminated"]);
+const GLOBAL = new Set(["gates", "horn", "avalanche", "tide", "mist", "notice", "directive", "eliminated", "chaos"]);
 /** Global events that still lean toward where they happened. */
 const LEAN = new Set(["relic"]);
 /** Longest a voice line runs, per line. */

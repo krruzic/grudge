@@ -91,6 +91,8 @@ void main() {
 const MAX_DPR = 2;
 
 /** An audio listener (see GameRenderer.listeners). */
+const BLOOD = new THREE.Color(0.9, 0.12, 0.08);
+
 export interface Listener {
   x: number;
   z: number;
@@ -285,6 +287,23 @@ export class GameRenderer {
     su.zenith.value.set(a.skyZenith);
     su.horizon.value.set(a.skyHorizon);
     this.renderer.setClearColor(a.skyHorizon, 1);
+    this.baseSun.copy(this.sun.color);
+    this.baseSky.copy(this.hemi?.color ?? this.baseSky);
+  }
+
+  private baseSun = new THREE.Color();
+  private baseSky = new THREE.Color();
+  private bloodK = 0;
+
+  /** Team deathmatch blood moon: the light eases toward a deep red while it lasts. */
+  private bloodMoon(dt: number): void {
+    const tdm = this.world.tdm;
+    const on = !!tdm && tdm.chaos === "bloodmoon" && this.world.time < tdm.chaosUntil;
+    const k = Math.max(0, Math.min(1, this.bloodK + (on ? dt : -dt) * 0.8));
+    if (k === this.bloodK) return;
+    this.bloodK = k;
+    this.sun.color.copy(this.baseSun).lerp(BLOOD, k * 0.65);
+    this.hemi?.color.copy(this.baseSky).lerp(BLOOD, k * 0.5);
   }
 
   setMap(map: MapView, t: Terrain): void {
@@ -637,6 +656,7 @@ export class GameRenderer {
     this.scene.matrixWorldAutoUpdate = false;
     this.time += dt;
     this.drainEvents();
+    this.bloodMoon(dt);
     pt = perf.cpu("r.events", pt);
     this.entityViews.sync(alpha, dt, this.time);
     pt = perf.cpu("r.entities", pt);

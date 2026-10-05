@@ -53,8 +53,9 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
 
   drawRosterRow(s, ctx, W);
 
+  if (s.mode === "tdm") drawTdmSeats(s, ctx, W, 96, floorY - 102);
   // Seat cards: 2v2 orders them blue, blue, red, red.
-  const order = s.mode === "ffa" ? [0, 1, 2, 3] : s.twoVtwo ? [0, 2, 1, 3] : [0, 1];
+  const order = s.mode === "tdm" ? [] : s.mode === "ffa" ? [0, 1, 2, 3] : s.twoVtwo ? [0, 2, 1, 3] : [0, 1];
   const n = order.length;
   const bw = s.twoVtwo ? Math.min(72, Math.floor((W - 30) / n) - 14) : Math.min(118, Math.floor(W * 0.3));
   const bgap = s.twoVtwo ? Math.floor((W - bw * n) / (n + 1)) : Math.floor((W - bw * 2) / 3);
@@ -62,6 +63,13 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
   const bh = floorY - by - 6;
   order.forEach((i, k) => drawSeatCard(s, ctx, i, bgap + k * (bw + bgap), by, bw, bh));
   if (!s.twoVtwo) drawAddCpuCards(s, ctx, W, by);
+  const naming = [...s.naming.keys()].find((i) => s.mode === "tdm" && s.slots[i]);
+  if (naming !== undefined) {
+    // Compact deathmatch cards are too small for the keyboard: it opens over that team's half.
+    const half = Math.floor(W / 2);
+    const nx = s.teamOf(naming) ? half + 6 : 6;
+    s.naming.get(naming)!.draw(ctx, nx, 92, half - 12, floorY - 96, performance.now() / 1000);
+  }
 
   bottomPrompt(
     ctx,
@@ -265,6 +273,108 @@ function woodButton(s: Screens, ctx: CanvasRenderingContext2D, bid: string, t: s
   texturedRect(ctx, "wood", cx - 25, by, 50, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
   shadowText(ctx, t, cx - textWidth(t, 0.55) / 2, by + 2, hot ? "#fff4b0" : "#e8d8b8", 0.55);
   s.hit(bid, cx - 28, by - 3, 56, 17);
+}
+
+// ── Team deathmatch seats ──
+
+/** Eight compact seat cards: blue's four in a 2x2 grid on the left half, red's on the right. */
+function drawTdmSeats(s: Screens, ctx: CanvasRenderingContext2D, W: number, y0: number, h: number): void {
+  const half = Math.floor(W / 2);
+  const gap = 6;
+  const cw = Math.floor((half - gap * 3) / 2);
+  const ch = Math.floor((h - gap) / 2);
+  for (let i = 0; i < 8; i++) {
+    const team = i % 2;
+    const k = Math.floor(i / 2);
+    const x = team * half + gap + (k % 2) * (cw + gap);
+    const y = y0 + Math.floor(k / 2) * (ch + gap);
+    drawCompactSeat(s, ctx, i, x, y, cw, ch);
+  }
+}
+
+/**
+ * One deathmatch seat: champion portrait on the left, label / champion name on the right, the kind plaque
+ * (pencil, PLAYER / CPU, camera or CPU level) along the bottom. Open seats offer SIT HERE (+ ADD CPU).
+ */
+function drawCompactSeat(
+  s: Screens,
+  ctx: CanvasRenderingContext2D,
+  i: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const sl = s.slots[i];
+  if (!sl) return;
+  const team = s.teamOf(i);
+  const ink = TEAM_TEXT[team];
+  s.portraits?.drop(i);
+  if (sl.open) {
+    card(ctx, x, y, w, h, 0, TEAM_BRIGHT[team], () => {
+      const t = `SEAT ${i + 1} · OPEN`;
+      drawPlain(ctx, t, w / 2 - textWidth(t, 0.55, true) / 2, 6, ink, 0.55, true);
+    });
+    const btns: [string, string][] = s.peer
+      ? [[`take:${i}`, "SIT HERE"]]
+      : [
+          [`sit:${i}`, "SIT HERE"],
+          [`seatcpu:${i}`, "+ ADD CPU"],
+        ];
+    btns.forEach(([bid, t], k) => woodButton(s, ctx, bid, t, x + w / 2, y + 18 + k * 15));
+    return;
+  }
+  const human = sl.joined && !sl.cpu;
+  const naming = s.naming.has(i);
+  const tagged = !sl.cpu && !!sl.tag;
+  const label = tagged ? sl.tag! : `P${i + 1}`;
+  const unsealed = !sl.ready && !naming;
+  const preview =
+    unsealed && !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:"));
+  const ps = h - 16;
+  card(ctx, x, y, w, h, 0, chipColor(i, sl.cpu), () => {
+    inset(ctx, 4, 4, ps, ps, "#2a2018");
+    texturedRect(ctx, "cloth", 4, 4, ps, ps, TEAM_CLOTH[team], 0, 0.7);
+    const icon = !unsealed || preview ? s.portraits?.icon(sl.hero) : null;
+    if (icon) {
+      ctx.save();
+      if (preview) ctx.globalAlpha = 0.72;
+      smoothImage(ctx, icon, 4, 4, ps, ps);
+      ctx.restore();
+    } else {
+      band(ctx, 4, 4, ps, ps, "#000000", 0.35);
+      drawPlain(ctx, "?", 4 + ps / 2 - textWidth("?", 1.2, true) / 2, 4 + ps / 2 - 6, "#e8d8b8", 1.2, true);
+    }
+    const rx = ps + 8;
+    const rw = w - rx - 3;
+    const ls = Math.min(0.75, rw / Math.max(1, textWidth(label, 1, true)));
+    drawPlain(ctx, label, rx, 6, ink, ls, true);
+    const name = unsealed && !preview ? "CHOOSE" : (s.heroes[sl.hero]?.name ?? sl.hero).toUpperCase();
+    const ns = Math.min(0.55, rw / Math.max(1, textWidth(name, 1, true)));
+    drawPlain(ctx, name, rx, 17, BROWN, ns, true);
+    if (sl.ready && human) waxSeal(ctx, w - 9, ps - 4, 6, "#a8141a", "combo");
+  });
+  if (human && sl.local) {
+    const bid = `unplug:${i}`;
+    const hot = hovered(s, bid);
+    const ux = x + w - 10;
+    const uy = y + 2;
+    ctx.fillStyle = "#1a120a";
+    ctx.fillRect(ux - 1, uy - 1, 8, 8);
+    ctx.fillStyle = hot ? "#b83020" : "#6a3a24";
+    ctx.fillRect(ux, uy, 6, 6);
+    shadowText(ctx, "X", ux + 3 - textWidth("X", 0.45) / 2, uy + 0.5, hot ? "#fff4b0" : "#e8d8b8", 0.45);
+    s.hit(bid, ux - 2, uy - 2, 10, 10);
+  }
+  if (naming) return;
+  const sg = !sl.cpu ? s.signing.get(i) : undefined;
+  if (sg) {
+    drawSigning(ctx, x + 2, y + 2, w - 4, h - 4, sg[0] === 1, sg[1], performance.now() / 1000);
+    return;
+  }
+  kindPlaque(s, ctx, i, x + w / 2, y + h - 11, sl);
+  if (sl.cpu && !s.peer && !!s.cursors?.cursors.some((c) => c.active))
+    woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
 }
 
 // ── Seat card ──

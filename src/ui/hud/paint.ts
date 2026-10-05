@@ -7,7 +7,7 @@ export const INK = "#0b0806";
 /** GameCube-style button colours. */
 export const PAD = { a: "#2f5fd8", b: "#2a9a48", c: "#e8b818", start: "#d82828", z: "#8a8a94", r: "#8a8a94" };
 /** "P1".."P4" tag colours on player panels. */
-export const PLAYER_TAG = ["#8ab0ff", "#ff9a8a", "#70e0d0", "#ffd060"];
+export const PLAYER_TAG = ["#8ab0ff", "#ff9a8a", "#ffd060", "#80e080", "#c8a0ff", "#ffc080", "#70e0d0", "#ff9ad0"];
 /** Screen-edge margins of the HUD in layout units. */
 export const MARGIN_X = 14;
 export const MARGIN_Y = 10;

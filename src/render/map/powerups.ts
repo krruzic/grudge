@@ -91,6 +91,7 @@ const ringGeo = new THREE.RingGeometry(0.62, 0.8, 24);
 function makeView(kind: string): PowerView {
   const root = new THREE.Group();
   const item = (MAKE[kind] ?? potion)();
+  item.scale.setScalar(1.5);
   const glow = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: glowTex,

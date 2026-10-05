@@ -280,6 +280,31 @@ export function playEvent(a: Audio, ev: SimEvent, w: World): void {
         [523, 659, 784, 1046].forEach((f, i) => a.tone("triangle", f, f, 0.3, 0.06, 0, i * 0.07));
       } else a.play("magic.dark", 0.35, { rate: 0.7 });
       return;
+    case "powerup":
+      if (ev.stage === "spawn") {
+        if (a.allow("pspawn", 1)) a.tone("sine", 880, 1320, 0.25, 0.03);
+        return;
+      }
+      if (ev.kind === "potion") {
+        a.play("gulp", 0.7);
+        a.play("heal", 0.5, { at: 0.1 });
+      } else if (ev.kind === "might") {
+        a.play("metal.clank", 0.6, { rate: 0.8 });
+        a.play("levelup", 0.5, { rate: 0.8 });
+      } else if (ev.kind === "haste") {
+        a.play("whoosh.big", 0.7, { rate: 1.4 });
+        a.play("levelup", 0.4, { rate: 1.3 });
+      } else {
+        a.play("shield.up", 0.7);
+        a.play("metal.clank", 0.4, { rate: 1.3 });
+      }
+      return;
+    case "chaos":
+      a.play("bell.church", 0.5, { priority: true, dur: 2.5 });
+      if (ev.kind === "bloodmoon") a.play("gong", 0.7, { rate: 0.7, at: 0.3 });
+      else if (ev.kind === "winds") a.play("whistle.wind", 0.6, { at: 0.2 });
+      else if (ev.kind === "potions") a.play("bell.small", 0.5, { at: 0.3, rate: 1.2 });
+      return;
     case "directive":
       if (a.allow("directive", 1)) a.vocal("herald", "order", 0.6, { gap: 0.4 });
       return;

@@ -572,6 +572,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
   const e = M.economy;
   const sh = M.arena.shop;
   const rel = M.arena.relic;
+  const td = (M as { tdm?: { killLimit?: number; respawnSeconds?: number } }).tdm ?? {};
   const og = M.arena.ogre;
   const can = M.arena.cannon;
   const entries: CodexEntry[] = [
@@ -894,6 +895,12 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
           text: "LOSE YOUR KEEP AND YOUR HOUSE IS OUT. YOUR TOWERS CRUMBLE, YOUR SOLDIERS WANDER HOME AND YOUR CHAMPION STAYS DOWN, SULKING. THE LAST HOUSE WITH A KEEP WINS. IF THE BELL TOLLS FIRST, THE HOUSE STILL STANDING THAT DID THE MOST DAMAGE TO OTHER KEEPS TAKES IT.",
           tip: `TWO HOUSES FIGHTING IS GREAT NEWS FOR THE OTHER TWO. A FALLEN CHAMPION STILL PAYS ${e.bounty.hero} GOLD TO WHOEVER DID IT, SO EVERYONE IS ALWAYS LOOKING AT YOU.`,
           art: { kind: "seal", glyph: "castle", color: "#c89a14" },
+        },
+        {
+          title: "TEAM DEATHMATCH",
+          text: `EIGHT CHAMPIONS, TWO HOUSES, NO KEEPS, NO TOWERS, NO SOLDIERS, NO GOLD. THE FIRST HOUSE TO ${td.killLimit ?? 20} CHAMPION KILLS WINS (SET IT IN THE RULES); IF THE BELL TOLLS FIRST, MOST KILLS WINS, AND A TIE GOES TO SUDDEN DEATH: NEXT KILL WINS. FALL AND YOU'RE BACK IN ${td.respawnSeconds ?? 2} SECONDS, SOMEWHERE AWAY FROM THE ENEMY. THE GRUDGE STILL WAKES IN THE MIDDLE, BUT HERE IT JUST MAKES ITS CARRIER NASTIER: MORE DAMAGE, LESS DAMAGE TAKEN, A LITTLE FASTER, SLOWLY HEALING. YOU KEEP FIGHTING WITH IT; IT ONLY DROPS WHEN YOU DIE.`,
+          tip: "POTIONS HEAL, THE AXE HITS HARDER, THE WING RUNS FASTER, THE SHIELD SOAKS. EVERY MINUTE OR SO CHAOS BREAKS OUT: CANNONS, THE OGRE, A BLOOD MOON, POTION RAIN OR SWIFT WINDS.",
+          art: { kind: "seal", glyph: "combo", color: "#8a40e0" },
         },
       ],
     },

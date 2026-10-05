@@ -22,7 +22,7 @@ import { MAX_TAG, cleanTag } from "../game/save";
 import { NetLink, type NetMsg } from "../net/link";
 import { mathPrint, worldHash, type Frame, type MatchSpec } from "../net/session";
 import type { App } from "./app";
-import { MAX_PLAYERS, maps, roster } from "./assets";
+import { MAX_PLAYERS, maps, roster, seatsFor } from "./assets";
 import { enterSelect, freeLabel, makeHuman, makeOpen, setMode } from "./select";
 import { linkMates, resetAttractWorld, setPaused, startNetMatch, toMenu } from "./match";
 
@@ -154,9 +154,10 @@ export function leaveNet(app: App, why = ""): void {
 // ── Host: seating ──
 
 function freeRemoteSlot(app: App): number {
-  for (const i of [1, 2, 3, 0]) {
+  const order = [...Array.from({ length: seatsFor(app.mode === "tdm" ? "tdm" : "2v2") - 1 }, (_, k) => k + 1), 0];
+  for (const i of order) {
     const s = app.slots[i];
-    const local = app.pads.players[i].connected || i < app.forceJoin;
+    const local = !!app.pads.players[i]?.connected || i < app.forceJoin;
     if (!local && !app.net.seatAt(i) && (s.open || s.autoCpu)) return i;
   }
   return -1;
@@ -220,7 +221,7 @@ function lobbyView(app: App) {
         cpu: s.cpu,
         open: !!s.open,
         name: s.tag ?? null,
-        remote: remote >= 0 ? remote : app.pads.players[i].connected ? 0 : -1,
+        remote: remote >= 0 ? remote : app.pads.players[i]?.connected ? 0 : -1,
         local: n.seatAt(i)?.k ?? 0,
         active: app.slotActive(i),
         commander: app.commanderSlot(i),
@@ -640,7 +641,7 @@ function sendLobby(app: App, now: number): void {
     mode: app.mode === "ffa" ? "FREE FOR ALL" : app.mode === "2v2" ? "2 VS 2" : "1 VS 1",
     map: fieldName(app, "RANDOM"),
     humans: Math.max(1, localHumans + seated),
-    seats: 4,
+    seats: seatsFor(app.mode),
     phase: matchPhase(app),
   });
   if (app.state === "select") {

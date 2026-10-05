@@ -62,7 +62,7 @@ export function makeHuman(app: App, i: number): void {
   if (holder >= 0 && holder !== i) cursors[holder].holding = -1;
   sl.ready = false;
   app.cursors.placeChip(i, null);
-  if (cursors[i].holding < 0) cursors[i].holding = i;
+  if (cursors[i] && cursors[i].holding < 0) cursors[i].holding = i;
 }
 
 /** Seat i becomes OPEN (online host: waiting for a guest). */
@@ -76,7 +76,7 @@ export function makeOpen(app: App, i: number): void {
   sl.autoCpu = true;
   sl.tag = undefined;
   sl.tagId = undefined;
-  if (app.cursors.cursors[i].holding === i) app.cursors.cursors[i].holding = -1;
+  if (app.cursors.cursors[i]?.holding === i) app.cursors.cursors[i].holding = -1;
   app.cursors.placeChip(i, null);
 }
 
@@ -87,7 +87,7 @@ function makeCpu(app: App, i: number): void {
   sl.cpu = true;
   if (wasOpen) sl.ready = false;
   sl.joined = false;
-  if (app.cursors.cursors[i].holding === i) app.cursors.cursors[i].holding = -1;
+  if (app.cursors.cursors[i]?.holding === i) app.cursors.cursors[i].holding = -1;
   settleCpu(app, i);
 }
 
@@ -100,20 +100,26 @@ function vacate(app: App, i: number): void {
   }
 }
 
-/** Switches 1v1 / 2v2 / FFA, re-deciding seats 2 and 3 and moving to a field that fits the mode. */
+/**
+ * Switches 1v1 / 2v2 / FFA / deathmatch, re-deciding the seats that come into play, leave it, or change between
+ * champion and commander, and moving to a field that fits the mode.
+ */
 export function setMode(app: App, v: MatchMode): void {
   if (app.mode === v) return;
-  const was = app.mode;
-  const wasCommander = [false, false, ...[2, 3].map((k) => app.commanderSlot(k))];
+  const seats = Array.from({ length: MAX_PLAYERS }, (_, k) => k).slice(2);
+  const wasActive = seats.map((k) => app.slotActive(k));
+  const wasCommander = seats.map((k) => app.commanderSlot(k));
   app.mode = v;
-  for (const k of [2, 3]) {
+  for (const [j, k] of seats.entries()) {
     const sl = app.slots[k];
-    if (app.mode === "1v1") {
-      if (app.cursors.cursors[k].holding >= 0) app.cursors.cursors[k].holding = -1;
-    } else if (was === "1v1") {
+    if (!app.slotActive(k)) {
+      const c = app.cursors.cursors[k];
+      if (c && c.holding >= 0) c.holding = -1;
+      app.cursors.placeChip(k, null);
+    } else if (!wasActive[j]) {
       if (app.present(k)) makeHuman(app, k);
       else vacate(app, k);
-    } else if (wasCommander[k] !== app.commanderSlot(k)) {
+    } else if (wasCommander[j] !== app.commanderSlot(k)) {
       if (sl.open) makeOpen(app, k);
       else if (sl.cpu) {
         sl.ready = false;
@@ -144,10 +150,15 @@ export function enterSelect(app: App, keep = false): void {
     app.net.mode === "host" && slots[i].cpu && slots[i].autoCpu === false && !slots[i].open;
   if (here >= 3) {
     if (app.mode === "1v1") app.mode = "2v2";
-  } else if (app.net.mode === "host" && app.mode !== "ffa" && !(app.mode === "2v2" && [2, 3].some(keptCpu)))
+  } else if (
+    app.net.mode === "host" &&
+    app.mode !== "ffa" &&
+    app.mode !== "tdm" &&
+    !(app.mode === "2v2" && [2, 3].some(keptCpu))
+  )
     app.mode = "1v1";
   app.cursors.setScale(app.uiCanvas.w, app.uiCanvas.h);
-  app.cursors.reset(app.mode === "ffa" ? [0, 1, 2, 3] : app.mode === "2v2" ? [0, 2, 1, 3] : [0, 1]);
+  app.cursors.reset(app.mode === "ffa" ? [0, 1, 2, 3] : app.mode === "1v1" ? [0, 1] : [0, 2, 1, 3]);
   slots.forEach((sl, i) => {
     const keepCpu = keptCpu(i);
     sl.ready = false;
@@ -159,7 +170,7 @@ export function enterSelect(app: App, keep = false): void {
         sl.hero = pv.hero;
         sl.costume = pv.costume;
         sl.ready = true;
-        if (app.cursors.cursors[i].holding === i) app.cursors.cursors[i].holding = -1;
+        if (app.cursors.cursors[i]?.holding === i) app.cursors.cursors[i].holding = -1;
         app.cursors.placeChip(i, pv.hero);
       }
     } else if (keepCpu) {
@@ -336,7 +347,7 @@ export function updateSelect(app: App, now: number, dt: number): void {
   if (app.mode === "1v1" && [0, 1, 2, 3].filter((i) => app.present(i)).length >= 3) setMode(app, "2v2");
   // Seats follow who is plugged in: joiners take open / auto-CPU seats, leavers become vacant.
   slots.forEach((sl, i) => {
-    sl.local = pads.players[i].connected;
+    sl.local = !!pads.players[i]?.connected;
     if (app.present(i) && (sl.open || (sl.cpu && sl.autoCpu))) {
       sl.autoCpu = false;
       makeHuman(app, i);
@@ -424,7 +435,7 @@ function selectButton(app: App, buttonId: string, by: number): void {
     app.pads.release(i);
     audio.ui("back");
   } else if (id === "mode" && !app.training) {
-    setMode(app, app.mode === "1v1" ? "2v2" : app.mode === "2v2" ? "ffa" : "1v1");
+    setMode(app, app.mode === "1v1" ? "2v2" : app.mode === "2v2" ? "ffa" : app.mode === "ffa" ? "tdm" : "1v1");
     audio.ui("ok");
   } else if (id === "add") {
     if (app.mode === "1v1") setMode(app, "2v2");
@@ -628,7 +639,7 @@ export function updateFieldSelect(app: App, now: number, dt: number): void {
       if (!app.slotActive(i) || app.commanderSlot(i) || app.slots[i].cpu) continue;
       app.slots[i].ready = false;
       cursors.placeChip(i, null);
-      cursors.cursors[i].holding = i;
+      if (cursors.cursors[i]) cursors.cursors[i].holding = i;
     }
   }
 }

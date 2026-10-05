@@ -26,7 +26,7 @@
     "#2bc84a",
     "#9a9068"
   ],
-  "playerColors": ["#2a5cff", "#ff2a2a", "#20d0c0", "#ffc020"],
+  "playerColors": ["#2a5cff", "#ff2a2a", "#ffc020", "#30c040", "#9a4ae8", "#ff8a18", "#18c8b4", "#ff3aa8"],
   "saturation": 1.12,
   "heroScale": 1.5,
   "vignette": 0.1,
