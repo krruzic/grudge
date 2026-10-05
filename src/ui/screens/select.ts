@@ -552,7 +552,7 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
     ctx.translate(zx + camW / 2, y + 4);
     ctx.rotate(-Math.PI / 4);
     ctx.fillStyle = BROWN;
-    ctx.fillRect(-4.6, -1.3, 9.2, 2.6);
+    ctx.fillRect(-2.6, -1.3, 7.2, 2.6);
     ctx.fillStyle = "#e8b830";
     ctx.fillRect(-2.2, -0.9, 5.4, 1.8);
     ctx.fillStyle = "#e07a8a";

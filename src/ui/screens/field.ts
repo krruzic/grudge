@@ -137,7 +137,7 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
     // Pin: one wedge per seat voting for this card, else the colours of the hands pointing at it.
     const voters = s.votes.filter(([, v]) => v === k).map(([seat]) => handColor(seat));
     const hands = s.cursors?.handsOn(`map:${k}`) ?? [];
-    pin(ctx, cw / 2, 3, voters.length ? voters : hands.length ? hands : sel ? "#c81818" : "#8a8a90");
+    pin(ctx, cw / 2, 3, voters.length ? voters : hands.length ? hands : "#8a8a90");
     ctx.restore();
     if (sel) goldArrow(ctx, cx - 6, cy + chh / 2, -1, 6);
   }
