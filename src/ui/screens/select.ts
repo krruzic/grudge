@@ -565,8 +565,8 @@ function drawSeatCard(
     drawTree(ctx, sl.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
     ctx.restore();
   }
-  // Ability glyphs along the bottom edge (embossed), vector icons until the sheet has loaded.
-  (["a", "b", "r", "z"] as const).forEach((a, j) => {
+  // Ability glyphs along the bottom edge (embossed), vector icons until the sheet has loaded; SIT HERE takes the row.
+  (sitHere ? [] : (["a", "b", "r", "z"] as const)).forEach((a, j) => {
     const cx = x + (w / 4) * (j + 0.5);
     const g = heroGlyph(sl.hero, j);
     if (g) {
@@ -581,7 +581,8 @@ function drawSeatCard(
     } else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
   });
   if (!commander) drawCostumeStrip(s, ctx, i, sl, fx, fy, fw, ih);
-  if (sitHere) woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
+  // SIT HERE over the (display-only) ability glyph row, clear of the costume strip and the evolution trees.
+  if (sitHere) woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + w / 2, y + h - 12);
   if (sl.ready && !commander && human) {
     ctx.save();
     waxSeal(ctx, fx + fw - 7, fy + ih + 3, 6, chipColor(i, false), "combo");
