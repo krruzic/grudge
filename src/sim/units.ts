@@ -303,7 +303,7 @@ export function moveToward(w: World, e: Entity, goal: Vec2, stopDist: number): v
   const dx = wp.x - p.x;
   const dz = wp.z - p.z;
   const d = Math.hypot(dx, dz) || 1;
-  const sp = u.speed * w.speedMul(e) * w.dt;
+  const sp = u.speed * w.speedMul(e) * w.marchMul(e.team) * w.dt;
   const step = Math.min(sp, d);
   const moved = w.moveBy(e, (dx / d) * step, (dz / d) * step);
   if (!moved) {

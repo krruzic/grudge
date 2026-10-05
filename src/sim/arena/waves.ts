@@ -54,7 +54,7 @@ export function spawnInterval(arena: Arena, o: Entity): number {
   t /= wv.rateMul ?? 1;
   if (w.ffaCfg) t /= w.ffaCfg.spawnRateMul ?? 1;
   if (arena.relic.state === "shrined" && arena.relic.shrineId === o.id) t /= 1 + w.data.match.arena.relic.outpostExtra;
-  if (w.isSudden()) t /= w.data.match.suddenDeath.productionMul;
+  t /= 1 + (w.data.match.suddenDeath.productionMul - 1) * w.surge();
   if (st.graveUntil && w.time < st.graveUntil) t *= st.graveMul ?? 1;
   const g = w.data.match.economy.grain;
   if (g?.surplus !== undefined && w.teams[o.team].grain >= g.surplus) t *= g.surplusMul ?? 0.7;

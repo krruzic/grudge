@@ -54,6 +54,10 @@ export function buy(arena: Arena, hero: Entity, item: ShopItem, aimAt?: Vec2): b
       w.emit({ type: "notice", team, text: "NO SHIELDS IN SUDDEN DEATH" });
       return false;
     }
+    if (!w.homeHeld(team)) {
+      w.emit({ type: "notice", team, text: "BUILD ON EVERY HOME PAD FOR A SHIELD" });
+      return false;
+    }
     if (w.time < ts.wardReadyAt) {
       w.emit({ type: "notice", team, text: `SHIELD READY IN ${Math.ceil(ts.wardReadyAt - w.time)}` });
       return false;

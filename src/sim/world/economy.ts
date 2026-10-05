@@ -11,7 +11,7 @@ export function updateEconomy(w: World, dt: number): void {
     // Holding the relic shrine multiplies gold (not grain) income.
     const tithe = w.arena.heldBy(team) ? w.data.match.arena.relic.incomeMul : 1;
     t.resource += w.incomeOf(team) * (1 + t.catchUp * cu.incomeBoost) * tithe * dt;
-    t.grain += w.grainOf(team) * (1 + t.catchUp * cu.incomeBoost) * dt;
+    t.grain += w.grainOf(team) * dt;
     // Soldiers eat: upkeep comes out of the grain store (never below zero). With the store empty, outposts can't
     // pay for new soldiers, so an army settles at what the team's buildings can feed - lose buildings (or have
     // your champion down, which halts outposts) and it shrinks as soldiers die and aren't replaced.

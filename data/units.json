@@ -108,5 +108,6 @@
     "growPerMinute": 0.06,
     "lossDelay": 0.8,
     "lossDelayCap": 2
-  }
+  },
+  "advanceSpeedMul": 1.35
 }

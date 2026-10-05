@@ -67,7 +67,7 @@ export function shop(bot: Bot, w: World, me: Entity, threatened: boolean): boole
   }
   const core = w.core(me.team)!;
   const ward = (core.structure!.ward ?? 0) / w.wardMax;
-  const wardOk = w.time >= ts.wardReadyAt && !w.isSudden();
+  const wardOk = w.time >= ts.wardReadyAt && !w.isSudden() && w.homeHeld(me.team);
   const wantWard =
     wardOk && ward < (bot.role === "attack" ? 0.15 : bot.role === "support" ? 0.55 : 0.4) && gold >= sh.ward.cost;
   const myArmy = w.teams[me.team].unitCount;
@@ -119,6 +119,23 @@ export function pickBuild(bot: Bot, w: World, me: Entity): void {
         Math.hypot(a.x - myCore.transform.pos.x, a.z - myCore.transform.pos.z) -
         Math.hypot(b.x - myCore.transform.pos.x, b.z - myCore.transform.pos.z),
     );
+  // Past the opening, an empty home pad means no keep shield (World.homeHeld): refilling it comes first.
+  const hole = w.time > 90 ? pads.find((p) => p.zone === "home" && p.side === me.team && !p.structureId) : undefined;
+  if (hole) {
+    const ownOutposts = w.entities.filter(
+      (o) =>
+        o.alive &&
+        o.team === me.team &&
+        w.data.structures.types[o.structure?.type as StructureType]?.class === "production",
+    ).length;
+    const type: StructureType = ownOutposts < MAX_OUTPOSTS ? "barracks" : "damage";
+    if (res >= buildCost(w, type, false, me.team)) {
+      bot.buildPad = hole;
+      bot.buildType = type;
+      bot.buildSpec = null;
+    }
+    return;
+  }
   const outposts = w.entities.filter(
     (o) =>
       o.alive &&

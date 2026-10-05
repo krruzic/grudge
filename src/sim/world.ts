@@ -564,8 +564,53 @@ export class World {
     return this.match.phase === "sudden";
   }
 
+  /**
+   * War drums: 0 until suddenDeath.rampFrom seconds, rising to 1 at the end of regulation (1 in sudden death).
+   * Sudden death's production / cost / soldier damage multipliers phase in by this much, so a match that's
+   * dragging tips over before the bell instead of in it.
+   */
+  surge(): number {
+    if (this.isSudden()) return 1;
+    const from = this.data.match.suddenDeath.rampFrom;
+    if (from === undefined || this.training || this.tdm) return 0;
+    const end = this.matchLength;
+    return end > from ? Math.max(0, Math.min(1, (this.time - from) / (end - from))) : 0;
+  }
+
+  /** Every home pad of `team` has one of its own finished buildings on it (needed for the keep shield to hold). */
+  homeHeld(team: number): boolean {
+    let n = 0;
+    for (const p of this.pads) {
+      if (p.zone !== "home" || p.side !== team) continue;
+      n++;
+      const s = p.structureId ? this.get(p.structureId) : undefined;
+      if (!s?.alive || s.team !== team || !s.structure?.ready) return false;
+    }
+    return n > 0;
+  }
+
+  /**
+   * Soldiers of a house with the upper hand march faster to join the fight (not while fighting): every enemy
+   * champion down, or more of its champions standing than any rival.
+   */
+  marchMul(team: number): number {
+    const m = this.data.units.advanceSpeedMul;
+    if (!m || this.tdm) return 1;
+    let mine = 0;
+    let best = 0;
+    const up = new Array(this.teamCount).fill(0);
+    for (const p of this.players) {
+      if (p.commander) continue;
+      const e = this.getAny(p.heroId);
+      if (e?.hero && !e.hero.dead && p.team >= 0 && p.team < this.teamCount) up[p.team]++;
+    }
+    mine = up[team] ?? 0;
+    for (let t = 0; t < this.teamCount; t++) if (t !== team && this.standing(t)) best = Math.max(best, up[t]);
+    return mine > best ? m : 1;
+  }
+
   costMul(): number {
-    return this.isSudden() ? this.data.match.suddenDeath.costMul : 1;
+    return 1 + (this.data.match.suddenDeath.costMul - 1) * this.surge();
   }
 
   setDirective(team: number, type: UnitType | "all", dir: Directive, hero: Entity): void {

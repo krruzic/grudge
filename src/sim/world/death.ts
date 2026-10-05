@@ -79,6 +79,9 @@ function killHero(
     return;
   }
   w.loseGold(target.team, w.data.match.economy.loss.heroDeath, "HERO DOWN");
+  // Losing a champion spills a share of the house's grain store (a beaten house can't bank its way back).
+  const spill = w.data.match.economy.grain?.deathLoss ?? 0;
+  if (victim && spill > 0) victim.grain *= 1 - spill;
   if (killerTeam >= 0 && killerTeam !== target.team) muster(w, killerTeam, cut);
 }
 

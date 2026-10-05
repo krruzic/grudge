@@ -357,6 +357,8 @@ export interface VeterancyDef {
 
 export interface UnitData {
   popCap: number;
+  /** Soldiers of a house with more champions standing march this much faster (World.marchMul). */
+  advanceSpeedMul?: number;
   waves: {
     firstSeconds: number;
     everySeconds: number;
@@ -450,7 +452,8 @@ export interface MatchData {
   maxTicksPerFrame: number;
   matchSeconds: number;
   suddenDeathSeconds: number;
-  suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
+  /** rampFrom: seconds after which these phase in toward full by the end of regulation (World.surge). */
+  suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number; rampFrom?: number };
   lockdown?: { seconds: number; warnSeconds?: number };
   /** Team deathmatch rules (sim/tdm.ts). */
   tdm?: import("./tdm.ts").TdmConfig;
@@ -497,6 +500,8 @@ export interface MatchData {
       zoneMul?: Partial<Record<"home" | "forward" | "neutral", number>>;
       /** Grain per second each living soldier eats. */
       upkeep?: Partial<Record<"grunt" | "ranged" | "heavy", number>>;
+      /** Fraction of the grain store lost when one of the house's champions dies. */
+      deathLoss?: number;
       starvedMul?: number;
     };
     padIncome?: Record<string, number>;

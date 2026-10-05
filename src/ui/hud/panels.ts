@@ -101,7 +101,8 @@ export function drawTeamHead(
   const capped = ts.unitCount >= w.popCap;
   const out = !!ts.out;
   const hpFrac = core && !out ? core.hp / core.maxHp : 0;
-  const wardFrac = ward > 0 && !sudden ? ward / w.wardMax : 0;
+  // No shield ring while a home pad is empty (the ward doesn't hold then, World.homeHeld).
+  const wardFrac = ward > 0 && !sudden && w.homeHeld(t) ? ward / w.wardMax : 0;
   const lowPulse = hpFrac < 0.25 ? Math.floor(now * 4) % 2 : 0;
   const prevGrain = S.shownGrain[t] ?? ts.grain;
   S.shownGrain[t] = prevGrain + (ts.grain - prevGrain) * Math.min(1, 0.25);

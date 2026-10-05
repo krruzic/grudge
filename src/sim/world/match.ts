@@ -33,12 +33,13 @@ export function updateMatch(w: World): void {
     }
     w.endMatch(pool.length === 1 ? pool[0] : -1, pool.length === 1 ? reason : "dead even");
   }
-  // The ward cap depends on player count, so clamp every tick; a core is "shielded" while it has ward left.
+  // The ward cap depends on player count, so clamp every tick; a core is "shielded" while it has ward left and
+  // its house holds every home pad (World.homeHeld) - lose a home building and the shield is down until rebuilt.
   for (let team = 0; team < w.teamCount; team++) {
     const core = w.core(team);
     if (!core?.structure) continue;
     if ((core.structure.ward ?? 0) > w.wardMax) core.structure.ward = w.wardMax;
-    core.structure.shielded = (core.structure.ward ?? 0) > 0;
+    core.structure.shielded = (core.structure.ward ?? 0) > 0 && w.homeHeld(team);
   }
 }
 

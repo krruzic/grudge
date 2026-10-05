@@ -10,7 +10,8 @@
   "suddenDeath": {
     "productionMul": 1.6,
     "costMul": 0.6,
-    "unitDamageMul": 1.7
+    "unitDamageMul": 1.7,
+    "rampFrom": 90
   },
   "ffa": {
     "timeMul": 1.5,
@@ -52,7 +53,8 @@
         "home": 1.0,
         "forward": 1.8,
         "neutral": 2.2
-      }
+      },
+      "deathLoss": 0.35
     },
     "respawnBigMul": 1.667,
     "padIncome": {

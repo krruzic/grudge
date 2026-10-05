@@ -38,7 +38,7 @@ export function damageMulOf(w: World, src: Entity): number {
   if (s.brewUntil !== undefined && w.time < s.brewUntil) m *= s.brewMul ?? 1;
   if (src.hero) m *= w.mapEvents.hauntMul(src, "damage");
   if (src.hero) m *= src.hero.damageMul * (src.hero.action?.power ?? 1);
-  if (src.unit && w.isSudden()) m *= w.data.match.suddenDeath.unitDamageMul;
+  if (src.unit) m *= 1 + (w.data.match.suddenDeath.unitDamageMul - 1) * w.surge();
   if (s.powerDamageMul !== undefined) m *= s.powerDamageMul;
   return m;
 }
@@ -304,8 +304,9 @@ function emitSoaked(w: World, src: Entity | null, target: Entity, ev: HitPos, so
 /** Core ward absorbs damage outside sudden death; breaking it locks out re-buying for a while. */
 function soakWard(w: World, src: Entity | null, target: Entity, amount: number, ev: HitPos): number {
   const ts = target.structure;
-  if (!(ts?.type === "core" && (ts.ward ?? 0) > 0 && !w.isSudden())) return amount;
-  const soak = Math.min(ts.ward!, amount);
+  if (!(ts?.type === "core" && (ts.ward ?? 0) > 0 && !w.isSudden() && w.homeHeld(target.team))) return amount;
+  // As the war drums build (World.surge) the ward catches less of each blow; in sudden death, nothing.
+  const soak = Math.min(ts.ward!, amount * (1 - w.surge() * 0.8));
   ts.ward! -= soak;
   amount -= soak;
   if (ts.ward! <= 0) {

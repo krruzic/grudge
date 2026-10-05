@@ -893,6 +893,21 @@ function siege(bot: Bot, w: World, s: Senses): boolean {
   const toCore = w.dist(me, core);
   let target: Entity = core;
   let bd = toCore;
+  // A shielded keep only holds its ward while every home pad is built: knock out the nearest home building first.
+  if ((core.structure?.ward ?? 0) > 0 && w.homeHeld(core.team)) {
+    let hd = Infinity;
+    for (const pad of w.pads) {
+      if (pad.zone !== "home" || pad.side !== core.team || !pad.structureId) continue;
+      const o = w.get(pad.structureId);
+      if (!o?.alive || o.team !== core.team || !ok(bot, w, me, o)) continue;
+      const d = w.dist(me, o);
+      if (d < hd) {
+        hd = d;
+        target = o;
+      }
+    }
+    bd = hd < Infinity ? hd : bd;
+  }
   for (const o of w.entities) {
     if (!o.alive || !o.structure || o.team !== core.team || o.structure.siege || o === core) continue;
     if (w.dist(o, core) > toCore + 2) continue;
