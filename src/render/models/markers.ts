@@ -126,28 +126,33 @@ export function footRingBatch(max: number): THREE.InstancedMesh {
 }
 
 export function playerTag(label: string, teamColor: THREE.Color): THREE.Sprite {
+  // The plate grows with the name (signed tags are up to 8 letters), keeping the P1-sized height.
   const c = cacheCanvas();
-  c.width = 128;
+  const font = "bold 12px monospace";
+  const m = c.getContext("2d")!;
+  m.font = font;
+  const bw = Math.max(32, Math.ceil(m.measureText(label).width) + 8);
+  c.width = bw * 4;
   c.height = 64;
   const ctx = c.getContext("2d")!;
   ctx.scale(4, 4);
   ctx.fillStyle = `#${teamColor.getHexString()}`;
-  ctx.fillRect(0, 0, 32, 16);
+  ctx.fillRect(0, 0, bw, 16);
   ctx.strokeStyle = "#000";
   ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, 30, 14);
-  ctx.font = "bold 12px monospace";
+  ctx.strokeRect(1, 1, bw - 2, 14);
+  ctx.font = font;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const hsl = { h: 0, s: 0, l: 0 };
   teamColor.getHSL(hsl);
   ctx.fillStyle = hsl.l > 0.5 && hsl.h > 0.1 && hsl.h < 0.55 ? "#101010" : "#fff";
-  ctx.fillText(label, 16, 9);
+  ctx.fillText(label, bw / 2, 9);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.userData.owned = true;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
-  s.scale.set(0.9, 0.45, 1);
+  s.scale.set(0.9 * (bw / 32), 0.45, 1);
   s.position.y = 2.75;
   s.renderOrder = 10;
   return s;

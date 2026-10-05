@@ -113,7 +113,9 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     const icon = s.portraits?.icon(p.hero);
     if (icon) smoothImage(ctx, icon, 5, 5, chh - 8, chh - 8);
     const nm = p.cpu ? "CPU" : (p.tag ?? `P${p.slot + 1}`);
-    drawPlain(ctx, nm, chh + 2, chh / 2 - 9, TEAM_TEXT[p.team], 0.72, true);
+    const nmRoom = cw - chh - 6 - (won ? 22 : ffa ? 30 : 4);
+    const nms = Math.min(0.72, nmRoom / Math.max(1, textWidth(nm, 1, true)));
+    drawPlain(ctx, nm, chh + 2, chh / 2 - 9, TEAM_TEXT[p.team], nms, true);
     const hero = (s.heroes[p.hero]?.name ?? p.hero).toUpperCase();
     drawPlain(ctx, hero, chh + 2, chh / 2 + 2, "#4a3018", 0.55, true);
     if (won) waxSeal(ctx, cw - 12, chh / 2, 8, "#c8a020", "combo");

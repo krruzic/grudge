@@ -461,13 +461,7 @@ function selectButton(app: App, buttonId: string, by: number): void {
     slots[i].level = (slots[i].level % 3) + 1;
     app.net.lobbySentAt = 0;
     audio.ui("move");
-  } else if (
-    (id === "tag" || id === "pen") &&
-    !slots[i].cpu &&
-    !app.commanderSlot(i) &&
-    by === i &&
-    !app.screens.naming.has(i)
-  ) {
+  } else if (id === "pen" && !slots[i].cpu && !app.commanderSlot(i) && by === i && !app.screens.naming.has(i)) {
     // Only the card's owner signs its name.
     openNaming(app, i, slots[i].tag);
   } else if (id === "go" && selectReady(app) && !app.screens.naming.size) {

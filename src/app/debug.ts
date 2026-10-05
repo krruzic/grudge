@@ -9,7 +9,7 @@ import { allLearned, gainXp, learn } from "../sim/talents";
 import { spawnUnit } from "../sim/structures";
 import inputData from "../../data/input.json";
 import { CommandMapper } from "../input/commands";
-import { setPlayerCostumes } from "../render/costumes";
+import { setPlayerCostumes, setPlayerNames } from "../render/costumes";
 import type { Page } from "../ui/menus";
 import type { App } from "./app";
 import { houses, roster } from "./assets";
@@ -57,7 +57,7 @@ export function startFromUrl(app: App): void {
 }
 
 /**
- * `?bots`: an all-CPU match. Options: heroes=a,b,.. costumes=.. mode= partners time=<s to fast-forward>
+ * `?bots`: an all-CPU match. Options: heroes=a,b,.. costumes=.. names=.. mode= partners time=<s to fast-forward>
  * rank=<1-3 veteran soldiers> plant (place banners) spawn=x,z (move heroes) wall / works[=ground] (force the
  * Warden's wall / the Engineer's works for screenshots).
  */
@@ -65,6 +65,7 @@ function beginBotMatch(app: App): void {
   const p = app.params;
   const hs = (p.get("heroes") ?? "").split(",").filter((h) => roster.includes(h));
   setPlayerCostumes((p.get("costumes") ?? "").split(","));
+  setPlayerNames((p.get("names") ?? "").split(","));
   if (houses(app.mapIndex) === 4 && p.has("map")) app.mode = "ffa";
   if (!app.fields().includes(app.mapIndex)) app.mapIndex = app.fields()[0] ?? app.mapIndex;
   app.players = app.mode === "1v1" ? 2 : 4;

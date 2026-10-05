@@ -220,9 +220,12 @@ export class PauseMenu {
     const icon = this.host.portraits?.icon(p.heroType);
     if (icon) smoothImage(ctx, icon, x + 1, y, pic, pic);
     const nm = `${playerLabel(p.player)} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
-    drawPlain(ctx, nm, x + tx, y, BROWN, ffa ? 0.52 : 0.55, true);
     const lv = `LV ${e.hero.level ?? 1}`;
     const ls = ffa ? 0.48 : 0.5;
+    // Long signed names shrink to fit beside the level.
+    const room = colW - tx - textWidth(lv, ls, true) - 3;
+    const ns = Math.min(ffa ? 0.52 : 0.55, room / Math.max(1, textWidth(nm, 1, true)));
+    drawPlain(ctx, nm, x + tx, y, BROWN, ns, true);
     drawPlain(ctx, lv, x + colW - textWidth(lv, ls, true), y, "#8a1810", ls, true);
     const fr = e.alive ? Math.max(0, e.hp / e.maxHp) : 0;
     const bw = colW - (ffa ? 25 : 27);

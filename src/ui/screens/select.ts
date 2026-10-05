@@ -4,7 +4,7 @@
 // pick it. Below: one seat card per active seat showing the seat's kind plaque (PLAYER / CPU with difficulty
 // gems / COMMANDER, camera toggle), name plate, the hero on its painted stage with the costume strip, the
 // evolution tree and ability glyphs. A human seat that hasn't placed its seal shows "PICK A CHAMPION" instead.
-// Mouse targets ("hero:<id>", "kind:<i>", "lvl:<i>", "cam:<i>", "tag:<i>", "sit:<i>", "go", ...) go into the
+// Mouse targets ("hero:<id>", "kind:<i>", "lvl:<i>", "cam:<i>", "pen:<i>", "sit:<i>", "go", ...) go into the
 // cursors' hit list; app/select.ts turns cursor actions on them into seat changes.
 import { CAMERA_NAMES } from "../../game/save";
 import { costumesOf } from "../../render/costumes";
@@ -303,7 +303,6 @@ function drawSeatCard(
   const naming = s.naming.has(i);
   const tagged = !sl.cpu && !commander && !!sl.tag;
   const label = tagged ? sl.tag! : `P${i + 1}`;
-  const tagHot = !sl.cpu && !commander && hovered(s, `tag:${i}`);
   const iy = 30;
   const ih = h - iy - 34;
   // An unsealed card (a human's, or a CPU's whose chip someone picked up) is empty, unless the cursor holding its
@@ -314,7 +313,7 @@ function drawSeatCard(
   const blank = unsealed && !preview;
   card(ctx, x, y, w, h, 0, sl.open ? TEAM_BRIGHT[team] : chipColor(i, sl.cpu), () => {
     const ls = tagged ? Math.min(0.95, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 0.95;
-    drawPlain(ctx, label, w / 2 - textWidth(label, ls, true) / 2, 7, tagHot ? "#c81818" : ink, ls, true);
+    drawPlain(ctx, label, w / 2 - textWidth(label, ls, true) / 2, 7, ink, ls, true);
     inset(ctx, 5, iy, w - 10, ih, "#2a2018");
     texturedRect(ctx, "cloth", 5, iy, w - 10, ih, TEAM_CLOTH[team], 0, 0.7);
     band(ctx, 5, iy + ih - 10, w - 10, 10, "#000000", 0.25);
@@ -330,11 +329,6 @@ function drawSeatCard(
     const ns = Math.min(0.8, (w - 10) / Math.max(1, textWidth(name, 1, true)));
     drawPlain(ctx, name, w / 2 - textWidth(name, ns, true) / 2, iy + ih + 5, BROWN, ns, true);
   });
-  // Only humans' name plates are clickable (and only the owner's click opens it: app/select.ts).
-  if (!sl.cpu && !commander) {
-    s.hit(`tag:${i}`, x + 4, y + 3, w - 8, 13);
-    if (tagHot) shadowText(ctx, "SIGN NAME", x + w / 2 - textWidth("SIGN NAME", 0.42) / 2, y - 7, "#f8e8c0", 0.42);
-  }
   const sitHere = sl.cpu && !s.peer && !commander && !!s.cursors?.cursors.some((c) => c.active);
   /** Little X box in the card's corner. */
   const xBox = (bid: string, tip: string) => {
@@ -537,7 +531,7 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
   const lvW = 21;
   const camW = 11;
   const extra = sl.cpu && !dummy ? lvW + 3 : camPl ? camW + 3 : 0;
-  // Humans get a pencil on the left: sign your name (same as clicking the P# label).
+  // Humans get a pencil on the left: sign your name.
   const pen = !sl.cpu && s.championSeat(i);
   const lead = pen ? camW + 3 : 0;
   const x0 = Math.round(cx - (pw + extra + lead) / 2) + lead;

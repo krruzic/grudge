@@ -131,7 +131,7 @@ function lobbyButton(app: App, buttonId: string, by: number): void {
     app.audio.ui("ok");
   } else if (id === "cam") {
     app.audio.ui("back");
-  } else if ((id === "tag" || id === "pen") && net.mySlots.get(by) === i && !app.screens.naming.has(i)) {
+  } else if (id === "pen" && net.mySlots.get(by) === i && !app.screens.naming.has(i)) {
     openNaming(app, i, lb.slots[i]?.name);
   } else if (id === "lvl" && lb.slots[i]?.cpu) {
     net.link.toHost({ t: "lvl", k: [...net.mySlots.keys()][0] ?? 0, slot: i });
