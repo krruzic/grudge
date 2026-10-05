@@ -260,9 +260,29 @@ function rollVariance(w: World, src: Entity | null, amount: number, opts: Damage
   return [amount, crit];
 }
 
+/**
+ * Team synergy auras (heroes.json "synergy", keyed by the partner's class): every partner champion within 9 m of
+ * champion `e` contributes its `edge` (damage dealt) or `guard` (damage taken) entry for e's class. Not in
+ * deathmatch, where houses are bigger.
+ */
+function partnerMul(w: World, e: Entity, kind: "edge" | "guard"): number {
+  const cls = e.hero ? w.heroDef(e.hero.type).class : undefined;
+  if (!cls || w.tdm) return 1;
+  let m = 1;
+  for (const p of w.players) {
+    if (p.team !== e.team || p.heroId === e.id) continue;
+    const o = w.getAny(p.heroId);
+    if (!o?.alive || !o.hero || o.hero.dead || w.dist(o, e) > 9) continue;
+    m *= w.heroDef(o.hero.type).synergy?.[kind]?.[cls] ?? 1;
+  }
+  return m;
+}
+
 /** Guard, the attacker's stealth-ambush opener (consumed here), marks, and armour effects. */
 function defenderScaling(w: World, src: Entity | null, target: Entity, amount: number): number {
   if (w.time < target.status.guardUntil) amount *= target.status.guardMul;
+  if (target.hero) amount *= partnerMul(w, target, "guard");
+  if (src?.hero) amount *= partnerMul(w, src, "edge");
   if (src && src.kind !== "structure") {
     if (w.time < src.status.stealthUntil) {
       amount *= src.status.ambushMul;

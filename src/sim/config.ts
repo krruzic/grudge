@@ -284,9 +284,15 @@ export interface HeroDef {
   class?: HeroClass;
   /**
    * Team synergies by partner class (2v2 / team deathmatch partners only):
-   *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed;
+   *   edge    - multiplier on a partner's damage while within 9 m of this champion;
+   *   guard   - multiplier on damage a partner takes while within 9 m of this champion.
    */
-  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
+  synergy?: {
+    hexAlly?: Partial<Record<HeroClass, number>>;
+    edge?: Partial<Record<HeroClass, number>>;
+    guard?: Partial<Record<HeroClass, number>>;
+  };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

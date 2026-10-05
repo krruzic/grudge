@@ -284,7 +284,14 @@
           0
         ]
       },
-      "class": "builder"
+      "class": "builder",
+      "synergy": {
+        "edge": {
+          "assassin": 1.12,
+          "tank": 1.12,
+          "bruiser": 1.08
+        }
+      }
     },
     "raider": {
       "name": "Grim",
@@ -414,7 +421,14 @@
           0
         ]
       },
-      "class": "assassin"
+      "class": "assassin",
+      "synergy": {
+        "edge": {
+          "bruiser": 1.1,
+          "tank": 1.1,
+          "assassin": 1.08
+        }
+      }
     },
     "summoner": {
       "name": "Remnil",
@@ -637,7 +651,12 @@
           0
         ]
       },
-      "class": "assassin"
+      "class": "assassin",
+      "synergy": {
+        "edge": {
+          "caster": 1.12
+        }
+      }
     },
     "warden": {
       "name": "Thorn",
@@ -734,7 +753,14 @@
           0
         ]
       },
-      "class": "tank"
+      "class": "tank",
+      "synergy": {
+        "guard": {
+          "assassin": 0.85,
+          "builder": 0.85,
+          "bruiser": 0.88
+        }
+      }
     },
     "marksman": {
       "name": "Wren",
