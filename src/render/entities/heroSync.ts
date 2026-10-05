@@ -91,7 +91,7 @@ function syncRecallBar(ents: EntityViews, v: View, h: NonNullable<Entity["hero"]
 function syncWard(ents: EntityViews, e: Entity, v: View, dt: number, time: number): void {
   const h = e.hero!;
   const w = ents.world;
-  const warded = w.time < e.status.invulnUntil && h.action?.name !== "dodge" && h.action?.name !== "z";
+  const warded = w.time < e.status.invulnUntil && h.action?.name !== "dodge" && h.action?.name !== "z" && !h.wing;
   v.wardK = Math.max(0, Math.min(1, (v.wardK ?? 0) + (warded ? dt * 8 : -dt * 5)));
   if (v.wardK > 0 && !v.ward) {
     const line = hullMaterial(0xffd860, false);

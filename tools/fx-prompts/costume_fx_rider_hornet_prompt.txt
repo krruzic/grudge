@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume WAR HORNET: a badger courier in black lacquered leather armour with crimson quilting riding a fierce black-and-crimson war hornet with smoky red wings. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single glossy dark crimson-red honey droplet (cherry-red honey) with a white highlight
+2. a thick wobbly blob of dark crimson-red honey flying, glossy, with a short drippy tail
+3. a splash crown of thick crimson-red honey with fat drops, side view
+4. a round puddle of glossy dark crimson-red honey seen from directly above, with a few small black honeycomb pieces and bubbles in it
+5. a small chunk of black honeycomb with crimson honey in the cells
+6. a small fierce cartoon hornet in flight, black and crimson stripes, angry brows
+7. a glowing ember-red spark puff with tiny orange sparks
+8. a single dark red rose petal
+9. a small black iron spike stud
+10. a chunky crimson-red honey heal plus symbol with red honey dripping off its arms
+11. a glossy dark red-black blob of hornet venom jelly with a red sparkle
+12. a small black iron crown with red gems and a red twinkle
+13. a horizontal translucent smoky red buzzing wing motion blur streak, thick on the left tapering to the right
+14. a broken curved shard of black glazed pottery with a red rim
+15. a swirling round dark red-and-black wind gust whirl with ember specks, seen from above
+16. a ring of black honeycomb hexagon cells with crimson honey drips, seen from directly above, forming a circle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

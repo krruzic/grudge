@@ -1,5 +1,7 @@
 """Cut Bramble's 2x2 HQ FX painting into assets/fx/hq/rider.<key>[@costume].png:
-rider_hq_cut.py <raw.png> [costume]. Quadrants: pool (512), ring (1024), splash (512), gust (512)."""
+rider_hq_cut.py <raw.png> [costume]. Quadrants: pool (512), ring (1024), splash (512), gust (512).
+(rider.gust@warhornet was deleted after cutting: that painting came back as a side-view tornado, and the themed
+128 px atlas cell reads better as a ground decal.)"""
 import os, sys
 import numpy as np
 from PIL import Image

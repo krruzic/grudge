@@ -1,4 +1,5 @@
 """Key and cut a 4x4 magenta FX sheet into a 512 px atlas (128 px cells): rider_fx_cut.py <raw.png> <atlas name>
+(rider, rider@warhornet, rider@lavenderfield, rider@queencourier)
 -> assets/fx/<name>.png (+ .json). Same keying as newhero_fx_cut.py."""
 import os, sys
 import numpy as np
@@ -7,13 +8,16 @@ CELL = 128
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 
 
-def keyed(path):
+def keyed(path, edge_only=False):
     a = np.asarray(Image.open(path).convert("RGB")).astype(np.float32)
     bg = np.median(np.concatenate([a[:8, :8].reshape(-1, 3), a[-8:, -8:].reshape(-1, 3), a[:8, -8:].reshape(-1, 3)]), 0)
     d = np.sqrt(((a - bg) ** 2).sum(-1))
     alpha = np.clip((d - 22) / 70, 0, 1)
     if bg[1] < 80:
         spill = np.clip(np.minimum(a[..., 0], a[..., 2]) - a[..., 1], 0, None)
+        if edge_only:
+            # Costume sheets can be genuinely purple: only strip magenta where the sprite fades into the key.
+            spill = np.clip(spill - 30, 0, None) * (1 - alpha) ** 0.5
         a[..., 0] -= spill * 0.9
         a[..., 2] -= spill * 0.9
     else:
@@ -41,19 +45,19 @@ def fit(a, al, rect, m=3):
 
 
 raw, name = sys.argv[1], sys.argv[2]
-a, al = keyed(raw)
+a, al = keyed(raw, "@" in name)
 H, W = al.shape
 out = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
 for i in range(16):
     cx, cy = i % 4, i // 4
     out.paste(fit(a, al, (cx * W // 4, cy * H // 4, (cx + 1) * W // 4, (cy + 1) * H // 4)), (cx * CELL, cy * CELL))
 # Glow cells (soft halos) pick up magenta spill: pull pinkish texels to warm cream. Cells listed per sheet name.
-GLOW = {"rider": [6]}
+GLOW = {"rider": [6], "rider@warhornet": [6], "rider@queencourier": [6]}
 o = np.asarray(out).astype(np.float32)
-for i in GLOW.get(name.split("@")[0], []) if "@" not in name else []:
+for i in GLOW.get(name, []):
     cx, cy = i % 4, i // 4
     c = o[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL]
-    pink = (c[..., 2] >= c[..., 1] * 0.8) & (c[..., 0] - c[..., 1] > 30)
+    pink = (c[..., 2] >= c[..., 1] * 0.8) & (c[..., 0] - c[..., 1] > 30) & (c[..., 2] > c[..., 0] * 0.55)
     g = c[..., 1] + (c[..., 0] - c[..., 1]) * 0.75
     c[..., 1] = np.where(pink, g, c[..., 1])
     c[..., 2] = np.where(pink, g * 0.6, c[..., 2])

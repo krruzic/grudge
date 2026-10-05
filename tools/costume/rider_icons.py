@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFilter
 from scipy import ndimage
 sheet = sys.argv[1]
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "assets", "ui", "costume_icons")
-names = ["rider_classic", "rider_hornet", "rider_lavender", "rider_royal"]
+names = ["rider_classic", "rider_warhornet", "rider_lavenderfield", "rider_queencourier"]
 im = Image.open(sheet).convert("RGB")
 a = np.asarray(im).astype(np.float32)
 H, W = a.shape[:2]

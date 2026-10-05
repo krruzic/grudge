@@ -64,6 +64,34 @@ const TINTS: Record<string, Record<number, number>> = {
     0xe0ffb0: 0xe8d0ff,
   },
   celadon: { 0xffc860: 0x9fe0b0, 0xffe6a0: 0xd8f0ff, 0xffd070: 0xa8d8ff, 0xfff0c0: 0xe8f4ff, 0xffe0a0: 0xe0f0ff },
+  // Bramble & Mead: the kit's honey golds become each costume's honey.
+  warhornet: {
+    0xffd060: 0xff5040,
+    0xffe080: 0xff7050,
+    0xfff0b0: 0xffb0a0,
+    0xffe8a0: 0xff8070,
+    0xfff4d0: 0xffc0b0,
+    0xfff0c0: 0xffa090,
+    0xffc040: 0xff4030,
+  },
+  lavenderfield: {
+    0xffd060: 0xd0a0ff,
+    0xffe080: 0xe0b8ff,
+    0xfff0b0: 0xf0e0ff,
+    0xffe8a0: 0xe8d0ff,
+    0xfff4d0: 0xf4ecff,
+    0xfff0c0: 0xf0e4ff,
+    0xffc040: 0xc890ff,
+  },
+  queencourier: {
+    0xffd060: 0xffe8b0,
+    0xffe080: 0xfff0c8,
+    0xfff0b0: 0xfff8e8,
+    0xffe8a0: 0xd8b0ff,
+    0xfff4d0: 0xfffaf0,
+    0xfff0c0: 0xf0e0ff,
+    0xffc040: 0xc080ff,
+  },
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
@@ -75,6 +103,9 @@ const TRAILS: Record<string, number> = {
   suntotem: 0xffe0a0,
   starfall: 0xd890ff,
   celadon: 0x7fb0ff,
+  warhornet: 0xff4a3a,
+  lavenderfield: 0xd8a8ff,
+  queencourier: 0xb070ff,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);
@@ -171,9 +202,7 @@ COSTUME_SKIN.colossus = {
       ),
   },
   lipFlat: 0.3,
-  decal: new Map([
-    [WARLORD.crackRing, "flat"],
-  ]),
+  decal: new Map([[WARLORD.crackRing, "flat"]]),
 };
 COSTUME_SKIN.calliope = {
   chunk: {
