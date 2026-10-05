@@ -74,7 +74,12 @@
       "structure": 60,
       "coreDamagePer100": 0
     },
-    "refundOnUpgradeLoss": 0
+    "refundOnUpgradeLoss": 0,
+    "muster": {
+      "grain": 100,
+      "burst": 2,
+      "every": 0.6
+    }
   },
   "catchUp": {
     "resourceScale": 600,

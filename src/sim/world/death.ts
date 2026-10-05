@@ -34,7 +34,7 @@ export function kill(w: World, target: Entity, src: Entity | null): void {
     big: target.kind !== "unit",
   });
   if (target.hero) {
-    killHero(w, target, src, killer, cut);
+    killHero(w, target, src, killer, cut, killerTeam);
     return;
   }
   target.alive = false;
@@ -45,7 +45,14 @@ export function kill(w: World, target: Entity, src: Entity | null): void {
 }
 
 /** Hero death: respawn timer (longer in big matches, shorter for trailing FFA teams), frozen cooldowns, bounty. */
-function killHero(w: World, target: Entity, src: Entity | null, killer: TeamTally, cut: number): void {
+function killHero(
+  w: World,
+  target: Entity,
+  src: Entity | null,
+  killer: TeamTally,
+  cut: number,
+  killerTeam: number,
+): void {
   const hh = target.hero!;
   const victim = w.teams[target.team];
   if (src?.unit && src.alive && src.team !== target.team) w.promote(src, w.data.units.veterancy.heroKillValue);
@@ -72,6 +79,27 @@ function killHero(w: World, target: Entity, src: Entity | null, killer: TeamTall
     return;
   }
   w.loseGold(target.team, w.data.match.economy.loss.heroDeath, "HERO DOWN");
+  if (killerTeam >= 0 && killerTeam !== target.team) muster(w, killerTeam, cut);
+}
+
+/**
+ * A champion kill feeds the killers' army: a grain bounty, and every outpost of theirs sends a quick burst of
+ * soldiers (paid from grain as usual), so the army is big and on its way by the time the victim respawns.
+ */
+function muster(w: World, team: number, cut: number): void {
+  const m = w.data.match.economy.muster;
+  if (!m) return;
+  const ts = w.teams[team];
+  const grain = Math.round(m.grain * cut);
+  ts.grain += grain;
+  for (const o of w.entities) {
+    const st = o.structure;
+    if (!o.alive || o.team !== team || !st?.ready || st.spawnAt === undefined) continue;
+    if (st.type === "core" || w.data.structures.types[st.type]?.class !== "production") continue;
+    st.burst = m.burst;
+    st.spawnAt = Math.min(st.spawnAt, w.time);
+  }
+  w.emit({ type: "notice", team, text: `CHAMPION SLAIN · +${grain} GRAIN · OUTPOSTS MUSTER` });
 }
 
 /** Unit death: the neutral ogre blesses the killing team; regular units pay a rank-scaled bounty. */
@@ -222,7 +250,8 @@ export function eliminate(w: World, team: number, by: number): void {
   ts.resource = 0;
   ts.grain = 0;
   for (const e of w.entities) {
-    if (!e.alive || e.team !== team || e === w.core(team)) continue;
+    if (e.team !== team || e === w.core(team)) continue;
+    // Champions already dead when the keep falls must not come back either (they're waiting on a respawn timer).
     if (e.hero) {
       e.alive = false;
       e.hero.dead = true;
@@ -230,6 +259,7 @@ export function eliminate(w: World, team: number, by: number): void {
       e.hero.action = null;
       continue;
     }
+    if (!e.alive) continue;
     if (e.structure?.padIndex !== undefined && e.structure.padIndex >= 0) {
       const pad = w.pads[e.structure.padIndex];
       pad.structureId = 0;

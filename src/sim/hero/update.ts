@@ -24,7 +24,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (h.pip) updatePip(w, e);
   if (h.dead) {
     h.grave = undefined;
-    if (w.time >= h.respawnAt) respawn(w, e);
+    if (w.time >= h.respawnAt && !w.teams[e.team]?.out) respawn(w, e);
     return;
   }
   graveTick(w, e, ab.r);

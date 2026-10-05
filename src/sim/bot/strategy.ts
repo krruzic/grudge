@@ -24,11 +24,12 @@ export function pressing(w: World, team: number): boolean {
   const foe = w.rival(team);
   if (foe < 0 || foe === team) return false;
   const f = w.teams[foe];
-  if (foesDown(w, team) && t.unitCount >= 2) return true;
+  // Every enemy champion dead: always go, whatever is left of the army.
+  if (foesDown(w, team)) return true;
   // More champions standing than they have (2v2 with one of theirs down) and at least an even army.
   const up = (tm: number) =>
     w.players.filter((p) => p.team === tm && !p.commander && w.getAny(p.heroId)?.hero?.dead === false).length;
-  if (up(team) > up(foe) && t.unitCount >= Math.max(2, f.unitCount)) return true;
+  if (up(team) > up(foe) && t.unitCount >= f.unitCount - 2) return true;
   if (t.unitCount >= Math.max(6, f.unitCount + 4)) return true;
   let mine = 0;
   let theirs = 0;
@@ -37,7 +38,9 @@ export function pressing(w: World, team: number): boolean {
     if (e.team === team) mine++;
     else if (e.team === foe) theirs++;
   }
-  return mine >= theirs + 2 && t.unitCount >= Math.max(4, f.unitCount);
+  // A building lead (they've lost the most) with a roughly even army, or a champion-kill lead backed by buildings.
+  if (mine >= theirs + 2 && t.unitCount >= f.unitCount - 1) return true;
+  return t.heroKills >= f.heroKills + 4 && mine >= theirs && t.unitCount >= f.unitCount - 1;
 }
 
 /**

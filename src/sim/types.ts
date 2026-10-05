@@ -299,6 +299,8 @@ export interface StructureState {
   aim?: number;
   spawnAt?: number;
   spawnN?: number;
+  /** Quick spawns left after a champion kill (muster, world/death.ts): each comes `muster.every` s apart. */
+  burst?: number;
   graveUntil?: number;
   graveMul?: number;
   graveHaste?: number;

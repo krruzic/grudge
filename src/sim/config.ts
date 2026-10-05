@@ -487,6 +487,8 @@ export interface MatchData {
     loss: { heroDeath: number; tower: number };
     rally: { seconds: number; damageMul: number; speedMul: number };
     bounty: { hero: number; structure: number };
+    /** Champion kill: grain to the killers and a burst of `burst` quick spawns (`every` s apart) per outpost. */
+    muster?: { grain: number; burst: number; every: number };
   };
   catchUp: {
     resourceScale: number;

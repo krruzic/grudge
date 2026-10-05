@@ -154,6 +154,9 @@ export function think(bot: Bot, w: World, me: Entity): void {
   const heroCrowd = s.ehAlive ? crowdAt(w, me, s.enemyHero!) : 0;
   const crowded =
     s.plan.crowd !== undefined && !s.smoked && heroCrowd > s.plan.crowd && s.enemyHero!.hp > s.enemyHero!.maxHp * 0.35;
+  // Every enemy champion is dead: the window is for breaking buildings, not trading with soldiers.
+  bot.why = "siege";
+  if (foesDown(w, me.team) && siege(bot, w, s)) return;
   bot.why = "fight";
   if (fight(bot, w, s, k, crowded)) return;
   bot.fightId = 0;

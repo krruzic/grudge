@@ -148,7 +148,10 @@ export function updateWaves(arena: Arena): void {
       const vet = w.data.units.veterancy;
       w.promote(u, vet.killsForRank[Math.min(vet.killsForRank.length, st.graveRank) - 1]);
     }
-    st.spawnAt = w.time + arena.spawnInterval(o);
+    if (st.burst) {
+      st.burst--;
+      st.spawnAt = w.time + (w.data.match.economy.muster?.every ?? 0.6);
+    } else st.spawnAt = w.time + arena.spawnInterval(o);
   }
 }
 
