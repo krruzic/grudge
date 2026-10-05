@@ -4,6 +4,9 @@
 import * as THREE from "three";
 import ironUrl from "../../../assets/textures/iron.png?url";
 import seamUrl from "../../../assets/fx/colossus_seam.png?url";
+import lavaBloodmoonUrl from "../../../assets/fx/lava@bloodmoon.png?url";
+import lavaGildedUrl from "../../../assets/fx/lava@gilded.png?url";
+import lavaSwampUrl from "../../../assets/fx/lava@swamp.png?url";
 import {
   ARCHITECT,
   cv,
@@ -431,4 +434,29 @@ COSTUME_SKIN.clockwork = {
     colors: [0xe0b048, 0xc87a40, 0x8a8a90],
     tex: ironTex,
   },
+};
+
+// Warlord recolours: the quake fissures' molten core, cut and lips in the costume's colours (lava@<costume>.png,
+// tools/fx-prompts/lava_variants.py) - blood-red, molten gold, toxic swamp green.
+const lavaCore = (url: string) => () => {
+  const t = new THREE.TextureLoader().load(url);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return keep(
+    new THREE.MeshBasicMaterial({
+      map: t,
+      alphaTest: 0.4,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    }),
+  );
+};
+COSTUME_SKIN.bloodmoon = {
+  fisMat: { core: lavaCore(lavaBloodmoonUrl), cut: () => lambert(0x1a0608), lip: () => lambert(0x3a2a2a) },
+};
+COSTUME_SKIN.gilded = {
+  fisMat: { core: lavaCore(lavaGildedUrl), cut: () => lambert(0x2a1c08), lip: () => lambert(0x8a7450) },
+};
+COSTUME_SKIN.swamp = {
+  fisMat: { core: lavaCore(lavaSwampUrl), cut: () => lambert(0x14200a), lip: () => lambert(0x4a5a2a) },
 };
