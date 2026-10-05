@@ -439,6 +439,8 @@ export interface MatchData {
     outpostBonus?: number;
     popCapMul: number;
     spawnCostMul: number;
+    /** Free for all grain income multiplier. */
+    grainMul?: number;
     productionCostMul: number;
     guard: { count: number; respawnSeconds: number; hpMul: number };
   };

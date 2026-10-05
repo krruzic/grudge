@@ -24,20 +24,21 @@
       "count": 3,
       "respawnSeconds": 25,
       "hpMul": 1.3
-    }
+    },
+    "grainMul": 0.7
   },
   "economy": {
     "start": 200,
     "income": 1.0,
     "grain": {
       "start": 60,
-      "base": 1.6,
+      "base": 2.0,
       "perLevel": [
-        0.7,
-        1.1,
-        1.5
+        0.8,
+        1.2,
+        1.6
       ],
-      "outpostShare": 0.85,
+      "outpostShare": 0,
       "unitBountyMul": 1,
       "surplus": 150,
       "surplusMul": 0.7,

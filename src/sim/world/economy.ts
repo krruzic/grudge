@@ -64,7 +64,8 @@ export function grainOf(w: World, team: number): number {
       inc += ((w.data.units.waves.spawnCost[def.unit] ?? 0) / every) * g.outpostShare;
     }
   }
-  return inc;
+  // Free for all has more pads per house and cheaper soldiers: less grain to go with them.
+  return inc * (w.ffaCfg?.grainMul ?? 1);
 }
 
 /** Gold per second: base income + per-zone income for each built pad. */
