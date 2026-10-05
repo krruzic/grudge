@@ -39,6 +39,12 @@ PROPS = {
     "keg": {"static": True, "height": 0.5, "tex": 256, "lathe": {"axis": 0, "mirror": (1, 1), "segs": 20}},
     "powderkeg": {"static": True, "height": 0.62, "tex": 256, "lathe": {"axis": 1, "extra_tris": 140, "extra_up": True, "extra_t": (0.6, 1.2), "extra_r": 1.04, "extra_lat": 0.25, "mirror": (0, 1), "segs": 20}},
     "bigkeg": {"static": True, "height": 2.3, "tex": 512, "tris": 2000, "barrel": {"axis": 0, "push": (1,), "zmin": -0.25}},
+    # Deathmatch power-ups (render/map/powerups.ts).
+    "power_potion": {"static": True, "height": 0.75, "tex": 256, "tris": 900},
+    "power_might": {"static": True, "height": 0.85, "tex": 256, "tris": 900},
+    "power_haste": {"static": True, "height": 0.75, "tex": 256, "tris": 900},
+    "power_shield": {"static": True, "height": 0.85, "tex": 256, "tris": 900},
+    "power_rush": {"static": True, "height": 0.85, "tex": 256, "tris": 900},
     "keg@celadon": {"static": True, "src": "keg_celadon", "height": 0.55, "tex": 512},
     "powderkeg@celadon": {"static": True, "src": "powderkeg_celadon", "height": 0.62, "tex": 512},
     "bigkeg@celadon": {"static": True, "src": "bigkeg_celadon", "height": 2.3, "tex": 1024},

@@ -1,11 +1,13 @@
 // Team deathmatch power-ups (World.tdm.powerups): each spot has a faint rune ring on the ground; a ready power-up
 // floats and spins above it with a coloured glow - a red potion flask, an orange war-axe head (might), a blue
-// wing (haste), a gold shield and a violet hourglass (rush: cooldowns ready, super meter). Taking one pops a burst of its colour (onPowerup).
+// wing (haste), a gold shield and a violet hourglass (rush: cooldowns ready, super meter) - painted Tripo models
+// (assets/props/power_*.glb), with the vector versions below as a fallback. Taking one pops a burst of its colour (onPowerup).
 import * as THREE from "three";
 import { glowTex } from "../combat/textures";
 import { emit } from "../fx/parts";
 import { FX } from "../fx/atlas";
 import type { MapFx } from "./mapFx";
+import { prop } from "../props";
 
 const COLOR: Record<string, number> = {
   potion: 0xff3a48,
@@ -114,8 +116,26 @@ const ringGeo = new THREE.RingGeometry(0.62, 0.8, 24);
 
 function makeView(kind: string): PowerView {
   const root = new THREE.Group();
-  const item = (MAKE[kind] ?? potion)();
-  item.scale.setScalar(1.5);
+  // Painted Tripo model (assets/props/power_<kind>.glb), centred on its spin axis; the vector one until it loads.
+  const model = prop(`power_${kind}`);
+  let item: THREE.Object3D;
+  if (model) {
+    item = new THREE.Group();
+    // Fit the model's largest side to ~0.95 m whatever its export size (the axe lies diagonally).
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const k = 0.95 / Math.max(size.x, size.y, size.z, 0.01);
+    model.scale.multiplyScalar(k);
+    model.position.set(
+      (-(box.min.x + box.max.x) / 2) * k,
+      (-(box.min.y + box.max.y) / 2) * k,
+      (-(box.min.z + box.max.z) / 2) * k,
+    );
+    item.add(model);
+  } else {
+    item = (MAKE[kind] ?? potion)();
+    item.scale.setScalar(1.5);
+  }
   const glow = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: glowTex,
