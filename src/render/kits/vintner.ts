@@ -60,7 +60,8 @@ function wine(h: FxHost, x: number, y: number, z: number, gy: number, n: number,
 function anvilSlam(h: FxHost, x: number, gy: number, z: number, r: number, k: number, final = false): void {
   decal(h, VINTNER.crater, x, gy, z, r * 0.75, 1.6 + k, { grow: 0.08 });
   decal(h, VINTNER.dustRing, x, gy + 0.02, z, r, 0.6, { grow: 0.5, opacity: 0.85 });
-  if (final) decal(h, VINTNER.splat, x, gy + 0.03, z, r * 0.9, 3.2, { grow: 0.1, rot: Math.random() * 6 });
+  if (final)
+    decal(h, VINTNER.splat, x, gy + 0.03, z, r * 0.75, 3, { grow: 0.1, rot: Math.random() * 6, opacity: 0.75 });
   shockwave(h, FX.shock, x, gy + 0.2, z, UP, 0.4, r * 1.1, 0.35 + k * 0.1, 0xfff0e0, 0.9);
   emit(h, {
     tex: VINTNER.splash,

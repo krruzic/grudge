@@ -460,7 +460,7 @@ function drawGrit(ctx: CanvasRenderingContext2D, vx: number, y: number, k: numbe
   ctx.save();
   shield(2.5);
   ctx.clip();
-  ctx.fillStyle = "#b8b2aa";
+  ctx.fillStyle = k >= 1 ? "#f0e8d8" : "#c8c2b8";
   const top = y + 5 + 2.5 * 1.3 - k * 2.5 * 2.4;
   ctx.fillRect(vx - 3, top, 6, 8);
   ctx.restore();

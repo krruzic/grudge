@@ -158,6 +158,37 @@ def keep_faces(o, pred):
     bm.free()
 
 
+def drop_islands(o, bad):
+    """Weld, then delete every connected island whose vertex centroid (source coords) satisfies bad(c)."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bm.verts.ensure_lookup_table()
+    seen = set()
+    kill = []
+    for v in bm.verts:
+        if v.index in seen:
+            continue
+        stack = [v]
+        seen.add(v.index)
+        g = []
+        while stack:
+            x = stack.pop()
+            g.append(x)
+            for e in x.link_edges:
+                y = e.other_vert(x)
+                if y.index not in seen:
+                    seen.add(y.index)
+                    stack.append(y)
+        c = sum((x.co for x in g), Vector()) / len(g)
+        if bad(c):
+            kill += g
+    bmesh.ops.delete(bm, geom=kill, context="VERTS")
+    bm.to_mesh(o.data)
+    bm.free()
+
+
 def decimate(w, tris):
     n = sum(len(p.vertices) - 2 for p in w.data.polygons)
     if n <= tris:
@@ -208,8 +239,12 @@ def attach_anvil(name, arm, src_path):
     back = w.copy()
     back.data = w.data.copy()
     bpy.context.scene.collection.objects.link(back)
-    keep_faces(w, lambda c: c.y < -0.09)
-    keep_faces(back, lambda c: c.y >= -0.09)
+    # The back anvil's horn tip pokes past the split line: it goes with the back anvil, not the weapon.
+    horn = lambda c: c.x > 0.09 and -0.29 < c.y and -0.02 < c.z < 0.125
+    keep_faces(w, lambda c: c.y < -0.09 and not horn(c))
+    keep_faces(back, lambda c: c.y >= -0.09 or horn(c))
+    drop_islands(w, lambda c: c.x > 0.13 and c.y > -0.25)
+    drop_islands(back, lambda c: c.y < -0.25)
     decimate(w, WEAPON_TRIS)
     decimate(back, BACK_TRIS)
 
