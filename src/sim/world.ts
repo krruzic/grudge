@@ -362,6 +362,15 @@ export class World {
     return e;
   }
 
+  /**
+   * FFA deathmatch-only champion tuning (tdm.ffaHeroMods): champions built around partners, soldiers or holding
+   * ground get hp / speed / damage multipliers there. 1s everywhere else.
+   */
+  dmMod(type: string): { hp: number; speed: number; damage: number } {
+    const m = this.tdm && this.teamCount > 2 ? this.tdm.cfg.ffaHeroMods?.[type] : undefined;
+    return { hp: m?.hp ?? 1, speed: m?.speed ?? 1, damage: m?.damage ?? 1 };
+  }
+
   spawnHero(type: string, player: number, team: number): Entity {
     const def = this.heroDef(type);
     const tiers = this.data.heroes.tiers;
@@ -371,12 +380,13 @@ export class World {
       this.tdm && !this.terrain.spawns.some((s) => s.team === team)
         ? this.tdm.respawnSpot(team)
         : this.spawnPoint(team);
-    const e = this.addEntity(team, "hero", b.radius, spawn.x, spawn.z, tiers.health[def.health]);
+    const mod = this.dmMod(type);
+    const e = this.addEntity(team, "hero", b.radius, spawn.x, spawn.z, tiers.health[def.health] * mod.hp);
     e.hero = {
       type,
       player,
-      speed: tiers.speed[def.speed] * (def.hooks.speedMul ?? 1),
-      damageMul: tiers.damage[def.damage],
+      speed: tiers.speed[def.speed] * (def.hooks.speedMul ?? 1) * mod.speed,
+      damageMul: tiers.damage[def.damage] * mod.damage,
       vel: { x: 0, z: 0 },
       action: null,
       comboIndex: 0,

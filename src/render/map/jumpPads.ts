@@ -67,16 +67,19 @@ export function buildJumpPads(mf: MapFx): void {
       b.position.set(Math.cos(a) * 0.82, 0.07, Math.sin(a) * 0.82);
       deck.add(b);
     }
-    const ar = new THREE.Mesh(arrowGeo, paint);
+    // Each pad paints its own arrow so it can go grey while the pad is cooling down or sealed.
+    const arrowMat = paint.clone();
+    const tipMat = red.clone();
+    const ar = new THREE.Mesh(arrowGeo, arrowMat);
     ar.position.y = 0.072;
     deck.add(ar);
-    const tip = new THREE.Mesh(new THREE.CircleGeometry(0.1, 8), red);
+    const tip = new THREE.Mesh(new THREE.CircleGeometry(0.1, 8), tipMat);
     tip.rotation.x = -Math.PI / 2;
     tip.position.set(0, 0.075, 0.12);
     deck.add(tip);
     g.add(deck);
     mf.root.add(g);
-    mf.springs.push({ spring, deck, launch: -99, release: -99 });
+    mf.springs.push({ spring, deck, launch: -99, release: -99, arrow: arrowMat, tip: tipMat, off: false });
   });
 }
 export function syncJumpPads(mf: MapFx): void {
@@ -101,6 +104,12 @@ export function syncJumpPads(mf: MapFx): void {
       k = 0.55 + 0.25 * Math.exp(-sinceFail * 6) * Math.cos(sinceFail * 30);
     }
     if (cooling && t - p.readyAt > -0.6) k = 0.55 + 0.45 * (1 - (p.readyAt - t) / 0.6);
+    const off = cooling || mf.world.mapEvents.sealed(p.x, p.z, p.tx, p.tz);
+    if (off !== s.off && s.arrow && s.tip) {
+      s.off = off;
+      s.arrow.color.setHex(off ? 0x7a7670 : 0xe8b830);
+      s.tip.color.setHex(off ? 0x5a5650 : 0xb82818);
+    }
     s.spring.scale.y = 0.32 * k;
     s.deck.position.y = 0.18 + 0.32 * k + 0.02;
   });

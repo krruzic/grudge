@@ -88,7 +88,16 @@ export class MapFx {
   }[] = [];
 
   // Jump pads (jumpPads.ts).
-  springs: { spring: THREE.Object3D; deck: THREE.Object3D; launch: number; release: number }[] = [];
+  springs: {
+    spring: THREE.Object3D;
+    deck: THREE.Object3D;
+    launch: number;
+    release: number;
+    /** Arrow / tip paint, greyed while the pad can't launch. */
+    arrow?: THREE.MeshLambertMaterial;
+    tip?: THREE.MeshLambertMaterial;
+    off?: boolean;
+  }[] = [];
   pendingBursts: { at: number; x: number; y: number; z: number }[] = [];
   // Dune serpent (serpent.ts)
   serpent: SerpentView | null = null;

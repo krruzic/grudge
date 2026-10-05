@@ -34,6 +34,8 @@ export interface TdmConfig {
   /** Respawn spots try to stay at least this far from every living enemy champion. */
   safeDistance: number;
   relicFirstSeconds: number;
+  /** FFA deathmatch only: per-champion hp / speed / damage multipliers (World.dmMod). */
+  ffaHeroMods?: Record<string, { hp?: number; speed?: number; damage?: number }>;
   /** Seconds a champion may carry the Grudge before it returns to the middle (asleep relicRewakeSeconds). */
   relicCarrySeconds?: number;
   relicRewakeSeconds?: number;

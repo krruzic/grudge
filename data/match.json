@@ -256,7 +256,36 @@
       "rain": 6
     },
     "relicCarrySeconds": 15,
-    "relicRewakeSeconds": 8
+    "relicRewakeSeconds": 8,
+    "ffaHeroMods": {
+      "friar": {
+        "hp": 1.15,
+        "speed": 1.25,
+        "damage": 1.45
+      },
+      "marksman": {
+        "hp": 1.3,
+        "speed": 1.15,
+        "damage": 1.1
+      },
+      "summoner": {
+        "hp": 1.12,
+        "damage": 1.2
+      },
+      "warden": {
+        "speed": 1.06,
+        "damage": 1.1
+      },
+      "raider": {
+        "damage": 0.9
+      },
+      "duelist": {
+        "damage": 0.92
+      },
+      "engineer": {
+        "hp": 1.1
+      }
+    }
   },
   "respawnSlam": {
     "radius": 10,
