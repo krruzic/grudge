@@ -49,6 +49,8 @@ interface Senses {
   plan: BotPlan;
   /** Retreating to heal (unless a kill is right there). */
   lowHp: boolean;
+  /** The local fight: > 0.25 advantage, < -0.25 disadvantage (see situation()). */
+  edge: number;
   smoked: boolean;
 }
 
@@ -309,12 +311,40 @@ function sense(bot: Bot, w: World, me: Entity): Senses {
   const dHero = ehAlive ? w.dist(me, enemyHero!) : Infinity;
   const plan = w.heroDef(h.type).botPlan ?? {};
   const finish = !!ehAlive && dHero < 4 && enemyHero!.hp < enemyHero!.maxHp * 0.25 && enemyHero!.hp < me.hp;
-  // Hysteresis: start healing below retreatHp, stop above 80%.
-  if (me.hp < me.maxHp * (plan.retreatHp ?? 0.3)) bot.healing = true;
-  else if (me.hp > me.maxHp * 0.8) bot.healing = false;
+  // Read the fight before running: ahead -> stay in much lower, behind -> leave earlier. Healing stops at 80%, or
+  // sooner once nothing is threatening (or the fight has turned our way).
+  const st = situation(w, me);
+  const hpf = me.hp / me.maxHp;
+  const base = plan.retreatHp ?? 0.3;
+  const leaveAt = st.edge > 0.25 ? Math.max(0.12, base - 0.15) : st.edge < -0.25 ? base + 0.12 : base;
+  const enemyWorse = !!ehAlive && dHero < 10 && enemyHero!.hp / enemyHero!.maxHp < hpf - 0.1;
+  if (hpf < leaveAt && !(enemyWorse && st.edge >= 0)) bot.healing = true;
+  else if (hpf > 0.8 || (st.threat === 0 && hpf > 0.55) || (st.edge > 0.25 && hpf > 0.45)) bot.healing = false;
   const lowHp = bot.healing && !finish;
   const smoked = w.time < me.status.stealthUntil;
-  return { me, p: me.transform.pos, h, assist, enemyHero, ehAlive, dHero, plan, lowHp, smoked };
+  return { me, p: me.transform.pos, h, assist, enemyHero, ehAlive, dHero, plan, lowHp, smoked, edge: st.edge };
+}
+
+/**
+ * The fight around the bot (12 m): our side's strength (champions by hp, soldiers, our towers covering us) against
+ * theirs. `edge` -1..1: > 0.25 advantage, < -0.25 disadvantage, else neutral; `threat` = their raw strength.
+ */
+function situation(w: World, me: Entity): { edge: number; threat: number } {
+  let mine = 0;
+  let theirs = 0;
+  const p = me.transform.pos;
+  for (const o of w.entities) {
+    if (!o.alive || o.team < 0 || o.neutral) continue;
+    const d = Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z);
+    let v = 0;
+    if (o.hero && !o.hero.dead && d < 12) v = 0.4 + (o.hp / o.maxHp) * 0.8;
+    else if (o.unit && d < 10) v = 0.15 * (1 + o.unit.rank * 0.3);
+    else if (o.structure?.ready && o.structure.damage > 0 && d < o.structure.range + 1) v = 0.8;
+    if (!v) continue;
+    if (o.team === me.team) mine += v;
+    else theirs += v;
+  }
+  return { edge: (mine - theirs) / Math.max(mine, theirs, 0.6), threat: theirs };
 }
 
 /** Enemy units near `t` minus own units near the bot. */
@@ -595,7 +625,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     !smoked &&
     w.time - bot.openedAt > 1.5 &&
     enemyHero!.hp > me.hp * plan.huntRatio &&
-    dHero > 2.2;
+    dHero > 2.2 &&
+    s.edge < 0.25;
   const engage =
     !outmatched &&
     (!plan.hitAndRun ||
@@ -639,13 +670,17 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
   }
   if (!target) return false;
 
-  const towerThreat = w.enemiesNear(
-    me,
-    12,
-    (o) => o.structure?.type === "damage" && o.structure.ready && o.structure.works === undefined,
-  ).length;
-  if (towerThreat && me.hp < me.maxHp * 0.6 && target.hero && !lowHp) {
-    bot.goal = w.spawnPoint(me.team);
+  // Chasing a champion under their tower while hurt: back out of the tower's reach (not all the way home) -
+  // unless we're clearly winning this fight or the target is nearly dead.
+  const tower = w
+    .enemiesNear(me, 12, (o) => o.structure?.type === "damage" && o.structure.ready && o.structure.works === undefined)
+    .sort((a, b) => w.dist(me, a) - w.dist(me, b))[0];
+  if (tower && me.hp < me.maxHp * 0.5 && target.hero && !lowHp && s.edge < 0.25 && target.hp > target.maxHp * 0.3) {
+    const ax = p.x - tower.transform.pos.x;
+    const az = p.z - tower.transform.pos.z;
+    const al = Math.hypot(ax, az) || 1;
+    const out = tower.structure!.range + 2;
+    bot.goal = { x: tower.transform.pos.x + (ax / al) * out, z: tower.transform.pos.z + (az / al) * out };
     return true;
   }
   bot.fightId = target.id;

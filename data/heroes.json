@@ -386,7 +386,7 @@
         }
       },
       "botPlan": {
-        "retreatHp": 0.45,
+        "retreatHp": 0.35,
         "crowd": 1,
         "opener": "r",
         "openerRange": 15,
@@ -801,7 +801,7 @@
         }
       },
       "botPlan": {
-        "retreatHp": 0.4,
+        "retreatHp": 0.32,
         "picks": [
           0,
           1,
@@ -817,7 +817,7 @@
       "speed": "mid",
       "damage": "low",
       "defaultBuild": "barracks",
-      "botRange": 4.5,
+      "botRange": 2.4,
       "hooks": {
         "speedMul": 0.82,
         "plentyRadius": 7,
@@ -925,7 +925,7 @@
         }
       },
       "botPlan": {
-        "retreatHp": 0.4,
+        "retreatHp": 0.3,
         "healer": true,
         "picks": [
           0,
