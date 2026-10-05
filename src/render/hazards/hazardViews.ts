@@ -8,6 +8,7 @@ import type { World } from "../../sim/world";
 import { withCostume } from "../fx/atlas";
 import type { FxHost } from "../fx/parts";
 import { wardenBrambleCast, wardenWallCrumble, wardenWallBlock } from "../kits/wardenParts";
+import { fortBlock, fortCrumble } from "../kits/architect";
 import { SpriteBatches } from "../batch/spriteBatch";
 import { MapFx } from "../map/mapFx";
 import { modMesh, syncWall } from "./terrainMods";
@@ -84,6 +85,7 @@ export class HazardViews {
       if (obj) {
         obj.userData.born = this.now;
         obj.userData.wall = m?.kind === "wall";
+        obj.userData.ice = m?.style === "ice";
         if (!obj.userData.wall) obj.scale.y = 0.01;
         else if (this.fx) {
           const cells = obj.userData.cells as THREE.Object3D[];
@@ -97,16 +99,18 @@ export class HazardViews {
             costumeOfPlayer(m?.owner !== undefined ? this.world.getAny(m.owner)?.hero?.player : undefined),
             () => {
               for (const c of cells)
-                wardenWallBlock(
-                  fx,
-                  c.position.x,
-                  c.userData.baseY,
-                  c.position.z,
-                  c.userData.delay,
-                  dz / dl,
-                  -dx / dl,
-                  m?.style === "wood",
-                );
+                if (m?.style === "ice") fortBlock(fx, c.position.x, c.userData.baseY, c.position.z, c.userData.delay);
+                else
+                  wardenWallBlock(
+                    fx,
+                    c.position.x,
+                    c.userData.baseY,
+                    c.position.z,
+                    c.userData.delay,
+                    dz / dl,
+                    -dx / dl,
+                    m?.style === "wood",
+                  );
             },
           );
         }
@@ -118,8 +122,9 @@ export class HazardViews {
       if (obj) {
         this.mods.delete(ev.id);
         if (obj.userData.wall && this.fx) {
+          const ice = obj.userData.ice;
           for (const c of obj.userData.cells as THREE.Object3D[])
-            wardenWallCrumble(this.fx, c.position.x, c.userData.baseY, c.position.z);
+            (ice ? fortCrumble : wardenWallCrumble)(this.fx, c.position.x, c.userData.baseY, c.position.z);
           this.dying.push({ obj, at: this.now });
         } else {
           this.root.remove(obj);

@@ -241,6 +241,28 @@ export class RelicView {
       g.visible = !!b;
       if (!b) return;
       const cos = costumeOfPlayer(w.getAny(b.ownerId)?.hero?.player);
+      // Hoot's carpenter's square (boomerang style "square"): swapped in for the wrench model while it flies.
+      const kind = b.style ?? "wrench";
+      if ((g.userData.kind ?? "wrench") !== kind) {
+        const m = prop(kind === "square" ? "architect_square" : "wrench", undefined, {
+          hero: kind === "square" ? "architect" : "engineer",
+          costume: cos,
+        });
+        if (m) {
+          m.rotation.x = kind === "square" ? Math.PI / 2 : -0.25;
+          m.scale.setScalar(kind === "square" ? 1.9 : 1.3);
+          g.clear();
+          g.add(m);
+        }
+        g.userData.kind = kind;
+        g.userData.costume = cos;
+      }
+      if (kind === "square") {
+        g.position.set(b.x, b.y, b.z);
+        g.rotation.set(0, this.t * 18, 0);
+        if (this.fx && Math.random() < 0.5) this.fx.dust(b.x, b.y - 0.3, b.z, 0.4, 1, 0.2, 0xe8f6ff);
+        return;
+      }
       if ((g.userData.costume ?? "") !== cos && g.children.length === 1) {
         const m = prop("wrench", undefined, { hero: "engineer", costume: cos });
         if (m) {

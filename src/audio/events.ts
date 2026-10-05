@@ -17,6 +17,7 @@ const WEAPON: Record<string, { swing: string; hit: string; rate?: number }> = {
   herald: { swing: "swing.light", hit: "hit.flesh" },
   summoner: { swing: "swing.light", hit: "magic.bolt" },
   marksman: { swing: "swing.light", hit: "arrow.hit" },
+  architect: { swing: "swing.light", hit: "hit.wood", rate: 1.1 },
 };
 const ARMORED = new Set(["warlord", "herald", "engineer"]);
 
@@ -458,6 +459,15 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
     case "ballista":
       a.play("crank", 0.5, { dur: span });
       break;
+    case "fort":
+    case "lookout":
+      a.play("build.work", 0.5, { rate: 1.2 });
+      if (Math.random() < 0.5) a.vocal(hero, "attack", 0.6, { id: ev.src });
+      break;
+    case "dome":
+      shout(0.8);
+      a.play("whistle.wind", 0.6, { dur: span });
+      break;
     case "summon":
       shout(0.8);
       a.play("magic.dark", 0.6, { rate: 0.7, dur: span });
@@ -486,6 +496,15 @@ function shot(a: Audio, ev: Extract<SimEvent, { type: "shot" }>): void {
   switch (ev.style) {
     case "arrow":
       a.play("arrow.loose", 0.3, { rate: 1.15 });
+      return;
+    case "square":
+      // Hoot's carpenter's square spinning away.
+      a.play("stig.wrench", 0.75, { rate: 0.85 });
+      a.play("swing.heavy", 0.5, { rate: 1.2 });
+      return;
+    case "icicle":
+      a.play("glass", 0.3, { rate: 1.8 });
+      a.play("arrow.loose", 0.3, { rate: 1.4 });
       return;
     case "longarrow":
       a.play("arrow.loose", 0.7);
@@ -623,6 +642,44 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       return;
     case "plenty":
       if (Math.random() < 0.5) a.play("burp", 0.35);
+      return;
+    // Professor Hoot (architect)
+    case "squareRecall":
+      a.play("stig.wrench", 0.5, { rate: 1.2 });
+      return;
+    case "fortRise":
+      a.play("step.snow", 0.9, { rate: 0.7 });
+      a.play("rock.rumble", 0.5, { rate: 1.6 });
+      a.play("glass", 0.35, { rate: 1.4, at: 0.12 });
+      if ((ev.radius ?? 0) > 0) a.play("whoosh.big", 0.6, { rate: 1.3 });
+      return;
+    case "fortFall":
+      a.play("step.snow", 0.6, { rate: 0.6 });
+      if ((ev.radius ?? 0) > 0) a.play("glass", 0.7, { rate: 0.9 });
+      return;
+    case "lookoutRise":
+      a.play("rock.rumble", 0.7, { rate: 1.3 });
+      a.play("creak", 0.5, { rate: 0.8, at: 0.1 });
+      a.play("glass", 0.45, { rate: 1.2, at: 0.25 });
+      return;
+    case "lookoutFall":
+      a.play("collapse", 0.7, { rate: 1.2 });
+      a.play("glass", (ev.radius ?? 0) > 0 ? 0.9 : 0.5, { rate: 0.8, at: 0.05 });
+      if ((ev.radius ?? 0) > 0) a.play("explode.small", 0.5, { rate: 1.6, at: 0.08 });
+      return;
+    case "dome":
+      a.play("whoosh.big", 0.9, { rate: 0.7, priority: true });
+      a.play("rock.rumble", 0.7, { rate: 1.2 });
+      a.play("glass", 0.8, { rate: 0.7, at: 0.2 });
+      a.play("bell.small", 0.35, { rate: 1.6, at: 0.3 });
+      return;
+    case "domeBlock":
+      if (a.allow("domeBlock", 2)) a.play("glass", 0.45, { rate: 1.7 });
+      return;
+    case "owlHop":
+      a.play("cloth.flap", 0.7, { rate: 1.3 });
+      a.play("cloth.flap", 0.5, { rate: 1.5, at: 0.12 });
+      if (Math.random() < 0.4) a.play("owl", 0.45, { rate: 1.2, dur: 0.6 });
       return;
     case "kegRocket":
       a.play("cork", 0.8);

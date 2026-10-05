@@ -8,6 +8,7 @@ import { arcHit, shoveHit, slamAt } from "./strikes.ts";
 import { graveArrive } from "./gravewalk.ts";
 import { heartseeker, rake, sendPip, volley } from "./marksman.ts";
 import { brewfest, throwKeg } from "./friar.ts";
+import { chillTargets, fireDome, fireFort, fireLookout, throwSquare } from "./architect.ts";
 import { fireLeap, fireQuake, fireSlam } from "./kinds/melee.ts";
 import { fireBanner, fireRally, fireWarcry } from "./kinds/command.ts";
 import { fireBlink, fireHex, fireReach, fireRootcage, fireShoot, fireStealth, fireSummon } from "./kinds/spells.ts";
@@ -72,6 +73,10 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
     fireBombThrow(w, e, a);
     return;
   }
+  if (a.kind === "squarethrow") {
+    throwSquare(w, e, a);
+    return;
+  }
   if (a.name === "dodge" || a.name === "hit") return;
   if (a.kind === "heave") {
     fireHeave(w, e, a, mul);
@@ -110,6 +115,13 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return throwKeg(w, e, a, def, "powder", mul);
     case "brewfest":
       return brewfest(w, e, a, def);
+    // architect
+    case "fort":
+      return fireFort(w, e, a, def, mul);
+    case "lookout":
+      return fireLookout(w, e, a, def);
+    case "dome":
+      return fireDome(w, e, a, def, mul);
     // spells / mobility
     case "shoot":
       return fireShoot(w, e, a, def, mul);
@@ -166,6 +178,7 @@ function fireComboHit(w: World, e: Entity, a: HeroAction, mul: number): void {
   const big = fin || m.extra > 0 || pw > 1.3;
   const targets = arcHit(w, e, a.dirX, a.dirZ, range, arc, dmg, knockback, big);
   afterMelee(w, e, targets, dmg * targets.length, fin, a.dirX, a.dirZ, hit.range, !!a.jab);
+  if (ab.a.chillSlow) chillTargets(w, e, targets);
 }
 
 /** Engineer standing on his own works: A throws a returning wrench (see hero/boomerangs.ts). */

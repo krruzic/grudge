@@ -232,7 +232,9 @@ function projectileView(cfx: CombatFx, world: World, p: Projectile): THREE.Sprit
     return tower as unknown as THREE.Sprite;
   }
   const src = world.getAny(p.sourceId);
-  const kit = KITS[src?.hero?.type ?? ""];
+  // Hoot's Icicle Belfry: the lookout (an owned structure) shoots with its owner's kit.
+  const owner = p.style === "icicle" && src?.owner !== undefined ? world.getAny(src.owner) : undefined;
+  const kit = KITS[src?.hero?.type ?? owner?.hero?.type ?? ""];
   const costume = costumeOfEntity(world, src);
   const custom = withCostume(costume, () => kit?.projectile?.(cfx, p.style) ?? null);
   if (custom) {

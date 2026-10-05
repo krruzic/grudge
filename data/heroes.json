@@ -959,6 +959,123 @@
       },
       "class": "support"
     },
+    "architect": {
+      "name": "Hoot",
+      "blurb": "Snow Architect. Vantage: hits 20% harder from higher ground than his target. Raises snow forts and an ice lookout, throws his square like a boomerang.",
+      "health": "sturdy",
+      "speed": "mid",
+      "damage": "high",
+      "defaultBuild": "damage",
+      "botRange": 2.2,
+      "hooks": {
+        "featherFall": 1,
+        "highGroundMul": 1.2,
+        "highGroundHeight": 0.9,
+        "squareDamage": 36,
+        "squareRange": 9,
+        "squareCooldown": 2.2
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 46,
+              "range": 2.5,
+              "arcDeg": 120,
+              "dur": 0.34,
+              "hitAt": 0.14,
+              "lunge": 1.8,
+              "knockback": 1.2
+            },
+            {
+              "damage": 46,
+              "range": 2.5,
+              "arcDeg": 130,
+              "dur": 0.34,
+              "hitAt": 0.14,
+              "lunge": 1.8,
+              "knockback": 1.4
+            },
+            {
+              "damage": 78,
+              "range": 2.8,
+              "arcDeg": 170,
+              "dur": 0.55,
+              "hitAt": 0.25,
+              "lunge": 2.2,
+              "knockback": 5.0
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight",
+          "variance": 0.15
+        },
+        "b": {
+          "kind": "fort",
+          "anim": "build",
+          "length": 5,
+          "offset": 2.6,
+          "seconds": 12,
+          "hp": 220,
+          "max": 2,
+          "damage": 50,
+          "coverMul": 0.6,
+          "dur": 0.6,
+          "hitAt": 0.33,
+          "cooldown": 9,
+          "bot": "never",
+          "callout": "SNOW FORT",
+          "stunSeconds": 0.5
+        },
+        "r": {
+          "kind": "lookout",
+          "anim": "build",
+          "height": 2,
+          "size": 2,
+          "seconds": 10,
+          "hp": 300,
+          "dur": 0.6,
+          "hitAt": 0.33,
+          "cooldown": 15,
+          "bot": "never",
+          "callout": "LOOKOUT"
+        },
+        "z": {
+          "kind": "dome",
+          "anim": "cast",
+          "range": 8,
+          "radius": 5.5,
+          "seconds": 6,
+          "slowMul": 0.55,
+          "heal": 30,
+          "damage": 70,
+          "dur": 0.9,
+          "hitAt": 0.5,
+          "bot": "never",
+          "botRange": 5,
+          "callout": "AVALANCHE DOME \u00b7 FROZEN, NO SHOTS IN OR OUT",
+          "variance": 0.1,
+          "stunSeconds": 0.8
+        }
+      },
+      "botPlan": {
+        "retreatHp": 0.3,
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "class": "builder",
+      "synergy": {
+        "lookout": {
+          "marksman": 3
+        }
+      }
+    },
     "herald": {
       "name": "Herald",
       "role": "commander",

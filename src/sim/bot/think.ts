@@ -34,6 +34,8 @@ import {
   warlordFight,
   wrenAbilities,
   wrenShoot,
+  architectEscape,
+  architectFight,
 } from "./tactics.ts";
 
 /** What the bot knows about the fight this think. */
@@ -73,6 +75,7 @@ export function think(bot: Bot, w: World, me: Entity): void {
   // A held charge is let go unless this think wants it held again.
   bot.wantCharge = null;
   bot.chargeRange = Infinity;
+  bot.chargeAt = 1;
   const s = sense(bot, w, me);
   bot.why = "shop";
   if (!w.tdm && shop(bot, w, me, !!s.ehAlive && s.dHero < 8)) return;
@@ -177,7 +180,7 @@ export function think(bot: Bot, w: World, me: Entity): void {
  *   0 brawler (Warlord, Thorn, Stig)  the nearest enemy, head on
  *   1 flanker (Grim)                  the enemy with the fewest friends around it
  *   2 hunter (Francois)               the weakest enemy in reach (the Grudge carrier first)
- *   3 skirmisher (Wren, Remnil)       the nearest enemy, come at from the side
+ *   3 skirmisher (Wren, Remnil, Hoot) the nearest enemy, come at from the side
  *   4 support (Maddock, Herald)       the enemy closest to a hurt friend; otherwise sticks with the house
  */
 const TDM_STYLE: Record<string, number> = {
@@ -190,6 +193,7 @@ const TDM_STYLE: Record<string, number> = {
   summoner: 3,
   friar: 4,
   herald: 4,
+  architect: 3,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -481,6 +485,8 @@ function retreat(bot: Bot, w: World, s: Senses, swarm: number, graveReady: boole
     if (esc === "b") bot.wantB = true;
     else bot.wantR = true;
   }
+  // Architect: a snow fort between him and a melee chaser, the dome on himself if the super is up.
+  if (w.heroDef(h.type).abilities.b.kind === "fort") architectEscape(bot, w, me);
   // Friar: keg at his feet, then KEG ROCKET home (bot/tactics.ts).
   if (w.heroDef(h.type).abilities.b.kind === "keg" && friarEscape(bot, w, me, sp)) return;
   if (plan.healer && (h.cooldowns.b ?? 0) <= w.time && healSpotScore(w, me) >= 80) bot.wantB = true;
@@ -586,6 +592,8 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (ab.r.kind === "parry") duelistFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Warden: charged slap in melee.
   if (ab.r.kind === "wall") wardenFight(bot, w, me, ehAlive ? enemyHero : undefined);
+  // Architect: lookout perch, owl hop, forts, square throws.
+  const hootPerched = ab.b.kind === "fort" && architectFight(bot, w, me, lowHp);
   if (
     hk.heaveRange &&
     rdy("heave") &&
@@ -641,7 +649,7 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (ab.r.kind === "powderkeg") friarPowder(bot, w, me, ehAlive ? enemyHero : undefined, clumpScore(w, me));
   else if (plan.healer && rdy("r") && ab.r.bot === "fight" && clumpScore(w, me) >= 3 && bot.rand() < 0.5)
     bot.wantR = true;
-  return false;
+  return hootPerched;
 }
 
 /**

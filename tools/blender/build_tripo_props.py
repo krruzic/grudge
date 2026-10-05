@@ -55,6 +55,10 @@ PROPS = {
     "wallstone@suntotem": {"static": True, "src": "wallstone_suntotem", "size": (1.0, 0.95, 2.5), "tex": 512, "tris": 1700},
     "cactus@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, -1), "height": 1.7, "tex": 512, "tris": 1800},
     "thorns@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, 1), "height": 0.9, "tex": 512, "tris": 2400},
+    # Professor Hoot (architect): one snow fort wall cell (long axis X like wallstone) and the 2x2 ice lookout tower.
+    "snowfort": {"static": True, "yaw": 90, "size": (1.05, 0.75, 1.8), "tex": 256, "tris": 900},
+    "lookout": {"static": True, "size": (2.0, 2.0, 2.45), "tex": 512, "tris": 2400},
+    "architect_square": {"static": True, "yaw": 90, "height": 0.55, "tex": 256, "tris": 1000},
 }
 
 
@@ -451,7 +455,7 @@ def build_static(name, cfg):
     if cfg.get("lathe"):
         src = lathe_barrel(src, cfg["lathe"])
         me = src.data
-    me.transform(Matrix.Rotation(math.radians(-90), 4, "Z"))
+    me.transform(Matrix.Rotation(math.radians(-90 + cfg.get("yaw", 0)), 4, "Z"))
     co = np.array([v.co[:] for v in me.vertices])
     lo, hi = co.min(0), co.max(0)
     dims = hi - lo

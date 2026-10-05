@@ -1,4 +1,4 @@
-// Boomerangs (engineer wrench): fly out up to `range` or until blocked, then home back to the owner, hitting each
+// Boomerangs (engineer wrench, architect square): fly out up to `range` or until blocked, then home back to the owner, hitting each
 // enemy at most once per leg.
 import type { World } from "../world.ts";
 
@@ -12,7 +12,7 @@ export function updateBoomerangs(w: World): void {
       continue;
     }
     if (!b.back) {
-      const step = 17 * dt;
+      const step = 17 * (b.speedMul ?? 1) * dt;
       const nx = b.x + b.dirX * step;
       const nz = b.z + b.dirZ * step;
       b.dist += step;
@@ -33,7 +33,7 @@ export function updateBoomerangs(w: World): void {
         w.boomerangs.splice(i, 1);
         continue;
       }
-      const step = Math.min(d, 20 * dt);
+      const step = Math.min(d, 20 * (b.speedMul ?? 1) * dt);
       b.x += (dx / d) * step;
       b.z += (dz / d) * step;
       b.y += (owner.transform.y + 1.6 - b.y) * Math.min(1, dt * 6);
@@ -43,13 +43,17 @@ export function updateBoomerangs(w: World): void {
       if (Math.hypot(o.transform.pos.x - b.x, o.transform.pos.z - b.z) - o.radius > 1.0) continue;
       b.hit.push(o.id);
       const dmg = o.structure ? b.damage * 0.6 : b.damage;
-      w.damage(owner, o, dmg, {
+      const landed = w.damage(owner, o, dmg, {
         knockback: 3,
         fromX: b.x - b.dirX,
         fromZ: b.z - b.dirZ,
         big: true,
         structureDamage: o.structure ? dmg : undefined,
+        slowMul: o.structure ? undefined : b.slowMul,
+        slowSeconds: o.structure ? undefined : b.slowSeconds,
+        stun: o.hero ? b.stun : undefined,
       });
+      if (landed && b.cdrB && o.hero && owner.hero) owner.hero.cooldowns.b = (owner.hero.cooldowns.b ?? 0) - b.cdrB;
     }
   }
 }

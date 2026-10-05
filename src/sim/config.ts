@@ -85,6 +85,14 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
+  /** Architect: Snow Fort rises with a frost burst around it. */
+  frostBurst?: { radius: number; damage: number; slowMul: number; slowSeconds: number; stun?: number };
+  /** Architect: forts burst into shards when they fall. */
+  shatter?: { radius: number; damage: number; slowMul?: number; slowSeconds?: number; stun?: number };
+  /** Architect: the Lookout collapses into an ice burst when it ends; R again topples it early. */
+  collapse?: { radius: number; damage: number; slowMul?: number; slowSeconds?: number; stun?: number };
+  /** Architect: the Lookout shoots icicles at the nearest foe while it stands. */
+  icicles?: { damage: number; range: number; cooldown: number };
 }
 
 export interface TalentWith {
@@ -249,6 +257,18 @@ export interface AbilityDef {
   splash?: number;
   splashDamage?: number;
   pierceRange?: number;
+  /** Architect: thrown square range / return speed multipliers, Snow Fort cooldown cut per champion hit. */
+  throwRangeMul?: number;
+  throwSpeedMul?: number;
+  throwCdr?: number;
+  /** Architect: champions hit by the thrown square are dazed this long. */
+  throwStun?: number;
+  /** Architect Frostbite: combo hits and the square slow to chillSlow for chillSeconds; slowed foes take chillMul. */
+  chillSlow?: number;
+  chillSeconds?: number;
+  chillMul?: number;
+  /** Architect: ranged damage taken behind a Snow Fort. */
+  coverMul?: number;
 }
 
 export interface BotPlan {
@@ -285,8 +305,9 @@ export interface HeroDef {
   /**
    * Team synergies by partner class (2v2 / team deathmatch partners only):
    *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   *   lookout - Lookout footprint (cells per side) when a partner of that class is on the house.
    */
-  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
+  synergy?: { hexAlly?: Partial<Record<HeroClass, number>>; lookout?: Partial<Record<HeroClass, number>> };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

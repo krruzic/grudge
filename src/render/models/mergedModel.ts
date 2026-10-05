@@ -68,7 +68,10 @@ export function mergeParts(scene: THREE.Object3D): void {
       (((m.material as THREE.MeshStandardMaterial).map?.image as { width?: number } | undefined)?.width ?? 0) > 256;
     const list = meshes.filter(
       (m) =>
-        m.skeleton === skel && m.bindMatrix.equals(meshes[0].bindMatrix) && !big(m) && !/_(pip|wrench)/.test(m.name),
+        m.skeleton === skel &&
+        m.bindMatrix.equals(meshes[0].bindMatrix) &&
+        !big(m) &&
+        !/_(pip|wrench|square)/.test(m.name),
     );
     if (list.length < 2 || list.length > MAX) continue;
     const keys = Object.keys(list[0].geometry.attributes).sort().join(",");

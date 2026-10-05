@@ -3,11 +3,14 @@
 //   wrenAbilities  Pip as a diver answer (pre-emptive Pip -> SKYSHOT -> TALON RAKE), Pip/arrows to break channels,
 //                  Heartseeker held for a kill
 //   wrenShoot      fully charged Vantage power shots from max range, standing still (high ground when close by)
+//   architectFight Hoot: Lookout under him when a champion closes in, hop back up onto it, charged square throws at
+//                  range, Snow Forts across a ranged champion's line of fire (or between him and a chaser)
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
 import { abilities } from "../talents.ts";
 import { inOwnPuddle } from "../hero/friar.ts";
+import { fortCount, myLookout, onLookout } from "../hero/architect.ts";
 
 const isMelee = (w: World, o: Entity): boolean => !!o.hero && (w.heroDef(o.hero.type).botRange ?? 1.8) <= 3;
 
@@ -379,4 +382,113 @@ export function wrenShoot(bot: Bot, w: World, me: Entity, target: Entity): boole
   if (d < want - 2.5 || d > pierce * 0.85) bot.goal = vantageSpot(w, me, target, want) ?? bot.goal;
   else bot.goal = null;
   return true;
+}
+
+/**
+ * Professor Hoot (replaces the generic B/R rules, which are "never" in heroes.json). Returns true when it owns this
+ * think (perched on his Lookout: hold the spot and fight from it).
+ *   - Lookout (R) under him when a melee champion comes within 6 m (or a crowd of soldiers within 5 m).
+ *   - Owl Hop (dodge) back up onto his Lookout when knocked off with a fight still on.
+ *   - Snow Fort (B) toward a ranged champion 5-13 m away (cover), or between him and a melee chaser when hurt.
+ *   - Charged A (square boomerang) at a champion 4-9 m away, or from the Lookout at anything in reach.
+ */
+export function architectFight(bot: Bot, w: World, me: Entity, lowHp: boolean): boolean {
+  const h = me.hero!;
+  const p = me.transform.pos;
+  const ab = abilities(w, me);
+  const hk = w.heroDef(h.type).hooks;
+  const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
+  const foes = foesNear(w, me, 16);
+  const t = foes[0];
+  const lk = myLookout(w, me);
+  const perched = !!onLookout(w, me);
+  const soldiers = w.enemiesNear(me, 4, (o) => !!o.unit && o.unit.type !== "ranged").length;
+  if (!h.action && t) {
+    const d = w.dist(me, t);
+    if (!lk && rdy("r") && ((d < 5 && isMelee(w, t)) || soldiers >= 4) && bot.rand() < 0.8) bot.wantR = true;
+    else if (lk && !perched && rdy("dodge") && d < 10 && Math.hypot(lk.cx! - p.x, lk.cz! - p.z) < 6) {
+      bot.wantDodge = true;
+      const l = Math.hypot(lk.cx! - p.x, lk.cz! - p.z) || 1;
+      bot.wantFace = { x: (lk.cx! - p.x) / l, z: (lk.cz! - p.z) / l };
+    }
+    const ranged = !isMelee(w, t);
+    const maxForts = ab.b.max ?? 2;
+    if (rdy("b") && fortCount(w, me) < maxForts && !bot.wantR) {
+      const dx = t.transform.pos.x - p.x;
+      const dz = t.transform.pos.z - p.z;
+      const l = Math.hypot(dx, dz) || 1;
+      if (ranged && d > 5 && d < 13) {
+        bot.wantB = true;
+        bot.wantPlace = { x: (dx / l) * 2.8, z: (dz / l) * 2.8 };
+      } else if (lowHp && !ranged && d < 4.5) {
+        bot.wantB = true;
+        bot.wantPlace = { x: (dx / l) * 1.6, z: (dz / l) * 1.6 };
+      }
+    }
+  } else if (!h.action && !lk && rdy("r") && soldiers >= 4) bot.wantR = true;
+  // Avalanche Dome: dropped on a ranged champion it traps their shots inside (and freezes them) while he closes in;
+  // on a melee champion toe to toe it freezes them in the swing.
+  if (t && !h.action && h.meter >= w.data.heroes.baseline.superMax) {
+    const d = w.dist(me, t);
+    const zr = ab.z.range ?? 8;
+    if ((!isMelee(w, t) && d < zr && w.canSee(me, t)) || (isMelee(w, t) && d < 3)) {
+      bot.wantZ = true;
+      bot.wantPlace = { x: t.transform.pos.x - p.x, z: t.transform.pos.z - p.z };
+    }
+  }
+  const out = w.boomerangs.some((b) => b.ownerId === me.id);
+  const reach = (hk.squareRange ?? 9) * (ab.a.throwRangeMul ?? 1);
+  const pressed = foesNear(w, me, perched ? 2.6 : 3.5).length > 0;
+  if (t && !out && rdy("square") && !bot.wantB && !bot.wantR && !pressed) {
+    const d = w.dist(me, t) - t.radius;
+    if ((d > 4.5 || perched) && d < reach * 0.95 && w.canSee(me, t)) {
+      bot.wantCharge = "a";
+      bot.chargeAimId = t.id;
+      bot.chargeRange = reach;
+      // A half-charged throw already flies (x1.4); only hold to full power from the perch.
+      bot.chargeAt = perched ? 1 : 0.5;
+    }
+  }
+  if (!perched) return false;
+  // Perched: hold the high ground against melee champions and soldiers, swing at whatever comes right below; a
+  // ranged champion outside the square's reach is chased down instead. The tower has no stairs (no nav path off
+  // it), so leaving means stepping off the edge: toward the fight, or toward home when hurt.
+  const d = t ? w.dist(me, t) - t.radius : Infinity;
+  if (!t || lowHp || d > (isMelee(w, t) ? 12 : reach * 0.9)) {
+    const to = t && !lowHp ? t.transform.pos : w.tdm ? w.tdm.safeFrom(me) : w.spawnPoint(me.team);
+    const l = Math.hypot(to.x - p.x, to.z - p.z) || 1;
+    bot.wantFace = { x: (to.x - p.x) / l, z: (to.z - p.z) / l };
+    return false;
+  }
+  bot.goal = null;
+  bot.fightId = t.id;
+  if (d < 2.4) {
+    bot.wantAttack = true;
+    bot.wantCharge = null;
+    aimAt(bot, me, t);
+  }
+  return true;
+}
+
+/** Hoot retreating: a Snow Fort between him and the nearest champion within 5 m, Avalanche Dome on himself. */
+export function architectEscape(bot: Bot, w: World, me: Entity): void {
+  const h = me.hero!;
+  if (onLookout(w, me)) {
+    const home = w.tdm ? w.tdm.safeFrom(me) : w.spawnPoint(me.team);
+    const l = Math.hypot(home.x - me.transform.pos.x, home.z - me.transform.pos.z) || 1;
+    bot.wantFace = { x: (home.x - me.transform.pos.x) / l, z: (home.z - me.transform.pos.z) / l };
+  }
+  const chaser = foesNear(w, me, 5)[0];
+  if (!chaser || h.action) return;
+  if (h.meter >= w.data.heroes.baseline.superMax) {
+    bot.wantZ = true;
+    bot.wantPlace = { x: 0, z: 0 };
+    return;
+  }
+  if ((h.cooldowns.b ?? 0) > w.time || fortCount(w, me) >= (abilities(w, me).b.max ?? 2)) return;
+  const dx = chaser.transform.pos.x - me.transform.pos.x;
+  const dz = chaser.transform.pos.z - me.transform.pos.z;
+  const l = Math.hypot(dx, dz) || 1;
+  bot.wantB = true;
+  bot.wantPlace = { x: (dx / l) * 1.6, z: (dz / l) * 1.6 };
 }

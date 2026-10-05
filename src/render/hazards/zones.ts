@@ -1,6 +1,7 @@
 // Zones (World.zones): area effects left by abilities, built once per zone in the owner's costume and animated
 // every frame by animateZone(). Styles: Thorn's bramble (and Sun Totem's desert variant), sinkhole/crater/lava
-// (3D fissures from fx/parts), bones, tesla, smoke, ale/aletrail/brewfest/tar (Maddock), grove.
+// (3D fissures from fx/parts), bones, tesla, smoke, ale/aletrail/brewfest/tar (Maddock), grove, dome (Hoot's
+// Avalanche Dome: a frost ring on the ground under a translucent hemisphere of ice blocks).
 //
 // Every zone's first child is a flat decal disc (ZONE_TEX / ZONE_DECAL). Only Maddock's ale, aletrail, tar and
 // brewfest zones show it; for the others it stays hidden since they moved to 3D fissures and props (turning
@@ -17,6 +18,7 @@ import {
   WARLORD,
   RAIDER,
   HERALD,
+  ARCHITECT,
   hd,
   cv,
   cm,
@@ -608,6 +610,38 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"),
     );
     ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));
+  } else if (style === "dome") {
+    decal.material = new THREE.MeshBasicMaterial({
+      map: hd(ARCHITECT.frostRing),
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+    decal.visible = true;
+    // The ice-block painting is seen from directly above, so it's projected straight down onto the hemisphere.
+    const geo = new THREE.SphereGeometry(r, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+    const uv = geo.getAttribute("uv") as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, 0.5 + pos.getX(i) / (2 * r), 0.5 - pos.getZ(i) / (2 * r));
+    geo.scale(1, 0.55, 1);
+    const dome = new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
+        map: hd(ARCHITECT.iceCrack),
+        color: 0xe8f8ff,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+      }),
+    );
+    dome.position.y = gy(0, 0) - 0.05;
+    dome.name = "rise";
+    g.add(dome);
+    ring(Math.round(r * 2.4), [0.1, 0.95], (x, z) =>
+      sprite(ARCHITECT.flake, 0.3 + Math.random() * 0.2, x, z, 0.4, false, "drift"),
+    );
+    ring(Math.round(r * 1.2), [0.2, 0.9], (x, z) => sprite(ARCHITECT.twinkle, 0.45, x, z, 1.2, true, "spark"));
   } else if (style === "grove") {
     ring(Math.round(r * 2.2), [0.1, 0.95], (x, z) => {
       const f = crossQuad(cm(FLOWER), 0.35 + Math.random() * 0.15, 0.35);

@@ -183,6 +183,7 @@ voice("warden", WAR, WAR_L, 0.74)
 voice("herald", WAR, {**WAR_L, "order": ["yes*.wav", "yesconfirm*.wav", "here*.wav", "hut*.wav"]}, 0.95)
 voice("engineer", ADV, ADV_L, 0.94)
 voice("friar", ADV, ADV_L, 0.8)
+voice("architect", ADV, ADV_L, 1.12)  # a fussy little professor: the adventurer pitched up
 voice("marksman", FEM, {"attack": ["attack*.wav"], "big": ["jump*.wav"], "hurt": ["damaged*.wav"],
                         "death": ["damaged3.wav"], "taunt": ["healed*.wav"]}, 1.0)
 voice("summoner", ZOM, {"attack": ["humanYell[1-3].wav"], "big": ["humanYell[4-5].wav"], "hurt": ["humanYell*.wav"],

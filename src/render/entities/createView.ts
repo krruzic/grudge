@@ -156,7 +156,7 @@ function heroParts(ents: EntityViews, e: Entity, team: THREE.Color, root: THREE.
   const held: THREE.Object3D[] = [];
   const pipNodes: THREE.Object3D[] = [];
   body.traverse((o) => {
-    if (o.name.startsWith(`${hero.type}_wrench`)) held.push(o);
+    if (o.name.startsWith(`${hero.type}_wrench`) || o.name.startsWith(`${hero.type}_square`)) held.push(o);
     if (o.name.startsWith(`${hero.type}_pip`) || o.name.startsWith(`${hero.type}_keg`)) pipNodes.push(o);
   });
   if (held.length) view.held = held;

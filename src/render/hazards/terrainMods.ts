@@ -1,5 +1,5 @@
 // Terrain mods (World.mods): Stig's ramps and works decks (plank decks on posts), Thorn's walls (stone or
-// palisade cells in the owner's costume). Wall cells are merged into one mesh per material; each vertex keeps
+// palisade cells in the owner's costume), Hoot's snow forts (ice wall cells along an arc) and his ice lookout tower. Wall cells are merged into one mesh per material; each vertex keeps
 // its cell index (aCellO.w) so the shader can raise, tilt or hide cells individually from the uCell uniform
 // array that syncWall() fills from the (invisible) per-cell anchor objects.
 import * as THREE from "three";
@@ -9,6 +9,7 @@ import { costumeOfPlayer } from "../costumes";
 import { cm } from "../fx/atlas";
 import { propParts } from "../props";
 import type { HazardViews } from "./hazardViews";
+import type { TerrainMod } from "../../sim/types";
 import { mergeInto, meshesOf } from "./grow";
 
 /** Deck plank whose top-face UVs are in world units so planks line up across cells. */
@@ -115,6 +116,36 @@ function mergeFlat(parent: THREE.Object3D): void {
   );
   for (const c of [...parent.children]) if (!(c as THREE.Mesh).isMesh && !c.children.length) parent.remove(c);
 }
+const ICE_BLOCK = new THREE.MeshLambertMaterial({ color: 0xcfeefa, flatShading: true });
+ICE_BLOCK.userData.keep = true;
+/** Professor Hoot's Lookout: one ice tower prop scaled to the footprint, its platform at the deck height. */
+function lookoutMesh(hz: HazardViews, m: TerrainMod, costume: string): THREE.Object3D {
+  const g = new THREE.Group();
+  const W = hz.world.terrain.width;
+  const xs = m.cells.map((c) => c % W);
+  const zs = m.cells.map((c) => Math.floor(c / W));
+  const size = Math.max(...xs) - Math.min(...xs) + 1;
+  const cx = m.cx ?? (Math.min(...xs) + Math.max(...xs)) / 2 + 0.5;
+  const cz = m.cz ?? (Math.min(...zs) + Math.max(...zs)) / 2 + 0.5;
+  const top = m.top ?? m.deck[0];
+  let base = Infinity;
+  for (const c of m.cells) base = Math.min(base, hz.world.terrain.groundHeight((c % W) + 0.5, Math.floor(c / W) + 0.5));
+  if (!Number.isFinite(base)) base = top - 2;
+  const art = propParts("lookout", costume);
+  if (art) {
+    const piece = new THREE.Mesh(art.geo, art.mat);
+    // The prop is 2 x 2 m with its flat platform 1.9 m up; sink it a little so uneven ground never shows a gap.
+    const h = top - base + 0.25;
+    piece.scale.set(size / 2 + 0.04, h / 1.9, size / 2 + 0.04);
+    piece.position.set(cx, base - 0.25, cz);
+    g.add(piece);
+  } else {
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(size, top - base, size), ICE_BLOCK);
+    tower.position.set(cx, (top + base) / 2, cz);
+    g.add(tower);
+  }
+  return g;
+}
 export function modMesh(hz: HazardViews, id: number): THREE.Object3D | null {
   const m = hz.world.mods.find((k) => k.id === id);
   if (!m) return null;
@@ -125,9 +156,36 @@ export function modMesh(hz: HazardViews, id: number): THREE.Object3D | null {
   const c1 = m.cells[m.cells.length - 1];
   const wallYaw = -Math.atan2(Math.floor(c1 / W) - Math.floor(c0 / W), (c1 % W) - (c0 % W));
   const modCostume = costumeOfPlayer(m.owner !== undefined ? hz.world.getAny(m.owner)?.hero?.player : undefined);
+  if (m.style === "lookout") return lookoutMesh(hz, m, modCostume);
   m.cells.forEach((c, k) => {
     const x = (c % W) + 0.5;
     const z = Math.floor(c / W) + 0.5;
+    if (m.style === "ice") {
+      // Snow Fort cell: the cells run along the arc, so each block turns to its neighbours' tangent.
+      const a = m.cells[Math.max(0, k - 1)];
+      const b = m.cells[Math.min(m.cells.length - 1, k + 1)];
+      const yaw = -Math.atan2(Math.floor(b / W) - Math.floor(a / W), (b % W) - (a % W));
+      const y = hz.world.terrain.groundHeight(x, z);
+      const cell = new THREE.Group();
+      cell.position.set(x, y, z);
+      const art = propParts("snowfort", modCostume);
+      if (art) {
+        const piece = new THREE.Mesh(art.geo, art.mat);
+        piece.rotation.y = yaw + (Math.random() - 0.5) * 0.12;
+        piece.scale.y = 0.94 + Math.random() * 0.12;
+        piece.position.y = -0.08;
+        cell.add(piece);
+      } else {
+        const block = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.7, 0.7), ICE_BLOCK);
+        block.position.y = 0.85;
+        block.rotation.y = yaw;
+        cell.add(block);
+      }
+      cell.userData.baseY = y;
+      cell.userData.delay = Math.abs(k - (m.cells.length - 1) / 2) * 0.05;
+      cells.push(cell);
+      return;
+    }
     if (m.kind !== "wall") {
       const works = m.kind === "works";
       const plank = new THREE.Mesh(deckBox(x, z, works ? 0.22 : 0.14), WOOD);

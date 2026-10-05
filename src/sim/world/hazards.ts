@@ -4,6 +4,7 @@ import type { World } from "../world.ts";
 import type { TerrainMod } from "../types.ts";
 import { Kind } from "../terrain.ts";
 import { healFrom, onZoneEnd } from "../hero/friar.ts";
+import { onHootModEnd } from "../hero/architect.ts";
 
 /** Step phase 5: expire timed entities, then traps, zones, delayed blasts and terrain mods (in that order). */
 export function updateHazards(w: World): void {
@@ -232,6 +233,7 @@ function revertMod(w: World, m: TerrainMod): void {
     if (m.prevStyle) tr.styles[c] = m.prevStyle[k];
   });
   w.nav.recompute(m.cells);
+  onHootModEnd(w, m);
   for (const e of w.entities) {
     if (!e.alive || e.kind === "structure") continue;
     const h = w.terrain.heightAt(e.transform.pos.x, e.transform.pos.z);

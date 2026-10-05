@@ -77,6 +77,7 @@ const GAIT: Record<string, { stride: number; rate: number; gain: number; layer?:
   duelist: { stride: 1.7, rate: 1.1, gain: 0.85 },
   marksman: { stride: 1.6, rate: 1.15, gain: 0.75 },
   summoner: { stride: 1.6, rate: 1.05, gain: 0.6 },
+  architect: { stride: 1.4, rate: 1.2, gain: 0.7 },
 };
 const STEP = 0.075;
 

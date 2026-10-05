@@ -7,6 +7,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, bCooldown, frenzySpeed, onBUse } from "../talents.ts";
 import { canRake, trackStill, updatePip } from "./marksman.ts";
 import { detonateKegs, kegRocketTick, plentyTick } from "./friar.ts";
+import { squareInput, toppleLookout } from "./architect.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -385,6 +386,8 @@ function startFromInput(
     e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + (ab.z.hitAt ?? 0.5));
   } else if (cmd.special && ab.r.kind === "powderkeg" && detonateKegs(w, e)) {
     // Powder keg already out: R blows it now instead of throwing another.
+  } else if (cmd.special && ab.r.kind === "lookout" && !act && toppleLookout(w, e)) {
+    // Collapse talent: R with a lookout standing topples it.
   } else if (cmd.special && ready(e, "r", w.time) && !act && ab.r.kind === "gravewalk") {
     graveBegin(w, e, cmd, ab.r);
   } else if (cmd.special && ready(e, "r", w.time) && !act) {
@@ -404,6 +407,8 @@ function startFromInput(
     const [dx, dz] = aim(w, e, cmd, def.hooks.wrenchRange ?? 10);
     begin(e, "a", "wrench", 0.4, 0.16, dx, dz);
     h.cooldowns.wrench = w.time + (def.hooks.wrenchCooldown ?? 1.1);
+  } else if (cmd.attack && !act && def.hooks.squareDamage && squareInput(w, e, cmd)) {
+    // Architect: charged A throws the square, A while it's out calls it back.
   } else if (cmd.attack && h.bomb && !act) {
     const sh = w.data.match.arena.shop.bomb;
     const [dx, dz] = aim(w, e, cmd, sh.throwRange);
