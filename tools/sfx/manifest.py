@@ -183,6 +183,9 @@ voice("warden", WAR, WAR_L, 0.74)
 voice("herald", WAR, {**WAR_L, "order": ["yes*.wav", "yesconfirm*.wav", "here*.wav", "hut*.wav"]}, 0.95)
 voice("engineer", ADV, ADV_L, 0.94)
 voice("friar", ADV, ADV_L, 0.8)
+# Brindle: the adventurer pack pitched up into a croaky frog (the committed files were cut from vo.engineer.* with
+# ffmpeg: asetrate x1.3, highpass 180, lowpass 7000, vibrato 18 Hz / 0.25).
+voice("harpooner", ADV, ADV_L, 1.22, hp=180, lp=7000)
 voice("marksman", FEM, {"attack": ["attack*.wav"], "big": ["jump*.wav"], "hurt": ["damaged*.wav"],
                         "death": ["damaged3.wav"], "taunt": ["healed*.wav"]}, 1.0)
 voice("summoner", ZOM, {"attack": ["humanYell[1-3].wav"], "big": ["humanYell[4-5].wav"], "hurt": ["humanYell*.wav"],

@@ -76,6 +76,7 @@ const GAIT: Record<string, { stride: number; rate: number; gain: number; layer?:
   raider: { stride: 1.7, rate: 1.1, gain: 0.55 },
   duelist: { stride: 1.7, rate: 1.1, gain: 0.85 },
   marksman: { stride: 1.6, rate: 1.15, gain: 0.75 },
+  harpooner: { stride: 1.3, rate: 0.9, gain: 0.8, layer: "step.water" },
   summoner: { stride: 1.6, rate: 1.05, gain: 0.6 },
 };
 const STEP = 0.075;
@@ -180,7 +181,8 @@ export class Tracker {
       a.play("swing.light", 0.3, { rate: 0.8 });
     }
     const ch = hs.charging ?? "";
-    if (ch && !s.charging && hs.type === "marksman" && a.at(h, p.x, y, p.z, e.id)) a.play("wren.draw", 0.45);
+    if (ch && !s.charging && (hs.type === "marksman" || hs.type === "harpooner") && a.at(h, p.x, y, p.z, e.id))
+      a.play("wren.draw", 0.45);
     s.stun = st.stunUntil;
     s.slow = st.slowUntil;
     s.hex = st.hexUntil;

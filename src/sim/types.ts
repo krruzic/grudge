@@ -96,6 +96,10 @@ export interface Status {
   blindMiss?: number;
   brewUntil?: number;
   brewMul?: number;
+  /** Brindle's Wet (hero/harpooner.ts): dripping until wetUntil; slipAt = last puddle slip. */
+  wetUntil?: number;
+  wetOwner?: number;
+  slipAt?: number;
 }
 
 /** Marksman's hawk (hero/marksman.ts). */
@@ -428,6 +432,16 @@ export interface Missile {
   endBurst?: { radius: number; damage: number };
   arrow?: boolean;
   knockback?: number;
+  /** Brindle's harpoon: stepped by hero/harpooner.ts (ricochets left/done, last bounce point, Reel In, ring bounces). */
+  harpoon?: {
+    bounces: number;
+    bounced: number;
+    reel?: boolean;
+    ring?: number;
+    bx?: number;
+    bz?: number;
+    pierced?: number;
+  };
 }
 
 export interface Boomerang {

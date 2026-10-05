@@ -1050,6 +1050,102 @@
         }
       },
       "class": "support"
+    },
+    "harpooner": {
+      "name": "Brindle",
+      "blurb": "Harpoon bow. Wet: his hits leave foes dripping for 3s. Harpoons skewer through soldiers and ricochet off walls and structures; a banked harpoon hits a Wet foe 35% harder.",
+      "health": "mid",
+      "speed": "mid",
+      "damage": "mid",
+      "defaultBuild": "range",
+      "botRange": 10.5,
+      "hooks": {
+        "wetSeconds": 3,
+        "ricochets": 1,
+        "ricochetWetMul": 1.35,
+        "ringBounces": 4,
+        "lashStep": 2.6,
+        "slideSeconds": 0.5,
+        "slideSpeed": 13,
+        "puddleSeconds": 3,
+        "puddleRadius": 1.6,
+        "slipStun": 0.6,
+        "wetHitMul": 1.2,
+        "soldierPierce": 2,
+        "unitMul": 1.3
+      },
+      "abilities": {
+        "a": {
+          "kind": "harpoon",
+          "anim": "shoot",
+          "damage": 70,
+          "range": 10,
+          "speed": 30,
+          "chargeRicochets": 1,
+          "dur": 0.55,
+          "hitAt": 0.3,
+          "cooldown": 1.1,
+          "bot": "fight",
+          "botRange": 9,
+          "variance": 0.12,
+          "crit": 0.08
+        },
+        "b": {
+          "kind": "reel",
+          "anim": "throw",
+          "damage": 60,
+          "range": 10,
+          "speed": 34,
+          "heroPull": 0.5,
+          "dur": 0.7,
+          "hitAt": 0.32,
+          "cooldown": 8,
+          "bot": "never",
+          "botRange": 9.5,
+          "callout": "REEL IN \u00b7 DRAG THEM INTO WALLS"
+        },
+        "r": {
+          "kind": "tonguelash",
+          "anim": "cast",
+          "range": 7,
+          "dur": 0.3,
+          "hitAt": 0.14,
+          "cooldown": 7,
+          "bot": "never",
+          "callout": "TONGUE LASH"
+        },
+        "z": {
+          "kind": "riptide",
+          "anim": "slam",
+          "radius": 6,
+          "seconds": 6,
+          "damage": 110,
+          "dps": 20,
+          "slowMul": 0.65,
+          "pullSpeed": 1.6,
+          "dur": 0.9,
+          "hitAt": 0.5,
+          "bot": "fight",
+          "botRange": 4.5,
+          "callout": "RIPTIDE \u00b7 HARPOONS BOUNCE IN THE RING"
+        }
+      },
+      "botPlan": {
+        "retreatHp": 0.3,
+        "escape": "r",
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "class": "marksman",
+      "synergy": {
+        "reelTo": {
+          "tank": 1
+        }
+      }
     }
   }
 }

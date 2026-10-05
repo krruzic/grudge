@@ -11,6 +11,7 @@ import { emit } from "../fx/parts";
 import { decal } from "../fx/decals";
 import { chunks } from "../fx/chunks";
 import { spikeBatch } from "../kits/warlord";
+import { harpoonMissile, harpoonMissileTick } from "../kits/harpooner";
 import type { CombatFx } from "./combatFx";
 import { SHARED_GEO, SHARED_MAT } from "./assets";
 import { towerProjectile, towerProjectileTick } from "./towers";
@@ -25,7 +26,7 @@ export function syncMissiles(cfx: CombatFx, world: World): void {
     useCostume(costumeOfEntity(world, world.getAny(m.ownerId)));
     let v = cfx.missileViews.get(m.id);
     if (!v) {
-      v = { obj: missileView(m.style), lastSpike: -1 };
+      v = { obj: harpoonMissile(m.style, activeCostume()) ?? missileView(m.style), lastSpike: -1 };
       cfx.root.add(v.obj);
       cfx.missileViews.set(m.id, v);
     }
@@ -38,6 +39,7 @@ export function syncMissiles(cfx: CombatFx, world: World): void {
     const spin = v.obj.getObjectByName("spin") as THREE.Sprite | undefined;
     if (spin) spin.material.rotation = performance.now() / 60;
     missileTrail(cfx, m);
+    if (m.harpoon) harpoonMissileTick(cfx, world, m, v.obj);
     if (m.style === "rock" && m.dist - v.lastSpike > 0.6) {
       v.lastSpike = m.dist;
       rockSpike(cfx, world, m.x, m.z);

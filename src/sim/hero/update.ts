@@ -7,6 +7,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, bCooldown, frenzySpeed, onBUse } from "../talents.ts";
 import { canRake, trackStill, updatePip } from "./marksman.ts";
 import { detonateKegs, kegRocketTick, plentyTick } from "./friar.ts";
+import { harpoonerTick, slideTick } from "./harpooner.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -30,6 +31,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   graveTick(w, e, ab.r);
   if (def.hooks.vantageMul) trackStill(w, e);
   if (def.hooks.plentyRadius) plentyTick(w, e);
+  if (def.hooks.wetSeconds) harpoonerTick(w, e);
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -470,6 +472,8 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
   } else if (a.kind === "kegrocket") {
     kegRocketTick(w, e, a);
+  } else if (a.kind === "slide") {
+    slideTick(w, e, a);
   } else if (a.kind === "combo" && a.t < a.hitAt) {
     const hit = ab.a.hits![a.combo];
     const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;

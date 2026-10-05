@@ -1053,6 +1053,110 @@
      }
     }
    ]
+  },
+  "harpooner": {
+   "r": [
+    {
+     "id": "springlegs",
+     "name": "SPRING LEGS",
+     "desc": "TONGUE LASH REACHES 3M FARTHER AND COOLS DOWN 2S FASTER.",
+     "add": {
+      "range": 3,
+      "cooldown": -2
+     }
+    },
+    {
+     "id": "oilskin",
+     "name": "OILSKIN",
+     "desc": "LANDING A TONGUE LASH GIVES YOU A 90 SHIELD FOR 3S AND LEAVES A PUDDLE WET FOES SLIP ON.",
+     "fx": {
+      "landShield": 90,
+      "landPuddle": true
+     }
+    }
+   ],
+   "b": [
+    {
+     "id": "winch",
+     "name": "WHALER'S WINCH",
+     "desc": "REEL IN HITS 25 HARDER AND DRAGS CHAMPIONS NINE TENTHS OF THE WAY INSTEAD OF HALF.",
+     "combo": "WITH SPRING LEGS: REEL IN COOLS DOWN 2S FASTER.",
+     "add": {
+      "damage": 25
+     },
+     "set": {
+      "heroPull": 0.9
+     },
+     "with": [
+      {
+       "id": "springlegs",
+       "add": {
+        "cooldown": -2
+       }
+      }
+     ]
+    },
+    {
+     "id": "undertow",
+     "name": "UNDERTOW",
+     "desc": "ANYTHING YOU REEL IN IS SLOWED 40% FOR 2S AND STAYS WET FOR 5S.",
+     "combo": "WITH OILSKIN: REEL IN HITS 20 HARDER.",
+     "set": {
+      "slowMul": 0.6,
+      "slowSeconds": 2,
+      "wetSeconds": 5
+     },
+     "with": [
+      {
+       "id": "oilskin",
+       "add": {
+        "damage": 20
+       }
+      }
+     ]
+    }
+   ],
+   "a": [
+    {
+     "id": "barbed",
+     "name": "BARBED HEADS",
+     "desc": "HARPOONS OPEN A BLEED (10 PER SECOND FOR 3S) THAT STACKS 3 TIMES.",
+     "fx": {
+      "bleed": {
+       "dps": 10,
+       "seconds": 3,
+       "max": 3
+      }
+     }
+    },
+    {
+     "id": "quickline",
+     "name": "QUICK LINE",
+     "desc": "YOU LOOSE 20% FASTER AND EVERY HARPOON RICOCHETS ONE MORE TIME.",
+     "mul": {
+      "dur": 0.8,
+      "hitAt": 0.8
+     },
+     "add": {
+      "ricochets": 1
+     }
+    }
+   ],
+   "z": [
+    {
+     "id": "maelstrom",
+     "name": "MAELSTROM",
+     "desc": "RIPTIDE+: THE RING IS 2M WIDER AND LASTS 2S LONGER, DRAGS HARDER, AND FOES IN IT TAKE 15% MORE FROM YOUR WHOLE HOUSE.",
+     "add": {
+      "radius": 2,
+      "seconds": 2
+     },
+     "set": {
+      "pullSpeed": 2.4,
+      "vulnMul": 1.15
+     }
+    }
+   ]
   }
  },
  "order": [

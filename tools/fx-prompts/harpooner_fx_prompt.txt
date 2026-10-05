@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for BRINDLE TADWICK, a frogfolk fisherman in a yellow oilskin coat who shoots ricocheting whalebone harpoons, reels foes in on a rope and summons a ring of swirling sea water, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single clear blue-green sea water droplet with a white highlight
+2. a crown splash of clear turquoise sea water with white foam tips and flying droplets, side view
+3. a thin round ripple ring of pale turquoise water seen from directly above, like a circle drawn on a pond
+4. a fluffy white blob of sea foam
+5. a single translucent pale aqua bubble with a white highlight
+6. a fan-shaped burst of sea spray flying outward, white and turquoise
+7. a shallow puddle of sea water seen from directly above, round, turquoise with a white foamy rim and reflections
+8. a swirling whirlpool ring of deep teal and turquoise sea water with white foam streaks, seen from directly above, a ring with an empty centre
+9. a curling ocean wave crest with white foam, side view
+10. a horizontal length of tarred brown fishing rope, twisted strands, spanning the whole cell width
+11. a bright white and pale cyan ricochet spark star with sharp rays
+12. a small pink and cream scallop seashell
+13. a wavy strand of green-brown seaweed kelp
+14. a bright white four-pointed glint star with a pale turquoise centre
+15. a glossy pink frog tongue tip, round and sticky, with a little shine
+16. a turquoise and white water impact burst with spiky droplets radiating out
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

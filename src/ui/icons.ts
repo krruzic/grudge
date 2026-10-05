@@ -540,7 +540,16 @@ const TINT: Record<string, string> = {
   keg: "#c88a48",
   powderkeg: "#7a4a28",
   brewfest: "#ffc848",
+  harpoon: "#e8e0c8",
+  reel: "#c8a070",
+  tonguelash: "#ff8aa0",
+  riptide: "#60d8e8",
 };
+// Brindle's kinds reuse the closest engravings until the painted glyph strip loads.
+STROKES.harpoon = STROKES.shoot;
+STROKES.reel = STROKES.reach;
+STROKES.tonguelash = STROKES.leap;
+STROKES.riptide = STROKES.tide;
 
 export function engravedIcon(
   ctx: CanvasRenderingContext2D,

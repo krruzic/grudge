@@ -8,6 +8,7 @@ import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
 import { abilities } from "../talents.ts";
 import { inOwnPuddle } from "../hero/friar.ts";
+import { nearWall } from "../hero/harpooner.ts";
 
 const isMelee = (w: World, o: Entity): boolean => !!o.hero && (w.heroDef(o.hero.type).botRange ?? 1.8) <= 3;
 
@@ -379,4 +380,50 @@ export function wrenShoot(bot: Bot, w: World, me: Entity, target: Entity): boole
   if (d < want - 2.5 || d > pierce * 0.85) bot.goal = vantageSpot(w, me, target, want) ?? bot.goal;
   else bot.goal = null;
   return true;
+}
+
+/**
+ * Brindle once he has a target: Reel In a champion standing by a wall, prop or structure (wall splat), one that is
+ * low, or (with a tank partner close) anyone in reach; Tongue Lash away from a melee champion on top of him; charged
+ * harpoons (extra ricochet) when nobody is diving him, plain shots otherwise.
+ */
+export function harpoonerFight(bot: Bot, w: World, me: Entity, target: Entity): void {
+  const h = me.hero!;
+  const ab = abilities(w, me);
+  const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
+  const d = w.dist(me, target) - target.radius;
+  const diver = foesNear(w, me, 3.4).find((o) => isMelee(w, o));
+  if (diver && rdy("r") && !h.action && bot.rand() < 0.7 * bot.skill) {
+    const ex = me.transform.pos.x - diver.transform.pos.x;
+    const ez = me.transform.pos.z - diver.transform.pos.z;
+    const el = Math.hypot(ex, ez) || 1;
+    bot.wantR = true;
+    bot.wantPlace = { x: (ex / el) * 6, z: (ez / el) * 6 };
+    return;
+  }
+  if (target.hero && rdy("b") && !h.action && d < (ab.b.range ?? 10) - 0.5 && w.canSee(me, target)) {
+    const tank = w.entities.some(
+      (o) =>
+        o.alive &&
+        o.hero &&
+        o !== me &&
+        o.team === me.team &&
+        w.heroDef(o.hero.type).class === "tank" &&
+        w.dist(me, o) < 10,
+    );
+    const melee = isMelee(w, target);
+    const good = nearWall(w, target) || target.hp < target.maxHp * 0.3 || tank || (!melee && d > 6);
+    if (good && bot.rand() < 0.5 * bot.skill) {
+      bot.wantB = true;
+      aimAt(bot, me, target);
+      return;
+    }
+  }
+  const reach = (ab.a.range ?? 9) * 1.25;
+  if (!foesNear(w, me, 3.6).some((o) => isMelee(w, o)) && d > 3 && d < reach - 1 && w.canSee(me, target)) {
+    bot.wantCharge = "a";
+    bot.chargeAimId = target.id;
+    bot.chargeRange = reach + target.radius;
+    bot.wantAttack = false;
+  }
 }

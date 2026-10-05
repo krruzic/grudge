@@ -4,6 +4,7 @@
 import type { World } from "../world.ts";
 import type { Entity, Missile } from "../types.ts";
 import { onArrowHit } from "../hero/marksman.ts";
+import { stepHarpoon } from "../hero/harpooner.ts";
 
 export function fireMissile(w: World, src: Entity, m: Omit<Missile, "id" | "ownerId" | "team" | "dist" | "hit">): void {
   w.missiles.push({ ...m, id: w.newId(), ownerId: src.id, team: src.team, dist: 0, hit: [] });
@@ -23,6 +24,10 @@ export function updateMissiles(w: World): void {
   const dt = w.dt;
   for (let i = w.missiles.length - 1; i >= 0; i--) {
     const m = w.missiles[i];
+    if (m.harpoon) {
+      if (stepHarpoon(w, m)) w.missiles.splice(i, 1);
+      continue;
+    }
     const owner = w.get(m.ownerId) ?? null;
     const step = m.speed * dt;
     const nx = m.x + m.dirX * step;
