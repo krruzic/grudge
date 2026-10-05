@@ -131,6 +131,8 @@ export interface Keg {
   landed: boolean;
   fuseAt: number;
   mul: number;
+  /** Powder keg: R pressed again while it flew - blow the moment it lands. */
+  blowOnLand?: boolean;
 }
 
 /**

@@ -282,6 +282,21 @@ function boom(w: World, owner: Entity, k: Keg, mini: boolean): void {
   scatter(w, owner, k, "minipowder", c);
 }
 
+/**
+ * R again with a powder keg out: every one of Maddock's powder kegs on its fuse blows now (one still flying blows
+ * as it lands). Returns false when there's none, so R throws a new keg as usual.
+ */
+export function detonateKegs(w: World, e: Entity): boolean {
+  let any = false;
+  for (const k of w.kegs) {
+    if (k.ownerId !== e.id || k.kind !== "powder") continue;
+    any = true;
+    if (k.landed) k.fuseAt = Math.min(k.fuseAt, w.time);
+    else k.blowOnLand = true;
+  }
+  return any;
+}
+
 /** Step phase 5: land kegs when their flight ends; powder kegs then wait for their fuse (instant on a direct hero hit). */
 export function updateKegs(w: World): void {
   for (let i = w.kegs.length - 1; i >= 0; i--) {
@@ -319,7 +334,7 @@ export function updateKegs(w: World): void {
           o.team !== owner.team &&
           Math.hypot(o.transform.pos.x - k.toX, o.transform.pos.z - k.toZ) < 1.4,
       );
-      k.fuseAt = w.time + (direct ? 0 : (r.fuse ?? 1));
+      k.fuseAt = w.time + (direct || k.blowOnLand ? 0 : (r.fuse ?? 1));
       fx(w, "kegLand", owner.id, owner.team, k.toX, k.toY, k.toZ, {
         radius: r.radius ?? 3.2,
         seconds: k.fuseAt - w.time,
