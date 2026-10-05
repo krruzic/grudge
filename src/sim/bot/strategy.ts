@@ -3,17 +3,55 @@
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Directive, Entity } from "../types.ts";
-import { baseThreat, enemyHeroes, mateHero } from "./awareness.ts";
+import { enemyHeroes, mateHero } from "./awareness.ts";
 
 export function say(bot: Bot, w: World, me: Entity, text: string): void {
   bot.sayText = `${w.heroDef(me.hero!.type).name.toUpperCase()}: ${text}`;
 }
 
-/** Solo bot: defend when the core is swarmed, push with a big army or in sudden death, else follow the hero. */
+/** Every enemy champion is currently dead (a free window to push). */
+export function foesDown(w: World, team: number): boolean {
+  const foes = w.players.filter((p) => p.team !== team && !p.commander);
+  return foes.length > 0 && foes.every((p) => w.getAny(p.heroId)?.hero?.dead);
+}
+
+/**
+ * A building of ours that is actually losing its fight: attackers within 13 m clearly outweigh what defends it
+ * there (its own fire, our soldiers and champions), and it's the keep or a tower already under 60%. A lone
+ * champion poking a healthy tower doesn't count - the nearest few soldiers handle that (units.ts call-ups).
+ */
+export function realThreat(w: World, team: number): Entity | undefined {
+  if (foesDown(w, team)) return undefined;
+  let worst: Entity | undefined;
+  let gap = 0;
+  for (const s of w.entities) {
+    if (!s.alive || s.team !== team || !s.structure || s.structure.siege) continue;
+    const core = s.structure.type === "core";
+    if (!core && (!w.arena.isTowerOrKeep(s) || s.hp > s.maxHp * 0.6)) continue;
+    let ours = s.structure.damage > 0 ? 0.8 : 0;
+    let theirs = 0;
+    for (const o of w.entities) {
+      if (!o.alive || o.structure || o.neutral || o.team < 0) continue;
+      if (Math.hypot(o.transform.pos.x - s.transform.pos.x, o.transform.pos.z - s.transform.pos.z) > 13) continue;
+      const v = o.hero ? (o.hero.dead ? 0 : 0.4 + (o.hp / o.maxHp) * 0.8) : 0.15;
+      if (o.team === team) ours += v;
+      else theirs += v;
+    }
+    const g = theirs - ours * 1.3;
+    if (theirs >= 0.9 && g > gap) {
+      gap = g;
+      worst = s;
+    }
+  }
+  return worst;
+}
+
+/** Solo bot: defend when a building is really losing, push with a big army, in sudden death or while every enemy
+ * champion is dead, else follow the hero. */
 export function pickDirective(bot: Bot, w: World, me: Entity): Directive {
   const t = w.teams[me.team];
-  const core = w.core(me.team);
-  if (core && w.enemiesNear(core, 15, (o) => o.kind === "unit").length >= 3) return "nearest";
+  if (realThreat(w, me.team)) return "nearest";
+  if (foesDown(w, me.team) && t.unitCount >= 3) return "push";
   if (t.unitCount >= 7 || w.isSudden()) return "push";
   if (t.unitCount >= 4 && w.time > 90) return "follow";
   return "follow";
@@ -53,10 +91,11 @@ export function updateRole(bot: Bot, w: World, me: Entity): void {
   }
 }
 
-/** Support bot directive (only when no human has issued orders for 25s). */
+/** Support bot directive (only when no human has issued orders for a while, see Bot.command). */
 export function supportDirective(bot: Bot, w: World, me: Entity): Directive {
   const t = w.teams[me.team];
-  if (baseThreat(bot, w, me)) return "defend";
+  if (foesDown(w, me.team) && t.unitCount >= 3) return "push";
+  if (realThreat(w, me.team)) return "defend";
   if (w.isSudden() || t.unitCount >= 9) return "push";
   const lead = w.heroOf(me.team);
   if (lead && lead.alive && lead.id !== me.id) return "follow";

@@ -183,7 +183,7 @@ export class Bot {
       const d =
         this.role === "solo"
           ? pickDirective(this, w, me)
-          : this.role === "support" && w.time - this.humanOrderAt > 25
+          : this.role === "support" && w.time - this.humanOrderAt > 90
             ? supportDirective(this, w, me)
             : cur;
       if (d !== this.lastDirective) {

@@ -21,6 +21,7 @@ import {
   ok,
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
+import { realThreat } from "./strategy.ts";
 import {
   duelistFight,
   engineerFight,
@@ -88,9 +89,9 @@ export function think(bot: Bot, w: World, me: Entity): void {
     bot.goal = null;
     return;
   }
-  // Recall home when the base is under attack and we're far away and out of combat.
+  // Recall home when a building at home is really losing its fight and we're far away and out of combat.
   if (!h.recallUsed && w.time - h.combatAt > 3 && !w.enemiesNear(me, 9).length) {
-    const threat = baseThreat(bot, w, me);
+    const threat = realThreat(w, me.team);
     const core = w.core(me.team);
     if (threat && core && w.dist(me, core) > 35 && w.dist(me, threat) > 30) {
       bot.wantRecall = true;

@@ -42,10 +42,15 @@ export function updateUnit(w: World, e: Entity): void {
   if (target && laneMarch && w.dist(e, target) - target.radius > laneReach + 1) target = undefined;
   const defending = directive === "defend";
   const intruder = (o: Entity) => defending && w.inBase(e.team, o.transform.pos.x, o.transform.pos.z);
+  // Fighting retreat: whatever is hitting this soldier (or is right in its face) gets fought back, whatever the
+  // orders and leash say.
+  const harasser = (o: Entity) =>
+    (e.status.hurtBy === o.id && w.time - (e.status.hurtAt ?? -99) < 2) || w.dist(e, o) - o.radius <= u.range + 0.5;
   if (
     target &&
     anchor &&
     !intruder(target) &&
+    !harasser(target) &&
     Math.hypot(target.transform.pos.x - anchor.x, target.transform.pos.z - anchor.z) > leash + 2
   )
     target = undefined;
@@ -71,7 +76,8 @@ export function updateUnit(w: World, e: Entity): void {
         const d = w.dist(e, o) - o.radius;
         const vision = laneMarch ? Math.min(laneReach, u.aggro * w.rangeMul(e, o)) : u.aggro * w.rangeMul(e, o);
         if (d > vision) continue;
-        if (anchor && Math.hypot(o.transform.pos.x - anchor.x, o.transform.pos.z - anchor.z) > leash) continue;
+        if (anchor && !harasser(o) && Math.hypot(o.transform.pos.x - anchor.x, o.transform.pos.z - anchor.z) > leash)
+          continue;
         const vs = def.vs[w.classOf(o)] ?? 1;
         let score = d - vs * 1.5 + (o.structure ? 2 : 0) + (o.id === u.targetId ? -1 : 0);
         if (o.hero) {
@@ -193,6 +199,13 @@ function directiveGoal(
         if (toWp < 4 || past) u.lanePassed = team.laneGen;
         else goal = { x: lane.x, z: lane.z };
       }
+    } else if (directive === "defend" && attackedBuilding(w, e.team)) {
+      // Defend goes to whichever of our buildings is being hit, and fights around it.
+      const s = attackedBuilding(w, e.team)!;
+      const off = slotOffset(u.slot, 1.6);
+      anchor = { x: s.transform.pos.x, z: s.transform.pos.z };
+      leash = 11;
+      goal = { x: anchor.x + off.x, z: anchor.z + off.z };
     } else if (directive === "defend") {
       const { post, rank } = w.defendPost(e);
       const off = slotOffset(rank, 0.8);
@@ -350,4 +363,21 @@ function defenderTarget(w: World, e: Entity): number {
     }
   }
   return D.of.get(e.id) ?? 0;
+}
+
+/** The team's building (keep or pad structure) hit most recently by an enemy in the last 4 s, if any. */
+function attackedBuilding(w: World, team: number): Entity | undefined {
+  let best: Entity | undefined;
+  let at = -Infinity;
+  for (const s of w.entities) {
+    if (!s.alive || !s.structure || s.team !== team) continue;
+    if (s.structure.padIndex < 0 && s.structure.type !== "core") continue;
+    const t = s.status.hurtAt ?? -99;
+    if (w.time - t > 4 || t <= at) continue;
+    const foe = s.status.hurtBy !== undefined ? w.get(s.status.hurtBy) : undefined;
+    if (!foe?.alive || foe.team === team) continue;
+    at = t;
+    best = s;
+  }
+  return best;
 }
