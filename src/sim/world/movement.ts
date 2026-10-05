@@ -14,6 +14,7 @@ export function speedMul(w: World, e: Entity): number {
   let m = w.ffa ? (w.data.match.ffa?.speedMul ?? 1) : 1;
   if (w.time < s.slowUntil) m *= s.slowMul;
   if (w.time < s.buffUntil) m *= s.buffSpeedMul;
+  if (s.powerSpeedMul !== undefined) m *= s.powerSpeedMul;
   if (w.time < s.rallyUntil) m *= w.data.match.economy.rally.speedMul;
   if (e.hero) m *= w.mapEvents.hauntMul(e, "speed");
   for (const z of w.zones) {
@@ -107,7 +108,7 @@ export function pacingMul(w: World, e: Entity): number {
   else if (turf === "enemyTower") m *= pc.towerIntruderMul;
   if (w.calm(e)) m *= pc.calmSpeedMul;
   if (w.time - h.actionEndAt < pc.commitSeconds) m *= pc.commitMul;
-  if (w.arena.carrying(e)) m *= w.data.match.arena.relic.carrySpeedMul;
+  if (w.arena.carrying(e) && !w.tdm) m *= w.data.match.arena.relic.carrySpeedMul;
   return m;
 }
 

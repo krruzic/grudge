@@ -21,14 +21,15 @@ export function updateRelic(arena: Arena): void {
       arena.drop(c ?? null, r.x, r.z);
       return;
     }
-    if (w.time < c.status.stunUntil) {
+    // Team deathmatch: the carrier only loses it by dying, and there are no shrines.
+    if (w.time < c.status.stunUntil && !w.tdm) {
       arena.drop(c, c.transform.pos.x + c.status.kvx * 0.12, c.transform.pos.z + c.status.kvz * 0.12);
       return;
     }
     r.x = c.transform.pos.x;
     r.z = c.transform.pos.z;
     r.y = c.transform.y;
-    const shrine = shrineNear(arena, c);
+    const shrine = w.tdm ? null : shrineNear(arena, c);
     if (shrine) {
       if (r.channel === 0 && w.time - arena.crackNoticeAt > 4) {
         arena.crackNoticeAt = w.time;

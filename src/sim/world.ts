@@ -35,6 +35,7 @@ import { updateUnit } from "./units.ts";
 import { updateStructure } from "./structures.ts";
 import { Arena } from "./arena.ts";
 import { MapEvents } from "./mapEvents.ts";
+import { Tdm } from "./tdm.ts";
 import { tickStatus, updateMissiles } from "./talents.ts";
 import { updateKegs } from "./hero/friar.ts";
 import { mulberry32 } from "./world/rng.ts";
@@ -96,6 +97,8 @@ export class World {
   readonly teamCount: number;
   readonly mapEvents: MapEvents;
   readonly arena: Arena;
+  /** Team deathmatch rules (map mode "tdm"), else null. */
+  readonly tdm: Tdm | null;
   /** Per-team castle footprint (see world/bases.ts): base mask, gate cells and defend posts. */
   readonly bases: BaseInfo[];
   tick = 0;
@@ -189,6 +192,7 @@ export class World {
     this.bases = Array.from({ length: this.teamCount }, (_, t) => bases.computeBase(this, t));
     this.arena = new Arena(this);
     this.mapEvents = new MapEvents(this);
+    this.tdm = this.terrain.mode === "tdm" ? new Tdm(this) : null;
     this.initJumpPads();
   }
 
@@ -218,8 +222,11 @@ export class World {
     for (const p of this.projectiles) p.prevT = p.t;
 
     // 2. Match clock, income and per-tick status (auras, stealth/visibility).
-    match.updateMatch(this);
-    economy.updateEconomy(this, dt);
+    if (this.tdm) this.tdm.updateClock();
+    else {
+      match.updateMatch(this);
+      economy.updateEconomy(this, dt);
+    }
     vision.updateStatusMods(this);
 
     // 3. Player commands + hero controllers, in player-slot order.
@@ -231,6 +238,7 @@ export class World {
 
     // 4. Neutral/arena objectives, then AI units and structures (snapshot: spawns this tick act next tick).
     this.arena.update();
+    this.tdm?.update();
     const list = this.entities.slice();
     for (const e of list) {
       if (!e.alive) continue;
@@ -496,6 +504,7 @@ export class World {
 
   /** Regular-time length; lockdown maps add their opening lock duration. */
   get matchLength(): number {
+    if (this.tdm) return this.tdm.cfg.matchSeconds;
     return (
       this.data.match.matchSeconds * (this.ffa ? (this.data.match.ffa?.timeMul ?? 1) : 1) +
       (this.mapEvents?.lockUntil ?? 0)

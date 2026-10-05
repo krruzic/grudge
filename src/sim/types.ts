@@ -87,6 +87,10 @@ export interface Status {
   markAll: boolean;
   markWeaken: number;
   pipUntil?: number;
+  /** Team deathmatch multipliers (Grudge carrier, power-ups, blood moon), recomputed every tick by sim/tdm.ts. */
+  powerDamageMul?: number;
+  powerSpeedMul?: number;
+  powerTakenMul?: number;
   pipOwner?: number;
   blindUntil?: number;
   blindMiss?: number;
@@ -590,6 +594,17 @@ export type SimEvent =
   | { type: "gates"; stage: "warn" | "shift"; pattern: number; seconds: number; lock?: boolean }
   | { type: "geyser"; stage: "warn" | "erupt"; id: number; x: number; y: number; z: number; seconds: number }
   | { type: "serpent"; stage: "warn" | "breach"; x: number; y: number; z: number; seconds: number }
+  | {
+      type: "powerup";
+      stage: "spawn" | "take";
+      id: number;
+      kind: string;
+      x: number;
+      y: number;
+      z: number;
+      by: number;
+    }
+  | { type: "chaos"; kind: string }
   | {
       type: "avalanche";
       stage: "warn" | "slide" | "settle";

@@ -39,6 +39,7 @@ export function damageMulOf(w: World, src: Entity): number {
   if (src.hero) m *= w.mapEvents.hauntMul(src, "damage");
   if (src.hero) m *= src.hero.damageMul * (src.hero.action?.power ?? 1);
   if (src.unit && w.isSudden()) m *= w.data.match.suddenDeath.unitDamageMul;
+  if (s.powerDamageMul !== undefined) m *= s.powerDamageMul;
   return m;
 }
 
@@ -274,6 +275,7 @@ function defenderScaling(w: World, src: Entity | null, target: Entity, amount: n
     amount *= st.markMul;
   if (src && w.time < src.status.markUntil && src.status.markWeaken < 1) amount *= src.status.markWeaken;
   if (w.time < st.armorUntil) amount *= st.armorMul;
+  if (st.powerTakenMul !== undefined) amount *= st.powerTakenMul;
   if (target.hero && st.shield > 0) {
     const aws = abilities(w, target).a.fx?.armorWhileShield;
     if (aws) amount *= aws;

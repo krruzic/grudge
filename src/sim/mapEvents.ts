@@ -161,7 +161,8 @@ export class MapEvents {
 
   constructor(readonly w: World) {
     const ld = w.data.match.lockdown;
-    if (ld && ld.seconds > 0) buildLock(this, ld.seconds, ld.warnSeconds ?? 5);
+    // No opening lockdown in team deathmatch (there are no bases to lock).
+    if (ld && ld.seconds > 0 && w.terrain.mode !== "tdm") buildLock(this, ld.seconds, ld.warnSeconds ?? 5);
     this.mist = w.terrain.mist as MistDef | undefined;
     if (this.mist) {
       const t = w.terrain;

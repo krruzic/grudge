@@ -427,6 +427,8 @@ export interface MatchData {
   suddenDeathSeconds: number;
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number };
   lockdown?: { seconds: number; warnSeconds?: number };
+  /** Team deathmatch rules (sim/tdm.ts). */
+  tdm?: import("./tdm.ts").TdmConfig;
   ffa?: {
     timeMul?: number;
     speedMul?: number;

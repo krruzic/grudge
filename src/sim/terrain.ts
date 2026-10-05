@@ -70,7 +70,7 @@ export interface MapData {
   depth: number;
   mirror: "x" | "diag" | "rot" | "quad" | "none";
   teams?: number;
-  mode?: "duel" | "ffa";
+  mode?: "duel" | "ffa" | "tdm";
   tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
   surround?: string;
   rimHeight: number;
@@ -155,6 +155,8 @@ export class Terrain {
   readonly jumppads: { a: MapPoint; b: MapPoint }[] = [];
   private mirror: "x" | "diag" | "rot" | "quad" | "none" = "none";
   readonly teams: number = 2;
+  /** "tdm" for team deathmatch (see sim/tdm.ts and tdmMap); otherwise the regular base modes. */
+  readonly mode: string;
   readonly tide?: { lowSeconds: number; highSeconds: number; firstSeconds: number };
   readonly tideCells: number[] = [];
   readonly surround?: string;
@@ -218,6 +220,7 @@ export class Terrain {
         ? data.mirror
         : "none";
     this.teams = data.teams ?? 2;
+    this.mode = data.mode ?? (this.teams > 2 ? "ffa" : "duel");
     this.tide = data.tide;
     this.surround = data.surround;
     this.avalanche = data.avalanche;

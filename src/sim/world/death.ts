@@ -62,6 +62,10 @@ function killHero(w: World, target: Entity, src: Entity | null, killer: TeamTall
   if (hh.meter < w.data.heroes.baseline.superMax) hh.meter = 0;
   killer.resource += w.data.match.economy.bounty.hero * cut;
   killer.heroKills++;
+  if (w.tdm) {
+    w.tdm.onHeroKill(target, src);
+    return;
+  }
   w.loseGold(target.team, w.data.match.economy.loss.heroDeath, "HERO DOWN");
 }
 

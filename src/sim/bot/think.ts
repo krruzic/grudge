@@ -71,7 +71,7 @@ export function think(bot: Bot, w: World, me: Entity): void {
   bot.wantCharge = null;
   bot.chargeRange = Infinity;
   const s = sense(bot, w, me);
-  if (shop(bot, w, me, !!s.ehAlive && s.dHero < 8)) return;
+  if (!w.tdm && shop(bot, w, me, !!s.ehAlive && s.dHero < 8)) return;
   if (objectives(bot, w, s)) return;
   const h = s.h;
   const swarm = w.enemiesNear(me, 6, (o) => !!o.unit).length;
@@ -149,8 +149,56 @@ export function think(bot: Bot, w: World, me: Entity): void {
   if (fight(bot, w, s, k, crowded)) return;
   bot.fightId = 0;
   if (gravewalk(bot, w, s, graveReady)) return;
+  if (w.tdm) {
+    tdmRoam(bot, w, s);
+    return;
+  }
   if (raidOrHunt(bot, w, s, k, crowded)) return;
   macro(bot, w, s);
+}
+
+/** Nearest ready power-up within `range` (potions only with `potion`), for team deathmatch. */
+function nearPowerup(w: World, me: Entity, range: number, potion = false): Vec2 | null {
+  let best: Vec2 | null = null;
+  let bd = range;
+  for (const p of w.tdm?.powerups ?? []) {
+    if (w.time < p.readyAt || (potion && p.kind !== "potion")) continue;
+    const d = Math.hypot(p.x - me.transform.pos.x, p.z - me.transform.pos.z);
+    if (d < bd) {
+      bd = d;
+      best = { x: p.x, z: p.z };
+    }
+  }
+  return best;
+}
+
+/**
+ * Team deathmatch, nothing in reach: top up on a nearby potion when hurt, grab a power-up on the way, else go
+ * hunting the nearest enemy champion (the Grudge carrier first), else head for the middle.
+ */
+function tdmRoam(bot: Bot, w: World, s: Senses): void {
+  const { me } = s;
+  const pot = me.hp < me.maxHp * 0.75 ? nearPowerup(w, me, 16, true) : null;
+  const pw = pot ?? nearPowerup(w, me, 7);
+  if (pw) {
+    bot.goal = pw;
+    return;
+  }
+  const r = w.arena.relic;
+  const carrier = r.state === "carried" ? w.getAny(r.carrier) : undefined;
+  let prey: Entity | undefined = carrier && carrier.team !== me.team ? carrier : undefined;
+  if (!prey) {
+    let bd = Infinity;
+    for (const e of w.entities) {
+      if (!e.alive || !e.hero || e.hero.dead || e.team === me.team) continue;
+      const d = w.dist(me, e);
+      if (d < bd) {
+        bd = d;
+        prey = e;
+      }
+    }
+  }
+  bot.goal = prey ? { x: prey.transform.pos.x, z: prey.transform.pos.z } : { ...w.arena.home };
 }
 
 function sense(bot: Bot, w: World, me: Entity): Senses {
@@ -196,7 +244,7 @@ function crowdAt(w: World, me: Entity, t: Entity): number {
 function objectives(bot: Bot, w: World, s: Senses): boolean {
   const { me, p, h, enemyHero, ehAlive, dHero, lowHp, assist } = s;
   const relic = w.arena.relic;
-  if (w.arena.carrying(me)) {
+  if (w.arena.carrying(me) && !w.tdm) {
     // Bring the relic to the nearest own tower/keep.
     let best: Entity | undefined;
     let bd = Infinity;
@@ -244,7 +292,8 @@ function objectives(bot: Bot, w: World, s: Senses): boolean {
 /** Low hp: gravewalk home, recall, use the plan's escape ability, heal, hide in grass, fight only if cornered. */
 function retreat(bot: Bot, w: World, s: Senses, swarm: number, graveReady: boolean): void {
   const { me, p, h, enemyHero, ehAlive, dHero, plan } = s;
-  const sp = w.spawnPoint(me.team);
+  // Team deathmatch has no home: run for a potion, else somewhere the enemy isn't.
+  const sp = w.tdm ? (nearPowerup(w, me, 30, true) ?? w.tdm.safeFrom(me)) : w.spawnPoint(me.team);
   bot.goal = sp;
   if (h.recallAt !== undefined) {
     bot.goal = null;

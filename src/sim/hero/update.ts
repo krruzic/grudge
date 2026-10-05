@@ -59,12 +59,12 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     tickCannonAim(w, e, cmd);
     return;
   }
-  // Carrying the relic: block drops it; all attack inputs are disabled.
-  if (w.arena.carrying(e) && cmd.block && !h.blocking) {
+  // Carrying the relic: block drops it; all attack inputs are disabled (team deathmatch: the carrier fights on).
+  if (w.arena.carrying(e) && !w.tdm && cmd.block && !h.blocking) {
     w.arena.drop(e, e.transform.pos.x, e.transform.pos.z);
     cmd = { ...cmd, block: false };
   }
-  if (w.arena.carrying(e))
+  if (w.arena.carrying(e) && !w.tdm)
     cmd = { ...cmd, attack: false, secondary: false, special: false, super: false, dodge: false, build: undefined };
   if (def.hooks.wrenchDamage) {
     const on = onWorks(w, e);
@@ -110,13 +110,13 @@ function respawn(w: World, e: Entity): void {
   const h = e.hero!;
   h.morphAt = undefined;
   if (h.morphed) w.unmorph(e);
-  const sp = w.spawnPoint(e.team);
+  const sp = w.tdm ? w.tdm.respawnSpot(e.team) : w.spawnPoint(e.team);
   w.teleport(e, sp.x, sp.z);
   e.hp = e.maxHp;
   e.alive = true;
   h.dead = false;
   h.vel.x = h.vel.z = 0;
-  e.status.invulnUntil = w.time + 1.5;
+  e.status.invulnUntil = w.time + (w.tdm?.cfg.spawnInvuln ?? 1.5);
   e.status.kvx = e.status.kvz = 0;
   e.status.stunUntil = 0;
   h.recallUsed = false;
@@ -184,7 +184,7 @@ function tryJumpPad(w: World, e: Entity, cmd: Command): boolean {
     !h.action &&
     w.jumpPads.length &&
     w.time >= (h.jumpReadyAt ?? 0) &&
-    !w.arena.carrying(e) &&
+    !(w.arena.carrying(e) && !w.tdm) &&
     !h.bomb &&
     h.morphAt === undefined
   ))
@@ -251,7 +251,7 @@ function tickRecall(w: World, e: Entity, cmd: Command): boolean {
       return false;
     }
   }
-  if (cmd.recall && !h.action && !h.aim) {
+  if (cmd.recall && !h.action && !h.aim && !w.tdm) {
     if (h.recallUsed) w.emit({ type: "notice", team: e.team, text: "RECALL USED · ONCE PER LIFE" });
     else if (!w.arena.carrying(e)) {
       h.recallAt = w.time + b.recallSeconds;

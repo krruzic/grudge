@@ -3,17 +3,46 @@
   "maxTicksPerFrame": 5,
   "matchSeconds": 360,
   "suddenDeathSeconds": 60,
-  "lockdown": { "seconds": 30, "warnSeconds": 5 },
+  "lockdown": {
+    "seconds": 30,
+    "warnSeconds": 5
+  },
   "suddenDeath": {
     "productionMul": 1.6,
     "costMul": 0.6,
     "unitDamageMul": 1.7
   },
-  "ffa": { "timeMul": 1.5, "waveSeconds": 9, "speedMul": 1.2, "spawnRateMul": 1.3, "popCapMul": 1.5, "spawnCostMul": 0.75, "productionCostMul": 0.75, "guard": { "count": 3, "respawnSeconds": 25, "hpMul": 1.3 } },
+  "ffa": {
+    "timeMul": 1.5,
+    "waveSeconds": 9,
+    "speedMul": 1.2,
+    "spawnRateMul": 1.3,
+    "popCapMul": 1.5,
+    "spawnCostMul": 0.75,
+    "productionCostMul": 0.75,
+    "guard": {
+      "count": 3,
+      "respawnSeconds": 25,
+      "hpMul": 1.3
+    }
+  },
   "economy": {
     "start": 200,
     "income": 1.0,
-    "grain": { "start": 60, "base": 1.6, "perLevel": [0.7, 1.1, 1.5], "outpostShare": 0.85, "unitBountyMul": 1, "surplus": 150, "surplusMul": 0.7, "starvedMul": 2.5 },
+    "grain": {
+      "start": 60,
+      "base": 1.6,
+      "perLevel": [
+        0.7,
+        1.1,
+        1.5
+      ],
+      "outpostShare": 0.85,
+      "unitBountyMul": 1,
+      "surplus": 150,
+      "surplusMul": 0.7,
+      "starvedMul": 2.5
+    },
     "respawnCooldownPenalty": 2,
     "respawnBigMul": 1.667,
     "padIncome": {
@@ -153,7 +182,8 @@
         "splashUnitMul": 1.8,
         "structureSplash": 220
       },
-      "ward": { "brokenLockout": 45,
+      "ward": {
+        "brokenLockout": 45,
         "buyFraction": 0.25,
         "soloScale": 0.5,
         "cost": 150,
@@ -173,5 +203,39 @@
     "variance": 0.12,
     "critChance": 0.07,
     "critMul": 1.5
+  },
+  "tdm": {
+    "notes": "Team deathmatch (sim/tdm.ts): first team to killLimit champion kills; regulation matchSeconds, then sudden death (next kill wins). Respawn after respawnSeconds at a random spot at least safeDistance from living enemies. The Grudge buffs its carrier. Power-ups respawn at fixed spots; a chaos event every everySeconds.",
+    "killLimit": 20,
+    "matchSeconds": 600,
+    "respawnSeconds": 2,
+    "spawnInvuln": 1.5,
+    "safeDistance": 14,
+    "relicFirstSeconds": 20,
+    "relic": {
+      "damageMul": 1.3,
+      "takenMul": 0.8,
+      "speedMul": 1.1,
+      "regen": 6
+    },
+    "powerups": {
+      "count": 10,
+      "respawnSeconds": 25,
+      "potionHeal": 0.45,
+      "mightMul": 1.4,
+      "mightSeconds": 10,
+      "hasteMul": 1.35,
+      "hasteSeconds": 10,
+      "shield": 120,
+      "shieldSeconds": 12,
+      "killXp": 0
+    },
+    "chaos": {
+      "firstSeconds": 45,
+      "everySeconds": 50,
+      "bloodMul": 1.5,
+      "seconds": 15,
+      "rain": 6
+    }
   }
 }

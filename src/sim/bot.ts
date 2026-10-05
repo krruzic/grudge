@@ -118,7 +118,7 @@ export class Bot {
       const syn = opt ? opt.list.findIndex((o) => (o.with ?? []).some((q) => owned.has(q.id))) : -1;
       cmd.learn = fixed ? fixed[k % fixed.length] : syn >= 0 ? syn : this.rand() < 0.5 ? 0 : 1;
     }
-    if (!me || !me.alive || w.teams[me.team]?.out || !w.core(me.team)) {
+    if (!me || !me.alive || w.teams[me.team]?.out || (!w.core(me.team) && !w.tdm)) {
       this.holdSlot = this.wantCharge = null;
       return cmd;
     }
@@ -126,11 +126,11 @@ export class Bot {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;
       think(this, w, me);
     }
-    if (w.time >= this.roleCheckAt) {
+    if (w.time >= this.roleCheckAt && !w.tdm) {
       this.roleCheckAt = w.time + 1;
       updateRole(this, w, me);
     }
-    if (w.time >= this.directiveAt) {
+    if (w.time >= this.directiveAt && !w.tdm) {
       this.directiveAt = w.time + 2;
       const cur = w.teams[me.team].directives.grunt;
       if (this.lastDirective && cur !== this.lastDirective) this.humanOrderAt = w.time;
