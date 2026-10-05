@@ -6,7 +6,7 @@
 //   awareness.ts world queries (threats, targets, cover)                    economy.ts    shop and build orders
 // Determinism: a Bot only reads World and its own state, and its randomness is the seeded rand() below.
 import type { World } from "./world.ts";
-import type { Command, Directive, Pad, StructureType, Vec2 } from "./types.ts";
+import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./types.ts";
 import { learned as learnedOf, options } from "./talents.ts";
 import { think } from "./bot/think.ts";
 import { pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
@@ -100,6 +100,51 @@ export class Bot {
     this.seed = seed * 9973 + player * 131;
   }
 
+  /** Sidestep direction (+1 / -1) and until when, after getting stuck walking into someone. */
+  private sidestep = 0;
+  private sidestepUntil = 0;
+  private stuckAt = { x: 0, z: 0, t: 0 };
+
+  /**
+   * Team deathmatch local avoidance: steer away from friendly champions within 2.2 m, and when the bot has barely
+   * moved for 0.8 s while trying to walk (two bots shoving into each other), sidestep perpendicular for 0.7 s.
+   */
+  private unjam(w: World, me: Entity, cmd: Command): void {
+    const p = me.transform.pos;
+    const mv = Math.hypot(cmd.moveX, cmd.moveZ);
+    if (mv < 0.2) {
+      this.stuckAt = { x: p.x, z: p.z, t: w.time };
+      return;
+    }
+    let ax = 0;
+    let az = 0;
+    for (const o of w.entities) {
+      if (o === me || !o.alive || !o.hero || o.hero.dead || o.team !== me.team) continue;
+      const dx = p.x - o.transform.pos.x;
+      const dz = p.z - o.transform.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 2.2 || d < 1e-3) continue;
+      const k = (2.2 - d) / 2.2;
+      ax += (dx / d) * k;
+      az += (dz / d) * k;
+    }
+    if (Math.hypot(p.x - this.stuckAt.x, p.z - this.stuckAt.z) > 0.6) this.stuckAt = { x: p.x, z: p.z, t: w.time };
+    else if (w.time - this.stuckAt.t > 0.8 && w.time >= this.sidestepUntil) {
+      this.sidestep = this.rand() < 0.5 ? 1 : -1;
+      this.sidestepUntil = w.time + 0.7;
+      this.stuckAt.t = w.time;
+    }
+    let mx = cmd.moveX / mv + ax * 1.2;
+    let mz = cmd.moveZ / mv + az * 1.2;
+    if (w.time < this.sidestepUntil) {
+      mx += (-cmd.moveZ / mv) * this.sidestep * 1.5;
+      mz += (cmd.moveX / mv) * this.sidestep * 1.5;
+    }
+    const l = Math.hypot(mx, mz) || 1;
+    cmd.moveX = (mx / l) * mv;
+    cmd.moveZ = (mz / l) * mv;
+  }
+
   /** Bot-local Park-Miller LCG (independent of World.rng). */
   rand(): number {
     this.seed = (this.seed * 16807) % 2147483647;
@@ -162,6 +207,7 @@ export class Bot {
       this.goal = { x: horn.x, z: horn.z };
     preferJumpPad(this, w, me);
     steer(this, w, me, cmd);
+    if (w.tdm) this.unjam(w, me, cmd);
     if (
       this.buildPad &&
       this.buildType &&

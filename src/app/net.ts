@@ -241,7 +241,7 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
   const slots = app.slots;
   if (m.t === "want") {
     // The set of local pads this guest wants seated: drop seats for pads that left (not mid-match), add new ones.
-    const ks = ((m.ks as number[]) ?? []).filter((k) => k >= 0 && k < 4).slice(0, 4);
+    const ks = ((m.ks as number[]) ?? []).filter((k) => k >= 0 && k < MAX_PLAYERS).slice(0, 4);
     for (const r of n.rseats.filter((q) => q.peer === id && !ks.includes(q.k))) {
       if (inMatch(app)) continue;
       freeSeat(app, r, performance.now() / 1000);

@@ -29,7 +29,6 @@ import {
   heroNames,
   houses,
   maps,
-  MAX_LOCAL,
   MAX_PLAYERS,
   seatsFor,
   renderConfig,
@@ -124,7 +123,7 @@ export class App {
   readonly screens: Screens;
   readonly menus: Menus;
   readonly audio = new Audio();
-  readonly cursors = new MenuCursors(MAX_LOCAL, MAX_PLAYERS);
+  readonly cursors = new MenuCursors(MAX_PLAYERS);
   readonly net = new NetSession();
   readonly padsEl: HTMLElement;
 
@@ -148,7 +147,7 @@ export class App {
     const dbgZoom = p.get("zoom");
     if (dbgZoom) Object.assign(renderConfig, { minViewWidth: Number(dbgZoom), viewMargin: 0 });
 
-    this.pads = new Gamepads(inputData as InputConfig, MAX_LOCAL);
+    this.pads = new Gamepads(inputData as InputConfig, MAX_PLAYERS);
     this.view = new GameRenderer(
       renderConfig,
       this.world,

@@ -472,6 +472,15 @@ function selectButton(app: App, buttonId: string, by: number): void {
     slots[i].level = (slots[i].level % 3) + 1;
     app.net.lobbySentAt = 0;
     audio.ui("move");
+  } else if (id === "cos") {
+    // A costume icon on a compact card: the seat's owner (or anyone for a CPU) picks it.
+    const k = Number(buttonId.split(":")[2]);
+    const list = costumesOf(slots[i].hero);
+    if ((by === i || slots[i].cpu) && list[k] !== undefined && slots[i].costume !== list[k]) {
+      slots[i].costume = list[k];
+      app.net.lobbySentAt = 0;
+      audio.ui("move");
+    }
   } else if (id === "pen" && !slots[i].cpu && !app.commanderSlot(i) && by === i && !app.screens.naming.has(i)) {
     // Only the card's owner signs its name.
     openNaming(app, i, slots[i].tag);

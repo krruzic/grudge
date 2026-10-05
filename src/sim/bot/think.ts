@@ -157,6 +157,61 @@ export function think(bot: Bot, w: World, me: Entity): void {
   macro(bot, w, s);
 }
 
+/**
+ * Team deathmatch personalities by champion, so a house doesn't move as one blob:
+ *   0 brawler (Warlord, Thorn, Stig)  the nearest enemy, head on
+ *   1 flanker (Grim)                  the enemy with the fewest friends around it
+ *   2 hunter (Francois)               the weakest enemy in reach (the Grudge carrier first)
+ *   3 skirmisher (Wren, Remnil)       the nearest enemy, come at from the side
+ *   4 support (Maddock, Herald)       the enemy closest to a hurt friend; otherwise sticks with the house
+ */
+const TDM_STYLE: Record<string, number> = {
+  warlord: 0,
+  warden: 0,
+  engineer: 0,
+  raider: 1,
+  duelist: 2,
+  marksman: 3,
+  summoner: 3,
+  friar: 4,
+  herald: 4,
+};
+
+export function tdmStyle(me: Entity): number {
+  return TDM_STYLE[me.hero?.type ?? ""] ?? 0;
+}
+
+function tdmPrey(bot: Bot, w: World, me: Entity): Entity | undefined {
+  const style = tdmStyle(me);
+  const carrier = w.arena.relic.state === "carried" ? w.arena.relic.carrier : 0;
+  let best: Entity | undefined;
+  let bs = Infinity;
+  for (const e of enemyHeroes(bot, w, me)) {
+    if (!e.alive || !ok(bot, w, me, e)) continue;
+    const d = w.dist(me, e);
+    if (d > 40) continue;
+    let score = d;
+    if (style === 1) {
+      let friends = 0;
+      for (const o of w.entities) if (o !== e && o.alive && o.hero && o.team === e.team && w.dist(o, e) < 8) friends++;
+      score = d * 0.4 + friends * 10;
+    } else if (style === 2) score = d * 0.3 + (e.hp / e.maxHp) * 25 - (e.id === carrier ? 15 : 0);
+    else if (style === 4) {
+      // Peel for the most hurt friend nearby.
+      let near = Infinity;
+      for (const o of w.entities)
+        if (o !== me && o.alive && o.hero && o.team === me.team && o.hp < o.maxHp * 0.7)
+          near = Math.min(near, w.dist(o, e));
+      score = Math.min(near, d + 6) + d * 0.2;
+    }
+    if (score < bs) {
+      bs = score;
+      best = e;
+    }
+  }
+  return best;
+}
+
 /** Nearest ready power-up within `range` (potions only with `potion`), for team deathmatch. */
 function nearPowerup(w: World, me: Entity, range: number, potion = false): Vec2 | null {
   let best: Vec2 | null = null;
@@ -198,13 +253,47 @@ function tdmRoam(bot: Bot, w: World, s: Senses): void {
       }
     }
   }
-  bot.goal = prey ? { x: prey.transform.pos.x, z: prey.transform.pos.z } : { ...w.arena.home };
+  if (!prey) {
+    bot.goal = { ...w.arena.home };
+    return;
+  }
+  const style = tdmStyle(me);
+  if (style === 4) {
+    // Support: stay a few metres behind the friend nearest the fight.
+    let mate: Entity | undefined;
+    let md = Infinity;
+    for (const o of w.entities) {
+      if (o === me || !o.alive || !o.hero || o.hero.dead || o.team !== me.team) continue;
+      const dd = w.dist(o, prey);
+      if (dd < md) {
+        md = dd;
+        mate = o;
+      }
+    }
+    if (mate && md < 25) {
+      const mp = mate.transform.pos;
+      const dx = mp.x - prey.transform.pos.x;
+      const dz = mp.z - prey.transform.pos.z;
+      const dl = Math.hypot(dx, dz) || 1;
+      bot.goal = { x: mp.x + (dx / dl) * 3, z: mp.z + (dz / dl) * 3 };
+      return;
+    }
+  }
+  // Far off: come at the target from this champion's own side (spread around it) instead of in a conga line.
+  const pp = prey.transform.pos;
+  const d = w.dist(me, prey);
+  if (d > 9) {
+    const side = [0, 1.2, -0.7, 1.6, 0][style] ?? 0;
+    const ang = Math.atan2(me.transform.pos.x - pp.x, me.transform.pos.z - pp.z) + side * (me.id % 2 ? -1 : 1);
+    const r = Math.min(d * 0.6, 8);
+    bot.goal = { x: pp.x + Math.sin(ang) * r, z: pp.z + Math.cos(ang) * r };
+  } else bot.goal = { x: pp.x, z: pp.z };
 }
 
 function sense(bot: Bot, w: World, me: Entity): Senses {
   const h = me.hero!;
-  const assist = assistTarget(bot, w, me);
-  let enemyHero = assist;
+  const assist = w.tdm ? undefined : assistTarget(bot, w, me);
+  let enemyHero = assist ?? (w.tdm ? tdmPrey(bot, w, me) : undefined);
   if (!enemyHero) {
     let bd = Infinity;
     for (const e of enemyHeroes(bot, w, me)) {

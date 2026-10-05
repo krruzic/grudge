@@ -25,7 +25,9 @@ export function updateUnit(w: World, e: Entity): void {
   const dirs = w.data.match.directives;
   const team = w.teams[e.team];
   const directive = u.guard ? "hold" : team.directives[u.type];
-  const hero = w.heroOf(e.team);
+  // Team deathmatch summons follow their own summoner (there are four champions per house).
+  const owner = w.tdm && e.owner !== undefined ? w.getAny(e.owner) : undefined;
+  const hero = owner?.hero ? owner : w.heroOf(e.team);
   const heroAlive = !!hero && hero.alive;
   u.moving = false;
   const vet = w.data.units.veterancy;
@@ -142,6 +144,23 @@ function directiveGoal(
     anchor = u.guard;
     leash = u.range + 1.5;
     goal = u.guard;
+  } else if (w.tdm) {
+    // Team deathmatch has no keeps to push: summoned soldiers hunt the nearest enemy champion (within 30 m of
+    // their own champion), else stay at their champion's side.
+    const near = hero && heroAlive ? hero : e;
+    let bd = 30;
+    for (const o of w.entities) {
+      if (!o.alive || !o.hero || o.hero.dead || o.team === e.team || o.team < 0) continue;
+      const d = w.dist(near, o);
+      if (d < bd) {
+        bd = d;
+        goal = { x: o.transform.pos.x, z: o.transform.pos.z };
+      }
+    }
+    if (!goal && heroAlive) {
+      const off = slotOffset(u.slot, 2.2);
+      goal = { x: hero!.transform.pos.x + off.x, z: hero!.transform.pos.z + off.z };
+    }
   } else {
     const focus = directive === "focus" ? w.get(team.directives.focus[u.type]) : undefined;
     if (focus) {

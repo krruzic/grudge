@@ -30,8 +30,6 @@ import { loadFont } from "../ui/font";
 
 /** Match player slots (team deathmatch fields eight champions). */
 export const MAX_PLAYERS = 8;
-/** Local seats: controllers / keyboard (and their menu cursors). */
-export const MAX_LOCAL = 4;
 
 /** Seats a mode plays with. */
 export function seatsFor(mode: string): number {

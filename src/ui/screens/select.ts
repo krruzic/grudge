@@ -309,8 +309,8 @@ function drawCompactSeat(
   if (!sl) return;
   const team = s.teamOf(i);
   const ink = TEAM_TEXT[team];
-  s.portraits?.drop(i);
   if (sl.open) {
+    s.portraits?.drop(i);
     card(ctx, x, y, w, h, 0, TEAM_BRIGHT[team], () => {
       const t = `SEAT ${i + 1} · OPEN`;
       drawPlain(ctx, t, w / 2 - textWidth(t, 0.55, true) / 2, 6, ink, 0.55, true);
@@ -332,16 +332,11 @@ function drawCompactSeat(
   const preview =
     unsealed && !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:"));
   const ps = h - 16;
+  const showHero = !unsealed || preview;
   card(ctx, x, y, w, h, 0, chipColor(i, sl.cpu), () => {
     inset(ctx, 4, 4, ps, ps, "#2a2018");
     texturedRect(ctx, "cloth", 4, 4, ps, ps, TEAM_CLOTH[team], 0, 0.7);
-    const icon = !unsealed || preview ? s.portraits?.icon(sl.hero) : null;
-    if (icon) {
-      ctx.save();
-      if (preview) ctx.globalAlpha = 0.72;
-      smoothImage(ctx, icon, 4, 4, ps, ps);
-      ctx.restore();
-    } else {
+    if (!showHero) {
       band(ctx, 4, 4, ps, ps, "#000000", 0.35);
       drawPlain(ctx, "?", 4 + ps / 2 - textWidth("?", 1.2, true) / 2, 4 + ps / 2 - 6, "#e8d8b8", 1.2, true);
     }
@@ -352,7 +347,6 @@ function drawCompactSeat(
     const name = unsealed && !preview ? "CHOOSE" : (s.heroes[sl.hero]?.name ?? sl.hero).toUpperCase();
     const ns = Math.min(0.55, rw / Math.max(1, textWidth(name, 1, true)));
     drawPlain(ctx, name, rx, 17, BROWN, ns, true);
-    if (sl.ready && human) waxSeal(ctx, w - 9, ps - 4, 6, "#a8141a", "combo");
   });
   if (human && sl.local) {
     const bid = `unplug:${i}`;
@@ -372,9 +366,41 @@ function drawCompactSeat(
     drawSigning(ctx, x + 2, y + 2, w - 4, h - 4, sg[0] === 1, sg[1], performance.now() / 1000);
     return;
   }
+  // The champion's live stage in the portrait frame, like the big cards.
+  if (showHero) drawStage(s, ctx, i, sl, team, x + 4, y + 4, ps, ps, preview);
+  else s.portraits?.drop(i);
+  if (sl.ready && human) waxSeal(ctx, x + ps, y + ps - 2, 5, "#a8141a", "combo");
+  // Costumes: always on show as small clickable icons under the name (the C-stick flicks them too).
+  const cl = showHero ? costumesOf(sl.hero) : [];
+  if (cl.length > 1) {
+    const rx = x + ps + 8;
+    const sz = Math.min(11, (w - ps - 11) / cl.length - 1.5);
+    const cur = Math.max(0, cl.indexOf(sl.costume ?? ""));
+    cl.forEach((c, k) => {
+      const ix = rx + k * (sz + 1.5);
+      const iy = y + 26;
+      const ic = costumeIcon(sl.hero, c);
+      const bid = `cos:${i}:${k}`;
+      const hot = hovered(s, bid);
+      ctx.fillStyle = k === cur ? "#f4e2b0" : hot ? "#c89050" : "rgba(40,24,10,0.6)";
+      ctx.fillRect(ix - 1, iy - 1, sz + 2, sz + 2);
+      if (ic) {
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.globalAlpha = k === cur || hot ? 1 : 0.75;
+        ctx.drawImage(ic, ix, iy, sz, sz);
+        ctx.restore();
+      }
+      s.hit(bid, ix - 1, iy - 1, sz + 2, sz + 2);
+    });
+  }
   kindPlaque(s, ctx, i, x + w / 2, y + h - 11, sl);
-  if (sl.cpu && !s.peer && !!s.cursors?.cursors.some((c) => c.active))
-    woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
+  // SIT HERE only while a hand is over the card (it would cover the costumes otherwise).
+  const handOver = !!s.cursors?.cursors.some(
+    (c) => c.active && c.holding < 0 && c.x >= x && c.x <= x + w && c.y >= y && c.y <= y + h,
+  );
+  if (sl.cpu && !s.peer && handOver) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
 }
 
 // ── Seat card ──

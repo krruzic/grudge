@@ -213,10 +213,10 @@
     "safeDistance": 14,
     "relicFirstSeconds": 20,
     "relic": {
-      "damageMul": 1.3,
-      "takenMul": 0.8,
-      "speedMul": 1.1,
-      "regen": 6
+      "damageMul": 1.2,
+      "takenMul": 0.9,
+      "speedMul": 1.05,
+      "regen": 3
     },
     "powerups": {
       "count": 10,

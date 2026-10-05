@@ -6,6 +6,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import type { AbilityDef } from "../config.ts";
 import { abilities, addShield } from "../talents.ts";
 import { begin } from "./common.ts";
+import { spawnUnit } from "../structures.ts";
 
 export interface GraveSpot {
   id: number;
@@ -25,6 +26,15 @@ export function graveSpots(w: World, e: Entity): GraveSpot[] {
     if (Math.hypot(x - p.x, z - p.z) - s.radius < near || w.mapEvents.sealed(p.x, p.z, x, z)) return;
     out.push({ id: s.id, x, z, keep });
   };
+  if (w.tdm) {
+    // Team deathmatch has no keep or towers: the "graves" are the ready power-up spots (id = -power-up id).
+    for (const pu of w.tdm.powerups) {
+      if (w.time < pu.readyAt) continue;
+      if (Math.hypot(pu.x - p.x, pu.z - p.z) < near || w.mapEvents.sealed(p.x, p.z, pu.x, pu.z)) continue;
+      out.push({ id: -pu.id, x: pu.x, z: pu.z, keep: false });
+    }
+    return out;
+  }
   const core = w.core(e.team);
   if (core?.alive) add(core, true);
   for (const pad of w.pads) {
@@ -64,6 +74,27 @@ export function graveBegin(w: World, e: Entity, cmd: Command, def: AbilityDef): 
   const h = e.hero!;
   const t = e.transform;
   const spots = graveSpots(w, e);
+  if (w.tdm) {
+    // Aimed: the power-up nearest the aim point; quick press: the nearest one.
+    const px = t.pos.x + (cmd.place?.dx ?? 0);
+    const pz = t.pos.z + (cmd.place?.dz ?? 0);
+    let pick: GraveSpot | undefined;
+    let bd = Infinity;
+    for (const s of spots) {
+      const d = Math.hypot(s.x - px, s.z - pz);
+      if (d < bd) {
+        bd = d;
+        pick = s;
+      }
+    }
+    if (!pick) {
+      w.emit({ type: "notice", team: e.team, text: "NO POWER-UP TO WALK TO" });
+      h.cooldowns.r = w.time + 0.5;
+      return;
+    }
+    startWalk(w, e, def, pick.id, pick.x, pick.z);
+    return;
+  }
   let pick = spots.find((s) => s.keep);
   if (!cmd.place && !pick && spots.length) {
     w.emit({ type: "notice", team: e.team, text: "ALREADY HOME · HOLD TO PICK A GRAVE" });
@@ -93,13 +124,21 @@ export function graveBegin(w: World, e: Entity, cmd: Command, def: AbilityDef): 
     return;
   }
   const land = graveLanding(w, e, s);
+  startWalk(w, e, def, s.id, land.x, land.z);
+}
+
+/** Start the gravewalk channel toward (x, z) (grave `id`, negative for a deathmatch power-up). */
+function startWalk(w: World, e: Entity, def: AbilityDef, id: number, x: number, z: number): void {
+  const h = e.hero!;
+  const t = e.transform;
+  const land = { x, z };
   const dx = land.x - t.pos.x;
   const dz = land.z - t.pos.z;
   const dl = Math.hypot(dx, dz) || 1;
   const a = begin(e, "r", "gravewalk", def.dur ?? 1.15, def.hitAt ?? 1, dx / dl, dz / dl);
   a.toX = land.x;
   a.toZ = land.z;
-  a.targetId = s.id;
+  a.targetId = id;
   a.placed = true;
   h.cooldowns.r = w.time + (def.interruptCooldown ?? 5);
   if (def.callout)
@@ -125,8 +164,9 @@ export function graveBegin(w: World, e: Entity, cmd: Command, def: AbilityDef): 
 export function graveArrive(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   const h = e.hero!;
   const t = e.transform;
-  const s = a.targetId !== undefined ? graveValid(w, e, a.targetId) : null;
-  if (!s || a.toX === undefined || w.mapEvents.sealed(t.pos.x, t.pos.z, a.toX, a.toZ!)) {
+  const pu = w.tdm && (a.targetId ?? 0) < 0 ? w.tdm.powerups.find((q) => q.id === -a.targetId!) : undefined;
+  const s = pu ? null : a.targetId !== undefined ? graveValid(w, e, a.targetId) : null;
+  if ((!s && !pu) || a.toX === undefined || w.mapEvents.sealed(t.pos.x, t.pos.z, a.toX, a.toZ!)) {
     w.emit({ type: "notice", team: e.team, text: "THE GRAVE IS GONE" });
     return;
   }
@@ -136,11 +176,26 @@ export function graveArrive(w: World, e: Entity, a: HeroAction, def: AbilityDef)
   e.status.kvx = e.status.kvz = 0;
   e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.4);
   h.cooldowns.r = w.time + (def.cooldown ?? 20);
-  const sx = s.transform.pos.x;
-  const sz = s.transform.pos.z;
-  if (Math.hypot(sx - t.pos.x, sz - t.pos.z) > 0.5) t.facing = t.prevFacing = Math.atan2(t.pos.x - sx, t.pos.z - sz);
+  if (s) {
+    const sx = s.transform.pos.x;
+    const sz = s.transform.pos.z;
+    if (Math.hypot(sx - t.pos.x, sz - t.pos.z) > 0.5) t.facing = t.prevFacing = Math.atan2(t.pos.x - sx, t.pos.z - sz);
+  }
   w.emit({ type: "blink", x: t.pos.x, y: t.y, z: t.pos.z, team: e.team, src: e.id });
-  if (s.structure!.type !== "core") h.grave = { id: s.id, until: Infinity };
+  if (s && s.structure!.type !== "core") h.grave = { id: s.id, until: Infinity };
+  // Deathmatch: the grave talents that hasten towers / outposts have nothing to boost, so arriving raises a pair
+  // of skeletons at your side instead (more with them: the grave rank talent).
+  if (pu && w.tdm) {
+    const n = 2 + (def.fx?.graveRank ?? 0);
+    for (let k = 0; k < n; k++) {
+      const ang = e.transform.facing + (k - (n - 1) / 2) * 0.9;
+      const u = spawnUnit(w, e.team, "grunt", t.pos.x + Math.sin(ang) * 1.6, t.pos.z + Math.cos(ang) * 1.6, 1);
+      if (u) {
+        u.expiresAt = w.time + 15;
+        u.owner = e.id;
+      }
+    }
+  }
   const gb = def.fx?.graveBurst;
   if (gb) {
     const hexSec = w.heroDef(h.type).abilities.b.hexSeconds ?? 6;

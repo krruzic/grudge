@@ -6,6 +6,7 @@
 import type { SelectSlot } from "../ui/screens";
 import type { App } from "./app";
 import { data, roster } from "./assets";
+import { costumesOf } from "../render/costumes";
 import { cStickFlick, freezeNamingCursors, isNaming, nextCostume, openNaming, runNaming } from "./select";
 import { toMenu } from "./match";
 
@@ -131,6 +132,14 @@ function lobbyButton(app: App, buttonId: string, by: number): void {
     app.audio.ui("ok");
   } else if (id === "cam") {
     app.audio.ui("back");
+  } else if (id === "cos" && net.mySlots.get(by) === i) {
+    const list = costumesOf(lb.slots[i].hero);
+    const c = list[Number(buttonId.split(":")[2])];
+    if (c !== undefined) {
+      lb.slots[i].costume = c;
+      net.link.toHost({ t: "costume", k: by, id: c });
+      app.audio.ui("move");
+    }
   } else if (id === "pen" && net.mySlots.get(by) === i && !app.screens.naming.has(i)) {
     openNaming(app, i, lb.slots[i]?.name);
   } else if (id === "lvl" && lb.slots[i]?.cpu) {
