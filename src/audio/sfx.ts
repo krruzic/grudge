@@ -378,7 +378,9 @@ export class Audio {
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];
     this.play(id, sealed ? 0.5 : 0.3, { rate, priority: true, dur: 0.6 });
-    if (sealed) this.vocal(hero, "taunt", 0.6, { priority: true, at: 0.05, gap: 0.3 });
+    // Sealing: the announcer calls the champion's full name (tools/gen-announcer.mjs); a taunt if there's none.
+    if (sealed && this.bank.has(`name.${hero}`)) this.play(`name.${hero}`, 0.95, { priority: true, jitter: 0, at: 0.1 });
+    else if (sealed) this.vocal(hero, "taunt", 0.6, { priority: true, at: 0.05, gap: 0.3 });
   }
 
   /** An announcer line (global, centred). */
