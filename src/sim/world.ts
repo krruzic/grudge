@@ -115,6 +115,8 @@ export class World {
   // Internal caches/flags used by the world/* modules (not part of the public API).
   /** Defend-post assignment, rebuilt once per tick. */
   readonly posts = { tick: -1, of: new Map<number, [number, number]>() };
+  /** Soldiers sent back to defend a structure under attack (unit id -> attacker id), rebuilt once per tick. */
+  readonly defense = { tick: -1, of: new Map<number, number>() };
   /** Formation slot assignment, rebuilt once per tick. */
   readonly forms = { tick: -1, of: new Map<number, [number, number]>() };
   /** Connected tall-grass patch id per cell (lazy, terrain flags never change). */

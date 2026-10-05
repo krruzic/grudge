@@ -50,7 +50,14 @@ export function updateUnit(w: World, e: Entity): void {
   )
     target = undefined;
 
-  if (!target || w.time >= u.retargetAt) {
+  // Called back to defend: a champion (or soldier) hitting one of our buildings gets the nearest few soldiers,
+  // wherever they were (see assignDefense).
+  const guardId = u.guard ? 0 : defenderTarget(w, e);
+  const callTarget = guardId ? w.get(guardId) : undefined;
+  if (callTarget?.alive && w.canSee(e, callTarget)) {
+    target = callTarget;
+    u.targetId = callTarget.id;
+  } else if (!target || w.time >= u.retargetAt) {
     u.retargetAt = w.time + 0.4 + (e.id % 5) * 0.03;
     let best: Entity | undefined;
     let bestScore = Infinity;
@@ -66,7 +73,12 @@ export function updateUnit(w: World, e: Entity): void {
         if (d > vision) continue;
         if (anchor && Math.hypot(o.transform.pos.x - anchor.x, o.transform.pos.z - anchor.z) > leash) continue;
         const vs = def.vs[w.classOf(o)] ?? 1;
-        const score = d - vs * 1.5 + (o.structure ? 2 : 0) + (o.id === u.targetId ? -1 : 0);
+        let score = d - vs * 1.5 + (o.structure ? 2 : 0) + (o.id === u.targetId ? -1 : 0);
+        if (o.hero) {
+          // Finish off a hurt champion, and punish one that's hitting our buildings.
+          score -= (1 - o.hp / o.maxHp) * 6;
+          if (raiding(w, o, e.team)) score -= 3;
+        }
         if (score < bestScore) {
           bestScore = score;
           best = o;
@@ -289,4 +301,53 @@ export function moveToward(w: World, e: Entity, goal: Vec2, stopDist: number): v
   }
   u.moving = true;
   w.faceToward(e, dx, dz, 10);
+}
+
+/** `o` hit one of `team`'s buildings in the last 2.5 s. */
+function raiding(w: World, o: Entity, team: number): boolean {
+  for (const s of w.entities)
+    if (
+      s.alive &&
+      s.structure &&
+      s.team === team &&
+      s.status.hurtBy === o.id &&
+      w.time - (s.status.hurtAt ?? -99) < 2.5
+    )
+      return true;
+  return false;
+}
+
+/**
+ * Defense call-ups, computed once per tick per world: every building attacked in the last 2.5 s by a living enemy
+ * calls its nearest soldiers (within 40 m) onto the attacker - 3 for a tower, 6 for the keep, more if the attacker
+ * is a champion low on health (they smell blood). Returns the attacker this soldier was called onto, or 0.
+ */
+function defenderTarget(w: World, e: Entity): number {
+  const D = w.defense;
+  if (D.tick !== w.tick) {
+    D.tick = w.tick;
+    D.of.clear();
+    for (const s of w.entities) {
+      if (!s.alive || !s.structure || (s.structure.padIndex < 0 && s.structure.type !== "core")) continue;
+      if (w.time - (s.status.hurtAt ?? -99) > 2.5) continue;
+      const foe = s.status.hurtBy !== undefined ? w.get(s.status.hurtBy) : undefined;
+      if (!foe?.alive || foe.team === s.team || foe.structure) continue;
+      let n = s.structure.type === "core" ? 6 : 3;
+      if (foe.hero && foe.hp < foe.maxHp * 0.4) n += 2;
+      const near = w.entities
+        .filter(
+          (u) =>
+            u.alive &&
+            u.unit &&
+            !u.unit.guard &&
+            u.team === s.team &&
+            !D.of.has(u.id) &&
+            Math.hypot(u.transform.pos.x - s.transform.pos.x, u.transform.pos.z - s.transform.pos.z) < 40,
+        )
+        .sort((a, b) => w.dist(a, s) - w.dist(b, s) || a.id - b.id)
+        .slice(0, n);
+      for (const u of near) D.of.set(u.id, foe.id);
+    }
+  }
+  return D.of.get(e.id) ?? 0;
 }
