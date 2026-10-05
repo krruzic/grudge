@@ -26,5 +26,5 @@ def cut(sheet, names, cols, rows, out):
         sq[oy:oy+by1-by0,ox:ox+bx1-bx0,3]=soft[by0:by1,bx0:bx1]
         Image.fromarray(np.clip(sq,0,255).astype(np.uint8),"RGBA").resize((96,96),Image.LANCZOS).save(f"{out}/{n}.png")
 if __name__=="__main__":
-    names=["warlord_classic","warlord_bloodmoon","engineer_classic","engineer_frost","engineer_ember","raider_classic","raider_nightshade","summoner_classic","summoner_lich","duelist_classic","duelist_blackrose","warden_classic","warden_winterbark","herald_classic","herald_blackknight"]
+    names=["warlord_classic","warlord_bloodmoon","engineer_classic","engineer_frost","engineer_ember","raider_classic","raider_frostbite","summoner_classic","summoner_lich","duelist_classic","duelist_blackrose","warden_classic","warden_winterbark","herald_classic","herald_blackknight"]
     cut("icons_out.png",names,5,3,"/home/krruzic/Projects/grudge/assets/ui/costume_icons")

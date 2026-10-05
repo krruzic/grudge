@@ -161,6 +161,7 @@ const TRAILS: Record<string, number> = {
   warhornet: 0xff4a3a,
   lavenderfield: 0xd8a8ff,
   queencourier: 0xb070ff,
+  frostbite: 0x9ae8ff,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);

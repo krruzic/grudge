@@ -1,7 +1,7 @@
 import numpy as np, os, sys
 from PIL import Image, ImageDraw, ImageFilter
 sheet, out = sys.argv[1], sys.argv[2]
-names = ["raider_classic", "raider_blood", "raider_jackal", "raider_nightshade", "raider_sporeblight"]
+names = ["raider_classic", "raider_blood", "raider_jackal", "raider_frostbite", "raider_sporeblight"]
 eyes = [(255, 238, 165), (255, 165, 40), (250, 240, 205), (255, 222, 50), (205, 255, 120)]
 im = Image.open(sheet).convert("RGB")
 y0, y1 = int(im.height * 0.31), int(im.height * 0.68)
