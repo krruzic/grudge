@@ -6,6 +6,7 @@ import type { World } from "../world.ts";
 import type { Entity } from "../types.ts";
 import { abilities, addShield, allFx, mark as markOne, xpForDamage } from "../talents.ts";
 import { pipMarkMul, vantageMul } from "../hero/marksman.ts";
+import { curlBlocks, gritMul } from "../hero/vintner.ts";
 
 export interface DamageOpts {
   knockback?: number;
@@ -96,6 +97,10 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
       blocked = true;
       amount *= w.data.heroes.baseline.blockFrontalMul;
     }
+  } else if (target.hero?.curlUntil && fx !== undefined && fz !== undefined && curlBlocks(w, target, fx, fz)) {
+    // Gristle's Anvil Curl: the anvil on his back stops a hit from behind.
+    blocked = true;
+    amount *= w.heroDef(target.hero.type).hooks.curlMul ?? 0.15;
   }
   amount = Math.max(1, Math.round(amount));
 
@@ -284,6 +289,7 @@ function defenderScaling(w: World, src: Entity | null, target: Entity, amount: n
     const aws = abilities(w, target).a.fx?.armorWhileShield;
     if (aws) amount *= aws;
   }
+  if (target.hero?.grit) amount *= gritMul(w, target);
   return amount;
 }
 

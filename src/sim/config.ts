@@ -85,6 +85,8 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
+  /** Gristle's Switcheroo: he lands with a stomp where the partner stood. */
+  switchSlam?: { radius: number; damage: number; knockback: number; stun: number };
 }
 
 export interface TalentWith {
@@ -285,8 +287,9 @@ export interface HeroDef {
   /**
    * Team synergies by partner class (2v2 / team deathmatch partners only):
    *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   *   switchAlly - multiplier on the shield Gristle's Switcheroo gives a partner (> 1 also adds a speed burst).
    */
-  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
+  synergy?: { hexAlly?: Partial<Record<HeroClass, number>>; switchAlly?: Partial<Record<HeroClass, number>> };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

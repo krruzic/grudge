@@ -30,6 +30,7 @@ import {
   heaveDir,
   raiderFight,
   summonerFight,
+  vintnerFight,
   wardenFight,
   warlordFight,
   wrenAbilities,
@@ -190,6 +191,7 @@ const TDM_STYLE: Record<string, number> = {
   summoner: 3,
   friar: 4,
   herald: 4,
+  vintner: 0,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -774,6 +776,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     // Summoner: charged hex, bolt-range spacing.
     if (ab.b.kind === "hex") summonerFight(bot, w, me, target);
   }
+  // Gristle: grit stance, wall headbutts, pounds, Switcheroo rescues, anvil curl (bot/tactics.ts).
+  if (ab.b.kind === "headbutt") vintnerFight(bot, w, me, target);
   if (plan.healer && ab.a.kind === "combo") {
     // Melee healer: keep swinging at whatever is in reach.
     if (!target.hero) {

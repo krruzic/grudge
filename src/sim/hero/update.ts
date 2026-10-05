@@ -7,6 +7,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, bCooldown, frenzySpeed, onBUse } from "../talents.ts";
 import { canRake, trackStill, updatePip } from "./marksman.ts";
 import { detonateKegs, kegRocketTick, plentyTick } from "./friar.ts";
+import { crushTick, curlTick, gritTick, headbuttTick, startPound } from "./vintner.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -30,6 +31,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   graveTick(w, e, ab.r);
   if (def.hooks.vantageMul) trackStill(w, e);
   if (def.hooks.plentyRadius) plentyTick(w, e);
+  if (def.hooks.gritMax) gritTick(w, e);
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -97,6 +99,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   ) {
     h.action.power = 1 + cmd.charge * (h.action.name === "a" ? 0.8 : 0.6);
     if (cmd.charge >= 0.99) callout(w, e, "FULL POWER!");
+    if (def.hooks.poundRadius) startPound(w, e, cmd.charge);
   }
   if (h.action) {
     tickAction(w, e, ab);
@@ -470,6 +473,12 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
   } else if (a.kind === "kegrocket") {
     kegRocketTick(w, e, a);
+  } else if (a.kind === "curl") {
+    curlTick(w, e, a);
+  } else if (a.kind === "headbutt" && adef) {
+    headbuttTick(w, e, a, adef);
+  } else if (a.kind === "crush" && adef) {
+    crushTick(w, e, a, adef);
   } else if (a.kind === "combo" && a.t < a.hitAt) {
     const hit = ab.a.hits![a.combo];
     const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;

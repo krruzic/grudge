@@ -1024,6 +1024,122 @@
         }
       },
       "class": "support"
+    },
+    "vintner": {
+      "name": "Gristle",
+      "blurb": "Cellar Boar. Thick Skin: standing his ground (or blocking) builds Grit, up to 25% less damage taken; moving drains it.",
+      "health": "high",
+      "speed": "mid",
+      "damage": "mid",
+      "defaultBuild": "control",
+      "botRange": 2.4,
+      "hooks": {
+        "speedMul": 0.86,
+        "gritMax": 0.25,
+        "gritSeconds": 3,
+        "gritDrainSeconds": 1.5,
+        "gritStillSpeed": 1.2,
+        "poundRadius": 3.2,
+        "poundDamage": 70,
+        "poundKnockback": 11,
+        "poundStun": 0.35,
+        "poundDur": 0.72,
+        "poundHitAt": 0.4,
+        "curlSeconds": 1.2,
+        "curlDur": 0.36,
+        "curlSpeed": 9,
+        "curlMul": 0.15
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 56,
+              "range": 2.6,
+              "arcDeg": 140,
+              "dur": 0.56,
+              "hitAt": 0.3,
+              "lunge": 1.0,
+              "knockback": 2
+            },
+            {
+              "damage": 90,
+              "range": 2.9,
+              "arcDeg": 170,
+              "dur": 0.74,
+              "hitAt": 0.42,
+              "lunge": 1.4,
+              "knockback": 6
+            }
+          ],
+          "comboWindow": 0.45,
+          "anim": "attack_a",
+          "bot": "fight",
+          "variance": 0.1
+        },
+        "b": {
+          "kind": "headbutt",
+          "anim": "headbutt",
+          "range": 6,
+          "damage": 60,
+          "splashDamage": 50,
+          "stunSeconds": 1.1,
+          "knockback": 8,
+          "dur": 0.62,
+          "hitAt": 0.4,
+          "cooldown": 8,
+          "bot": "never",
+          "botRange": 5.5,
+          "callout": "HEADBUTT",
+          "variance": 0.1
+        },
+        "r": {
+          "kind": "switcheroo",
+          "anim": "cast",
+          "range": 8,
+          "heal": 120,
+          "seconds": 3,
+          "speedMul": 1.3,
+          "slowSeconds": 2,
+          "stunSeconds": 0.45,
+          "dur": 0.5,
+          "hitAt": 0.24,
+          "cooldown": 12,
+          "bot": "never",
+          "callout": "SWITCHEROO"
+        },
+        "z": {
+          "kind": "crush",
+          "anim": "crush",
+          "radius": 4.4,
+          "damage": 130,
+          "knockback": 12,
+          "stunSeconds": 1.2,
+          "structureDamage": 400,
+          "dur": 2.0,
+          "hitAt": 0.55,
+          "bot": "fight",
+          "botRange": 3.5,
+          "callout": "CRUSH SEASON \u00b7 THREE SLAMS"
+        }
+      },
+      "botPlan": {
+        "retreatHp": 0.25,
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "class": "tank",
+      "synergy": {
+        "switchAlly": {
+          "marksman": 1.6,
+          "caster": 1.6
+        }
+      }
     }
   }
 }
