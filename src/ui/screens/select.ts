@@ -369,7 +369,7 @@ function drawCompactSeat(
   // The champion's live stage in the portrait frame, like the big cards.
   if (showHero) drawStage(s, ctx, i, sl, team, x + 4, y + 4, ps, ps, preview);
   else s.portraits?.drop(i);
-  if (sl.ready && human) waxSeal(ctx, x + ps, y + ps - 2, 5, "#a8141a", "combo");
+  if (sl.ready && human) waxSeal(ctx, x + ps, y + ps - 2, 5, chipColor(i, false), "combo");
   // Costumes: small clickable icons under the name for a human's own card, while their hand is over it or they
   // flick the C-stick (CPU cards keep that spot for SIT HERE).
   const own = s.cursors?.cursors[i];
@@ -529,7 +529,7 @@ function drawSeatCard(
   if (sitHere) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
   if (sl.ready && !commander && human) {
     ctx.save();
-    waxSeal(ctx, fx + fw - 9, fy + ih - 8, 7, "#a8141a", "combo");
+    waxSeal(ctx, fx + fw - 9, fy + ih - 8, 7, chipColor(i, false), "combo");
     ctx.restore();
   }
 }
