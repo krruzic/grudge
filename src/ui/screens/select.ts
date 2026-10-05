@@ -61,16 +61,17 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
   ribbon(ctx, 8 + cw / 2, 4, cw, 11, cam, 0.5);
   s.hit("camera", 4, 1, cw + 8, 17);
 
-  drawRosterRow(s, ctx, W);
+  // The roster takes one row of cards, two once there are more than nine champions; seats start below it.
+  const top = drawRosterRow(s, ctx, W) + 6;
 
   const eight = s.mode === "tdm" || s.mode === "ffadm";
-  if (eight) drawTdmSeats(s, ctx, W, 96, floorY - 102);
+  if (eight) drawTdmSeats(s, ctx, W, top, floorY - top - 6);
   // Seat cards: 2v2 orders them blue, blue, red, red.
   const order = eight ? [] : s.mode === "ffa" ? [0, 1, 2, 3] : s.twoVtwo ? [0, 2, 1, 3] : [0, 1];
   const n = order.length;
   const bw = s.twoVtwo ? Math.min(72, Math.floor((W - 30) / n) - 14) : Math.min(118, Math.floor(W * 0.3));
   const bgap = s.twoVtwo ? Math.floor((W - bw * n) / (n + 1)) : Math.floor((W - bw * 2) / 3);
-  const by = 96;
+  const by = top;
   const bh = floorY - by - 6;
   order.forEach((i, k) => drawSeatCard(s, ctx, i, bgap + k * (bw + bgap), by, bw, bh));
   if (!s.twoVtwo) drawAddCpuCards(s, ctx, W, by);
@@ -110,24 +111,33 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
   if (s.openHint && !s.peer) drawOpenHint(s, ctx, W);
 }
 
-/** One card per champion; a card picked by a seat takes that team's colour (gold when picked by both). */
-function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): void {
-  const n = s.roster.length;
-  // Cards shrink to fit the roster (42 px wide, never below 26).
-  const sw = Math.max(26, Math.min(42, Math.floor((W - 24 - (n - 1) * 6) / Math.max(1, n))));
+/**
+ * One card per champion (one row, or two rows once the roster passes nine); a card picked by a seat takes that
+ * team's colour. Returns the y where the roster ends.
+ */
+function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): number {
+  const all = s.roster.length;
+  const rows = all > 9 ? 2 : 1;
+  const per = Math.ceil(all / rows);
+  // Cards shrink to fit a row (42 px wide, never below 26; a bit smaller on two rows).
+  const sw = Math.max(24, Math.min(rows > 1 ? 30 : 42, Math.floor((W - 24 - (per - 1) * 6) / Math.max(1, per))));
   const sh = Math.round((sw * 54) / 42);
-  const gap = Math.min(12, Math.floor((W - 24 - n * sw) / Math.max(1, n - 1)));
-  const gx = Math.round((W - (n * sw + (n - 1) * gap)) / 2);
-  const gy = 25;
+  const gap = Math.min(12, Math.floor((W - 24 - per * sw) / Math.max(1, per - 1)));
+  const rowGap = 4;
   s.roster.forEach((type, k) => {
-    const x = gx + k * (sw + gap);
+    const row = Math.floor(k / per);
+    const inRow = Math.min(per, all - row * per);
+    const col = k - row * per;
+    const gx = Math.round((W - (inRow * sw + (inRow - 1) * gap)) / 2);
+    const x = gx + col * (sw + gap);
+    const gy = 23 + row * (sh + rowGap);
     const pickedBy = [0, 1, 2, 3]
       .filter((i) => (i < 2 || (s.twoVtwo && s.championSeat(i))) && s.slots[i]?.ready && s.slots[i].hero === type)
       .map((i) => s.teamOf(i));
     const hot = hovered(s, `hero:${type}`);
     s.hit(`hero:${type}`, x - 2, gy - 2, sw + 4, sh + 4);
     // Chips placed on this hero sit around this point (see Screens.draw).
-    s.shieldAt.set(type, { x: x + sw / 2, y: gy + sh - 22 });
+    s.shieldAt.set(type, { x: x + sw / 2, y: gy + sh * 0.6 });
     const icon = s.portraits?.icon(type);
     const tilt = pickedBy.length || hot ? 0 : k % 2 ? 0.04 : -0.04;
     // The pin shows whose seals sit on this champion (one wedge each), else the hands pointing at it.
@@ -157,6 +167,7 @@ function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): vo
       );
     });
   });
+  return 23 + rows * (sh + rowGap);
 }
 
 /** 1v1: "+ ADD CPU" cards at the sides switch to 2v2 (not for online guests). */
