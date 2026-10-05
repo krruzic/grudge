@@ -11,6 +11,7 @@ import { harpoonerTick, slideTick } from "./harpooner.ts";
 import { gustTick, manuscriptRecast, recallSwarm, scribeTick } from "./scribe.ts";
 import { chainSwingTick, tideTick, whirlTick } from "./wreckwitch.ts";
 import { squareInput, toppleLookout } from "./architect.ts";
+import { crushTick, curlTick, gritTick, headbuttTick, startPound } from "./vintner.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -38,6 +39,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (def.hooks.wetSeconds) harpoonerTick(w, e);
   if (def.hooks.runeMax) scribeTick(w, e);
   if (def.hooks.tideMax) tideTick(w, e);
+  if (def.hooks.gritMax) gritTick(w, e);
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -109,6 +111,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   ) {
     h.action.power = 1 + cmd.charge * (h.action.name === "a" ? 0.8 : 0.6);
     if (cmd.charge >= 0.99) callout(w, e, "FULL POWER!");
+    if (def.hooks.poundRadius) startPound(w, e, cmd.charge);
   }
   if (h.action) {
     tickAction(w, e, ab);
@@ -496,6 +499,12 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     gustTick(w, e, a);
   } else if (a.kind === "chainswing") {
     chainSwingTick(w, e, a);
+  } else if (a.kind === "curl") {
+    curlTick(w, e, a);
+  } else if (a.kind === "headbutt" && adef) {
+    headbuttTick(w, e, a, adef);
+  } else if (a.kind === "crush" && adef) {
+    crushTick(w, e, a, adef);
   } else if (a.kind === "combo" && a.t < a.hitAt) {
     const hit = ab.a.hits![a.combo];
     const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;

@@ -298,6 +298,10 @@ export interface HeroState {
   tideHitAt?: number;
   /** Index of the last anchor-whirl sweep of the current hold. */
   whirlN?: number;
+  /** Gristle's Thick Skin (hero/vintner.ts): 0..1 of his max damage reduction. */
+  grit?: number;
+  /** Gristle's Anvil Curl: hits from behind are blocked until then. */
+  curlUntil?: number;
 }
 
 export interface UnitState {

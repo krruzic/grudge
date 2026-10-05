@@ -10,6 +10,7 @@ import { bellySlide } from "./harpooner.ts";
 import { startGust } from "./scribe.ts";
 import { startChainSwing } from "./wreckwitch.ts";
 import { owlHop } from "./architect.ts";
+import { startCurl } from "./vintner.ts";
 import { begin, callout, ready } from "./common.ts";
 
 /** Warlord HEAVE target: the nearest stunned enemy (hero or soldier) within reach in front of him. */
@@ -101,6 +102,7 @@ export function combo(w: World, e: Entity, cmd: Command): boolean {
     if (ab.r.kind === "erratum" && startGust(w, e, cmd)) return true;
     if (ab.b.kind === "dredge" && startChainSwing(w, e, cmd)) return true;
     if (ab.b.kind === "fort" && owlHop(w, e, cmd)) return true;
+    if (ab.b.kind === "headbutt" && startCurl(w, e, cmd)) return true;
     if (ab.r.kind === "works" && onWorks(w, e)) {
       for (let d = 11; d >= 5; d -= 1) {
         if (w.startJump(e, t.pos.x + mx * d, t.pos.z + mz * d, 0.9, 4)) {

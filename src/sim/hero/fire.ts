@@ -12,6 +12,7 @@ import { fireHarpoon, riptide, tongueLash } from "./harpooner.ts";
 import { fireErratum, fireInk, fireManuscript, fireSwarm } from "./scribe.ts";
 import { fireBilge, fireDavyGrip, fireDredge, tideOnHit } from "./wreckwitch.ts";
 import { chillTargets, fireDome, fireFort, fireLookout, throwSquare } from "./architect.ts";
+import { crushSlam, fireHeadbutt, firePound, fireSwitch } from "./vintner.ts";
 import { fireLeap, fireQuake, fireSlam } from "./kinds/melee.ts";
 import { fireBanner, fireRally, fireWarcry } from "./kinds/command.ts";
 import { fireBlink, fireHex, fireReach, fireRootcage, fireShoot, fireStealth, fireSummon } from "./kinds/spells.ts";
@@ -85,6 +86,10 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
     fireHeave(w, e, a, mul);
     return;
   }
+  if (a.kind === "pound") {
+    firePound(w, e, a, mul);
+    return;
+  }
 
   const def = ab[a.name];
   switch (a.kind) {
@@ -150,6 +155,13 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return fireLookout(w, e, a, def);
     case "dome":
       return fireDome(w, e, a, def, mul);
+    // vintner (Gristle)
+    case "headbutt":
+      return fireHeadbutt(w, e, a, def);
+    case "switcheroo":
+      return fireSwitch(w, e, a, def);
+    case "crush":
+      return crushSlam(w, e, a, def, 0);
     // spells / mobility
     case "shoot":
       return fireShoot(w, e, a, def, mul);

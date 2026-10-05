@@ -13,4 +13,5 @@ import "./harpooner";
 import "./scribe";
 import "./wreckwitch";
 import "./architect";
+import "./vintner";
 import "../fx/costumeSkins";

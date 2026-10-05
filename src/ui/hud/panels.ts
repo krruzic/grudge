@@ -305,6 +305,7 @@ function panelKey(
     local && h.picks.length ? Math.floor(now * 3) % 3 : -1,
     h.pip ? 1 : 0,
     vantageOn(w, e) ? 1 : 0,
+    gritStep(e),
   ].join("|");
 }
 
@@ -379,6 +380,7 @@ function paintPlayerPanel(
     ringMeter(ctx, zx, y + 5, 6.4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
     padButton(ctx, zx, y + 5, 4.4, full ? "#e8c030" : PAD.z, "Z", !full);
     if (vantageOn(w, e)) drawVantage(ctx, ax(px + 39), y);
+    else if (gritStep(e)) drawGrit(ctx, ax(px + 39), y, gritStep(e) / 4);
     px += 42;
   }
   const cfgXp = w.data.talents?.xp;
@@ -430,6 +432,38 @@ function drawVantage(ctx: CanvasRenderingContext2D, vx: number, y: number): void
   ctx.lineTo(vx - 2.2, y + 5);
   ctx.closePath();
   ctx.fill();
+}
+
+/** Gristle's Grit in quarters (0 = none). */
+function gritStep(e: Entity): number {
+  const g = e.hero?.grit;
+  return g ? Math.ceil(g * 4 - 0.01) : 0;
+}
+
+/** Grey stone shield beside the Z ring, filling from the bottom with Gristle's Grit (gold rim when full). */
+function drawGrit(ctx: CanvasRenderingContext2D, vx: number, y: number, k: number): void {
+  const shield = (r: number) => {
+    ctx.beginPath();
+    ctx.moveTo(vx - r, y + 5 - r * 1.1);
+    ctx.lineTo(vx + r, y + 5 - r * 1.1);
+    ctx.lineTo(vx + r, y + 5 + r * 0.2);
+    ctx.lineTo(vx, y + 5 + r * 1.3);
+    ctx.lineTo(vx - r, y + 5 + r * 0.2);
+    ctx.closePath();
+  };
+  ctx.fillStyle = k >= 1 ? "#e8c030" : INK;
+  shield(3.4);
+  ctx.fill();
+  ctx.fillStyle = "#3a3438";
+  shield(2.5);
+  ctx.fill();
+  ctx.save();
+  shield(2.5);
+  ctx.clip();
+  ctx.fillStyle = k >= 1 ? "#f0e8d8" : "#c8c2b8";
+  const top = y + 5 + 2.5 * 1.3 - k * 2.5 * 2.4;
+  ctx.fillRect(vx - 3, top, 6, 8);
+  ctx.restore();
 }
 
 // ── Morph meter and learn cards (anchored under a player panel) ──

@@ -301,6 +301,11 @@
       "architect": {
         "hp": 1.1,
         "damage": 1.15
+      },
+      "vintner": {
+        "hp": 1.15,
+        "speed": 1.08,
+        "damage": 1.22
       }
     },
     "speedMul": 1.2,

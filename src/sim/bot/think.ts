@@ -32,6 +32,7 @@ import {
   raiderFight,
   summonerFight,
   scribeFight,
+  vintnerFight,
   wardenFight,
   warlordFight,
   witchFight,
@@ -200,6 +201,7 @@ const TDM_STYLE: Record<string, number> = {
   harpooner: 3,
   wreckwitch: 0,
   architect: 3,
+  vintner: 0,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -794,6 +796,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
   }
   // Wreck Witch: tide-aware engage, Dredge / Bilge / whirl / Davy's Grip (bot/tactics.ts).
   if (ab.b.kind === "dredge" && witchFight(bot, w, me, target)) return true;
+  // Gristle: grit stance, wall headbutts, pounds, Switcheroo rescues, anvil curl (bot/tactics.ts).
+  if (ab.b.kind === "headbutt") vintnerFight(bot, w, me, target);
   if (plan.healer && ab.a.kind === "combo") {
     // Melee healer: keep swinging at whatever is in reach.
     if (!target.hero) {

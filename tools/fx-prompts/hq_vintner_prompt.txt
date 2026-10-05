@@ -1,0 +1,6 @@
+The FIRST image is a 2x2 grid of four small, low-resolution, blurry visual-effect sprites from our hand-painted stylised fantasy action game, all ground decals seen from directly above. Repaint the image as a crisp HIGH-RESOLUTION version with the SAME 2x2 layout: each of the four sprites stays centred in its own quadrant and keeps its colours and design, but is redrawn with sharp clean edges and rich painted detail, filling about 88% of its quadrant with an even margin, never touching or crossing into another quadrant. Same soft hand-painted style. No text, no borders, no drop shadows, no black outlines.
+Top-left: a round glossy puddle of spilled red-purple wine seen from above, with a darker rim, a few floating grape skins and small droplets around the edge.
+Top-right: a ROUND (circular, not square) ground crater seen from above: cracked dry brown earth broken into slabs radiating from a sunken centre, red-purple wine seeping into the cracks, the outer edge fading into scattered pebbles and dust.
+Bottom-left: a big star-shaped splatter of crushed red-purple grapes seen from above, with grape skins, seeds and droplets flung outward.
+Bottom-right: two thick curved golden arrows chasing each other around a circle, a swap symbol, seen from above, polished gold with warm highlights.
+Plain flat pure green background (#00FF00) everywhere outside the sprites.

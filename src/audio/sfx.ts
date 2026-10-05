@@ -42,6 +42,8 @@ const VOICE_DUR: Record<string, number> = { attack: 0.55, big: 0.95, hurt: 0.6, 
 /** Champions voiced at runtime from another champion's lines, pitch-cast (rate) and with longer lines (Hollin is
  * Wren's voice pack an older, lower register; her own vo.* files can replace this once the CC0 packs are fetched). */
 const VOICE_CAST: Record<string, [string, number, number]> = { scribe: ["marksman", 0.84, 1.15] };
+/** Champions whose voices are pitched down far enough that their lines need a little longer (Gristle at 0.7). */
+const VOICE_LEN: Record<string, number> = { vintner: 1.2 };
 /** Most sample voices at once; past this only priority sounds start. */
 const MAX_VOICES = 56;
 
@@ -251,6 +253,7 @@ export class Audio {
     if (!hero) return;
     const cast = VOICE_CAST[hero];
     o = { dur: (VOICE_DUR[line] ?? 1) * (cast?.[2] ?? 1), ...(cast ? { rate: cast[1] } : {}), ...o };
+    o = { dur: (VOICE_DUR[line] ?? 1) * (VOICE_LEN[hero] ?? 1), ...o };
     const key = `${o.id ?? hero}:${line === "death" ? "d" : "v"}`;
     const now = this.now;
     if ((this.vocalAt.get(key) ?? 0) > now) return;
@@ -369,6 +372,7 @@ export class Audio {
       scribe: ["ui.page", 1],
       wreckwitch: ["chain.rattle", 0.9],
       architect: ["stig.wrench", 0.85],
+      vintner: ["hammer", 0.6],
       herald: ["cloth.flap", 1],
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];

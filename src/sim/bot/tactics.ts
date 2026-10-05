@@ -5,6 +5,7 @@
 //   wrenShoot      fully charged Vantage power shots from max range, standing still (high ground when close by)
 //   architectFight Hoot: Lookout under him when a champion closes in, hop back up onto it, charged square throws at
 //                  range, Snow Forts across a ranged champion's line of fire (or between him and a chaser)
+//   vintnerFight   Gristle: grit stance, wall headbutts, pounds, Switcheroo rescues, anvil curl vs shots
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
@@ -13,6 +14,7 @@ import { inOwnPuddle } from "../hero/friar.ts";
 import { nearWall } from "../hero/harpooner.ts";
 import { erratumSpots } from "../hero/scribe.ts";
 import { fortCount, myLookout, onLookout } from "../hero/architect.ts";
+import { switchTarget } from "../hero/vintner.ts";
 
 const isMelee = (w: World, o: Entity): boolean => !!o.hero && (w.heroDef(o.hero.type).botRange ?? 1.8) <= 3;
 
@@ -681,4 +683,105 @@ export function architectEscape(bot: Bot, w: World, me: Entity): void {
   const l = Math.hypot(dx, dz) || 1;
   bot.wantB = true;
   bot.wantPlace = { x: (dx / l) * 1.6, z: (dz / l) * 1.6 };
+}
+
+/** Something solid within `reach` m behind `o` along (dx, dz): a cliff, wall, water edge or structure. */
+function wallBehind(w: World, o: Entity, dx: number, dz: number, reach: number): boolean {
+  const p = o.transform.pos;
+  const y = o.transform.y;
+  for (let k = 1; k <= Math.ceil(reach / 0.5); k++) {
+    const x = p.x + dx * (o.radius + k * 0.5);
+    const z = p.z + dz * (o.radius + k * 0.5);
+    const h = w.terrain.heightAt(x, z);
+    if (!Number.isFinite(h) || h - y > (o.hero?.stepHeight ?? 0.75)) return true;
+    if (w.mapEvents.sealed(p.x, p.z, x, z)) return true;
+    for (const s of w.entities)
+      if (s.alive && s.structure && Math.hypot(s.transform.pos.x - x, s.transform.pos.z - z) < s.radius) return true;
+  }
+  return false;
+}
+
+/**
+ * Gristle: stands his ground in melee (Grit), Headbutts champions with a wall close behind them (or that are
+ * running away low), pounds with a charged A when a champion or a crowd is at his feet, Switcheroos a hurt partner
+ * out of trouble (or, alone and winning, jukes a fleeing champion back past him), and curls behind his anvil when a
+ * champion is about to hit him from range.
+ */
+export function vintnerFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  const h = me.hero!;
+  const ab = abilities(w, me);
+  const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
+  const p = me.transform.pos;
+  // Switcheroo: a partner below 45% with an enemy champion on them, or below 25% anywhere in reach.
+  const ally = switchTarget(w, me);
+  if (ally && rdy("r") && !h.action) {
+    const pressed = foesNear(w, ally, 5).length > 0;
+    if ((pressed && ally.hp < ally.maxHp * 0.45) || ally.hp < ally.maxHp * 0.25) {
+      bot.wantR = true;
+      aimAt(bot, me, ally);
+      return;
+    }
+  }
+  if (!target?.alive) return;
+  const d = w.dist(me, target) - target.radius;
+  const dx = target.transform.pos.x - p.x;
+  const dz = target.transform.pos.z - p.z;
+  const l = Math.hypot(dx, dz) || 1;
+  if (target.hero) {
+    // Headbutt into a wall (2.5 m behind them at most), or chase down a low runner.
+    const wall = wallBehind(w, target, dx / l, dz / l, 2.5);
+    const runner = target.hp < target.maxHp * 0.3 && d > 2.5;
+    const gap = d > 3.2 && bot.rand() < 0.12;
+    if (
+      rdy("b") &&
+      !h.action &&
+      d < (ab.b.range ?? 6) - 0.5 &&
+      (wall || runner || gap) &&
+      bot.rand() < 0.6 * bot.skill
+    ) {
+      bot.wantB = true;
+      aimAt(bot, me, target);
+      return;
+    }
+    // Alone and winning: juke a fleeing champion back past him (toward our side of the fight).
+    if (!ally && rdy("r") && !h.action && d > 3 && d < (ab.r.range ?? 8) * 0.7 && target.hp < target.maxHp * 0.35) {
+      bot.wantR = true;
+      aimAt(bot, me, target);
+      return;
+    }
+    // Anvil Curl: a ranged champion lining up a shot, or a big swing coming - put the anvil toward it.
+    const ta = target.hero.action;
+    const ranged = !isMelee(w, target);
+    if (
+      rdy("dodge") &&
+      !h.action &&
+      ta &&
+      ta.name !== "dodge" &&
+      !ta.fired &&
+      ((ranged && d < 12) || (ta.name === "z" && d < 4)) &&
+      bot.rand() < 0.35 * bot.skill
+    ) {
+      bot.wantDodge = true;
+      bot.wantFace = { x: -dx / l, z: -dz / l };
+      return;
+    }
+    // Pound: hold A through the exchange and let it go at full charge with them at his feet.
+    // (every other 4 s window, so it stays a punctuation of the combo rather than replacing it)
+    if (d < 2.6 && (h.grit ?? 0) > 0.5 && Math.floor(w.time / 4) % 2 === 0) {
+      bot.wantCharge = "a";
+      bot.chargeAimId = target.id;
+      bot.chargeRange = 2.8 + target.radius;
+    }
+  } else if (d < 2.6 && rdy("a")) {
+    // A pack of soldiers at his feet: pound the lot.
+    const r = w.heroDef(h.type).hooks.poundRadius ?? 3.2;
+    if (w.enemiesNear(me, r, (o) => !!o.unit).length >= 3) {
+      bot.wantCharge = "a";
+      bot.chargeAimId = target.id;
+      bot.chargeRange = r;
+    }
+  }
+  // Stand your ground: once in reach, stop walking so Grit builds (turn to the target instead).
+  const reach = (ab.a.hits?.[0].range ?? 2.6) - 0.3;
+  if (d < reach && !bot.wantDodge) bot.goal = { x: p.x, z: p.z };
 }

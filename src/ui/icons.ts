@@ -504,6 +504,20 @@ const FILLS: Record<string, Draw> = {
     c.lineTo(0.15, -0.55);
     c.closePath();
   },
+  anvil: (c) => {
+    c.moveTo(-0.95, -0.45);
+    c.lineTo(0.75, -0.45);
+    c.lineTo(0.75, -0.1);
+    c.quadraticCurveTo(0.35, -0.05, 0.3, 0.2);
+    c.lineTo(0.3, 0.45);
+    c.lineTo(0.6, 0.75);
+    c.lineTo(-0.6, 0.75);
+    c.lineTo(-0.3, 0.45);
+    c.lineTo(-0.3, 0.2);
+    c.quadraticCurveTo(-0.35, -0.05, -0.55, -0.12);
+    c.quadraticCurveTo(-0.85, -0.2, -0.95, -0.45);
+    c.closePath();
+  },
   brewfest: (c) => {
     c.moveTo(-0.6, -0.55);
     c.lineTo(0.35, -0.55);
@@ -645,6 +659,7 @@ const TINT: Record<string, string> = {
   fort: "#d8f4ff",
   lookout: "#a8e0ff",
   dome: "#c8f0ff",
+  anvil: "#b8b4b0",
 };
 // Brindle's kinds reuse the closest engravings until the painted glyph strip loads.
 STROKES.harpoon = STROKES.shoot;

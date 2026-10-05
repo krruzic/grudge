@@ -17,6 +17,7 @@ hero/               update.ts (hero controller), start.ts (begin an ability), fi
                     boomerangs.ts, marksman.ts + friar.ts + scribe.ts (per-hero mechanics)
                     boomerangs.ts, marksman.ts + friar.ts + wreckwitch.ts (per-hero mechanics)
                     boomerangs.ts, marksman.ts + friar.ts + architect.ts (per-hero mechanics)
+                    boomerangs.ts, marksman.ts + friar.ts + vintner.ts (per-hero mechanics)
 talents.ts          talent trees, xp/levels, effective abilities (hero.ab); talents/ effects, missiles, triggers
 units.ts            soldier AI                       structures.ts  pads/build/upgrade/spawnUnit
 structures/towers.ts tower behaviour                 arena.ts + arena/  relic, waves, shop/bombs, cannon, ogre

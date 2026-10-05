@@ -1,0 +1,7 @@
+The image shows the existing ability glyph set of a fantasy game (white vector glyphs on black). Design FOUR more minimal ICON GLYPHS in EXACTLY this clean flat VECTOR style: SOLID FILLED pure WHITE silhouettes on a pure BLACK background, like the club, fist, cloud and tombstone in the reference: big solid white shapes with only a few thin black cut lines for key details, NOT outline drawings, no gradients, no shading, no texture, like a polished icon font. Arrange them as a single horizontal row of 4 equal SQUARE cells on one continuous pure black background (no white gaps, no borders, no grid lines), each glyph centred in its cell with generous padding. NO TEXT, NO LETTERS, NO NUMBERS.
+
+Left to right:
+1. a solid blacksmith's ANVIL head on a short handle (an anvil hammer), swung downward, with two curved motion swoosh lines behind it and a burst of three short impact lines under its face.
+2. a solid side-view BOAR HEAD with a big curved tusk, lowered and charging to the right, with three horizontal speed lines behind it and a small jagged impact star at its snout.
+3. two thick solid curved ARROWS chasing each other in a circle (a swap symbol), with a small solid shield shape in the middle.
+4. a big solid ANVIL slamming down onto the ground with three expanding curved shockwave arcs on each side and a few cracks under it.

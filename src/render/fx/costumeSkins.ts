@@ -100,6 +100,10 @@ const TINTS: Record<string, Record<number, number>> = {
   snowy: { 0xa8e8ff: 0xd8b8ff, 0xd8f4ff: 0xf2e6ff, 0xe8fbff: 0xf6eeff, 0xe8f6ff: 0xf2e8ff },
   temple: { 0xa8e8ff: 0x58e0b8, 0xd8f4ff: 0xb8f0d8, 0xe8fbff: 0xd8fff0, 0xe8f6ff: 0xc8f0e0 },
   clockwork: { 0xa8e8ff: 0xffb850, 0xd8f4ff: 0xffe0a0, 0xe8fbff: 0xfff0c8, 0xe8f6ff: 0xd8d0c8 },
+  // Gristle (vintner): the wine-pink hit flashes become harvest gold, forge orange and frost blue.
+  harvestking: { 0xb0305a: 0xe0a020, 0xffd8e0: 0xfff0b0, 0xffd0e0: 0xfff0c0 },
+  forgemaster: { 0xb0305a: 0xff6a10, 0xffd8e0: 0xffc080, 0xffd0e0: 0xffd090, 0xfff0e0: 0xffd8b0, 0xffe080: 0xff9a40 },
+  icewine: { 0xb0305a: 0x80c8ff, 0xffd8e0: 0xe0f0ff, 0xffd0e0: 0xe8f4ff, 0xffe080: 0xc8e8ff, 0xffe8a0: 0xd0f0ff },
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
@@ -123,6 +127,9 @@ const TRAILS: Record<string, number> = {
   snowy: 0xd8b8ff,
   temple: 0x58d8b8,
   clockwork: 0xffc060,
+  harvestking: 0xe0a020,
+  forgemaster: 0xff6a10,
+  icewine: 0x80c8ff,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);

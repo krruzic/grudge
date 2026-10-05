@@ -20,6 +20,9 @@ export const ONE_SHOT = new Set([
   "gust",
   "swing",
   "build",
+  "headbutt",
+  "crush",
+  "pound",
 ]);
 /** Substitute clip when a rig lacks one (followed up to 3 times). */
 export const ANIM_FALLBACK: Record<string, string> = {
@@ -31,6 +34,9 @@ export const ANIM_FALLBACK: Record<string, string> = {
   swing: "dodge",
   whirl: "attack_c",
   build: "slam",
+  headbutt: "attack_b",
+  crush: "slam",
+  pound: "slam",
 };
 /** Ability kind -> clip; unlisted kinds play "cast". */
 export const KIND_ANIM: Record<string, string> = {
@@ -88,4 +94,8 @@ export const KIND_ANIM: Record<string, string> = {
   davygrip: "slam",
   chainswing: "swing",
   none: "idle",
+  headbutt: "headbutt",
+  switcheroo: "cast",
+  crush: "crush",
+  pound: "pound",
 };

@@ -1512,6 +1512,118 @@
           }
         }
       ]
+    },
+    "vintner": {
+      "r": [
+        {
+          "id": "stompin",
+          "name": "STOMP IN",
+          "desc": "YOU LAND FROM THE SWAP WITH A STOMP: 60 TO FOES WITHIN 2.6M OF YOUR PARTNER'S OLD SPOT, KNOCKING THEM BACK AND STUNNING 0.4S.",
+          "fx": {
+            "switchSlam": {
+              "radius": 2.6,
+              "damage": 60,
+              "knockback": 8,
+              "stun": 0.4
+            }
+          }
+        },
+        {
+          "id": "houserules",
+          "name": "HOUSE RULES",
+          "desc": "SWITCHEROO REACHES 3M FARTHER, THE SHIELD HOLDS 200 AND IT COMES BACK 3S SOONER.",
+          "add": {
+            "range": 3,
+            "heal": 80,
+            "cooldown": -3
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "batteringram",
+          "name": "BATTERING RAM",
+          "desc": "HEADBUTT RUSHES 2M FARTHER AND A WALL PIN STUNS 0.4S LONGER.",
+          "combo": "WITH STOMP IN: PINNING A CHAMPION TO A WALL HITS FOR +40.",
+          "add": {
+            "range": 2,
+            "stunSeconds": 0.4
+          },
+          "with": [
+            {
+              "id": "stompin",
+              "add": {
+                "splashDamage": 40
+              }
+            }
+          ]
+        },
+        {
+          "id": "thickhead",
+          "name": "THICK HEAD",
+          "desc": "WHILE YOU HEADBUTT AND FOR 2.5S AFTER YOU TAKE 40% LESS AND CAN'T BE STUNNED OR KNOCKED BACK.",
+          "combo": "WITH HOUSE RULES: HEADBUTT COMES BACK 2S SOONER.",
+          "fx": {
+            "armorOnUse": {
+              "mul": 0.6,
+              "seconds": 2.5,
+              "cc": true
+            }
+          },
+          "with": [
+            {
+              "id": "houserules",
+              "add": {
+                "cooldown": -2
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "ironhide",
+          "name": "IRON HIDE",
+          "desc": "GRIT BUILDS IN 1S INSTEAD OF 2S AND HOLDS UP TO 35% LESS DAMAGE.",
+          "fx": {
+            "grit": {
+              "max": 0.35,
+              "seconds": 1
+            }
+          }
+        },
+        {
+          "id": "trample",
+          "name": "TRAMPLE",
+          "desc": "YOUR OVERHEAD FINISHER HITS 25% HARDER, KNOCKS FOES FARTHER AND STUNS THEM 0.5S.",
+          "fx": {
+            "finisherBonus": {
+              "damage": 1.25,
+              "knock": 1.4
+            },
+            "finisherStun": 0.5
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "vintageyear",
+          "name": "VINTAGE YEAR",
+          "desc": "CRUSH SEASON+: SLAMS 1M WIDER, AND THE LAST ONE LEAVES A POOL OF CRUSHED GRAPES FOR 4S: FOES IN IT ARE SLOWED 45% AND TAKE 22 PER SECOND.",
+          "add": {
+            "radius": 1
+          },
+          "fx": {
+            "zoneAfter": {
+              "seconds": 4,
+              "dps": 22,
+              "slowMul": 0.55,
+              "style": "wine",
+              "radius": 4.2
+            }
+          }
+        }
+      ]
     }
   },
   "order": [

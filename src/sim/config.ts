@@ -114,6 +114,10 @@ export interface TalentFx {
   collapse?: { radius: number; damage: number; slowMul?: number; slowSeconds?: number; stun?: number };
   /** Architect: the Lookout shoots icicles at the nearest foe while it stands. */
   icicles?: { damage: number; range: number; cooldown: number };
+  /** Gristle's Thick Skin talent: faster, bigger Grit. */
+  grit?: { max: number; seconds: number };
+  /** Gristle's Switcheroo: he lands with a stomp where the partner stood. */
+  switchSlam?: { radius: number; damage: number; knockback: number; stun: number };
 }
 
 export interface TalentWith {
@@ -348,6 +352,7 @@ export interface HeroDef {
    *   swarmAlly - multiplier on a partner's next hit on a foe in this champion's bee swarm (Abbess Hollin);
    *   dredgeStack - Tide stacks Mother Kelp gains when Dredge catches a foe already slowed or rooted;
    *   lookout     - Professor Hoot's Lookout footprint (cells per side) with a partner of that class;
+   *   switchAlly - multiplier on the shield Gristle's Switcheroo gives a partner (> 1 also adds a speed burst).
    *   (each new champion documents its own entries in its hero module).
    */
   synergy?: Partial<Record<string, Partial<Record<HeroClass, number>>>>;
