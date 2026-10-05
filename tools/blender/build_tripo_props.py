@@ -55,6 +55,8 @@ PROPS = {
     "wallstone@suntotem": {"static": True, "src": "wallstone_suntotem", "size": (1.0, 0.95, 2.5), "tex": 512, "tris": 1700},
     "cactus@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, -1), "height": 1.7, "tex": 512, "tris": 1800},
     "thorns@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, 1), "height": 0.9, "tex": 512, "tris": 2400},
+    # Brindle's harpoon in flight (point along +Z from the tail at z=0; render/kits/harpooner.ts lays it along the shot).
+    "harpoon": {"static": True, "height": 1.1, "tex": 256, "tris": 900},
 }
 
 
