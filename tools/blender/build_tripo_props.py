@@ -55,6 +55,8 @@ PROPS = {
     "wallstone@suntotem": {"static": True, "src": "wallstone_suntotem", "size": (1.0, 0.95, 2.5), "tex": 512, "tris": 1700},
     "cactus@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, -1), "height": 1.7, "tex": 512, "tris": 1800},
     "thorns@suntotem": {"static": True, "src": "desert_suntotem", "keep": (1, 1), "height": 0.9, "tex": 512, "tris": 2400},
+    # Bramble's thrown honey pot (the other half of the ladle's props mesh).
+    "honeypot": {"static": True, "src": "rider_props", "keep": (1, 1), "height": 0.5, "tex": 256, "tris": 1200},
 }
 
 
