@@ -32,8 +32,18 @@ import { BROWN, INK, MODE_NAME, TEAM_BRIGHT, TEAM_CLOTH, TEAM_FIELD, TEAM_TEXT, 
 import { costumeIcon, drawTree, hasTree, heroGlyph, stageArt } from "./selectArt";
 import { chipColor } from "../cursor";
 
-/** A cursor is hovering mouse target `id`. */
-const hovered = (s: Screens, id: string) => !!s.cursors?.cursors.some((c) => c.active && c.hover === id);
+/** A cursor (local, or an online player's mirrored one) is hovering mouse target `id`. */
+const hovered = (s: Screens, id: string) =>
+  !!s.cursors?.cursors.some((c) => c.active && c.hover === id) || !!s.cursors?.ghosts.some((g) => g.wire[0] === id);
+
+/** Whoever holds seat i's chip (here or online) is hovering a champion with it. */
+const previewing = (s: Screens, i: number) =>
+  !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:")) ||
+  !!s.cursors?.ghosts.some((g) => g.wire[5] === i && g.wire[0].startsWith("hero:"));
+
+/** Seat i's costume strip is open: flicked here, or by an online player's hand. */
+const stripOpen = (s: Screens, i: number) =>
+  performance.now() / 1000 < (s.costumeShownUntil[i] ?? 0) || !!s.cursors?.ghosts.some((g) => g.wire[7] === i);
 
 export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number, H: number, blink: boolean): void {
   boardBg(ctx, W, H);
@@ -331,8 +341,7 @@ function drawCompactSeat(
   const tagged = !sl.cpu && !!sl.tag;
   const label = tagged ? sl.tag! : `P${i + 1}`;
   const unsealed = !sl.ready && !naming;
-  const preview =
-    unsealed && !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:"));
+  const preview = unsealed && previewing(s, i);
   const ps = h - 16;
   const showHero = !unsealed || preview;
   card(ctx, x, y, w, h, 0, chipColor(i, sl.cpu), () => {
@@ -372,12 +381,13 @@ function drawCompactSeat(
   if (showHero) drawStage(s, ctx, i, sl, team, x + 4, y + 4, ps, ps, preview);
   else s.portraits?.drop(i);
   if (sl.ready && human) waxSeal(ctx, x + ps, y + ps - 2, 5, chipColor(i, false), "combo");
-  // Costumes: small clickable icons under the name for a human's own card, while their hand is over it or they
-  // flick the C-stick (CPU cards keep that spot for SIT HERE).
+  // Costumes: small clickable icons under the name for a human's own card while their hand is over it, or for any
+  // card whose costume is being flicked (a CPU's by whoever holds its chip; CPU cards otherwise keep that spot for
+  // SIT HERE).
   const own = s.cursors?.cursors[i];
   const ownHand = !!own?.active && own.x >= x && own.x <= x + w && own.y >= y && own.y <= y + h;
-  const flicking = performance.now() / 1000 < (s.costumeShownUntil[i] ?? 0);
-  const cl = showHero && !sl.cpu && (ownHand || flicking) ? costumesOf(sl.hero) : [];
+  const flicking = stripOpen(s, i);
+  const cl = showHero && ((ownHand && !sl.cpu) || flicking) ? costumesOf(sl.hero) : [];
   if (cl.length > 1) {
     const rx = x + ps + 8;
     const sz = Math.min(11, (w - ps - 11) / cl.length - 1.5);
@@ -447,8 +457,7 @@ function drawSeatCard(
   // An unsealed card (a human's, or a CPU's whose chip someone picked up) is empty, unless the cursor holding its
   // chip is hovering a champion: then that champion is previewed, see-through, until the seal is placed.
   const unsealed = (human || sl.cpu) && !commander && !sl.ready && !naming;
-  const preview =
-    unsealed && !!s.cursors?.cursors.some((c) => c.active && c.holding === i && c.hover.startsWith("hero:"));
+  const preview = unsealed && previewing(s, i);
   const blank = unsealed && !preview;
   card(ctx, x, y, w, h, 0, sl.open ? TEAM_BRIGHT[team] : chipColor(i, sl.cpu), () => {
     const ls = tagged ? Math.min(0.95, (w - 34) / Math.max(1, textWidth(label, 1, true))) : 0.95;
@@ -630,7 +639,7 @@ function drawCostumeStrip(
   ih: number,
 ): void {
   const cl = costumesOf(sl.hero);
-  if (cl.length <= 1 || performance.now() / 1000 >= (s.costumeShownUntil[i] ?? 0)) return;
+  if (cl.length <= 1 || !stripOpen(s, i)) return;
   const cur = Math.max(0, cl.indexOf(sl.costume ?? ""));
   const sz = Math.min(15, (fw - 6) / cl.length - 2);
   const gap = 2;

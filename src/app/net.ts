@@ -5,7 +5,8 @@
 //
 // Lobby flow: a guest announces which local pads want seats ("want"); the host seats each one in a free slot
 // (open or auto-CPU), and every 0.25 s broadcasts the whole lobby view ("lobby"). Guests send their picks,
-// ready flags, costume, camera, name and level changes as small messages keyed by their local pad index `k`.
+// ready flags, costume, camera, name and level changes as small messages keyed by their local pad index `k`; any
+// seated guest may also move a CPU's chip ("cpu": hover / place / pick up) and dress that CPU ("cpucos").
 // Cursors and name entries are mirrored live both ways at ~12 Hz ("hand", "nm" up to the host; "pres" down).
 //
 // Match flow (lockstep): the host starts everyone with the same MatchSpec ("start"). Each tick, the host merges
@@ -23,7 +24,7 @@ import { NetLink, type NetMsg } from "../net/link";
 import { mathPrint, worldHash, type Frame, type MatchSpec } from "../net/session";
 import type { App } from "./app";
 import { MAX_PLAYERS, maps, roster, seatsFor } from "./assets";
-import { enterSelect, freeLabel, makeHuman, makeOpen, setMode } from "./select";
+import { enterSelect, freeLabel, makeHuman, makeOpen, setMode, stripSeat } from "./select";
 import { linkMates, resetAttractWorld, setPaused, startNetMatch, toMenu } from "./match";
 
 /** A guest's local pad seated at a slot on the host (slot -1 = waiting for a free seat). */
@@ -65,6 +66,8 @@ export class NetSession {
   /** Mirrored guest cursors and name entries, keyed "peer:k". */
   readonly remoteHands = new Map<string, HandWire>();
   readonly remoteSigning = new Map<string, [number, string]>();
+  /** CPU seat -> when a guest last picked up / moved its chip (so it isn't put back before their hand shows it). */
+  readonly cpuHeldAt = new Map<number, number>();
   /** Last broadcast time of the lobby view; set to 0 to send it on the next frame. */
   lobbySentAt = 0;
   presSent = "";
@@ -312,6 +315,28 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
       slots[to].level = (slots[to].level % 3) + 1;
       n.lobbySentAt = 0;
     }
+    return;
+  }
+  if ((m.t === "cpu" || m.t === "cpucos") && i >= 0 && app.state === "select") {
+    // A guest choosing for a CPU: its chip is in their hand (ready false), hovered / placed on a champion, or dressed.
+    const to = Number(m.slot);
+    const sl = slots[to];
+    if (!sl?.cpu || sl.open || !app.slotActive(to) || app.commanderSlot(to) || app.heldBy(to) >= 0) return;
+    if (m.t === "cpucos") {
+      const c = String(m.id ?? "");
+      if (costumesOf(sl.hero).includes(c)) sl.costume = c;
+    } else {
+      const hero = String(m.hero ?? "");
+      if (roster.includes(hero) && (!sl.ready || m.ready === true)) sl.hero = hero;
+      if (typeof m.ready === "boolean") {
+        sl.ready = m.ready;
+        app.cursors.placeChip(to, m.ready ? sl.hero : null);
+        if (m.ready && !costumesOf(sl.hero).includes(sl.costume ?? "")) sl.costume = "";
+        app.audio.ui(m.ready ? "seal" : "peel");
+      }
+      n.cpuHeldAt.set(to, m.ready === true ? -99 : performance.now() / 1000);
+    }
+    n.lobbySentAt = 0;
     return;
   }
   if (m.t === "seat" && app.state === "select") {
@@ -567,7 +592,9 @@ function sendGuestPresence(app: App, now: number): void {
   }
   for (let k = 0; k < n.handSent.length; k++) {
     const seated = app.state === "lobby" && n.mySlots.has(k);
-    const h = seated ? app.cursors.wire(k) : null;
+    const lb = app.screens.lobby;
+    const strip = seated ? stripSeat(app, k, n.mySlots.get(k)!, (s) => !!lb?.slots[s]?.cpu) : -1;
+    const h = seated ? app.cursors.wire(k, strip) : null;
     const hs = JSON.stringify(h);
     if (hs !== n.handSent[k] && now - n.handAt[k] >= PRES_DT) {
       n.handSent[k] = hs;
@@ -601,7 +628,10 @@ function sendHostPresence(app: App, now: number): void {
   };
   if (live) {
     app.cursors.cursors.forEach((_, i) => {
-      const w = app.cursors.wire(i);
+      const w = app.cursors.wire(
+        i,
+        stripSeat(app, i, i, (s) => !!app.slots[s]?.cpu),
+      );
       if (w) hands.push([i, w]);
     });
     for (const [slot, ne] of app.screens.naming) names.push([slot, ...ne.wire()]);

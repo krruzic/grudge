@@ -1,13 +1,24 @@
 // Guest lobby controller (state "lobby"): an online guest's view of the host's champion select.
 // The host owns the seats; this screen draws the mirrored LobbyView (screens.lobby, refreshed by net.ts) and turns
 // the guest's own cursor actions into requests ("pick", "ready", "seat", "cam", "tag", "lvl", "costume"),
-// applying them optimistically to the local copy until the next lobby broadcast. A guest may only act on the
-// seats its own pads sit in (net.mySlots). While the host is on field select, the guest watches it read-only.
+// applying them optimistically to the local copy until the next lobby broadcast. A guest acts on the seats its
+// own pads sit in (net.mySlots), and on CPU seats: it may pick up a CPU's chip, place it ("cpu") and, while
+// holding it, flick the C-stick to dress that CPU ("cpucos"). While the host is on field select, the guest
+// watches it read-only.
 import type { SelectSlot } from "../ui/screens";
 import type { App } from "./app";
 import { data, roster } from "./assets";
 import { costumesOf } from "../render/costumes";
-import { cStickFlick, freezeNamingCursors, isNaming, nextCostume, openNaming, runNaming } from "./select";
+import {
+  COSTUME_STRIP_SECONDS,
+  cStickFlick,
+  dressSeat,
+  freezeNamingCursors,
+  isNaming,
+  nextCostume,
+  openNaming,
+  runNaming,
+} from "./select";
 import { toMenu } from "./match";
 
 export function updateLobby(app: App, now: number, dt: number): void {
@@ -21,6 +32,10 @@ export function updateLobby(app: App, now: number, dt: number): void {
   const mine = () => [...net.mySlots.values()];
   const held = (i: number) => cursors.cursors.some((c) => c.active && c.holding === i);
   const picking = lb.phase === "lobby";
+  const cpuSeat = (i: number) =>
+    !!lb.slots[i]?.cpu && !lb.slots[i].open && !!lb.slots[i].active && !lb.slots[i].commander;
+  // Messages about CPU seats go out under any of this guest's seated pads.
+  const anyK = () => [...net.mySlots.keys()][0] ?? 0;
 
   // Chips follow the host's seats; this guest's camera flags come from its own save.
   lb.slots.forEach((sl, i) => {
@@ -34,16 +49,19 @@ export function updateLobby(app: App, now: number, dt: number): void {
       cursors.cursors[k].holding = i;
     if (sl.ready) net.dropped.delete(i);
   }
-  for (const c of cursors.cursors) if (c.holding >= 0 && !mine().includes(c.holding)) c.holding = -1;
+  for (const c of cursors.cursors)
+    if (c.holding >= 0 && !mine().includes(c.holding) && !(picking && cpuSeat(c.holding))) c.holding = -1;
 
-  for (const [k, i] of net.mySlots) {
+  // C-stick: dress your own champion - or, while holding a CPU's chip, that CPU.
+  for (const [k, own] of net.mySlots) {
     const dir = cStickFlick(app.pads.players[k]);
-    if (dir && picking && !isNaming(app, k)) screens.costumeShownUntil[i] = now + 2.5;
+    const i = dressSeat(app, k, own, cpuSeat);
+    if (dir && picking && !isNaming(app, k)) screens.costumeShownUntil[i] = now + COSTUME_STRIP_SECONDS;
     if (dir && dir !== app.costumeFlick[k] && picking && !isNaming(app, k)) {
       const next = nextCostume(lb.slots[i].hero, lb.slots[i].costume, dir);
       if (next !== null) {
         lb.slots[i].costume = next;
-        net.link.toHost({ t: "costume", k, id: next });
+        net.link.toHost(i === own ? { t: "costume", k, id: next } : { t: "cpucos", k, slot: i, id: next });
         app.audio.ui("move");
       }
     }
@@ -52,10 +70,34 @@ export function updateLobby(app: App, now: number, dt: number): void {
   runNaming(app, (slot) => net.padOfSlot(slot), now);
 
   const canHold = (slot: number, by: number) =>
-    picking && !net.guestField && net.mySlots.get(by) === slot && !lb.slots[slot].commander;
+    picking &&
+    !net.guestField &&
+    net.mySlots.has(by) &&
+    ((net.mySlots.get(by) === slot && !lb.slots[slot].commander) || cpuSeat(slot));
   const acts = cursors.update(freezeNamingCursors(app, app.pads.players), dt, now, canHold);
   let leave = false;
   for (const act of acts) {
+    if ((act.type === "hover" || act.type === "place" || act.type === "pick") && cpuSeat(act.slot)) {
+      // Choosing for a CPU: the host keeps its chip off the board while it's in our hand.
+      const sl = lb.slots[act.slot];
+      if (act.type === "hover") {
+        if (sl.hero === act.hero) continue;
+        sl.hero = act.hero;
+        net.link.toHost({ t: "cpu", k: anyK(), slot: act.slot, hero: act.hero });
+        app.audio.ui("move");
+      } else if (act.type === "place") {
+        sl.hero = act.hero;
+        sl.ready = true;
+        net.link.toHost({ t: "cpu", k: anyK(), slot: act.slot, hero: act.hero, ready: true });
+        app.audio.ui("seal");
+        app.audio.heroCue(act.hero, true);
+      } else {
+        sl.ready = false;
+        net.link.toHost({ t: "cpu", k: anyK(), slot: act.slot, ready: false });
+        app.audio.ui("peel");
+      }
+      continue;
+    }
     if (act.type === "hover") {
       const k = net.padOfSlot(act.slot);
       if (k >= 0 && lb.slots[act.slot].hero !== act.hero) {
@@ -82,7 +124,14 @@ export function updateLobby(app: App, now: number, dt: number): void {
     else if (act.type === "back") {
       // B drops the chip in hand (remembered so it isn't re-grabbed); with nothing in hand it leaves.
       const c = cursors.cursors[act.by];
-      if (c?.holding >= 0) {
+      if (c?.holding >= 0 && cpuSeat(c.holding)) {
+        // Put a CPU's chip back down on the champion it had.
+        const sl = lb.slots[c.holding];
+        sl.ready = true;
+        net.link.toHost({ t: "cpu", k: anyK(), slot: c.holding, hero: sl.hero, ready: true });
+        c.holding = -1;
+        app.audio.ui("back");
+      } else if (c?.holding >= 0) {
         net.dropped.add(c.holding);
         c.holding = -1;
       } else leave = true;
@@ -132,12 +181,12 @@ function lobbyButton(app: App, buttonId: string, by: number): void {
     app.audio.ui("ok");
   } else if (id === "cam") {
     app.audio.ui("back");
-  } else if (id === "cos" && net.mySlots.get(by) === i) {
+  } else if (id === "cos" && (net.mySlots.get(by) === i || (lb.slots[i]?.cpu && net.mySlots.has(by)))) {
     const list = costumesOf(lb.slots[i].hero);
     const c = list[Number(buttonId.split(":")[2])];
     if (c !== undefined) {
       lb.slots[i].costume = c;
-      net.link.toHost({ t: "costume", k: by, id: c });
+      net.link.toHost(lb.slots[i].cpu ? { t: "cpucos", k: by, slot: i, id: c } : { t: "costume", k: by, id: c });
       app.audio.ui("move");
     }
   } else if (id === "pen" && net.mySlots.get(by) === i && !app.screens.naming.has(i)) {

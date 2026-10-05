@@ -80,7 +80,7 @@ export function makeOpen(app: App, i: number): void {
   app.cursors.placeChip(i, null);
 }
 
-function makeCpu(app: App, i: number): void {
+export function makeCpu(app: App, i: number): void {
   const sl = app.slots[i];
   const wasOpen = !!sl.open;
   sl.open = false;
@@ -340,7 +340,22 @@ export function nextCostume(hero: string, current: string | undefined, dir: numb
   return list[(at + dir + list.length) % list.length];
 }
 
-const COSTUME_STRIP_SECONDS = 2.5;
+export const COSTUME_STRIP_SECONDS = 2.5;
+
+/**
+ * The seat pad k's C-stick dresses: a CPU whose chip its cursor is holding, else its own seat (`own`, -1 none).
+ * Online the host's view of who holds what comes from the CPU flags in `isCpu`.
+ */
+export function dressSeat(app: App, k: number, own: number, isCpu: (seat: number) => boolean): number {
+  const c = app.cursors.cursors[k];
+  return c?.active && c.holding >= 0 && c.holding !== own && isCpu(c.holding) ? c.holding : own;
+}
+
+/** The seat whose costume strip pad k has open right now (sent with its mirrored hand), or -1. */
+export function stripSeat(app: App, k: number, own: number, isCpu: (seat: number) => boolean): number {
+  const t = dressSeat(app, k, own, isCpu);
+  return t >= 0 && performance.now() / 1000 < (app.screens.costumeShownUntil[t] ?? 0) ? t : -1;
+}
 
 // ── Champion select (state "select") ──
 
@@ -363,14 +378,16 @@ export function updateSelect(app: App, now: number, dt: number): void {
   });
   runNaming(app, (slot) => (pads.players[slot]?.connected ? slot : -1), now);
 
+  // C-stick: dress your own champion - or, while holding a CPU's chip, that CPU.
   pads.players.forEach((p, i) => {
     const dir = cStickFlick(p);
-    const canDress = !slots[i].cpu && !slots[i].open && !isNaming(app, i);
-    if (dir && canDress) screens.costumeShownUntil[i] = now + COSTUME_STRIP_SECONDS;
+    const t = dressSeat(app, i, i, (s) => !!slots[s]?.cpu);
+    const canDress = (t !== i || (!slots[i].cpu && !slots[i].open)) && !isNaming(app, i);
+    if (dir && canDress) screens.costumeShownUntil[t] = now + COSTUME_STRIP_SECONDS;
     if (dir && dir !== app.costumeFlick[i] && canDress) {
-      const next = nextCostume(slots[i].hero, slots[i].costume, dir);
+      const next = nextCostume(slots[t].hero, slots[t].costume, dir);
       if (next !== null) {
-        slots[i].costume = next;
+        slots[t].costume = next;
         app.net.lobbySentAt = 0;
         app.audio.ui("move");
       }
@@ -386,19 +403,32 @@ export function updateSelect(app: App, now: number, dt: number): void {
     if (act.type === "hover") {
       if (!slots[act.slot].ready && slots[act.slot].hero !== act.hero) {
         slots[act.slot].hero = act.hero;
+        app.net.lobbySentAt = 0;
         app.audio.ui("move");
       }
     } else if (act.type === "place") {
       slots[act.slot].hero = act.hero;
       slots[act.slot].ready = true;
+      if (!costumesOf(act.hero).includes(slots[act.slot].costume ?? "")) slots[act.slot].costume = "";
+      app.net.lobbySentAt = 0;
       app.audio.ui("seal");
       app.audio.heroCue(act.hero, true);
     } else if (act.type === "pick") {
       slots[act.slot].ready = false;
+      app.net.lobbySentAt = 0;
       app.audio.ui("peel");
     } else if (act.type === "button") selectButton(app, act.id, act.by);
     else if (act.type === "back") selectBack(app, act.by);
   }
+  // A CPU chip nobody holds any more (an online guest let go of it or left) goes back down on its champion.
+  slots.forEach((sl, i) => {
+    if (!sl.cpu || sl.ready || sl.open || !app.slotActive(i) || app.commanderSlot(i) || app.heldBy(i) >= 0) return;
+    if ([...app.net.remoteHands.values()].some((h) => h[5] === i) || now - (app.net.cpuHeldAt.get(i) ?? -99) < 1.5)
+      return;
+    sl.ready = true;
+    cursors.placeChip(i, sl.hero);
+    app.net.lobbySentAt = 0;
+  });
   // Holding B leaves for the menu, for whoever's seal is in their own hand (or who drives a CPU / commander seat).
   const canLeave = (i: number) => {
     const c = cursors.cursors[i];

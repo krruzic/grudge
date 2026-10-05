@@ -99,7 +99,7 @@ export class Screens {
   cameraMode = 1;
   zoomModes: number[] = [0, 0, 0, 0];
   /** Until when each seat's costume strip is shown (after a C-stick flick). */
-  costumeShownUntil: number[] = [0, 0, 0, 0];
+  costumeShownUntil: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
   /** Open name entries by seat, and mirrored remote ones ([caps, text]). */
   naming = new Map<number, NameEntry>();
   signing = new Map<number, [number, string]>();

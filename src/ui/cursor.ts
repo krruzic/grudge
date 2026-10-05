@@ -56,9 +56,10 @@ export type CursorAction =
 
 /**
  * A cursor on the wire: [target id under it, x and y within that target (0-63), x from screen centre and y in
- * layout units (used when over no target), held chip seat (-1 none), pose (0 point, 1 open, 2 grab)].
+ * layout units (used when over no target), held chip seat (-1 none), pose (0 point, 1 open, 2 grab), seat whose
+ * costume strip this hand has open (-1 none)].
  */
-export type HandWire = [string, number, number, number, number, number, number];
+export type HandWire = [string, number, number, number, number, number, number, number];
 
 export interface Ghost {
   slot: number;
@@ -71,7 +72,7 @@ export interface Ghost {
 const POSES = ["glove_point", "glove_open", "glove_grab"] as const;
 
 export function cleanHand(v: unknown): HandWire | null {
-  if (!Array.isArray(v) || v.length !== 7) return null;
+  if (!Array.isArray(v) || v.length !== 8) return null;
   const n = (k: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(Number(v[k]) || 0)));
   return [
     String(v[0] ?? "")
@@ -81,8 +82,9 @@ export function cleanHand(v: unknown): HandWire | null {
     n(2, 0, 63),
     n(3, -999, 999),
     n(4, -50, 300),
-    n(5, -1, 3),
+    n(5, -1, 7),
     n(6, 0, 2),
+    n(7, -1, 7),
   ];
 }
 
@@ -112,7 +114,8 @@ export class MenuCursors {
   private ghostAt = 0;
   private scale = { w: 427, h: 240 };
 
-  wire(i: number): HandWire | null {
+  /** Cursor i as a HandWire; `strip` = seat whose costume strip it has open (-1 none). */
+  wire(i: number, strip = -1): HandWire | null {
     const c = this.cursors[i];
     if (!c?.active) return null;
     const h = this.at(c.x, c.y);
@@ -126,6 +129,7 @@ export class MenuCursors {
       Math.round(c.y),
       c.holding,
       c.holding >= 0 ? 2 : c.grabbable ? 1 : 0,
+      strip,
     ];
   }
 

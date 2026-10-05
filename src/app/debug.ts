@@ -13,7 +13,8 @@ import { setPlayerCostumes, setPlayerNames } from "../render/costumes";
 import type { Page } from "../ui/menus";
 import type { App } from "./app";
 import { houses, roster, seatsFor } from "./assets";
-import { enterSelect } from "./select";
+import { enterSelect, makeCpu, setMode } from "./select";
+import type { MatchMode } from "../game/save";
 import { beginAttract, fastForward, resetAttractWorld, setPaused, setupControl, toMenu } from "./match";
 
 const MENU_PAGES: Page[] = ["players", "network", "rules", "options", "records", "controls", "codex"];
@@ -166,6 +167,14 @@ export function installDebugApi(app: App): void {
       app.screens.set("lobby");
     },
     bots: () => app.bots,
+    /** Online playtests: host or join a battle on this dev server, switch mode, put a CPU in seat i. */
+    netHost: (name = "HOST") => net.link.host(name),
+    netJoin: (name = "GUEST") => net.link.join(name),
+    setMode: (m: MatchMode) => setMode(app, m),
+    seatCpu: (i: number) => {
+      makeCpu(app, i);
+      app.slots[i].autoCpu = false;
+    },
     /** Hands player slot i to the first local pad's input. */
     humanize: (i: number) => {
       app.mappers[i] = new CommandMapper(inputData.cstickFlickThreshold, app.commanderSlot(i));
