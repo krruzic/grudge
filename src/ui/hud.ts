@@ -13,6 +13,7 @@
 // orders, buildMenu.
 import { playerLabel } from "../render/costumes";
 import type { World } from "../sim/world";
+import type { Entity } from "../sim/types";
 import type { MapperUi } from "../input/commands";
 import type { Portraits } from "./portraits";
 import { drawText, textWidth } from "./font";
@@ -69,6 +70,8 @@ export class Hud {
   private dense = false;
   /** Bottom-left (or bottom-right) corner under each player's panel, for morph rings and learn cards. */
   private panelAt: Record<number, { x: number; y: number; right: boolean }> = {};
+  /** Deathmatch: the last power-up each champion (by id) took and when (for the line under their panel). */
+  private powerTaken = new Map<number, { kind: string; at: number }>();
   /** Memo ids for crosses are numbered per frame. */
   private crossN = 0;
 
@@ -104,9 +107,45 @@ export class Hud {
         }
       }
       this.callouts.digest(w, ev, now);
+      if (ev.type === "powerup" && ev.stage === "take") this.powerTaken.set(ev.by, { kind: ev.kind, at: now });
       if (ev.type === "directive" && ev.team >= 0 && ev.team < this.orders.length)
         this.orders[ev.team] = { type: ev.unitType, dir: ev.dir, until: now + 2.2 };
     }
+  }
+
+  /**
+   * Deathmatch: what this champion's power-ups are doing, under their panel - running ones with seconds left
+   * (might, haste, shield), and a short flash for instant ones (potion, rush). Returns the height used.
+   */
+  private drawPowerLines(
+    ctx: CanvasRenderingContext2D,
+    w: World,
+    e: Entity,
+    x: number,
+    y: number,
+    right: boolean,
+    now: number,
+  ): number {
+    const td = w.tdm!;
+    const lines: [string, string][] = [];
+    const left = (until: number | undefined) => Math.ceil((until ?? 0) - w.time);
+    const mt = left(td.might.get(e.id));
+    const pct = (m: number) => Math.round((m - 1) * 100);
+    if (mt > 0) lines.push([`MIGHT · HIT ${pct(td.cfg.powerups.mightMul)}% HARDER · ${mt}`, "#ffa040"]);
+    const ht = left(td.haste.get(e.id));
+    if (ht > 0) lines.push([`HASTE · ${pct(td.cfg.powerups.hasteMul)}% FASTER · ${ht}`, "#70c8ff"]);
+    const st = left(e.status.shieldUntil);
+    if (st > 0 && e.status.shield > 0) lines.push([`SHIELD · ${Math.ceil(e.status.shield)} SOAK · ${st}`, "#ffd850"]);
+    const last = this.powerTaken.get(e.id);
+    if (last && now - last.at < 2.5) {
+      if (last.kind === "potion") lines.push(["POTION · HEALED", "#ff7080"]);
+      else if (last.kind === "rush") lines.push(["RUSH · ABILITIES READY · SUPER CHARGED", "#c090ff"]);
+    }
+    lines.forEach(([t, c], k) => {
+      const tw = textWidth(t, 0.6);
+      drawText(ctx, t, Math.round(right ? x - tw : x), y + k * 8, c, 0.6);
+    });
+    return lines.length * 8;
   }
 
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, w: World, ui: (MapperUi | null)[], now: number): void {
@@ -262,7 +301,10 @@ export class Hud {
       const tag = shown.length > 1 || teamHeroes.length > 1 ? playerLabel(p.player) : "";
       const h = drawPlayerPanel(ctx, this.memo, p.player, w, e, px0, py0, right, now, local, tag);
       this.panelAt[p.player] = { x: right ? px0 + BLOCK_W : px0, y: py0 + h, right };
-      if (!r) y = py0 + h;
+      const ph =
+        local && w.tdm ? this.drawPowerLines(ctx, w, e, right ? px0 + BLOCK_W : px0, py0 + h + 2, right, now) : 0;
+      this.panelAt[p.player].y += ph;
+      if (!r) y = py0 + h + ph;
     }
 
     // Crosses sit in the bottom corner of the team's area (or of the acting player's split view).
