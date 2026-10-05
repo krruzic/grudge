@@ -1,5 +1,6 @@
 // Command/support ability kinds: banner (team rally point that also extends command auras), rally (heal + cleanse
 // + guard, optional cooldown refund) and warcry (team buff, optional challenge taunt / lifesteal aura).
+import { refillCharge } from "../common.ts";
 import type { World } from "../../world.ts";
 import type { Entity, HeroAction } from "../../types.ts";
 import type { AbilityDef } from "../../config.ts";
@@ -83,7 +84,7 @@ export function fireWarcry(w: World, e: Entity, a: HeroAction, base: AbilityDef)
     src: e.id,
     style: def.fx?.challenge ? "challenge" : def.fx?.lifestealAura ? "blood" : undefined,
   });
-  if (def.resetB) e.hero!.cooldowns.b = w.time;
+  if (def.resetB) refillCharge(w, e, "b");
   for (const o of w.entities) {
     if (!o.alive || o.team !== e.team || o.kind === "structure") continue;
     if (w.dist(e, o) > (def.radius ?? 8)) continue;

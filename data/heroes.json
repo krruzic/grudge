@@ -1044,16 +1044,15 @@
           "offset": 2.6,
           "seconds": 12,
           "hp": 220,
-          "max": 3,
+          "max": 1,
           "damage": 50,
           "coverMul": 0.6,
           "dur": 0.6,
           "hitAt": 0.33,
-          "cooldown": 8,
+          "cooldown": 9,
           "bot": "never",
           "callout": "SNOW FORT",
-          "stunSeconds": 0.5,
-          "charges": 2
+          "stunSeconds": 0.5
         },
         "r": {
           "kind": "lookout",

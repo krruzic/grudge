@@ -13,7 +13,7 @@ import { chainSwingTick, tideTick, whirlTick } from "./wreckwitch.ts";
 import { squareInput, toppleLookout } from "./architect.ts";
 import { crushTick, curlTick, gritTick, headbuttTick, startPound } from "./vintner.ts";
 import { buzzTick, honeyPartners, maybeFling, stuckInHoney, sweetToothTick, tickWing } from "./rider.ts";
-import { aim, begin, callout, chaining, ready, spendCharge } from "./common.ts";
+import { aim, begin, callout, chaining, ready, refillCharge, spendCharge } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
 import { combo, onWorks } from "./combos.ts";
@@ -420,7 +420,7 @@ function startFromInput(
     spendCharge(w, e, "r", ab.r.cooldown ?? 10);
     if (ab.r.kind === "erratum") manuscriptRecast(w, e, "r");
     if (ab.r.resetB && ab.r.kind !== "warcry") {
-      h.cooldowns.b = w.time;
+      refillCharge(w, e, "b");
       h.recastUntil = 0;
     }
   } else if (cmd.secondary && !act && canRake(e)) {

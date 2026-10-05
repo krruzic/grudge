@@ -24,6 +24,19 @@ export function spendCharge(w: World, e: Entity, slot: "b" | "r", cd: number): v
   h.cooldowns[slot] = Math.min(...stock);
 }
 
+/** Give back one charge now (a reset: kills, Shadow Step); for a normal ability, ready it now. */
+export function refillCharge(w: World, e: Entity, slot: "b" | "r"): void {
+  const h = e.hero!;
+  const stock = h.stock?.[slot];
+  if (!stock?.length) {
+    h.cooldowns[slot] = w.time;
+    return;
+  }
+  const waiting = stock.filter((t) => t > w.time);
+  if (waiting.length) stock[stock.indexOf(Math.min(...waiting))] = w.time;
+  h.cooldowns[slot] = w.time;
+}
+
 /** A charged ability that fizzled: give the charge back after `after` s. */
 export function refundCharge(w: World, e: Entity, slot: "b" | "r", after: number): void {
   const stock = e.hero!.stock?.[slot];

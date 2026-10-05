@@ -365,10 +365,9 @@
         {
           "id": "doublejump",
           "name": "DOUBLE JUMP",
-          "desc": "LEAP AGAIN WITHIN 3S. LANDINGS CRATER THE GROUND, SLOWING FOES 45%.",
-          "combo": "WITH SHADOW STEP: BLINKING RESETS LEAP.",
+          "desc": "LEAP HAS 2 CHARGES THAT RECHARGE ON THEIR OWN. LANDINGS CRATER THE GROUND, SLOWING FOES 45%.",
+          "combo": "WITH SHADOW STEP: BLINKING GIVES BACK A LEAP.",
           "fx": {
-            "recast": 3,
             "zoneAfter": {
               "seconds": 2.5,
               "dps": 12,
@@ -385,7 +384,10 @@
                 "resetB": true
               }
             }
-          ]
+          ],
+          "set": {
+            "charges": 2
+          }
         }
       ],
       "a": [

@@ -1,5 +1,6 @@
 // Kills and their consequences: bounties, veterancy, hero respawn timers, structure rubble, core loss/elimination,
 // plus the gold-loss and tower-rally rules that fire on deaths.
+import { refillCharge } from "../hero/common.ts";
 import type { World } from "../world.ts";
 import type { Entity, Pad } from "../types.ts";
 import { gainXp, onKill } from "../talents.ts";
@@ -183,7 +184,7 @@ function rubbleSeconds(w: World, zone: Pad["zone"]): number {
 function onKillSynergy(w: World, target: Entity, src: Entity | null): void {
   const t = w.time;
   if (src?.hero && w.heroDef(src.hero.type).hooks.killResetsB) {
-    if (target.hero || target.structure) src.hero.cooldowns.b = t;
+    if (target.hero || target.structure) refillCharge(w, src, "b");
   }
   // Vanish (Grim): a champion kill patches him up and readies Smoke, to get out after the pick.
   const hk = src?.hero ? w.heroDef(src.hero.type).hooks : undefined;

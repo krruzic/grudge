@@ -499,6 +499,17 @@ function retreat(bot: Bot, w: World, s: Senses, swarm: number, graveReady: boole
     if (plan.escape2 === "b") bot.wantB = true;
     else bot.wantR = true;
   }
+  // Roll for it: with a champion on our heels (or soldiers swarming) and no escape ability used this tick, dodge
+  // toward home - a slow champion can't outwalk a chaser.
+  if (!bot.wantB && !bot.wantR && !h.action && (h.cooldowns.dodge ?? 0) <= w.time && (dHero < 3.5 || swarm >= 3)) {
+    const ex = sp.x - me.transform.pos.x;
+    const ez = sp.z - me.transform.pos.z;
+    const el = Math.hypot(ex, ez) || 1;
+    if (bot.rand() < 0.7 * bot.skill) {
+      bot.wantDodge = true;
+      bot.wantFace = { x: ex / el, z: ez / el };
+    }
+  }
   // Architect: a snow fort between him and a melee chaser, the dome on himself if the super is up.
   if (w.heroDef(h.type).abilities.b.kind === "fort") architectEscape(bot, w, me);
   // Friar: keg at his feet, then KEG ROCKET home (bot/tactics.ts).
@@ -542,10 +553,11 @@ function kit(bot: Bot, w: World, s: Senses): Kit {
         return d <= (a.botRange ?? 3);
       case "allies":
         return allies >= 3 && nearby.length >= 2;
-      // War Cry / Brewfest: in deathmatch (no army) when an enemy champion is close; otherwise in an army brawl.
+      // War Cry / Brewfest: when an enemy champion is close (cowing them is a duel tool too: they deal less and
+      // are slowed), or in an army brawl.
       case "roar":
         return (
-          (!!w.tdm && !!ehAlive && dHero < (a.dm?.cowRadius ?? a.cowRadius ?? 6) - 1) ||
+          (!!ehAlive && dHero < (w.tdm ? (a.dm?.cowRadius ?? a.cowRadius ?? 6) : (a.cowRadius ?? 6)) - 1) ||
           (allies >= 3 && nearby.length >= 2)
         );
       case "defend":
@@ -617,10 +629,11 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
     rdy("heave") &&
     !h.action &&
     ehAlive &&
-    w.time < enemyHero!.status.stunUntil &&
-    dHero < hk.heaveRange + 0.6
+    dHero < hk.heaveRange + 0.6 &&
+    (w.time < enemyHero!.status.stunUntil || bot.rand() < 0.5 * bot.skill)
   ) {
-    // Warlord: heave a stunned hero into a friendly tower, else back toward our core.
+    // Warlord: heave a hero in reach (the grab stuns them) into a friendly tower, else back toward our core -
+    // always on a stunned one, often otherwise.
     bot.wantAttack = true;
     bot.wantBlock = true;
     bot.wantFace = heaveDir(w, me, enemyHero!);
