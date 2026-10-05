@@ -21,6 +21,7 @@ import {
   cv,
   cm,
   withCostume,
+  WITCH,
 } from "../fx/atlas";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 import { zoneFissures } from "../fx/fissures";
@@ -608,6 +609,22 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"),
     );
     ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));
+  } else if (style === "bilge") {
+    // Mother Kelp's Bilge: a scummy brine puddle under a low, drifting gas cloud.
+    decal.material = new THREE.MeshBasicMaterial({
+      map: hd(WITCH.puddle),
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+    decal.visible = true;
+    ring(Math.round(r * 2.2), [0, 0.85], (x, z) =>
+      sprite(WITCH.cloud, 1.3 + Math.random() * 1.1, x, z, 0.2, false, "smoke"),
+    );
+    ring(Math.round(r * 2), [0.05, 0.85], (x, z) =>
+      sprite(WITCH.bubble, 0.2 + Math.random() * 0.15, x, z, -0.05, false, "bubble"),
+    );
   } else if (style === "grove") {
     ring(Math.round(r * 2.2), [0.1, 0.95], (x, z) => {
       const f = crossQuad(cm(FLOWER), 0.35 + Math.random() * 0.15, 0.35);
