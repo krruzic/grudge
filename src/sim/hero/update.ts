@@ -121,11 +121,11 @@ function respawn(w: World, e: Entity): void {
   e.status.stunUntil = 0;
   h.recallUsed = false;
   h.recallAt = undefined;
-  const pen = w.data.match.economy.respawnCooldownPenalty ?? 0;
+  // Everything comes back ready except the super, which resumes its frozen remaining time (a half-charged super
+  // meter is already lost on death).
   const frozen = h.frozenCd ?? {};
-  // B and R always get at least the respawn penalty; everything else resumes its frozen remaining time.
-  for (const k of new Set([...Object.keys(frozen), "b", "r"]))
-    h.cooldowns[k as keyof typeof h.cooldowns] = w.time + (frozen[k] ?? 0) + pen;
+  for (const k of Object.keys(h.cooldowns)) h.cooldowns[k as keyof typeof h.cooldowns] = w.time;
+  if (frozen.z !== undefined) h.cooldowns.z = w.time + frozen.z;
   h.frozenCd = undefined;
   w.emit({ type: "spawn", id: e.id });
   if (!w.tdm) keepLanding(w, e);

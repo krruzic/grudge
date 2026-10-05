@@ -275,7 +275,8 @@ export interface HeroData {
     stepHeight: number;
     maxSlope: number;
     respawnSeconds: number;
-    /** Respawn grows this much per minute of match time (capped at respawnMax), so late kills open real windows. */
+    /** Respawn grows this much per minute of match time, capped at respawnMax seconds (after the big-match
+     * multiplier), so late kills open real windows without long waits. */
     respawnPerMinute?: number;
     respawnMax?: number;
     recallSeconds: number;
@@ -482,7 +483,6 @@ export interface MatchData {
       starvedMul?: number;
     };
     padIncome?: Record<string, number>;
-    respawnCooldownPenalty?: number;
     respawnBigMul?: number;
     loss: { heroDeath: number; tower: number };
     rally: { seconds: number; damageMul: number; speedMul: number };
