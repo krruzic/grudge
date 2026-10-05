@@ -4,8 +4,8 @@
   "matchSeconds": 360,
   "suddenDeathSeconds": 60,
   "lockdown": {
-    "seconds": 30,
-    "warnSeconds": 5
+    "seconds": 15,
+    "warnSeconds": 4
   },
   "suddenDeath": {
     "productionMul": 1.6,

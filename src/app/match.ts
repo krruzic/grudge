@@ -119,6 +119,7 @@ export function beginAttract(app: App): void {
 
 /** To the main menu (leaving any online session). */
 export function toMenu(app: App, why?: string): void {
+  app.audio.stopName();
   app.menus.training = false;
   if (app.net.mode !== "off") leaveNet(app, why ?? "");
   const s = app.state;
@@ -186,6 +187,7 @@ export function startNetMatch(app: App, spec: MatchSpec, local: boolean[], remot
 
 /** Field select confirmed: fill open seats with CPUs, build the spec, tell guests, start. */
 export function beginMatch(app: App): void {
+  app.audio.stopName();
   const players = seatsFor(app.mode);
   app.players = players;
   const seats = app.slots.slice(0, players);

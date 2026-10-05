@@ -19,23 +19,26 @@ const KEY = process.env.FAL_KEY;
 if (!KEY) throw new Error("FAL_KEY missing (.env)");
 
 const VOICE = "Brian";
+const MODEL = "elevenlabs/tts/eleven-v4";
+// Short, punchy, one breath: vowels stretched for the hype, no "..." (that makes long dead pauses).
 const LINES = {
-  warlord: "[deep, booming, slow] THE... WAAARLORD!!",
-  engineer: "[excited, punchy] STIIIG... THE ENGINEER!",
-  raider: "[menacing whisper] Griiim... [shouting] THE RAIDER!",
-  summoner: "[ominous, low, slow] Reeemnil... [dramatic] the SUMMONER.",
-  duelist: "[theatrical, flamboyant] FRANÇOIIIS... the DUELIST!",
-  warden: "[slow, rumbling, deep] THOOORN... THE WARDEN!",
-  marksman: "[sharp, crisp, fast] WREN! [proud] The MARKSMAN!",
-  friar: "[very deep, jolly, rumbling] BROTHERRR... MADDOOOCK!!",
-  harpooner: "[playful, bouncy] BRIIINDLE... TADWIIICK!",
-  scribe: "[warm, reverent, then grand] Abbess... HOLLIIIN!",
-  wreckwitch: "[creepy, cackling] MOTHERRR... KELP!",
-  architect: "[proud, scholarly] PROFESSORRR... HOOOT!",
-  vintner: "[gruff, heavy, growling] GRISTLE... THE CELLAR BOAR!!",
-  rider: "[cheerful, bright] BRAMBLE... AND... MEEEAD!",
-  herald: "[regal, commanding] THE... HERALD!",
+  warlord: "[deep booming announcer] The WAAARLORD!",
+  engineer: "[punchy excited announcer] STIIIG!",
+  raider: "[menacing growl announcer] GRIIIM!",
+  summoner: "[ominous low announcer] REEEMNIL!",
+  duelist: "[flamboyant theatrical announcer] FRANÇOIIIS!",
+  warden: "[slow rumbling deep announcer] THOOORN!",
+  marksman: "[sharp crisp announcer] WREN!",
+  friar: "[very deep jolly announcer] Brother MADDOOOCK!",
+  harpooner: "[playful bouncy announcer] Brindle TADWIIICK!",
+  scribe: "[warm grand announcer] Abbess HOLLIN!",
+  wreckwitch: "[creepy raspy announcer] Mother KELP!",
+  architect: "[proud scholarly announcer] Professor HOOOT!",
+  vintner: "[gruff deep announcer] GRISTLE!",
+  rider: "[bright cheerful announcer] /ˈbræmbəl/ and MEAD!",
+  herald: "[regal commanding announcer] The HERALD!",
 };
+const TAKES = 2;
 
 async function falRun(model, input) {
   const sub = await fetch(`https://queue.fal.run/${model}`, {
@@ -60,16 +63,25 @@ async function falRun(model, input) {
 const raw = join(root, "assets", "generated", "announcer");
 mkdirSync(raw, { recursive: true });
 const which = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(LINES);
+const dur = (f) => Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", f]).toString());
 for (const hero of which) {
-  const r = await falRun("fal-ai/elevenlabs/tts/eleven-v3", { text: LINES[hero], voice: VOICE, stability: 0.3 });
-  const mp3 = join(raw, `${hero}.mp3`);
-  writeFileSync(mp3, Buffer.from(await (await fetch(r.audio.url)).arrayBuffer()));
-  // Trim leading / trailing silence, normalise loudness, mono ogg like the rest of the bank.
-  execFileSync("ffmpeg", [
-    "-y", "-loglevel", "error", "-i", mp3,
-    "-af", "silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,loudnorm=I=-14:TP=-1.5",
-    "-ac", "1", "-ar", "44100", "-c:a", "libvorbis", "-q:a", "5",
-    join(root, "assets", "sfx", `name.${hero}.0.ogg`),
-  ]);
-  console.log(hero, "ok");
+  // A couple of takes; keep the tightest one (the game cuts long calls anyway).
+  let best = null;
+  for (let t = 0; t < TAKES; t++) {
+    const r = await falRun(MODEL, { text: LINES[hero], voice: VOICE, stability: 0.35, seed: 7 + t * 101 });
+    const mp3 = join(raw, `${hero}.${t}.mp3`);
+    writeFileSync(mp3, Buffer.from(await (await fetch(r.audio.url)).arrayBuffer()));
+    const ogg = join(raw, `${hero}.${t}.ogg`);
+    // Trim the ends, squash any pause inside to 0.12 s, normalise, mono ogg like the rest of the bank.
+    execFileSync("ffmpeg", [
+      "-y", "-loglevel", "error", "-i", mp3,
+      "-af",
+      "silenceremove=start_periods=1:start_threshold=-42dB:stop_periods=-1:stop_duration=0.12:stop_threshold=-42dB,areverse,silenceremove=start_periods=1:start_threshold=-42dB,areverse,loudnorm=I=-14:TP=-1.5",
+      "-ac", "1", "-ar", "44100", "-c:a", "libvorbis", "-q:a", "5", ogg,
+    ]);
+    const d = dur(ogg);
+    if (!best || d < best.d) best = { ogg, d };
+  }
+  execFileSync("cp", [best.ogg, join(root, "assets", "sfx", `name.${hero}.0.ogg`)]);
+  console.log(hero, best.d.toFixed(2) + "s");
 }

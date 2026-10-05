@@ -27,6 +27,7 @@ export function updateLobby(app: App, now: number, dt: number): void {
   cursors.setScale(app.uiCanvas.w, app.uiCanvas.h);
   cursors.tagOf = (k) => net.mySlots.get(k) ?? -1;
   screens.set(net.guestField && lb ? "map" : "lobby");
+  if (net.guestField) app.audio.stopName();
   if (net.guestField) for (const c of cursors.cursors) c.holding = -1;
   if (!lb) return;
   const mine = () => [...net.mySlots.values()];
@@ -77,6 +78,7 @@ export function updateLobby(app: App, now: number, dt: number): void {
   const acts = cursors.update(freezeNamingCursors(app, app.pads.players), dt, now, canHold);
   let leave = false;
   for (const act of acts) {
+    if (act.type === "pick" || act.type === "back") app.audio.stopName();
     if ((act.type === "hover" || act.type === "place" || act.type === "pick") && cpuSeat(act.slot)) {
       // Choosing for a CPU: the host keeps its chip off the board while it's in our hand.
       const sl = lb.slots[act.slot];

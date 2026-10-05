@@ -194,6 +194,7 @@ function selectReady(app: App): boolean {
 
 /** Champion select -> field select. */
 function toMap(app: App): void {
+  app.audio.stopName();
   app.mapHover.fill("*");
   app.screens.readyBanner = false;
   app.readySince = -1;
@@ -400,6 +401,8 @@ export function updateSelect(app: App, now: number, dt: number): void {
     app.slotActive(slot) && !app.commanderSlot(slot) && (slot === by ? !slots[slot].cpu : slots[slot].cpu);
   const acts = cursors.update(freezeNamingCursors(app, app.padsForCursors()), dt, now, canHold);
   for (const act of acts) {
+    // Picking a seal back up or pressing B cuts the announcer's name call.
+    if (act.type === "pick" || act.type === "back") app.audio.stopName();
     if (act.type === "hover") {
       if (!slots[act.slot].ready && slots[act.slot].hero !== act.hero) {
         slots[act.slot].hero = act.hero;
