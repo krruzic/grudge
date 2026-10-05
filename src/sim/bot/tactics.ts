@@ -267,6 +267,25 @@ export function friarEscape(bot: Bot, w: World, me: Entity, home: Vec2): boolean
  */
 export function friarPowder(bot: Bot, w: World, me: Entity, target: Entity | undefined, clump: number): void {
   const h = me.hero!;
+  // A keg of ours is fizzing: blow it early (R again) while an enemy champion - or a crowd - is in the blast,
+  // before they step out of it.
+  const r = abilities(w, me).r;
+  const blast = (r.radius ?? 3.2) * 0.85;
+  for (const k of w.kegs) {
+    if (k.ownerId !== me.id || k.kind !== "powder" || !k.landed || k.fuseAt - w.time < 0.15) continue;
+    let foes = 0;
+    let champ = false;
+    for (const o of w.entities) {
+      if (!o.alive || o.team === me.team || o.team < 0 || o.structure) continue;
+      if (Math.hypot(o.transform.pos.x - k.toX, o.transform.pos.z - k.toZ) > blast + o.radius) continue;
+      foes++;
+      if (o.hero) champ = true;
+    }
+    if (champ || foes >= 3) {
+      bot.wantR = true;
+      return;
+    }
+  }
   if ((h.cooldowns.r ?? 0) > w.time || h.action) return;
   const range = abilities(w, me).r.range ?? 8;
   const t = target?.alive && target.hero && w.dist(me, target) < range + 0.5 ? target : undefined;
