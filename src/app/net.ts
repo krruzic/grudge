@@ -156,13 +156,20 @@ export function leaveNet(app: App, why = ""): void {
 
 // ── Host: seating ──
 
+/**
+ * A seat for a joining guest: an open seat, else an automatic CPU's, else any CPU's in play (a human always beats
+ * a CPU, even one added on purpose - otherwise a lobby full of CPUs could never be joined). Never a seat with a
+ * local pad.
+ */
 function freeRemoteSlot(app: App): number {
-  const order = [...Array.from({ length: seatsFor(app.mode === "tdm" ? "tdm" : "2v2") - 1 }, (_, k) => k + 1), 0];
-  for (const i of order) {
-    const s = app.slots[i];
-    const local = !!app.pads.players[i]?.connected || i < app.forceJoin;
-    if (!local && !app.net.seatAt(i) && (s.open || s.autoCpu)) return i;
-  }
+  const n = Math.max(seatsFor(app.mode), seatsFor("2v2"));
+  const order = [...Array.from({ length: n - 1 }, (_, k) => k + 1), 0];
+  const free = (i: number) => !(app.pads.players[i]?.connected || i < app.forceJoin) && !app.net.seatAt(i);
+  for (const ok of [
+    (s: (typeof app.slots)[number]) => s.open || s.autoCpu,
+    (s: (typeof app.slots)[number], i: number) => s.cpu && app.slotActive(i),
+  ])
+    for (const i of order) if (free(i) && ok(app.slots[i], i)) return i;
   return -1;
 }
 
@@ -340,6 +347,7 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
     return;
   }
   if (m.t === "seat" && app.state === "select") {
+    // Includes taking over a CPU's seat (a human always beats a CPU).
     moveRemoteSeat(app, r, Number(m.slot));
     return;
   }
@@ -387,7 +395,7 @@ function moveRemoteSeat(app: App, r: RemoteSeat, to: number): void {
     to !== i &&
     !app.net.seatAt(to) &&
     !app.pads.players[to]?.connected &&
-    (tgt.open || tgt.autoCpu);
+    (tgt.open || tgt.cpu);
   if (!allowed) return;
   const hero = i >= 0 ? slots[i].hero : roster[0];
   const keep = i >= 0 ? ([slots[i].tag, slots[i].tagId] as const) : null;

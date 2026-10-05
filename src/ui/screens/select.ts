@@ -359,8 +359,10 @@ function drawCompactSeat(
     const ns = Math.min(0.55, rw / Math.max(1, textWidth(name, 1, true)));
     drawPlain(ctx, name, rx, 17, BROWN, ns, true);
   });
-  if (human && sl.local) {
-    const bid = `unplug:${i}`;
+  // X: a local human unplugs; the host can open a CPU's seat (so someone online can sit there).
+  const xid = human && sl.local ? `unplug:${i}` : sl.cpu && s.hosting ? `seatopen:${i}` : "";
+  if (xid) {
+    const bid = xid;
     const hot = hovered(s, bid);
     const ux = x + w - 10;
     const uy = y + 2;
@@ -412,8 +414,9 @@ function drawCompactSeat(
     });
   }
   kindPlaque(s, ctx, i, x + w / 2, y + h - 11, sl);
-  if (sl.cpu && !s.peer && !!s.cursors?.cursors.some((c) => c.active))
-    woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
+  // SIT HERE on a CPU: a local pad moves there, or an online guest takes the seat over.
+  if (sl.cpu && (s.peer || !!s.cursors?.cursors.some((c) => c.active)))
+    woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
 }
 
 // ── Seat card ──
@@ -477,7 +480,7 @@ function drawSeatCard(
     const ns = Math.min(0.8, (w - 10) / Math.max(1, textWidth(name, 1, true)));
     drawPlain(ctx, name, w / 2 - textWidth(name, ns, true) / 2, iy + ih + 5, BROWN, ns, true);
   });
-  const sitHere = sl.cpu && !s.peer && !commander && !!s.cursors?.cursors.some((c) => c.active);
+  const sitHere = sl.cpu && !commander && (s.peer || !!s.cursors?.cursors.some((c) => c.active));
   /** Little X box in the card's corner. */
   const xBox = (bid: string, tip: string) => {
     const hot = hovered(s, bid);
@@ -537,7 +540,7 @@ function drawSeatCard(
     } else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
   });
   if (!commander) drawCostumeStrip(s, ctx, i, sl, fx, fy, fw, ih);
-  if (sitHere) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
+  if (sitHere) woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
   if (sl.ready && !commander && human) {
     ctx.save();
     waxSeal(ctx, fx + fw - 7, fy + ih + 3, 6, chipColor(i, false), "combo");
