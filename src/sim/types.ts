@@ -296,6 +296,9 @@ export interface HeroState {
   freeCast?: { b: boolean; r: boolean };
   /** Wreck Witch Tide Rising (hero/wreckwitch.ts): stacks, seconds toward the next one, last time near a foe. */
   tide?: number;
+  /** Mother Kelp's chain swing: swings in the current chain, and until when another one continues it. */
+  swingChain?: number;
+  swingChainUntil?: number;
   tideT?: number;
   tideNearAt?: number;
   tideEbbAt?: number;

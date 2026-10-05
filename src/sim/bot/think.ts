@@ -494,6 +494,10 @@ function retreat(bot: Bot, w: World, s: Senses, swarm: number, graveReady: boole
     bot.wantPlace = { x: (ex / el) * 8, z: (ez / el) * 8 };
     if (esc === "b") bot.wantB = true;
     else bot.wantR = true;
+  } else if (plan.escape2 && (h.cooldowns[plan.escape2] ?? 0) <= w.time && (dHero < 6 || swarm >= 2)) {
+    // Second way out (Grim: Smoke - unseen and faster) once the first is spent.
+    if (plan.escape2 === "b") bot.wantB = true;
+    else bot.wantR = true;
   }
   // Architect: a snow fort between him and a melee chaser, the dome on himself if the super is up.
   if (w.heroDef(h.type).abilities.b.kind === "fort") architectEscape(bot, w, me);
@@ -719,8 +723,30 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     return true;
   }
   let target: Entity | undefined;
-  if (ehAlive && dHero < 9 + prefer && w.canSee(me, enemyHero!) && !crowded) target = enemyHero;
-  else if (crowded && dHero < 12) {
+  // Army first (Grim): with enemy soldiers around, cut them down - archers first - and only go for the champion
+  // once they're alone (no soldiers of theirs within 6 m) or below 40%.
+  if (plan.clearFirst) {
+    const army = nearby
+      .filter((o) => o.unit && w.dist(me, o) < 8 && w.canSee(me, o))
+      .sort(
+        (a, b) =>
+          Number(b.unit!.type === "ranged") - Number(a.unit!.type === "ranged") || w.dist(me, a) - w.dist(me, b),
+      );
+    const eh = enemyHero;
+    const alone = ehAlive && !w.entities.some((o) => o.alive && o.unit && o.team === eh!.team && w.dist(o, eh!) < 6);
+    const dive = ehAlive && dHero < 9 && (alone || eh!.hp < eh!.maxHp * 0.4) && w.canSee(me, eh!);
+    if (army.length && !dive) {
+      target = army[0];
+      bot.fightId = target.id;
+      bot.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
+      if (w.dist(me, target) - target.radius < 2.3) bot.wantAttack = true;
+      if (rdy("b") && army.length >= 3 && w.dist(me, target) > 3 && w.dist(me, target) < 7) bot.wantB = true;
+      return true;
+    }
+    if (dive) target = eh;
+  }
+  if (!target && ehAlive && dHero < 9 + prefer && w.canSee(me, enemyHero!) && !crowded) target = enemyHero;
+  else if (!target && crowded && dHero < 12) {
     const close = nearby.find((o) => w.dist(me, o) < 2.6 && !o.structure);
     if (!close) {
       const ex = p.x - enemyHero!.transform.pos.x;
@@ -731,7 +757,7 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
       return true;
     }
     target = close;
-  } else if (nearby.length) {
+  } else if (!target && nearby.length) {
     nearby.sort((a, b) => w.dist(me, a) - w.dist(me, b));
     target =
       nearby.find((o) => (o.kind !== "structure" || w.dist(me, o) < 5) && w.canSee(me, o) && ok(bot, w, me, o)) ??

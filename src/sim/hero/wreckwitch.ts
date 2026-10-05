@@ -2,6 +2,7 @@
 // the held-A anchor whirl, Dredge (B: anchor on a chain, swaps places with the first enemy it catches), Bilge (R:
 // brine cloud, no healing inside), Davy's Grip (Z: drowned hands root everyone around her, damage scales with
 // stacks) and the chain swing dodge (L+X next to a structure or tree: an arc around it).
+import { Kind } from "../terrain.ts";
 import type { World } from "../world.ts";
 import type { AbilityDef } from "../config.ts";
 import type { Command, Entity, HeroAction } from "../types.ts";
@@ -338,21 +339,49 @@ export function fireDavyGrip(w: World, e: Entity, a: HeroAction, def: AbilityDef
 
 type Pivot = { x: number; z: number; r: number };
 
+/** Map props tall enough to hook even when they're walk-through decoration (posts, trunks, pillars). */
+const HOOKABLE_PROPS = new Set([
+  "tree",
+  "pine",
+  "appletree",
+  "deadtree",
+  "yew",
+  "column",
+  "spire",
+  "statue",
+  "obelisk",
+  "torch",
+  "banner",
+  "brokenpillar",
+  "angel",
+  "cactus",
+  "topiary",
+]);
+
 /**
- * Everything the chain swing could hook within reach, nearest first: every structure, plus trees / rocks / wall
- * cells (blocked nav cells) not under a building - the nearest cell per 45-degree sector, so a stand of trees
- * offers a few distinct choices rather than dozens.
+ * Everything the chain swing could hook within reach, nearest first:
+ *   - buildings (any side's, and neutral ones)
+ *   - map props: every solid one (trees, rocks, towers, statues, carts...) and the tall walk-through ones above
+ *   - lookout towers (Hoot's)
+ *   - wall cells: map walls and hero walls (stone walls, palisades, snow forts) - the nearest cell per 45-degree
+ *     sector, so a long wall offers a few distinct choices rather than dozens.
+ * Not cliffs, slopes or water: there's nothing standing up to wrap a chain round.
  */
 export function swingPivots(w: World, e: Entity, reach = w.heroDef(e.hero!.type).hooks.swingReach ?? 0): Pivot[] {
   const p = e.transform.pos;
+  const tr = w.terrain;
   const out: (Pivot & { d: number })[] = [];
-  const structs: Entity[] = [];
-  for (const o of w.entities) {
-    if (!o.alive || !o.structure) continue;
-    structs.push(o);
-    const d = w.dist(e, o) - o.radius;
-    if (d < reach) out.push({ x: o.transform.pos.x, z: o.transform.pos.z, r: o.radius, d });
-  }
+  const add = (x: number, z: number, r: number) => {
+    const d = Math.hypot(x - p.x, z - p.z) - r;
+    if (d < reach && !out.some((q) => Math.hypot(q.x - x, q.z - z) < q.r + r + 0.3)) out.push({ x, z, r, d });
+  };
+  for (const o of w.entities) if (o.alive && o.structure) add(o.transform.pos.x, o.transform.pos.z, o.radius);
+  for (const m of w.mods)
+    if (m.style === "lookout" && m.until > w.time && m.cx !== undefined) {
+      const xs = m.cells.map((c) => c % tr.width);
+      add(m.cx, m.cz!, (Math.max(...xs) - Math.min(...xs) + 1) / 2);
+    }
+  for (const q of tr.props) if (q.solid || HOOKABLE_PROPS.has(q.type)) add(q.x, q.z, q.solid ? 0.5 : 0.35);
   const sector: ((Pivot & { d: number }) | undefined)[] = new Array(8);
   const cx = Math.floor(p.x);
   const cz = Math.floor(p.z);
@@ -361,12 +390,10 @@ export function swingPivots(w: World, e: Entity, reach = w.heroDef(e.hero!.type)
     for (let dx = -R; dx <= R; dx++) {
       const x = cx + dx;
       const z = cz + dz;
-      const i = w.nav.index(x, z);
-      if (i < 0 || w.nav.open(i) || !Number.isFinite(w.terrain.heightAt(x + 0.5, z + 0.5))) continue;
-      if (structs.some((o) => Math.hypot(o.transform.pos.x - x - 0.5, o.transform.pos.z - z - 0.5) < o.radius + 1))
-        continue;
+      const i = tr.index(x, z);
+      if (i < 0 || tr.kinds[i] !== Kind.Wall) continue;
       const d = Math.hypot(x + 0.5 - p.x, z + 0.5 - p.z) - 0.5;
-      if (d >= reach) continue;
+      if (d >= reach || out.some((q) => Math.hypot(q.x - x - 0.5, q.z - z - 0.5) < q.r + 0.8)) continue;
       const k = (Math.round(Math.atan2(z + 0.5 - p.z, x + 0.5 - p.x) / (Math.PI / 4)) + 8) % 8;
       if (!sector[k] || d < sector[k]!.d) sector[k] = { x: x + 0.5, z: z + 0.5, r: 0.5, d };
     }
@@ -472,11 +499,17 @@ export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
     fromZ2: (deg * Math.PI) / 180,
     chargeRange: rr,
   };
+  a.hitIds = [];
   h.action = a;
   h.blocking = false;
   e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + dur);
+  // Chaining: another swing within swingChainWindow s of landing continues the chain (up to swingChain swings);
+  // a fresh swing or a full chain puts the dodge on its normal cooldown.
+  const max = hk.swingChain ?? 5;
+  h.swingChain = w.time <= (h.swingChainUntil ?? -1) ? (h.swingChain ?? 0) + 1 : 1;
+  h.swingChainUntil = h.swingChain < max ? w.time + dur + (hk.swingChainWindow ?? 0.9) : -1;
   h.cooldowns.dodge = w.time + dur + w.data.heroes.baseline.dodgeCooldown + 0.3;
-  callout(w, e, "CHAIN SWING");
+  callout(w, e, h.swingChain > 1 ? `CHAIN SWING x${h.swingChain}` : "CHAIN SWING");
   fx(w, "chainSwing", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: pv.x, tz: pv.z, seconds: dur, radius: rr });
   return true;
 }
@@ -498,6 +531,21 @@ export function chainSwingTick(w: World, e: Entity, a: HeroAction): void {
   t.pos.z = nz;
   const gy = w.groundY(nx, nz);
   if (Number.isFinite(gy)) t.y = gy;
+  // Whack whoever she swings into (once each per swing), knocked out along her path.
+  const hk = w.heroDef(e.hero!.type).hooks;
+  if (hk.swingDamage) {
+    const hit = (a.hitIds ??= []);
+    for (const o of w.enemiesNear(e, 1.3, (q) => !!q.hero || !!q.unit)) {
+      if (hit.includes(o.id)) continue;
+      hit.push(o.id);
+      w.damage(e, o, hk.swingDamage * w.damageMulOf(e), {
+        fromX: t.pos.x - fdx,
+        fromZ: t.pos.z - fdz,
+        knockback: hk.swingKnockback ?? 7,
+        big: true,
+      });
+    }
+  }
   if (a.t + w.dt >= a.dur) {
     const tx = a.toX!;
     const tz = a.toZ!;

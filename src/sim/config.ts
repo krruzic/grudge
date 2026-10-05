@@ -333,6 +333,10 @@ export interface AbilityDef {
 export interface BotPlan {
   retreatHp?: number;
   crowd?: number;
+  /** Clear the enemy soldiers around first; dive the champion only when they're alone or low. */
+  clearFirst?: boolean;
+  /** Ability to escape with when `escape` is on cooldown. */
+  escape2?: "b" | "r";
   opener?: "b" | "r";
   openerRange?: number;
   flank?: boolean;

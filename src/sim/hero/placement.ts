@@ -69,7 +69,9 @@ export function placeRanges(
         : undefined,
     // Mother Kelp: what a held dodge could hook (none while the dodge is cooling down).
     swing:
-      w.heroDef(h.type).hooks.swingReach && ready(e, "dodge", w.time) && !h.action
+      w.heroDef(h.type).hooks.swingReach &&
+      (ready(e, "dodge", w.time) || w.time <= (h.swingChainUntil ?? -1)) &&
+      !h.action
         ? swingPivots(w, e).map((s) => ({ x: s.x, z: s.z }))
         : undefined,
     ready: {

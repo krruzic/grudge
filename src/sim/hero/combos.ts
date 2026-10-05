@@ -94,6 +94,9 @@ export function combo(w: World, e: Entity, cmd: Command): boolean {
     callout(w, e, "ARM SHOVE");
     return true;
   }
+  // Mother Kelp mid-chain: a swing right after landing continues the chain even with the dodge cooling down.
+  if (cmd.dodge && cmd.swing && !act && w.time <= (h.swingChainUntil ?? -1) && ab.b.kind === "dredge")
+    if (startChainSwing(w, e, cmd)) return true;
   if (cmd.dodge && ready(e, "dodge", w.time) && !act) {
     const dodgeCd = () =>
       (h.cooldowns.dodge = w.time + w.data.heroes.baseline.dodgeSeconds + w.data.heroes.baseline.dodgeCooldown);

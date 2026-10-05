@@ -309,7 +309,8 @@
         "soldierTakenMul": 1.1,
         "killHeal": 0.3,
         "killResetsR": 1,
-        "heroLeech": 0.2
+        "heroLeech": 0.2,
+        "heroDamageMul": 1.3
       },
       "abilities": {
         "a": {
@@ -385,7 +386,8 @@
           "cooldown": 14,
           "bot": "approach",
           "botRange": 12,
-          "callout": "SMOKE \u00b7 UNSEEN"
+          "callout": "SMOKE \u00b7 UNSEEN",
+          "charges": 2
         },
         "z": {
           "kind": "dash",
@@ -420,7 +422,11 @@
           0,
           0,
           0
-        ]
+        ],
+        "clearFirst": true,
+        "escape2": "r",
+        "huntRatio": 0.9,
+        "hitAndRun": 2
       },
       "class": "assassin"
     },
@@ -928,19 +934,20 @@
           "anim": "throw",
           "range": 8,
           "radius": 3.2,
-          "damage": 85,
+          "damage": 75,
           "unitMul": 1.6,
           "structureDamage": 130,
           "knockback": 10,
           "fuse": 1.0,
-          "flight": 0.35,
-          "dur": 0.5,
-          "hitAt": 0.28,
-          "cooldown": 6,
+          "flight": 0.2,
+          "dur": 0.36,
+          "hitAt": 0.16,
+          "cooldown": 8,
           "bot": "fight",
           "botRange": 8,
           "callout": "POWDER KEG",
-          "variance": 0.15
+          "variance": 0.15,
+          "charges": 2
         },
         "z": {
           "kind": "brewfest",
@@ -986,7 +993,7 @@
       "botRange": 2.2,
       "hooks": {
         "featherFall": 1,
-        "squareDamage": 44,
+        "squareDamage": 38,
         "squareRange": 9,
         "squareCooldown": 2.2,
         "heroDamageMul": 1.12,
@@ -1376,7 +1383,11 @@
         "swingReach": 3.5,
         "swingSeconds": 0.5,
         "tideArmor": 0.02,
-        "tideLeech": 0.015
+        "tideLeech": 0.015,
+        "swingDamage": 30,
+        "swingKnockback": 7,
+        "swingChain": 5,
+        "swingChainWindow": 0.9
       },
       "abilities": {
         "a": {
@@ -1680,7 +1691,7 @@
           "bot": "never",
           "callout": "TAKE WING \u00b7 R AGAIN TO LAND \u00b7 A DROPS HONEY BOMBS",
           "bombEvery": 0.7,
-          "bombDamage": 32,
+          "bombDamage": 24,
           "bombRadius": 2.2
         },
         "z": {
