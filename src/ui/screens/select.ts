@@ -449,10 +449,6 @@ function drawCompactSeat(
     });
   }
   kindPlaque(s, ctx, i, x + w / 2, y + h - 11, sl);
-  // SIT HERE on a CPU: a local pad moves there, or an online guest takes the seat over. It sits along the bottom
-  // of the portrait so the costume icons beside it stay clickable.
-  if (sl.cpu && (s.peer || !!s.cursors?.cursors.some((c) => c.active)))
-    woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + 4 + ps / 2, y + ps - 9, Math.min(50, ps - 4));
 }
 
 // ── Seat card ──
@@ -521,7 +517,6 @@ function drawSeatCard(
     drawPlain(ctx, name, nx, iy + ih + 5, BROWN, ns, true);
     classGlyph(ctx, cls, nx - 5.5, iy + ih + 8.5, 8, BROWN, "rgba(0,0,0,0)");
   });
-  const sitHere = sl.cpu && !commander && (s.peer || !!s.cursors?.cursors.some((c) => c.active));
   /** Little X box in the card's corner. */
   const xBox = (bid: string, tip: string) => {
     const hot = hovered(s, bid);
@@ -565,8 +560,8 @@ function drawSeatCard(
     drawTree(ctx, sl.hero, "b", fx + fw - 2 - Math.round(23 * tw), fy + 3, true, tw);
     ctx.restore();
   }
-  // Ability glyphs along the bottom edge (embossed), vector icons until the sheet has loaded; SIT HERE takes the row.
-  (sitHere ? [] : (["a", "b", "r", "z"] as const)).forEach((a, j) => {
+  // Ability glyphs along the bottom edge (embossed), vector icons until the sheet has loaded.
+  (["a", "b", "r", "z"] as const).forEach((a, j) => {
     const cx = x + (w / 4) * (j + 0.5);
     const g = heroGlyph(sl.hero, j);
     if (g) {
@@ -581,8 +576,6 @@ function drawSeatCard(
     } else abilityIcon(ctx, def?.abilities?.[a]?.kind ?? "none", cx, y + h - 10, 7);
   });
   if (!commander) drawCostumeStrip(s, ctx, i, sl, fx, fy, fw, ih);
-  // SIT HERE over the (display-only) ability glyph row, clear of the costume strip and the evolution trees.
-  if (sitHere) woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + w / 2, y + h - 12);
   if (sl.ready && !commander && human) {
     ctx.save();
     waxSeal(ctx, fx + fw - 7, fy + ih + 3, 6, chipColor(i, false), "combo");
@@ -719,14 +712,17 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
   cx = Math.round(cx);
   const dummy = s.training && sl.cpu;
   const label = dummy ? "DUMMY" : sl.cpu ? "CPU" : !s.championSeat(i) ? "COMMANDER" : "PLAYER";
-  const pw = Math.max(26, textWidth(label, 0.5, true) + 10);
+  const pw = Math.max(sl.cpu ? 20 : 26, textWidth(label, 0.5, true) + (sl.cpu ? 6 : 10));
   const camPl = !sl.cpu && s.cameraMode !== 0 && s.championSeat(i);
   const lvW = 21;
   const camW = 11;
   const extra = sl.cpu && !dummy ? lvW + 3 : camPl ? camW + 3 : 0;
-  // Humans get a pencil on the left: sign your name.
+  // Humans get a pencil on the left: sign your name. A CPU seat gets SIT there instead (a local pad moves onto it,
+  // or an online guest takes it over) - its own button in the row, so it never covers the stage or costumes.
   const pen = !sl.cpu && s.championSeat(i);
-  const lead = pen ? camW + 3 : 0;
+  const sit = sl.cpu && !dummy && (s.peer || !!s.cursors?.cursors.some((c) => c.active));
+  const sitW = textWidth("SIT", 0.5, true) + 5;
+  const lead = pen ? camW + 3 : sit ? sitW + 2 : 0;
   const x0 = Math.round(cx - (pw + extra + lead) / 2) + lead;
   if (pen) {
     const zx = x0 - lead;
@@ -737,6 +733,20 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
     uiGlyph(ctx, "pencil", zx + camW / 2, y + 4, 9, BROWN);
     s.hit(`pen:${i}`, zx - 2, y - 2, camW + 4, 12);
     if (hl) shadowText(ctx, "SIGN YOUR NAME", cx - textWidth("SIGN YOUR NAME", 0.42) / 2, y - 24, "#f8e8c0", 0.42);
+  }
+  if (sit) {
+    const zx = x0 - lead;
+    const bid = s.peer ? `take:${i}` : `sit:${i}`;
+    const hl = hovered(s, bid);
+    ctx.fillStyle = INK;
+    ctx.fillRect(zx - 1, y - 1, sitW + 2, 10);
+    texturedRect(ctx, "parch", zx, y, sitW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
+    drawPlain(ctx, "SIT", zx + sitW / 2 - textWidth("SIT", 0.5, true) / 2, y + 1.6, BROWN, 0.5, true);
+    s.hit(bid, zx - 2, y - 2, sitW + 4, 12);
+    if (hl) {
+      const t = s.peer ? "TAKE THIS SEAT" : "SIT HERE · PLAY THIS SEAT";
+      shadowText(ctx, t, cx - textWidth(t, 0.42) / 2, y - 24, "#f8e8c0", 0.42);
+    }
   }
   const px = x0 + pw / 2;
   ctx.fillStyle = INK;
