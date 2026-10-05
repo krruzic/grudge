@@ -1270,6 +1270,124 @@
           }
         }
       ]
+    },
+    "wreckwitch": {
+      "r": [
+        {
+          "id": "brinesquall",
+          "name": "BRINE SQUALL",
+          "desc": "BILGE SPREADS 1M WIDER, THE CLOUD HANGS FOR 5S AND THE FIRST GOUT KNOCKS THE WIND OUT OF FOES: STUNNED 0.8S.",
+          "add": {
+            "radius": 1,
+            "delay": 2
+          },
+          "set": {
+            "stunSeconds": 0.8
+          }
+        },
+        {
+          "id": "scurvy",
+          "name": "SCURVY",
+          "desc": "THE BRINE EATS AT THEM: 26 PER SECOND, A 40% SLOW, AND FOES IN THE CLOUD TAKE 15% MORE DAMAGE FROM YOUR HOUSE.",
+          "set": {
+            "dps": 26,
+            "slowMul": 0.6,
+            "vulnMul": 1.15
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "keelhaul",
+          "name": "KEELHAUL",
+          "desc": "DREDGE HITS FOR 40 MORE AND THE CATCH IS STUNNED 1S.",
+          "combo": "WITH BRINE SQUALL: THE CATCH IS LEFT STANDING IN A PUDDLE OF BILGE (2.2M, 3S, NO HEALING).",
+          "add": {
+            "damage": 40
+          },
+          "fx": {
+            "dredgeStun": 1.0
+          },
+          "with": [
+            {
+              "id": "brinesquall",
+              "fx": {
+                "zoneAfter": {
+                  "seconds": 3,
+                  "dps": 10,
+                  "slowMul": 0.75,
+                  "style": "bilge",
+                  "radius": 2.2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "longchain",
+          "name": "LONG CHAIN",
+          "desc": "DREDGE REACHES 13M, COMES BACK 2S SOONER, AND EVERY CHAMPION YOU CATCH RAISES THE TIDE BY TWO.",
+          "combo": "WITH SCURVY: WHATEVER YOU DREDGE CAN'T HEAL FOR 3S.",
+          "add": {
+            "range": 4,
+            "cooldown": -2
+          },
+          "with": [
+            {
+              "id": "scurvy",
+              "fx": {
+                "dredgeNoHeal": 3
+              }
+            }
+          ],
+          "fx": {
+            "tideOnCatch": 2
+          }
+        }
+      ],
+      "a": [
+        {
+          "id": "barnacle",
+          "name": "BARNACLE CRUST",
+          "desc": "SWINGS GROW A BARNACLE CRUST, +20 SHIELD A HIT UP TO 120, AND EVERY CHAMPION YOU HIT RAISES THE TIDE BY ONE (ONCE A SECOND).",
+          "fx": {
+            "tideOnHit": 1,
+            "shieldOnHit": {
+              "amount": 20,
+              "max": 120,
+              "seconds": 6
+            }
+          }
+        },
+        {
+          "id": "undertow",
+          "name": "UNDERTOW",
+          "desc": "YOUR SECOND SWING HITS 35% HARDER AND STUNS 0.5S; THE HELD WHIRL REACHES 1M FURTHER, HITS 40% HARDER AND DRAGS FOES IN.",
+          "fx": {
+            "finisherBonus": {
+              "damage": 1.35
+            },
+            "finisherStun": 0.5,
+            "maelstrom": {
+              "range": 1,
+              "mul": 1.4,
+              "pull": 7
+            }
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "davyslocker",
+          "name": "DAVY'S LOCKER",
+          "desc": "DAVY'S GRIP+: THE HANDS REACH 2M FURTHER, HOLD FOR 2S AND EVERY TIDE STACK ADDS 13 DAMAGE.",
+          "add": {
+            "radius": 2,
+            "rootSeconds": 0.5,
+            "stackDamage": 3
+          }
+        }
+      ]
     }
   },
   "order": [

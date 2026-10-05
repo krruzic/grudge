@@ -127,6 +127,7 @@ function updateZones(w: World): void {
     for (const o of w.entities) {
       if (!o.alive || o.team === z.team || o.kind === "structure") continue;
       if (Math.hypot(o.transform.pos.x - z.x, o.transform.pos.z - z.z) > z.radius) continue;
+      if (z.noHeal) o.status.noHealUntil = Math.max(o.status.noHealUntil ?? 0, t + z.noHeal);
       if (z.poison) {
         o.status.poisonDps = z.poison;
         o.status.poisonUntil = t + (z.poisonSeconds ?? 3);

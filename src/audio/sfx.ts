@@ -367,6 +367,7 @@ export class Audio {
       friar: ["maddock.keg", 1],
       harpooner: ["twang", 0.75],
       scribe: ["ui.page", 1],
+      wreckwitch: ["chain.rattle", 0.9],
       herald: ["cloth.flap", 1],
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];

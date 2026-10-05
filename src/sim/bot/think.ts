@@ -34,6 +34,7 @@ import {
   scribeFight,
   wardenFight,
   warlordFight,
+  witchFight,
   wrenAbilities,
   wrenShoot,
 } from "./tactics.ts";
@@ -194,6 +195,7 @@ const TDM_STYLE: Record<string, number> = {
   scribe: 3,
   herald: 4,
   harpooner: 3,
+  wreckwitch: 0,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -782,6 +784,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     // Harpooner: Reel In by walls, Tongue Lash off divers, charged harpoons.
     if (ab.b.kind === "reel") harpoonerFight(bot, w, me, target);
   }
+  // Wreck Witch: tide-aware engage, Dredge / Bilge / whirl / Davy's Grip (bot/tactics.ts).
+  if (ab.b.kind === "dredge" && witchFight(bot, w, me, target)) return true;
   if (plan.healer && ab.a.kind === "combo") {
     // Melee healer: keep swinging at whatever is in reach.
     if (!target.hero) {

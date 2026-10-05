@@ -42,6 +42,11 @@ export function syncHero(ents: EntityViews, e: Entity, v: View, facing: number, 
   const a = h.action;
   syncActionAnim(ents, e, v, facing, dt);
   v.body.position.y = heroLift(ents, e, v, dt) - (v.wade ?? 0) / (v.body.parent?.scale.y || 1);
+  // Wreck Witch Tide Rising: she swells 3% per stack (eased so stacks gained and lost don't pop).
+  if (h.tide !== undefined) {
+    v.tideK = (v.tideK ?? 0) + ((h.tide ?? 0) - (v.tideK ?? 0)) * Math.min(1, dt * 4);
+    v.body.scale.setScalar(1 + v.tideK * 0.03);
+  }
   // Stealthed (or hidden in cover and unseen by the other team): fade the hero's own materials.
   const stealth = w.time < e.status.stealthUntil || (e.status.hidden && e.status.seenBy === 0);
   if (stealth !== v.stealthed) {
@@ -139,6 +144,7 @@ function syncActionAnim(ents: EntityViews, e: Entity, v: View, facing: number, d
         ents.fx.slash(p.x, p.y, p.z, facing, e.team, k, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
       }
     } else if (a.name === "dodge" && a.kind !== "kegrocket" && a.kind !== "pagegust") {
+    } else if (a.name === "dodge" && a.kind !== "kegrocket" && a.kind !== "chainswing") {
       anim = "dodge";
       ents.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, ents.heroScale * 0.8, 5, 2.2);
     } else if (a.name === "hit") anim = "hit";
@@ -167,7 +173,8 @@ function syncActionAnim(ents: EntityViews, e: Entity, v: View, facing: number, d
   }
   if (!a) {
     const speed = Math.hypot(h.vel.x, h.vel.z);
-    if (h.blocking) ents.play(v, "block");
+    if (h.charging === "a" && (h.chargeT ?? 0) > 0.15 && v.actions.has("whirl")) ents.play(v, "whirl", 1.6);
+    else if (h.blocking) ents.play(v, "block");
     else if (speed > 0.8) ents.play(v, "run", Math.max(0.6, speed / h.speed) * 1.2);
     else if (!(v.current?.startsWith("attack_") && v.actions.get(v.current)?.isRunning())) ents.play(v, "idle");
   }
@@ -186,6 +193,7 @@ function heroLift(ents: EntityViews, e: Entity, v: View, dt: number): number {
   if (a?.kind === "quake" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 1.8;
   if (a?.kind === "leap" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 2.6;
   if (a?.kind === "kegrocket") lift = Math.min(1, a.t / 0.08, (a.dur - a.t) / 0.1) * 0.75;
+  if (a?.kind === "chainswing") lift = Math.sin(Math.min(1, a.t / a.dur) * Math.PI) * 1.3;
   if (h.jump) {
     const j = h.jump;
     const k = (w.time - j.start) / j.dur;

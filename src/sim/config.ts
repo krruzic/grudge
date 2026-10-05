@@ -97,6 +97,15 @@ export interface TalentFx {
   swarmFollow?: number;
   /** Hollin: uncharged Ink Bolts slow. */
   inkSlow?: { mul: number; seconds: number };
+  /** Wreck Witch: champion hits with A add Tide stacks (once a second). */
+  tideOnHit?: number;
+  /** Wreck Witch: the held-A whirl reaches further, hits harder and drags foes in. */
+  maelstrom?: { range: number; mul: number; pull: number };
+  /** Wreck Witch Dredge: stun instead of slow; victims can't heal for this many seconds. */
+  dredgeStun?: number;
+  dredgeNoHeal?: number;
+  /** Wreck Witch Dredge: Tide stacks gained for every champion caught. */
+  tideOnCatch?: number;
 }
 
 export interface TalentWith {
@@ -274,6 +283,8 @@ export interface AbilityDef {
   blotRadius?: number;
   blotDamage?: number;
   runeDamage?: number;
+  /** Davy's Grip: extra damage per Tide Rising stack. */
+  stackDamage?: number;
 }
 
 export interface BotPlan {
@@ -315,6 +326,7 @@ export interface HeroDef {
    *   guard     - multiplier on damage a partner takes while within 9 m of this champion;
    *   reelTo    - Reel In drags a champion this share of the way to a partner of that class (Brindle + tank);
    *   swarmAlly - multiplier on a partner's next hit on a foe in this champion's bee swarm (Abbess Hollin);
+   *   dredgeStack - Tide stacks Mother Kelp gains when Dredge catches a foe already slowed or rooted;
    *   (each new champion documents its own entries in its hero module).
    */
   synergy?: Partial<Record<string, Partial<Record<HeroClass, number>>>>;

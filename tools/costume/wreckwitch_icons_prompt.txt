@@ -1,0 +1,8 @@
+The FIRST image is a 2 x 2 reference grid of the same fantasy game character, MOTHER KELP the Wreck Witch, an old sea-hag with a long hooked nose, a sly crooked grin and glowing eyes, in four costume variants. The SECOND image is a finished costume-icon set for another character in the game, showing the exact icon style to match. Paint a 2 x 2 grid of four COSTUME SELECT ICONS of Mother Kelp in EXACTLY the style of the second image (Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon HEAD only, front-facing, same head shape, size and framing in all four, thick dark outline around the whole silhouette, strong flat colours, a sliver of collar at the bottom at most), one per cell, in the same order and positions as the first image, each centred in its cell with lots of empty space around it:
+
+top left: CLASSIC: pale sea-green skin, a wild mane of dark green seaweed hair with two little shells, a starfish on her cheek, an off-white sailcloth hood collar.
+top right: DROWNED SIREN: pale lavender-blue skin with a few fish scales on the cheeks, coral-red anemone hair with pearls, glowing gold eyes, a pearly pink collar with a gold cord.
+bottom left: BOG QUEEN: mossy olive-brown skin, wild dry swamp-grass hair with cattails and two little white flowers, glowing amber eyes, a mossy green collar.
+bottom right: FROZEN WRECK: frostbitten pale grey-white skin, frozen frost-white hair with icicles, glowing icy eyes, a frosted slate-grey collar.
+
+The four heads must be identical in shape, size and pose, only the costume details differ. Keep her hair compact so each head fits well inside its cell. Plain flat light grey background, no text, no borders, no frames, no circles behind the heads.

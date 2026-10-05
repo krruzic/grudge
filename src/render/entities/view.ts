@@ -38,6 +38,8 @@ export interface View {
   wasDead?: boolean;
   ward?: { hulls: THREE.Mesh[]; line: ReturnType<typeof hullMaterial>; glow: ReturnType<typeof hullMaterial> };
   wardK?: number;
+  /** Wreck Witch: eased Tide Rising stacks driving her size. */
+  tideK?: number;
   stealthed?: boolean;
   baseVisible?: boolean;
   mark?: THREE.Sprite;

@@ -11,4 +11,5 @@ import "./marksman";
 import "./friar";
 import "./harpooner";
 import "./scribe";
+import "./wreckwitch";
 import "../fx/costumeSkins";

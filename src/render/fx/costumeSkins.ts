@@ -18,6 +18,7 @@ import {
   SUMMONER,
   WARDEN,
   WARLORD,
+  WITCH,
   WREN,
 } from "./atlas";
 import { COSTUME_SKIN, SHARED_CHUNK_GEOS } from "./chunks";
@@ -90,6 +91,10 @@ const TINTS: Record<string, Record<number, number>> = {
     0x303868: 0x701818,
     0xc8d0ff: 0xffb0a0,
   },
+  // Mother Kelp (wreckwitch): her shock rings and splash tints follow the costume's sea.
+  siren: { 0xc0fff0: 0xffd0e8, 0xb0fff0: 0xffc0dc, 0xa0ffe8: 0xffa8d0 },
+  bogqueen: { 0xc0fff0: 0xe8e8a0, 0xb0fff0: 0xd8e090, 0xa0ffe8: 0xc8d870 },
+  frostwreck: { 0xc0fff0: 0xf0faff, 0xb0fff0: 0xe0f4ff, 0xa0ffe8: 0xc8ecff },
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
@@ -107,6 +112,9 @@ const TRAILS: Record<string, number> = {
   queenbee: 0xffc840,
   vigil: 0xb0a0ff,
   redink: 0xd02828,
+  siren: 0xff8fb8,
+  bogqueen: 0x9ab040,
+  frostwreck: 0xc8f0ff,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);
@@ -156,6 +164,15 @@ const SWAPS: Record<string, [THREE.Texture, THREE.Texture][]> = {
   redink: [
     [FX.dust, SCRIBE.inkCloud],
     [FX.twinkle, SCRIBE.star],
+  ],
+  siren: [[FX.splash, WITCH.brine]],
+  bogqueen: [
+    [FX.dust, WITCH.cloud],
+    [FX.splash, WITCH.brine],
+  ],
+  frostwreck: [
+    [FX.dust, WITCH.cloud],
+    [FX.splash, WITCH.brine],
   ],
   celadon: [
     [FX.dust, FRIAR.barley],

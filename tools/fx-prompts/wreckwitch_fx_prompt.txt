@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for MOTHER KELP, the Wreck Witch, a hunched old sea-hag with seaweed hair who swings a barnacled ship's anchor on a rusty chain, spits clouds of foul bilge brine and summons drowned hands from the ground, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a splash crown of murky green-teal seawater with white foam tips, side view
+2. a single murky green brine droplet
+3. a single pale sea-foam bubble with a white highlight
+4. a wavy strand of dark green kelp seaweed
+5. a small cream spiral seashell with a barnacle on it
+6. a puffy sickly yellow-green and grey bilge-gas cloud, lumpy and soft
+7. a horizontal spray of green brine spit, thick on the left spraying apart to the right
+8. a cracked broken red heal plus symbol split in two, dripping green slime
+9. a horizontal length of heavy rusty iron chain spanning the whole cell width
+10. a single heavy rusty iron chain link
+11. a thick dark sea-green crescent swoosh arc of a heavy anchor swing, with water droplets flying off it
+12. a curling turquoise ocean wave crest with white foam
+13. a gaunt pale sea-green drowned hand with long fingers reaching up out of a small swirl of dark water
+14. a swirling dark teal-and-navy whirlpool seen from directly above, spiral arms with white foam streaks
+15. a ring of churning dark green water seen from directly above, with pale grasping drowned fingers poking up all around the ring, empty centre
+16. a round puddle of murky green bilge water seen from directly above, with a scummy yellow-white foam rim, floating bits of seaweed and a few bubbles
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

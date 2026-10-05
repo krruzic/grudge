@@ -19,6 +19,7 @@ const WEAPON: Record<string, { swing: string; hit: string; rate?: number }> = {
   marksman: { swing: "swing.light", hit: "arrow.hit" },
   harpooner: { swing: "swing.light", hit: "arrow.hit", rate: 0.85 },
   scribe: { swing: "swing.light", hit: "splash", rate: 1.6 },
+  wreckwitch: { swing: "swing.heavy", hit: "kelp.anchor", rate: 0.85 },
 };
 const ARMORED = new Set(["warlord", "herald", "engineer"]);
 
@@ -450,6 +451,17 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
       a.play("cork", 0.8);
       a.vocal(hero, "taunt", 0.8, { id: ev.src, at: 0.1 });
       break;
+    case "davygrip":
+      shout(0.9);
+      a.play("bubble", 0.5, { dur: span });
+      break;
+    case "dredge":
+      shout(0.6);
+      a.play("chain.rattle", 0.5, { rate: 0.9 });
+      break;
+    case "bilge":
+      a.play("kelp.slime", 0.4, { rate: 1.2 });
+      break;
     case "stealth":
       a.play("grim.smoke", 0.6);
       a.play("pop", 0.5);
@@ -755,6 +767,50 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       a.play("whistle.wind", 0.5, { rate: 1.2 });
       a.play("ui.page", 0.55);
       a.play("cloth.flap", 0.45, { rate: 1.1, at: 0.05 });
+      return;
+    // Mother Kelp: anchor and chain, brine, drowned hands.
+    case "whirl":
+      if (a.allow("kelpWhirl", 1)) {
+        a.play("swing.heavy", 0.55, { rate: 0.75 });
+        a.play("chain.rattle", 0.35, { rate: 1.1 });
+      }
+      return;
+    case "dredge":
+    case "dredgeMiss":
+      a.play("chain.rattle", 0.8, { priority: true });
+      a.play("whoosh.big", 0.6, { rate: 0.8 });
+      if (ev.name === "dredgeMiss") a.play("splash", 0.5, { at: ev.seconds ?? 0.2 });
+      return;
+    case "dredgeSwap":
+      a.play("kelp.anchor", 0.9, { priority: true });
+      a.play("splash", 0.8, { at: 0.02 });
+      a.play("bubble", 0.5, { at: 0.1 });
+      return;
+    case "bilge":
+      a.play("kelp.spit", 0.8, { priority: true });
+      a.play("kelp.slime", 0.7, { at: 0.12 });
+      a.play("bubble", 0.4, { at: 0.2 });
+      return;
+    case "davygrip":
+      a.play("kelp.curse", 0.8, { priority: true });
+      a.play("splash", 0.9, { rate: 0.7 });
+      a.play("rock.rumble", 0.6, { rate: 0.8, at: 0.05 });
+      a.play("kelp.slime", 0.6, { at: 0.1 });
+      a.impact();
+      return;
+    case "grab":
+      if (a.allow("kelpGrab", 2)) a.play("kelp.slime", 0.6, { rate: 0.8 });
+      return;
+    case "chainSwing":
+      a.play("chain.rattle", 0.8);
+      a.play("whoosh.big", 0.5, { rate: 1.1, at: 0.05 });
+      return;
+    case "tide":
+      if ((ev.radius ?? 0) >= 10 && a.allow("kelpTide", 1)) {
+        a.play("splash", 0.6, { rate: 0.8 });
+        a.vocal("wreckwitch", "taunt", 0.7, { id: ev.src });
+      } else if ((ev.radius ?? 0) % 3 === 0 && (ev.radius ?? 0) > 0 && a.allow("kelpTide", 1))
+        a.play("bubble", 0.3, { rate: 0.9 });
       return;
   }
   void w;

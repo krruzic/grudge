@@ -487,7 +487,8 @@ export class EntityViews {
           const away =
             !!e.hero.pip ||
             ha?.kind === "kegrocket" ||
-            ((ha?.kind === "keg" || ha?.kind === "powderkeg") && ha.t >= ha.hitAt - 0.03);
+            ((ha?.kind === "keg" || ha?.kind === "powderkeg" || ha?.kind === "dredge") && ha.t >= ha.hitAt - 0.03) ||
+            ha?.kind === "chainswing";
           for (const o of v.pipNodes) o.visible = !away;
         }
         v.baseVisible = v.root.visible;

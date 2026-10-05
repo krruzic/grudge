@@ -6,6 +6,7 @@ import type { World } from "../world.ts";
 import type { Entity } from "../types.ts";
 import { abilities, addShield, allFx, mark as markOne, xpForDamage } from "../talents.ts";
 import { pipMarkMul, vantageMul } from "../hero/marksman.ts";
+import { tideArmor, tideLeech, tideMul } from "../hero/wreckwitch.ts";
 
 export interface DamageOpts {
   knockback?: number;
@@ -38,6 +39,7 @@ export function damageMulOf(w: World, src: Entity): number {
   if (s.brewUntil !== undefined && w.time < s.brewUntil) m *= s.brewMul ?? 1;
   if (src.hero) m *= w.mapEvents.hauntMul(src, "damage");
   if (src.hero) m *= src.hero.damageMul * (src.hero.action?.power ?? 1);
+  if (src.hero?.tide) m *= tideMul(w, src);
   if (src.unit) m *= 1 + (w.data.match.suddenDeath.unitDamageMul - 1) * w.surge();
   if (s.powerDamageMul !== undefined) m *= s.powerDamageMul;
   return m;
@@ -300,6 +302,7 @@ function defenderScaling(w: World, src: Entity | null, target: Entity, amount: n
   if (src && w.time < src.status.markUntil && src.status.markWeaken < 1) amount *= src.status.markWeaken;
   if (w.time < st.armorUntil) amount *= st.armorMul;
   if (st.powerTakenMul !== undefined) amount *= st.powerTakenMul;
+  if (target.hero?.tide) amount *= tideArmor(w, target);
   if (target.hero && st.shield > 0) {
     const aws = abilities(w, target).a.fx?.armorWhileShield;
     if (aws) amount *= aws;
@@ -389,6 +392,7 @@ function matchupArmour(w: World, src: Entity | null, target: Entity, amount: num
 function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number): void {
   if (src?.hero && src.alive && target.hero && w.lone(src))
     w.heal(src, amount * (w.heroDef(src.hero.type).hooks.loneLeech ?? 0));
+  if (src?.hero?.tide && src.alive) w.heal(src, amount * tideLeech(w, src));
   if (target.hero?.jump && amount > 0) w.cancelJump(target);
   xpForDamage(w, src, target, amount);
   if (src && src.alive && src.status.stealUntil && w.time < src.status.stealUntil)
@@ -523,5 +527,6 @@ export function lone(w: World, e: Entity): boolean {
 
 export function heal(w: World, target: Entity, amount: number): void {
   if (!target.alive || target.hp >= target.maxHp) return;
+  if (target.status.noHealUntil !== undefined && w.time < target.status.noHealUntil) return;
   target.hp = Math.min(target.maxHp, target.hp + amount);
 }

@@ -103,6 +103,8 @@ export interface Status {
   /** Inside Hollin's bee swarm (hero/scribe.ts): her partner's next hit lands harder (heroes.json synergy). */
   swarmUntil?: number;
   swarmOwner?: number;
+  /** Wreck Witch Bilge: no healing of any kind until this time. */
+  noHealUntil?: number;
 }
 
 /** Marksman's hawk (hero/marksman.ts). */
@@ -288,6 +290,14 @@ export interface HeroState {
   runes?: Rune[];
   manuscriptUntil?: number;
   freeCast?: { b: boolean; r: boolean };
+  /** Wreck Witch Tide Rising (hero/wreckwitch.ts): stacks, seconds toward the next one, last time near a foe. */
+  tide?: number;
+  tideT?: number;
+  tideNearAt?: number;
+  tideEbbAt?: number;
+  tideHitAt?: number;
+  /** Index of the last anchor-whirl sweep of the current hold. */
+  whirlN?: number;
 }
 
 export interface UnitState {
@@ -413,6 +423,8 @@ export interface Zone {
   vuln?: number;
   /** The zone follows this entity (Hollin's recalled bee swarm). */
   follow?: number;
+  /** Enemies inside can't heal for this many seconds (Wreck Witch Bilge). */
+  noHeal?: number;
 }
 
 export interface Delayed {
