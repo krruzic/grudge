@@ -32,6 +32,7 @@ import {
   summonerFight,
   wardenFight,
   warlordFight,
+  witchFight,
   wrenAbilities,
   wrenShoot,
 } from "./tactics.ts";
@@ -190,6 +191,7 @@ const TDM_STYLE: Record<string, number> = {
   summoner: 3,
   friar: 4,
   herald: 4,
+  wreckwitch: 0,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -774,6 +776,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     // Summoner: charged hex, bolt-range spacing.
     if (ab.b.kind === "hex") summonerFight(bot, w, me, target);
   }
+  // Wreck Witch: tide-aware engage, Dredge / Bilge / whirl / Davy's Grip (bot/tactics.ts).
+  if (ab.b.kind === "dredge" && witchFight(bot, w, me, target)) return true;
   if (plan.healer && ab.a.kind === "combo") {
     // Melee healer: keep swinging at whatever is in reach.
     if (!target.hero) {

@@ -380,3 +380,79 @@ export function wrenShoot(bot: Bot, w: World, me: Entity, target: Entity): boole
   else bot.goal = null;
   return true;
 }
+
+/**
+ * Mother Kelp: Dredges the enemy marksman / caster out of their backline (and chases with it once the tide is in at
+ * 4+ stacks or the target is low), Bilge on healers first (then on whoever is mending, low or in reach), the held-A
+ * anchor whirl in a crowd of soldiers, Davy's Grip at high tide or on two champions. Hovering at the edge to build
+ * stacks before committing tested worse than brawling: the stacks' leech and toughness are what keep her alive.
+ * Returns true when she took over goal/attack this think.
+ */
+export function witchFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): boolean {
+  const h = me.hero!;
+  const ab = abilities(w, me);
+  const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
+  const tide = h.tide ?? 0;
+  const foes = foesNear(w, me, 14);
+  const p = me.transform.pos;
+  const face = (o: Entity) => aimAt(bot, me, o);
+  let acted = false;
+  // Davy's Grip: at high tide with a champion in the ring, two champions in it, or a kill.
+  const z = ab.z;
+  if (h.meter >= w.data.heroes.baseline.superMax && !h.action) {
+    const r = (z.radius ?? 6) - 0.8;
+    const inRing = foes.filter((o) => w.dist(me, o) < r);
+    const dmg = ((z.damage ?? 70) + tide * (z.stackDamage ?? 10)) * w.damageMulOf(me);
+    if (inRing.length >= 2 || (inRing.length && (tide >= 5 || inRing[0].hp < dmg * 1.2))) bot.wantZ = true;
+  }
+  // Bilge: a healer in spitting range first, else a champion that's healing up or low.
+  if (rdy("r") && !h.action) {
+    const range = (ab.r.range ?? 5) + 1;
+    const healer = foes.find((o) => w.heroDef(o.hero!.type).botPlan?.healer && w.dist(me, o) < range);
+    const mending = foes.find(
+      (o) =>
+        w.dist(me, o) < range &&
+        (o.hp < o.maxHp * 0.6 || (o.status.hotUntil !== undefined && w.time < o.status.hotUntil)),
+    );
+    const t = healer ?? mending ?? (target?.hero && w.dist(me, target) < range - 0.5 ? target : undefined);
+    if (t && bot.rand() < 0.6 * bot.skill + 0.2) {
+      bot.wantR = true;
+      bot.wantPlace = { x: t.transform.pos.x - p.x, z: t.transform.pos.z - p.z };
+      face(t);
+      acted = true;
+    }
+  }
+  // Dredge: pull the enemy marksman / caster out (when healthy enough to fight on their side), else close the gap
+  // on the target once committed.
+  if (rdy("b") && !h.action && !bot.wantR) {
+    const reach = (ab.b.range ?? 9) - 0.6;
+    const back = foes.find((o) => {
+      const cls = w.heroDef(o.hero!.type).class;
+      return (cls === "marksman" || cls === "caster") && w.dist(me, o) < reach && w.dist(me, o) > 3.5;
+    });
+    const commit = !!target?.hero && (tide >= 4 || target.hp < target.maxHp * 0.4);
+    const pick =
+      back && me.hp > me.maxHp * 0.45
+        ? back
+        : target?.hero && (commit || w.dist(me, target) > 3.5) && w.dist(me, target) < reach && w.dist(me, target) > 2
+          ? target
+          : undefined;
+    if (pick && bot.rand() < 0.5 * bot.skill + 0.25) {
+      bot.wantB = true;
+      face(pick);
+      acted = true;
+    }
+  }
+  if (!target?.alive) return acted;
+  // Whirl in a crowd of soldiers (against a champion the combo hits harder).
+  const close = w.enemiesNear(me, 3.2).filter((o) => !o.structure).length;
+  const heroClose = target.hero && w.dist(me, target) - target.radius < 2.6;
+  if (!h.action && !bot.wantB && !bot.wantR && !bot.wantZ && close >= 4 && !heroClose) {
+    bot.wantCharge = "a";
+    bot.chargeAimId = target.id;
+    bot.chargeRange = 3;
+    bot.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
+    return true;
+  }
+  return acted;
+}

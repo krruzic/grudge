@@ -85,6 +85,15 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
+  /** Wreck Witch: champion hits with A add Tide stacks (once a second). */
+  tideOnHit?: number;
+  /** Wreck Witch: the held-A whirl reaches further, hits harder and drags foes in. */
+  maelstrom?: { range: number; mul: number; pull: number };
+  /** Wreck Witch Dredge: stun instead of slow; victims can't heal for this many seconds. */
+  dredgeStun?: number;
+  dredgeNoHeal?: number;
+  /** Wreck Witch Dredge: Tide stacks gained for every champion caught. */
+  tideOnCatch?: number;
 }
 
 export interface TalentWith {
@@ -249,6 +258,8 @@ export interface AbilityDef {
   splash?: number;
   splashDamage?: number;
   pierceRange?: number;
+  /** Davy's Grip: extra damage per Tide Rising stack. */
+  stackDamage?: number;
 }
 
 export interface BotPlan {
@@ -285,8 +296,9 @@ export interface HeroDef {
   /**
    * Team synergies by partner class (2v2 / team deathmatch partners only):
    *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   *   dredgeStack - Wreck Witch Tide stacks gained when Dredge catches a foe already slowed or rooted.
    */
-  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
+  synergy?: { hexAlly?: Partial<Record<HeroClass, number>>; dredgeStack?: Partial<Record<HeroClass, number>> };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

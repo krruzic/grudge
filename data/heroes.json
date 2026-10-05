@@ -1024,6 +1024,119 @@
         }
       },
       "class": "support"
+    },
+    "wreckwitch": {
+      "name": "Mother Kelp",
+      "blurb": "Wreck Witch. Tide Rising: every second near an enemy champion adds a stack (max 10). Each stack: +5% damage, 2% tougher, 1.5% life drained from her hits, and she grows. Swaps places with her prey.",
+      "health": "high",
+      "speed": "mid",
+      "damage": "mid",
+      "defaultBuild": "barracks",
+      "botRange": 2.2,
+      "hooks": {
+        "speedMul": 0.94,
+        "tideRadius": 6,
+        "tideMax": 10,
+        "tidePer": 0.05,
+        "tideDrain": 4,
+        "whirlDamage": 22,
+        "whirlRange": 2.9,
+        "whirlEvery": 0.35,
+        "whirlMax": 3,
+        "swingReach": 3.5,
+        "swingSeconds": 0.5,
+        "tideArmor": 0.02,
+        "tideLeech": 0.015
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 56,
+              "range": 2.8,
+              "arcDeg": 160,
+              "dur": 0.5,
+              "hitAt": 0.27,
+              "lunge": 1.2,
+              "knockback": 2
+            },
+            {
+              "damage": 80,
+              "range": 3.0,
+              "arcDeg": 200,
+              "dur": 0.62,
+              "hitAt": 0.33,
+              "lunge": 1.6,
+              "knockback": 6
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight",
+          "variance": 0.15
+        },
+        "b": {
+          "kind": "dredge",
+          "anim": "throw",
+          "range": 9,
+          "width": 0.9,
+          "damage": 80,
+          "slowMul": 0.6,
+          "slowSeconds": 1.5,
+          "dur": 0.6,
+          "hitAt": 0.3,
+          "cooldown": 8,
+          "bot": "never",
+          "botRange": 9,
+          "callout": "DREDGE",
+          "stunSeconds": 0.5
+        },
+        "r": {
+          "kind": "bilge",
+          "anim": "cast",
+          "range": 5,
+          "radius": 3,
+          "damage": 60,
+          "dps": 16,
+          "slowMul": 0.75,
+          "seconds": 3,
+          "delay": 3,
+          "dur": 0.55,
+          "hitAt": 0.3,
+          "cooldown": 10,
+          "bot": "never",
+          "botRange": 5,
+          "callout": "BILGE \u00b7 NO HEALING"
+        },
+        "z": {
+          "kind": "davygrip",
+          "anim": "slam",
+          "radius": 6,
+          "damage": 70,
+          "stackDamage": 10,
+          "rootSeconds": 1.5,
+          "dur": 0.95,
+          "hitAt": 0.55,
+          "bot": "never",
+          "botRange": 5,
+          "callout": "DAVY'S GRIP"
+        }
+      },
+      "botPlan": {
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "class": "bruiser",
+      "synergy": {
+        "dredgeStack": {
+          "caster": 2
+        }
+      }
     }
   }
 }

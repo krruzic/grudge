@@ -96,6 +96,8 @@ export interface Status {
   blindMiss?: number;
   brewUntil?: number;
   brewMul?: number;
+  /** Wreck Witch Bilge: no healing of any kind until this time. */
+  noHealUntil?: number;
 }
 
 /** Marksman's hawk (hero/marksman.ts). */
@@ -244,6 +246,14 @@ export interface HeroState {
   stillAt?: number;
   stillX?: number;
   stillZ?: number;
+  /** Wreck Witch Tide Rising (hero/wreckwitch.ts): stacks, seconds toward the next one, last time near a foe. */
+  tide?: number;
+  tideT?: number;
+  tideNearAt?: number;
+  tideEbbAt?: number;
+  tideHitAt?: number;
+  /** Index of the last anchor-whirl sweep of the current hold. */
+  whirlN?: number;
 }
 
 export interface UnitState {
@@ -367,6 +377,8 @@ export interface Zone {
   poisonSeconds?: number;
   /** Enemies inside take this damage multiplier from the zone's team (brewfest "tipsy"). */
   vuln?: number;
+  /** Enemies inside can't heal for this many seconds (Wreck Witch Bilge). */
+  noHeal?: number;
 }
 
 export interface Delayed {

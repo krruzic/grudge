@@ -7,6 +7,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, bCooldown, frenzySpeed, onBUse } from "../talents.ts";
 import { canRake, trackStill, updatePip } from "./marksman.ts";
 import { detonateKegs, kegRocketTick, plentyTick } from "./friar.ts";
+import { chainSwingTick, tideTick, whirlTick } from "./wreckwitch.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -24,12 +25,14 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (h.pip) updatePip(w, e);
   if (h.dead) {
     h.grave = undefined;
+    if (h.tide) h.tide = 0;
     if (w.time >= h.respawnAt && !w.teams[e.team]?.out) respawn(w, e);
     return;
   }
   graveTick(w, e, ab.r);
   if (def.hooks.vantageMul) trackStill(w, e);
   if (def.hooks.plentyRadius) plentyTick(w, e);
+  if (def.hooks.tideMax) tideTick(w, e);
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -79,6 +82,10 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   } else {
     h.charging = undefined;
     h.chargeT = 0;
+  }
+  if (def.hooks.whirlDamage) {
+    if (h.charging === "a") whirlTick(w, e);
+    else h.whirlN = undefined;
   }
   if (combo(w, e, cmd)) return;
 
@@ -470,6 +477,8 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
   } else if (a.kind === "kegrocket") {
     kegRocketTick(w, e, a);
+  } else if (a.kind === "chainswing") {
+    chainSwingTick(w, e, a);
   } else if (a.kind === "combo" && a.t < a.hitAt) {
     const hit = ab.a.hits![a.combo];
     const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;
@@ -534,7 +543,7 @@ function freeMove(w: World, e: Entity, cmd: Command): void {
   const dt = w.dt;
   const b = w.data.heroes.baseline;
   const pc = w.data.match.pacing;
-  if (e.hp < e.maxHp && w.calm(e)) {
+  if (e.hp < e.maxHp && w.calm(e) && !(e.status.noHealUntil !== undefined && w.time < e.status.noHealUntil)) {
     const turf = w.turf(e);
     if (turf === "home" || turf === "tower") e.hp = Math.min(e.maxHp, e.hp + e.maxHp * pc.homeRegenFrac * dt);
     else if (
