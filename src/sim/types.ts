@@ -638,6 +638,8 @@ export interface Command {
   place?: { dx: number; dz: number };
   morph?: boolean;
   formation?: boolean;
+  /** Mother Kelp: dodge as a chain swing round the pivot nearest this point (picked by holding dodge). */
+  swing?: { x: number; z: number };
   /** Deathmatch: a C-stick callout to the team's CPUs - push this way (world direction, unit length). */
   callout?: { x: number; z: number };
 }

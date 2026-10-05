@@ -1,5 +1,6 @@
 // Placeable abilities: which ability kinds can be aimed at a ground point (hold the button to show a reticle), and
 // their max placement range. Read by the client (reticle/aim UI via placeRanges) and by startAbility.
+import { swingPivots } from "./wreckwitch.ts";
 import type { World } from "../world.ts";
 import type { Entity } from "../types.ts";
 import type { AbilityDef } from "../config.ts";
@@ -48,6 +49,7 @@ export function placeRanges(
   r?: number;
   z?: number;
   spots?: { x: number; z: number }[];
+  swing?: { x: number; z: number }[];
   ready: { b: boolean; r: boolean; z: boolean };
 } {
   const ab = abilities(w, e);
@@ -64,6 +66,11 @@ export function placeRanges(
       ? graveSpots(w, e).map((s) => ({ x: s.x, z: s.z }))
       : ab.r.kind === "erratum"
         ? erratumSpots(w, e).map((s) => ({ x: s.x, z: s.z }))
+        : undefined,
+    // Mother Kelp: what a held dodge could hook (none while the dodge is cooling down).
+    swing:
+      w.heroDef(h.type).hooks.swingReach && ready(e, "dodge", w.time) && !h.action
+        ? swingPivots(w, e).map((s) => ({ x: s.x, z: s.z }))
         : undefined,
     ready: {
       b: ready(e, "b", w.time),

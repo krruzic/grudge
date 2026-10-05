@@ -13,6 +13,7 @@ import { pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
 import { duelistReflex } from "./bot/tactics.ts";
+import { swingPivots } from "./hero/wreckwitch.ts";
 
 /** Pad hold timing (mirrors src/input/commands.ts): a hold counts as charging after TAP, full power after +FULL. */
 const CHARGE_TAP = 0.2;
@@ -256,6 +257,11 @@ export class Bot {
     cmd.special = this.wantR;
     cmd.super = this.wantZ;
     cmd.dodge = this.wantDodge;
+    // CPU Kelp: a dodge next to something hookable is a chain swing round the nearest one (humans hold to pick).
+    if (cmd.dodge && w.heroDef(me.hero!.type).hooks.swingReach) {
+      const pv = swingPivots(w, me)[0];
+      if (pv) cmd.swing = { x: pv.x, z: pv.z };
+    }
     cmd.recall = this.wantRecall;
     this.wantRecall = false;
     cmd.block = this.wantBlock && !w.arena.carrying(me);

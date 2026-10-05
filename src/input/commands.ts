@@ -36,6 +36,8 @@ export interface MapperUi {
     at?: { x: number; z: number };
     spots?: number;
   } | null;
+  /** Mother Kelp holding dodge: the pivot picked and the swing direction (the renderer previews the swing). */
+  swing: { at: { x: number; z: number }; dirX: number; dirZ: number } | null;
 }
 
 export interface AimInfo {
@@ -46,6 +48,8 @@ export interface AimInfo {
   r?: number;
   z?: number;
   spots?: { x: number; z: number }[];
+  /** Mother Kelp: chain-swing pivots in reach (a held dodge picks one with the stick). */
+  swing?: { x: number; z: number }[];
   ready?: { b: boolean; r: boolean; z: boolean };
 }
 
@@ -83,6 +87,7 @@ export class CommandMapper {
       learnReady: false,
       charge: null,
       reticle: null,
+      swing: null,
       morph: 0,
       morphBack: false,
     };
@@ -111,6 +116,9 @@ export class CommandMapper {
   specReady = false;
   morphHold = 0.6;
   private xHeldFor = -1;
+  private swingHeld = -1;
+  private swingSel: { x: number; z: number } | null = null;
+  private swingDir: { x: number; z: number } | null = null;
 
   update(p: PadState, now: number, atPad = false, atHome = false, canLearn = false, aim: AimInfo | null = null): void {
     const c = this.pending;
@@ -221,9 +229,51 @@ export class CommandMapper {
       else c.secondary = true;
       if (held > TAP && range) c.place = { ...this.place };
     }
-    if (p.pressed.dodge) c.dodge = true;
     const blockDodge = p.pressed.x && p.held.block && p.profile !== "keyboard";
-    if (blockDodge) c.dodge = true;
+    // Mother Kelp next to something hookable: a TAP of dodge is a plain roll (on release); HOLDING it shows the
+    // swing, the stick picks which pivot, and releasing swings round it.
+    const swingAt = aim?.swing;
+    this.ui.swing = null;
+    if ((p.pressed.dodge || blockDodge) && swingAt?.length) this.swingHeld = now;
+    else if (p.pressed.dodge || blockDodge) c.dodge = true;
+    if (this.swingHeld >= 0) {
+      const down = p.held.dodge || (p.held.x && p.held.block);
+      const held = now - this.swingHeld;
+      if (down && swingAt?.length) {
+        if (held > TAP) {
+          const hx = aim!.hx ?? 0;
+          const hz = aim!.hz ?? 0;
+          const mag = Math.hypot(p.stickX, p.stickY);
+          if (!this.swingSel || mag > 0.45) {
+            const sa = mag > 0.45 ? Math.atan2(p.stickX, p.stickY) : aim!.facing;
+            let bd = Infinity;
+            for (const q of swingAt) {
+              let d = Math.abs(Math.atan2(q.x - hx, q.z - hz) - sa);
+              if (d > Math.PI) d = Math.PI * 2 - d;
+              if (d < bd) {
+                bd = d;
+                this.swingSel = q;
+              }
+            }
+          }
+          this.swingDir = mag > 0.45 ? { x: p.stickX / mag, z: p.stickY / mag } : this.swingDir;
+          c.moveX = c.moveZ = 0;
+          this.ui.swing = { at: this.swingSel!, dirX: this.swingDir?.x ?? 0, dirZ: this.swingDir?.z ?? 0 };
+        }
+      } else {
+        c.dodge = true;
+        if (held > TAP && this.swingSel) {
+          c.swing = { ...this.swingSel };
+          if (this.swingDir) {
+            c.moveX = this.swingDir.x;
+            c.moveZ = this.swingDir.z;
+          }
+        }
+        this.swingHeld = -1;
+        this.swingSel = null;
+        this.swingDir = null;
+      }
+    }
     const sm = Math.hypot(p.stickX, p.stickY);
     if (sm < this.smash.from) {
       this.restAt = now;

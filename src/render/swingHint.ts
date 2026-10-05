@@ -1,10 +1,17 @@
-// Mother Kelp's chain-swing indicator: while a local Kelp has her dodge ready next to something she can hook
-// (a building, tree, rock or wall cell), a ring marks what the anchor would catch, a trail of dots shows the arc
-// and a marker shows where she'd land if she pressed L+X now (sim/hero/wreckwitch.ts chainSwingPlan, toward where
-// she's heading). Nothing shows when the dodge would be an ordinary roll.
+// Mother Kelp's chain-swing aim: while a local Kelp HOLDS dodge next to something she can hook (a tap is a plain
+// roll), small rings mark every pivot in reach, a bright ring the one her stick picked, a trail of dots the arc and
+// a marker where she'll land on release (sim/hero/wreckwitch.ts chainSwingPlan / swingPivots).
 import * as THREE from "three";
 import type { World } from "../sim/world";
-import { chainSwingPlan } from "../sim/hero/wreckwitch";
+import { chainSwingPlan, swingPivots } from "../sim/hero/wreckwitch";
+
+/** One local Kelp holding dodge: the pivot picked and the swing direction (input/commands.ts ui.swing). */
+export interface SwingAim {
+  heroId: number;
+  at: { x: number; z: number };
+  dirX: number;
+  dirZ: number;
+}
 
 const DOTS = 7;
 const TEAL = 0x5ee8c8;
@@ -13,6 +20,7 @@ interface Hint {
   pivot: THREE.Mesh;
   land: THREE.Mesh;
   dots: THREE.Mesh[];
+  others: THREE.Mesh[];
 }
 
 export class SwingHints {
@@ -35,26 +43,37 @@ export class SwingHints {
       d.renderOrder = 6;
       dots.push(d);
     }
-    this.root.add(pivot, land, ...dots);
-    const h = { pivot, land, dots };
+    const others: THREE.Mesh[] = [];
+    for (let i = 0; i < 8; i++) {
+      const o = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 24), mat(0.35));
+      o.rotation.x = -Math.PI / 2;
+      o.renderOrder = 6;
+      others.push(o);
+    }
+    this.root.add(pivot, land, ...dots, ...others);
+    const h = { pivot, land, dots, others };
     this.pool.push(h);
     return h;
   }
 
-  /** `heroIds`: the local humans' heroes (only Mother Kelps show anything). */
-  sync(w: World, heroIds: number[], time: number): void {
-    const kelps = heroIds
-      .map((id) => w.getAny(id))
-      .filter((e) => !!e?.alive && e.hero && !e.hero.dead && !!w.heroDef(e.hero.type).hooks.swingReach);
-    while (this.pool.length < kelps.length) this.make();
+  sync(w: World, aims: SwingAim[], time: number): void {
+    while (this.pool.length < aims.length) this.make();
     this.pool.forEach((p, i) => {
-      const e = kelps[i];
-      const plan =
-        e && !e.hero!.action && (e.hero!.cooldowns.dodge ?? 0) <= w.time
-          ? chainSwingPlan(w, e, e.hero!.vel.x, e.hero!.vel.z)
-          : null;
+      const aim = aims[i];
+      const e = aim ? w.getAny(aim.heroId) : undefined;
+      const live = !!e?.alive && !!e.hero && !e.hero.dead && !e.hero.action;
+      const plan = live && aim ? chainSwingPlan(w, e!, aim.dirX, aim.dirZ, aim.at) : null;
       p.pivot.visible = p.land.visible = !!plan;
       p.dots.forEach((d) => (d.visible = !!plan));
+      // The other pivots she could pick, faint.
+      const rest = plan && e ? swingPivots(w, e).filter((q) => q.x !== plan.pv.x || q.z !== plan.pv.z) : [];
+      p.others.forEach((o, k) => {
+        const q = rest[k];
+        o.visible = !!q;
+        if (!q) return;
+        o.position.set(q.x, w.groundY(q.x, q.z) + 0.1, q.z);
+        o.scale.setScalar(q.r + 0.35);
+      });
       if (!plan || !e) return;
       const pulse = 1 + Math.sin(time * 6) * 0.06;
       p.pivot.position.set(plan.pv.x, w.groundY(plan.pv.x, plan.pv.z) + 0.12, plan.pv.z);

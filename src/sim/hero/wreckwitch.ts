@@ -336,24 +336,24 @@ export function fireDavyGrip(w: World, e: Entity, a: HeroAction, def: AbilityDef
   }
 }
 
-/** Pivot for the chain swing: the nearest structure or blocked cell (tree, rock, wall) within reach. */
-function swingPivot(w: World, e: Entity, reach: number): { x: number; z: number; r: number } | null {
+type Pivot = { x: number; z: number; r: number };
+
+/**
+ * Everything the chain swing could hook within reach, nearest first: every structure, plus trees / rocks / wall
+ * cells (blocked nav cells) not under a building - the nearest cell per 45-degree sector, so a stand of trees
+ * offers a few distinct choices rather than dozens.
+ */
+export function swingPivots(w: World, e: Entity, reach = w.heroDef(e.hero!.type).hooks.swingReach ?? 0): Pivot[] {
   const p = e.transform.pos;
-  let best: { x: number; z: number; r: number } | null = null;
-  let bd = reach;
+  const out: (Pivot & { d: number })[] = [];
   const structs: Entity[] = [];
   for (const o of w.entities) {
     if (!o.alive || !o.structure) continue;
     structs.push(o);
     const d = w.dist(e, o) - o.radius;
-    if (d < bd) {
-      bd = d;
-      best = { x: o.transform.pos.x, z: o.transform.pos.z, r: o.radius };
-    }
+    if (d < reach) out.push({ x: o.transform.pos.x, z: o.transform.pos.z, r: o.radius, d });
   }
-  // A building wins over the blocked cells it stands on (and any tree or rock only counts when no building is in
-  // reach), so she swings round the whole thing rather than one corner of it.
-  if (best) return best;
+  const sector: ((Pivot & { d: number }) | undefined)[] = new Array(8);
   const cx = Math.floor(p.x);
   const cz = Math.floor(p.z);
   const R = Math.ceil(reach);
@@ -366,13 +366,21 @@ function swingPivot(w: World, e: Entity, reach: number): { x: number; z: number;
       if (structs.some((o) => Math.hypot(o.transform.pos.x - x - 0.5, o.transform.pos.z - z - 0.5) < o.radius + 1))
         continue;
       const d = Math.hypot(x + 0.5 - p.x, z + 0.5 - p.z) - 0.5;
-      if (d < bd) {
-        bd = d;
-        best = { x: x + 0.5, z: z + 0.5, r: 0.5 };
-      }
+      if (d >= reach) continue;
+      const k = (Math.round(Math.atan2(z + 0.5 - p.z, x + 0.5 - p.x) / (Math.PI / 4)) + 8) % 8;
+      if (!sector[k] || d < sector[k]!.d) sector[k] = { x: x + 0.5, z: z + 0.5, r: 0.5, d };
     }
   }
-  return best;
+  for (const c of sector) if (c) out.push(c);
+  return out.sort((a, b) => a.d - b.d).map(({ x, z, r }) => ({ x, z, r }));
+}
+
+/** The pivot at (or nearest to) a requested point, among those in reach; the nearest one with no request. */
+function swingPivot(w: World, e: Entity, at?: { x: number; z: number }): Pivot | null {
+  const all = swingPivots(w, e);
+  if (!all.length) return null;
+  if (!at) return all[0];
+  return all.reduce((b, q) => (Math.hypot(q.x - at.x, q.z - at.z) < Math.hypot(b.x - at.x, b.z - at.z) ? q : b));
 }
 
 /**
@@ -384,6 +392,7 @@ export function chainSwingPlan(
   e: Entity,
   moveX: number,
   moveZ: number,
+  at?: { x: number; z: number },
 ): {
   pv: { x: number; z: number; r: number };
   x: number;
@@ -397,7 +406,7 @@ export function chainSwingPlan(
 } | null {
   const hk = w.heroDef(e.hero!.type).hooks;
   if (!hk.swingReach) return null;
-  const pv = swingPivot(w, e, hk.swingReach);
+  const pv = swingPivot(w, e, at);
   if (!pv) return null;
   const t = e.transform;
   const rx = t.pos.x - pv.x;
@@ -432,12 +441,14 @@ export function chainSwingPlan(
 }
 
 /**
- * Dodge replacement (L+X) next to a structure or tree: she hooks the anchor round it and swings in an arc to its
- * far side, in the direction of the stick. Returns false (plain dodge) with nothing to hook or nowhere to land.
+ * Held dodge (cmd.swing names the pivot picked while holding; a tap is a plain roll): she hooks the anchor round
+ * that structure or tree and swings in an arc to its far side, in the direction of the stick. Returns false (plain
+ * dodge) with no swing asked for, nothing to hook or nowhere to land.
  */
 export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
+  if (!cmd.swing) return false;
   const hk = w.heroDef(e.hero!.type).hooks;
-  const plan = chainSwingPlan(w, e, cmd.moveX, cmd.moveZ);
+  const plan = chainSwingPlan(w, e, cmd.moveX, cmd.moveZ, cmd.swing);
   if (!plan) return false;
   const { pv, x, z, rr, base, deg, sign, sx, sz } = plan;
   const t = e.transform;

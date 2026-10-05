@@ -128,6 +128,13 @@ export function updateMatchInput(app: App, now: number): void {
     }
   });
   view.setMenus(app.mappers.map((m) => !!m && m.ui.buildMenu !== "closed"));
+  view.setSwingAims(
+    app.mappers.flatMap((m, i) => {
+      const s = m?.ui.swing;
+      const h = s ? w.heroForPlayer(i) : undefined;
+      return s && h ? [{ heroId: h.id, ...s }] : [];
+    }),
+  );
   view.setReticles(
     app.mappers.flatMap((m, i) => {
       const r = m?.ui.reticle;
