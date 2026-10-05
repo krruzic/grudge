@@ -22,6 +22,8 @@ CFG = {
     },
     "team_hue": (205, 245),
     "attach": [("attach_anvil", "vintner_props_tripo.glb"), ("attach_backanvil", "vintner_props_tripo.glb")],
+    # The weapon: its own Tripo model (vintner_hammer_prompt.txt) - a big anvil head on a chained oak shaft.
+    "hammer": "vintner_hammer_tripo.glb",
     "clips": "vintner_clips",
 }
 
@@ -214,8 +216,8 @@ def frame(a, b):
     return (Bm @ A.inverted()).to_4x4()
 
 
-WEAPON_TRIS = 1800
-WEAPON_LEN = 1.15
+WEAPON_TRIS = 2400
+WEAPON_LEN = 1.25
 WEAPON_GRIP = 0.14
 WEAPON_AXIS = (0.0, -1.0, -0.35)
 WEAPON_SIDE = (1.0, 0.0, 0.0)
@@ -232,21 +234,16 @@ def attach_backanvil(name, arm, src_path):
 
 
 def attach_anvil(name, arm, src_path):
-    """The props sheet holds both anvils (split at y = -0.09 in Tripo space): the chain anvil (weapon) goes in
-    hand_R as <name>_anvil, the big one on the back as <name>_backanvil. Both share one 512 texture."""
+    """The weapon (<name>_anvil, rigid in hand_R) is the anvil hammer model (CFG["hammer"], own 512 texture); the
+    old props sheet still supplies the big back anvil (<name>_backanvil, its half split at y = -0.09)."""
     reskin(name, arm)
-    w = th.import_prop(name + "_anvil", src_path, tex=512)
-    back = w.copy()
-    back.data = w.data.copy()
-    bpy.context.scene.collection.objects.link(back)
-    # The back anvil's horn tip pokes past the split line: it goes with the back anvil, not the weapon.
+    back = th.import_prop(name + "_backanvil", src_path, tex=512)
     horn = lambda c: c.x > 0.09 and -0.29 < c.y and -0.02 < c.z < 0.125
-    keep_faces(w, lambda c: c.y < -0.09 and not horn(c))
     keep_faces(back, lambda c: c.y >= -0.09 or horn(c))
-    drop_islands(w, lambda c: c.x > 0.13 and c.y > -0.25)
     drop_islands(back, lambda c: c.y < -0.25)
-    decimate(w, WEAPON_TRIS)
     decimate(back, BACK_TRIS)
+    w = th.import_prop(name + "_anvil", os.path.join(os.path.dirname(src_path), CFG["hammer"]), tex=512)
+    decimate(w, WEAPON_TRIS)
 
     # Weapon: principal axis by PCA, oriented pommel -> anvil head (the head end is the wider one).
     co = np.array([v.co[:] for v in w.data.vertices])
