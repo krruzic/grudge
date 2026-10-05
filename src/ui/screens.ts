@@ -139,6 +139,9 @@ export class Screens {
 
   /** Seat i picks a champion (not the commander). */
   championSeat(i: number): boolean {
+    // Seats past the mode's count (5-8 outside the deathmatches) aren't in play, whatever hero they last held.
+    const seats = this.mode === "1v1" ? 2 : this.mode === "tdm" || this.mode === "ffadm" ? this.slots.length : 4;
+    if (i >= seats) return false;
     return (
       i < 2 ||
       this.mode === "ffa" ||
