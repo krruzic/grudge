@@ -194,6 +194,9 @@ voice("summoner", ZOM, {"attack": ["humanYell[1-3].wav"], "big": ["humanYell[4-5
                         "death": ["humanDeath*.wav"], "taunt": ["zombieYell[1-3].wav"]}, 0.9)
 voice("wreckwitch", FEM, {"attack": ["attack*.wav"], "big": ["jump*.wav"], "hurt": ["damaged[12].wav"],
                           "death": ["damaged3.wav"], "taunt": ["healed*.wav"]}, 0.74)  # an old sea-hag, cast low
+voice("rider", "exi/RPG Voice Starter Pack/Type 1/", {"attack": ["attack*.wav"], "big": ["jump*.wav", "cure.wav"],
+                                                     "hurt": ["damaged[12].wav"], "death": ["damaged3.wav"],
+                                                     "taunt": ["healed*.wav", "heal.wav"]}, 0.86)
 S("vo.undead", ZOM + "zombieYell*.wav", ZOM + "zombieDeath*.wav", max=8, gain=-3)
 
 # ── Champions: signature sounds ──
@@ -207,6 +210,7 @@ S("remnil.army", ZOM + "zombieYell*.wav", rate=0.75, max=6)
 S("francois.ring", IMP + "impactBell_heavy_*.ogg", rate=1.5, max=4, gain=-4)
 S("thorn.grow", WM + "wood_cracking_*.ogg", WM + "wood_squeak_*.ogg", rate=0.7, max=6)
 S("wren.draw", RPG + "handleSmallLeather*.ogg", RPG + "beltHandle*.ogg", rate=0.85, max=4, gain=-4)
+S("bramble.honey", WATER + "slime_*.ogg", rate=0.8, max=8, lp=6000)
 S("maddock.keg", IMP + "impactPlank_medium_*.ogg", WM + "wood_slam_*.ogg", rate=0.8, max=6)
 S("kelp.anchor", IMP + "impactMetal_heavy_*.ogg", rate=0.7, max=5)
 S("kelp.slime", WATER + "slime_*.ogg", max=8)

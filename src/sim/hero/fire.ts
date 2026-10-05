@@ -13,6 +13,7 @@ import { fireErratum, fireInk, fireManuscript, fireSwarm } from "./scribe.ts";
 import { fireBilge, fireDavyGrip, fireDredge, tideOnHit } from "./wreckwitch.ts";
 import { chillTargets, fireDome, fireFort, fireLookout, throwSquare } from "./architect.ts";
 import { crushSlam, fireHeadbutt, firePound, fireSwitch } from "./vintner.ts";
+import { honeyFling, royalJelly, takeWing, throwHoneyPot } from "./rider.ts";
 import { fireLeap, fireQuake, fireSlam } from "./kinds/melee.ts";
 import { fireBanner, fireRally, fireWarcry } from "./kinds/command.ts";
 import { fireBlink, fireHex, fireReach, fireRootcage, fireShoot, fireStealth, fireSummon } from "./kinds/spells.ts";
@@ -90,6 +91,11 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
     firePound(w, e, a, mul);
     return;
   }
+  if (a.kind === "honeyfling") {
+    // Rider: held A flings a honey dollop (hero/rider.ts).
+    honeyFling(w, e, a);
+    return;
+  }
 
   const def = ab[a.name];
   switch (a.kind) {
@@ -162,6 +168,13 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return fireSwitch(w, e, a, def);
     case "crush":
       return crushSlam(w, e, a, def, 0);
+    // rider
+    case "honeypot":
+      return throwHoneyPot(w, e, a, def);
+    case "takewing":
+      return takeWing(w, e, def);
+    case "royaljelly":
+      return royalJelly(w, e, def);
     // spells / mobility
     case "shoot":
       return fireShoot(w, e, a, def, mul);

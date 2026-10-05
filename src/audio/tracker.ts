@@ -82,6 +82,8 @@ const GAIT: Record<string, { stride: number; rate: number; gain: number; layer?:
   summoner: { stride: 1.6, rate: 1.05, gain: 0.6 },
   scribe: { stride: 1.4, rate: 1.1, gain: 0.55 },
   architect: { stride: 1.4, rate: 1.2, gain: 0.7 },
+  // Mead hovers: no footfalls (silent gain), Bramble never touches the ground.
+  rider: { stride: 99, rate: 1, gain: 0 },
 };
 const STEP = 0.075;
 

@@ -33,7 +33,19 @@ const demoData = {
 } as GameData;
 
 /** Ability kinds that help allies (the demo adds friendly soldiers for them to affect). */
-const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner", "keg", "brewfest", "dome"]);
+const ALLY_KINDS = new Set([
+  "warcry",
+  "zone",
+  "repair",
+  "rally",
+  "banner",
+  "keg",
+  "brewfest",
+  "dome",
+  "honeypot",
+  "takewing",
+  "royaljelly",
+]);
 /** Big area abilities: wider camera, longer loop. */
 const BIG = new Set([
   "quake",
@@ -57,9 +69,24 @@ const BIG = new Set([
   "manuscript",
   "lookout",
   "dome",
+  "takewing",
+  "royaljelly",
 ]);
 /** Long-reach abilities: the target soldiers stand further away. */
-const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry", "pip", "keg", "powderkeg", "inkbolt", "swarm"]);
+const FAR = new Set([
+  "leap",
+  "dash",
+  "hex",
+  "reach",
+  "shoot",
+  "flurry",
+  "pip",
+  "keg",
+  "powderkeg",
+  "inkbolt",
+  "swarm",
+  "honeypot",
+]);
 /** Where the demo hero stands on the crossing map. */
 const SPOT = { x: 23.5, z: 7 };
 const BUTTON = { a: "attack", b: "secondary", r: "special", z: "super" } as const;
@@ -413,7 +440,7 @@ function buildAbilityWorld(hero: string, slot: Slot, pick: number): World {
 
 /** Start of every loop: hero back on the spot at full health / cooldowns, fresh target and ally soldiers. */
 function resetAbilityLoop(w: World, me: Entity, d: DemoRun): void {
-  const healer = d.kind === "keg" || d.kind === "brewfest";
+  const healer = d.kind === "keg" || d.kind === "brewfest" || d.kind === "royaljelly" || d.kind === "takewing";
   w.teleport(me, SPOT.x, SPOT.z);
   me.transform.facing = me.transform.prevFacing = Math.PI / 2;
   me.alive = true;
@@ -422,6 +449,7 @@ function resetAbilityLoop(w: World, me: Entity, d: DemoRun): void {
   me.hero!.cooldowns = {};
   me.hero!.meter = 9999;
   me.hero!.pip = undefined;
+  me.hero!.wing = undefined;
   // Healing abilities need someone hurt to heal.
   if (healer) me.hp = me.maxHp * 0.45;
   me.status.stealthUntil = 0;
@@ -509,6 +537,11 @@ function abilityCommand(w: World, me: Entity, d: DemoRun, t: number): Command {
         cmd.moveZ = dz / dl;
       }
     }
+  }
+  // Take Wing: steer a lazy circle over the soldiers, then come down.
+  if (d.kind === "takewing" && t > 0.9 && me.hero!.wing) {
+    cmd.moveX = Math.cos((t - 0.9) * 1.8);
+    cmd.moveZ = Math.sin((t - 0.9) * 1.8);
   }
   if (d.presses.some((p) => t < p && d.t >= p)) {
     (cmd as unknown as Record<string, unknown>)[d.btn] = true;

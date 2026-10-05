@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume LAVENDER FIELDS: a badger courier in a sage-green quilted smock with lavender embroidery riding a soft lilac-and-plum bumblebee with pink-lilac wings. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single glossy pale lilac-violet lavender honey droplet with a white highlight
+2. a thick wobbly blob of pale lilac-violet lavender honey flying, glossy, with a short drippy tail
+3. a splash crown of thick pale lilac lavender honey with fat drops, side view
+4. a round puddle of glossy pale lilac-violet lavender honey seen from directly above, with a few small lavender flower buds and bubbles in it
+5. a small chunk of pale cream honeycomb with lilac honey in the cells
+6. a small cute cartoon bumblebee in flight, lilac and plum stripes, rosy cheeks
+7. a soft glowing pale violet pollen puff with tiny sparkles
+8. a single pale pink-lilac flower petal
+9. a single sprig of purple lavender flowers
+10. a chunky lilac-violet honey heal plus symbol with honey dripping off its arms
+11. a glossy pale pink-white blob of royal jelly with a violet sparkle
+12. a small daisy-chain flower crown of white daisies and lavender with a twinkle
+13. a horizontal translucent pale pink-lilac buzzing wing motion blur streak, thick on the left tapering to the right
+14. a broken curved shard of cream pottery painted with a small lavender sprig
+15. a swirling round pale lilac wind gust whirl with violet pollen specks and petals, seen from above
+16. a ring of purple lavender sprigs and small cream honeycomb pieces, seen from directly above, forming a circle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

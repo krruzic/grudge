@@ -2,6 +2,7 @@
 // every frame by animateZone(). Styles: Thorn's bramble (and Sun Totem's desert variant), sinkhole/crater/lava
 // (3D fissures from fx/parts), bones, tesla, smoke, ale/aletrail/brewfest/tar (Maddock), grove, dome (Hoot's
 // Avalanche Dome: a frost ring on the ground under a translucent hemisphere of ice blocks).
+// (3D fissures from fx/parts), bones, tesla, smoke, ale/aletrail/brewfest/tar (Maddock), grove, honey (Bramble).
 //
 // Every zone's first child is a flat decal disc (ZONE_TEX / ZONE_DECAL). Only Maddock's ale, aletrail, tar and
 // brewfest zones show it; for the others it stays hidden since they moved to 3D fissures and props (turning
@@ -32,6 +33,7 @@ import { isDesert } from "../kits/desert";
 import { ZONE_DECALS, BUBBLE, FOAM } from "../kits/friar";
 import { PUDDLE_DECAL, RIPTIDE_DECAL, TIDE_BUBBLE, TIDE_FOAM } from "../kits/harpooner";
 import { animateSwarm, swarmZone } from "../kits/scribe";
+import { HONEY_BEE, HONEY_COMB, HONEY_DROP, HONEY_POOL } from "../kits/rider";
 import { propParts } from "../props";
 import type { HazardViews } from "./hazardViews";
 import type { Zone } from "../../sim/types";
@@ -575,6 +577,23 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       ring(Math.round(r * 1.5), [0.75, 0.98], (x, z) =>
         sprite(FOAM, 0.45 + Math.random() * 0.3, x, z, -0.2, false, "foam"),
       );
+  } else if (style === "honey") {
+    // Bramble's sticky pool: the painted honey puddle, bobbing comb pieces, honey drops and a few circling bees.
+    decal.material = new THREE.MeshBasicMaterial({
+      map: hd(HONEY_POOL),
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+    decal.visible = true;
+    ring(Math.round(r * 1.4), [0.15, 0.8], (x, z) =>
+      sprite(HONEY_COMB, 0.3 + Math.random() * 0.15, x, z, -0.15, false, "foam"),
+    );
+    ring(Math.round(r * 2), [0.05, 0.85], (x, z) =>
+      sprite(HONEY_DROP, 0.16 + Math.random() * 0.1, x, z, -0.05, false, "bubble"),
+    );
+    ring(Math.max(2, Math.round(r)), [0.3, 0.8], (x, z) => sprite(HONEY_BEE, 0.32, x, z, 0.7, false, "wisp"));
   } else if (style === "cider") {
     // Russet Hollow well mud: a sticky amber puddle with a glossy rim.
     decal.material = new THREE.MeshBasicMaterial({

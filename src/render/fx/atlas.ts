@@ -32,6 +32,7 @@ import scribeUrl from "../../../assets/fx/scribe.png?url";
 import wreckwitchUrl from "../../../assets/fx/wreckwitch.png?url";
 import architectUrl from "../../../assets/fx/architect.png?url";
 import vintnerUrl from "../../../assets/fx/vintner.png?url";
+import riderUrl from "../../../assets/fx/rider.png?url";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 
 // ── Sheets and cells ──
@@ -620,6 +621,25 @@ export const VINTNER = atlas("vintner", vintnerUrl, [
   "swap",
   "dizzy",
   "splat",
+] as const);
+
+export const RIDER = atlas("rider", riderUrl, [
+  "drop",
+  "blob",
+  "splash",
+  "pool",
+  "comb",
+  "bee",
+  "pollen",
+  "petal",
+  "clover",
+  "heal",
+  "jelly",
+  "crown",
+  "wing",
+  "shard",
+  "gust",
+  "ring",
 ] as const);
 
 /** Resolves once every base sheet has loaded; composites paint and base HQ paintings start loading then. */

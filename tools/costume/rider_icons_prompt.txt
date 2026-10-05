@@ -1,0 +1,8 @@
+The FIRST image is a 2 x 2 reference grid of the same fantasy game character, BRAMBLE, a friendly badger-folk courier (white face with two bold black stripes over the eyes, small round ears, black nose, warm smile) riding a giant fuzzy bee, in four costume variants. The SECOND image is the finished costume-icon set for the game's other characters, showing the exact icon style to match. Paint a 2 x 2 grid of four COSTUME SELECT ICONS of Bramble in EXACTLY the style of the second image (Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon HEAD only, front-facing, same head shape, size and framing in all four, thick dark outline around the whole silhouette, strong flat colours, a sliver of collar at the bottom at most), one per cell, in the same order and positions as the first image, each centred in its cell with lots of empty space around it:
+
+top left: CLASSIC: the badger head under a wide-brimmed straw sun hat with a green clover sprig in the band, a pale neckerchief knot, a mustard-yellow quilted collar.
+top right: WAR HORNET: same face under a black leather hat with a crimson band and a small red feather, a black and crimson quilted armour collar.
+bottom left: LAVENDER FIELDS: same face with rosy blush cheeks under the straw hat with a lilac ribbon and a bunch of purple lavender flowers, a sage-green collar.
+bottom right: QUEEN'S COURIER: same face under a royal purple felt hat with a gold band and a little gold crown badge, a purple velvet collar with gold braid.
+
+The four heads must be identical in shape, size and pose, only the costume details differ. Plain flat light grey background, no text, no borders, no frames, no circles behind the heads, no bee.

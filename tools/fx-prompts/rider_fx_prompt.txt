@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for BRAMBLE & MEAD, a badger-folk honey courier riding a giant fuzzy bumblebee, who flings honey, throws honey pots that leave sticky pools, flies on her bee and heals friends with royal jelly, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single glossy golden honey droplet with a white highlight
+2. a thick wobbly blob of golden honey flying, glossy, with a short drippy tail
+3. a splash crown of thick golden honey with fat drops, side view
+4. a round puddle of glossy golden honey seen from directly above, with a few small honeycomb pieces and bubbles in it
+5. a small chunk of golden honeycomb, a few hexagon cells
+6. a small cute cartoon bumblebee in flight, yellow and black stripes, little wings
+7. a soft glowing yellow pollen puff with tiny sparkles
+8. a single pink-white apple blossom petal
+9. a single green four-leaf clover
+10. a chunky golden honey heal plus symbol with honey dripping off its arms
+11. a glossy pearly cream-white blob of royal jelly with a golden sparkle
+12. a small shining golden crown with a twinkle
+13. a horizontal translucent pale-amber buzzing wing motion blur streak, thick on the left tapering to the right
+14. a broken curved shard of orange clay pottery
+15. a swirling round cream-white wind gust whirl with pollen specks, seen from above
+16. a ring of golden honeycomb hexagon cells with drips of honey, seen from directly above, forming a circle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

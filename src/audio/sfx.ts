@@ -373,6 +373,7 @@ export class Audio {
       wreckwitch: ["chain.rattle", 0.9],
       architect: ["stig.wrench", 0.85],
       vintner: ["hammer", 0.6],
+      rider: ["bramble.honey", 1],
       herald: ["cloth.flap", 1],
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];

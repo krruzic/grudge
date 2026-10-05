@@ -8,6 +8,7 @@ import { trailOf, FX } from "../fx/atlas";
 import { hullMaterial, buildHulls } from "../heroModels";
 import { KITS } from "../kits/registry";
 import { KIND_ANIM, ANIM_FALLBACK } from "./animation";
+import { beeLift } from "../heroProps/rider";
 import { makeBar, setBar } from "./bars";
 import type { EntityViews } from "./entityViews";
 import type { View } from "./view";
@@ -95,7 +96,7 @@ function syncRecallBar(ents: EntityViews, v: View, h: NonNullable<Entity["hero"]
 function syncWard(ents: EntityViews, e: Entity, v: View, dt: number, time: number): void {
   const h = e.hero!;
   const w = ents.world;
-  const warded = w.time < e.status.invulnUntil && h.action?.name !== "dodge" && h.action?.name !== "z";
+  const warded = w.time < e.status.invulnUntil && h.action?.name !== "dodge" && h.action?.name !== "z" && !h.wing;
   v.wardK = Math.max(0, Math.min(1, (v.wardK ?? 0) + (warded ? dt * 8 : -dt * 5)));
   if (v.wardK > 0 && !v.ward) {
     const line = hullMaterial(0xffd860, false);
@@ -175,6 +176,8 @@ function syncActionAnim(ents: EntityViews, e: Entity, v: View, facing: number, d
     const speed = Math.hypot(h.vel.x, h.vel.z);
     if (h.charging === "a" && (h.chargeT ?? 0) > 0.15 && v.actions.has("whirl")) ents.play(v, "whirl", 1.6);
     else if (h.blocking) ents.play(v, "block");
+    if (h.wing && v.actions.has("fly")) ents.play(v, "fly");
+    else if (h.blocking) ents.play(v, "block");
     else if (speed > 0.8) ents.play(v, "run", Math.max(0.6, speed / h.speed) * 1.2);
     else if (!(v.current?.startsWith("attack_") && v.actions.get(v.current)?.isRunning())) ents.play(v, "idle");
   }
@@ -194,6 +197,7 @@ function heroLift(ents: EntityViews, e: Entity, v: View, dt: number): number {
   if (a?.kind === "leap" && a.t < a.hitAt) lift = Math.sin((a.t / a.hitAt) * Math.PI) * 2.6;
   if (a?.kind === "kegrocket") lift = Math.min(1, a.t / 0.08, (a.dur - a.t) / 0.1) * 0.75;
   if (a?.kind === "chainswing") lift = Math.sin(Math.min(1, a.t / a.dur) * Math.PI) * 1.3;
+  lift = Math.max(lift, beeLift(ents.fx, e, v, dt, w.time));
   if (h.jump) {
     const j = h.jump;
     const k = (w.time - j.start) / j.dur;

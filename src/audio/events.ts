@@ -22,6 +22,7 @@ const WEAPON: Record<string, { swing: string; hit: string; rate?: number }> = {
   scribe: { swing: "swing.light", hit: "splash", rate: 1.6 },
   wreckwitch: { swing: "swing.heavy", hit: "kelp.anchor", rate: 0.85 },
   architect: { swing: "swing.light", hit: "hit.wood", rate: 1.1 },
+  rider: { swing: "swing.light", hit: "hit.blunt", rate: 1.1 },
 };
 const ARMORED = new Set(["warlord", "herald", "engineer", "vintner"]);
 
@@ -415,6 +416,10 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
     } else if (ev.kind === "whirl") [0, 0.1, 0.2].forEach((t) => a.play("swing.blade", 0.6, { at: t }));
     else if (ev.kind === "rake") a.play("bird.screech", 0.7);
     else if (ev.kind === "throw") a.play("swing.light", 0.5, { rate: 0.8 });
+    else if (ev.kind === "honeyfling") {
+      a.play("swing.light", 0.55, { rate: 0.9 });
+      a.play("bramble.honey", 0.35, { rate: 1.3 });
+    }
     return;
   }
   // Ability start.
@@ -538,6 +543,16 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
     case "harpoon":
       if (Math.random() < 0.25) a.vocal(hero, "attack", 0.5, { id: ev.src });
       break;
+    case "takewing":
+      buzz(a, 1.2, 0.5);
+      a.play("cloth.flap", 0.5, { rate: 1.4 });
+      a.vocal(hero, "big", 0.7, { id: ev.src });
+      break;
+    case "royaljelly":
+      a.vocal(hero, "taunt", 0.8, { id: ev.src });
+      a.play("magic.spell", 0.6, { rate: 1.2 });
+      break;
+    case "honeypot":
     case "keg":
     case "powderkeg":
     case "pip":
@@ -928,8 +943,50 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       } else if ((ev.radius ?? 0) % 3 === 0 && (ev.radius ?? 0) > 0 && a.allow("kelpTide", 1))
         a.play("bubble", 0.3, { rate: 0.9 });
       return;
+    // Bramble & Mead
+    case "potThrow":
+      a.play("swing.light", 0.5, { rate: 0.75 });
+      return;
+    case "potSplash":
+      a.play("glass", 0.45, { rate: 0.7 });
+      a.play("bramble.honey", 0.9, { at: 0.02 });
+      a.play("splash", 0.4, { at: 0.04, rate: 0.7 });
+      return;
+    case "wingUp":
+      a.play("whoosh.big", 0.6, { rate: 1.2 });
+      return;
+    case "wingLand":
+      a.play("body.land", 0.6);
+      a.play("bubble", 0.5, { at: 0.08 });
+      buzz(a, 0.4, 0.25);
+      return;
+    case "royalJelly":
+      a.play("cheer", 0.5, { priority: true });
+      a.play("bramble.honey", 0.7, { rate: 0.8 });
+      [523, 659, 784, 1047].forEach((f, i) => a.tone("triangle", f, f, 0.25, 0.06, 0, i * 0.07));
+      return;
+    case "buzz":
+      buzz(a, 0.35, 0.35);
+      a.play("dodge", 0.35);
+      return;
+    case "honeyBuff":
+      buzz(a, 0.3, 0.2);
+      a.tone("triangle", 660, 990, 0.14, 0.05);
+      return;
+    case "sweetHigh":
+      if (a.allow("sweetHigh", 1)) a.tone("sine", 880, 1320, 0.2, 0.04);
+      return;
   }
   void w;
+}
+
+/** Mead's wings: a few overlapping sawtooth drones wobbling around 170-230 Hz. */
+function buzz(a: Audio, dur: number, gain: number): void {
+  const n = Math.max(2, Math.round(dur / 0.09));
+  for (let i = 0; i < n; i++) {
+    const f = 175 + Math.random() * 50;
+    a.tone("sawtooth", f, f * (0.92 + Math.random() * 0.16), 0.12, gain * 0.12, 0, i * 0.08);
+  }
 }
 
 function relic(a: Audio, ev: Extract<SimEvent, { type: "relic" }>): void {

@@ -30,6 +30,7 @@ import {
   friarPowder,
   heaveDir,
   raiderFight,
+  riderFight,
   summonerFight,
   scribeFight,
   vintnerFight,
@@ -202,6 +203,7 @@ const TDM_STYLE: Record<string, number> = {
   wreckwitch: 0,
   architect: 3,
   vintner: 0,
+  rider: 4,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -604,6 +606,8 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (ab.r.kind === "erratum") scribeFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Architect: lookout perch, owl hop, forts, square throws.
   const hootPerched = ab.b.kind === "fort" && architectFight(bot, w, me, lowHp);
+  // Rider: Honey Pot on the brawl, honey dollops at range, Royal Jelly when hurt, Take Wing out.
+  if (ab.r.kind === "takewing") riderFight(bot, w, me, ehAlive ? enemyHero : undefined);
   if (
     hk.heaveRange &&
     rdy("heave") &&

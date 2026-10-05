@@ -105,6 +105,8 @@ export interface Status {
   swarmOwner?: number;
   /** Wreck Witch Bilge: no healing of any kind until this time. */
   noHealUntil?: number;
+  /** Stuck in Bramble's honey (rider pool): no dodging until then. */
+  stickyUntil?: number;
 }
 
 /** Marksman's hawk (hero/marksman.ts). */
@@ -302,6 +304,8 @@ export interface HeroState {
   grit?: number;
   /** Gristle's Anvil Curl: hits from behind are blocked until then. */
   curlUntil?: number;
+  /** Rider's Take Wing flight (hero/rider.ts): steered until `until`, R lands after minUntil; y = flight height. */
+  wing?: { until: number; minUntil: number; y: number; dirX: number; dirZ: number };
 }
 
 export interface UnitState {
@@ -433,6 +437,8 @@ export interface Zone {
   noHeal?: number;
   /** Architect's Avalanche Dome: no hit from more than 3.2 m away crosses its rim (world/damage.ts). */
   dome?: boolean;
+  /** Enemies inside can't dodge (rider honey). */
+  sticky?: boolean;
 }
 
 export interface Delayed {

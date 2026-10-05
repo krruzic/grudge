@@ -64,6 +64,8 @@ PROPS = {
     "snowfort": {"static": True, "yaw": 90, "size": (1.05, 0.75, 1.8), "tex": 256, "tris": 900},
     "lookout": {"static": True, "size": (2.0, 2.0, 2.45), "tex": 512, "tris": 2400},
     "architect_square": {"static": True, "yaw": 90, "height": 0.55, "tex": 256, "tris": 1000},
+    # Bramble's thrown honey pot (the other half of the ladle's props mesh).
+    "honeypot": {"static": True, "src": "rider_props", "keep": (1, 1), "height": 0.5, "tex": 256, "tris": 1200},
 }
 
 

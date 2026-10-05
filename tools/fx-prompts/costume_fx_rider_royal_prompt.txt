@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume QUEEN'S COURIER: a badger courier in a royal purple velvet coat with gold braid riding a shining gold-and-ivory queen bee with pearly gold-veined wings. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single glossy pearly ivory-gold royal honey droplet with a white highlight
+2. a thick wobbly blob of pearly ivory-gold royal honey flying, glossy, with gold flecks and a short drippy tail
+3. a splash crown of thick pearly ivory-gold honey with gold flecks and fat drops, side view
+4. a round puddle of glossy pearly ivory-gold royal honey seen from directly above, with a few gold flakes and small gold honeycomb pieces in it
+5. a small chunk of shining gold honeycomb
+6. a small regal cartoon queen bee in flight, gold and ivory stripes, a tiny gold crown
+7. a soft glowing gold pollen puff with tiny white sparkles
+8. a single royal purple velvet rose petal
+9. a small gold fleur-de-lis
+10. a chunky gold and ivory heal plus symbol with purple gem centre
+11. a glossy pearly white blob of royal jelly with a gold sparkle
+12. a small shining gold crown with purple gems and a twinkle
+13. a horizontal translucent pearly white-gold buzzing wing motion blur streak, thick on the left tapering to the right
+14. a broken curved shard of white porcelain with a gold rim
+15. a swirling round ivory and royal purple wind gust whirl with gold specks, seen from above
+16. a ring of shining gold honeycomb hexagon cells with pearly jelly drops and small purple gems, seen from directly above, forming a circle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

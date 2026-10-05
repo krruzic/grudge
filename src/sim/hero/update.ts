@@ -12,6 +12,7 @@ import { gustTick, manuscriptRecast, recallSwarm, scribeTick } from "./scribe.ts
 import { chainSwingTick, tideTick, whirlTick } from "./wreckwitch.ts";
 import { squareInput, toppleLookout } from "./architect.ts";
 import { crushTick, curlTick, gritTick, headbuttTick, startPound } from "./vintner.ts";
+import { buzzTick, honeyPartners, maybeFling, stuckInHoney, sweetToothTick, tickWing } from "./rider.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -30,6 +31,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (h.dead) {
     h.grave = undefined;
     if (h.tide) h.tide = 0;
+    h.wing = undefined;
     if (w.time >= h.respawnAt && !w.teams[e.team]?.out) respawn(w, e);
     return;
   }
@@ -40,6 +42,12 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (def.hooks.runeMax) scribeTick(w, e);
   if (def.hooks.tideMax) tideTick(w, e);
   if (def.hooks.gritMax) gritTick(w, e);
+  if (def.hooks.sweetRadius) {
+    sweetToothTick(w, e);
+    honeyPartners(w, e);
+  }
+  if (h.wing && tickWing(w, e, cmd)) return;
+  cmd = stuckInHoney(w, e, cmd);
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -112,6 +120,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     h.action.power = 1 + cmd.charge * (h.action.name === "a" ? 0.8 : 0.6);
     if (cmd.charge >= 0.99) callout(w, e, "FULL POWER!");
     if (def.hooks.poundRadius) startPound(w, e, cmd.charge);
+    if (def.hooks.flingDamage) maybeFling(w, e, cmd.charge);
   }
   if (h.action) {
     tickAction(w, e, ab);
@@ -404,7 +413,7 @@ function startFromInput(
     // Collapse talent: R with a lookout standing topples it.
   } else if (cmd.special && ready(e, "r", w.time) && !act && ab.r.kind === "gravewalk") {
     graveBegin(w, e, cmd, ab.r);
-  } else if (cmd.special && ready(e, "r", w.time) && !act) {
+  } else if (cmd.special && ready(e, "r", w.time) && !act && !(ab.r.kind === "takewing" && w.arena.carrying(e))) {
     startAbility(w, e, "r", cmd);
     h.cooldowns.r = w.time + (ab.r.cooldown ?? 10);
     if (ab.r.kind === "erratum") manuscriptRecast(w, e, "r");
@@ -505,6 +514,8 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     headbuttTick(w, e, a, adef);
   } else if (a.kind === "crush" && adef) {
     crushTick(w, e, a, adef);
+  } else if (a.kind === "buzz") {
+    buzzTick(w, e, a);
   } else if (a.kind === "combo" && a.t < a.hitAt) {
     const hit = ab.a.hits![a.combo];
     const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;

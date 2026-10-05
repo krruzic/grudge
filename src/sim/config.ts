@@ -118,6 +118,12 @@ export interface TalentFx {
   grit?: { max: number; seconds: number };
   /** Gristle's Switcheroo: he lands with a stomp where the partner stood. */
   switchSlam?: { radius: number; damage: number; knockback: number; stun: number };
+  /** Rider: Take Wing landing slams foes around her. */
+  wingSlam?: { damage: number; radius: number; stun?: number };
+  /** Rider: the Honey Pot splash shields allies. */
+  potShield?: { amount: number; seconds: number };
+  /** Rider: Take Wing landing leaves a small honey pool. */
+  landPool?: { radius: number; seconds: number };
 }
 
 export interface TalentWith {
@@ -309,6 +315,11 @@ export interface AbilityDef {
   chillMul?: number;
   /** Architect: ranged damage taken behind a Snow Fort. */
   coverMul?: number;
+  /** Rider: Royal Jelly shield amount / duration; Take Wing landing vulnerability and landing lag. */
+  shield?: number;
+  shieldSeconds?: number;
+  vulnSeconds?: number;
+  landSeconds?: number;
 }
 
 export interface BotPlan {
@@ -353,6 +364,7 @@ export interface HeroDef {
    *   dredgeStack - Tide stacks Mother Kelp gains when Dredge catches a foe already slowed or rooted;
    *   lookout     - Professor Hoot's Lookout footprint (cells per side) with a partner of that class;
    *   switchAlly - multiplier on the shield Gristle's Switcheroo gives a partner (> 1 also adds a speed burst).
+   *   honeyAlly - damage multiplier for a partner standing in this champion's honey pool.
    *   (each new champion documents its own entries in its hero module).
    */
   synergy?: Partial<Record<string, Partial<Record<HeroClass, number>>>>;
