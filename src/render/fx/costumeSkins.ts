@@ -135,6 +135,66 @@ const TINTS: Record<string, Record<number, number>> = {
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
+/**
+ * The original champions' recolour costumes: their kits' saturated FX colours (rings, glows, streaks drawn over the
+ * themed atlas cells) re-hued to the costume. [hue 0-360, saturation multiplier, lightness multiplier]; near-white
+ * colours keep their lightness so glows stay glows.
+ */
+const KIT_COLORS: Record<string, number[]> = {
+  warden: [0xc0ff90, 0xd8ffc0, 0x90ff60, 0xe0ffc8],
+  warlord: [0xff6060, 0xff3030, 0xffb060, 0xffb070, 0xff9060, 0xffa060, 0xff8040, 0xffc040, 0xffd080, 0xffe0c0],
+  raider: [0xc0ffb0, 0xd0ffc0, 0xc0a0ff, 0xa0ff90],
+  summoner: [0xc080ff, 0xd0a0ff, 0xe0c0ff, 0xd8b0ff, 0xb070ff, 0xa0ffa0],
+  marksman: [0xff7050, 0xffb090, 0xd8ffb0, 0xff9a70, 0xff9a50, 0xffb0a0, 0xffc0a0, 0xffd0a0, 0xffd860],
+  engineer: [0xa0f0ff, 0xa0e0ff, 0xfff0b0],
+  duelist: [0xe8f0ff, 0xd8e8ff],
+  herald: [0xfff0a0, 0xfff0b0, 0xffe8a0, 0xffd870],
+  friar: [0xffe0a0, 0xffe090, 0xffd070, 0xfff0d0, 0xfff0c0, 0xffe8a0, 0xffe6a0, 0xffc860, 0xffc850, 0xffb060],
+};
+const RECOLOUR: Record<string, [string, number, number, number, number]> = {
+  // costume: [hero, hue, saturation x, lightness x, weapon trail]
+  bloodmoon: ["warlord", 0, 1.1, 0.85, 0xff3a3a],
+  gilded: ["warlord", 45, 0.9, 1.05, 0xffd060],
+  swamp: ["warlord", 95, 0.7, 0.85, 0x9ac060],
+  clock: ["engineer", 38, 0.9, 1, 0xffc870],
+  ember: ["engineer", 22, 1.1, 0.95, 0xff7a30],
+  frost: ["engineer", 195, 0.8, 1.05, 0xc8f0ff],
+  blood: ["raider", 8, 1.1, 0.9, 0xff5030],
+  jackal: ["raider", 38, 0.7, 0.95, 0xe8c080],
+  frostbite: ["raider", 195, 0.9, 1, 0x9ae8ff],
+  lich: ["summoner", 192, 0.85, 1.05, 0xb0f0ff],
+  crimson: ["summoner", 355, 1, 0.9, 0xff4050],
+  plague: ["summoner", 85, 0.8, 0.9, 0xb0e060],
+  blackrose: ["duelist", 350, 0.9, 0.8, 0xc02040],
+  bleu: ["duelist", 220, 1, 1, 0x80a8ff],
+  carnival: ["duelist", 45, 1.1, 1, 0xffc040],
+  winterbark: ["warden", 200, 0.7, 1.05, 0xd0f0ff],
+  autumn: ["warden", 28, 1, 0.95, 0xffa040],
+  blossom: ["warden", 335, 0.8, 1.05, 0xffb0d0],
+  raven: ["marksman", 240, 0.6, 0.75, 0x8090ff],
+  sunfire: ["marksman", 25, 1.1, 1, 0xffa030],
+  winter: ["marksman", 205, 0.8, 1.05, 0xb8e8ff],
+  abbot: ["friar", 48, 0.8, 1.05, 0xfff0c0],
+  grog: ["friar", 25, 0.9, 0.75, 0xc07a30],
+  hopmaster: ["friar", 75, 0.8, 1, 0xc0e060],
+  blackknight: ["herald", 0, 0.9, 0.8, 0xd03030],
+  paladin: ["herald", 48, 0.7, 1.05, 0xfff0c0],
+  revenant: ["herald", 130, 0.8, 0.9, 0x70ff90],
+};
+for (const [c, [hero, hue, sm, lm, trail]] of Object.entries(RECOLOUR)) {
+  const map: Record<number, number> = {};
+  const hsl = { h: 0, s: 0, l: 0 };
+  for (const col of KIT_COLORS[hero]) {
+    const k = new THREE.Color(col).getHSL(hsl);
+    const glow = k.l > 0.82;
+    map[col] = new THREE.Color()
+      .setHSL(hue / 360, Math.min(1, hsl.s * sm), glow ? hsl.l : Math.min(0.95, hsl.l * lm))
+      .getHex();
+  }
+  setCostumeTints(c, map);
+  setCostumeTrail(c, "trail", trail);
+}
+
 const TRAILS: Record<string, number> = {
   colossus: 0xff70c8,
   calliope: 0xe0b8ff,
@@ -161,7 +221,6 @@ const TRAILS: Record<string, number> = {
   warhornet: 0xff4a3a,
   lavenderfield: 0xd8a8ff,
   queencourier: 0xb070ff,
-  frostbite: 0x9ae8ff,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);
