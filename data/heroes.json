@@ -749,6 +749,7 @@
           "anim": "cast",
           "range": 14,
           "seconds": 5,
+          "pipShakeAfter": 1,
           "markMul": 1.15,
           "peck": 14,
           "rake": 70,
@@ -766,9 +767,9 @@
         "r": {
           "kind": "volley",
           "anim": "volley",
-          "range": 9,
+          "range": 11,
           "radius": 3.5,
-          "damage": 33,
+          "damage": 29,
           "unitMul": 1.35,
           "waves": 5,
           "interval": 0.4,
@@ -779,7 +780,7 @@
           "hitAt": 0.35,
           "cooldown": 13,
           "bot": "fight",
-          "botRange": 9.5,
+          "botRange": 13,
           "callout": "VOLLEY \u00b7 ARROW RAIN"
         },
         "z": {

@@ -281,8 +281,9 @@ export function updatePip(w: World, e: Entity): void {
     }
   }
   if (p.phase === "on") {
-    // A dodge roll shakes Pip off.
-    const rolled = alive && tgt!.hero?.action?.name === "dodge";
+    // A dodge roll shakes Pip off - once he has held on for pipShakeAfter seconds (no instant roll-outs).
+    const latchedFor = w.time - (p.until - (def.seconds ?? 5));
+    const rolled = alive && tgt!.hero?.action?.name === "dodge" && latchedFor >= (def.pipShakeAfter ?? 1.5);
     if (rolled) {
       w.emit({
         type: "callout",
@@ -378,6 +379,7 @@ export function wrenTarget(
   dirZ: number,
   stick: boolean,
   reach: number,
+  cone = 0.2,
 ): Entity | null {
   const t = e.transform;
   let best: Entity | null = null;
@@ -390,7 +392,7 @@ export function wrenTarget(
     const dz = o.transform.pos.z - t.pos.z;
     const len = Math.hypot(dx, dz) || 1;
     const along = (dx * dirX + dz * dirZ) / len;
-    if (stick && along < 0.2) continue;
+    if (stick && along < cone) continue;
     const pip = o.status.pipOwner === e.id && w.time < (o.status.pipUntil ?? 0);
     const sc = d * 0.5 + (o.hero ? -6 : 0) + (pip ? -4 : 0) + (o.structure ? 5 : 0) - along * (stick ? 6 : 2);
     if (sc < bs) {
@@ -411,9 +413,12 @@ export function marksmanShot(w: World, e: Entity, a: HeroAction, def: AbilityDef
   const base = def.range ?? 11;
   const far = base * (hk.vantageRange ?? 1.2);
   const stick = !!a.stick;
-  let target = wrenTarget(w, e, a.dirX, a.dirZ, stick, far);
+  // A charged shot released with the stick held is aimed by hand: only a target within ~20 degrees of the stick
+  // gets the homing / snap, otherwise it flies exactly where she points.
+  const cone = stick && (a.power ?? 1) > 1.05 ? 0.94 : 0.2;
+  let target = wrenTarget(w, e, a.dirX, a.dirZ, stick, far, cone);
   if (target && w.dist(e, target) - target.radius > base && !vantage(w, e, target))
-    target = wrenTarget(w, e, a.dirX, a.dirZ, stick, base);
+    target = wrenTarget(w, e, a.dirX, a.dirZ, stick, base, cone);
   let dx = a.dirX;
   let dz = a.dirZ;
   if (target) {

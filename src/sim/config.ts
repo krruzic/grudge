@@ -162,6 +162,8 @@ export interface AbilityDef {
   stunSeconds?: number;
   bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "gravewalk" | "heal" | "never";
   botRange?: number;
+  /** Wren's Pip: seconds latched before a dodge roll can shake him off. */
+  pipShakeAfter?: number;
   heal?: number;
   length?: number;
   width?: number;
