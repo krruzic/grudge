@@ -523,7 +523,7 @@
       "hooks": {
         "heroDamageMul": 1.05,
         "maxHits": 2,
-        "structureMul": 0.55
+        "structureMul": 0.7
       },
       "abilities": {
         "a": {

@@ -221,13 +221,10 @@ function drawFfaRows(
     texturedRect(ctx, "cloth", x, ry - 12, Math.round(colW - 4), 8, TEAM_CLOTH[t], 0, 0.7);
     const pl = PLACE[k] ?? "";
     shadowText(ctx, pl, cx(k) - textWidth(pl, 0.45) / 2, ry - 11, "#fff4d8", 0.45);
+    // A fallen house's header is dimmed (its place already says where it finished).
     if (w.teams[t]?.out) {
-      ctx.strokeStyle = "#8a1810";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, ry - 4.5);
-      ctx.lineTo(x + Math.round(colW - 4), ry - 4.5);
-      ctx.stroke();
+      ctx.fillStyle = "rgba(30, 20, 12, 0.45)";
+      ctx.fillRect(x, ry - 12, Math.round(colW - 4), 8);
     }
   });
   rows.forEach(([label, f], i) => {
