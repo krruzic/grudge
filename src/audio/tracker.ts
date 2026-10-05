@@ -78,6 +78,7 @@ const GAIT: Record<string, { stride: number; rate: number; gain: number; layer?:
   marksman: { stride: 1.6, rate: 1.15, gain: 0.75 },
   harpooner: { stride: 1.3, rate: 0.9, gain: 0.8, layer: "step.water" },
   summoner: { stride: 1.6, rate: 1.05, gain: 0.6 },
+  scribe: { stride: 1.4, rate: 1.1, gain: 0.55 },
 };
 const STEP = 0.075;
 

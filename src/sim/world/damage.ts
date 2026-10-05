@@ -473,6 +473,16 @@ function synergyMul(w: World, src: Entity | null, target: Entity, opts: DamageOp
       const cls = w.heroDef(src.hero.type).class;
       if (o?.hero && o.team === src.team && cls) m *= w.heroDef(o.hero.type).synergy?.hexAlly?.[cls] ?? 1;
     }
+    // Hollin's bees: a partner champion's next hit on a foe inside her swarm lands harder, by class (then it's spent).
+    if (src?.hero && ts.swarmUntil !== undefined && t < ts.swarmUntil && ts.swarmOwner !== src.id) {
+      const o = w.getAny(ts.swarmOwner!);
+      const cls = w.heroDef(src.hero.type).class;
+      const k = o?.hero && o.team === src.team && cls ? w.heroDef(o.hero.type).synergy?.swarmAlly?.[cls] : undefined;
+      if (k) {
+        m *= k;
+        ts.swarmUntil = 0;
+      }
+    }
     if (src?.hero && t < src.hero.openingUntil) {
       const r = w.heroDef(src.hero.type).abilities.r;
       m *= r.openingMul ?? 1.5;

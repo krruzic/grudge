@@ -14,6 +14,7 @@ import type {
   Delayed,
   Directive,
   Entity,
+  InkBolt,
   Keg,
   MatchState,
   Missile,
@@ -38,6 +39,7 @@ import { MapEvents } from "./mapEvents.ts";
 import { Tdm } from "./tdm.ts";
 import { tickStatus, updateMissiles } from "./talents.ts";
 import { updateKegs } from "./hero/friar.ts";
+import { updateInk } from "./hero/scribe.ts";
 import { mulberry32 } from "./world/rng.ts";
 import { newStatus } from "./world/status.ts";
 import { applyPlayerCommand } from "./world/commands.ts";
@@ -80,6 +82,7 @@ export class World {
   readonly boomerangs: Boomerang[] = [];
   readonly missiles: Missile[] = [];
   readonly kegs: Keg[] = [];
+  readonly inkBolts: InkBolt[] = [];
   readonly pads: Pad[] = [];
   readonly teams: TeamState[] = [];
   readonly players: PlayerSlot[] = [];
@@ -253,6 +256,7 @@ export class World {
     updateBoomerangs(this);
     updateMissiles(this);
     updateKegs(this);
+    updateInk(this);
     tickStatus(this);
     this.runTimers();
     hazards.updateHazards(this);

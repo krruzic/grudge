@@ -87,6 +87,16 @@ export interface TalentFx {
   kegShield?: { amount: number; seconds: number };
   /** Brindle's Tongue Lash: leave a puddle where he lands. */
   landPuddle?: boolean;
+  /** Hollin: Erratum leaves an ink blot where she stood. */
+  erratumBlot?: { damage: number; radius: number; blind: number };
+  /** Hollin: Erratum leaves a small bee swarm where she stood. */
+  erratumSwarm?: { seconds: number; radius: number };
+  /** Hollin: extra runes kept at once and extra rune lifetime. */
+  moreRunes?: { count: number; seconds: number };
+  /** Hollin: seconds a recalled swarm keeps following her beyond its own time. */
+  swarmFollow?: number;
+  /** Hollin: uncharged Ink Bolts slow. */
+  inkSlow?: { mul: number; seconds: number };
 }
 
 export interface TalentWith {
@@ -258,6 +268,12 @@ export interface AbilityDef {
   chargeRicochets?: number;
   heroPull?: number;
   pullSpeed?: number;
+  bounces?: number;
+  bounceRange?: number;
+  bounceMul?: number;
+  blotRadius?: number;
+  blotDamage?: number;
+  runeDamage?: number;
 }
 
 export interface BotPlan {
@@ -292,18 +308,16 @@ export interface HeroDef {
   /** Fighting class, for team synergies: what a partner's synergy table keys on. */
   class?: HeroClass;
   /**
-   * Team synergies by partner class (2v2 / team deathmatch partners only):
-   *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed;
-   *   edge    - multiplier on a partner's damage while within 9 m of this champion;
-   *   guard   - multiplier on damage a partner takes while within 9 m of this champion;
-   *   reelTo  - Reel In drags a champion this share of the way to a partner of that class (Brindle + tank).
+   * Team synergies by partner class (2v2 / team deathmatch partners only). Each entry maps a partner's class to a
+   * number; what the number means depends on the entry:
+   *   hexAlly   - multiplier on a partner's champion hits against foes this champion has hexed (Remnil);
+   *   edge      - multiplier on a partner's damage while within 9 m of this champion;
+   *   guard     - multiplier on damage a partner takes while within 9 m of this champion;
+   *   reelTo    - Reel In drags a champion this share of the way to a partner of that class (Brindle + tank);
+   *   swarmAlly - multiplier on a partner's next hit on a foe in this champion's bee swarm (Abbess Hollin);
+   *   (each new champion documents its own entries in its hero module).
    */
-  synergy?: {
-    hexAlly?: Partial<Record<HeroClass, number>>;
-    edge?: Partial<Record<HeroClass, number>>;
-    guard?: Partial<Record<HeroClass, number>>;
-    reelTo?: Partial<Record<HeroClass, number>>;
-  };
+  synergy?: Partial<Record<string, Partial<Record<HeroClass, number>>>>;
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

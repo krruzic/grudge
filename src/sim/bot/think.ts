@@ -31,6 +31,7 @@ import {
   heaveDir,
   raiderFight,
   summonerFight,
+  scribeFight,
   wardenFight,
   warlordFight,
   wrenAbilities,
@@ -190,6 +191,7 @@ const TDM_STYLE: Record<string, number> = {
   marksman: 3,
   summoner: 3,
   friar: 4,
+  scribe: 3,
   herald: 4,
   harpooner: 3,
 };
@@ -588,6 +590,8 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (ab.r.kind === "parry") duelistFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Warden: charged slap in melee.
   if (ab.r.kind === "wall") wardenFight(bot, w, me, ehAlive ? enemyHero : undefined);
+  // Hollin: Erratum out of dives, swarm called home, bookmarks, charged bolts.
+  if (ab.r.kind === "erratum") scribeFight(bot, w, me, ehAlive ? enemyHero : undefined);
   if (
     hk.heaveRange &&
     rdy("heave") &&

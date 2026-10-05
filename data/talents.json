@@ -1,1168 +1,1281 @@
 {
- "notes": "Level 2 learns A tier 1, level 3 B tier 1, level 4 A tier 2, level 5 B tier 2. Each tier-1 pick has its own two tier-2 follow-ups. Mods: set/add/mul change the ability's numbers, fx turns on mechanics (see src/sim/talents.ts).",
- "xp": {
-  "levels": [
-   0,
-   150,
-   400,
-   750,
-   1200
-  ],
-  "passive": 1.5,
-  "vsHero": 0.3,
-  "vsUnit": 0.05,
-  "vsStructure": 0.04,
-  "heroKill": 120,
-  "unitKill": 4,
-  "structureKill": 40,
-  "perLevelHp": 0.06,
-  "perLevelDamage": 0.06
- },
- "heroes": {
-  "warlord": {
-   "r": [
-    {
-     "id": "bloodroar",
-     "name": "BLOODROAR",
-     "desc": "WAR CRY BECOMES A BLOOD OATH: ALLIES IN 12M HEAL 18% OF ALL DAMAGE THEY DEAL WHILE IT LASTS.",
-     "add": {
-      "radius": 2,
-      "seconds": 2
-     },
-     "fx": {
-      "lifestealAura": 0.18
-     }
-    },
-    {
-     "id": "challenge",
-     "name": "CHALLENGE",
-     "desc": "WAR CRY DRAGS EVERY FOE IN 6M TO YOU. FOR 3S THEY DEAL 20% LESS AND YOU TAKE 20% LESS.",
-     "fx": {
-      "challenge": {
-       "radius": 6,
-       "weaken": 0.8,
-       "armor": 0.8,
-       "seconds": 3
-      }
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "magnitude",
-     "name": "MAGNITUDE",
-     "desc": "SLAM SUCKS FOES INTO ITS CENTER AND TEARS OPEN A SINKHOLE THAT SLOWS 50%. RADIUS +15%.",
-     "combo": "WITH CHALLENGE: THE SLAM ALSO STUNS 1S.",
-     "mul": {
-      "radius": 1.15
-     },
-     "fx": {
-      "pull": true,
-      "zoneAfter": {
-       "seconds": 3.5,
-       "dps": 25,
-       "slowMul": 0.5,
-       "style": "sinkhole"
-      }
-     },
-     "with": [
-      {
-       "id": "challenge",
-       "set": {
-        "stunSeconds": 1.0
-       }
-      }
-     ]
-    },
-    {
-     "id": "shouldercharge",
-     "name": "SHOULDER CHARGE",
-     "desc": "SLAM BECOMES A 5M CHARGE THAT BOWLS FOES OVER FOR 45 AND STUNS 0.6S, THEN SLAMS. UNSTOPPABLE WHILE CHARGING.",
-     "combo": "WITH BLOODROAR: CHARGE COOLDOWN -20%.",
-     "fx": {
-      "charge": {
-       "range": 5,
-       "damage": 45,
-       "knockback": 5,
-       "stun": 0.6
-      },
-      "armorOnUse": {
-       "mul": 0.8,
-       "seconds": 1.5,
-       "cc": true
-      }
-     },
-     "with": [
-      {
-       "id": "bloodroar",
-       "mul": {
-        "cooldown": 0.8
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "earthsplitter",
-     "name": "EARTHSPLITTER",
-     "desc": "YOUR FINISHER SPLITS THE GROUND: A ROCK WAVE RUNS 9M, STUNS 0.5S AND ERUPTS AT THE END FOR 45.",
-     "fx": {
-      "wave": {
-       "damage": 40,
-       "length": 9,
-       "width": 1.4,
-       "stun": 0.5,
-       "style": "rock"
-      },
-      "waveEnd": {
-       "radius": 2.4,
-       "damage": 45
-      }
-     }
-    },
-    {
-     "id": "berserker",
-     "name": "BERSERKER",
-     "desc": "SWINGS HEAL 10% OF THEIR DAMAGE AND STACK ATTACK SPEED. AT 3 STACKS EVERY SWING CLEAVES ALL AROUND YOU.",
-     "fx": {
-      "lifesteal": 0.1,
-      "frenzy": {
-       "max": 3,
-       "speed": 0.13,
-       "seconds": 3.5,
-       "atMaxArc": 360,
-       "atMaxDamage": 1.05
-      }
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "cataclysm",
-     "name": "CATACLYSM",
-     "desc": "EARTHQUAKE+: 15% WIDER, STUNS 0.2S LONGER AND LEAVES A FIELD OF LAVA CRACKS FOR 4S.",
-     "mul": {
-      "radius": 1.15
-     },
-     "add": {
-      "stunSeconds": 0.2
-     },
-     "fx": {
-      "zoneAfter": {
-       "seconds": 4,
-       "dps": 22,
-       "slowMul": 0.6,
-       "style": "lava"
-      }
-     }
-    }
-   ]
+  "notes": "Level 2 learns A tier 1, level 3 B tier 1, level 4 A tier 2, level 5 B tier 2. Each tier-1 pick has its own two tier-2 follow-ups. Mods: set/add/mul change the ability's numbers, fx turns on mechanics (see src/sim/talents.ts).",
+  "xp": {
+    "levels": [
+      0,
+      150,
+      400,
+      750,
+      1200
+    ],
+    "passive": 1.5,
+    "vsHero": 0.3,
+    "vsUnit": 0.05,
+    "vsStructure": 0.04,
+    "heroKill": 120,
+    "unitKill": 4,
+    "structureKill": 40,
+    "perLevelHp": 0.06,
+    "perLevelDamage": 0.06
   },
-  "engineer": {
-   "r": [
-    {
-     "id": "teslatower",
-     "name": "TESLA TOWER",
-     "desc": "YOUR SIEGE RAMP GETS A TESLA COIL ON TOP: 400 HP, CHAINS LIGHTNING THROUGH 3 FOES EVERY SECOND WHILE THE RAMP STANDS.",
-     "set": {
-      "hp": 400,
-      "damage": 45,
-      "callout": "TESLA RAMP"
-     },
-     "fx": {
-      "tesla": true
-     }
-    },
-    {
-     "id": "palisade",
-     "name": "PALISADE",
-     "desc": "SIEGE WORKS BECOME A SPIKED TIMBER WALL. IT SLAMS UP THROUGH FOES FOR 60, STUNS 0.6S AND LASTS 12S.",
-     "set": {
-      "kind": "wall",
-      "length": 6,
-      "offset": 2.5,
-      "seconds": 12,
-      "cooldown": 14,
-      "damage": 60,
-      "stunSeconds": 0.6,
-      "knockback": 7,
-      "style": "wood",
-      "callout": "PALISADE",
-      "bot": "defend"
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "shockwrench",
-     "name": "SHOCK WRENCH",
-     "desc": "THE PULSE ELECTRIFIES: 90 TO FOES, STUN 0.5S, AND A TESLA FIELD CRACKLES FOR 4S. REACH +20%.",
-     "combo": "WITH TESLA TOWER: REPAIRED TOWERS AND COILS FIRE TWICE AS FAST FOR 6S.",
-     "set": {
-      "damage": 90,
-      "stunSeconds": 0.5
-     },
-     "mul": {
-      "radius": 1.2
-     },
-     "fx": {
-      "zoneAfter": {
-       "seconds": 4,
-       "dps": 30,
-       "slowMul": 0.7,
-       "style": "tesla",
-       "radius": 3.2
-      }
-     },
-     "with": [
-      {
-       "id": "teslatower",
-       "fx": {
-        "towerHaste": {
-         "mul": 2,
-         "seconds": 6
+  "heroes": {
+    "warlord": {
+      "r": [
+        {
+          "id": "bloodroar",
+          "name": "BLOODROAR",
+          "desc": "WAR CRY BECOMES A BLOOD OATH: ALLIES IN 12M HEAL 18% OF ALL DAMAGE THEY DEAL WHILE IT LASTS.",
+          "add": {
+            "radius": 2,
+            "seconds": 2
+          },
+          "fx": {
+            "lifestealAura": 0.18
+          }
+        },
+        {
+          "id": "challenge",
+          "name": "CHALLENGE",
+          "desc": "WAR CRY DRAGS EVERY FOE IN 6M TO YOU. FOR 3S THEY DEAL 20% LESS AND YOU TAKE 20% LESS.",
+          "fx": {
+            "challenge": {
+              "radius": 6,
+              "weaken": 0.8,
+              "armor": 0.8,
+              "seconds": 3
+            }
+          }
         }
-       }
-      }
-     ]
-    },
-    {
-     "id": "fortify",
-     "name": "FORTIFY",
-     "desc": "REPAIRS ALSO BOLT ON ARMOR: BUILDINGS GET A 250 SHIELD, YOU AND TROOPS NEARBY GET 90. REACH +30%.",
-     "combo": "WITH PALISADE: REPAIRS ADD 6S TO YOUR WALLS.",
-     "mul": {
-      "radius": 1.3
-     },
-     "fx": {
-      "structShield": {
-       "amount": 250,
-       "seconds": 8
-      },
-      "allyShield": 90
-     },
-     "with": [
-      {
-       "id": "palisade",
-       "fx": {
-        "extendWalls": 6
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "riveter",
-     "name": "RIVETER",
-     "desc": "YOUR FINISHER FIRES A FAN OF THREE HOT RIVETS 10M THAT BURST FOR 30 AROUND WHAT THEY HIT.",
-     "fx": {
-      "bolt": {
-       "damage": 40,
-       "range": 10,
-       "count": 3,
-       "spread": 15,
-       "style": "rivet",
-       "splash": 1.8,
-       "splashDamage": 30
-      }
-     }
-    },
-    {
-     "id": "overclock",
-     "name": "OVERCLOCK",
-     "desc": "HITS CUT REPAIR COOLDOWN 0.6S AND STACK ATTACK SPEED. AT 4 STACKS EVERY HIT ARCS LIGHTNING TO 2 FOES FOR 35.",
-     "fx": {
-      "cdrOnHit": {
-       "slot": "b",
-       "seconds": 0.6
-      },
-      "frenzy": {
-       "max": 4,
-       "speed": 0.12,
-       "seconds": 3
-      },
-      "chainAtMax": {
-       "count": 2,
-       "damage": 35
-      }
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "greatballista",
-     "name": "GREAT BALLISTA",
-     "desc": "BALLISTA+: 60% MORE HP, BOLTS HIT 30% HARDER, +3M RANGE AND IT STANDS 10S LONGER.",
-     "mul": {
-      "hp": 1.6,
-      "damage": 1.3
-     },
-     "add": {
-      "range": 3,
-      "seconds": 10
-     }
-    }
-   ]
-  },
-  "raider": {
-   "r": [
-    {
-     "id": "smokebomb",
-     "name": "SMOKE BOMB",
-     "desc": "STEALTH DROPS A CHOKING SMOKE CLOUD 3.5M WIDE: FOES INSIDE ARE SLOWED 45% FOR 4S.",
-     "fx": {
-      "zoneAfter": {
-       "seconds": 4,
-       "dps": 0,
-       "slowMul": 0.55,
-       "style": "smoke",
-       "radius": 3.5
-      }
-     }
-    },
-    {
-     "id": "shadowstep",
-     "name": "SHADOW STEP",
-     "desc": "STEALTH BECOMES A BLINK: VANISH AND REAPPEAR UP TO 7M AWAY (HOLD TO AIM), UNSEEN FOR 1.5S.",
-     "set": {
-      "kind": "blink",
-      "range": 7,
-      "seconds": 1.5,
-      "dur": 0.25,
-      "hitAt": 0.12,
-      "cooldown": 9,
-      "ambushMul": 1.6,
-      "callout": "SHADOW STEP"
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "pounce",
-     "name": "POUNCE",
-     "desc": "LEAP LANDINGS MARK FOES: THEY TAKE 30% MORE FROM YOU AND THE MARK RIPS FOR 90 AFTER 2S.",
-     "combo": "WITH SMOKE BOMB: MARKS TAKE 50% MORE.",
-     "fx": {
-      "mark": {
-       "seconds": 4,
-       "mul": 1.3,
-       "burst": 90
-      }
-     },
-     "with": [
-      {
-       "id": "smokebomb",
-       "fx": {
-        "mark": {
-         "mul": 1.5
+      ],
+      "b": [
+        {
+          "id": "magnitude",
+          "name": "MAGNITUDE",
+          "desc": "SLAM SUCKS FOES INTO ITS CENTER AND TEARS OPEN A SINKHOLE THAT SLOWS 50%. RADIUS +15%.",
+          "combo": "WITH CHALLENGE: THE SLAM ALSO STUNS 1S.",
+          "mul": {
+            "radius": 1.15
+          },
+          "fx": {
+            "pull": true,
+            "zoneAfter": {
+              "seconds": 3.5,
+              "dps": 25,
+              "slowMul": 0.5,
+              "style": "sinkhole"
+            }
+          },
+          "with": [
+            {
+              "id": "challenge",
+              "set": {
+                "stunSeconds": 1.0
+              }
+            }
+          ]
+        },
+        {
+          "id": "shouldercharge",
+          "name": "SHOULDER CHARGE",
+          "desc": "SLAM BECOMES A 5M CHARGE THAT BOWLS FOES OVER FOR 45 AND STUNS 0.6S, THEN SLAMS. UNSTOPPABLE WHILE CHARGING.",
+          "combo": "WITH BLOODROAR: CHARGE COOLDOWN -20%.",
+          "fx": {
+            "charge": {
+              "range": 5,
+              "damage": 45,
+              "knockback": 5,
+              "stun": 0.6
+            },
+            "armorOnUse": {
+              "mul": 0.8,
+              "seconds": 1.5,
+              "cc": true
+            }
+          },
+          "with": [
+            {
+              "id": "bloodroar",
+              "mul": {
+                "cooldown": 0.8
+              }
+            }
+          ]
         }
-       }
-      }
-     ]
-    },
-    {
-     "id": "doublejump",
-     "name": "DOUBLE JUMP",
-     "desc": "LEAP AGAIN WITHIN 3S. LANDINGS CRATER THE GROUND, SLOWING FOES 45%.",
-     "combo": "WITH SHADOW STEP: BLINKING RESETS LEAP.",
-     "fx": {
-      "recast": 3,
-      "zoneAfter": {
-       "seconds": 2.5,
-       "dps": 12,
-       "slowMul": 0.55,
-       "style": "crater",
-       "radius": 2.6
-      }
-     },
-     "with": [
-      {
-       "id": "shadowstep",
-       "slot": "r",
-       "set": {
-        "resetB": true
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "serrated",
-     "name": "SERRATED",
-     "desc": "HITS BLEED 14/S (3 STACKS). YOUR FINISHER ON A 3-STACK RIPS IT OPEN FOR 100. HEAL 25% OF DAMAGE TO BLEEDERS.",
-     "fx": {
-      "bleed": {
-       "dps": 14,
-       "seconds": 3,
-       "max": 3
-      },
-      "consumeBleed": 100,
-      "lifestealVsBleed": 0.25
-     }
-    },
-    {
-     "id": "twinfangs",
-     "name": "TWIN FANGS",
-     "desc": "YOUR FINISHER THROWS TWO POISONED DAGGERS 8M THAT SLOW 40% AND RICOCHET TO ANOTHER FOE.",
-     "fx": {
-      "bolt": {
-       "damage": 40,
-       "range": 8,
-       "count": 2,
-       "spread": 12,
-       "style": "dagger",
-       "slowMul": 0.6,
-       "slowSeconds": 1.5,
-       "chain": 1
-      }
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "deathmark",
-     "name": "DEATH MARK",
-     "desc": "EXECUTE DASH+: +3M, EXECUTES BELOW 50% HEALTH AND A HERO KILL REFUNDS 60% OF YOUR METER.",
-     "add": {
-      "range": 3
-     },
-     "set": {
-      "executeBelow": 0.5
-     },
-     "fx": {
-      "meterOnKill": 0.6
-     }
-    }
-   ]
-  },
-  "summoner": {
-   "r": [
-    {
-     "id": "risenranks",
-     "name": "RISEN RANKS",
-     "desc": "SOLDIERS FROM AN OUTPOST YOU EMPOWER COME OUT AS VETERANS.",
-     "fx": {
-      "graveRank": 1
-     }
-    },
-    {
-     "id": "wraithgate",
-     "name": "WRAITH GATE",
-     "desc": "GRAVEWALK CHANNELS IN 0.6S. YOU ARRIVE IN A BURST OF WRAITHS: FOES IN 5M TAKE 60, ARE HEXED AND SLOWED 50% FOR 2S. YOU GAIN A 120 SHIELD.",
-     "set": {
-      "dur": 0.75,
-      "hitAt": 0.6,
-      "callout": "WRAITH GATE"
-     },
-     "fx": {
-      "graveBurst": {
-       "radius": 5,
-       "damage": 60,
-       "slowMul": 0.5,
-       "slowSeconds": 2,
-       "shield": 120
-      }
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "gravepull",
-     "name": "GRAVE PULL",
-     "desc": "HEX DRAGS FOES INTO ITS CENTER AND LEAVES BONE SPIKES FOR 3S (SLOW 40%, 25/S).",
-     "combo": "WITH WRAITH GATE: HEXED FOES ARE ALSO STUNNED 1S.",
-     "fx": {
-      "pull": true,
-      "zoneAfter": {
-       "seconds": 3,
-       "dps": 25,
-       "slowMul": 0.6,
-       "style": "bones"
-      }
-     },
-     "with": [
-      {
-       "id": "wraithgate",
-       "set": {
-        "stunSeconds": 1.0
-       }
-      }
-     ]
-    },
-    {
-     "id": "cascade",
-     "name": "CASCADE",
-     "desc": "HEX FALLS THREE TIMES, MARCHING FORWARD 3M EACH TIME.",
-     "combo": "WITH RISEN RANKS: EVERY HEX RAISES A GRUNT FOR 12S.",
-     "fx": {
-      "echo": {
-       "count": 2,
-       "delay": 0.35,
-       "scale": 0.85,
-       "step": 3
-      }
-     },
-     "with": [
-      {
-       "id": "risenranks",
-       "fx": {
-        "summon": {
-         "type": "grunt",
-         "count": 1,
-         "seconds": 12
+      ],
+      "a": [
+        {
+          "id": "earthsplitter",
+          "name": "EARTHSPLITTER",
+          "desc": "YOUR FINISHER SPLITS THE GROUND: A ROCK WAVE RUNS 9M, STUNS 0.5S AND ERUPTS AT THE END FOR 45.",
+          "fx": {
+            "wave": {
+              "damage": 40,
+              "length": 9,
+              "width": 1.4,
+              "stun": 0.5,
+              "style": "rock"
+            },
+            "waveEnd": {
+              "radius": 2.4,
+              "damage": 45
+            }
+          }
+        },
+        {
+          "id": "berserker",
+          "name": "BERSERKER",
+          "desc": "SWINGS HEAL 10% OF THEIR DAMAGE AND STACK ATTACK SPEED. AT 3 STACKS EVERY SWING CLEAVES ALL AROUND YOU.",
+          "fx": {
+            "lifesteal": 0.1,
+            "frenzy": {
+              "max": 3,
+              "speed": 0.13,
+              "seconds": 3.5,
+              "atMaxArc": 360,
+              "atMaxDamage": 1.05
+            }
+          }
         }
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "soulsiphon",
-     "name": "SOUL SIPHON",
-     "desc": "BOLTS HEAL YOU FOR 30% OF THEIR DAMAGE AND GROW A SOUL SHIELD, +25 EACH UP TO 150.",
-     "fx": {
-      "lifesteal": 0.3,
-      "shieldOnHit": {
-       "amount": 25,
-       "max": 150,
-       "seconds": 6
-      }
-     }
-    },
-    {
-     "id": "arcbolts",
-     "name": "ARC BOLTS",
-     "desc": "BOLTS LEAP TO TWO MORE FOES FOR 60%. YOUR ORB ARCS TO THREE MORE.",
-     "fx": {
-      "chain": {
-       "count": 2,
-       "mul": 0.6
-      },
-      "orbChain": 3
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "legion",
-     "name": "LEGION",
-     "desc": "RAISE AN ARMY+: TWO MORE GRUNTS AND ONE MORE ARCHER, 10S LONGER, AND THE HEX REACHES 3M FURTHER.",
-     "set": {
-      "units": {
-       "grunt": 4,
-       "heavy": 1,
-       "ranged": 2
-      }
-     },
-     "add": {
-      "seconds": 10,
-      "hexRadius": 3
-     }
-    }
-   ]
-  },
-  "duelist": {
-   "r": [
-    {
-     "id": "riposte",
-     "name": "RIPOSTE",
-     "desc": "PARRY WINDOW +0.2S. A CLEAN PARRY GRANTS A 150 SHIELD AND THE COUNTER HITS TWICE AS HARD, STUNNING 0.6S LONGER.",
-     "add": {
-      "window": 0.2
-     },
-     "fx": {
-      "parryShield": 150,
-      "parryCounter": {
-       "mul": 2,
-       "stun": 0.6
-      }
-     }
-    },
-    {
-     "id": "volte",
-     "name": "VOLTE",
-     "desc": "PARRY BECOMES A SIDESTEP: BLINK 4M (HOLD TO AIM), UNTOUCHABLE, AND YOUR NEXT A HITS 70% HARDER.",
-     "set": {
-      "kind": "blink",
-      "range": 4,
-      "seconds": 0,
-      "dur": 0.2,
-      "hitAt": 0.1,
-      "cooldown": 6,
-      "callout": "VOLTE"
-     },
-     "fx": {
-      "empowerNextA": 1.7
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "blinkstep",
-     "name": "BLINK STEP",
-     "desc": "LUNGE AGAIN WITHIN 2.5S, AND A PHANTOM REPEATS EACH LUNGE HALF A SECOND LATER.",
-     "combo": "WITH VOLTE: SIDESTEPPING RESETS LUNGE.",
-     "fx": {
-      "recast": 2.5,
-      "afterimage": 0.5
-     },
-     "with": [
-      {
-       "id": "volte",
-       "slot": "r",
-       "set": {
-        "resetB": true
-       }
-      }
-     ]
-    },
-    {
-     "id": "marked",
-     "name": "MARKED",
-     "desc": "LUNGE MARKS FOES FOR 4S: THEY TAKE 25% MORE FROM YOUR WHOLE TEAM AND DEAL 25% LESS.",
-     "combo": "WITH RIPOSTE: PARRIED ATTACKERS ARE MARKED TOO.",
-     "fx": {
-      "mark": {
-       "seconds": 4,
-       "mul": 1.25,
-       "all": true,
-       "weaken": 0.75
-      }
-     },
-     "with": [
-      {
-       "id": "riposte",
-       "slot": "r",
-       "fx": {
-        "parryMark": true
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "fleche",
-     "name": "FLECHE",
-     "desc": "YOUR FINISHER LUNGES FARTHER, HITS 40% HARDER AND SENDS A SLASH 7M THROUGH FOES FOR 45.",
-     "fx": {
-      "finisherBonus": {
-       "damage": 1.4,
-       "lunge": 1.6
-      },
-      "wave": {
-       "damage": 45,
-       "length": 7,
-       "width": 1.1,
-       "style": "slash"
-      }
-     }
-    },
-    {
-     "id": "momentum",
-     "name": "MOMENTUM",
-     "desc": "HITS STACK +8% DAMAGE AND ATTACK SPEED UP TO 5, AND CUT YOUR R COOLDOWN 0.8S.",
-     "fx": {
-      "frenzy": {
-       "max": 5,
-       "speed": 0.08,
-       "damage": 0.08,
-       "seconds": 3
-      },
-      "cdrOnHit": {
-       "slot": "r",
-       "seconds": 0.8
-      }
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "thousandcuts",
-     "name": "THOUSAND CUTS",
-     "desc": "BLADE FLURRY+: THREE MORE STRIKES, EACH HITTING HARDER, AND 60% MORE DAMAGE TO STUNNED FOES.",
-     "add": {
-      "count": 3,
-      "damage": 8,
-      "vsStunnedMul": 0.2
-     }
-    }
-   ]
-  },
-  "warden": {
-   "r": [
-    {
-     "id": "rootcage",
-     "name": "ROOT CAGE",
-     "desc": "STONE WALL BECOMES A ROOT CAGE: AFTER 0.5S ROOTS BURST UP WHERE YOU AIM (UP TO 9M), DEALING 60 AND HOLDING FOES 1.4S.",
-     "set": {
-      "kind": "rootcage",
-      "range": 9,
-      "radius": 2.4,
-      "delay": 0.5,
-      "stunSeconds": 1.4,
-      "damage": 60,
-      "cooldown": 12,
-      "callout": "ROOT CAGE",
-      "bot": "fight",
-      "botRange": 8
-     }
-    },
-    {
-     "id": "rampart",
-     "name": "LIVING RAMPART",
-     "desc": "THE WALL GROWS 3M LONGER, LASTS 4S MORE AND SPROUTS A GROVE: ALLIES BESIDE IT HEAL 30 PER SECOND.",
-     "add": {
-      "length": 3,
-      "seconds": 4
-     },
-     "fx": {
-      "grove": {
-       "heal": 30
-      }
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "graspingvine",
-     "name": "GRASPING VINE",
-     "desc": "THE SLAP YANKS ITS TARGET TO YOU AND CHOKES IT, STUNNING 0.8S.",
-     "combo": "WITH ROOT CAGE: YANKING A ROOTED FOE DEALS +60.",
-     "fx": {
-      "pull": true
-     },
-     "set": {
-      "stunSeconds": 0.8
-     },
-     "with": [
-      {
-       "id": "rootcage",
-       "set": {
-        "vsStunnedMul": 1.75
-       }
-      }
-     ]
-    },
-    {
-     "id": "whiplash",
-     "name": "WHIPLASH",
-     "desc": "THE SLAP HITS EVERYONE IN LINE, REACHES 3M FARTHER AND BURSTS INTO SPLINTERS AT ITS END FOR 55.",
-     "combo": "WITH LIVING RAMPART: THE LASH ALSO STUNS 0.8S.",
-     "add": {
-      "range": 3
-     },
-     "fx": {
-      "pierce": true,
-      "splinter": {
-       "radius": 2.4,
-       "damage": 55
-      }
-     },
-     "with": [
-      {
-       "id": "rampart",
-       "set": {
-        "stunSeconds": 0.8
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "thornguard",
-     "name": "THORNGUARD",
-     "desc": "HITS GROW A BARK SHIELD, +25 EACH UP TO 150. WHILE IT HOLDS YOU TAKE 25% LESS, AND WHEN IT BREAKS IT BURSTS FOR 90.",
-     "fx": {
-      "shieldOnHit": {
-       "amount": 25,
-       "max": 150,
-       "seconds": 6
-      },
-      "armorWhileShield": 0.75,
-      "shieldBurst": 90
-     }
-    },
-    {
-     "id": "overgrowth",
-     "name": "OVERGROWTH",
-     "desc": "YOUR FINISHER ROOTS FOES 0.6S AND LEAVES A PATCH OF BRAMBLES FOR 3S.",
-     "fx": {
-      "finisherStun": 0.6,
-      "finisherZone": {
-       "radius": 2.6,
-       "seconds": 3,
-       "dps": 25,
-       "slowMul": 0.6,
-       "style": "bramble"
-      }
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "ancientgrove",
-     "name": "ANCIENT GROVE",
-     "desc": "BRAMBLES+: 2M WIDER, 3S LONGER, AND ALLIES INSIDE HEAL 25 PER SECOND.",
-     "add": {
-      "radius": 2,
-      "seconds": 3
-     },
-     "fx": {
-      "grove": {
-       "heal": 25
-      }
-     }
-    }
-   ]
-  },
-  "marksman": {
-   "r": [
-    {
-     "id": "firearrows",
-     "name": "FIRE ARROWS",
-     "desc": "VOLLEY ARROWS ARE LIT: THE GROUND THEY HIT BURNS FOR 3S (25 PER SECOND, SLOWS) AND THE RAIN SPREADS 0.5M WIDER.",
-     "add": {
-      "radius": 0.5
-     },
-     "fx": {
-      "zoneAfter": {
-       "seconds": 3.2,
-       "dps": 25,
-       "slowMul": 0.8,
-       "style": "lava"
-      }
-     }
-    },
-    {
-     "id": "doublevolley",
-     "name": "DOUBLE VOLLEY",
-     "desc": "A SECOND RAIN OF ARROWS FALLS ON THE SAME SPOT RIGHT AFTER THE FIRST, AT 80% STRENGTH.",
-     "fx": {
-      "echo": {
-       "count": 1,
-       "delay": 2.2,
-       "scale": 0.8
-      }
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "longwatch",
-     "name": "LONG WATCH",
-     "desc": "PIP HOLDS ON FOR 8S INSTEAD OF 5 AND ITS MARK MAKES THE TARGET TAKE 25% MORE FROM YOU.",
-     "combo": "WITH DOUBLE VOLLEY: PIP'S PREY IS SLOWED 30% INSTEAD OF 25%.",
-     "add": {
-      "seconds": 3
-     },
-     "set": {
-      "markMul": 1.25
-     },
-     "with": [
-      {
-       "id": "doublevolley",
-       "fx": {
-        "pipSlow": 0.7
-       }
-      }
-     ]
-    },
-    {
-     "id": "talons",
-     "name": "RAKING TALONS",
-     "desc": "PIP PECKS TWICE AS OFTEN ON ITS OWN, AND EVERY PECK (AND THE RAKE) OPENS A BLEED THAT STACKS 3 TIMES.",
-     "combo": "WITH FIRE ARROWS: PECKS HIT 8 HARDER.",
-     "fx": {
-      "pipAutoPeck": 0.75,
-      "bleed": {
-       "dps": 10,
-       "seconds": 3,
-       "max": 3
-      }
-     },
-     "with": [
-      {
-       "id": "firearrows",
-       "add": {
-        "peck": 8
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "broadhead",
-     "name": "BROADHEAD",
-     "desc": "ARROWS BURST ON IMPACT FOR 18 AROUND THE TARGET (2M). FULL POWER SHOTS FLY 4M FARTHER.",
-     "set": {
-      "splash": 2,
-      "splashDamage": 18
-     },
-     "add": {
-      "pierceRange": 4
-     }
-    },
-    {
-     "id": "quickdraw",
-     "name": "QUICKDRAW",
-     "desc": "YOU LOOSE 20% FASTER, AND EVERY ARROW THAT HITS A CHAMPION TAKES 1S OFF SEND PIP.",
-     "mul": {
-      "dur": 0.8,
-      "hitAt": 0.8
-     },
-     "fx": {
-      "cdrOnHit": {
-       "slot": "b",
-       "seconds": 1
-      }
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "huntersmark",
-     "name": "HUNTER'S MARK",
-     "desc": "HEARTSEEKER+: EVERYTHING IT HITS IS MARKED FOR 6S (YOUR WHOLE HOUSE DEALS 20% MORE TO THEM) AND PIP FLIES TO THE CHAMPION IF IT'S ON YOUR SHOULDER.",
-     "fx": {
-      "mark": {
-       "seconds": 6,
-       "mul": 1.2,
-       "all": true
-      },
-      "pipOnHit": true
-     }
-    }
-   ]
-  },
-  "friar": {
-   "r": [
-    {
-     "id": "clusterkeg",
-     "name": "CLUSTER KEG",
-     "desc": "THE POWDER KEG BURSTS INTO THREE LITTLE KEGS THAT HOP OUTWARD AND POP FOR 40 EACH.",
-     "fx": {
-      "cluster": {
-       "count": 3,
-       "damage": 40,
-       "radius": 2,
-       "dist": 2.8
-      }
-     }
-    },
-    {
-     "id": "tarkeg",
-     "name": "TAR KEG",
-     "desc": "THE BLAST LEAVES A POOL OF BURNING TAR FOR 3.5S: FOES IN IT ARE SLOWED 50% AND TAKE 18 PER SECOND.",
-     "fx": {
-      "zoneAfter": {
-       "seconds": 3.5,
-       "dps": 18,
-       "slowMul": 0.5,
-       "style": "tar"
-      }
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "stout",
-     "name": "HEARTY STOUT",
-     "desc": "THE SPLASH ALSO GIVES EVERY ALLY IT TOUCHES AN 80 SHIELD FOR 5S.",
-     "combo": "WITH CLUSTER KEG: THE HEALING KEG SPLITS TOO, TWO LITTLE KEGS HEAL 40 WHERE THEY LAND.",
-     "fx": {
-      "kegShield": {
-       "amount": 80,
-       "seconds": 5
-      }
-     },
-     "with": [
-      {
-       "id": "clusterkeg",
-       "fx": {
-        "cluster": {
-         "count": 2,
-         "heal": 40,
-         "radius": 2,
-         "dist": 2.6
+      ],
+      "z": [
+        {
+          "id": "cataclysm",
+          "name": "CATACLYSM",
+          "desc": "EARTHQUAKE+: 15% WIDER, STUNS 0.2S LONGER AND LEAVES A FIELD OF LAVA CRACKS FOR 4S.",
+          "mul": {
+            "radius": 1.15
+          },
+          "add": {
+            "stunSeconds": 0.2
+          },
+          "fx": {
+            "zoneAfter": {
+              "seconds": 4,
+              "dps": 22,
+              "slowMul": 0.6,
+              "style": "lava"
+            }
+          }
         }
-       }
-      }
-     ]
+      ]
     },
-    {
-     "id": "wellspring",
-     "name": "WELLSPRING",
-     "desc": "THE ALE PUDDLE IS 1M WIDER, LASTS 8S AND ALLIES STANDING IN IT MOVE 15% FASTER.",
-     "combo": "WITH TAR KEG: FOES WADING IN YOUR PUDDLE ARE SLOWED 30%.",
-     "add": {
-      "puddleRadius": 1,
-      "puddleSeconds": 3
-     },
-     "fx": {
-      "puddleHaste": 1.15
-     },
-     "with": [
-      {
-       "id": "tarkeg",
-       "fx": {
-        "puddleSlow": 0.7
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "tapster",
-     "name": "TAPROOM BRAWLER",
-     "desc": "YOUR SWINGS HEAL YOU FOR 15% OF THEIR DAMAGE AND PATCH UP SOLDIERS AROUND YOU FOR 25 A HIT.",
-     "fx": {
-      "lifesteal": 0.15,
-      "healAllies": 25
-     }
+    "engineer": {
+      "r": [
+        {
+          "id": "teslatower",
+          "name": "TESLA TOWER",
+          "desc": "YOUR SIEGE RAMP GETS A TESLA COIL ON TOP: 400 HP, CHAINS LIGHTNING THROUGH 3 FOES EVERY SECOND WHILE THE RAMP STANDS.",
+          "set": {
+            "hp": 400,
+            "damage": 45,
+            "callout": "TESLA RAMP"
+          },
+          "fx": {
+            "tesla": true
+          }
+        },
+        {
+          "id": "palisade",
+          "name": "PALISADE",
+          "desc": "SIEGE WORKS BECOME A SPIKED TIMBER WALL. IT SLAMS UP THROUGH FOES FOR 60, STUNS 0.6S AND LASTS 12S.",
+          "set": {
+            "kind": "wall",
+            "length": 6,
+            "offset": 2.5,
+            "seconds": 12,
+            "cooldown": 14,
+            "damage": 60,
+            "stunSeconds": 0.6,
+            "knockback": 7,
+            "style": "wood",
+            "callout": "PALISADE",
+            "bot": "defend"
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "shockwrench",
+          "name": "SHOCK WRENCH",
+          "desc": "THE PULSE ELECTRIFIES: 90 TO FOES, STUN 0.5S, AND A TESLA FIELD CRACKLES FOR 4S. REACH +20%.",
+          "combo": "WITH TESLA TOWER: REPAIRED TOWERS AND COILS FIRE TWICE AS FAST FOR 6S.",
+          "set": {
+            "damage": 90,
+            "stunSeconds": 0.5
+          },
+          "mul": {
+            "radius": 1.2
+          },
+          "fx": {
+            "zoneAfter": {
+              "seconds": 4,
+              "dps": 30,
+              "slowMul": 0.7,
+              "style": "tesla",
+              "radius": 3.2
+            }
+          },
+          "with": [
+            {
+              "id": "teslatower",
+              "fx": {
+                "towerHaste": {
+                  "mul": 2,
+                  "seconds": 6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "fortify",
+          "name": "FORTIFY",
+          "desc": "REPAIRS ALSO BOLT ON ARMOR: BUILDINGS GET A 250 SHIELD, YOU AND TROOPS NEARBY GET 90. REACH +30%.",
+          "combo": "WITH PALISADE: REPAIRS ADD 6S TO YOUR WALLS.",
+          "mul": {
+            "radius": 1.3
+          },
+          "fx": {
+            "structShield": {
+              "amount": 250,
+              "seconds": 8
+            },
+            "allyShield": 90
+          },
+          "with": [
+            {
+              "id": "palisade",
+              "fx": {
+                "extendWalls": 6
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "riveter",
+          "name": "RIVETER",
+          "desc": "YOUR FINISHER FIRES A FAN OF THREE HOT RIVETS 10M THAT BURST FOR 30 AROUND WHAT THEY HIT.",
+          "fx": {
+            "bolt": {
+              "damage": 40,
+              "range": 10,
+              "count": 3,
+              "spread": 15,
+              "style": "rivet",
+              "splash": 1.8,
+              "splashDamage": 30
+            }
+          }
+        },
+        {
+          "id": "overclock",
+          "name": "OVERCLOCK",
+          "desc": "HITS CUT REPAIR COOLDOWN 0.6S AND STACK ATTACK SPEED. AT 4 STACKS EVERY HIT ARCS LIGHTNING TO 2 FOES FOR 35.",
+          "fx": {
+            "cdrOnHit": {
+              "slot": "b",
+              "seconds": 0.6
+            },
+            "frenzy": {
+              "max": 4,
+              "speed": 0.12,
+              "seconds": 3
+            },
+            "chainAtMax": {
+              "count": 2,
+              "damage": 35
+            }
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "greatballista",
+          "name": "GREAT BALLISTA",
+          "desc": "BALLISTA+: 60% MORE HP, BOLTS HIT 30% HARDER, +3M RANGE AND IT STANDS 10S LONGER.",
+          "mul": {
+            "hp": 1.6,
+            "damage": 1.3
+          },
+          "add": {
+            "range": 3,
+            "seconds": 10
+          }
+        }
+      ]
     },
-    {
-     "id": "bellyflop",
-     "name": "BELLY FLOP",
-     "desc": "YOUR FINISHER IS A FULL BELLY FLOP: 35% HARDER, KNOCKS FOES FARTHER AND STUNS THEM 0.6S.",
-     "fx": {
-      "finisherBonus": {
-       "damage": 1.35,
-       "knock": 1.5
-      },
-      "finisherStun": 0.6
-     }
+    "raider": {
+      "r": [
+        {
+          "id": "smokebomb",
+          "name": "SMOKE BOMB",
+          "desc": "STEALTH DROPS A CHOKING SMOKE CLOUD 3.5M WIDE: FOES INSIDE ARE SLOWED 45% FOR 4S.",
+          "fx": {
+            "zoneAfter": {
+              "seconds": 4,
+              "dps": 0,
+              "slowMul": 0.55,
+              "style": "smoke",
+              "radius": 3.5
+            }
+          }
+        },
+        {
+          "id": "shadowstep",
+          "name": "SHADOW STEP",
+          "desc": "STEALTH BECOMES A BLINK: VANISH AND REAPPEAR UP TO 7M AWAY (HOLD TO AIM), UNSEEN FOR 1.5S.",
+          "set": {
+            "kind": "blink",
+            "range": 7,
+            "seconds": 1.5,
+            "dur": 0.25,
+            "hitAt": 0.12,
+            "cooldown": 9,
+            "ambushMul": 1.6,
+            "callout": "SHADOW STEP"
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "pounce",
+          "name": "POUNCE",
+          "desc": "LEAP LANDINGS MARK FOES: THEY TAKE 30% MORE FROM YOU AND THE MARK RIPS FOR 90 AFTER 2S.",
+          "combo": "WITH SMOKE BOMB: MARKS TAKE 50% MORE.",
+          "fx": {
+            "mark": {
+              "seconds": 4,
+              "mul": 1.3,
+              "burst": 90
+            }
+          },
+          "with": [
+            {
+              "id": "smokebomb",
+              "fx": {
+                "mark": {
+                  "mul": 1.5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "doublejump",
+          "name": "DOUBLE JUMP",
+          "desc": "LEAP AGAIN WITHIN 3S. LANDINGS CRATER THE GROUND, SLOWING FOES 45%.",
+          "combo": "WITH SHADOW STEP: BLINKING RESETS LEAP.",
+          "fx": {
+            "recast": 3,
+            "zoneAfter": {
+              "seconds": 2.5,
+              "dps": 12,
+              "slowMul": 0.55,
+              "style": "crater",
+              "radius": 2.6
+            }
+          },
+          "with": [
+            {
+              "id": "shadowstep",
+              "slot": "r",
+              "set": {
+                "resetB": true
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "serrated",
+          "name": "SERRATED",
+          "desc": "HITS BLEED 14/S (3 STACKS). YOUR FINISHER ON A 3-STACK RIPS IT OPEN FOR 100. HEAL 25% OF DAMAGE TO BLEEDERS.",
+          "fx": {
+            "bleed": {
+              "dps": 14,
+              "seconds": 3,
+              "max": 3
+            },
+            "consumeBleed": 100,
+            "lifestealVsBleed": 0.25
+          }
+        },
+        {
+          "id": "twinfangs",
+          "name": "TWIN FANGS",
+          "desc": "YOUR FINISHER THROWS TWO POISONED DAGGERS 8M THAT SLOW 40% AND RICOCHET TO ANOTHER FOE.",
+          "fx": {
+            "bolt": {
+              "damage": 40,
+              "range": 8,
+              "count": 2,
+              "spread": 12,
+              "style": "dagger",
+              "slowMul": 0.6,
+              "slowSeconds": 1.5,
+              "chain": 1
+            }
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "deathmark",
+          "name": "DEATH MARK",
+          "desc": "EXECUTE DASH+: +3M, EXECUTES BELOW 50% HEALTH AND A HERO KILL REFUNDS 60% OF YOUR METER.",
+          "add": {
+            "range": 3
+          },
+          "set": {
+            "executeBelow": 0.5
+          },
+          "fx": {
+            "meterOnKill": 0.6
+          }
+        }
+      ]
+    },
+    "summoner": {
+      "r": [
+        {
+          "id": "risenranks",
+          "name": "RISEN RANKS",
+          "desc": "SOLDIERS FROM AN OUTPOST YOU EMPOWER COME OUT AS VETERANS.",
+          "fx": {
+            "graveRank": 1
+          }
+        },
+        {
+          "id": "wraithgate",
+          "name": "WRAITH GATE",
+          "desc": "GRAVEWALK CHANNELS IN 0.6S. YOU ARRIVE IN A BURST OF WRAITHS: FOES IN 5M TAKE 60, ARE HEXED AND SLOWED 50% FOR 2S. YOU GAIN A 120 SHIELD.",
+          "set": {
+            "dur": 0.75,
+            "hitAt": 0.6,
+            "callout": "WRAITH GATE"
+          },
+          "fx": {
+            "graveBurst": {
+              "radius": 5,
+              "damage": 60,
+              "slowMul": 0.5,
+              "slowSeconds": 2,
+              "shield": 120
+            }
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "gravepull",
+          "name": "GRAVE PULL",
+          "desc": "HEX DRAGS FOES INTO ITS CENTER AND LEAVES BONE SPIKES FOR 3S (SLOW 40%, 25/S).",
+          "combo": "WITH WRAITH GATE: HEXED FOES ARE ALSO STUNNED 1S.",
+          "fx": {
+            "pull": true,
+            "zoneAfter": {
+              "seconds": 3,
+              "dps": 25,
+              "slowMul": 0.6,
+              "style": "bones"
+            }
+          },
+          "with": [
+            {
+              "id": "wraithgate",
+              "set": {
+                "stunSeconds": 1.0
+              }
+            }
+          ]
+        },
+        {
+          "id": "cascade",
+          "name": "CASCADE",
+          "desc": "HEX FALLS THREE TIMES, MARCHING FORWARD 3M EACH TIME.",
+          "combo": "WITH RISEN RANKS: EVERY HEX RAISES A GRUNT FOR 12S.",
+          "fx": {
+            "echo": {
+              "count": 2,
+              "delay": 0.35,
+              "scale": 0.85,
+              "step": 3
+            }
+          },
+          "with": [
+            {
+              "id": "risenranks",
+              "fx": {
+                "summon": {
+                  "type": "grunt",
+                  "count": 1,
+                  "seconds": 12
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "soulsiphon",
+          "name": "SOUL SIPHON",
+          "desc": "BOLTS HEAL YOU FOR 30% OF THEIR DAMAGE AND GROW A SOUL SHIELD, +25 EACH UP TO 150.",
+          "fx": {
+            "lifesteal": 0.3,
+            "shieldOnHit": {
+              "amount": 25,
+              "max": 150,
+              "seconds": 6
+            }
+          }
+        },
+        {
+          "id": "arcbolts",
+          "name": "ARC BOLTS",
+          "desc": "BOLTS LEAP TO TWO MORE FOES FOR 60%. YOUR ORB ARCS TO THREE MORE.",
+          "fx": {
+            "chain": {
+              "count": 2,
+              "mul": 0.6
+            },
+            "orbChain": 3
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "legion",
+          "name": "LEGION",
+          "desc": "RAISE AN ARMY+: TWO MORE GRUNTS AND ONE MORE ARCHER, 10S LONGER, AND THE HEX REACHES 3M FURTHER.",
+          "set": {
+            "units": {
+              "grunt": 4,
+              "heavy": 1,
+              "ranged": 2
+            }
+          },
+          "add": {
+            "seconds": 10,
+            "hexRadius": 3
+          }
+        }
+      ]
+    },
+    "duelist": {
+      "r": [
+        {
+          "id": "riposte",
+          "name": "RIPOSTE",
+          "desc": "PARRY WINDOW +0.2S. A CLEAN PARRY GRANTS A 150 SHIELD AND THE COUNTER HITS TWICE AS HARD, STUNNING 0.6S LONGER.",
+          "add": {
+            "window": 0.2
+          },
+          "fx": {
+            "parryShield": 150,
+            "parryCounter": {
+              "mul": 2,
+              "stun": 0.6
+            }
+          }
+        },
+        {
+          "id": "volte",
+          "name": "VOLTE",
+          "desc": "PARRY BECOMES A SIDESTEP: BLINK 4M (HOLD TO AIM), UNTOUCHABLE, AND YOUR NEXT A HITS 70% HARDER.",
+          "set": {
+            "kind": "blink",
+            "range": 4,
+            "seconds": 0,
+            "dur": 0.2,
+            "hitAt": 0.1,
+            "cooldown": 6,
+            "callout": "VOLTE"
+          },
+          "fx": {
+            "empowerNextA": 1.7
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "blinkstep",
+          "name": "BLINK STEP",
+          "desc": "LUNGE AGAIN WITHIN 2.5S, AND A PHANTOM REPEATS EACH LUNGE HALF A SECOND LATER.",
+          "combo": "WITH VOLTE: SIDESTEPPING RESETS LUNGE.",
+          "fx": {
+            "recast": 2.5,
+            "afterimage": 0.5
+          },
+          "with": [
+            {
+              "id": "volte",
+              "slot": "r",
+              "set": {
+                "resetB": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "marked",
+          "name": "MARKED",
+          "desc": "LUNGE MARKS FOES FOR 4S: THEY TAKE 25% MORE FROM YOUR WHOLE TEAM AND DEAL 25% LESS.",
+          "combo": "WITH RIPOSTE: PARRIED ATTACKERS ARE MARKED TOO.",
+          "fx": {
+            "mark": {
+              "seconds": 4,
+              "mul": 1.25,
+              "all": true,
+              "weaken": 0.75
+            }
+          },
+          "with": [
+            {
+              "id": "riposte",
+              "slot": "r",
+              "fx": {
+                "parryMark": true
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "fleche",
+          "name": "FLECHE",
+          "desc": "YOUR FINISHER LUNGES FARTHER, HITS 40% HARDER AND SENDS A SLASH 7M THROUGH FOES FOR 45.",
+          "fx": {
+            "finisherBonus": {
+              "damage": 1.4,
+              "lunge": 1.6
+            },
+            "wave": {
+              "damage": 45,
+              "length": 7,
+              "width": 1.1,
+              "style": "slash"
+            }
+          }
+        },
+        {
+          "id": "momentum",
+          "name": "MOMENTUM",
+          "desc": "HITS STACK +8% DAMAGE AND ATTACK SPEED UP TO 5, AND CUT YOUR R COOLDOWN 0.8S.",
+          "fx": {
+            "frenzy": {
+              "max": 5,
+              "speed": 0.08,
+              "damage": 0.08,
+              "seconds": 3
+            },
+            "cdrOnHit": {
+              "slot": "r",
+              "seconds": 0.8
+            }
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "thousandcuts",
+          "name": "THOUSAND CUTS",
+          "desc": "BLADE FLURRY+: THREE MORE STRIKES, EACH HITTING HARDER, AND 60% MORE DAMAGE TO STUNNED FOES.",
+          "add": {
+            "count": 3,
+            "damage": 8,
+            "vsStunnedMul": 0.2
+          }
+        }
+      ]
+    },
+    "warden": {
+      "r": [
+        {
+          "id": "rootcage",
+          "name": "ROOT CAGE",
+          "desc": "STONE WALL BECOMES A ROOT CAGE: AFTER 0.5S ROOTS BURST UP WHERE YOU AIM (UP TO 9M), DEALING 60 AND HOLDING FOES 1.4S.",
+          "set": {
+            "kind": "rootcage",
+            "range": 9,
+            "radius": 2.4,
+            "delay": 0.5,
+            "stunSeconds": 1.4,
+            "damage": 60,
+            "cooldown": 12,
+            "callout": "ROOT CAGE",
+            "bot": "fight",
+            "botRange": 8
+          }
+        },
+        {
+          "id": "rampart",
+          "name": "LIVING RAMPART",
+          "desc": "THE WALL GROWS 3M LONGER, LASTS 4S MORE AND SPROUTS A GROVE: ALLIES BESIDE IT HEAL 30 PER SECOND.",
+          "add": {
+            "length": 3,
+            "seconds": 4
+          },
+          "fx": {
+            "grove": {
+              "heal": 30
+            }
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "graspingvine",
+          "name": "GRASPING VINE",
+          "desc": "THE SLAP YANKS ITS TARGET TO YOU AND CHOKES IT, STUNNING 0.8S.",
+          "combo": "WITH ROOT CAGE: YANKING A ROOTED FOE DEALS +60.",
+          "fx": {
+            "pull": true
+          },
+          "set": {
+            "stunSeconds": 0.8
+          },
+          "with": [
+            {
+              "id": "rootcage",
+              "set": {
+                "vsStunnedMul": 1.75
+              }
+            }
+          ]
+        },
+        {
+          "id": "whiplash",
+          "name": "WHIPLASH",
+          "desc": "THE SLAP HITS EVERYONE IN LINE, REACHES 3M FARTHER AND BURSTS INTO SPLINTERS AT ITS END FOR 55.",
+          "combo": "WITH LIVING RAMPART: THE LASH ALSO STUNS 0.8S.",
+          "add": {
+            "range": 3
+          },
+          "fx": {
+            "pierce": true,
+            "splinter": {
+              "radius": 2.4,
+              "damage": 55
+            }
+          },
+          "with": [
+            {
+              "id": "rampart",
+              "set": {
+                "stunSeconds": 0.8
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "thornguard",
+          "name": "THORNGUARD",
+          "desc": "HITS GROW A BARK SHIELD, +25 EACH UP TO 150. WHILE IT HOLDS YOU TAKE 25% LESS, AND WHEN IT BREAKS IT BURSTS FOR 90.",
+          "fx": {
+            "shieldOnHit": {
+              "amount": 25,
+              "max": 150,
+              "seconds": 6
+            },
+            "armorWhileShield": 0.75,
+            "shieldBurst": 90
+          }
+        },
+        {
+          "id": "overgrowth",
+          "name": "OVERGROWTH",
+          "desc": "YOUR FINISHER ROOTS FOES 0.6S AND LEAVES A PATCH OF BRAMBLES FOR 3S.",
+          "fx": {
+            "finisherStun": 0.6,
+            "finisherZone": {
+              "radius": 2.6,
+              "seconds": 3,
+              "dps": 25,
+              "slowMul": 0.6,
+              "style": "bramble"
+            }
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "ancientgrove",
+          "name": "ANCIENT GROVE",
+          "desc": "BRAMBLES+: 2M WIDER, 3S LONGER, AND ALLIES INSIDE HEAL 25 PER SECOND.",
+          "add": {
+            "radius": 2,
+            "seconds": 3
+          },
+          "fx": {
+            "grove": {
+              "heal": 25
+            }
+          }
+        }
+      ]
+    },
+    "marksman": {
+      "r": [
+        {
+          "id": "firearrows",
+          "name": "FIRE ARROWS",
+          "desc": "VOLLEY ARROWS ARE LIT: THE GROUND THEY HIT BURNS FOR 3S (25 PER SECOND, SLOWS) AND THE RAIN SPREADS 0.5M WIDER.",
+          "add": {
+            "radius": 0.5
+          },
+          "fx": {
+            "zoneAfter": {
+              "seconds": 3.2,
+              "dps": 25,
+              "slowMul": 0.8,
+              "style": "lava"
+            }
+          }
+        },
+        {
+          "id": "doublevolley",
+          "name": "DOUBLE VOLLEY",
+          "desc": "A SECOND RAIN OF ARROWS FALLS ON THE SAME SPOT RIGHT AFTER THE FIRST, AT 80% STRENGTH.",
+          "fx": {
+            "echo": {
+              "count": 1,
+              "delay": 2.2,
+              "scale": 0.8
+            }
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "longwatch",
+          "name": "LONG WATCH",
+          "desc": "PIP HOLDS ON FOR 8S INSTEAD OF 5 AND ITS MARK MAKES THE TARGET TAKE 25% MORE FROM YOU.",
+          "combo": "WITH DOUBLE VOLLEY: PIP'S PREY IS SLOWED 30% INSTEAD OF 25%.",
+          "add": {
+            "seconds": 3
+          },
+          "set": {
+            "markMul": 1.25
+          },
+          "with": [
+            {
+              "id": "doublevolley",
+              "fx": {
+                "pipSlow": 0.7
+              }
+            }
+          ]
+        },
+        {
+          "id": "talons",
+          "name": "RAKING TALONS",
+          "desc": "PIP PECKS TWICE AS OFTEN ON ITS OWN, AND EVERY PECK (AND THE RAKE) OPENS A BLEED THAT STACKS 3 TIMES.",
+          "combo": "WITH FIRE ARROWS: PECKS HIT 8 HARDER.",
+          "fx": {
+            "pipAutoPeck": 0.75,
+            "bleed": {
+              "dps": 10,
+              "seconds": 3,
+              "max": 3
+            }
+          },
+          "with": [
+            {
+              "id": "firearrows",
+              "add": {
+                "peck": 8
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "broadhead",
+          "name": "BROADHEAD",
+          "desc": "ARROWS BURST ON IMPACT FOR 18 AROUND THE TARGET (2M). FULL POWER SHOTS FLY 4M FARTHER.",
+          "set": {
+            "splash": 2,
+            "splashDamage": 18
+          },
+          "add": {
+            "pierceRange": 4
+          }
+        },
+        {
+          "id": "quickdraw",
+          "name": "QUICKDRAW",
+          "desc": "YOU LOOSE 20% FASTER, AND EVERY ARROW THAT HITS A CHAMPION TAKES 1S OFF SEND PIP.",
+          "mul": {
+            "dur": 0.8,
+            "hitAt": 0.8
+          },
+          "fx": {
+            "cdrOnHit": {
+              "slot": "b",
+              "seconds": 1
+            }
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "huntersmark",
+          "name": "HUNTER'S MARK",
+          "desc": "HEARTSEEKER+: EVERYTHING IT HITS IS MARKED FOR 6S (YOUR WHOLE HOUSE DEALS 20% MORE TO THEM) AND PIP FLIES TO THE CHAMPION IF IT'S ON YOUR SHOULDER.",
+          "fx": {
+            "mark": {
+              "seconds": 6,
+              "mul": 1.2,
+              "all": true
+            },
+            "pipOnHit": true
+          }
+        }
+      ]
+    },
+    "friar": {
+      "r": [
+        {
+          "id": "clusterkeg",
+          "name": "CLUSTER KEG",
+          "desc": "THE POWDER KEG BURSTS INTO THREE LITTLE KEGS THAT HOP OUTWARD AND POP FOR 40 EACH.",
+          "fx": {
+            "cluster": {
+              "count": 3,
+              "damage": 40,
+              "radius": 2,
+              "dist": 2.8
+            }
+          }
+        },
+        {
+          "id": "tarkeg",
+          "name": "TAR KEG",
+          "desc": "THE BLAST LEAVES A POOL OF BURNING TAR FOR 3.5S: FOES IN IT ARE SLOWED 50% AND TAKE 18 PER SECOND.",
+          "fx": {
+            "zoneAfter": {
+              "seconds": 3.5,
+              "dps": 18,
+              "slowMul": 0.5,
+              "style": "tar"
+            }
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "stout",
+          "name": "HEARTY STOUT",
+          "desc": "THE SPLASH ALSO GIVES EVERY ALLY IT TOUCHES AN 80 SHIELD FOR 5S.",
+          "combo": "WITH CLUSTER KEG: THE HEALING KEG SPLITS TOO, TWO LITTLE KEGS HEAL 40 WHERE THEY LAND.",
+          "fx": {
+            "kegShield": {
+              "amount": 80,
+              "seconds": 5
+            }
+          },
+          "with": [
+            {
+              "id": "clusterkeg",
+              "fx": {
+                "cluster": {
+                  "count": 2,
+                  "heal": 40,
+                  "radius": 2,
+                  "dist": 2.6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "wellspring",
+          "name": "WELLSPRING",
+          "desc": "THE ALE PUDDLE IS 1M WIDER, LASTS 8S AND ALLIES STANDING IN IT MOVE 15% FASTER.",
+          "combo": "WITH TAR KEG: FOES WADING IN YOUR PUDDLE ARE SLOWED 30%.",
+          "add": {
+            "puddleRadius": 1,
+            "puddleSeconds": 3
+          },
+          "fx": {
+            "puddleHaste": 1.15
+          },
+          "with": [
+            {
+              "id": "tarkeg",
+              "fx": {
+                "puddleSlow": 0.7
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "tapster",
+          "name": "TAPROOM BRAWLER",
+          "desc": "YOUR SWINGS HEAL YOU FOR 15% OF THEIR DAMAGE AND PATCH UP SOLDIERS AROUND YOU FOR 25 A HIT.",
+          "fx": {
+            "lifesteal": 0.15,
+            "healAllies": 25
+          }
+        },
+        {
+          "id": "bellyflop",
+          "name": "BELLY FLOP",
+          "desc": "YOUR FINISHER IS A FULL BELLY FLOP: 35% HARDER, KNOCKS FOES FARTHER AND STUNS THEM 0.6S.",
+          "fx": {
+            "finisherBonus": {
+              "damage": 1.35,
+              "knock": 1.5
+            },
+            "finisherStun": 0.6
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "grandcask",
+          "name": "GRAND CASK",
+          "desc": "BREWFEST+: THE CASK HOLDS 8S, POURS 2M WIDER AND HAS 450 HEALTH.",
+          "add": {
+            "seconds": 2,
+            "radius": 2,
+            "hp": 150
+          }
+        }
+      ]
+    },
+    "harpooner": {
+      "r": [
+        {
+          "id": "springlegs",
+          "name": "SPRING LEGS",
+          "desc": "TONGUE LASH REACHES 3M FARTHER AND COOLS DOWN 2S FASTER.",
+          "add": {
+            "range": 3,
+            "cooldown": -2
+          }
+        },
+        {
+          "id": "oilskin",
+          "name": "OILSKIN",
+          "desc": "LANDING A TONGUE LASH GIVES YOU A 90 SHIELD FOR 3S AND LEAVES A PUDDLE WET FOES SLIP ON.",
+          "fx": {
+            "landShield": 90,
+            "landPuddle": true
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "winch",
+          "name": "WHALER'S WINCH",
+          "desc": "REEL IN HITS 25 HARDER AND DRAGS CHAMPIONS NINE TENTHS OF THE WAY INSTEAD OF HALF.",
+          "combo": "WITH SPRING LEGS: REEL IN COOLS DOWN 2S FASTER.",
+          "add": {
+            "damage": 25
+          },
+          "set": {
+            "heroPull": 0.9
+          },
+          "with": [
+            {
+              "id": "springlegs",
+              "add": {
+                "cooldown": -2
+              }
+            }
+          ]
+        },
+        {
+          "id": "undertow",
+          "name": "UNDERTOW",
+          "desc": "ANYTHING YOU REEL IN IS SLOWED 40% FOR 2S AND STAYS WET FOR 5S.",
+          "combo": "WITH OILSKIN: REEL IN HITS 20 HARDER.",
+          "set": {
+            "slowMul": 0.6,
+            "slowSeconds": 2,
+            "wetSeconds": 5
+          },
+          "with": [
+            {
+              "id": "oilskin",
+              "add": {
+                "damage": 20
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "barbed",
+          "name": "BARBED HEADS",
+          "desc": "HARPOONS OPEN A BLEED (10 PER SECOND FOR 3S) THAT STACKS 3 TIMES.",
+          "fx": {
+            "bleed": {
+              "dps": 10,
+              "seconds": 3,
+              "max": 3
+            }
+          }
+        },
+        {
+          "id": "quickline",
+          "name": "QUICK LINE",
+          "desc": "YOU LOOSE 20% FASTER AND EVERY HARPOON RICOCHETS ONE MORE TIME.",
+          "mul": {
+            "dur": 0.8,
+            "hitAt": 0.8
+          },
+          "add": {
+            "ricochets": 1
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "maelstrom",
+          "name": "MAELSTROM",
+          "desc": "RIPTIDE+: THE RING IS 2M WIDER AND LASTS 2S LONGER, DRAGS HARDER, AND FOES IN IT TAKE 15% MORE FROM YOUR WHOLE HOUSE.",
+          "add": {
+            "radius": 2,
+            "seconds": 2
+          },
+          "set": {
+            "pullSpeed": 2.4,
+            "vulnMul": 1.15
+          }
+        }
+      ]
+    },
+    "scribe": {
+      "r": [
+        {
+          "id": "marginnote",
+          "name": "MARGIN NOTE",
+          "desc": "ERRATUM LEAVES AN INK BLOT WHERE YOU STOOD: FOES THERE TAKE 60 AND ARE BLINDED FOR 1.5S.",
+          "fx": {
+            "erratumBlot": {
+              "damage": 60,
+              "radius": 2.4,
+              "blind": 1.5
+            }
+          }
+        },
+        {
+          "id": "dogeared",
+          "name": "DOG-EARED PAGES",
+          "desc": "ERRATUM IS READY 3S SOONER, AND YOU KEEP 2 MORE RUNES THAT LAST 6S LONGER.",
+          "add": {
+            "cooldown": -3
+          },
+          "fx": {
+            "moreRunes": {
+              "count": 2,
+              "seconds": 6
+            }
+          }
+        }
+      ],
+      "b": [
+        {
+          "id": "royalhive",
+          "name": "ROYAL HIVE",
+          "desc": "THE SWARM LASTS 2S LONGER AND IS 0.6M WIDER.",
+          "combo": "WITH MARGIN NOTE: ERRATUM LEAVES A SMALL SWARM TOO.",
+          "add": {
+            "seconds": 2,
+            "radius": 0.6
+          },
+          "with": [
+            {
+              "id": "marginnote",
+              "slot": "r",
+              "fx": {
+                "erratumSwarm": {
+                  "seconds": 3,
+                  "radius": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "stingingprose",
+          "name": "STINGING PROSE",
+          "desc": "THE SWARM STINGS 50% HARDER AND SLOWS FOES 50% INSTEAD OF 35%.",
+          "combo": "WITH DOG-EARED PAGES: A CALLED SWARM STAYS 3S LONGER.",
+          "mul": {
+            "dps": 1.5
+          },
+          "set": {
+            "slowMul": 0.5
+          },
+          "with": [
+            {
+              "id": "dogeared",
+              "fx": {
+                "swarmFollow": 3
+              }
+            }
+          ]
+        }
+      ],
+      "a": [
+        {
+          "id": "ricochet",
+          "name": "RICOCHET RUNES",
+          "desc": "INK BOLTS RICOCHET TWICE, AND A RICOCHET LOSES ONLY 25% OF ITS DAMAGE.",
+          "add": {
+            "bounces": 1
+          },
+          "set": {
+            "bounceMul": 0.75
+          }
+        },
+        {
+          "id": "indelible",
+          "name": "INDELIBLE INK",
+          "desc": "TAPPED BOLTS SLOW 20% FOR 1S. CHARGED BOLTS BLOT 1M WIDER AND BLIND FOR 2.2S.",
+          "add": {
+            "blotRadius": 1,
+            "blindSeconds": 1
+          },
+          "fx": {
+            "inkSlow": {
+              "mul": 0.8,
+              "seconds": 1
+            }
+          }
+        }
+      ],
+      "z": [
+        {
+          "id": "grandcodex",
+          "name": "GRAND CODEX",
+          "desc": "MANUSCRIPT+: THE WINDOW LASTS 11S AND EVERY RUNE FLARES FOR 120.",
+          "add": {
+            "seconds": 3,
+            "damage": 40
+          }
+        }
+      ]
     }
-   ],
-   "z": [
-    {
-     "id": "grandcask",
-     "name": "GRAND CASK",
-     "desc": "BREWFEST+: THE CASK HOLDS 8S, POURS 2M WIDER AND HAS 450 HEALTH.",
-     "add": {
-      "seconds": 2,
-      "radius": 2,
-      "hp": 150
-     }
-    }
-   ]
   },
-  "harpooner": {
-   "r": [
-    {
-     "id": "springlegs",
-     "name": "SPRING LEGS",
-     "desc": "TONGUE LASH REACHES 3M FARTHER AND COOLS DOWN 2S FASTER.",
-     "add": {
-      "range": 3,
-      "cooldown": -2
-     }
-    },
-    {
-     "id": "oilskin",
-     "name": "OILSKIN",
-     "desc": "LANDING A TONGUE LASH GIVES YOU A 90 SHIELD FOR 3S AND LEAVES A PUDDLE WET FOES SLIP ON.",
-     "fx": {
-      "landShield": 90,
-      "landPuddle": true
-     }
-    }
-   ],
-   "b": [
-    {
-     "id": "winch",
-     "name": "WHALER'S WINCH",
-     "desc": "REEL IN HITS 25 HARDER AND DRAGS CHAMPIONS NINE TENTHS OF THE WAY INSTEAD OF HALF.",
-     "combo": "WITH SPRING LEGS: REEL IN COOLS DOWN 2S FASTER.",
-     "add": {
-      "damage": 25
-     },
-     "set": {
-      "heroPull": 0.9
-     },
-     "with": [
-      {
-       "id": "springlegs",
-       "add": {
-        "cooldown": -2
-       }
-      }
-     ]
-    },
-    {
-     "id": "undertow",
-     "name": "UNDERTOW",
-     "desc": "ANYTHING YOU REEL IN IS SLOWED 40% FOR 2S AND STAYS WET FOR 5S.",
-     "combo": "WITH OILSKIN: REEL IN HITS 20 HARDER.",
-     "set": {
-      "slowMul": 0.6,
-      "slowSeconds": 2,
-      "wetSeconds": 5
-     },
-     "with": [
-      {
-       "id": "oilskin",
-       "add": {
-        "damage": 20
-       }
-      }
-     ]
-    }
-   ],
-   "a": [
-    {
-     "id": "barbed",
-     "name": "BARBED HEADS",
-     "desc": "HARPOONS OPEN A BLEED (10 PER SECOND FOR 3S) THAT STACKS 3 TIMES.",
-     "fx": {
-      "bleed": {
-       "dps": 10,
-       "seconds": 3,
-       "max": 3
-      }
-     }
-    },
-    {
-     "id": "quickline",
-     "name": "QUICK LINE",
-     "desc": "YOU LOOSE 20% FASTER AND EVERY HARPOON RICOCHETS ONE MORE TIME.",
-     "mul": {
-      "dur": 0.8,
-      "hitAt": 0.8
-     },
-     "add": {
-      "ricochets": 1
-     }
-    }
-   ],
-   "z": [
-    {
-     "id": "maelstrom",
-     "name": "MAELSTROM",
-     "desc": "RIPTIDE+: THE RING IS 2M WIDER AND LASTS 2S LONGER, DRAGS HARDER, AND FOES IN IT TAKE 15% MORE FROM YOUR WHOLE HOUSE.",
-     "add": {
-      "radius": 2,
-      "seconds": 2
-     },
-     "set": {
-      "pullSpeed": 2.4,
-      "vulnMul": 1.15
-     }
-    }
-   ]
-  }
- },
- "order": [
-  "r",
-  "b",
-  "a",
-  "z"
- ]
+  "order": [
+    "r",
+    "b",
+    "a",
+    "z"
+  ]
 }

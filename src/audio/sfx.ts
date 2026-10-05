@@ -39,6 +39,9 @@ const GLOBAL = new Set(["gates", "horn", "avalanche", "tide", "mist", "notice", 
 const LEAN = new Set(["relic"]);
 /** Longest a voice line runs, per line. */
 const VOICE_DUR: Record<string, number> = { attack: 0.55, big: 0.95, hurt: 0.6, death: 1.7, taunt: 1.3, order: 0.9 };
+/** Champions voiced at runtime from another champion's lines, pitch-cast (rate) and with longer lines (Hollin is
+ * Wren's voice pack an older, lower register; her own vo.* files can replace this once the CC0 packs are fetched). */
+const VOICE_CAST: Record<string, [string, number, number]> = { scribe: ["marksman", 0.84, 1.15] };
 /** Most sample voices at once; past this only priority sounds start. */
 const MAX_VOICES = 56;
 
@@ -246,11 +249,12 @@ export class Audio {
    */
   vocal(hero: string | undefined, line: string, gain = 0.8, o: PlayOpts & { id?: number; gap?: number } = {}): void {
     if (!hero) return;
-    o = { dur: VOICE_DUR[line] ?? 1, ...o };
+    const cast = VOICE_CAST[hero];
+    o = { dur: (VOICE_DUR[line] ?? 1) * (cast?.[2] ?? 1), ...(cast ? { rate: cast[1] } : {}), ...o };
     const key = `${o.id ?? hero}:${line === "death" ? "d" : "v"}`;
     const now = this.now;
     if ((this.vocalAt.get(key) ?? 0) > now) return;
-    if (this.play(`vo.${hero}.${line}`, gain, { jitter: 0.03, ...o }))
+    if (this.play(`vo.${cast?.[0] ?? hero}.${line}`, gain, { jitter: 0.03, ...o }))
       this.vocalAt.set(key, now + (o.gap ?? (line === "attack" ? 1.6 : 1.1)));
   }
 
@@ -362,6 +366,7 @@ export class Audio {
       marksman: ["arrow.loose", 1],
       friar: ["maddock.keg", 1],
       harpooner: ["twang", 0.75],
+      scribe: ["ui.page", 1],
       herald: ["cloth.flap", 1],
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];

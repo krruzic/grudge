@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for ABBESS HOLLIN, an old beekeeping abbess-scribe who casts spells with ink and a giant quill, releases swarms of bees and writes glowing golden runes on the ground, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a glossy round blob of deep blue-black ink with a bright white highlight and a little drip
+2. a single teardrop of blue-black ink
+3. a big splat of blue-black ink seen from directly above, with splatter droplets around it
+4. a horizontal brush stroke of blue-black ink, thick and wet on the left tapering to a dry-brush point on the right, spanning the whole cell width
+5. a single cute chunky honeybee seen from above, wings spread, gold and black stripes
+6. a little cluster of three honeybees flying together
+7. a chunk of golden honeycomb, a few hexagonal wax cells with honey
+8. a ring of golden honeycomb hexagons seen from directly above, forming a circle with an empty middle
+9. a single curled parchment page with faint brown handwriting scribbles
+10. a fan of four loose parchment pages fluttering
+11. a single cream-white goose quill feather with honey-gold bars and an ink-blue tip
+12. a glowing golden magic rune circle seen from directly above: a calligraphic ring of gold ink with small hexagon and bee sigils around it and an ornate flourish in the middle, honey-gold light
+13. an ornate glowing golden abstract sigil like an illuminated manuscript flourish (curls and a small bee shape, not a real letter)
+14. a gold-leaf four-pointed sparkle star with a warm white centre
+15. a dark blue-black ink cloud puff, lumpy and soft
+16. a circle seen from directly above made of an illuminated manuscript page border: gold-leaf vines, little painted flowers and bees, deep blue and red accents, forming a ring with an empty middle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

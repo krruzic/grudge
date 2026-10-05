@@ -1146,6 +1146,101 @@
           "tank": 1
         }
       }
+    },
+    "scribe": {
+      "name": "Hollin",
+      "blurb": "Beekeeping scribe. Annotations: her charged bolts and swarms write runes; recast onto a rune to empower the spell, or Erratum to swap places with it.",
+      "health": "mid",
+      "speed": "mid",
+      "damage": "mid",
+      "defaultBuild": "range",
+      "botRange": 9.5,
+      "hooks": {
+        "speedMul": 0.92,
+        "runeMax": 4,
+        "runeSeconds": 12,
+        "runeRadius": 2.2
+      },
+      "abilities": {
+        "a": {
+          "kind": "inkbolt",
+          "anim": "shoot",
+          "damage": 56,
+          "range": 12.5,
+          "speed": 22,
+          "dur": 0.5,
+          "hitAt": 0.2,
+          "cooldown": 0.6,
+          "bounces": 1,
+          "bounceRange": 6,
+          "bounceMul": 0.6,
+          "blotRadius": 2.4,
+          "blotDamage": 40,
+          "blindSeconds": 1.2,
+          "blindMiss": 0.5,
+          "runeDamage": 55,
+          "bot": "fight",
+          "botRange": 12,
+          "variance": 0.2
+        },
+        "b": {
+          "kind": "swarm",
+          "anim": "cast",
+          "range": 9,
+          "radius": 2.6,
+          "seconds": 4,
+          "dps": 32,
+          "slowMul": 0.65,
+          "dur": 0.55,
+          "hitAt": 0.3,
+          "cooldown": 9,
+          "bot": "fight",
+          "botRange": 9,
+          "callout": "SWARM \u00b7 B AGAIN CALLS IT TO YOU"
+        },
+        "r": {
+          "kind": "erratum",
+          "anim": "attack_b",
+          "range": 12,
+          "dur": 0.4,
+          "hitAt": 0.2,
+          "cooldown": 8,
+          "bot": "never",
+          "callout": "ERRATUM"
+        },
+        "z": {
+          "kind": "manuscript",
+          "anim": "slam",
+          "seconds": 8,
+          "damage": 80,
+          "radius": 2.6,
+          "slowMul": 0.6,
+          "slowSeconds": 1.5,
+          "splash": 4,
+          "splashDamage": 40,
+          "knockback": 8,
+          "dur": 0.9,
+          "hitAt": 0.5,
+          "bot": "fight",
+          "botRange": 9,
+          "callout": "ILLUMINATED MANUSCRIPT \u00b7 RUNES EVERYWHERE, FREE RECASTS"
+        }
+      },
+      "botPlan": {
+        "retreatHp": 0.32,
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "class": "caster",
+      "synergy": {
+        "swarmAlly": {
+          "assassin": 1.15
+        }
+      }
     }
   }
 }

@@ -10,4 +10,5 @@ import "./herald";
 import "./marksman";
 import "./friar";
 import "./harpooner";
+import "./scribe";
 import "../fx/costumeSkins";

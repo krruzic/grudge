@@ -1,0 +1,11 @@
+The TOP ROW of the image shows four existing costume select icons of another hero from our game (Super Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon head with a small collar, front-facing, thick dark outline around the whole silhouette, strong colours). The BOTTOM ROW shows rough 3D renders of our new hero ABBESS HOLLIN, an old beekeeping abbess-scribe, in her four costumes (the renders are too dark; her real skin is pale and rosy).
+
+Paint ONE consistent set of FOUR COSTUME SELECT ICONS of ABBESS HOLLIN in a single row, evenly spaced, same size, in EXACTLY the style of the top-row icons. All four share IDENTICAL head shape, framing, size, outline thickness and expression: a kindly old woman with a pale rosy wrinkled face, a long pointed nose, round brass spectacles, a wry knowing smile, silver curls at her temples, wearing a wide-brimmed hat with a bee veil pinned up around her face like a hood. The whole head, hat brim and collar fit fully inside each cell with empty space around them.
+
+Left to right:
+1. CLASSIC: tan straw hat with a brown band, cream veil, honey-amber robe collar, a little blue-and-gold bee brooch.
+2. QUEEN BEE: black hat with a gold band and a small gold honeycomb crown, translucent amber-gold veil with a honeycomb net pattern, black collar with bold gold bumblebee stripes.
+3. MIDNIGHT VIGIL: deep violet felt hat with a silver band and tiny silver stars, pale silver-white veil, midnight indigo collar with a silver crescent moon brooch.
+4. RED INK: black felt hat with a crimson band and a red quill feather tucked in, black lace veil, parchment-white collar covered in black handwriting with red correction strokes.
+
+Plain flat light grey background, no text, no labels, no frames, no borders, no shoulders or bodies below the collar.

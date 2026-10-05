@@ -138,7 +138,7 @@ function syncActionAnim(ents: EntityViews, e: Entity, v: View, facing: number, d
         const p = v.root.position;
         ents.fx.slash(p.x, p.y, p.z, facing, e.team, k, Math.min(3.2, (hit.range ?? 2) * 0.95), a.hitAt * 0.7);
       }
-    } else if (a.name === "dodge" && a.kind !== "kegrocket") {
+    } else if (a.name === "dodge" && a.kind !== "kegrocket" && a.kind !== "pagegust") {
       anim = "dodge";
       ents.fx.dust(e.transform.pos.x, e.transform.y, e.transform.pos.z, ents.heroScale * 0.8, 5, 2.2);
     } else if (a.name === "hit") anim = "hit";

@@ -100,6 +100,9 @@ export interface Status {
   wetUntil?: number;
   wetOwner?: number;
   slipAt?: number;
+  /** Inside Hollin's bee swarm (hero/scribe.ts): her partner's next hit lands harder (heroes.json synergy). */
+  swarmUntil?: number;
+  swarmOwner?: number;
 }
 
 /** Marksman's hawk (hero/marksman.ts). */
@@ -137,6 +140,39 @@ export interface Keg {
   mul: number;
   /** Powder keg: R pressed again while it flew - blow the moment it lands. */
   blowOnLand?: boolean;
+}
+
+/** Hollin's rune on the ground (hero/scribe.ts): recasting onto it empowers the spell, Erratum blinks to it. */
+export interface Rune {
+  id: number;
+  x: number;
+  z: number;
+  until: number;
+}
+
+/** Hollin's Ink Bolt in flight (hero/scribe.ts): ricochets off walls and on to the next target. */
+export interface InkBolt {
+  id: number;
+  ownerId: number;
+  team: number;
+  x: number;
+  z: number;
+  y: number;
+  dirX: number;
+  dirZ: number;
+  speed: number;
+  range: number;
+  dist: number;
+  damage: number;
+  hit: number[];
+  bounces: number;
+  /** Charged bolt: splashes and blinds where it lands. */
+  blot?: { radius: number; damage: number; blind: number };
+  /** Writes a rune where it lands (charged bolts, Illuminated Manuscript). */
+  rune: boolean;
+  slowMul?: number;
+  /** Who it was aimed at: the bolt bends gently toward them. */
+  targetId?: number;
 }
 
 /**
@@ -248,6 +284,10 @@ export interface HeroState {
   stillAt?: number;
   stillX?: number;
   stillZ?: number;
+  /** Hollin (hero/scribe.ts): her runes, Illuminated Manuscript window and its unused free recasts. */
+  runes?: Rune[];
+  manuscriptUntil?: number;
+  freeCast?: { b: boolean; r: boolean };
 }
 
 export interface UnitState {
@@ -371,6 +411,8 @@ export interface Zone {
   poisonSeconds?: number;
   /** Enemies inside take this damage multiplier from the zone's team (brewfest "tipsy"). */
   vuln?: number;
+  /** The zone follows this entity (Hollin's recalled bee swarm). */
+  follow?: number;
 }
 
 export interface Delayed {

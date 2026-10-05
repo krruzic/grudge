@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background, for ABBESS HOLLIN, an old beekeeping scribe who casts ink bolts, bee swarms and golden runes. They are being re-themed for her costume "QUEEN BEE" (black velvet and gold bumblebee stripes, royal honey and gold), shown in image 2. Paint a NEW 4x4 sheet in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1, where EVERY cell is replaced by the new object described: a genuinely different subject in the costume theme, not a recolour of the old sprite, at the same size and position inside its cell as the old sprite. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom (same slot meanings as image 1):
+1. a glossy round blob of golden amber honey with a white highlight
+2. a single teardrop of golden honey
+3. a big splat of golden honey seen from above with sticky droplets around it
+4. a horizontal stroke of dripping golden honey, thick on the left tapering to a point on the right, spanning the whole cell width
+5. a plump royal bumblebee seen from above with a tiny gold crown, black and gold stripes
+6. three royal bumblebees flying together
+7. a chunk of dripping honeycomb with glossy amber honey
+8. a ring of gold-and-black striped honeycomb hexagons seen from above with an empty middle
+9. a golden royal decree scroll with a black wax seal
+10. a fan of four gold-edged black velvet pages
+11. a black-and-gold striped feather quill with a gold nib
+12. a glowing honey-gold rune circle seen from above made of hexagon cells and a tiny crown in the middle
+13. a glowing golden crown sigil with bee wings
+14. a golden pollen sparkle burst
+15. a soft cloud of glittering golden pollen dust
+16. a ring seen from above made of a black velvet border embroidered with gold bees and crowns, empty middle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.

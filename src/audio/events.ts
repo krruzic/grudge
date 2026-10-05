@@ -18,6 +18,7 @@ const WEAPON: Record<string, { swing: string; hit: string; rate?: number }> = {
   summoner: { swing: "swing.light", hit: "magic.bolt" },
   marksman: { swing: "swing.light", hit: "arrow.hit" },
   harpooner: { swing: "swing.light", hit: "arrow.hit", rate: 0.85 },
+  scribe: { swing: "swing.light", hit: "splash", rate: 1.6 },
 };
 const ARMORED = new Set(["warlord", "herald", "engineer"]);
 
@@ -344,8 +345,11 @@ function hit(a: Audio, ev: Extract<SimEvent, { type: "hit" }>, w: World): void {
     return;
   }
   let id = "hit.flesh";
-  if (src?.hero) id = WEAPON[src.hero.type]?.hit ?? id;
-  else if (src?.unit)
+  let rate = 1;
+  if (src?.hero) {
+    id = WEAPON[src.hero.type]?.hit ?? id;
+    if (src.hero.type === "scribe") rate = WEAPON.scribe.rate ?? 1;
+  } else if (src?.unit)
     id = src.unit.type === "heavy" ? "hit.blunt" : src.unit.type === "ranged" ? "arrow.hit" : "hit.flesh";
   else if (src?.structure) id = "arrow.hit";
   if (victim?.structure) {
@@ -354,7 +358,7 @@ function hit(a: Audio, ev: Extract<SimEvent, { type: "hit" }>, w: World): void {
   }
   const unitOnUnit = !!src?.unit && !!victim?.unit;
   const g = unitOnUnit ? 0.35 : 0.75;
-  a.play(id, g);
+  a.play(id, g, rate !== 1 ? { rate } : undefined);
   if (ev.big) a.play("hit.heavy", 0.6, { rate: 0.8 });
   if (victim?.hero && ARMORED.has(victim.hero.type)) a.play("hit.armor", 0.3);
   if (ev.crit) a.play("hit.crit", 0.7, { at: 0.02 });
@@ -465,6 +469,17 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
       break;
     case "hex":
       a.play("magic.dark", 0.5, { dur: span });
+      break;
+    case "swarm":
+      a.play("cloth.flap", 0.4, { rate: 1.3 });
+      break;
+    case "erratum":
+      a.play("ui.page", 0.6, { rate: 1.2 });
+      break;
+    case "manuscript":
+      shout(0.8);
+      a.play("ui.peel", 0.6);
+      a.play("magic.spell", 0.5, { rate: 0.8, dur: span });
       break;
     case "reach":
     case "zone":
@@ -683,6 +698,63 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       a.play("cork", 0.8);
       a.play("firecracker", 0.5, { at: 0.05 });
       a.play("whoosh.big", 0.6, { at: 0.05 });
+      return;
+    // Hollin: wet ink flicks, page rustles, bees and chimes.
+    case "inkShot":
+      a.play("swing.light", 0.5, { rate: 1.35 });
+      a.play("bubble", 0.35, { rate: 1.4, at: 0.02 });
+      if (Math.random() < 0.25) a.vocal("scribe", "attack", 0.5, { id: ev.src });
+      return;
+    case "inkCharged":
+      a.play("whoosh.big", 0.5, { rate: 1.5 });
+      a.play("magic.bolt", 0.55, { rate: 0.9 });
+      a.vocal("scribe", "big", 0.6, { id: ev.src });
+      return;
+    case "inkBounce":
+      if (a.allow("inkBounce", 1)) a.play("splash", 0.35, { rate: 1.9 });
+      return;
+    case "inkBlot":
+      a.play("splash.big", 0.6, { rate: 1.3 });
+      a.play("bubble", 0.4, { rate: 0.8, at: 0.05 });
+      return;
+    case "rune":
+      if (a.allow("rune", 1)) a.play("bell.small", 0.25, { rate: 1.5 });
+      return;
+    case "runeUse":
+      a.play("magic.spell", 0.5, { rate: 1.3 });
+      a.play("bell.small", 0.35, { rate: 1.2 });
+      return;
+    case "runeFlare":
+      if (a.allow("runeFlare", 2)) {
+        a.play("magic.spell", 0.65, { rate: 1.1 });
+        a.play("explode.small", 0.35, { rate: 1.5, at: 0.03 });
+      }
+      return;
+    case "swarm":
+    case "greatSwarm":
+      a.play("bed.insects", ev.name === "greatSwarm" ? 0.8 : 0.6, { rate: 1.7, dur: Math.min(1.6, ev.seconds ?? 1) });
+      a.play("bubble", 0.3, { rate: 0.7 });
+      if (ev.name === "greatSwarm") a.play("bell.small", 0.4, { rate: 1.1 });
+      return;
+    case "swarmCall":
+      a.play("bed.insects", 0.6, { rate: 2, dur: 0.9 });
+      a.play("whistle.wind", 0.3, { rate: 1.6 });
+      return;
+    case "erratum":
+      a.play("blink", 0.6, { rate: 0.9 });
+      a.play("ui.page", 0.6, { at: 0.04 });
+      a.play("cloth.flap", 0.4, { rate: 1.4, at: 0.06 });
+      return;
+    case "manuscript":
+      a.play("gong", 0.45, { rate: 1.6, priority: true });
+      a.play("bell.church", 0.4, { rate: 1.3, at: 0.05 });
+      [0, 0.07, 0.15, 0.24].forEach((t) => a.play("ui.page", 0.45, { at: t, rate: 1 + t }));
+      a.vocal("scribe", "taunt", 0.7, { id: ev.src, at: 0.15 });
+      return;
+    case "gust":
+      a.play("whistle.wind", 0.5, { rate: 1.2 });
+      a.play("ui.page", 0.55);
+      a.play("cloth.flap", 0.45, { rate: 1.1, at: 0.05 });
       return;
   }
   void w;
