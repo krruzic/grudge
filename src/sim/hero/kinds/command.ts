@@ -93,6 +93,22 @@ export function fireWarcry(w: World, e: Entity, a: HeroAction, def: AbilityDef):
       o.status.stealMul = def.fx.lifestealAura;
     }
   }
+  // The roar itself: the Warlord braces behind a shield, and foes close by flinch - cowed (dealing less) and slowed.
+  if (def.shieldFrac) {
+    e.status.shield = Math.max(e.status.shield, e.maxHp * def.shieldFrac);
+    e.status.shieldUntil = w.time + (def.seconds ?? 5);
+  }
+  if (def.cowRadius) {
+    for (const o of w.entities) {
+      if (!o.alive || o.team === e.team || o.structure || o.neutral) continue;
+      if (w.dist(e, o) > def.cowRadius + o.radius) continue;
+      o.status.cowedUntil = Math.max(o.status.cowedUntil, w.time + (def.cowSeconds ?? 3));
+      if (def.slowMul !== undefined) {
+        o.status.slowMul = def.slowMul;
+        o.status.slowUntil = w.time + (def.slowSeconds ?? 2);
+      }
+    }
+  }
   const ch = def.fx?.challenge;
   if (ch) {
     pullTo(w, e, t.pos.x, t.pos.z, ch.radius, 1.4);

@@ -108,12 +108,15 @@ export class Tdm {
     const nav = w.nav;
     const t = w.terrain;
     const home = w.arena.home;
+    const start = w.spawnPoint(0);
     const cand: Vec2[] = [];
     for (let z = 3; z < t.depth - 3; z += 2)
       for (let x = 3; x < t.width - 3; x += 2) {
         const i = nav.index(x, z);
         if (!nav.open(i) || w.terrain.slopeAt(x + 0.5, z + 0.5) > 0.35) continue;
-        if (!nav.reachable(home, { x: x + 0.5, z: z + 0.5 })) continue;
+        // Reachable on foot from where champions spawn (the map centre can be a fountain or a walled court only
+        // jump pads reach, e.g. Gardens - sampling "reachable from the centre" put every spot in there).
+        if (!nav.reachable(start, { x: x + 0.5, z: z + 0.5 })) continue;
         cand.push({ x: x + 0.5, z: z + 0.5 });
       }
     if (!cand.length) return;
@@ -296,8 +299,10 @@ export class Tdm {
     const w = this.w;
     const nav = w.nav;
     const t = w.terrain;
-    const home = w.arena.home;
-    let best: Vec2 = home;
+    // Reachable from a map spawn, not the centre: the centre can be a walled court only jump pads reach (Gardens),
+    // and then every try failed and everyone came back in the middle of the fight.
+    const start = w.spawnPoint(0);
+    let best: Vec2 = start;
     let bestRoom = -1;
     for (let k = 0; k < tries; k++) {
       const x = 2 + Math.floor(w.rng() * (t.width - 4));
@@ -305,7 +310,7 @@ export class Tdm {
       const i = nav.nearestOpen(x, z, 4);
       if (i < 0) continue;
       const p = { x: (i % nav.w) + 0.5, z: Math.floor(i / nav.w) + 0.5 };
-      if (!nav.reachable(home, p)) continue;
+      if (!nav.reachable(start, p)) continue;
       let room = Infinity;
       for (const e of w.entities)
         if (e.alive && e.hero && !e.hero.dead && (team < 0 || e.team !== team))

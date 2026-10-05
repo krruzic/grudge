@@ -515,8 +515,15 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
   h.blocking = false;
 }
 
+/** A living enemy champion within `r` m. */
+function foeNear(w: World, e: Entity, r: number): boolean {
+  for (const o of w.entities)
+    if (o.alive && o.hero && !o.hero.dead && o.team !== e.team && w.dist(e, o) < r) return true;
+  return false;
+}
+
 /**
- * No action: home regen when calm, blocking, and acceleration-limited movement toward the stick direction. If the
+ * No action: home regen when calm, rest regen away from enemies, blocking, and acceleration-limited movement toward the stick direction. If the
  * hero pushes but barely moves for 0.35s, unstick nudges it toward an open cell.
  */
 function freeMove(w: World, e: Entity, cmd: Command): void {
@@ -528,6 +535,9 @@ function freeMove(w: World, e: Entity, cmd: Command): void {
   if (e.hp < e.maxHp && w.calm(e)) {
     const turf = w.turf(e);
     if (turf === "home" || turf === "tower") e.hp = Math.min(e.maxHp, e.hp + e.maxHp * pc.homeRegenFrac * dt);
+    else if (pc.restRegenFrac && w.time - h.combatAt >= (pc.restSeconds ?? 5) && !foeNear(w, e, pc.restClear ?? 10))
+      // Resting anywhere: out of the fight for a while with no enemy champion close, wounds slowly mend.
+      e.hp = Math.min(e.maxHp, e.hp + e.maxHp * pc.restRegenFrac * dt);
   }
   h.blocking = !!cmd.block;
   const mul = w.speedMul(e) * (h.blocking ? b.blockMoveMul : 1) * (h.charging ? 0.45 : 1);

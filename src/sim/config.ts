@@ -160,7 +160,18 @@ export interface AbilityDef {
   comboCooldown?: number;
   seconds?: number;
   stunSeconds?: number;
-  bot?: "fight" | "allies" | "defend" | "approach" | "repair" | "banner" | "works" | "gravewalk" | "heal" | "never";
+  bot?:
+    | "fight"
+    | "allies"
+    | "defend"
+    | "approach"
+    | "repair"
+    | "banner"
+    | "works"
+    | "gravewalk"
+    | "heal"
+    | "never"
+    | "roar";
   botRange?: number;
   /** Wren's Pip: seconds latched before a dodge roll can shake him off. */
   pipShakeAfter?: number;
@@ -190,6 +201,10 @@ export interface AbilityDef {
   vsStunnedMul?: number;
   stunBonus?: number;
   cowSeconds?: number;
+  /** War Cry: enemies within this many m are cowed (cowSeconds) and slowed (slowMul / slowSeconds). */
+  cowRadius?: number;
+  /** War Cry: the caster gains this fraction of max hp as a shield for `seconds`. */
+  shieldFrac?: number;
   executeBelow?: number;
   executeMul?: number;
   hexSeconds?: number;
@@ -592,6 +607,11 @@ export interface MatchData {
   pacing: {
     homeSpeedMul: number;
     homeRegenFrac: number;
+    /** Rest regen anywhere: max-hp fraction per second after `restSeconds` out of combat with no enemy champion
+     * within `restClear` m. */
+    restRegenFrac?: number;
+    restSeconds?: number;
+    restClear?: number;
     towerReach: number;
     towerIntruderMul: number;
     calmSeconds: number;
