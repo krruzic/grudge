@@ -158,7 +158,7 @@ export function fortBlock(h: FxHost, x: number, y: number, z: number, delay: num
 /** A Snow Fort cell slumping as it melts or breaks. */
 export function fortCrumble(h: FxHost, x: number, y: number, z: number): void {
   snowPuff(h, x, y + 0.4, z, 1.6, 2);
-  chunks(h, 3, x, y + 1.2, z, { size: [0.18, 0.3], speed: [0.8, 2.2], up: [1, 3], color: ICE });
+  chunks(h, 3, x, y + 1.2, z, { size: [0.18, 0.3], speed: [0.8, 2.2], up: [1, 3], color: tint(ICE) });
   iceShards(h, x, y + 1, z, 2, [1, 2.5], y + 0.05);
 }
 
@@ -180,7 +180,7 @@ function avalanche(h: FxHost, x: number, gy: number, z: number, r: number): void
     order: 5,
   });
   snowPuff(h, x, gy, z, r, 8);
-  chunks(h, 8, x, gy + 1, z, { size: [0.2, 0.4], speed: [2.5, 5], up: [3, 6], color: ICE });
+  chunks(h, 8, x, gy + 1, z, { size: [0.2, 0.4], speed: [2.5, 5], up: [3, 6], color: tint(ICE) });
   iceShards(h, x, gy + 1, z, 10, [3, 6], gy + 0.05);
   emit(h, {
     tex: ARCHITECT.flake,

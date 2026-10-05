@@ -80,12 +80,16 @@ export class HazardViews {
       return;
     }
     if (ev.type === "mod" && ev.id !== undefined) {
-      const obj = modMesh(this, ev.id);
       const m = this.world.mods.find((k) => k.id === ev.id);
+      const owner = costumeOfPlayer(m?.owner !== undefined ? this.world.getAny(m.owner)?.hero?.player : undefined);
+      // Built under the owner's costume, so cm()/atlas cells on the wall (moss tufts etc.) are themed.
+      const obj = withCostume(owner, () => modMesh(this, ev.id!));
       if (obj) {
         obj.userData.born = this.now;
         obj.userData.wall = m?.kind === "wall";
         obj.userData.ice = m?.style === "ice";
+        // The owner's costume, so the wall's crumble later is themed too.
+        obj.userData.costume = owner;
         if (!obj.userData.wall) obj.scale.y = 0.01;
         else if (this.fx) {
           const cells = obj.userData.cells as THREE.Object3D[];
@@ -123,8 +127,11 @@ export class HazardViews {
         this.mods.delete(ev.id);
         if (obj.userData.wall && this.fx) {
           const ice = obj.userData.ice;
-          for (const c of obj.userData.cells as THREE.Object3D[])
-            (ice ? fortCrumble : wardenWallCrumble)(this.fx, c.position.x, c.userData.baseY, c.position.z);
+          const fx = this.fx;
+          withCostume(obj.userData.costume, () => {
+            for (const c of obj.userData.cells as THREE.Object3D[])
+              (ice ? fortCrumble : wardenWallCrumble)(fx, c.position.x, c.userData.baseY, c.position.z);
+          });
           this.dying.push({ obj, at: this.now });
         } else {
           this.root.remove(obj);

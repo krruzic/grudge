@@ -365,20 +365,20 @@ function paintPlayerPanel(
         const n = String(Math.ceil(left));
         drawNum(ctx, n, bx - textWidth(n, 0.72, true) / 2 - 0.5, y + 1.2, "#ffffff", 0.72);
       }
-      // Charged abilities (Hoot): how many uses are banked, in a small gold badge on the button's corner.
+      // Charged abilities (Hoot): one yellow pip per banked use, in an arc under the button.
       const n = charges(w, e, k);
-      if (n >= 0) {
-        const s = String(n);
-        ctx.fillStyle = INK;
-        ctx.beginPath();
-        ctx.arc(bx + 4, y + 8.6, 2.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = n > 0 ? "#e8b830" : "#5a5050";
-        ctx.beginPath();
-        ctx.arc(bx + 4, y + 8.6, 2, 0, Math.PI * 2);
-        ctx.fill();
-        drawNum(ctx, s, bx + 4 - textWidth(s, 0.5, true) / 2 - 0.2, y + 6.8, "#1a120a", 0.5);
-      }
+      if (n > 0)
+        for (let j = 0; j < n; j++) {
+          const dx = (j - (n - 1) / 2) * 3.4;
+          ctx.fillStyle = INK;
+          ctx.beginPath();
+          ctx.arc(bx + dx, y + 11.4, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffd030";
+          ctx.beginPath();
+          ctx.arc(bx + dx, y + 11.4, 1.05, 0, Math.PI * 2);
+          ctx.fill();
+        }
       if (k === "b" && h.pip) {
         ctx.fillStyle = INK;
         ctx.beginPath();
@@ -396,7 +396,7 @@ function paintPlayerPanel(
     const zx = ax(px + 30);
     ringMeter(ctx, zx, y + 5, 6.4, Math.min(1, frac), full && Math.floor(now * 5) % 2 === 0 ? "#fff4a0" : "#f0b020");
     padButton(ctx, zx, y + 5, 4.4, full ? "#e8c030" : PAD.z, "Z", !full);
-    px += 38;
+    px += 41;
     // The passive slot: a framed box for champions whose passive has a state worth watching.
     const ps = passiveState(w, e);
     if (ps) {

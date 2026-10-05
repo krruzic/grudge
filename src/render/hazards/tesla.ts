@@ -1,7 +1,7 @@
 // Stig's tesla coil: the costume's "tesla" prop when available (Calliope's carousel tower), else a procedural
 // copper coil on a stone base. Used both as a structure body and inside the tesla zone.
 import * as THREE from "three";
-import { ENGINEER } from "../fx/atlas";
+import { cv, ENGINEER, tint } from "../fx/atlas";
 import { prop } from "../props";
 import { IRON, STONE_CHUNK, COPPER } from "./materials";
 
@@ -13,8 +13,8 @@ export function teslaCoil(scale = 1, costume?: string): THREE.Group {
     const at = model.getObjectByName("glow");
     const glow = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: ENGINEER.arc,
-        color: 0x9ad0ff,
+        map: cv(ENGINEER.arc, costume),
+        color: tint(0x9ad0ff, costume),
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -44,8 +44,8 @@ export function teslaCoil(scale = 1, costume?: string): THREE.Group {
   g.add(ball);
   const glow = new THREE.Sprite(
     new THREE.SpriteMaterial({
-      map: ENGINEER.arc,
-      color: 0x9ad0ff,
+      map: cv(ENGINEER.arc, costume),
+      color: tint(0x9ad0ff, costume),
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
