@@ -64,6 +64,10 @@ const TINTS: Record<string, Record<number, number>> = {
     0xe0ffb0: 0xe8d0ff,
   },
   celadon: { 0xffc860: 0x9fe0b0, 0xffe6a0: 0xd8f0ff, 0xffd070: 0xa8d8ff, 0xfff0c0: 0xe8f4ff, 0xffe0a0: 0xe0f0ff },
+  // Gristle (vintner): the wine-pink hit flashes become harvest gold, forge orange and frost blue.
+  harvestking: { 0xb0305a: 0xe0a020, 0xffd8e0: 0xfff0b0, 0xffd0e0: 0xfff0c0 },
+  forgemaster: { 0xb0305a: 0xff6a10, 0xffd8e0: 0xffc080, 0xffd0e0: 0xffd090, 0xfff0e0: 0xffd8b0, 0xffe080: 0xff9a40 },
+  icewine: { 0xb0305a: 0x80c8ff, 0xffd8e0: 0xe0f0ff, 0xffd0e0: 0xe8f4ff, 0xffe080: 0xc8e8ff, 0xffe8a0: 0xd0f0ff },
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
@@ -75,6 +79,9 @@ const TRAILS: Record<string, number> = {
   suntotem: 0xffe0a0,
   starfall: 0xd890ff,
   celadon: 0x7fb0ff,
+  harvestking: 0xe0a020,
+  forgemaster: 0xff6a10,
+  icewine: 0x80c8ff,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);
@@ -171,9 +178,7 @@ COSTUME_SKIN.colossus = {
       ),
   },
   lipFlat: 0.3,
-  decal: new Map([
-    [WARLORD.crackRing, "flat"],
-  ]),
+  decal: new Map([[WARLORD.crackRing, "flat"]]),
 };
 COSTUME_SKIN.calliope = {
   chunk: {

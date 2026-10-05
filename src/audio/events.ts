@@ -14,11 +14,12 @@ const WEAPON: Record<string, { swing: string; hit: string; rate?: number }> = {
   duelist: { swing: "swing.blade", hit: "hit.blade", rate: 1.1 },
   warden: { swing: "swing.heavy", hit: "hit.blunt", rate: 0.8 },
   friar: { swing: "swing.light", hit: "hit.heavy" },
+  vintner: { swing: "swing.heavy", hit: "hit.heavy", rate: 0.75 },
   herald: { swing: "swing.light", hit: "hit.flesh" },
   summoner: { swing: "swing.light", hit: "magic.bolt" },
   marksman: { swing: "swing.light", hit: "arrow.hit" },
 };
-const ARMORED = new Set(["warlord", "herald", "engineer"]);
+const ARMORED = new Set(["warlord", "herald", "engineer", "vintner"]);
 
 const ent = (w: World, id: number | undefined): Entity | undefined => (id === undefined ? undefined : w.getAny(id));
 const heroType = (w: World, id: number | undefined): string | undefined => ent(w, id)?.hero?.type;
@@ -445,6 +446,20 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
       a.play("cork", 0.8);
       a.vocal(hero, "taunt", 0.8, { id: ev.src, at: 0.1 });
       break;
+    case "headbutt":
+      shout(0.9);
+      a.play("ogre.step", 0.5, { rate: 1.2 });
+      a.play("whoosh.big", 0.5, { rate: 0.8, at: 0.05 });
+      break;
+    case "switcheroo":
+      a.play("whistle.wind", 0.25, { rate: 1.8, dur: 0.3 });
+      a.tone("triangle", 660, 990, 0.12, 0.06);
+      a.tone("triangle", 990, 660, 0.12, 0.06, 0, 0.12);
+      break;
+    case "crush":
+      shout(1);
+      a.play("chain.rattle", 0.6, { dur: span });
+      break;
     case "stealth":
       a.play("grim.smoke", 0.6);
       a.play("pop", 0.5);
@@ -624,6 +639,50 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
     case "plenty":
       if (Math.random() < 0.5) a.play("burp", 0.35);
       return;
+    // Gristle (vintner)
+    case "pound":
+    case "crush":
+    case "crushFinal": {
+      const k = ev.name === "crushFinal" ? 1 : ev.name === "pound" ? 0.8 : ev.id === 1 ? 0.65 : 0.5;
+      a.play("hammer", 0.5 + 0.4 * k, { rate: 0.55 });
+      a.play("metal.clank", 0.4 + 0.3 * k, { rate: 0.6 - 0.1 * k, at: 0.01 });
+      a.play("warlord.slam", 0.5 + 0.4 * k, { rate: 1.25 - 0.3 * k, at: 0.02 });
+      a.play("splash", 0.3 + 0.3 * k, { rate: 0.8, at: 0.05 });
+      if (ev.name === "crushFinal") {
+        a.play("rock.break", 0.8, { at: 0.06, priority: true });
+        a.play("gong", 0.35, { rate: 0.6, at: 0.04 });
+        a.impact();
+      }
+      return;
+    }
+    case "headbuttHit":
+      a.play("hit.heavy", 0.8, { rate: 0.7 });
+      a.play("body.land", 0.4);
+      return;
+    case "wallSlam":
+      a.play("wallsplat", 0.9, { priority: true, rate: 0.85 });
+      a.play("rock.break", 0.6, { at: 0.03 });
+      a.play("bell.small", 0.35, { rate: 1.6, at: 0.15 });
+      a.impact();
+      return;
+    case "switchMark":
+      a.play("chain.rattle", 0.35, { rate: 1.4 });
+      return;
+    case "switch":
+      a.play("blink", 0.7);
+      a.play("whoosh.big", 0.5, { rate: 1.4 });
+      a.play("shield.up", 0.5, { at: 0.05 });
+      return;
+    case "switchFizzle":
+      a.play("ui.error", 0.3, { rate: 0.8 });
+      return;
+    case "curl":
+      a.play("metal.clank", 0.7, { rate: 0.7 });
+      a.play("body.land", 0.5);
+      return;
+    case "gritFull":
+      a.play("hit.armor", 0.25, { rate: 0.6 });
+      return;
     case "kegRocket":
       a.play("cork", 0.8);
       a.play("firecracker", 0.5, { at: 0.05 });
@@ -665,4 +724,5 @@ function callout(a: Audio, text: string): void {
   else if (text === "FULL POWER!") a.tone("triangle", 880, 1760, 0.18, 0.08);
   else if (text === "INTERRUPTED!" || text === "BLINDED!") a.play("glass", 0.5, { rate: 1.3 });
   else if (text === "!") a.play("ogre.voice", 0.7);
+  else if (text === "ANVIL POUND") a.play("swing.heavy", 0.6, { rate: 0.6 });
 }

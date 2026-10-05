@@ -85,6 +85,8 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
+  /** Gristle's Thick Skin talent: faster, bigger Grit. */
+  grit?: { max: number; seconds: number };
   /** Gristle's Switcheroo: he lands with a stomp where the partner stood. */
   switchSlam?: { radius: number; damage: number; knockback: number; stun: number };
 }

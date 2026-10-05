@@ -17,6 +17,7 @@ import {
   WARLORD,
   RAIDER,
   HERALD,
+  VINTNER,
   hd,
   cv,
   cm,
@@ -595,6 +596,20 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
     ring(Math.round(r * 1.2), [0.1, 0.9], (x, z) =>
       sprite(FX.fire, 0.6 + Math.random() * 0.3, x, z, -0.1, true, "glow"),
     );
+  } else if (style === "wine") {
+    // Gristle's Vintage Year: crushed grapes and spilled wine where the last Crush Season slam landed.
+    decal.material = new THREE.MeshBasicMaterial({
+      map: hd(VINTNER.puddle),
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+    decal.visible = true;
+    ring(Math.round(r * 2), [0.05, 0.85], (x, z) =>
+      sprite(VINTNER.grape, 0.22 + Math.random() * 0.14, x, z, -0.05, false, "bubble"),
+    );
+    ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(VINTNER.leaf, 0.35, x, z, -0.1, false, "foam"));
   } else if (style === "brewfest") {
     decal.material = new THREE.MeshBasicMaterial({
       map: hd(ZONE_DECALS.brewfest),

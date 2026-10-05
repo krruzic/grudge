@@ -39,6 +39,8 @@ const GLOBAL = new Set(["gates", "horn", "avalanche", "tide", "mist", "notice", 
 const LEAN = new Set(["relic"]);
 /** Longest a voice line runs, per line. */
 const VOICE_DUR: Record<string, number> = { attack: 0.55, big: 0.95, hurt: 0.6, death: 1.7, taunt: 1.3, order: 0.9 };
+/** Champions whose voices are pitched down far enough that their lines need a little longer (Gristle at 0.7). */
+const VOICE_LEN: Record<string, number> = { vintner: 1.2 };
 /** Most sample voices at once; past this only priority sounds start. */
 const MAX_VOICES = 56;
 
@@ -246,7 +248,7 @@ export class Audio {
    */
   vocal(hero: string | undefined, line: string, gain = 0.8, o: PlayOpts & { id?: number; gap?: number } = {}): void {
     if (!hero) return;
-    o = { dur: VOICE_DUR[line] ?? 1, ...o };
+    o = { dur: (VOICE_DUR[line] ?? 1) * (VOICE_LEN[hero] ?? 1), ...o };
     const key = `${o.id ?? hero}:${line === "death" ? "d" : "v"}`;
     const now = this.now;
     if ((this.vocalAt.get(key) ?? 0) > now) return;
@@ -361,6 +363,7 @@ export class Audio {
       warden: ["thorn.grow", 0.9],
       marksman: ["arrow.loose", 1],
       friar: ["maddock.keg", 1],
+      vintner: ["hammer", 0.6],
       herald: ["cloth.flap", 1],
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];

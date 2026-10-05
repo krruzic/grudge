@@ -33,8 +33,9 @@ export function gritTick(w: World, e: Entity): void {
   const rushing = k === "headbutt" || k === "curl" || k === "dodge";
   const still = h.blocking || (Math.hypot(h.vel.x, h.vel.z) < (hk.gritStillSpeed ?? 1.2) && !rushing && !h.jump);
   const before = h.grit ?? 0;
+  const tg = abilities(w, e).a.fx?.grit;
   const g = still
-    ? Math.min(1, before + w.dt / (hk.gritSeconds ?? 3))
+    ? Math.min(1, before + w.dt / (tg?.seconds ?? hk.gritSeconds ?? 3))
     : Math.max(0, before - w.dt / (hk.gritDrainSeconds ?? 1.5));
   h.grit = g;
   if (before < 1 && g >= 1) fx(w, "gritFull", e.id, e.team, t.pos.x, t.y, t.pos.z);
@@ -44,7 +45,7 @@ export function gritTick(w: World, e: Entity): void {
 export function gritMul(w: World, target: Entity): number {
   const g = target.hero?.grit;
   if (!g) return 1;
-  return 1 - g * (hooksOf(w, target).gritMax ?? 0.25);
+  return 1 - g * (abilities(w, target).a.fx?.grit?.max ?? hooksOf(w, target).gritMax ?? 0.25);
 }
 
 /** Anvil Curl: a hit from behind while curled is all but stopped by the anvil on his back. */
@@ -321,6 +322,7 @@ export function fireSwitch(w: World, e: Entity, a: HeroAction, def: AbilityDef):
       stunSeconds: sf.stun,
     };
     w.emit({ type: "slam", x: bx, y: w.groundY(bx, bz), z: bz, radius: sf.radius, team: e.team, src: e.id });
+    fx(w, "pound", e.id, e.team, bx, w.groundY(bx, bz), bz, { radius: sf.radius });
     aoe(w, e, bx, bz, sf.radius, sdef, w.damageMulOf(e));
   }
 }

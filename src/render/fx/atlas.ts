@@ -27,6 +27,7 @@ import duelistUrl from "../../../assets/fx/duelist.png?url";
 import heraldUrl from "../../../assets/fx/herald.png?url";
 import wrenUrl from "../../../assets/fx/wren.png?url";
 import friarUrl from "../../../assets/fx/friar.png?url";
+import vintnerUrl from "../../../assets/fx/vintner.png?url";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 
 // ── Sheets and cells ──
@@ -521,6 +522,25 @@ export const FRIAR = atlas("friar", friarUrl, [
   "spark",
   "blast",
   "hopRing",
+] as const);
+
+export const VINTNER = atlas("vintner", vintnerUrl, [
+  "grape",
+  "grapes",
+  "leaf",
+  "splash",
+  "drop",
+  "puddle",
+  "sparks",
+  "shard",
+  "chain",
+  "cork",
+  "crater",
+  "dustRing",
+  "grit",
+  "swap",
+  "dizzy",
+  "splat",
 ] as const);
 
 /** Resolves once every base sheet has loaded; composites paint and base HQ paintings start loading then. */

@@ -1,0 +1,8 @@
+The FIRST image is a 2 x 2 reference grid of the same fantasy game character, GRISTLE, a huge boar-folk vintner with a grey boar head, a spiky mane, pointed ears, small fierce amber eyes and two big curved lower tusks with metal caps, in four costume variants. The SECOND image is a row of finished costume-icon heads of the game's other characters, showing the exact icon style to match. Paint a 2 x 2 grid of four COSTUME SELECT ICONS of Gristle in EXACTLY the style of the second image (Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon HEAD only, front three-quarter facing, same head shape, size and framing in all four, thick dark outline around the whole silhouette, strong flat colours, a sliver of collar at the bottom at most), one per cell, in the same order and positions as the first image, each centred in its cell with lots of empty space around it:
+
+top left: CLASSIC: slate-grey boar with a dark grey mane, pink snout, brass tusk caps, a deep blue neckerchief.
+top right: HARVEST KING: russet-brown boar with a chestnut mane, gold tusk caps, a little crown of green grape leaves and a purple grape bunch tucked behind one ear, a blue neckerchief.
+bottom left: FORGEMASTER: sooty charcoal-black boar with glowing orange ember freckles, black mane with singed orange tips, copper tusk caps, a blue neckerchief.
+bottom right: ICEWINE: creamy-white snow boar with a silver mane and frost on the bristles, pale blue ice-crystal tusk caps, a blue neckerchief.
+
+The four heads must be identical in shape, size and pose, only the costume colours and details differ. Plain flat light grey background, no text, no borders, no frames, no circles behind the heads.

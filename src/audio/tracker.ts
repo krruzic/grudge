@@ -72,6 +72,7 @@ const GAIT: Record<string, { stride: number; rate: number; gain: number; layer?:
   herald: { stride: 1.8, rate: 0.95, gain: 1, layer: "step.armor" },
   engineer: { stride: 1.5, rate: 0.95, gain: 1 },
   friar: { stride: 1.9, rate: 0.82, gain: 1.15 },
+  vintner: { stride: 2.1, rate: 0.72, gain: 1.25, layer: "step.armor" },
   warden: { stride: 2.2, rate: 0.75, gain: 0.9, layer: "step.bark" },
   raider: { stride: 1.7, rate: 1.1, gain: 0.55 },
   duelist: { stride: 1.7, rate: 1.1, gain: 0.85 },

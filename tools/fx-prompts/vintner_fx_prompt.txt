@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for GRISTLE, a huge grey boar-folk vintner who fights with a blacksmith's anvil on a chain, headbutts foes into walls and crushes grapes with earth-shaking anvil slams, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single round dark purple grape with a soft white highlight
+2. a small bunch of dark purple grapes with a green stem
+3. a single green grape-vine leaf
+4. a splash crown of deep red-purple wine with lighter pink tips, side view
+5. a single deep red-purple wine droplet
+6. a puddle of spilled red-purple wine seen from directly above, round and glossy with a darker rim and a few floating grape skins
+7. a bright orange-white burst of forge sparks, like a hammer striking hot iron
+8. a single chipped dark iron shard fragment
+9. a single heavy dark iron chain link
+10. a wine cork
+11. a round ground crater seen from directly above: cracked brown earth radiating from the centre, with red-purple wine seeping into the cracks
+12. a thick ring of grey-brown dust and pebbles seen from directly above, a circle
+13. a grey stone shield emblem, a rounded hexagon of rough grey stone with a gold rim, like tough skin
+14. two curved golden arrows chasing each other in a circle, a swap symbol
+15. a ring of little purple grapes and yellow stars, like dizzy stars circling a stunned head, seen at an angle
+16. a big star-shaped red-purple splatter of crushed grapes seen from directly above, with grape skins and seeds
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.
