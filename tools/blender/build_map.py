@@ -81,8 +81,26 @@ TRIPO.update({
     "tent": {"size": (2.8, 2.6, 2.2), "faces": 800, "maps": ("spires",)},
     "cactus": {"size": (1.8, 1.8, 2.2), "faces": 700, "lo": 260, "maps": ("spires",)},
 })
+# Deathmatch arenas: Cutstone Quarry (sunset limestone quarry) and Bellfry Abbey (moonlit ruined abbey).
+TRIPO.update({
+    "crane": {"size": (4.0, 3.0, 5.6), "faces": 1400, "maps": ("quarry",)},
+    "stoneblocks": {"size": (2.6, 2.2, 1.6), "faces": 600, "maps": ("quarry",)},
+    "minecart": {"size": (2.0, 1.4, 1.5), "faces": 800, "maps": ("quarry",)},
+    "scaffold": {"size": (2.4, 2.4, 4.0), "faces": 1400, "maps": ("quarry",)},
+    "rubbleheap": {"size": (2.4, 2.2, 1.2), "faces": 700, "maps": ("quarry",)},
+    "shed": {"size": (3.2, 2.6, 2.6), "faces": 1000, "maps": ("quarry",)},
+    "fallenbell": {"size": (3.0, 2.6, 2.0), "faces": 1000, "maps": ("abbey",)},
+    "yew": {"size": (3.8, 3.8, 4.6), "trunk": True, "mirror": True, "faces": 1200, "lo": 400, "maps": ("abbey",),
+            "grade": (0.35, (0.62, 0.95, 0.72))},
+    "angel": {"size": (1.4, 1.4, 2.9), "faces": 1000, "maps": ("abbey",)},
+    "gravestones": {"size": (2.6, 2.0, 1.7), "faces": 800, "maps": ("abbey",)},
+    "shrine": {"size": (1.6, 1.4, 2.4), "faces": 1000, "maps": ("abbey",)},
+    "brokenpillar": {"size": (3.2, 2.0, 1.4), "faces": 700, "maps": ("abbey",)},
+})
 ORCHARD = ("appletree", "press", "ciderwell", "barrels", "pumpkins", "haycart",
-           "spire", "ribcage", "colossus", "obelisk", "tent", "cactus")
+           "spire", "ribcage", "colossus", "obelisk", "tent", "cactus",
+           "crane", "stoneblocks", "minecart", "scaffold", "rubbleheap", "shed",
+           "fallenbell", "yew", "angel", "gravestones", "shrine", "brokenpillar")
 ROCKS = ("rock_a", "rock_b", "rock_c")
 
 
@@ -208,10 +226,12 @@ class Builder:
 # tall grass to golden windfall straw.
 AUTUMN = MAP_NAME == "hollow"
 DESERT = MAP_NAME == "spires"
+QUARRY = MAP_NAME == "quarry"
+ABBEY = MAP_NAME == "abbey"
 
 
 def autumn_image(name, img):
-    if DESERT and img is not None and name in ("ruinstone", "brick", "cobble", "ruin_a", "ruin_b", "ruin_c", "ruin_d", "ruintop", "rubble"):
+    if (DESERT or QUARRY) and img is not None and name in ("ruinstone", "brick", "cobble", "ruin_a", "ruin_b", "ruin_c", "ruin_d", "ruintop", "rubble"):
         # Grey castle stone -> warm banded sandstone for the canyon ruins.
         px = list(img.pixels)
         for i in range(0, len(px), 4):
@@ -219,8 +239,23 @@ def autumn_image(name, img):
             px[i], px[i + 1], px[i + 2] = min(1.0, lum * 1.32 + 0.1), lum * 1.0 + 0.05, lum * 0.7
         img.pixels.foreach_set(px)
         return img
-    if DESERT and name == "tallgrass" and img is not None:
-        # Dry pale desert scrub.
+    if ABBEY and img is not None and name in HEDGES + ("leaves", "pine"):
+        # Moonlit abbey: hedges and canopies nudged a little toward blue.
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            px[i], px[i + 1], px[i + 2] = px[i] * 0.93, px[i + 1] * 0.98, min(1.0, px[i + 2] * 1.1)
+        img.pixels.foreach_set(px)
+        return img
+    if ABBEY and name == "tallgrass" and img is not None:
+        # Silver-green long graveyard grass under the moon.
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            lum = 0.3 * px[i] + 0.55 * px[i + 1] + 0.15 * px[i + 2]
+            px[i], px[i + 1], px[i + 2] = lum * 0.72, lum * 1.0, lum * 0.86
+        img.pixels.foreach_set(px)
+        return img
+    if (DESERT or QUARRY) and name == "tallgrass" and img is not None:
+        # Dry pale desert / quarry scrub.
         px = list(img.pixels)
         for i in range(0, len(px), 4):
             r, g, b = px[i], px[i + 1], px[i + 2]
@@ -463,6 +498,12 @@ def load_tripo(name, cfg):
     me.transform(Matrix.Diagonal((sx, sy, sz, 1.0)) @ Matrix.Translation((-cx, -cy, -lo.z)))
     mname = cfg.get("mat", "mp_" + name)
     img = tripo_image(src, mname, cfg.get("gain", 1.0))
+    if ABBEY and name in ("tree_a", "tree_b", "pine_a", "deadtree") and img is not None:
+        # Moonlit abbey: foliage nudged a little toward blue (a touch, not a cast).
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            px[i], px[i + 1], px[i + 2] = px[i] * 0.93, px[i + 1] * 0.98, min(1.0, px[i + 2] * 1.1)
+        img.pixels.foreach_set(px)
     if cfg.get("grade"):
         # Pull a too-saturated prop toward the map palette: desaturate by `sat`, then multiply by `mul`.
         sat, mul = cfg["grade"]

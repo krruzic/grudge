@@ -1,5 +1,5 @@
 // Field select ("CHOOSE THE FIELD"): a parchment card with a live preview of the hovered field, its name,
-// blurb and size, and a column of pinned field cards (plus RANDOM). Online guests watch the host's choice
+// blurb and size, and a grid of pinned field cards (plus RANDOM; one column when there are few). Online guests watch the host's choice
 // (fieldWatch) with a note saying who picks.
 import { Terrain } from "../../sim/terrain";
 import { drawPlain, textWidth } from "../font";
@@ -90,22 +90,30 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
     }
     const area = d.width * d.depth;
     const size = area <= 2400 ? "SMALL" : area <= 4000 ? "MEDIUM" : "LARGE";
-    const facts = `${size} FIELD  ·  ${d.width} BY ${d.depth} PACES  ·  ${padCount} TOWER PADS`;
+    const deathmatch = s.fieldMode === "tdm" || s.fieldMode === "ffadm";
+    const facts = `${size} FIELD  ·  ${d.width} BY ${d.depth} PACES  ·  ${
+      deathmatch ? (d.mode === "tdm" ? "DEATHMATCH ARENA" : "NO KEEPS") : `${padCount} TOWER PADS`
+    }`;
     drawPlain(ctx, facts, 14, ph - 12, "#6a4424", 0.55);
   }
   waxSeal(ctx, pw - 22, ih + 36, 15, "#a8141a", random ? "hex" : (d?.emblem ?? "castle"));
   ctx.restore();
 
-  // Right: pinned field cards, then RANDOM.
-  const cx0 = px + pw + 18;
-  const cw = W - cx0 - 14;
+  // Right: pinned field cards, then RANDOM - a grid once there are more than four.
+  const gx0 = px + pw + 18;
+  const gw = W - gx0 - 14;
   const n = pool.length + 1;
-  const chh = Math.min(62, Math.floor((H - 58 - (n - 1) * 8) / n));
+  const cols = n <= 4 ? 1 : n <= 8 ? 2 : 3;
+  const rows = Math.ceil(n / cols);
+  const gap = 8;
+  const cw = Math.floor((gw - (cols - 1) * gap) / cols);
+  const chh = Math.min(62, Math.floor((H - 58 - (rows - 1) * gap) / rows));
   for (let k = 0; k < n; k++) {
     const sel = k === Math.min(s.mapIndex, n - 1);
-    const cy = 30 + k * (chh + 8);
-    const cx = cx0 + (sel ? -8 : 0);
-    s.hit(`map:${k}`, cx0 - 8, cy - 2, cw + 8, chh + 6);
+    const cx0 = gx0 + (k % cols) * (cw + gap);
+    const cy = 30 + Math.floor(k / cols) * (chh + gap) - (sel && cols > 1 ? 3 : 0);
+    const cx = cx0 + (sel && cols === 1 ? -8 : 0);
+    s.hit(`map:${k}`, cx0 - (cols === 1 ? 8 : 2), cy - 2, cw + (cols === 1 ? 8 : 4), chh + 6);
     ctx.save();
     ctx.translate(cx + cw / 2, cy + chh / 2);
     ctx.rotate(sel ? 0 : k % 2 ? 0.03 : -0.03);
@@ -133,13 +141,14 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
       drawPlain(ctx, "?", 5 + tw / 2 - textWidth("?", 2.4, true) / 2, 5 + th / 2 - 13, "#5a3a18", 2.4, true);
     }
     const label = k < pool.length ? shortMapName(s.maps[pool[k]].name) : "RANDOM";
-    drawPlain(ctx, label, 6, th + 8, sel ? "#8a1810" : BROWN, 0.62, true);
+    const ls = Math.min(0.62, ((cw - 14) / Math.max(1, textWidth(label, 1, true))) * 0.86);
+    drawPlain(ctx, label, 6, th + 8, sel ? "#8a1810" : BROWN, ls, true);
     // Pin: one wedge per seat voting for this card, else the colours of the hands pointing at it.
     const voters = s.votes.filter(([, v]) => v === k).map(([seat]) => handColor(seat));
     const hands = s.cursors?.handsOn(`map:${k}`) ?? [];
     pin(ctx, cw / 2, 3, voters.length ? voters : hands.length ? hands : "#8a8a90");
     ctx.restore();
-    if (sel) goldArrow(ctx, cx - 6, cy + chh / 2, -1, 6);
+    if (sel && cols === 1) goldArrow(ctx, cx - 6, cy + chh / 2, -1, 6);
   }
   bottomPrompt(
     ctx,

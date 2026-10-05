@@ -19,6 +19,17 @@ import desertCliffUrl from "../../assets/textures/desert_cliff.png?url";
 import autumnGrassUrl from "../../assets/textures/autumn_grass.png?url";
 import autumnPathUrl from "../../assets/textures/autumn_path.png?url";
 import autumnBankUrl from "../../assets/textures/autumn_bank.png?url";
+import quarryFloorUrl from "../../assets/textures/quarry_floor.png?url";
+import quarryRoadUrl from "../../assets/textures/quarry_road.png?url";
+import quarryCliffUrl from "../../assets/textures/quarry_cliff.png?url";
+import quarrySlabsUrl from "../../assets/textures/quarry_slabs.png?url";
+import abbeyGrassUrl from "../../assets/textures/abbey_grass.png?url";
+import abbeyPathUrl from "../../assets/textures/abbey_path.png?url";
+import abbeyWallUrl from "../../assets/textures/abbey_wall.png?url";
+import abbeyFlagsUrl from "../../assets/textures/abbey_flags.png?url";
+import abbeyLongGrassUrl from "../../assets/textures/abbey_longgrass.png?url";
+import quarryScrubUrl from "../../assets/textures/quarry_scrub.png?url";
+import cliffUrl from "../../assets/textures/cliff.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./map/terrainMesh";
 import { cacheCanvas } from "../ui/cacheCanvas";
@@ -217,15 +228,36 @@ function mergeProps(scene: THREE.Object3D): void {
   }
 }
 
-const PALETTES: Record<string, Partial<Record<"grass" | "dirt" | "rock" | "cobble", string>>> = {
+/** Ground palettes. grass2 / rim / cobbleM: the deathmatch arenas' extras (see TerrainTextures). */
+const PALETTES: Record<
+  string,
+  Partial<Record<"grass" | "dirt" | "rock" | "cobble" | "grass2" | "rim", string>> & { cobbleM?: number }
+> = {
   autumn: { grass: autumnGrassUrl, dirt: autumnPathUrl, rock: autumnBankUrl },
   desert: { grass: desertFloorUrl, dirt: desertDuneUrl, rock: desertCliffUrl, cobble: desertFlagsUrl },
+  quarry: {
+    grass: quarryFloorUrl,
+    dirt: quarryRoadUrl,
+    rock: quarryCliffUrl,
+    cobble: quarrySlabsUrl,
+    grass2: quarryScrubUrl,
+    cobbleM: 5,
+  },
+  abbey: {
+    grass: abbeyGrassUrl,
+    dirt: abbeyPathUrl,
+    rock: abbeyWallUrl,
+    cobble: abbeyFlagsUrl,
+    grass2: abbeyLongGrassUrl,
+    rim: cliffUrl,
+    cobbleM: 4,
+  },
 };
 
 export async function loadMap(
   url: string,
   terrain: Terrain,
-  textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake" | "pavId">, string>,
+  textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake" | "pavId" | "grass2" | "rim" | "cobbleM">, string>,
   light?: TerrainLight,
 ): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
@@ -248,7 +280,18 @@ export async function loadMap(
   const ruin = ruined ? { crack } : undefined;
   const lake = terrain.tideCells.length ? await texLoader.loadAsync(lakeUrl) : undefined;
   if (lake) lake.anisotropy = ANISO;
-  root.add(buildTerrainMesh(terrain, { grass, dirt, rock, cobble, water, sand, pavId, ruin, lake }, light, sur));
+  const [grass2, rim] = await Promise.all(
+    [palette?.grass2, palette?.rim].map((u) => (u ? texLoader.loadAsync(u) : Promise.resolve(undefined))),
+  );
+  for (const tx of [grass2, rim]) if (tx) tx.anisotropy = ANISO;
+  root.add(
+    buildTerrainMesh(
+      terrain,
+      { grass, dirt, rock, cobble, water, sand, pavId, ruin, lake, grass2, rim, cobbleM: palette?.cobbleM },
+      light,
+      sur,
+    ),
+  );
   for (const t of [grass, dirt, rock, cobble, sand, ...(ruined ? [crack] : [])]) t.anisotropy = ANISO;
   const waterMesh = buildWaterMesh(terrain, waterMaterial(water), sur);
   root.add(waterMesh);

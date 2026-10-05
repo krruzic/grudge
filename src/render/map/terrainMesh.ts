@@ -22,6 +22,12 @@ export interface TerrainTextures {
   pavId: THREE.Texture;
   ruin?: { crack: THREE.Texture };
   lake?: THREE.Texture;
+  /** Second grass blended in patches outside the field (deathmatch arenas), and natural rock for cliffs outside the
+   * field when the palette's rock is a built wall. */
+  grass2?: THREE.Texture;
+  rim?: THREE.Texture;
+  /** Metres per cobble texture tile when the palette's paving doesn't follow the paving id map. */
+  cobbleM?: number;
 }
 
 const MARGIN = 48;
@@ -149,6 +155,11 @@ const PAVING_ID = `vec2 pu = wuv / ${PAVING_M}.0;
 const PAVING = `if (sw.w > 0.0) {
   ${PAVING_ID}
   vec3 cs = textureGrad(tCobble, pu, pdx, pdy).rgb;
+#ifdef COBBLE_M
+  // Palette paving (its own stone layout): tiled at its own scale, hex-sampled, no per-stone id tint.
+  cs = hexTex(tCobble, wuv / COBBLE_M, dpx.xz / COBBLE_M, dpy.xz / COBBLE_M);
+  sm = 0.0;
+#endif
   vec3 stoneTint = mix(vec3(0.9, 0.94, 1.0), vec3(1.05, 1.0, 0.9), r3) * (0.86 + 0.24 * r2);
   cs = mix(cs, cs * stoneTint, sm);
   float mac = rNoise(wuv * 0.06 + 31.0);
@@ -605,6 +616,10 @@ export function buildTerrainMesh(
   // Alpine snow takes over every grass vertex (altFromGrass), so it covers as much ground as grass does elsewhere
   // and gets the same hex-tile + drift treatment. The grass branch never runs there, so the cost matches.
   const hexAlt = hasSand && sur?.style === "alpine";
+  // Deathmatch arenas lay their painted path textures over big areas (quarry roads, abbey paths): hex-tile those
+  // too, with a slow brightness drift, so they don't read as a grid.
+  const hexDirt = !hexAlt && (t.palette === "quarry" || t.palette === "abbey");
+  const arena = !!tex.grass2 || !!tex.rim;
   if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
@@ -621,6 +636,9 @@ export function buildTerrainMesh(
     tPavId: { value: rawData(tex.pavId) },
     tCrack: { value: tex.ruin ? prepare(tex.ruin.crack) : null },
     tLake: { value: hasLake ? prepare(tex.lake!) : null },
+    tGrass2: { value: tex.grass2 ? prepare(tex.grass2) : null },
+    tRim: { value: tex.rim ? prepare(tex.rim) : null },
+    uField: { value: new THREE.Vector2(t.width, t.depth) },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
@@ -637,7 +655,7 @@ export function buildTerrainMesh(
       .replace(
         "#include <common>",
         `#include <common>
-uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tRock; uniform sampler2D tCobble;
+${tex.cobbleM ? `#define COBBLE_M ${tex.cobbleM.toFixed(1)}\n` : ""}uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tRock; uniform sampler2D tCobble;${arena ? "\nuniform sampler2D tGrass2; uniform sampler2D tRim; uniform vec2 uField;" : ""}
 varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${TERRAIN_HEAD}${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}${hasLake ? "\nuniform sampler2D tLake; varying float vLake;" : ""}`,
       )
       .replace(
@@ -652,11 +670,22 @@ vec3 tsum = vec3(0.0);
 if (sw.x > 0.0) {
   vec3 cg = hexTex(tGrass, wuv / 7.0, dpx.xz / 7.0, dpy.xz / 7.0);
   float gm = rNoise(wuv * 0.045 + 3.7);
-  cg *= mix(vec3(0.92, 0.97, 1.06), vec3(1.07, 1.02, 0.84), gm) * (0.92 + 0.14 * rNoise(wuv * 0.13 - 11.0));
+  cg *= mix(vec3(0.92, 0.97, 1.06), vec3(1.07, 1.02, 0.84), gm) * (0.92 + 0.14 * rNoise(wuv * 0.13 - 11.0));${
+    tex.grass2
+      ? `
+  // Out of bounds: patches of the second grass and a broader light/hue drift, so the surround isn't one carpet.
+  vec2 oob = max(-wuv, wuv - uField);
+  float outside = smoothstep(0.0, 6.0, max(oob.x, oob.y));
+  float patchy = smoothstep(0.4, 0.62, rNoise(wuv * 0.08 + 9.3) * 0.7 + rNoise(wuv * 0.31 - 2.0) * 0.3);
+  vec3 cg2 = hexTex(tGrass2, wuv / 5.0, dpx.xz / 5.0, dpy.xz / 5.0);
+  cg = mix(cg, cg2, patchy * mix(0.25, 0.85, outside));
+  cg *= mix(1.0, 0.8 + 0.4 * rNoise(wuv * 0.025 + 1.7), outside);`
+      : ""
+  }
   tsum += cg * sw.x;
 }
 if (sw.y > 0.0) {
-  ${hexAlt ? SNOW_DIRT : `vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}`}
+  ${hexAlt ? SNOW_DIRT : hexDirt ? "vec3 cd = hexTex(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0) * (0.9 + 0.2 * rNoise(wuv * 0.07 + 5.1));" : `vec3 cd = textureGrad(tDirt, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb;${hasSand ? "\n  if (vSand > 0.0) cd = mix(cd, textureGrad(tSand, wuv / 6.0, dpx.xz / 6.0, dpy.xz / 6.0).rgb, vSand);" : ""}`}
 ${hasLake ? "  if (vLake > 0.0) {\n    vec3 lk = textureGrad(tLake, wuv / 8.0, dpx.xz / 8.0, dpy.xz / 8.0).rgb;\n    lk = mix(vec3(0.6, 0.56, 0.5), lk, 0.5);\n    float salt = textureGrad(tLake, wuv / 29.0 + 0.37, dpx.xz / 29.0, dpy.xz / 29.0).r;\n    lk *= 0.82 + salt * 0.38;\n    cd = mix(cd, lk * vec3(1.24, 1.0, 0.72), vLake);\n  }" : ""}
   tsum += cd * sw.y;
 }
@@ -664,7 +693,21 @@ if (sw.z > 0.0) {
   vec3 cr = vec3(0.0);
   if (an.x > 0.0) cr += textureGrad(tRock, vWPos.zy / 5.0, dpx.zy / 5.0, dpy.zy / 5.0).rgb * an.x;
   if (an.y > 0.0) cr += textureGrad(tRock, vWPos.xz / 5.0, dpx.xz / 5.0, dpy.xz / 5.0).rgb * an.y;
-  if (an.z > 0.0) cr += textureGrad(tRock, vWPos.xy / 5.0, dpx.xy / 5.0, dpy.xy / 5.0).rgb * an.z;
+  if (an.z > 0.0) cr += textureGrad(tRock, vWPos.xy / 5.0, dpx.xy / 5.0, dpy.xy / 5.0).rgb * an.z;${
+    tex.rim
+      ? `
+  // Outside the field (the rim and surround hills) cliffs are natural rock, not the palette's built wall.
+  vec2 ob = max(-wuv, wuv - uField);
+  float rimW = smoothstep(-0.5, 1.5, max(ob.x, ob.y));
+  if (rimW > 0.0) {
+    vec3 nr = vec3(0.0);
+    if (an.x > 0.0) nr += textureGrad(tRim, vWPos.zy / 5.0, dpx.zy / 5.0, dpy.zy / 5.0).rgb * an.x;
+    if (an.y > 0.0) nr += textureGrad(tRim, vWPos.xz / 5.0, dpx.xz / 5.0, dpy.xz / 5.0).rgb * an.y;
+    if (an.z > 0.0) nr += textureGrad(tRim, vWPos.xy / 5.0, dpx.xy / 5.0, dpy.xy / 5.0).rgb * an.z;
+    cr = mix(cr, nr, rimW);
+  }`
+      : ""
+  }
   tsum += cr * sw.z;
 }
 ${ruined ? RUIN_PAVING : PAVING}
@@ -673,7 +716,7 @@ diffuseColor.rgb *= tsum;`,
   };
 
   mat.customProgramCacheKey = () =>
-    `terrain${hasSand ? "-sand" : ""}${hexAlt ? "-snow" : ""}${ruined ? "-ruin" : ""}${hasLake ? "-lake" : ""}`;
+    `terrain${hasSand ? "-sand" : ""}${hexAlt ? "-snow" : ""}${hexDirt ? "-hexdirt" : ""}${tex.grass2 ? "-g2" : ""}${tex.rim ? "-rim" : ""}${tex.cobbleM ? `-cob${tex.cobbleM}` : ""}${ruined ? "-ruin" : ""}${hasLake ? "-lake" : ""}`;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = "Terrain";
   mesh.receiveShadow = true;

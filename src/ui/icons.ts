@@ -325,6 +325,19 @@ const STROKES: Record<string, Draw> = {
     c.quadraticCurveTo(0.42, -0.58, 0.14, -0.78);
     c.closePath();
   },
+  pick: (c) => {
+    // A quarry pick: curved iron head across a long handle.
+    c.moveTo(-0.95, -0.35);
+    c.quadraticCurveTo(0, -0.95, 0.95, -0.35);
+    c.lineTo(0.85, -0.22);
+    c.quadraticCurveTo(0, -0.62, -0.85, -0.22);
+    c.closePath();
+    c.moveTo(-0.08, -0.62);
+    c.lineTo(0.08, -0.62);
+    c.lineTo(0.12, 0.95);
+    c.lineTo(-0.12, 0.95);
+    c.closePath();
+  },
   bell: (c) => {
     c.moveTo(-0.7, 0.55);
     c.quadraticCurveTo(-0.45, 0.35, -0.45, -0.15);

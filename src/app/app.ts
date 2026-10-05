@@ -220,9 +220,12 @@ export class App {
 
   /** Map indices playable in a mode: 4-house maps for FFA, 2-house maps otherwise. */
   fieldsFor(m: MatchMode): number[] {
-    // FFA deathmatch plays anywhere; team deathmatch on the 2-house fields.
-    if (m === "ffadm") return maps.map((_, i) => i);
-    return maps.map((_, i) => i).filter((i) => (houses(i) === 4) === (m === "ffa"));
+    // Deathmatch arenas (map mode "tdm") only host deathmatch; both deathmatch modes play them first, then the
+    // free-for-all fields. The 1v1 / 2v2 fields are only for those modes.
+    const all = maps.map((_, i) => i);
+    const arena = (i: number) => maps[i].data.mode === "tdm";
+    if (m === "ffadm" || m === "tdm") return [...all.filter(arena), ...all.filter((i) => !arena(i) && houses(i) === 4)];
+    return all.filter((i) => !arena(i) && (houses(i) === 4) === (m === "ffa"));
   }
 
   /** The map data a match on map i plays: deathmatch strips the bases (sim/tdm.ts tdmMap). */
