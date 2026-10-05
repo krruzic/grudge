@@ -268,6 +268,8 @@ export interface BotPlan {
   healer?: boolean;
 }
 
+export type HeroClass = "tank" | "bruiser" | "assassin" | "marksman" | "caster" | "support" | "builder";
+
 export interface HeroDef {
   name: string;
   blurb: string;
@@ -278,6 +280,13 @@ export interface HeroDef {
   botRange?: number;
   botPlan?: BotPlan;
   role?: "hero" | "commander";
+  /** Fighting class, for team synergies: what a partner's synergy table keys on. */
+  class?: HeroClass;
+  /**
+   * Team synergies by partner class (2v2 / team deathmatch partners only):
+   *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   */
+  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

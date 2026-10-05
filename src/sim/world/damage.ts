@@ -446,6 +446,13 @@ function synergyMul(w: World, src: Entity | null, target: Entity, opts: DamageOp
       const o = w.get(src.owner);
       if (o?.hero) m *= w.heroDef(o.hero.type).hooks.hexMinionMul ?? 1;
     }
+    // Marked for death: a partner champion of the hexer hits a hexed foe harder - by class (Remnil sets up
+    // assassins, not tanks; heroes.json "synergy").
+    if (src?.hero && t < ts.hexUntil && ts.hexOwner && ts.hexOwner !== src.id) {
+      const o = w.getAny(ts.hexOwner);
+      const cls = w.heroDef(src.hero.type).class;
+      if (o?.hero && o.team === src.team && cls) m *= w.heroDef(o.hero.type).synergy?.hexAlly?.[cls] ?? 1;
+    }
     if (src?.hero && t < src.hero.openingUntil) {
       const r = w.heroDef(src.hero.type).abilities.r;
       m *= r.openingMul ?? 1.5;
