@@ -112,62 +112,67 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
 }
 
 /**
- * One card per champion (one row, or two rows once the roster passes nine); a card picked by a seat takes that
- * team's colour. Returns the y where the roster ends.
+ * Smash-style roster grid: one portrait tile per champion, edge to edge (one row, two once the roster passes
+ * nine), no names, cards or pins. A tile's border takes the colours of the seals placed on it, else of the hands
+ * pointing at it. Returns the y where the grid ends.
  */
 function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): number {
   const all = s.roster.length;
   const rows = all > 9 ? 2 : 1;
   const per = Math.ceil(all / rows);
-  // Cards shrink to fit a row (42 px wide, never below 26; a bit smaller on two rows).
-  const sw = Math.max(24, Math.min(rows > 1 ? 30 : 42, Math.floor((W - 24 - (per - 1) * 6) / Math.max(1, per))));
-  const sh = Math.round((sw * 54) / 42);
-  const gap = Math.min(12, Math.floor((W - 24 - per * sw) / Math.max(1, per - 1)));
-  const rowGap = 4;
+  const gap = 2;
+  const tw = Math.max(22, Math.min(rows > 1 ? 40 : 46, Math.floor((W - 40 - (per - 1) * gap) / per)));
+  const th = Math.round(tw * 0.82);
+  const top = 23;
   s.roster.forEach((type, k) => {
     const row = Math.floor(k / per);
     const inRow = Math.min(per, all - row * per);
     const col = k - row * per;
-    const gx = Math.round((W - (inRow * sw + (inRow - 1) * gap)) / 2);
-    const x = gx + col * (sw + gap);
-    const gy = 23 + row * (sh + rowGap);
-    const pickedBy = [0, 1, 2, 3]
-      .filter((i) => (i < 2 || (s.twoVtwo && s.championSeat(i))) && s.slots[i]?.ready && s.slots[i].hero === type)
-      .map((i) => s.teamOf(i));
+    const gx = Math.round((W - (inRow * tw + (inRow - 1) * gap)) / 2);
+    const x = gx + col * (tw + gap);
+    const y = top + row * (th + gap);
     const hot = hovered(s, `hero:${type}`);
-    s.hit(`hero:${type}`, x - 2, gy - 2, sw + 4, sh + 4);
+    s.hit(`hero:${type}`, x, y, tw, th);
     // Chips placed on this hero sit around this point (see Screens.draw).
-    s.shieldAt.set(type, { x: x + sw / 2, y: gy + sh * 0.6 });
-    const icon = s.portraits?.icon(type);
-    const tilt = pickedBy.length || hot ? 0 : k % 2 ? 0.04 : -0.04;
-    // The pin shows whose seals sit on this champion (one wedge each), else the hands pointing at it.
+    s.shieldAt.set(type, { x: x + tw / 2, y: y + th * 0.62 });
     const sealed = s.slots.flatMap((sl, i) =>
       sl?.ready && !sl.open && sl.hero === type && (i < 2 || (s.twoVtwo && s.championSeat(i)))
         ? [chipColor(i, sl.cpu)]
         : [],
     );
     const hands = s.cursors?.handsOn(`hero:${type}`) ?? [];
-    const frame = sealed.length ? sealed : hands.length ? hands : "#8a8a90";
-    card(ctx, x, gy - (hot ? 2 : 0), sw, sh, tilt, frame, () => {
-      const iw = sw - 8;
-      ctx.fillStyle = "#2a1a0a";
-      ctx.fillRect(2, 6, iw + 4, iw + 4);
-      texturedRect(ctx, "cloth", 4, 8, iw, iw, pickedBy.length ? TEAM_FIELD[pickedBy[0]] : "#7a2a1c", 0, 0.7);
-      if (icon) smoothImage(ctx, icon, 4, 8, iw, iw);
-      const name = (s.heroes[type]?.name ?? type).toUpperCase();
-      const ns = Math.min(0.62, (sw - 4) / Math.max(1, textWidth(name, 1, true)));
-      drawPlain(
-        ctx,
-        name,
-        sw / 2 - textWidth(name, ns, true) / 2,
-        sh - 10,
-        pickedBy.length ? "#8a1810" : BROWN,
-        ns,
-        true,
-      );
-    });
+    const ring = sealed.length ? sealed : hands;
+    ctx.fillStyle = "#120c08";
+    ctx.fillRect(x - 1, y - 1, tw + 2, th + 2);
+    const icon = s.portraits?.icon(type);
+    if (icon) {
+      // Cover-crop the square portrait to the tile, biased toward the face.
+      const iw = (icon as { width: number }).width;
+      const ih = (icon as { height: number }).height;
+      const sw = iw;
+      const sh = Math.min(ih, (iw * th) / tw);
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.globalAlpha = sealed.length || hot ? 1 : 0.88;
+      ctx.drawImage(icon as CanvasImageSource, 0, (ih - sh) * 0.3, sw, sh, x, y, tw, th);
+      ctx.restore();
+    }
+    // Border: one stripe per colour around the tile.
+    if (ring.length) {
+      ring.forEach((c, j) => {
+        ctx.strokeStyle = c;
+        ctx.lineWidth = 1.5;
+        const o = 0.75 + j * 1.5;
+        ctx.strokeRect(x - o + 1.5, y - o + 1.5, tw + 2 * o - 3, th + 2 * o - 3);
+      });
+    } else if (hot) {
+      ctx.strokeStyle = "#f0d070";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, th - 1);
+    }
   });
-  return 23 + rows * (sh + rowGap);
+  return top + rows * (th + gap) + 2;
 }
 
 /** 1v1: "+ ADD CPU" cards at the sides switch to 2v2 (not for online guests). */
