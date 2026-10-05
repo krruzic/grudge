@@ -420,6 +420,11 @@ function matchupArmour(w: World, src: Entity | null, target: Entity, amount: num
 
 /** Side effects of hp actually lost: leech, jump cancel, xp, super meter, last-target memory, core damage stat. */
 function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number): void {
+  // Bloodthirst (Grim): a share of what he deals to champions heals him, wherever he is.
+  if (src?.hero && src.alive && target.hero) {
+    const lh = w.heroDef(src.hero.type).hooks.heroLeech;
+    if (lh) w.heal(src, amount * lh);
+  }
   if (src?.hero?.tide && src.alive) w.heal(src, amount * tideLeech(w, src));
   if (target.hero?.jump && amount > 0) w.cancelJump(target);
   xpForDamage(w, src, target, amount);

@@ -294,7 +294,7 @@
     },
     "raider": {
       "name": "Grim",
-      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Vanish: a champion kill heals him 30% and readies Leap and Smoke. Fragile: soldiers hit him 15% harder.",
+      "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Bloodthirst: heals for 20% of the damage he deals to champions. Vanish: a champion kill heals him 30% and readies Leap and Smoke. Soldiers hit him 10% harder.",
       "health": "low",
       "speed": "swift",
       "damage": "high",
@@ -306,9 +306,10 @@
         "maxSlope": 3.5,
         "killResetsB": 1,
         "speedMul": 1.07,
-        "soldierTakenMul": 1.15,
+        "soldierTakenMul": 1.1,
         "killHeal": 0.3,
-        "killResetsR": 1
+        "killResetsR": 1,
+        "heroLeech": 0.2
       },
       "abilities": {
         "a": {
