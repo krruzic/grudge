@@ -1125,11 +1125,11 @@
     {
      "id": "ironhide",
      "name": "IRON HIDE",
-     "desc": "GRIT BUILDS IN 1.5S INSTEAD OF 3S AND HOLDS UP TO 35% LESS DAMAGE.",
+     "desc": "GRIT BUILDS IN 1S INSTEAD OF 2S AND HOLDS UP TO 35% LESS DAMAGE.",
      "fx": {
       "grit": {
        "max": 0.35,
-       "seconds": 1.5
+       "seconds": 1
       }
      }
     },

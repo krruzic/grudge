@@ -470,6 +470,14 @@ export function vintnerFight(bot: Bot, w: World, me: Entity, target: Entity | un
       bot.chargeAimId = target.id;
       bot.chargeRange = 2.8 + target.radius;
     }
+  } else if (d < 2.6 && rdy("a")) {
+    // A pack of soldiers at his feet: pound the lot.
+    const r = w.heroDef(h.type).hooks.poundRadius ?? 3.2;
+    if (w.enemiesNear(me, r, (o) => !!o.unit).length >= 3) {
+      bot.wantCharge = "a";
+      bot.chargeAimId = target.id;
+      bot.chargeRange = r;
+    }
   }
   // Stand your ground: once in reach, stop walking so Grit builds (turn to the target instead).
   const reach = (ab.a.hits?.[0].range ?? 2.6) - 0.3;
