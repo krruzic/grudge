@@ -29,7 +29,7 @@ import {
 } from "../uiPaint";
 import type { SelectSlot, Screens } from "../screens";
 import { BROWN, INK, MODE_NAME, TEAM_BRIGHT, TEAM_CLOTH, TEAM_FIELD, TEAM_TEXT, center } from "./common";
-import { costumeIcon, drawTree, hasTree, heroGlyph, stageArt } from "./selectArt";
+import { costumeIcon, drawTree, hasTree, heroGlyph, stageArt, uiGlyph } from "./selectArt";
 import { chipColor } from "../cursor";
 
 /** A cursor (local, or an online player's mirrored one) is hovering mouse target `id`. */
@@ -705,23 +705,7 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
     ctx.fillStyle = INK;
     ctx.fillRect(zx - 1, y - 1, camW + 2, 10);
     texturedRect(ctx, "parch", zx, y, camW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
-    // A pencil, tip at the bottom-left: yellow body, pink eraser, brown point.
-    ctx.save();
-    ctx.translate(zx + camW / 2, y + 4);
-    ctx.rotate(-Math.PI / 4);
-    ctx.fillStyle = BROWN;
-    ctx.fillRect(-2.6, -1.3, 7.2, 2.6);
-    ctx.fillStyle = "#e8b830";
-    ctx.fillRect(-2.2, -0.9, 5.4, 1.8);
-    ctx.fillStyle = "#e07a8a";
-    ctx.fillRect(3.2, -0.9, 1.1, 1.8);
-    ctx.fillStyle = "#e8d0a0";
-    ctx.beginPath();
-    ctx.moveTo(-2.2, -0.9);
-    ctx.lineTo(-4.2, 0);
-    ctx.lineTo(-2.2, 0.9);
-    ctx.fill();
-    ctx.restore();
+    uiGlyph(ctx, "pencil", zx + camW / 2, y + 4, 9, BROWN);
     s.hit(`pen:${i}`, zx - 2, y - 2, camW + 4, 12);
     if (hl) shadowText(ctx, "SIGN YOUR NAME", cx - textWidth("SIGN YOUR NAME", 0.42) / 2, y - 24, "#f8e8c0", 0.42);
   }
@@ -771,30 +755,7 @@ function kindPlaque(s: Screens, ctx: CanvasRenderingContext2D, i: number, cx: nu
     ctx.fillStyle = INK;
     ctx.fillRect(zx - 1, y - 1, camW + 2, 10);
     texturedRect(ctx, "parch", zx, y, camW, 8, hl ? "#f0d890" : "#c8b088", 0, 1);
-    const mx = zx + camW / 2;
-    const my = y + 4;
-    if (manual) {
-      ctx.fillStyle = BROWN;
-      ctx.fillRect(mx - 1, my - 3, 2, 6);
-      ctx.fillRect(mx - 3, my - 1, 6, 2);
-      ctx.fillStyle = "#c81818";
-      ctx.fillRect(mx - 0.5, my - 3, 1, 1.4);
-    } else {
-      ctx.fillStyle = BROWN;
-      ctx.beginPath();
-      ctx.moveTo(mx - 4, my);
-      ctx.quadraticCurveTo(mx, my - 4.2, mx + 4, my);
-      ctx.quadraticCurveTo(mx, my + 4.2, mx - 4, my);
-      ctx.fill();
-      ctx.fillStyle = "#f0e4c8";
-      ctx.beginPath();
-      ctx.arc(mx, my, 1.7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#2a5ac8";
-      ctx.beginPath();
-      ctx.arc(mx, my, 1.1, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    uiGlyph(ctx, manual ? "dpadzoom" : "eye", zx + camW / 2, y + 4, 9, BROWN);
     s.hit(`cam:${i}`, zx - 2, y - 2, camW + 4, 12);
     if (hl) tip(manual ? "CAMERA: D-PAD ZOOM" : "CAMERA: AUTO ZOOM");
   }

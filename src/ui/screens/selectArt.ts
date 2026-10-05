@@ -81,6 +81,46 @@ export function heroGlyph(hero: string, row: number): Glyph | null {
   return hit;
 }
 
+// ── UI glyphs ──
+// Small painted glyphs in the ability-glyph style (assets/ui/glyphs: pencil, eye, dpadzoom), tinted once.
+
+const uiGlyphs = loadImages(
+  glob(import.meta.glob("../../../assets/ui/glyphs/*.png", { query: "?url", import: "default", eager: true })),
+  ".png",
+);
+const uiGlyphCache = new Map<string, HTMLCanvasElement>();
+
+/** Draws UI glyph `name` centred at (x, y), `size` px, in `color`; nothing until the image has loaded. */
+export function uiGlyph(
+  ctx: CanvasRenderingContext2D,
+  name: string,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+) {
+  const im = uiGlyphs.get(name);
+  if (!im?.complete || !im.naturalWidth) return;
+  const key = `${name}|${color}`;
+  let c = uiGlyphCache.get(key);
+  if (!c) {
+    c = cacheCanvas();
+    c.width = im.naturalWidth;
+    c.height = im.naturalHeight;
+    const g = c.getContext("2d")!;
+    g.drawImage(im, 0, 0);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = color;
+    g.fillRect(0, 0, c.width, c.height);
+    uiGlyphCache.set(key, c);
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(c, x - size / 2, y - size / 2, size, size);
+  ctx.restore();
+}
+
 // ── Evolution tree ──
 
 type TreeNode = { id: string; next?: TreeNode[] };

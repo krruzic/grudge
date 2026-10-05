@@ -285,6 +285,20 @@ export function cArrow(
 
 /** Lit bomb (a hero carrying a keep-shop bomb). */
 export function bombIcon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, now: number): void {
+  // Painted bomb (assets/ui/hud/bomb.png) with a flickering spark glow on its fuse; vector bomb until it loads.
+  if (ready(hudIcons.get("bomb"))) {
+    hudIcon(ctx, "bomb", x + r * 0.15, y - r * 0.2, r * 3.1);
+    const fx = x + r * 1.25;
+    const fy = y - r * 1.4;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = Math.floor(now * 10) % 2 === 0 ? "rgba(255,230,140,0.55)" : "rgba(255,120,40,0.35)";
+    ctx.beginPath();
+    ctx.arc(fx, fy, r * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2.6;
