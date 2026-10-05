@@ -201,6 +201,8 @@ export interface AbilityDef {
   vsStunnedMul?: number;
   stunBonus?: number;
   cowSeconds?: number;
+  /** Deathmatch-only overrides merged over this ability (team / FFA deathmatch). */
+  dm?: Partial<AbilityDef>;
   /** War Cry: enemies within this many m are cowed (cowSeconds) and slowed (slowMul / slowSeconds). */
   cowRadius?: number;
   /** War Cry: the caster gains this fraction of max hp as a shield for `seconds`. */

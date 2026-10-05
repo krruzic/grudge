@@ -535,8 +535,13 @@ function freeMove(w: World, e: Entity, cmd: Command): void {
   if (e.hp < e.maxHp && w.calm(e)) {
     const turf = w.turf(e);
     if (turf === "home" || turf === "tower") e.hp = Math.min(e.maxHp, e.hp + e.maxHp * pc.homeRegenFrac * dt);
-    else if (pc.restRegenFrac && w.time - h.combatAt >= (pc.restSeconds ?? 5) && !foeNear(w, e, pc.restClear ?? 10))
-      // Resting anywhere: out of the fight for a while with no enemy champion close, wounds slowly mend.
+    else if (
+      w.tdm &&
+      pc.restRegenFrac &&
+      w.time - h.combatAt >= (pc.restSeconds ?? 5) &&
+      !foeNear(w, e, pc.restClear ?? 10)
+    )
+      // Deathmatch (no home to heal at): out of the fight for a while with no enemy champion close, wounds mend.
       e.hp = Math.min(e.maxHp, e.hp + e.maxHp * pc.restRegenFrac * dt);
   }
   h.blocking = !!cmd.block;

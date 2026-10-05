@@ -69,7 +69,9 @@ export function fireRally(w: World, e: Entity, a: HeroAction, def: AbilityDef): 
 }
 
 /** Team damage/speed buff; challenge talent taunts and weakens nearby enemies, lifesteal aura grants leech. */
-export function fireWarcry(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
+export function fireWarcry(w: World, e: Entity, a: HeroAction, base: AbilityDef): void {
+  // Deathmatch: no army to rouse, so the roar itself does more (shield, cowing, slow - see heroes.json "dm").
+  const def = w.tdm && base.dm ? { ...base, ...base.dm } : base;
   const t = e.transform;
   w.emit({
     type: "warcry",

@@ -500,9 +500,12 @@ function kit(bot: Bot, w: World, s: Senses): Kit {
         return d <= (a.botRange ?? 3);
       case "allies":
         return allies >= 3 && nearby.length >= 2;
-      // War Cry: an enemy champion in cowing range, or the army is in a brawl.
+      // War Cry / Brewfest: in deathmatch (no army) when an enemy champion is close; otherwise in an army brawl.
       case "roar":
-        return (!!ehAlive && dHero < (a.cowRadius ?? 6) - 1) || (allies >= 3 && nearby.length >= 2);
+        return (
+          (!!w.tdm && !!ehAlive && dHero < (a.dm?.cowRadius ?? a.cowRadius ?? 6) - 1) ||
+          (allies >= 3 && nearby.length >= 2)
+        );
       case "defend":
         return !!enemyAttacking;
       case "approach":

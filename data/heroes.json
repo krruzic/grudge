@@ -129,19 +129,23 @@
         "r": {
           "kind": "warcry",
           "radius": 10,
-          "damageMul": 1.15,
-          "speedMul": 1.15,
+          "damageMul": 1.12,
+          "speedMul": 1.12,
           "seconds": 6,
           "cooldown": 16,
-          "shieldFrac": 0.1,
-          "cowRadius": 5,
-          "cowSeconds": 2.5,
-          "slowMul": 0.7,
-          "slowSeconds": 2,
+          "dm": {
+            "damageMul": 1.15,
+            "speedMul": 1.15,
+            "shieldFrac": 0.1,
+            "cowRadius": 5,
+            "cowSeconds": 2.5,
+            "slowMul": 0.7,
+            "slowSeconds": 2
+          },
           "dur": 0.5,
           "anim": "idle",
           "bot": "roar",
-          "callout": "WAR CRY \u00b7 HIT HARDER, FOES COWER"
+          "callout": "WAR CRY \u00b7 HIT HARDER"
         },
         "z": {
           "kind": "quake",
