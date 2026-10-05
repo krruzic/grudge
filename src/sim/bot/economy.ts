@@ -101,6 +101,9 @@ export function shop(bot: Bot, w: World, me: Entity, threatened: boolean): boole
     return false;
   }
   if (threatened) return false;
+  // Shopping trips: a cannon or bomb isn't worth walking home across the map for (or abandoning a push over);
+  // buy them when passing by. Only a failing ward calls the bot back.
+  if (!wantWard && (w.dist(me, core) > 26 || bot.sieging)) return false;
   bot.goal = { x: core.transform.pos.x + (me.team ? -2.5 : 2.5), z: core.transform.pos.z };
   return true;
 }

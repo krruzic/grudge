@@ -128,6 +128,67 @@ function respawn(w: World, e: Entity): void {
     h.cooldowns[k as keyof typeof h.cooldowns] = w.time + (frozen[k] ?? 0) + pen;
   h.frozenCd = undefined;
   w.emit({ type: "spawn", id: e.id });
+  if (!w.tdm) keepLanding(w, e);
+}
+
+/**
+ * Keep landing (anti-snowball): coming back while enemy champions stand by our keep, the champion lands heavy and
+ * throws them back out of the base, so a team that lost a fight at home gets a breath to regroup - and the
+ * attackers have to choose between walking back in or resetting.
+ */
+function keepLanding(w: World, e: Entity): void {
+  const cfg = w.data.match.respawnSlam;
+  const core = w.core(e.team);
+  if (!cfg || !core) return;
+  const cx = core.transform.pos.x;
+  const cz = core.transform.pos.z;
+  const near = (o: Entity) =>
+    w.inBase(e.team, o.transform.pos.x, o.transform.pos.z) ||
+    Math.hypot(o.transform.pos.x - cx, o.transform.pos.z - cz) < cfg.radius;
+  const foes = w.entities.filter((o) => o.alive && o.hero && !o.hero.dead && o.team !== e.team && near(o));
+  if (!foes.length) return;
+  const p = e.transform.pos;
+  w.emit({ type: "jumppad", stage: "land", pad: -1, id: e.id, x: p.x, y: e.transform.y, z: p.z, windup: 0, dur: 0 });
+  w.emit({ type: "notice", team: e.team, text: "KEEP LANDING · INTRUDERS THROWN OUT" });
+  // Out through the nearest gate, landing just beyond it.
+  const base = w.bases[e.team];
+  const W = w.nav.w;
+  const gates = base.gates.map((g) => {
+    let x = 0;
+    let z = 0;
+    for (const c of g) {
+      x += (c % W) + 0.5;
+      z += Math.floor(c / W) + 0.5;
+    }
+    x /= g.length;
+    z /= g.length;
+    const ox = x - cx;
+    const oz = z - cz;
+    const ol = Math.hypot(ox, oz) || 1;
+    return { x, z, ux: ox / ol, uz: oz / ol };
+  });
+  for (const o of foes) {
+    if (o.hero!.jump) continue;
+    w.damage(e, o, cfg.damage, { slowMul: cfg.slowMul, slowSeconds: cfg.slowSeconds, noFlinch: true });
+    if (!o.alive) continue;
+    const op = o.transform.pos;
+    const order = [...gates].sort(
+      (a, b) => Math.hypot(a.x - op.x, a.z - op.z) - Math.hypot(b.x - op.x, b.z - op.z) || a.x - b.x || a.z - b.z,
+    );
+    let done = false;
+    for (const g of order) {
+      for (const k of [1, 1.5, 0.6]) {
+        const tx = g.x + g.ux * cfg.outside * k;
+        const tz = g.z + g.uz * cfg.outside * k;
+        if (w.inBase(e.team, tx, tz)) continue;
+        if ((done = w.startJump(o, tx, tz, cfg.dur, cfg.peak))) break;
+      }
+      if (done) break;
+    }
+  }
+  for (const u of w.entities)
+    if (u.alive && u.unit && u.team !== e.team && u.team >= 0 && near(u))
+      w.damage(e, u, cfg.damage, { knockback: cfg.unitKnockback, fromX: cx, fromZ: cz });
 }
 
 /** Scripted jump arc (pad or ability): wait out the wind-up, launch, interpolate x/z, land. */

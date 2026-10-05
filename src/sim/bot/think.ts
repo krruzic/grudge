@@ -21,7 +21,7 @@ import {
   ok,
 } from "./awareness.ts";
 import { pickBuild, shop } from "./economy.ts";
-import { realThreat } from "./strategy.ts";
+import { foesDown, pressing, realThreat } from "./strategy.ts";
 import {
   duelistFight,
   engineerFight,
@@ -157,6 +157,8 @@ export function think(bot: Bot, w: World, me: Entity): void {
   bot.why = "fight";
   if (fight(bot, w, s, k, crowded)) return;
   bot.fightId = 0;
+  bot.why = "siege";
+  if (siege(bot, w, s)) return;
   bot.why = "raid";
   if (gravewalk(bot, w, s, graveReady)) return;
   if (w.tdm) {
@@ -324,10 +326,14 @@ function sense(bot: Bot, w: World, me: Entity): Senses {
   const st = situation(w, me);
   const hpf = me.hp / me.maxHp;
   const base = plan.retreatHp ?? 0.3;
-  const leaveAt = st.edge > 0.25 ? Math.max(0.12, base - 0.15) : st.edge < -0.25 ? base + 0.12 : base;
+  let leaveAt = st.edge > 0.25 ? Math.max(0.12, base - 0.15) : st.edge < -0.25 ? base + 0.12 : base;
+  // Every enemy champion is dead: this is the window to break things, only leave if nearly dead.
+  const down = foesDown(w, me.team);
+  if (down) leaveAt = Math.min(leaveAt, 0.15);
   const enemyWorse = !!ehAlive && dHero < 10 && enemyHero!.hp / enemyHero!.maxHp < hpf - 0.1;
   if (hpf < leaveAt && !(enemyWorse && st.edge >= 0)) bot.healing = true;
-  else if (hpf > 0.8 || (st.threat === 0 && hpf > 0.55) || (st.edge > 0.25 && hpf > 0.45)) bot.healing = false;
+  else if (hpf > 0.8 || (st.threat === 0 && hpf > 0.55) || (st.edge > 0.25 && hpf > 0.45) || (down && hpf > 0.25))
+    bot.healing = false;
   const lowHp = bot.healing && !finish;
   const smoked = w.time < me.status.stealthUntil;
   return { me, p: me.transform.pos, h, assist, enemyHero, ehAlive, dHero, plan, lowHp, smoked, edge: st.edge };
@@ -837,6 +843,60 @@ function raidOrHunt(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): bo
 }
 
 /**
+ * Cashing in a lead: while pressing() holds (champions down, bigger army, building lead) march on the enemy base
+ * with the soldiers and break what's in the way - the nearest of their buildings that's no farther from their keep
+ * than we are, the keep itself once it's the closest. Keeps going until the lead is gone and the local fight has
+ * turned, or we're too hurt.
+ */
+function siege(bot: Bot, w: World, s: Senses): boolean {
+  const { me, p } = s;
+  const core = w.foeCore(me.team, p.x, p.z);
+  if (!core || w.tdm) return (bot.sieging = false);
+  const lead = pressing(w, me.team);
+  if (lead) bot.sieging = true;
+  else if (bot.sieging && (s.edge < -0.25 || w.teams[me.team].unitCount < 2) && !foesDown(w, me.team))
+    bot.sieging = false;
+  if (!bot.sieging || me.hp < me.maxHp * 0.35) return false;
+  const toCore = w.dist(me, core);
+  let target: Entity = core;
+  let bd = toCore;
+  for (const o of w.entities) {
+    if (!o.alive || !o.structure || o.team !== core.team || o.structure.siege || o === core) continue;
+    if (w.dist(o, core) > toCore + 2) continue;
+    const d = w.dist(me, o);
+    if (d < bd && ok(bot, w, me, o)) {
+      bd = d;
+      target = o;
+    }
+  }
+  if (!ok(bot, w, me, target)) return false;
+  // Don't walk in alone ahead of the soldiers: wait near the front of the army until it's close.
+  const army = w.entities.filter((o) => o.alive && o.unit && o.team === me.team && !o.unit.guard);
+  const near = army.filter((o) => w.dist(o, target) < bd + 4).length;
+  const reach = Math.max(2.2, Math.min(8, w.heroDef(me.hero!.type).botRange ?? 1.8));
+  if (!foesDown(w, me.team) && near < 2 && army.length >= 2 && bd > 12) {
+    let cx = 0;
+    let cz = 0;
+    for (const u of army) {
+      cx += u.transform.pos.x;
+      cz += u.transform.pos.z;
+    }
+    cx /= army.length;
+    cz /= army.length;
+    bot.goal = { x: cx + (target.transform.pos.x - cx) * 0.2, z: cz + (target.transform.pos.z - cz) * 0.2 };
+    return true;
+  }
+  bot.fightId = target.id;
+  const dx = p.x - target.transform.pos.x;
+  const dz = p.z - target.transform.pos.z;
+  const dl = Math.hypot(dx, dz) || 1;
+  const stand = target.radius + reach * 0.8;
+  bot.goal = { x: target.transform.pos.x + (dx / dl) * stand, z: target.transform.pos.z + (dz / dl) * stand };
+  if (bd - target.radius < reach + 0.4) bot.wantAttack = true;
+  return true;
+}
+
+/**
  * Nothing to fight: defend the base (support role), tend/build structures, then position with the army according
  * to role and the current unit directive.
  */
@@ -858,7 +918,13 @@ function macro(bot: Bot, w: World, s: Senses): void {
   if (bot.tend) {
     // Stand by a structure we just ordered until it finishes building/upgrading.
     const st = bot.tend.structureId ? w.get(bot.tend.structureId) : undefined;
-    if (!st || st.team !== me.team || (st.structure!.ready && !st.structure!.upgrading) || (ehAlive && dHero < 7))
+    if (
+      !st ||
+      st.team !== me.team ||
+      (st.structure!.ready && !st.structure!.upgrading) ||
+      (ehAlive && dHero < 7) ||
+      pressing(w, me.team)
+    )
       bot.tend = null;
     else {
       bot.why = "tend";

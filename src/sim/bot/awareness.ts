@@ -132,13 +132,12 @@ export function graveTarget(bot: Bot, w: World, me: Entity): Vec2 | null {
   return best;
 }
 
-/** Nearest reachable enemy structure (skipping shielded cores), else the rival spawn. */
+/** Nearest reachable enemy structure (a warded keep counts - the ward only soaks damage), else the rival spawn. */
 export function frontTarget(bot: Bot, w: World, me: Entity): Vec2 {
   let best: Entity | undefined;
   let bestD = Infinity;
   for (const o of w.entities) {
     if (!o.alive || o.team === me.team || !o.structure) continue;
-    if (o.structure.type === "core" && o.structure.shielded) continue;
     if (!ok(bot, w, me, o)) continue;
     const d = w.dist(me, o);
     if (d < bestD) {

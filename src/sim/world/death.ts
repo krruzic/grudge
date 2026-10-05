@@ -56,7 +56,9 @@ function killHero(w: World, target: Entity, src: Entity | null, killer: TeamTall
   hh.aim = null;
   const big = w.ffa || w.players.length > 2 ? (w.data.match.economy.respawnBigMul ?? 1) : 1;
   const catchUpCut = (w.ffa ? (victim?.catchUp ?? 0) : 0) * w.data.match.catchUp.respawnCut;
-  hh.respawnAt = w.time + w.data.heroes.baseline.respawnSeconds * big * (1 - catchUpCut);
+  const bl = w.data.heroes.baseline;
+  const wait = Math.min(bl.respawnMax ?? Infinity, bl.respawnSeconds + (bl.respawnPerMinute ?? 0) * (w.time / 60));
+  hh.respawnAt = w.time + wait * big * (1 - catchUpCut);
   // Cooldowns are stored as absolute times; freeze the remaining durations so they resume on respawn.
   hh.frozenCd = Object.fromEntries(Object.entries(hh.cooldowns).map(([k, v]) => [k, Math.max(0, (v ?? 0) - w.time)]));
   if (hh.meter < w.data.heroes.baseline.superMax) hh.meter = 0;

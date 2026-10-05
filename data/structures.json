@@ -24,7 +24,11 @@
   "core": {
     "hp": 4000,
     "radius": 1.8,
-    "ward": 1500
+    "ward": 1500,
+    "bulwark": {
+      "mul": 0.35,
+      "fullAt": 300
+    }
   },
   "types": {
     "damage": {
@@ -243,6 +247,7 @@
     "hero": 1.0,
     "unit": 0.4,
     "max": 3.2,
-    "teamwork": 0.6
+    "teamwork": 0.6,
+    "unattended": 0.3
   }
 }

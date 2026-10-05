@@ -218,6 +218,8 @@ export function builderRate(w: World, e: Entity): number {
   if (heroes >= 2) rate += r.teamwork * (heroes - 1);
   // Free for all: a lone champion can't babysit every site, so building always goes at least at one hero's pace.
   if (w.ffa) rate = Math.max(rate, r.hero);
+  // Nobody around: the site still creeps along, so leaving to fight doesn't throw the gold away.
+  else rate = Math.max(rate, r.unattended ?? 0);
   return Math.min(r.max, rate);
 }
 

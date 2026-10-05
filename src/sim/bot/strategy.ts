@@ -16,6 +16,31 @@ export function foesDown(w: World, team: number): boolean {
 }
 
 /**
+ * A lead worth cashing in on: every enemy champion down (with a few soldiers to bring), a clearly bigger army, or
+ * a building lead and at least an even army. The bots march on the enemy base while it lasts.
+ */
+export function pressing(w: World, team: number): boolean {
+  const t = w.teams[team];
+  const foe = w.rival(team);
+  if (foe < 0 || foe === team) return false;
+  const f = w.teams[foe];
+  if (foesDown(w, team) && t.unitCount >= 2) return true;
+  // More champions standing than they have (2v2 with one of theirs down) and at least an even army.
+  const up = (tm: number) =>
+    w.players.filter((p) => p.team === tm && !p.commander && w.getAny(p.heroId)?.hero?.dead === false).length;
+  if (up(team) > up(foe) && t.unitCount >= Math.max(2, f.unitCount)) return true;
+  if (t.unitCount >= Math.max(6, f.unitCount + 4)) return true;
+  let mine = 0;
+  let theirs = 0;
+  for (const e of w.entities) {
+    if (!e.alive || !e.structure || e.structure.type === "core" || e.structure.siege) continue;
+    if (e.team === team) mine++;
+    else if (e.team === foe) theirs++;
+  }
+  return mine >= theirs + 2 && t.unitCount >= Math.max(4, f.unitCount);
+}
+
+/**
  * A building of ours that is actually losing its fight: attackers within 13 m clearly outweigh what defends it
  * there (its own fire, our soldiers and champions), and it's the keep or a tower already under 60%. A lone
  * champion poking a healthy tower doesn't count - the nearest few soldiers handle that (units.ts call-ups).
@@ -51,7 +76,7 @@ export function realThreat(w: World, team: number): Entity | undefined {
 export function pickDirective(bot: Bot, w: World, me: Entity): Directive {
   const t = w.teams[me.team];
   if (realThreat(w, me.team)) return "nearest";
-  if (foesDown(w, me.team) && t.unitCount >= 3) return "push";
+  if (pressing(w, me.team) || bot.sieging) return "push";
   if (t.unitCount >= 7 || w.isSudden()) return "push";
   if (t.unitCount >= 4 && w.time > 90) return "follow";
   return "follow";
@@ -94,8 +119,9 @@ export function updateRole(bot: Bot, w: World, me: Entity): void {
 /** Support bot directive (only when no human has issued orders for a while, see Bot.command). */
 export function supportDirective(bot: Bot, w: World, me: Entity): Directive {
   const t = w.teams[me.team];
-  if (foesDown(w, me.team) && t.unitCount >= 3) return "push";
+  if (foesDown(w, me.team) && t.unitCount >= 2) return "push";
   if (realThreat(w, me.team)) return "defend";
+  if (pressing(w, me.team) || bot.sieging) return "push";
   if (w.isSudden() || t.unitCount >= 9) return "push";
   const lead = w.heroOf(me.team);
   if (lead && lead.alive && lead.id !== me.id) return "follow";

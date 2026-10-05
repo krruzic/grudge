@@ -1045,11 +1045,11 @@
     {
      "id": "grandcask",
      "name": "GRAND CASK",
-     "desc": "BREWFEST+: THE CASK HOLDS 14S, POURS 2M WIDER AND HAS 900 HEALTH.",
+     "desc": "BREWFEST+: THE CASK HOLDS 8S, POURS 2M WIDER AND HAS 450 HEALTH.",
      "add": {
-      "seconds": 4,
+      "seconds": 2,
       "radius": 2,
-      "hp": 300
+      "hp": 150
      }
     }
    ]

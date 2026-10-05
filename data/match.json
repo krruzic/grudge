@@ -32,7 +32,7 @@
     "income": 1.0,
     "grain": {
       "start": 60,
-      "base": 2.0,
+      "base": 3.0,
       "perLevel": [
         0.8,
         1.2,
@@ -44,9 +44,14 @@
       "surplusMul": 0.7,
       "starvedMul": 2.5,
       "upkeep": {
-        "grunt": 0.5,
-        "ranged": 0.65,
-        "heavy": 1.3
+        "grunt": 0.35,
+        "ranged": 0.45,
+        "heavy": 0.9
+      },
+      "zoneMul": {
+        "home": 1.0,
+        "forward": 1.8,
+        "neutral": 2.2
       }
     },
     "respawnCooldownPenalty": 2,
@@ -73,13 +78,13 @@
     "refundOnUpgradeLoss": 0
   },
   "catchUp": {
-    "resourceScale": 250,
-    "structureWeight": 0.35,
-    "incomeBoost": 1.2,
-    "productionBoost": 0.8,
+    "resourceScale": 600,
+    "structureWeight": 0.2,
+    "incomeBoost": 0.3,
+    "productionBoost": 0.2,
     "bountyCut": 0.5,
-    "respawnCut": 0.4,
-    "fortify": 0.45
+    "respawnCut": 0.15,
+    "fortify": 0.15
   },
   "terrain": {
     "highGroundDelta": 1.0,
@@ -243,5 +248,15 @@
       "seconds": 15,
       "rain": 6
     }
+  },
+  "respawnSlam": {
+    "radius": 10,
+    "damage": 40,
+    "dur": 0.7,
+    "peak": 3.5,
+    "slowMul": 0.6,
+    "slowSeconds": 2,
+    "unitKnockback": 9,
+    "outside": 4
   }
 }

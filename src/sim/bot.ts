@@ -36,6 +36,8 @@ export class Bot {
   directiveAt = 0;
   lastDirective: Directive | null = null;
   healing = false;
+  /** Pressing a lead into the enemy base (bot/think.ts siege), with hysteresis. */
+  sieging = false;
   /** Which branch of think() decided the last goal (debug / sims only, never read by the sim). */
   why = "";
   openedAt = -99;

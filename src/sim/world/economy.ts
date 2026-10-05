@@ -71,7 +71,7 @@ export function grainOf(w: World, team: number): number {
     if (!p.structureId) continue;
     const s = w.get(p.structureId);
     if (!s?.alive || s.team !== team || !s.structure?.ready || s.structure.type === "core") continue;
-    inc += g.perLevel[Math.min(g.perLevel.length, s.structure.level) - 1] ?? 0;
+    inc += (g.perLevel[Math.min(g.perLevel.length, s.structure.level) - 1] ?? 0) * (g.zoneMul?.[p.zone] ?? 1);
     const def = w.data.structures.types[s.structure.type as "barracks"];
     if (g.outpostShare && def?.class === "production" && def.unit) {
       const every = (def.cadence ?? 10) * (s.structure.level > 1 ? (def.upgrade.cadence ?? 1) : 1);

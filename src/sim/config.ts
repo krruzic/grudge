@@ -275,6 +275,9 @@ export interface HeroData {
     stepHeight: number;
     maxSlope: number;
     respawnSeconds: number;
+    /** Respawn grows this much per minute of match time (capped at respawnMax), so late kills open real windows. */
+    respawnPerMinute?: number;
+    respawnMax?: number;
     recallSeconds: number;
     /** Walking speed multiplier while recalling. */
     recallWalkMul: number;
@@ -413,12 +416,14 @@ export interface StructureData {
   structureRadius: number;
   zoneRange: Record<string, number>;
   laneTower: Record<string, { hp: number; damage: number; heroSlow?: number }>;
-  core: { hp: number; radius: number; ward: number };
+  /** bulwark: keeps take `mul` damage at the start, easing to full damage by `fullAt` seconds (not in sudden death). */
+  core: { hp: number; radius: number; ward: number; bulwark?: { mul: number; fullAt: number } };
   upgradeSeconds: number;
   rubbleSeconds: number;
   rubbleHomeSeconds?: number;
   builderRadius: number;
-  builderRates: { hero: number; unit: number; max: number; teamwork: number };
+  /** unattended: build rate with nobody near (so an abandoned site still finishes, slowly). */
+  builderRates: { hero: number; unit: number; max: number; teamwork: number; unattended?: number };
   types: Record<StructureType, StructureDef>;
 }
 
@@ -431,6 +436,21 @@ export interface MatchData {
   lockdown?: { seconds: number; warnSeconds?: number };
   /** Team deathmatch rules (sim/tdm.ts). */
   tdm?: import("./tdm.ts").TdmConfig;
+  /**
+   * Keep landing: a champion respawning while enemy champions are inside its base (or within `radius` of its keep)
+   * lands heavy and throws them out through the nearest gate, landing `outside` m beyond it (damage, slow); enemy
+   * soldiers get knocked back.
+   */
+  respawnSlam?: {
+    radius: number;
+    outside: number;
+    damage: number;
+    dur: number;
+    peak: number;
+    slowMul: number;
+    slowSeconds: number;
+    unitKnockback: number;
+  };
   ffa?: {
     timeMul?: number;
     speedMul?: number;
@@ -455,6 +475,8 @@ export interface MatchData {
       unitBountyMul?: number;
       surplus?: number;
       surplusMul?: number;
+      /** Per-pad grain multiplier by zone: holding ground forward pays more than building at home. */
+      zoneMul?: Partial<Record<"home" | "forward" | "neutral", number>>;
       /** Grain per second each living soldier eats. */
       upkeep?: Partial<Record<"grunt" | "ranged" | "heavy", number>>;
       starvedMul?: number;

@@ -201,6 +201,10 @@ function attackerScaling(w: World, src: Entity | null, target: Entity, amount: n
     if (opts.structureDamage !== undefined) amount = opts.structureDamage;
     const tt = w.teams[target.team];
     if (tt) amount *= 1 - tt.catchUp * w.data.match.catchUp.fortify;
+    // Early keeps are sturdy: an early lead takes towers and outposts, a lead held into mid-game takes the keep.
+    const bw = w.data.structures.core.bulwark;
+    if (bw && target.structure.type === "core" && !w.isSudden())
+      amount *= bw.mul + (1 - bw.mul) * Math.min(1, w.time / bw.fullAt);
   }
   if (src && src.kind !== "structure") {
     const hk = w.hooks(src);
