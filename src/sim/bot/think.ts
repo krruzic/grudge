@@ -26,6 +26,7 @@ import {
   duelistFight,
   engineerFight,
   friarEscape,
+  harpoonerFight,
   friarPowder,
   heaveDir,
   raiderFight,
@@ -190,6 +191,7 @@ const TDM_STYLE: Record<string, number> = {
   summoner: 3,
   friar: 4,
   herald: 4,
+  harpooner: 3,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -773,6 +775,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     if (ab.b.kind === "pip") wrenShoot(bot, w, me, target);
     // Summoner: charged hex, bolt-range spacing.
     if (ab.b.kind === "hex") summonerFight(bot, w, me, target);
+    // Harpooner: Reel In by walls, Tongue Lash off divers, charged harpoons.
+    if (ab.b.kind === "reel") harpoonerFight(bot, w, me, target);
   }
   if (plan.healer && ab.a.kind === "combo") {
     // Melee healer: keep swinging at whatever is in reach.

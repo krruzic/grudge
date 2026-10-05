@@ -85,6 +85,8 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
+  /** Brindle's Tongue Lash: leave a puddle where he lands. */
+  landPuddle?: boolean;
 }
 
 export interface TalentWith {
@@ -249,6 +251,13 @@ export interface AbilityDef {
   splash?: number;
   splashDamage?: number;
   pierceRange?: number;
+  /** Brindle (hero/harpooner.ts): Wet seconds from this ability, extra ricochets (always / on a full-power shot),
+   * share of the distance Reel In drags a champion, Riptide's drag speed (m/s). */
+  wetSeconds?: number;
+  ricochets?: number;
+  chargeRicochets?: number;
+  heroPull?: number;
+  pullSpeed?: number;
 }
 
 export interface BotPlan {
@@ -285,8 +294,9 @@ export interface HeroDef {
   /**
    * Team synergies by partner class (2v2 / team deathmatch partners only):
    *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   *   reelTo  - Reel In drags a champion this share of the way to a partner of that class (Brindle + tank).
    */
-  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
+  synergy?: { hexAlly?: Partial<Record<HeroClass, number>>; reelTo?: Partial<Record<HeroClass, number>> };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

@@ -8,6 +8,7 @@ import { isMarksman, wrenTarget } from "./marksman.ts";
 import { aim, aimTarget, begin, reachOf, type Slot } from "./common.ts";
 import { placeRange } from "./placement.ts";
 import { graveBegin } from "./gravewalk.ts";
+import { tongueAim } from "./harpooner.ts";
 
 export function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): void {
   const def = abilities(w, e)[slot];
@@ -101,6 +102,7 @@ export function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): voi
     a.toZ = tz;
     e.status.invulnUntil = w.time + a.hitAt * 0.7;
   }
+  if (def.kind === "tonguelash") tongueAim(w, e, a, cmd);
   if (def.kind === "dash") {
     a.hitIds = [];
     e.status.invulnUntil = w.time + a.dur;
