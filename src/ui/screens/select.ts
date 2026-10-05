@@ -42,7 +42,7 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
   beam(ctx, 4, 2, W - 8, 17);
   artTitle(ctx, "t_champion", "CHOOSE YOUR CHAMPION", W / 2, 3, 14);
   // Mode ribbon (click: cycle 1v1 / 2v2 / FFA) and camera ribbon (click: shared / split view).
-  const mw = s.mode === "ffa" ? 70 : 46;
+  const mw = s.mode === "ffa" ? 70 : s.mode === "ffadm" ? 84 : 46;
   const modeArt = s.training ? null : nameImage(`t_${s.mode}`);
   ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, s.training ? "TRAINING" : MODE_NAME[s.mode], 0.55, undefined, modeArt);
   s.hit("mode", W - 15 - mw / 2 - mw / 2 - 5, 1, mw + 10, 17);
@@ -53,9 +53,10 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
 
   drawRosterRow(s, ctx, W);
 
-  if (s.mode === "tdm") drawTdmSeats(s, ctx, W, 96, floorY - 102);
+  const eight = s.mode === "tdm" || s.mode === "ffadm";
+  if (eight) drawTdmSeats(s, ctx, W, 96, floorY - 102);
   // Seat cards: 2v2 orders them blue, blue, red, red.
-  const order = s.mode === "tdm" ? [] : s.mode === "ffa" ? [0, 1, 2, 3] : s.twoVtwo ? [0, 2, 1, 3] : [0, 1];
+  const order = eight ? [] : s.mode === "ffa" ? [0, 1, 2, 3] : s.twoVtwo ? [0, 2, 1, 3] : [0, 1];
   const n = order.length;
   const bw = s.twoVtwo ? Math.min(72, Math.floor((W - 30) / n) - 14) : Math.min(118, Math.floor(W * 0.3));
   const bgap = s.twoVtwo ? Math.floor((W - bw * n) / (n + 1)) : Math.floor((W - bw * 2) / 3);
@@ -63,11 +64,11 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
   const bh = floorY - by - 6;
   order.forEach((i, k) => drawSeatCard(s, ctx, i, bgap + k * (bw + bgap), by, bw, bh));
   if (!s.twoVtwo) drawAddCpuCards(s, ctx, W, by);
-  const naming = [...s.naming.keys()].find((i) => s.mode === "tdm" && s.slots[i]);
+  const naming = [...s.naming.keys()].find((i) => eight && s.slots[i]);
   if (naming !== undefined) {
     // Compact deathmatch cards are too small for the keyboard: it opens over that team's half.
     const half = Math.floor(W / 2);
-    const nx = s.teamOf(naming) ? half + 6 : 6;
+    const nx = naming % 2 ? half + 6 : 6;
     s.naming.get(naming)!.draw(ctx, nx, 92, half - 12, floorY - 96, performance.now() / 1000);
   }
 
@@ -284,6 +285,7 @@ function drawTdmSeats(s: Screens, ctx: CanvasRenderingContext2D, W: number, y0: 
   const cw = Math.floor((half - gap * 3) / 2);
   const ch = Math.floor((h - gap) / 2);
   for (let i = 0; i < 8; i++) {
+    // Team deathmatch: blue's seats left, red's right. FFA deathmatch: same grid, seats in order.
     const team = i % 2;
     const k = Math.floor(i / 2);
     const x = team * half + gap + (k % 2) * (cw + gap);
@@ -529,7 +531,7 @@ function drawSeatCard(
   if (sitHere) woodButton(s, ctx, `sit:${i}`, "SIT HERE", x + w / 2, fy + ih - 16);
   if (sl.ready && !commander && human) {
     ctx.save();
-    waxSeal(ctx, fx + fw - 9, fy + ih - 8, 7, chipColor(i, false), "combo");
+    waxSeal(ctx, fx + fw - 7, fy + ih + 3, 6, chipColor(i, false), "combo");
     ctx.restore();
   }
 }

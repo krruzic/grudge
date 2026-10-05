@@ -549,6 +549,7 @@ export function drawStandings(
   teams: number[],
   right: boolean,
 ): void {
+  if (w.tdm) return drawDmStandings(ctx, memo, teamColors, x, y, w, teams, right);
   const rows = teams.map((t) => {
     const core = w.core(t);
     return {
@@ -573,6 +574,42 @@ export function drawStandings(
         const lab = "FALLEN";
         drawText(c, lab, right ? x + bw - 11 - textWidth(lab, 0.6) : mx, ry - 0.5, "#ffb8a0", 0.6);
       } else meter(c, mx, ry + 1, bw - 11, 4, r.hp, col);
+    });
+    return 0;
+  });
+}
+
+/** Deathmatch standings for the houses without a HUD block: gem and kill count, best first. */
+function drawDmStandings(
+  ctx: CanvasRenderingContext2D,
+  memo: Memo,
+  teamColors: string[],
+  x: number,
+  y: number,
+  w: World,
+  teams: number[],
+  right: boolean,
+): void {
+  const tdm = w.tdm!;
+  const rows = teams.slice().sort((a, b) => (tdm.score[b] ?? 0) - (tdm.score[a] ?? 0) || a - b);
+  const bw = 74;
+  const rh = 10;
+  const key = [x, y, right, ...rows.map((t) => `${t}:${tdm.score[t]}`)].join("|");
+  memo.draw(ctx, "standings", key, x - 8, y - 6, bw + 16, rows.length * rh + 10, (c) => {
+    rows.forEach((t, i) => {
+      const ry = y + i * rh;
+      const col = teamColors[t];
+      const gx = right ? x + bw - 4 : x + 4;
+      coreIcon(c, gx, ry + 3, 3.2, col, false);
+      const n = `${tdm.score[t] ?? 0}`;
+      const lab = `${TEAM_NAMES[t] ?? ""}`;
+      if (right) {
+        drawText(c, n, x + bw - 11 - textWidth(n, 0.7), ry - 0.5, "#ffffff", 0.7);
+        drawText(c, lab, x + bw - 15 - textWidth(n, 0.7) - textWidth(lab, 0.55), ry, col, 0.55);
+      } else {
+        drawText(c, n, x + 11, ry - 0.5, "#ffffff", 0.7);
+        drawText(c, lab, x + 15 + textWidth(n, 0.7), ry, col, 0.55);
+      }
     });
     return 0;
   });

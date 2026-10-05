@@ -7,7 +7,8 @@ import type { Entity, Vec2 } from "../types.ts";
 import { moveToward } from "../units.ts";
 
 /** Team index used for neutral entities (the ogre). */
-export const NEUTRAL = 4;
+/** The ogre's team: past the last house (FFA deathmatch fields up to eight). */
+export const NEUTRAL = 8;
 
 export function updateOgreSpawn(arena: Arena): void {
   const w = arena.w;

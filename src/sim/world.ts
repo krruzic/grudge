@@ -366,7 +366,11 @@ export class World {
     const def = this.heroDef(type);
     const tiers = this.data.heroes.tiers;
     const b = this.data.heroes.baseline;
-    const spawn = this.spawnPoint(team);
+    // Deathmatch houses without a map spawn (FFA deathmatch has eight) start somewhere safe instead.
+    const spawn =
+      this.tdm && !this.terrain.spawns.some((s) => s.team === team)
+        ? this.tdm.respawnSpot(team)
+        : this.spawnPoint(team);
     const e = this.addEntity(team, "hero", b.radius, spawn.x, spawn.z, tiers.health[def.health]);
     e.hero = {
       type,

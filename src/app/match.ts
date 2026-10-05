@@ -27,7 +27,8 @@ const BOT_SKILL = [0.5, 0.75, 0.95];
 export function linkMates(app: App): void {
   app.bots.forEach((b, i) => {
     if (!b) return;
-    const m = app.mode === "ffa" ? -1 : app.people.findIndex((h, j) => h && j !== i && j % 2 === i % 2);
+    const m =
+      app.mode === "ffa" || app.mode === "ffadm" ? -1 : app.people.findIndex((h, j) => h && j !== i && j % 2 === i % 2);
     b.mate = m < 0 ? null : m;
   });
 }
@@ -134,9 +135,14 @@ function buildWorld(app: App, spec: MatchSpec): World {
   const mi = maps.findIndex((m) => m.id === spec.map);
   app.mapIndex = mi < 0 ? 0 : mi;
   const mode = spec.mode ?? "1v1";
-  const map = mode === "tdm" ? tdmMap(maps[app.mapIndex].data) : maps[app.mapIndex].data;
+  const map =
+    mode === "tdm"
+      ? tdmMap(maps[app.mapIndex].data)
+      : mode === "ffadm"
+        ? tdmMap(maps[app.mapIndex].data, 8)
+        : maps[app.mapIndex].data;
   const w = new World(map, applyRules(data, spec.rules), spec.seed);
-  const all = mode === "ffa" || mode === "tdm";
+  const all = mode === "ffa" || mode === "tdm" || mode === "ffadm";
   for (let p = 0; p < spec.players; p++)
     w.spawnHero(
       all || p < 2 || spec.rules.partners === 1 ? (spec.heroes[p] ?? roster[0]) : commanderType,

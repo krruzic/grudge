@@ -136,7 +136,7 @@ export class App {
     );
     this.forceJoin = Number(p.get("join") ?? 0);
     const pm = p.get("mode");
-    this.mode = pm === "2v2" || pm === "ffa" || pm === "tdm" ? pm : "1v1";
+    this.mode = pm === "2v2" || pm === "ffa" || pm === "tdm" || pm === "ffadm" ? pm : "1v1";
     this.training = p.has("training");
     this.pickIndex =
       p.get("map") === "random" ? this.fields().length : Math.max(0, this.fields().indexOf(this.mapIndex));
@@ -220,12 +220,14 @@ export class App {
 
   /** Map indices playable in a mode: 4-house maps for FFA, 2-house maps otherwise. */
   fieldsFor(m: MatchMode): number[] {
+    // FFA deathmatch plays anywhere; team deathmatch on the 2-house fields.
+    if (m === "ffadm") return maps.map((_, i) => i);
     return maps.map((_, i) => i).filter((i) => (houses(i) === 4) === (m === "ffa"));
   }
 
-  /** The map data a match on map i plays: team deathmatch strips the bases (sim/tdm.ts tdmMap). */
+  /** The map data a match on map i plays: deathmatch strips the bases (sim/tdm.ts tdmMap). */
   mapData(i: number, mode: MatchMode = this.mode) {
-    return mode === "tdm" ? tdmMap(maps[i].data) : maps[i].data;
+    return mode === "tdm" ? tdmMap(maps[i].data) : mode === "ffadm" ? tdmMap(maps[i].data, 8) : maps[i].data;
   }
 
   fields(): number[] {
@@ -301,9 +303,9 @@ export class App {
    * commander in team modes unless `partners` (or the partners rule with `rules`) is set.
    */
   newWorld(heroes: string[], count = 2, rules = false, partners = false): World {
-    const tdm = this.mode === "tdm" && houses(this.mapIndex) === 2;
+    const tdm = (this.mode === "tdm" && houses(this.mapIndex) === 2) || this.mode === "ffadm";
     const w = new World(
-      tdm ? tdmMap(maps[this.mapIndex].data) : maps[this.mapIndex].data,
+      tdm ? this.mapData(this.mapIndex) : maps[this.mapIndex].data,
       rules ? applyRules(data, this.save.data.rules) : data,
       this.seed++,
     );

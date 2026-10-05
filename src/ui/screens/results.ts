@@ -21,7 +21,7 @@ import type { Screens } from "../screens";
 import { TEAM_CLOTH, TEAM_TEXT } from "./common";
 import { chipColor } from "../cursor";
 
-const PLACE = ["1ST", "2ND", "3RD", "4TH"];
+const PLACE = ["1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH"];
 
 export interface ResultPlayer {
   tag: string | null;
@@ -32,6 +32,12 @@ export interface ResultPlayer {
 
 /** Final team order for the results (see header). `fallen` lists eliminated houses in elimination order. */
 export function placing(w: World, fallen: number[]): number[] {
+  // Deathmatch: by kills (the winner first either way).
+  const tdm = w.tdm;
+  if (tdm)
+    return w.teams
+      .map((_, t) => t)
+      .sort((a, b) => Number(b === w.match.winner) - Number(a === w.match.winner) || tdm.score[b] - tdm.score[a]);
   const keep = (t: number) => {
     const c = w.core(t);
     return c?.alive ? c.hp / c.maxHp : 0;

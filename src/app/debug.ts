@@ -66,7 +66,7 @@ function beginBotMatch(app: App): void {
   const hs = (p.get("heroes") ?? "").split(",").filter((h) => roster.includes(h));
   setPlayerCostumes((p.get("costumes") ?? "").split(","));
   setPlayerNames((p.get("names") ?? "").split(","));
-  if (houses(app.mapIndex) === 4 && p.has("map")) app.mode = "ffa";
+  if (houses(app.mapIndex) === 4 && p.has("map") && app.mode !== "ffadm") app.mode = "ffa";
   if (!app.fields().includes(app.mapIndex)) app.mapIndex = app.fields()[0] ?? app.mapIndex;
   app.players = seatsFor(app.mode);
   setupControl(app, Array(app.players).fill(false));
@@ -74,7 +74,7 @@ function beginBotMatch(app: App): void {
   const first = hs[0] ?? app.randomHero();
   const second = hs[1] ?? hs[0] ?? app.randomHero();
   const extraFfa =
-    app.mode === "ffa" || app.mode === "tdm"
+    app.mode === "ffa" || app.mode === "tdm" || app.mode === "ffadm"
       ? Array.from({ length: Math.max(0, app.players - Math.max(2, hs.length)) }, () => app.randomHero())
       : [];
   app.show(app.newWorld([first, second, ...hs.slice(2), ...extraFfa], app.players, false, p.has("partners")));

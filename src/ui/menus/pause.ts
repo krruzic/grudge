@@ -197,7 +197,8 @@ export class PauseMenu {
       const mapName = this.host.currentMap.toUpperCase();
       if (mapName) shadowText(ctx, mapName, 10 + iw / 2 - textWidth(mapName, 0.5) / 2, 10 + ih - 10, "#f0e4c8", 0.5);
       const colW = (pw - 26) / 2;
-      if (w.ffa) this.drawHouses(ctx, w, colW, ih, ph);
+      if (w.ffa && w.tdm) this.dmBoard(ctx, w, pw, ih, ph);
+      else if (w.ffa) this.drawHouses(ctx, w, colW, ih, ph);
       else [0, 1].forEach((team) => this.drawTeam(ctx, w, team, 10 + team * (colW + 6), colW, ih, ph));
     });
   }
@@ -319,6 +320,40 @@ export class PauseMenu {
       drawPlain(ctx, k, x, sy + q * 8, "#6a4424", 0.5, true);
       drawPlain(ctx, v, x + colW - textWidth(v, 0.55, true), sy + q * 8, BROWN, 0.55, true);
     });
+  }
+
+  /** FFA deathmatch: every champion ranked by kills in two columns (house colour, K / D, HP). */
+  private dmBoard(ctx: CanvasRenderingContext2D, w: World, pw: number, ih: number, ph: number): void {
+    const tdm = w.tdm!;
+    const list = w.players
+      .slice()
+      .sort((a, b) => (tdm.score[b.team] ?? 0) - (tdm.score[a.team] ?? 0) || a.player - b.player);
+    const colW = (pw - 26) / 2;
+    const rows = Math.ceil(list.length / 2);
+    const rh = Math.min(26, Math.floor((ph - ih - 26) / rows));
+    list.forEach((p, k) => {
+      const e = w.getAny(p.heroId);
+      if (!e?.hero) return;
+      const x = 10 + Math.floor(k / rows) * (colW + 6);
+      const y = ih + 20 + (k % rows) * rh;
+      inset(ctx, x + 1, y, 16, 16, TEAM_CLOTH[p.team] ?? "#3a2a1c");
+      const icon = this.host.portraits?.icon(p.heroType);
+      if (icon) smoothImage(ctx, icon, x + 1, y, 16, 16);
+      const kd = `${tdm.kills.get(p.heroId) ?? 0} / ${tdm.deaths.get(p.heroId) ?? 0}`;
+      const kw = textWidth(kd, 0.55, true);
+      const nm = `${k + 1}. ${playerLabel(p.player)} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
+      const ns = Math.min(0.5, (colW - 22 - kw - 4) / Math.max(1, textWidth(nm, 1, true)));
+      drawPlain(ctx, nm, x + 21, y, TEAM_TEXT[p.team] ?? BROWN, ns, true);
+      drawPlain(ctx, kd, x + colW - kw, y, "#8a1810", 0.55, true);
+      const fr = e.alive ? Math.max(0, e.hp / e.maxHp) : 0;
+      const bw = colW - 23;
+      ctx.fillStyle = "#3a2410";
+      ctx.fillRect(x + 21, y + 9, bw + 2, 5);
+      ctx.fillStyle = e.alive ? (fr > 0.35 ? "#4a9a30" : "#c83020") : "#8a7a60";
+      ctx.fillRect(x + 22, y + 10, Math.round(bw * fr), 3);
+    });
+    const t = `FIRST TO ${tdm.limit} KILLS`;
+    drawPlain(ctx, t, pw / 2 - textWidth(t, 0.5, true) / 2, ph - 12, "#6a4424", 0.5, true);
   }
 
   /** FFA: four houses in a 2×2 grid, stats in two columns. */

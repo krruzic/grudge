@@ -33,12 +33,17 @@ export const MAX_PLAYERS = 8;
 
 /** Seats a mode plays with. */
 export function seatsFor(mode: string): number {
-  return mode === "1v1" ? 2 : mode === "tdm" ? MAX_PLAYERS : 4;
+  return mode === "1v1" ? 2 : mode === "tdm" || mode === "ffadm" ? MAX_PLAYERS : 4;
+}
+
+/** Deathmatch modes (no bases; sim/tdm.ts): teams of four, or everyone for themselves. */
+export function isDeathmatch(mode: string): boolean {
+  return mode === "tdm" || mode === "ffadm";
 }
 
 /** Team of seat i in a mode: FFA gives everyone a house; otherwise even seats vs odd seats. */
 export function teamOfSeat(mode: string, i: number): number {
-  return mode === "ffa" ? i : i % 2;
+  return mode === "ffa" || mode === "ffadm" ? i : i % 2;
 }
 
 export const data = {

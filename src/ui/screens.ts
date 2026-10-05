@@ -134,12 +134,18 @@ export class Screens {
   }
 
   teamOf(i: number): number {
-    return this.mode === "ffa" ? i : i % 2;
+    return this.mode === "ffa" || this.mode === "ffadm" ? i : i % 2;
   }
 
   /** Seat i picks a champion (not the commander). */
   championSeat(i: number): boolean {
-    return i < 2 || this.mode === "ffa" || this.mode === "tdm" || (this.mode === "2v2" && this.heroPartners);
+    return (
+      i < 2 ||
+      this.mode === "ffa" ||
+      this.mode === "tdm" ||
+      this.mode === "ffadm" ||
+      (this.mode === "2v2" && this.heroPartners)
+    );
   }
 
   set(which: Which): void {

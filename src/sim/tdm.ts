@@ -245,14 +245,16 @@ export class Tdm {
       if (this.cfg.powerups.killXp) gainXp(w, owner, this.cfg.powerups.killXp);
     }
     if (this.score[team] >= this.limit) w.endMatch(team, "kill limit");
-    else if (w.match.phase === "sudden") w.endMatch(team, "sudden death");
+    else if (w.match.phase === "sudden" && this.score.every((s, t) => t === team || s < this.score[team]))
+      w.endMatch(team, "sudden death");
   }
 
   updateClock(): void {
     const w = this.w;
     if (w.training || w.match.phase !== "play" || w.time < this.cfg.matchSeconds) return;
-    const [a, b] = this.score;
-    if (a !== b) w.endMatch(a > b ? 0 : 1, "most kills");
+    const top = Math.max(...this.score);
+    const leaders = this.score.flatMap((s, t) => (s === top ? [t] : []));
+    if (leaders.length === 1) w.endMatch(leaders[0], "most kills");
     else {
       w.match.phase = "sudden";
       w.emit({ type: "notice", team: -1, text: "SUDDEN DEATH · NEXT KILL WINS" });
@@ -319,19 +321,21 @@ export class Tdm {
 }
 
 /**
- * A base map turned into a team deathmatch arena: two teams, no keeps, tower pads, outposts or army; the map's own
- * events, jump pads and spawns (teams 0 and 1) stay.
+ * A base map turned into a deathmatch arena: `houses` teams (2 for team deathmatch, 8 for FFA deathmatch), no
+ * keeps, tower pads, outposts or army; the map's own events, jump pads and spawns stay (houses without one start
+ * at a random safe spot).
  */
 export function tdmMap<T extends { teams?: number; cores: unknown[]; pads: unknown[]; spawns: { team?: number }[] }>(
   m: T,
+  houses = 2,
 ): T {
   return {
     ...m,
     mode: "tdm",
-    teams: 2,
+    teams: houses,
     cores: [],
     pads: [],
     outposts: false,
-    spawns: m.spawns.filter((s) => (s.team ?? 0) < 2),
+    spawns: m.spawns.filter((s) => (s.team ?? 0) < houses),
   };
 }

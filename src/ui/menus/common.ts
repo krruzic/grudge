@@ -69,9 +69,9 @@ export const INK = "#0b0806";
 /** Body text on parchment. */
 export const BROWN = "#3a2410";
 /** House names and colours (team order). */
-export const HOUSE = ["BLUE", "RED", "YELLOW", "GREEN"];
-export const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24"];
-export const TEAM_CLOTH = ["#2a4ab8", "#b02a1c", "#c89a14", "#2a8a3a"];
+export const HOUSE = ["BLUE", "RED", "YELLOW", "GREEN", "PURPLE", "ORANGE", "TEAL", "PINK"];
+export const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24", "#5a1c98", "#a04800", "#0a6a60", "#a01868"];
+export const TEAM_CLOTH = ["#2a4ab8", "#b02a1c", "#c89a14", "#2a8a3a", "#7a38c8", "#d06810", "#109888", "#d02888"];
 export const ROMAN_N = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
 /** Right-aligned number / short value ending at rx. */

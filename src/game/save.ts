@@ -48,7 +48,7 @@ export interface HeroStats extends Record3 {
   picks: number;
 }
 
-export type MatchMode = "1v1" | "2v2" | "ffa" | "tdm";
+export type MatchMode = "1v1" | "2v2" | "ffa" | "tdm" | "ffadm";
 
 export interface MatchLog {
   at: number;

@@ -638,7 +638,16 @@ function sendLobby(app: App, now: number): void {
   const localHumans = app.slots.filter((s, i) => !s.cpu && !s.open && app.slotActive(i) && n.remoteAt(i) < 0).length;
   n.link.meta({
     name: `${(app.save.tagNames()[0] ?? "HOST").toUpperCase()}'S BATTLE`,
-    mode: app.mode === "ffa" ? "FREE FOR ALL" : app.mode === "2v2" ? "2 VS 2" : "1 VS 1",
+    mode:
+      app.mode === "ffa"
+        ? "FREE FOR ALL"
+        : app.mode === "tdm"
+          ? "TEAM DEATHMATCH"
+          : app.mode === "ffadm"
+            ? "FFA DEATHMATCH"
+            : app.mode === "2v2"
+              ? "2 VS 2"
+              : "1 VS 1",
     map: fieldName(app, "RANDOM"),
     humans: Math.max(1, localHumans + seated),
     seats: seatsFor(app.mode),

@@ -154,11 +154,14 @@ export function enterSelect(app: App, keep = false): void {
     app.net.mode === "host" &&
     app.mode !== "ffa" &&
     app.mode !== "tdm" &&
+    app.mode !== "ffadm" &&
     !(app.mode === "2v2" && [2, 3].some(keptCpu))
   )
     app.mode = "1v1";
   app.cursors.setScale(app.uiCanvas.w, app.uiCanvas.h);
-  app.cursors.reset(app.mode === "ffa" ? [0, 1, 2, 3] : app.mode === "1v1" ? [0, 1] : [0, 2, 1, 3]);
+  app.cursors.reset(
+    app.mode === "ffa" || app.mode === "ffadm" ? [0, 1, 2, 3] : app.mode === "1v1" ? [0, 1] : [0, 2, 1, 3],
+  );
   slots.forEach((sl, i) => {
     const keepCpu = keptCpu(i);
     sl.ready = false;
@@ -435,7 +438,8 @@ function selectButton(app: App, buttonId: string, by: number): void {
     app.pads.release(i);
     audio.ui("back");
   } else if (id === "mode" && !app.training) {
-    setMode(app, app.mode === "1v1" ? "2v2" : app.mode === "2v2" ? "ffa" : app.mode === "ffa" ? "tdm" : "1v1");
+    const cycle: MatchMode[] = ["1v1", "2v2", "ffa", "tdm", "ffadm"];
+    setMode(app, cycle[(cycle.indexOf(app.mode) + 1) % cycle.length]);
     audio.ui("ok");
   } else if (id === "add") {
     if (app.mode === "1v1") setMode(app, "2v2");

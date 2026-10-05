@@ -487,7 +487,7 @@ export interface TeamDirectives {
 export type Formation = "mass" | "column" | "line" | "wedge";
 export const FORMATIONS: Formation[] = ["mass", "column", "line", "wedge"];
 
-export const TEAM_NAMES = ["BLUE", "RED", "YELLOW", "GREEN"];
+export const TEAM_NAMES = ["BLUE", "RED", "YELLOW", "GREEN", "PURPLE", "ORANGE", "TEAL", "PINK"];
 
 /** Per-team economy, directives, stats and timers. */
 export interface TeamState {

@@ -77,7 +77,7 @@ export class Minimap {
       P: (x, z) => [x0 + x * s, y0 + z * s],
       s,
       now,
-      tc: (team) => this.teamColors[team] ?? this.teamColors[4] ?? "#9a9068",
+      tc: (team) => this.teamColors[team] ?? this.teamColors[8] ?? "#9a9068",
     };
 
     ctx.save();

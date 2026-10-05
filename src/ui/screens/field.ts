@@ -32,7 +32,7 @@ export function drawField(s: Screens, ctx: CanvasRenderingContext2D, W: number, 
   beam(ctx, 4, 2, W - 8, 17);
   artTitle(ctx, "t_field", "CHOOSE THE FIELD", W / 2, 3, 14);
   const pool = s.pool;
-  const mw = s.fieldMode === "ffa" ? 70 : 46;
+  const mw = s.fieldMode === "ffa" ? 70 : s.fieldMode === "ffadm" ? 84 : 46;
   const modeArt = nameImage(`t_${s.fieldMode}`);
   ribbon(ctx, W - 15 - mw / 2, 4, mw, 11, MODE_NAME[s.fieldMode], 0.55, undefined, modeArt);
 
