@@ -96,6 +96,8 @@ export interface MapData {
   lantern?: unknown;
   horns?: unknown;
   outposts?: boolean;
+  /** Deathmatch power-up spots (full map coordinates, not mirrored); otherwise they're sampled. */
+  powerups?: { x: number; z: number; kind?: string }[];
 }
 
 export enum Kind {
@@ -173,6 +175,7 @@ export class Terrain {
   readonly horns?: unknown;
   readonly outposts: boolean;
   readonly lantern?: unknown;
+  readonly powerSpots?: { x: number; z: number; kind?: string }[];
 
   /** How the map is mirrored (used to mirror map ops, surround scenery and gate/lane layouts). */
   get symmetry(): "x" | "diag" | "rot" | "quad" | "none" {
@@ -235,6 +238,7 @@ export class Terrain {
     this.lanes.push(...(data.lanes ?? []));
     this.outposts = !!data.outposts;
     this.lantern = data.lantern;
+    this.powerSpots = data.powerups;
     const mode = this.mirror;
     const mirror = mode !== "none";
 

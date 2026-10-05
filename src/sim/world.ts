@@ -368,18 +368,16 @@ export class World {
    */
   dmMod(type: string): { hp: number; speed: number; damage: number } {
     const m = this.tdm && this.teamCount > 2 ? this.tdm.cfg.ffaHeroMods?.[type] : undefined;
-    return { hp: m?.hp ?? 1, speed: m?.speed ?? 1, damage: m?.damage ?? 1 };
+    const fast = this.tdm?.cfg.speedMul ?? 1;
+    return { hp: m?.hp ?? 1, speed: (m?.speed ?? 1) * fast, damage: m?.damage ?? 1 };
   }
 
   spawnHero(type: string, player: number, team: number): Entity {
     const def = this.heroDef(type);
     const tiers = this.data.heroes.tiers;
     const b = this.data.heroes.baseline;
-    // Deathmatch houses without a map spawn (FFA deathmatch has eight) start somewhere safe instead.
-    const spawn =
-      this.tdm && !this.terrain.spawns.some((s) => s.team === team)
-        ? this.tdm.respawnSpot(team)
-        : this.spawnPoint(team);
+    // Deathmatch: everyone starts at a random spot clear of enemies (no team camps).
+    const spawn = this.tdm ? this.tdm.respawnSpot(team) : this.spawnPoint(team);
     const mod = this.dmMod(type);
     const e = this.addEntity(team, "hero", b.radius, spawn.x, spawn.z, tiers.health[def.health] * mod.hp);
     e.hero = {

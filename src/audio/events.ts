@@ -294,6 +294,9 @@ export function playEvent(a: Audio, ev: SimEvent, w: World): void {
       } else if (ev.kind === "haste") {
         a.play("whoosh.big", 0.7, { rate: 1.4 });
         a.play("levelup", 0.4, { rate: 1.3 });
+      } else if (ev.kind === "rush") {
+        a.play("magic.spell", 0.6, { rate: 1.3 });
+        a.play("levelup", 0.5, { rate: 1.5 });
       } else {
         a.play("shield.up", 0.7);
         a.play("metal.clank", 0.4, { rate: 1.3 });

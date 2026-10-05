@@ -10,7 +10,7 @@ import type { World } from "./world.ts";
 import type { Entity, Vec2 } from "./types.ts";
 import { gainXp } from "./talents.ts";
 
-export type PowerKind = "potion" | "might" | "haste" | "shield";
+export type PowerKind = "potion" | "might" | "haste" | "shield" | "rush";
 
 export interface PowerUp {
   id: number;
@@ -35,12 +35,16 @@ export interface TdmConfig {
   safeDistance: number;
   relicFirstSeconds: number;
   /** FFA deathmatch only: per-champion hp / speed / damage multipliers (World.dmMod). */
+  /** Every champion's speed in deathmatch (smaller fights, more chasing for power-ups). */
+  speedMul?: number;
   ffaHeroMods?: Record<string, { hp?: number; speed?: number; damage?: number }>;
   /** Seconds a champion may carry the Grudge before it returns to the middle (asleep relicRewakeSeconds). */
   relicCarrySeconds?: number;
   relicRewakeSeconds?: number;
   relic: { damageMul: number; takenMul: number; speedMul: number; regen: number };
   powerups: {
+    /** Rush: fraction of a full super meter granted. */
+    rushMeter?: number;
     count: number;
     respawnSeconds: number;
     potionHeal: number;
@@ -55,7 +59,8 @@ export interface TdmConfig {
   chaos: { firstSeconds: number; everySeconds: number; bloodMul: number; seconds: number; rain: number };
 }
 
-const KINDS: PowerKind[] = ["potion", "might", "potion", "haste", "potion", "shield"];
+/** Spread order for sampled spots: mostly fight-changers, two potions in ten. */
+const KINDS: PowerKind[] = ["might", "haste", "rush", "potion", "shield", "might", "haste", "rush", "potion", "shield"];
 const CHAOS: ChaosKind[] = ["cannon", "ogre", "bloodmoon", "potions", "winds"];
 const CHAOS_TEXT: Record<ChaosKind, string> = {
   cannon: "CHAOS · CANNON BARRAGE",
@@ -145,6 +150,12 @@ export class Tdm {
     const w = this.w;
     const nav = w.nav;
     const t = w.terrain;
+    // Maps can place their own (deathmatch arenas put the best ones where nobody would otherwise go).
+    const spots = (w.terrain.powerSpots ?? []) as { x: number; z: number; kind?: PowerKind }[];
+    if (spots.length) {
+      spots.forEach((p, i) => this.addPowerup(p.kind ?? KINDS[i % KINDS.length], p.x, p.z, 8 + i * 2));
+      return;
+    }
     const home = w.arena.home;
     const start = w.spawnPoint(0);
     const cand: Vec2[] = [];
@@ -182,7 +193,12 @@ export class Tdm {
     if (p.kind === "potion") w.heal(e, e.maxHp * c.potionHeal);
     else if (p.kind === "might") this.might.set(e.id, w.time + c.mightSeconds);
     else if (p.kind === "haste") this.haste.set(e.id, w.time + c.hasteSeconds);
-    else {
+    else if (p.kind === "rush" && e.hero) {
+      // Rush: every cooldown ready now and a chunk of super meter.
+      for (const k of Object.keys(e.hero.cooldowns)) e.hero.cooldowns[k as keyof typeof e.hero.cooldowns] = w.time;
+      const max = w.data.heroes.baseline.superMax;
+      e.hero.meter = Math.min(max, e.hero.meter + max * (c.rushMeter ?? 0.35));
+    } else {
       e.status.shield = Math.max(e.status.shield, c.shield);
       e.status.shieldUntil = w.time + c.shieldSeconds;
     }

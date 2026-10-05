@@ -1,13 +1,19 @@
 // Team deathmatch power-ups (World.tdm.powerups): each spot has a faint rune ring on the ground; a ready power-up
 // floats and spins above it with a coloured glow - a red potion flask, an orange war-axe head (might), a blue
-// wing (haste) and a gold shield. Taking one pops a burst of its colour (onPowerup).
+// wing (haste), a gold shield and a violet hourglass (rush: cooldowns ready, super meter). Taking one pops a burst of its colour (onPowerup).
 import * as THREE from "three";
 import { glowTex } from "../combat/textures";
 import { emit } from "../fx/parts";
 import { FX } from "../fx/atlas";
 import type { MapFx } from "./mapFx";
 
-const COLOR: Record<string, number> = { potion: 0xff3a48, might: 0xff8a20, haste: 0x40b8ff, shield: 0xffd040 };
+const COLOR: Record<string, number> = {
+  potion: 0xff3a48,
+  might: 0xff8a20,
+  haste: 0x40b8ff,
+  shield: 0xffd040,
+  rush: 0xb070ff,
+};
 
 const lambert = (color: number, emissive = 0x000000) =>
   new THREE.MeshLambertMaterial({ color, emissive, flatShading: true });
@@ -77,7 +83,25 @@ function shield(): THREE.Object3D {
   return g;
 }
 
-const MAKE: Record<string, () => THREE.Object3D> = { potion, might, haste, shield };
+function rush(): THREE.Object3D {
+  // An hourglass: two violet glass cones point to point between gold caps.
+  const g = new THREE.Group();
+  const glass = new THREE.MeshLambertMaterial({ color: 0xc090ff, emissive: 0x401870, transparent: true, opacity: 0.9 });
+  const top = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.3, 8), glass);
+  top.rotation.x = Math.PI;
+  top.position.y = 0.17;
+  const bot = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.3, 8), glass);
+  bot.position.y = -0.13;
+  const cap = lambert(0xe0b040, 0x302008);
+  const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.05, 8), cap);
+  c1.position.y = 0.34;
+  const c2 = c1.clone();
+  c2.position.y = -0.3;
+  g.add(top, bot, c1, c2);
+  return g;
+}
+
+const MAKE: Record<string, () => THREE.Object3D> = { potion, might, haste, shield, rush };
 
 export interface PowerView {
   root: THREE.Group;

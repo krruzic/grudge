@@ -238,7 +238,7 @@
     },
     "powerups": {
       "count": 10,
-      "respawnSeconds": 25,
+      "respawnSeconds": 20,
       "potionHeal": 0.45,
       "mightMul": 1.4,
       "mightSeconds": 10,
@@ -246,7 +246,8 @@
       "hasteSeconds": 10,
       "shield": 120,
       "shieldSeconds": 12,
-      "killXp": 0
+      "killXp": 0,
+      "rushMeter": 0.35
     },
     "chaos": {
       "firstSeconds": 45,
@@ -290,7 +291,8 @@
       "warlord": {
         "damage": 0.92
       }
-    }
+    },
+    "speedMul": 1.2
   },
   "respawnSlam": {
     "radius": 10,

@@ -265,8 +265,9 @@ function nearPowerup(w: World, me: Entity, range: number, potion = false): Vec2 
  */
 function tdmRoam(bot: Bot, w: World, s: Senses): void {
   const { me } = s;
-  const pot = me.hp < me.maxHp * 0.75 ? nearPowerup(w, me, 16, true) : null;
-  const pw = pot ?? nearPowerup(w, me, 7);
+  // Power-ups are worth a detour: anything ready within 20 m (a potion within 24 m when hurt).
+  const pot = me.hp < me.maxHp * 0.75 ? nearPowerup(w, me, 24, true) : null;
+  const pw = pot ?? nearPowerup(w, me, 20);
   if (pw) {
     bot.goal = pw;
     return;
