@@ -6,6 +6,7 @@ import type { Command, Entity } from "../types.ts";
 import { abilities, bCooldown } from "../talents.ts";
 import { isMarksman, skyshot } from "./marksman.ts";
 import { startKegRocket } from "./friar.ts";
+import { startGust } from "./scribe.ts";
 import { begin, callout, ready } from "./common.ts";
 
 /** Warlord HEAVE target: the nearest stunned enemy (hero or soldier) within reach in front of him. */
@@ -93,6 +94,7 @@ export function combo(w: World, e: Entity, cmd: Command): boolean {
       (h.cooldowns.dodge = w.time + w.data.heroes.baseline.dodgeSeconds + w.data.heroes.baseline.dodgeCooldown);
     if (isMarksman(w, e) && skyshot(w, e, cmd)) return true;
     if (ab.b.kind === "keg" && startKegRocket(w, e, cmd)) return true;
+    if (ab.r.kind === "erratum" && startGust(w, e, cmd)) return true;
     if (ab.r.kind === "works" && onWorks(w, e)) {
       for (let d = 11; d >= 5; d -= 1) {
         if (w.startJump(e, t.pos.x + mx * d, t.pos.z + mz * d, 0.9, 4)) {

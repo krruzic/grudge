@@ -85,6 +85,16 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
+  /** Hollin: Erratum leaves an ink blot where she stood. */
+  erratumBlot?: { damage: number; radius: number; blind: number };
+  /** Hollin: Erratum leaves a small bee swarm where she stood. */
+  erratumSwarm?: { seconds: number; radius: number };
+  /** Hollin: extra runes kept at once and extra rune lifetime. */
+  moreRunes?: { count: number; seconds: number };
+  /** Hollin: seconds a recalled swarm keeps following her beyond its own time. */
+  swarmFollow?: number;
+  /** Hollin: uncharged Ink Bolts slow. */
+  inkSlow?: { mul: number; seconds: number };
 }
 
 export interface TalentWith {
@@ -249,6 +259,12 @@ export interface AbilityDef {
   splash?: number;
   splashDamage?: number;
   pierceRange?: number;
+  bounces?: number;
+  bounceRange?: number;
+  bounceMul?: number;
+  blotRadius?: number;
+  blotDamage?: number;
+  runeDamage?: number;
 }
 
 export interface BotPlan {
@@ -285,8 +301,9 @@ export interface HeroDef {
   /**
    * Team synergies by partner class (2v2 / team deathmatch partners only):
    *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   *   swarmAlly - multiplier on a partner's next champion hit against a foe in this champion's bee swarm.
    */
-  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
+  synergy?: { hexAlly?: Partial<Record<HeroClass, number>>; swarmAlly?: Partial<Record<HeroClass, number>> };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

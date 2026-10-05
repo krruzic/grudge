@@ -6,6 +6,7 @@ import type { AbilityDef } from "../config.ts";
 import { abilities } from "../talents.ts";
 import { ready } from "./common.ts";
 import { graveSpots } from "./gravewalk.ts";
+import { erratumSpots } from "./scribe.ts";
 
 /** Placeable ability kinds -> max placement range (0 = use the ability's own range, default 8). */
 const PLACEABLE: Record<string, number> = {
@@ -23,6 +24,8 @@ const PLACEABLE: Record<string, number> = {
   volley: 0,
   keg: 0,
   powderkeg: 0,
+  swarm: 0,
+  erratum: 0,
 };
 
 export function placeRange(def: AbilityDef): number | undefined {
@@ -54,7 +57,11 @@ export function placeRanges(
     b: placeRange(ab.b),
     r: grave ? 999 : placeRange(ab.r),
     z: placeRange(ab.z),
-    spots: grave ? graveSpots(w, e).map((s) => ({ x: s.x, z: s.z })) : undefined,
+    spots: grave
+      ? graveSpots(w, e).map((s) => ({ x: s.x, z: s.z }))
+      : ab.r.kind === "erratum"
+        ? erratumSpots(w, e).map((s) => ({ x: s.x, z: s.z }))
+        : undefined,
     ready: {
       b: ready(e, "b", w.time),
       r: ready(e, "r", w.time) && !(grave && w.arena.carrying(e)),

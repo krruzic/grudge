@@ -26,6 +26,7 @@ import { cacheCanvas } from "../../ui/cacheCanvas";
 import { zoneFissures } from "../fx/fissures";
 import { isDesert } from "../kits/desert";
 import { ZONE_DECALS, BUBBLE, FOAM } from "../kits/friar";
+import { animateSwarm, swarmZone } from "../kits/scribe";
 import { propParts } from "../props";
 import type { HazardViews } from "./hazardViews";
 import type { Zone } from "../../sim/types";
@@ -608,6 +609,8 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       sprite(BUBBLE, 0.24 + Math.random() * 0.18, x, z, 0, false, "bubble"),
     );
     ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));
+  } else if (style === "swarm") {
+    swarmZone(g, r);
   } else if (style === "grove") {
     ring(Math.round(r * 2.2), [0.1, 0.95], (x, z) => {
       const f = crossQuad(cm(FLOWER), 0.35 + Math.random() * 0.15, 0.35);
@@ -673,6 +676,11 @@ export function animateZone(hz: HazardViews, z: Zone, o: THREE.Object3D, time: n
     spin.scale.setScalar(z.style === "sinkhole" ? 0.6 + 0.4 * (left % 1) : 1);
   }
   const life = Math.min(1, (time - (o.userData.born ?? time)) * 3, left / 0.6);
+  if (z.style === "swarm") {
+    const f = z.follow !== undefined ? w.getAny(z.follow) : undefined;
+    const fy = f ? f.transform.y : o.position.y;
+    animateSwarm(o, z.x, fy, z.z, !!f, time, dt, life);
+  }
   for (const c of o.children) {
     const b = c.userData.base as THREE.Vector3 | undefined;
     const ph = c.userData.phase ?? 0;

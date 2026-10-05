@@ -7,6 +7,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, bCooldown, frenzySpeed, onBUse } from "../talents.ts";
 import { canRake, trackStill, updatePip } from "./marksman.ts";
 import { detonateKegs, kegRocketTick, plentyTick } from "./friar.ts";
+import { gustTick, manuscriptRecast, recallSwarm, scribeTick } from "./scribe.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -30,6 +31,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   graveTick(w, e, ab.r);
   if (def.hooks.vantageMul) trackStill(w, e);
   if (def.hooks.plentyRadius) plentyTick(w, e);
+  if (def.hooks.runeMax) scribeTick(w, e);
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -390,16 +392,20 @@ function startFromInput(
   } else if (cmd.special && ready(e, "r", w.time) && !act) {
     startAbility(w, e, "r", cmd);
     h.cooldowns.r = w.time + (ab.r.cooldown ?? 10);
+    if (ab.r.kind === "erratum") manuscriptRecast(w, e, "r");
     if (ab.r.resetB && ab.r.kind !== "warcry") {
       h.cooldowns.b = w.time;
       h.recastUntil = 0;
     }
   } else if (cmd.secondary && !act && canRake(e)) {
     begin(e, "b", "rake", 0.34, 0.12, Math.sin(t.facing), Math.cos(t.facing));
+  } else if (cmd.secondary && !act && ab.b.kind === "swarm" && recallSwarm(w, e)) {
+    // Swarm already out: B calls it to follow her instead of casting another.
   } else if (cmd.secondary && ready(e, "b", w.time) && !act) {
     startAbility(w, e, "b", cmd);
     onBUse(w, e);
     h.cooldowns.b = bCooldown(w, e);
+    if (ab.b.kind === "swarm") manuscriptRecast(w, e, "b");
   } else if (cmd.attack && !act && def.hooks.wrenchDamage && onWorks(w, e) && ready(e, "wrench", w.time)) {
     const [dx, dz] = aim(w, e, cmd, def.hooks.wrenchRange ?? 10);
     begin(e, "a", "wrench", 0.4, 0.16, dx, dz);
@@ -470,6 +476,8 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
   } else if (a.kind === "kegrocket") {
     kegRocketTick(w, e, a);
+  } else if (a.kind === "pagegust") {
+    gustTick(w, e, a);
   } else if (a.kind === "combo" && a.t < a.hitAt) {
     const hit = ab.a.hits![a.combo];
     const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;

@@ -11,6 +11,7 @@ import type { GameData } from "../sim/config";
 import type { Command, Entity } from "../sim/types";
 import type { App } from "./app";
 import { data, houses, maps, roster } from "./assets";
+import { writeRune } from "../sim/hero/scribe";
 
 type Spec = NonNullable<ReturnType<App["menus"]["codexDemo"]>>;
 type Pad = Parameters<typeof createStructure>[2];
@@ -53,9 +54,10 @@ const BIG = new Set([
   "volley",
   "brewfest",
   "heartseeker",
+  "manuscript",
 ]);
 /** Long-reach abilities: the target soldiers stand further away. */
-const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry", "pip", "keg", "powderkeg"]);
+const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry", "pip", "keg", "powderkeg", "inkbolt", "swarm"]);
 /** Where the demo hero stands on the crossing map. */
 const SPOT = { x: 23.5, z: 7 };
 const BUTTON = { a: "attack", b: "secondary", r: "special", z: "super" } as const;
@@ -423,6 +425,11 @@ function resetAbilityLoop(w: World, me: Entity, d: DemoRun): void {
   me.status.stealthUntil = 0;
   me.status.hidden = false;
   w.kegs.length = 0;
+  w.inkBolts.length = 0;
+  me.hero!.runes = undefined;
+  // Erratum swaps with a rune: write one ahead of her (and Manuscript lights up a few by the soldiers).
+  if (d.kind === "erratum") writeRune(w, me, SPOT.x + 7, SPOT.z + 1.5);
+  if (d.kind === "manuscript") for (const dz of [-1.4, 1.4]) writeRune(w, me, SPOT.x + d.dist + 1.5, SPOT.z + dz);
   for (const u of w.entities)
     if (u.unit || (u.structure && u.structure.padIndex < 0 && u.structure.type !== "core")) u.alive = false;
   w.zones.length = 0;

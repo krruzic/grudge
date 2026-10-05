@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat green background, for ABBESS HOLLIN, an old beekeeping scribe who casts ink bolts, bee swarms and golden runes. They are being re-themed for her costume "MIDNIGHT VIGIL" (midnight indigo and violet with silver stars and crescent moons, moonlight), shown in image 2. Paint a NEW 4x4 sheet in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1, where EVERY cell is replaced by the new object described: a genuinely different subject in the costume theme, not a recolour of the old sprite, at the same size and position inside its cell as the old sprite. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom (same slot meanings as image 1):
+1. a glossy round blob of deep violet starlight ink with tiny silver stars inside it
+2. a single teardrop of violet ink with a silver star glint
+3. a big splat of violet-indigo starry ink seen from above with silver droplets
+4. a horizontal stroke of glowing violet ink with silver stars, thick on the left tapering to a point on the right, spanning the whole cell width
+5. a pale silver-blue glowing moth seen from above, wings spread
+6. three small glowing silver moths fluttering together
+7. a small silver crescent moon
+8. a ring of small silver crescent moons and stars seen from above with an empty middle
+9. a single pale blue star-chart page with dotted constellations
+10. a fan of four pale blue star-chart pages
+11. a silver-white owl feather quill with a silver nib
+12. a glowing silver-violet rune circle seen from above: a ring of tiny stars and constellation lines with a crescent moon in the middle
+13. a glowing silver constellation sigil shaped like a little moth
+14. a bright silver four-pointed star sparkle with a violet halo
+15. a soft cloud of violet night mist with tiny stars
+16. a ring seen from above made of a midnight-blue border with silver stars, crescent moons and constellation lines, empty middle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure green background (#00FF00) everywhere, one uniform colour, no checkerboard.

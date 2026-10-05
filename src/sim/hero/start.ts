@@ -51,7 +51,7 @@ export function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): voi
     return;
   }
   const a = begin(e, slot, def.kind, def.dur ?? 0.5, def.hitAt ?? 0.25, dx, dz);
-  if (wren) a.stick = mag > 0.3;
+  if (wren || def.kind === "erratum") a.stick = mag > 0.3;
   a.fromX2 = e.transform.pos.x;
   a.fromZ2 = e.transform.pos.z;
   if (def.callout)

@@ -8,6 +8,7 @@ import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
 import { abilities } from "../talents.ts";
 import { inOwnPuddle } from "../hero/friar.ts";
+import { erratumSpots } from "../hero/scribe.ts";
 
 const isMelee = (w: World, o: Entity): boolean => !!o.hero && (w.heroDef(o.hero.type).botRange ?? 1.8) <= 3;
 
@@ -379,4 +380,57 @@ export function wrenShoot(bot: Bot, w: World, me: Entity, target: Entity): boole
   if (d < want - 2.5 || d > pierce * 0.85) bot.goal = vantageSpot(w, me, target, want) ?? bot.goal;
   else bot.goal = null;
   return true;
+}
+
+/**
+ * Hollin: Erratum out of a dive to the rune furthest from the diver (else Page Gust away), call the swarm onto herself
+ * when a melee champion is on her, bookmark a rune at her feet before a fight starts (so there's always somewhere to Erratum back to), and
+ * charged Ink Bolts at champions from range (blot + blind + rune). Called from think's ability step.
+ */
+export function scribeFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  const h = me.hero!;
+  if (h.action) return;
+  const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
+  const diver = foesNear(w, me, 4).find((o) => isMelee(w, o));
+  const swarm = w.zones.find((z) => z.ownerId === me.id && z.style === "swarm" && w.time < z.until && z.radius > 1.6);
+  if (diver && swarm && swarm.follow !== me.id && bot.rand() < 0.6 * bot.skill) bot.wantB = true;
+  if (diver && rdy("r") && (me.hp < me.maxHp * 0.75 || w.dist(me, diver) < 2.6)) {
+    const spots = erratumSpots(w, me).filter(
+      (n) => Math.hypot(n.x - diver.transform.pos.x, n.z - diver.transform.pos.z) > 6,
+    );
+    if (spots.length) {
+      const far = spots.reduce((p, n) =>
+        Math.hypot(n.x - diver.transform.pos.x, n.z - diver.transform.pos.z) >
+        Math.hypot(p.x - diver.transform.pos.x, p.z - diver.transform.pos.z)
+          ? n
+          : p,
+      );
+      bot.wantR = true;
+      bot.wantPlace = { x: far.x - me.transform.pos.x, z: far.z - me.transform.pos.z };
+      return;
+    }
+  }
+  // PAGE GUST: no rune to swap to and a melee champion on her - glide back out of reach.
+  if (diver && w.dist(me, diver) < 2.8 && rdy("dodge") && bot.rand() < 0.7 * bot.skill) {
+    const dx = me.transform.pos.x - diver.transform.pos.x;
+    const dz = me.transform.pos.z - diver.transform.pos.z;
+    const l = Math.hypot(dx, dz) || 1;
+    bot.wantDodge = true;
+    bot.wantFace = { x: dx / l, z: dz / l };
+    return;
+  }
+  if (!target?.alive || !target.hero) return;
+  const d = w.dist(me, target);
+  if (rdy("r") && !erratumSpots(w, me).length && d > 7 && d < 15 && bot.rand() < 0.3) {
+    bot.wantR = true;
+    return;
+  }
+  const ab = abilities(w, me);
+  // Charge only when nobody is hitting her: holding A slows her to a crawl.
+  const calm = w.time - (me.status.hurtAt ?? -99) > 2 && w.enemiesNear(me, 6).length === 0;
+  if (calm && !diver && d > 6 && d < (ab.a.range ?? 11) * 1.1 && w.canSee(me, target)) {
+    bot.wantCharge = "a";
+    bot.chargeAimId = target.id;
+    bot.chargeRange = (ab.a.range ?? 11) * 1.05;
+  }
 }

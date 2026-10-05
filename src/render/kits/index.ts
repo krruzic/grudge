@@ -9,4 +9,5 @@ import "./engineer";
 import "./herald";
 import "./marksman";
 import "./friar";
+import "./scribe";
 import "../fx/costumeSkins";

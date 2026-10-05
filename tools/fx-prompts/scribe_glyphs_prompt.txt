@@ -1,0 +1,7 @@
+The image shows the existing ability glyph set of a fantasy game (white vector glyphs on black). Design FOUR more minimal ICON GLYPHS in EXACTLY this clean flat VECTOR style: SOLID FILLED pure WHITE silhouettes on a pure BLACK background, like the club, fist, cloud and tombstone in the reference: big solid white shapes with only a few thin black cut lines for key details, NOT outline drawings, no gradients, no shading, no texture, like a polished icon font. Arrange them as a single horizontal row of 4 equal SQUARE cells on one continuous pure black background (no white gaps, no borders, no grid lines), each glyph centred in its cell with generous padding. NO TEXT, NO LETTERS, NO NUMBERS.
+
+Left to right:
+1. a big solid ink drop flying diagonally up-right, with a thick tapering ink trail behind it that bends at a sharp angle (it has bounced once off a short solid wall line), and two little splash droplets at the bounce point.
+2. three solid chunky cartoon honeybees (round striped bodies with thin black stripe cuts and big wings) circling around a small honeycomb hexagon, with a curved dotted flight path looping around them.
+3. a solid feather quill and a solid open book page facing each other with two curved swap arrows between them (one arrow on top pointing right, one on the bottom pointing left).
+4. a big solid open book seen from the front with radiant light rays bursting up out of its pages and a small glowing rune circle floating above it.

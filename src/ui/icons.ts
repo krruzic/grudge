@@ -523,6 +523,57 @@ const FILLS: Record<string, Draw> = {
     c.arc(0.3, -0.62, 0.22, Math.PI, 0);
     c.closePath();
   },
+  inkbolt: (c) => {
+    c.moveTo(0.85, -0.85);
+    c.quadraticCurveTo(0.2, -0.55, -0.35, 0.05);
+    c.lineTo(-0.15, 0.25);
+    c.quadraticCurveTo(0.45, -0.25, 0.85, -0.85);
+    c.closePath();
+    c.moveTo(-0.2, 0.45);
+    c.arc(-0.45, 0.45, 0.25, 0, Math.PI * 2);
+    c.moveTo(-0.62, 0.95);
+    c.arc(-0.75, 0.95, 0.13, 0, Math.PI * 2);
+  },
+  swarm: (c) => {
+    for (const [x, y, s] of [
+      [-0.45, -0.35, 0.36],
+      [0.45, -0.2, 0.3],
+      [0, 0.5, 0.34],
+    ] as const) {
+      c.moveTo(x + s, y);
+      c.ellipse(x, y, s, s * 0.62, 0, 0, Math.PI * 2);
+      c.moveTo(x - s * 0.1, y - s * 0.4);
+      c.ellipse(x - s * 0.35, y - s * 0.75, s * 0.4, s * 0.25, -0.5, 0, Math.PI * 2);
+    }
+  },
+  erratum: (c) => {
+    c.moveTo(-0.85, -0.25);
+    c.lineTo(-0.2, -0.85);
+    c.lineTo(-0.2, -0.5);
+    c.lineTo(0.85, -0.5);
+    c.lineTo(0.85, 0);
+    c.lineTo(-0.2, 0);
+    c.lineTo(-0.2, 0.35);
+    c.closePath();
+    c.moveTo(0.85, 0.35);
+    c.lineTo(0.2, 0.95);
+    c.lineTo(0.2, 0.65);
+    c.lineTo(-0.85, 0.65);
+    c.lineTo(-0.85, 0.15);
+    c.lineTo(0.2, 0.15);
+    c.lineTo(0.2, -0.2);
+    c.closePath();
+  },
+  manuscript: (c) => {
+    c.moveTo(0, -0.55);
+    c.quadraticCurveTo(-0.45, -0.85, -0.9, -0.6);
+    c.lineTo(-0.9, 0.7);
+    c.quadraticCurveTo(-0.45, 0.5, 0, 0.8);
+    c.quadraticCurveTo(0.45, 0.5, 0.9, 0.7);
+    c.lineTo(0.9, -0.6);
+    c.quadraticCurveTo(0.45, -0.85, 0, -0.55);
+    c.closePath();
+  },
 };
 
 const TINT: Record<string, string> = {
@@ -540,6 +591,10 @@ const TINT: Record<string, string> = {
   keg: "#c88a48",
   powderkeg: "#7a4a28",
   brewfest: "#ffc848",
+  inkbolt: "#4a5ab8",
+  swarm: "#f0c030",
+  erratum: "#f0e0b0",
+  manuscript: "#ffd060",
 };
 
 export function engravedIcon(

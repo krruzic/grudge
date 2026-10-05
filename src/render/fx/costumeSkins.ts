@@ -11,6 +11,7 @@ import {
   FRIAR,
   FX,
   RAIDER,
+  SCRIBE,
   setCostumeSwap,
   setCostumeTints,
   setCostumeTrail,
@@ -64,6 +65,27 @@ const TINTS: Record<string, Record<number, number>> = {
     0xe0ffb0: 0xe8d0ff,
   },
   celadon: { 0xffc860: 0x9fe0b0, 0xffe6a0: 0xd8f0ff, 0xffd070: 0xa8d8ff, 0xfff0c0: 0xe8f4ff, 0xffe0a0: 0xe0f0ff },
+  // Hollin: blue-black ink and gold runes become honey, moonlight or red correction ink.
+  queenbee: { 0xa0b0ff: 0xffd070, 0x303868: 0x8a5a10, 0xc8d0ff: 0xffe0a0 },
+  vigil: {
+    0xffd060: 0xc8b8ff,
+    0xffd870: 0xd0c4ff,
+    0xffe090: 0xe4dcff,
+    0xffe6a0: 0xe8e0ff,
+    0xffc840: 0xb0a0ff,
+    0xa0b0ff: 0xc0a8ff,
+    0x303868: 0x403080,
+  },
+  redink: {
+    0xffd060: 0xff5a48,
+    0xffd870: 0xff6a58,
+    0xffe090: 0xff8a78,
+    0xffe6a0: 0xff9888,
+    0xffc840: 0xff4838,
+    0xa0b0ff: 0xff7060,
+    0x303868: 0x701818,
+    0xc8d0ff: 0xffb0a0,
+  },
 };
 for (const [c, m] of Object.entries(TINTS)) setCostumeTints(c, m);
 
@@ -75,6 +97,9 @@ const TRAILS: Record<string, number> = {
   suntotem: 0xffe0a0,
   starfall: 0xd890ff,
   celadon: 0x7fb0ff,
+  queenbee: 0xffc840,
+  vigil: 0xb0a0ff,
+  redink: 0xd02828,
 };
 for (const [c, col] of Object.entries(TRAILS)) setCostumeTrail(c, "trail", col);
 setCostumeTrail("shadowplay", "grave", 0xffc050);
@@ -112,6 +137,18 @@ const SWAPS: Record<string, [THREE.Texture, THREE.Texture][]> = {
     [FX.dust, WREN.gust],
     [FX.smoke, WREN.gust],
     [FX.twinkle, WREN.glint],
+  ],
+  queenbee: [
+    [FX.dust, SCRIBE.inkCloud],
+    [FX.twinkle, SCRIBE.star],
+  ],
+  vigil: [
+    [FX.dust, SCRIBE.inkCloud],
+    [FX.twinkle, SCRIBE.star],
+  ],
+  redink: [
+    [FX.dust, SCRIBE.inkCloud],
+    [FX.twinkle, SCRIBE.star],
   ],
   celadon: [
     [FX.dust, FRIAR.barley],

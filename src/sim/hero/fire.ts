@@ -8,6 +8,7 @@ import { arcHit, shoveHit, slamAt } from "./strikes.ts";
 import { graveArrive } from "./gravewalk.ts";
 import { heartseeker, rake, sendPip, volley } from "./marksman.ts";
 import { brewfest, throwKeg } from "./friar.ts";
+import { fireErratum, fireInk, fireManuscript, fireSwarm } from "./scribe.ts";
 import { fireLeap, fireQuake, fireSlam } from "./kinds/melee.ts";
 import { fireBanner, fireRally, fireWarcry } from "./kinds/command.ts";
 import { fireBlink, fireHex, fireReach, fireRootcage, fireShoot, fireStealth, fireSummon } from "./kinds/spells.ts";
@@ -110,6 +111,15 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return throwKeg(w, e, a, def, "powder", mul);
     case "brewfest":
       return brewfest(w, e, a, def);
+    // scribe (Hollin)
+    case "inkbolt":
+      return fireInk(w, e, a, def, mul);
+    case "swarm":
+      return fireSwarm(w, e, a, def);
+    case "erratum":
+      return fireErratum(w, e, a, def);
+    case "manuscript":
+      return fireManuscript(w, e, a, def);
     // spells / mobility
     case "shoot":
       return fireShoot(w, e, a, def, mul);

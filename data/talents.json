@@ -1053,6 +1053,119 @@
      }
     }
    ]
+  },
+  "scribe": {
+   "r": [
+    {
+     "id": "marginnote",
+     "name": "MARGIN NOTE",
+     "desc": "ERRATUM LEAVES AN INK BLOT WHERE YOU STOOD: FOES THERE TAKE 60 AND ARE BLINDED FOR 1.5S.",
+     "fx": {
+      "erratumBlot": {
+       "damage": 60,
+       "radius": 2.4,
+       "blind": 1.5
+      }
+     }
+    },
+    {
+     "id": "dogeared",
+     "name": "DOG-EARED PAGES",
+     "desc": "ERRATUM IS READY 3S SOONER, AND YOU KEEP 2 MORE RUNES THAT LAST 6S LONGER.",
+     "add": {
+      "cooldown": -3
+     },
+     "fx": {
+      "moreRunes": {
+       "count": 2,
+       "seconds": 6
+      }
+     }
+    }
+   ],
+   "b": [
+    {
+     "id": "royalhive",
+     "name": "ROYAL HIVE",
+     "desc": "THE SWARM LASTS 2S LONGER AND IS 0.6M WIDER.",
+     "combo": "WITH MARGIN NOTE: ERRATUM LEAVES A SMALL SWARM TOO.",
+     "add": {
+      "seconds": 2,
+      "radius": 0.6
+     },
+     "with": [
+      {
+       "id": "marginnote",
+       "slot": "r",
+       "fx": {
+        "erratumSwarm": {
+         "seconds": 3,
+         "radius": 2
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "stingingprose",
+     "name": "STINGING PROSE",
+     "desc": "THE SWARM STINGS 50% HARDER AND SLOWS FOES 50% INSTEAD OF 35%.",
+     "combo": "WITH DOG-EARED PAGES: A CALLED SWARM STAYS 3S LONGER.",
+     "mul": {
+      "dps": 1.5
+     },
+     "set": {
+      "slowMul": 0.5
+     },
+     "with": [
+      {
+       "id": "dogeared",
+       "fx": {
+        "swarmFollow": 3
+       }
+      }
+     ]
+    }
+   ],
+   "a": [
+    {
+     "id": "ricochet",
+     "name": "RICOCHET RUNES",
+     "desc": "INK BOLTS RICOCHET TWICE, AND A RICOCHET LOSES ONLY 25% OF ITS DAMAGE.",
+     "add": {
+      "bounces": 1
+     },
+     "set": {
+      "bounceMul": 0.75
+     }
+    },
+    {
+     "id": "indelible",
+     "name": "INDELIBLE INK",
+     "desc": "TAPPED BOLTS SLOW 20% FOR 1S. CHARGED BOLTS BLOT 1M WIDER AND BLIND FOR 2.2S.",
+     "add": {
+      "blotRadius": 1,
+      "blindSeconds": 1
+     },
+     "fx": {
+      "inkSlow": {
+       "mul": 0.8,
+       "seconds": 1
+      }
+     }
+    }
+   ],
+   "z": [
+    {
+     "id": "grandcodex",
+     "name": "GRAND CODEX",
+     "desc": "MANUSCRIPT+: THE WINDOW LASTS 11S AND EVERY RUNE FLARES FOR 120.",
+     "add": {
+      "seconds": 3,
+      "damage": 40
+     }
+    }
+   ]
   }
  },
  "order": [

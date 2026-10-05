@@ -1,5 +1,5 @@
 // HeroPropViews: persistent hero props that live outside the hero model: Wren's Pip (flying, latched, returning)
-// and vantage glow, Maddock's thrown kegs and the keg he rides during Keg Rocket. Synced once per frame by
+// and vantage glow, Maddock's thrown kegs and the keg he rides during Keg Rocket, Hollin's ink bolts and runes. Synced once per frame by
 // GameRenderer after the entity views, each under its owner's costume.
 import * as THREE from "three";
 import type { World } from "../../sim/world";
@@ -9,6 +9,7 @@ import { type FxHost } from "../fx/parts";
 import { costumeOfPlayer } from "../costumes";
 import { syncRider, syncKegs } from "./friar";
 import { syncPip, syncVantage } from "./marksman";
+import { syncScribe } from "./scribe";
 
 export class HeroPropViews {
   readonly root = new THREE.Group();
@@ -20,6 +21,8 @@ export class HeroPropViews {
   kegs = new Map<number, { obj: THREE.Object3D; ring?: THREE.Mesh; spark?: THREE.Sprite }>();
   riders = new Map<number, THREE.Object3D>();
   vantage = new Map<number, boolean>();
+  inkBolts = new Map<number, THREE.Object3D>();
+  runes = new Map<number, { obj: THREE.Object3D; born: number }>();
   t = 0;
   private emitT = 0;
 
@@ -70,5 +73,6 @@ export class HeroPropViews {
       this.riders.delete(id);
     }
     syncKegs(this, alpha, puff);
+    syncScribe(this, alpha, dt, puff);
   }
 }
