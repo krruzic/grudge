@@ -8,6 +8,11 @@ import { Kind } from "../../terrain.ts";
 import { addShield, pullTo, zoneAt } from "../../talents.ts";
 
 /** Repair pulse: heal (and optionally shield/haste) own structures in radius, heal allies (overhaulHeal), hit enemies. */
+/** Deathmatch: champion-built turrets and ballistas are flimsier (tdm.buildHpMul); 1 elsewhere. */
+function dmHp(w: World, kind: "tower" | "ballista"): number {
+  return w.tdm?.cfg.buildHpMul?.[kind] ?? 1;
+}
+
 export function fireRepair(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
   const t = e.transform;
   const hk = w.heroDef(e.hero!.type).hooks;
@@ -82,7 +87,7 @@ export function fireTurret(w: World, e: Entity, a: HeroAction, def: AbilityDef):
   if (i < 0) return;
   const sx = (i % w.nav.w) + 0.5;
   const sz = Math.floor(i / w.nav.w) + 0.5;
-  const s = w.addEntity(e.team, "structure", 0.8, sx, sz, def.hp ?? 400);
+  const s = w.addEntity(e.team, "structure", 0.8, sx, sz, (def.hp ?? 400) * dmHp(w, "tower"));
   s.structure = {
     type: "damage",
     padIndex: -1,
@@ -204,7 +209,7 @@ export function fireWorks(w: World, e: Entity, a: HeroAction, def: AbilityDef): 
   w.emit({ type: "build", id: anchor.id, padIndex: -1, team: e.team, upgrade: false });
   if (def.fx?.tesla) {
     // Tesla talent: a turret on top of the platform that lives as long as the works.
-    const s = w.addEntity(e.team, "structure", 0.8, cx, cz, def.hp ?? 400);
+    const s = w.addEntity(e.team, "structure", 0.8, cx, cz, (def.hp ?? 400) * dmHp(w, "tower"));
     s.structure = {
       type: "damage",
       padIndex: -1,
@@ -340,7 +345,7 @@ export function fireBallista(w: World, e: Entity, a: HeroAction, def: AbilityDef
   }
   const cellAt = tr.index(Math.floor(sx), Math.floor(sz));
   const onRamp = perch ?? mine.find((m) => m.cells.includes(cellAt)) ?? null;
-  const s = w.addEntity(e.team, "structure", 0.7, sx, sz, def.hp ?? 180);
+  const s = w.addEntity(e.team, "structure", 0.7, sx, sz, (def.hp ?? 180) * dmHp(w, "ballista"));
   const perchMul = perch ? (def.perchMul ?? 1.25) : 1;
   s.structure = {
     type: "damage",

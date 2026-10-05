@@ -35,6 +35,8 @@ export interface TdmConfig {
   safeDistance: number;
   relicFirstSeconds: number;
   /** FFA deathmatch only: per-champion hp / speed / damage multipliers (World.dmMod). */
+  /** Deathmatch hp multipliers for champion-built turrets (Stig's tesla / turret) and ballistas. */
+  buildHpMul?: { tower?: number; ballista?: number };
   /** Every champion's speed in deathmatch (smaller fights, more chasing for power-ups). */
   speedMul?: number;
   ffaHeroMods?: Record<string, { hp?: number; speed?: number; damage?: number }>;
@@ -60,7 +62,18 @@ export interface TdmConfig {
 }
 
 /** Spread order for sampled spots: fight-changers and potions about half and half (4 potions in 10). */
-const KINDS: PowerKind[] = ["potion", "might", "haste", "potion", "rush", "potion", "shield", "might", "potion", "haste"];
+const KINDS: PowerKind[] = [
+  "potion",
+  "might",
+  "haste",
+  "potion",
+  "rush",
+  "potion",
+  "shield",
+  "might",
+  "potion",
+  "haste",
+];
 const CHAOS: ChaosKind[] = ["cannon", "ogre", "bloodmoon", "potions", "winds"];
 const CHAOS_TEXT: Record<ChaosKind, string> = {
   cannon: "CHAOS · CANNON BARRAGE",

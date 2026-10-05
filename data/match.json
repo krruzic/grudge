@@ -292,7 +292,11 @@
         "damage": 0.92
       }
     },
-    "speedMul": 1.2
+    "speedMul": 1.2,
+    "buildHpMul": {
+      "tower": 0.5,
+      "ballista": 0.55
+    }
   },
   "respawnSlam": {
     "radius": 10,
