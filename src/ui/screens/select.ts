@@ -277,13 +277,23 @@ export function drawReadyBanner(
 }
 
 /** Small wooden button centred at cx ("SIT HERE", "+ ADD CPU"). */
-function woodButton(s: Screens, ctx: CanvasRenderingContext2D, bid: string, t: string, cx: number, by: number): void {
+function woodButton(
+  s: Screens,
+  ctx: CanvasRenderingContext2D,
+  bid: string,
+  t: string,
+  cx: number,
+  by: number,
+  bw = 50,
+): void {
   const hot = hovered(s, bid);
+  const half = bw / 2;
+  const ts = Math.min(0.55, (bw - 4) / Math.max(1, textWidth(t, 1)));
   ctx.fillStyle = INK;
-  ctx.fillRect(cx - 26, by - 1, 52, 13);
-  texturedRect(ctx, "wood", cx - 25, by, 50, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
-  shadowText(ctx, t, cx - textWidth(t, 0.55) / 2, by + 2, hot ? "#fff4b0" : "#e8d8b8", 0.55);
-  s.hit(bid, cx - 28, by - 3, 56, 17);
+  ctx.fillRect(cx - half - 1, by - 1, bw + 2, 13);
+  texturedRect(ctx, "wood", cx - half, by, bw, 11, hot ? "#b08050" : "#6a4a30", 0, 0.8);
+  shadowText(ctx, t, cx - textWidth(t, ts) / 2, by + 2 + (0.55 - ts) * 6, hot ? "#fff4b0" : "#e8d8b8", ts);
+  s.hit(bid, cx - half - 3, by - 3, bw + 6, 17);
 }
 
 // ── Team deathmatch seats ──
@@ -384,12 +394,14 @@ function drawCompactSeat(
   else s.portraits?.drop(i);
   if (sl.ready && human) waxSeal(ctx, x + ps, y + ps - 2, 5, chipColor(i, false), "combo");
   // Costumes: small clickable icons under the name for a human's own card while their hand is over it, or for any
-  // card whose costume is being flicked (a CPU's by whoever holds its chip; CPU cards otherwise keep that spot for
-  // SIT HERE).
+  // card whose costume is being flicked (a CPU's by whoever holds its chip).
   const own = s.cursors?.cursors[i];
   const ownHand = !!own?.active && own.x >= x && own.x <= x + w && own.y >= y && own.y <= y + h;
   const flicking = stripOpen(s, i);
-  const cl = showHero && ((ownHand && !sl.cpu) || flicking) ? costumesOf(sl.hero) : [];
+  // Anyone may dress a CPU, so its icons show whenever any hand is over its card.
+  const anyHand =
+    sl.cpu && !!s.cursors?.cursors.some((c) => c.active && c.x >= x && c.x <= x + w && c.y >= y && c.y <= y + h);
+  const cl = showHero && ((ownHand && !sl.cpu) || anyHand || flicking) ? costumesOf(sl.hero) : [];
   if (cl.length > 1) {
     const rx = x + ps + 8;
     const sz = Math.min(11, (w - ps - 11) / cl.length - 1.5);
@@ -414,9 +426,10 @@ function drawCompactSeat(
     });
   }
   kindPlaque(s, ctx, i, x + w / 2, y + h - 11, sl);
-  // SIT HERE on a CPU: a local pad moves there, or an online guest takes the seat over.
+  // SIT HERE on a CPU: a local pad moves there, or an online guest takes the seat over. It sits along the bottom
+  // of the portrait so the costume icons beside it stay clickable.
   if (sl.cpu && (s.peer || !!s.cursors?.cursors.some((c) => c.active)))
-    woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + ps + 8 + (w - ps - 11) / 2, y + 26);
+    woodButton(s, ctx, s.peer ? `take:${i}` : `sit:${i}`, "SIT HERE", x + 4 + ps / 2, y + ps - 9, Math.min(50, ps - 4));
 }
 
 // ── Seat card ──
