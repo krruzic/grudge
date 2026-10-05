@@ -1,0 +1,7 @@
+The attached image is the finished ability-glyph sheet of a fantasy game, showing the EXACT style to match. Design 4 more glyphs in exactly that style: minimal ICON GLYPHS in a clean flat VECTOR style, solid pure WHITE silhouettes on a pure BLACK square, bold simple shapes, no gradients, no shading, no outlines, no texture, like a polished icon font, same line weight and level of detail as the reference. Arrange them as ONE ROW of 4 equal black square cells, left to right, separated by thin light grey gaps, each glyph centred in its cell with generous black padding. NO TEXT, NO LETTERS, NO NUMBERS.
+
+They belong to BRINDLE, a frogfolk fisherman who shoots harpoons from a bow:
+1. HARPOON: a single big barbed harpoon flying diagonally up-right, with a zig-zag ricochet line behind it bouncing off a short wall stroke.
+2. REEL IN: a barbed harpoon hooked in a small round target on the right, with a wavy rope running back to the left, and an arrow along the rope pointing left (being pulled in).
+3. TONGUE LASH: a frog head in profile on the left, its long tongue shooting out in a curve to the upper right and wrapping around a small post.
+4. RIPTIDE: a whirlpool seen from above: a spiral of three curling wave bands around an empty centre, with a few droplets.

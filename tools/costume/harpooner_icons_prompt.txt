@@ -1,0 +1,8 @@
+The FIRST image is a 2 x 2 reference grid of the same fantasy game character, BRINDLE TADWICK, a squat frogfolk fisherman with a wide friendly frog grin, big round golden eyes and a sou'wester rain hat, in four costume variants. The SECOND image is the finished costume-icon set for the game's other characters, showing the exact icon style to match. Paint a 2 x 2 grid of four COSTUME SELECT ICONS of Brindle in EXACTLY the style of the second image (Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon HEAD only, front-facing, same head shape, size and framing in all four, thick dark outline around the whole silhouette, strong flat colours, a sliver of collar at the bottom at most), one per cell, in the same order and positions as the first image, each centred in its cell with lots of empty space around it:
+
+top left: CLASSIC: green frog with darker spots, cream throat, big golden eyes, wide grin, a mustard-yellow oilskin sou'wester hat, a sliver of yellow coat collar.
+top right: ADMIRAL: same frog face in emerald green, a crimson admiral's hat with gold braid trim, a crimson collar with gold trim.
+bottom left: BOG TOAD: an orange-brown warty toad face with a pale yellow throat, a floppy woven straw reed hat with cattails, an olive collar.
+bottom right: ABYSSAL: a dark indigo-violet frog face with glowing cyan spots and glowing pale cyan eyes, a glossy black sou'wester with thin glowing cyan piping, a black collar.
+
+The four heads must be identical in shape, size and pose, only the costume details differ. Plain flat light grey background, no text, no labels, no borders, no frames, no circles behind the heads.
