@@ -96,6 +96,8 @@ export interface Status {
   blindMiss?: number;
   brewUntil?: number;
   brewMul?: number;
+  /** Stuck in Bramble's honey (rider pool): no dodging until then. */
+  stickyUntil?: number;
 }
 
 /** Marksman's hawk (hero/marksman.ts). */
@@ -244,6 +246,8 @@ export interface HeroState {
   stillAt?: number;
   stillX?: number;
   stillZ?: number;
+  /** Rider's Take Wing flight (hero/rider.ts): steered until `until`, R lands after minUntil; y = flight height. */
+  wing?: { until: number; minUntil: number; y: number; dirX: number; dirZ: number };
 }
 
 export interface UnitState {
@@ -367,6 +371,8 @@ export interface Zone {
   poisonSeconds?: number;
   /** Enemies inside take this damage multiplier from the zone's team (brewfest "tipsy"). */
   vuln?: number;
+  /** Enemies inside can't dodge (rider honey). */
+  sticky?: boolean;
 }
 
 export interface Delayed {

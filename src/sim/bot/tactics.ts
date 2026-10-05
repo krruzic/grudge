@@ -380,3 +380,58 @@ export function wrenShoot(bot: Bot, w: World, me: Entity, target: Entity): boole
   else bot.goal = null;
   return true;
 }
+
+/**
+ * Bramble (rider) once she has a target: Honey Pot onto a champion in reach (the pool sits between them so she
+ * fights inside it: she heals, they're slowed and can't dodge), hold A for a honey dollop on a champion out of ladle
+ * reach, Royal Jelly when she or a partner champion nearby is hurt, and Take Wing out of a losing brawl.
+ */
+export function riderFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  const h = me.hero!;
+  if (h.wing || h.action) return;
+  const ab = abilities(w, me);
+  const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
+  const foes = foesNear(w, me, 9);
+  if (h.meter >= w.data.heroes.baseline.superMax && foes.length) {
+    const hurt =
+      me.hp < me.maxHp * 0.55 ||
+      w.entities.some(
+        (o) => o.alive && o.hero && o !== me && o.team === me.team && o.hp < o.maxHp * 0.5 && w.dist(me, o) < 9,
+      );
+    if (hurt) bot.wantZ = true;
+  }
+  if (!target?.alive || !target.hero || !w.canSee(me, target)) return;
+  const d = w.dist(me, target) - target.radius;
+  if (rdy("b") && d < (ab.b.range ?? 8) - 0.5 && (d < 3.5 || target.hero.action) && bot.rand() < 0.6) {
+    bot.wantB = true;
+    bot.wantPlace = { x: target.transform.pos.x - me.transform.pos.x, z: target.transform.pos.z - me.transform.pos.z };
+    return;
+  }
+  const hk = w.heroDef(h.type).hooks;
+  if (rdy("a") && d > 3.2 && d < (hk.flingRange ?? 8) - 0.5 && bot.rand() < 0.5 * bot.skill) {
+    bot.wantCharge = "a";
+    bot.chargeAimId = target.id;
+    bot.chargeRange = (hk.flingRange ?? 8) - 0.3;
+    bot.wantAttack = false;
+  }
+  // A ranged champion kiting her: fly straight onto them (over whatever is in the way).
+  if (
+    rdy("r") &&
+    !isMelee(w, target) &&
+    d > 5 &&
+    d < 15 &&
+    me.hp > me.maxHp * 0.5 &&
+    (w.heroDef(target.hero.type).botRange ?? 1.8) > 3 &&
+    bot.rand() < 0.5
+  ) {
+    bot.wantR = true;
+    bot.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
+    return;
+  }
+  // Losing the brawl at close range: fly out over the nearest wall toward home before it's too late.
+  if (rdy("r") && d < 3 && me.hp < me.maxHp * 0.45 && target.hp > me.hp * 1.3 && bot.rand() < 0.4) {
+    const home = w.tdm ? w.tdm.safeFrom(me) : w.spawnPoint(me.team);
+    bot.wantR = true;
+    bot.goal = home;
+  }
+}

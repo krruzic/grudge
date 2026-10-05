@@ -1053,6 +1053,114 @@
      }
     }
    ]
+  },
+  "rider": {
+   "r": [
+    {
+     "id": "stingerdive",
+     "name": "STINGER DIVE",
+     "desc": "TAKE WING LANDS AS A DIVE: FOES WITHIN 3M TAKE 70, ARE KNOCKED BACK AND STUNNED 0.5S.",
+     "fx": {
+      "wingSlam": {
+       "damage": 70,
+       "radius": 3,
+       "stun": 0.5
+      }
+     }
+    },
+    {
+     "id": "tailwind",
+     "name": "TAILWIND",
+     "desc": "TAKE WING LASTS 1S LONGER, FLIES 20% FASTER AND THE LANDING HEALS 50% MORE.",
+     "add": {
+      "seconds": 1
+     },
+     "mul": {
+      "speedMul": 1.2,
+      "heal": 1.5
+     }
+    }
+   ],
+   "b": [
+    {
+     "id": "beeswax",
+     "name": "BEESWAX",
+     "desc": "THE HONEY POT ALSO GIVES EVERY ALLIED CHAMPION IT SPLASHES A 70 SHIELD FOR 4S.",
+     "combo": "WITH STINGER DIVE: TAKE WING'S LANDING LEAVES A 2.5M HONEY POOL FOR 3S.",
+     "fx": {
+      "potShield": {
+       "amount": 70,
+       "seconds": 4
+      }
+     },
+     "with": [
+      {
+       "id": "stingerdive",
+       "fx": {
+        "landPool": {
+         "radius": 2.5,
+         "seconds": 3
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "swarmpot",
+     "name": "SWARM POT",
+     "desc": "ANGRY BEES POUR OUT OF THE POT: FOES IN THE POOL TAKE 16 PER SECOND AND IT IS 0.5M WIDER.",
+     "combo": "WITH TAILWIND: THE POOL LASTS 2S LONGER.",
+     "add": {
+      "dps": 16,
+      "radius": 0.5
+     },
+     "with": [
+      {
+       "id": "tailwind",
+       "add": {
+        "seconds": 2
+       }
+      }
+     ]
+    }
+   ],
+   "a": [
+    {
+     "id": "secondhelping",
+     "name": "SECOND HELPING",
+     "desc": "YOUR LADLE HITS HEAL YOU FOR 20% OF THEIR DAMAGE AND PATCH UP SOLDIERS AROUND YOU FOR 20 A HIT.",
+     "fx": {
+      "lifesteal": 0.2,
+      "healAllies": 20
+     }
+    },
+    {
+     "id": "honeydrizzle",
+     "name": "HONEY DRIZZLE",
+     "desc": "YOUR SECOND WHACK SLOPS HONEY: A 2M STICKY PUDDLE FOR 3S THAT SLOWS FOES 40%.",
+     "fx": {
+      "finisherZone": {
+       "radius": 2,
+       "seconds": 3,
+       "dps": 0,
+       "slowMul": 0.6,
+       "style": "honey"
+      }
+     }
+    }
+   ],
+   "z": [
+    {
+     "id": "queensfeast",
+     "name": "QUEEN'S FEAST",
+     "desc": "ROYAL JELLY+: REACHES 13M, THE SHIELD IS 200 AND THE HASTE LASTS 7S.",
+     "add": {
+      "radius": 3,
+      "shield": 80,
+      "seconds": 2
+     }
+    }
+   ]
   }
  },
  "order": [

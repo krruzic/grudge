@@ -29,6 +29,7 @@ import {
   friarPowder,
   heaveDir,
   raiderFight,
+  riderFight,
   summonerFight,
   wardenFight,
   warlordFight,
@@ -190,6 +191,7 @@ const TDM_STYLE: Record<string, number> = {
   summoner: 3,
   friar: 4,
   herald: 4,
+  rider: 4,
 };
 
 export function tdmStyle(me: Entity): number {
@@ -586,6 +588,8 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (ab.r.kind === "parry") duelistFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Warden: charged slap in melee.
   if (ab.r.kind === "wall") wardenFight(bot, w, me, ehAlive ? enemyHero : undefined);
+  // Rider: Honey Pot on the brawl, honey dollops at range, Royal Jelly when hurt, Take Wing out.
+  if (ab.r.kind === "takewing") riderFight(bot, w, me, ehAlive ? enemyHero : undefined);
   if (
     hk.heaveRange &&
     rdy("heave") &&

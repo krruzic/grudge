@@ -7,6 +7,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, bCooldown, frenzySpeed, onBUse } from "../talents.ts";
 import { canRake, trackStill, updatePip } from "./marksman.ts";
 import { detonateKegs, kegRocketTick, plentyTick } from "./friar.ts";
+import { buzzTick, honeyPartners, maybeFling, stuckInHoney, sweetToothTick, tickWing } from "./rider.ts";
 import { aim, begin, callout, chaining, ready } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
 import { startAbility } from "./start.ts";
@@ -24,12 +25,19 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (h.pip) updatePip(w, e);
   if (h.dead) {
     h.grave = undefined;
+    h.wing = undefined;
     if (w.time >= h.respawnAt && !w.teams[e.team]?.out) respawn(w, e);
     return;
   }
   graveTick(w, e, ab.r);
   if (def.hooks.vantageMul) trackStill(w, e);
   if (def.hooks.plentyRadius) plentyTick(w, e);
+  if (def.hooks.sweetRadius) {
+    sweetToothTick(w, e);
+    honeyPartners(w, e);
+  }
+  if (h.wing && tickWing(w, e, cmd)) return;
+  cmd = stuckInHoney(w, e, cmd);
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -97,6 +105,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   ) {
     h.action.power = 1 + cmd.charge * (h.action.name === "a" ? 0.8 : 0.6);
     if (cmd.charge >= 0.99) callout(w, e, "FULL POWER!");
+    if (def.hooks.flingDamage) maybeFling(w, e, cmd.charge);
   }
   if (h.action) {
     tickAction(w, e, ab);
@@ -387,7 +396,7 @@ function startFromInput(
     // Powder keg already out: R blows it now instead of throwing another.
   } else if (cmd.special && ready(e, "r", w.time) && !act && ab.r.kind === "gravewalk") {
     graveBegin(w, e, cmd, ab.r);
-  } else if (cmd.special && ready(e, "r", w.time) && !act) {
+  } else if (cmd.special && ready(e, "r", w.time) && !act && !(ab.r.kind === "takewing" && w.arena.carrying(e))) {
     startAbility(w, e, "r", cmd);
     h.cooldowns.r = w.time + (ab.r.cooldown ?? 10);
     if (ab.r.resetB && ab.r.kind !== "warcry") {
@@ -470,6 +479,8 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
   } else if (a.kind === "kegrocket") {
     kegRocketTick(w, e, a);
+  } else if (a.kind === "buzz") {
+    buzzTick(w, e, a);
   } else if (a.kind === "combo" && a.t < a.hitAt) {
     const hit = ab.a.hits![a.combo];
     const fin = !a.jab && a.combo === ab.a.hits!.length - 1 ? (ab.a.fx?.finisherBonus?.lunge ?? 1) : 1;

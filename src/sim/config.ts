@@ -85,6 +85,12 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
+  /** Rider: Take Wing landing slams foes around her. */
+  wingSlam?: { damage: number; radius: number; stun?: number };
+  /** Rider: the Honey Pot splash shields allies. */
+  potShield?: { amount: number; seconds: number };
+  /** Rider: Take Wing landing leaves a small honey pool. */
+  landPool?: { radius: number; seconds: number };
 }
 
 export interface TalentWith {
@@ -249,6 +255,11 @@ export interface AbilityDef {
   splash?: number;
   splashDamage?: number;
   pierceRange?: number;
+  /** Rider: Royal Jelly shield amount / duration; Take Wing landing vulnerability and landing lag. */
+  shield?: number;
+  shieldSeconds?: number;
+  vulnSeconds?: number;
+  landSeconds?: number;
 }
 
 export interface BotPlan {
@@ -285,8 +296,13 @@ export interface HeroDef {
   /**
    * Team synergies by partner class (2v2 / team deathmatch partners only):
    *   hexAlly - multiplier on a partner's champion hits against foes this champion has hexed.
+   *   honeyAlly - damage multiplier for a partner standing in this champion's honey pool.
    */
-  synergy?: { hexAlly?: Partial<Record<HeroClass, number>> };
+  synergy?: {
+    hexAlly?: Partial<Record<HeroClass, number>>;
+    /** Damage multiplier for a partner of that class standing in this champion's honey pool (rider). */
+    honeyAlly?: Partial<Record<HeroClass, number>>;
+  };
   hooks: Record<string, number>;
   abilities: Record<"a" | "b" | "r" | "z", AbilityDef>;
 }

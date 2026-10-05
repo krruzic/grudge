@@ -1024,6 +1024,134 @@
         }
       },
       "class": "support"
+    },
+    "rider": {
+      "name": "Bramble",
+      "blurb": "Honey Rider. Sweet Tooth: allies near her slowly heal, twice as fast if they stand above whoever hit them. Rides Mead, a giant bumblebee, over walls and gaps.",
+      "health": "high",
+      "speed": "mid",
+      "damage": "mid",
+      "defaultBuild": "barracks",
+      "botRange": 2.3,
+      "hooks": {
+        "speedMul": 1.1,
+        "sweetRadius": 7,
+        "sweetHero": 0.007,
+        "sweetUnit": 0.02,
+        "sweetSelf": 0.007,
+        "sweetHighMul": 2,
+        "sweetRise": 0.75,
+        "flingDamage": 55,
+        "flingRange": 8.5,
+        "flingSlow": 0.6,
+        "flingSlowSeconds": 2,
+        "flingSplash": 1.3,
+        "flingCharge": 0.3,
+        "flingCooldown": 0.6,
+        "honeyBuffSeconds": 2,
+        "buzzStrafe": 1,
+        "buzzTime": 1.15,
+        "buzzSpeed": 1.1
+      },
+      "abilities": {
+        "a": {
+          "kind": "combo",
+          "hits": [
+            {
+              "damage": 48,
+              "range": 2.5,
+              "arcDeg": 140,
+              "dur": 0.38,
+              "hitAt": 0.18,
+              "lunge": 1.6,
+              "knockback": 1.2
+            },
+            {
+              "damage": 68,
+              "range": 2.7,
+              "arcDeg": 200,
+              "dur": 0.56,
+              "hitAt": 0.28,
+              "lunge": 2,
+              "knockback": 5
+            }
+          ],
+          "comboWindow": 0.4,
+          "anim": "attack_a",
+          "bot": "fight",
+          "variance": 0.15,
+          "callout": "HOLD A \u00b7 FLING HONEY"
+        },
+        "b": {
+          "kind": "honeypot",
+          "anim": "throw",
+          "range": 8,
+          "radius": 3,
+          "damage": 45,
+          "unitMul": 2,
+          "heal": 80,
+          "slowMul": 0.55,
+          "seconds": 4,
+          "puddleHeal": 30,
+          "flight": 0.35,
+          "dur": 0.5,
+          "hitAt": 0.26,
+          "cooldown": 7,
+          "bot": "fight",
+          "botRange": 7,
+          "callout": "HONEY POT \u00b7 FOES STUCK, FRIENDS HEAL",
+          "dps": 12
+        },
+        "r": {
+          "kind": "takewing",
+          "anim": "cast",
+          "seconds": 3,
+          "speedMul": 1.3,
+          "heal": 70,
+          "radius": 4,
+          "vulnMul": 1.2,
+          "vulnSeconds": 1.5,
+          "landSeconds": 0.4,
+          "dur": 0.3,
+          "hitAt": 0.22,
+          "cooldown": 14,
+          "bot": "never",
+          "callout": "TAKE WING \u00b7 R AGAIN TO LAND"
+        },
+        "z": {
+          "kind": "royaljelly",
+          "anim": "cast",
+          "radius": 10,
+          "heal": 220,
+          "shield": 120,
+          "shieldSeconds": 4,
+          "hasteMul": 1.25,
+          "seconds": 5,
+          "dur": 0.8,
+          "hitAt": 0.45,
+          "bot": "roar",
+          "botRange": 6,
+          "callout": "ROYAL JELLY \u00b7 HEAL, SHIELD, HASTE"
+        }
+      },
+      "botPlan": {
+        "retreatHp": 0.32,
+        "healer": true,
+        "escape": "r",
+        "picks": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "class": "support",
+      "synergy": {
+        "honeyAlly": {
+          "bruiser": 1.2,
+          "assassin": 1.2
+        }
+      }
     }
   }
 }

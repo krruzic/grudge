@@ -8,6 +8,7 @@ import { arcHit, shoveHit, slamAt } from "./strikes.ts";
 import { graveArrive } from "./gravewalk.ts";
 import { heartseeker, rake, sendPip, volley } from "./marksman.ts";
 import { brewfest, throwKeg } from "./friar.ts";
+import { honeyFling, royalJelly, takeWing, throwHoneyPot } from "./rider.ts";
 import { fireLeap, fireQuake, fireSlam } from "./kinds/melee.ts";
 import { fireBanner, fireRally, fireWarcry } from "./kinds/command.ts";
 import { fireBlink, fireHex, fireReach, fireRootcage, fireShoot, fireStealth, fireSummon } from "./kinds/spells.ts";
@@ -77,6 +78,11 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
     fireHeave(w, e, a, mul);
     return;
   }
+  if (a.kind === "honeyfling") {
+    // Rider: held A flings a honey dollop (hero/rider.ts).
+    honeyFling(w, e, a);
+    return;
+  }
 
   const def = ab[a.name];
   switch (a.kind) {
@@ -110,6 +116,13 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return throwKeg(w, e, a, def, "powder", mul);
     case "brewfest":
       return brewfest(w, e, a, def);
+    // rider
+    case "honeypot":
+      return throwHoneyPot(w, e, a, def);
+    case "takewing":
+      return takeWing(w, e, def);
+    case "royaljelly":
+      return royalJelly(w, e, def);
     // spells / mobility
     case "shoot":
       return fireShoot(w, e, a, def, mul);
