@@ -36,6 +36,8 @@ export class Bot {
   directiveAt = 0;
   lastDirective: Directive | null = null;
   healing = false;
+  /** Which branch of think() decided the last goal (debug / sims only, never read by the sim). */
+  why = "";
   openedAt = -99;
   fightId = 0;
   graveId = 0;

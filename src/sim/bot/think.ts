@@ -74,13 +74,16 @@ export function think(bot: Bot, w: World, me: Entity): void {
   bot.wantCharge = null;
   bot.chargeRange = Infinity;
   const s = sense(bot, w, me);
+  bot.why = "shop";
   if (!w.tdm && shop(bot, w, me, !!s.ehAlive && s.dHero < 8)) return;
+  bot.why = "objective";
   if (objectives(bot, w, s)) return;
   const h = s.h;
   const swarm = w.enemiesNear(me, 6, (o) => !!o.unit).length;
   const graveDef = w.heroDef(h.type).abilities.r;
   const graveReady = graveDef.kind === "gravewalk" && (h.cooldowns.r ?? 0) <= w.time && !h.action;
   if (s.lowHp) {
+    bot.why = "heal";
     retreat(bot, w, s, swarm, graveReady);
     return;
   }
@@ -100,7 +103,9 @@ export function think(bot: Bot, w: World, me: Entity): void {
     }
   }
   const k = kit(bot, w, s);
+  bot.why = "ability";
   if (useAbilities(bot, w, s, k)) return;
+  bot.why = "event";
 
   const lan = w.mapEvents.lantern;
   if (
@@ -149,8 +154,10 @@ export function think(bot: Bot, w: World, me: Entity): void {
   const heroCrowd = s.ehAlive ? crowdAt(w, me, s.enemyHero!) : 0;
   const crowded =
     s.plan.crowd !== undefined && !s.smoked && heroCrowd > s.plan.crowd && s.enemyHero!.hp > s.enemyHero!.maxHp * 0.35;
+  bot.why = "fight";
   if (fight(bot, w, s, k, crowded)) return;
   bot.fightId = 0;
+  bot.why = "raid";
   if (gravewalk(bot, w, s, graveReady)) return;
   if (w.tdm) {
     tdmRoam(bot, w, s);
@@ -839,6 +846,7 @@ function macro(bot: Bot, w: World, s: Senses): void {
   if (bot.role === "support") {
     const threat = baseThreat(bot, w, me);
     if (threat && !(mate && w.dist(mate, threat) < w.dist(me, threat)) && ok(bot, w, me, threat)) {
+      bot.why = "guard";
       bot.goal = { x: threat.transform.pos.x, z: threat.transform.pos.z };
       return;
     }
@@ -853,6 +861,7 @@ function macro(bot: Bot, w: World, s: Senses): void {
     if (!st || st.team !== me.team || (st.structure!.ready && !st.structure!.upgrading) || (ehAlive && dHero < 7))
       bot.tend = null;
     else {
+      bot.why = "tend";
       bot.goal = { x: bot.tend.x + (me.team ? 1.4 : -1.4), z: bot.tend.z };
       return;
     }
@@ -865,11 +874,13 @@ function macro(bot: Bot, w: World, s: Senses): void {
     if ((st && st.team !== me.team) || w.teams[me.team].resource < cost || !ok(bot, w, me, pad)) {
       bot.buildPad = null;
     } else {
+      bot.why = "build";
       bot.goal = { x: pad.x, z: pad.z };
       return;
     }
   }
 
+  bot.why = "position";
   if (bot.role === "attack") {
     const prey = enemyHeroes(bot, w, me).find(
       (e) => w.canSee(me, e) && w.dist(me, e) < 20 && e.hp < me.hp * 1.2 && ok(bot, w, me, e),
