@@ -926,7 +926,7 @@
           "slowMul": 0.65,
           "dur": 0.9,
           "hitAt": 0.55,
-          "bot": "allies",
+          "bot": "roar",
           "botRange": 6,
           "callout": "BREWFEST \u00b7 HEAL, HIT HARDER, FOES TIPSY"
         }
