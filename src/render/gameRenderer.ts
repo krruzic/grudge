@@ -15,6 +15,7 @@ import { syncSilhouettes, silScene } from "./entities/silhouettes";
 import { EntityViews } from "./entities/entityViews";
 import { CombatFx } from "./combat/combatFx";
 import { HazardViews } from "./hazards/hazardViews";
+import { SwingHints } from "./swingHint";
 import { Reticles, type ReticleReq } from "./reticle";
 import type { UnitModels } from "./unitModels";
 import type { StructureModels } from "./structureModels";
@@ -142,6 +143,7 @@ export class GameRenderer {
   private heroProps: HeroPropViews | null = null;
 
   private reticles = new Reticles();
+  private swingHints = new SwingHints();
 
   private reticleReqs: ReticleReq[] = [];
   private heroModels: HeroModels;
@@ -704,6 +706,12 @@ export class GameRenderer {
     this.hazards.sync(this.time, dt);
     if (!this.reticles.root.parent) this.scene.add(this.reticles.root);
     this.reticles.sync(this.world, this.reticleReqs, this.time);
+    if (!this.swingHints.root.parent) this.scene.add(this.swingHints.root);
+    this.swingHints.sync(
+      this.world,
+      this.world.players.filter((p) => this.humanList[p.player]).map((p) => p.heroId),
+      this.time,
+    );
     pt = perf.cpu("r.fx", pt);
     this.syncSplit();
     this.fitTargets();

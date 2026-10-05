@@ -256,10 +256,56 @@ export function tickWing(w: World, e: Entity, cmd: Command): boolean {
   // The sim height never drops below the take-off height (no chasm deaths mid-air), and rises over walls.
   wg.y = Math.max(wg.y, w.groundY(t.pos.x, t.pos.z));
   t.y = wg.y;
+  // A in the air: Mead drops a honey bomb straight down.
+  if (cmd.attack && w.time >= (wg.bombAt ?? 0)) {
+    wg.bombAt = w.time + (r.bombEvery ?? 0.7);
+    honeyBomb(w, e, t.pos.x, t.pos.z, wg.y);
+  }
   // Picking up the Grudge on the way (outside deathmatch) brings her straight down: no flying it over walls.
   const done = w.time >= wg.until || (cmd.special && w.time >= wg.minUntil) || (w.arena.carrying(e) && !w.tdm);
   if (!done) return true;
   return !land(w, e);
+}
+
+/**
+ * Honey bomb (A while flying): a small pot falls from Mead and splats where she is - damage and a slow in a small
+ * circle, and a short sticky honey patch (no healing: that's the Honey Pot's job).
+ */
+function honeyBomb(w: World, e: Entity, x: number, z: number, y: number): void {
+  const r = abilities(w, e).r;
+  const fall = 0.3;
+  const mul = w.damageMulOf(e);
+  fx(w, "potThrow", e, x, y + 2.2, z, { tx: x, tz: z, seconds: fall });
+  w.later(fall, () => {
+    const radius = r.bombRadius ?? 2.2;
+    const gy = w.groundY(x, z);
+    fx(w, "potSplash", e, x, gy, z, { radius, seconds: 2 });
+    for (const o of w.entities.slice()) {
+      if (!o.alive || o.team === e.team) continue;
+      if (Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) - o.radius > radius) continue;
+      w.damage(e, o, (r.bombDamage ?? 32) * mul * (o.structure ? 0.6 : 1), {
+        fromX: x,
+        fromZ: z,
+        knockback: 1,
+        slowMul: o.structure ? undefined : 0.6,
+        slowSeconds: o.structure ? undefined : 1.2,
+      });
+    }
+    w.zones.push({
+      id: w.newId(),
+      team: e.team,
+      ownerId: e.id,
+      x,
+      z,
+      radius: radius * 0.8,
+      until: w.time + 2,
+      dps: 0,
+      slowMul: 0.6,
+      style: "honey",
+      heal: 0,
+      sticky: true,
+    });
+  });
 }
 
 /** Touch down on the nearest walkable cell (keep flying a moment if there's none close), heal around her. */

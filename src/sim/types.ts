@@ -305,7 +305,7 @@ export interface HeroState {
   /** Gristle's Anvil Curl: hits from behind are blocked until then. */
   curlUntil?: number;
   /** Rider's Take Wing flight (hero/rider.ts): steered until `until`, R lands after minUntil; y = flight height. */
-  wing?: { until: number; minUntil: number; y: number; dirX: number; dirZ: number };
+  wing?: { until: number; minUntil: number; y: number; dirX: number; dirZ: number; bombAt?: number };
 }
 
 export interface UnitState {

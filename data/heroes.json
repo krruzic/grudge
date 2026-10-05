@@ -1678,7 +1678,10 @@
           "hitAt": 0.22,
           "cooldown": 14,
           "bot": "never",
-          "callout": "TAKE WING \u00b7 R AGAIN TO LAND"
+          "callout": "TAKE WING \u00b7 R AGAIN TO LAND \u00b7 A DROPS HONEY BOMBS",
+          "bombEvery": 0.7,
+          "bombDamage": 32,
+          "bombRadius": 2.2
         },
         "z": {
           "kind": "royaljelly",

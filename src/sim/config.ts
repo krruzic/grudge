@@ -240,6 +240,10 @@ export interface AbilityDef {
   vsStunnedMul?: number;
   stunBonus?: number;
   cowSeconds?: number;
+  /** Bramble's Take Wing: A drops a honey bomb every bombEvery s (bombDamage within bombRadius). */
+  bombEvery?: number;
+  bombDamage?: number;
+  bombRadius?: number;
   /** Deathmatch-only overrides merged over this ability (team / FFA deathmatch). */
   dm?: Partial<AbilityDef>;
   /** War Cry: enemies within this many m are cowed (cowSeconds) and slowed (slowMul / slowSeconds). */

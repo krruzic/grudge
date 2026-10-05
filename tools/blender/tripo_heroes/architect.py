@@ -145,7 +145,7 @@ def reskin(name, arm):
     bpy.data.objects.remove(tmp, do_unlink=True)
 
 
-SQUARE_SCALE = 1.75
+SQUARE_SCALE = 1.0
 SQUARE_TRIS = 1400
 # Source grip (the leather wrap on the short arm) and its frame: the short arm runs -Y toward the corner, the long
 # arm +Z from the corner, the flat faces along X.

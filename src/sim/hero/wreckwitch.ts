@@ -376,23 +376,37 @@ function swingPivot(w: World, e: Entity, reach: number): { x: number; z: number;
 }
 
 /**
- * Dodge replacement (L+X) next to a structure or tree: she hooks the anchor round it and swings in an arc to its
- * far side, in the direction of the stick. Returns false (plain dodge) with nothing to hook or nowhere to land.
+ * Where a chain swing would go right now (pivot it hooks, landing spot, arc), or null when she'd just roll.
+ * Pure - the renderer calls it every frame for the swing indicator; startChainSwing commits it.
  */
-export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
+export function chainSwingPlan(
+  w: World,
+  e: Entity,
+  moveX: number,
+  moveZ: number,
+): {
+  pv: { x: number; z: number; r: number };
+  x: number;
+  z: number;
+  rr: number;
+  base: number;
+  deg: number;
+  sign: number;
+  sx: number;
+  sz: number;
+} | null {
   const hk = w.heroDef(e.hero!.type).hooks;
-  if (!hk.swingReach) return false;
+  if (!hk.swingReach) return null;
   const pv = swingPivot(w, e, hk.swingReach);
-  if (!pv) return false;
+  if (!pv) return null;
   const t = e.transform;
-  const h = e.hero!;
   const rx = t.pos.x - pv.x;
   const rz = t.pos.z - pv.z;
   const rl = Math.hypot(rx, rz) || 1;
   const rad = Math.max(rl, pv.r + 1.4) + 0.3;
-  const mag = Math.hypot(cmd.moveX, cmd.moveZ);
-  const sx = mag > 0.2 ? cmd.moveX / mag : Math.sin(t.facing);
-  const sz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);
+  const mag = Math.hypot(moveX, moveZ);
+  const sx = mag > 0.2 ? moveX / mag : Math.sin(t.facing);
+  const sz = mag > 0.2 ? moveZ / mag : Math.cos(t.facing);
   const sign = rx * sz - rz * sx >= 0 ? 1 : -1;
   const base = Math.atan2(rz, rx);
   for (const [deg, rr] of [
@@ -412,34 +426,48 @@ export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
       w.mapEvents.sealed(t.pos.x, t.pos.z, x, z)
     )
       continue;
-    const dur = hk.swingSeconds ?? 0.5;
-    const a: HeroAction = {
-      name: "dodge",
-      kind: "chainswing",
-      dur,
-      hitAt: 99,
-      combo: sign,
-      t: 0,
-      fired: false,
-      dirX: sx,
-      dirZ: sz,
-      fromX: pv.x,
-      fromZ: pv.z,
-      toX: x,
-      toZ: z,
-      fromX2: base,
-      fromZ2: (deg * Math.PI) / 180,
-      chargeRange: rr,
-    };
-    h.action = a;
-    h.blocking = false;
-    e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + dur);
-    h.cooldowns.dodge = w.time + dur + w.data.heroes.baseline.dodgeCooldown + 0.3;
-    callout(w, e, "CHAIN SWING");
-    fx(w, "chainSwing", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: pv.x, tz: pv.z, seconds: dur, radius: rr });
-    return true;
+    return { pv, x, z, rr, base, deg, sign, sx, sz };
   }
-  return false;
+  return null;
+}
+
+/**
+ * Dodge replacement (L+X) next to a structure or tree: she hooks the anchor round it and swings in an arc to its
+ * far side, in the direction of the stick. Returns false (plain dodge) with nothing to hook or nowhere to land.
+ */
+export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
+  const hk = w.heroDef(e.hero!.type).hooks;
+  const plan = chainSwingPlan(w, e, cmd.moveX, cmd.moveZ);
+  if (!plan) return false;
+  const { pv, x, z, rr, base, deg, sign, sx, sz } = plan;
+  const t = e.transform;
+  const h = e.hero!;
+  const dur = hk.swingSeconds ?? 0.5;
+  const a: HeroAction = {
+    name: "dodge",
+    kind: "chainswing",
+    dur,
+    hitAt: 99,
+    combo: sign,
+    t: 0,
+    fired: false,
+    dirX: sx,
+    dirZ: sz,
+    fromX: pv.x,
+    fromZ: pv.z,
+    toX: x,
+    toZ: z,
+    fromX2: base,
+    fromZ2: (deg * Math.PI) / 180,
+    chargeRange: rr,
+  };
+  h.action = a;
+  h.blocking = false;
+  e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + dur);
+  h.cooldowns.dodge = w.time + dur + w.data.heroes.baseline.dodgeCooldown + 0.3;
+  callout(w, e, "CHAIN SWING");
+  fx(w, "chainSwing", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: pv.x, tz: pv.z, seconds: dur, radius: rr });
+  return true;
 }
 
 /** Per tick of the chain swing: follow the arc around the pivot, settle on the landing spot at the end. */

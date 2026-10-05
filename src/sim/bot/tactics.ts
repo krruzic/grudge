@@ -793,7 +793,21 @@ export function vintnerFight(bot: Bot, w: World, me: Entity, target: Entity | un
  */
 export function riderFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
   const h = me.hero!;
-  if (h.wing || h.action) return;
+  if (h.wing) {
+    // Flying: steer over the target and bomb whatever is right underneath.
+    if (target?.alive) bot.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
+    const under = w.entities.some(
+      (o) =>
+        o.alive &&
+        o.team !== me.team &&
+        o.team >= 0 &&
+        (o.hero || o.unit) &&
+        Math.hypot(o.transform.pos.x - me.transform.pos.x, o.transform.pos.z - me.transform.pos.z) < 2,
+    );
+    bot.wantAttack = under;
+    return;
+  }
+  if (h.action) return;
   const ab = abilities(w, me);
   const rdy = (k: string) => (h.cooldowns[k] ?? 0) <= w.time;
   const foes = foesNear(w, me, 9);
