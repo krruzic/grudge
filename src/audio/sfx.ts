@@ -361,6 +361,7 @@ export class Audio {
       warden: ["thorn.grow", 0.9],
       marksman: ["arrow.loose", 1],
       friar: ["maddock.keg", 1],
+      harpooner: ["twang", 0.75],
       herald: ["cloth.flap", 1],
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];

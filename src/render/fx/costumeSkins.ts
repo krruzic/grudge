@@ -178,9 +178,7 @@ COSTUME_SKIN.colossus = {
       ),
   },
   lipFlat: 0.3,
-  decal: new Map([
-    [WARLORD.crackRing, "flat"],
-  ]),
+  decal: new Map([[WARLORD.crackRing, "flat"]]),
 };
 COSTUME_SKIN.calliope = {
   chunk: {

@@ -205,7 +205,8 @@ export function stepHarpoon(w: World, m: Missile): boolean {
     const hooks = owner?.hero ? w.heroDef(owner.hero.type).hooks : {};
     const banked = hp.bounced > 0 && isWet(w, o);
     const wet = isWet(w, o) ? (hooks.wetHitMul ?? 1) : 1;
-    const dmg = banked ? m.damage * wet * (hooks.ricochetWetMul ?? 1.35) : m.damage * wet;
+    const unit = o.unit ? (hooks.unitMul ?? 1) : 1;
+    const dmg = (banked ? m.damage * wet * (hooks.ricochetWetMul ?? 1.35) : m.damage * wet) * unit;
     const landed = w.damage(owner, o, dmg, {
       fromX: m.x - m.dirX,
       fromZ: m.z - m.dirZ,
@@ -246,6 +247,11 @@ export function stepHarpoon(w: World, m: Missile): boolean {
         });
         return false;
       }
+    }
+    // Soldiers don't stop a harpoon: it skewers up to `soldierPierce` of them and flies on (wave clear).
+    if (o.unit && (hp.pierced ?? 0) < (hooks.soldierPierce ?? 0)) {
+      hp.pierced = (hp.pierced ?? 0) + 1;
+      continue;
     }
     return true;
   }

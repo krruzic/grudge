@@ -142,10 +142,19 @@ function drip(h: FxHost, id: number, seconds: number): void {
       gravity: 10,
     });
     if (Math.random() < 0.15)
-      decal(h, TIDE.ripple, o.transform.pos.x, w.groundY(o.transform.pos.x, o.transform.pos.z), o.transform.pos.z, 0.6, 0.6, {
-        grow: 0.8,
-        opacity: 0.7,
-      });
+      decal(
+        h,
+        TIDE.ripple,
+        o.transform.pos.x,
+        w.groundY(o.transform.pos.x, o.transform.pos.z),
+        o.transform.pos.z,
+        0.6,
+        0.6,
+        {
+          grow: 0.8,
+          opacity: 0.7,
+        },
+      );
   });
 }
 

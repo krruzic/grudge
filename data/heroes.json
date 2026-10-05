@@ -1027,12 +1027,12 @@
     },
     "harpooner": {
       "name": "Brindle",
-      "blurb": "Harpoon bow. Wet: his hits leave foes dripping for 3s. Harpoons ricochet once off walls and structures, and a banked harpoon hits a Wet foe 35% harder.",
+      "blurb": "Harpoon bow. Wet: his hits leave foes dripping for 3s. Harpoons skewer through soldiers and ricochet off walls and structures; a banked harpoon hits a Wet foe 35% harder.",
       "health": "mid",
       "speed": "mid",
       "damage": "mid",
       "defaultBuild": "range",
-      "botRange": 7.5,
+      "botRange": 10.5,
       "hooks": {
         "wetSeconds": 3,
         "ricochets": 1,
@@ -1044,19 +1044,21 @@
         "puddleSeconds": 3,
         "puddleRadius": 1.6,
         "slipStun": 0.6,
-        "wetHitMul": 1.15
+        "wetHitMul": 1.2,
+        "soldierPierce": 2,
+        "unitMul": 1.3
       },
       "abilities": {
         "a": {
           "kind": "harpoon",
           "anim": "shoot",
-          "damage": 64,
+          "damage": 70,
           "range": 10,
           "speed": 30,
           "chargeRicochets": 1,
           "dur": 0.55,
           "hitAt": 0.3,
-          "cooldown": 1.2,
+          "cooldown": 1.1,
           "bot": "fight",
           "botRange": 9,
           "variance": 0.12,
@@ -1071,7 +1073,7 @@
           "heroPull": 0.5,
           "dur": 0.7,
           "hitAt": 0.32,
-          "cooldown": 10,
+          "cooldown": 8,
           "bot": "never",
           "botRange": 9.5,
           "callout": "REEL IN \u00b7 DRAG THEM INTO WALLS"

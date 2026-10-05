@@ -633,7 +633,9 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       sprite(TIDE_BUBBLE, 0.18 + Math.random() * 0.14, x, z, -0.05, false, "bubble"),
     );
     if (rip)
-      ring(Math.round(r * 2), [0.85, 1], (x, z) => sprite(TIDE_FOAM, 0.6 + Math.random() * 0.4, x, z, -0.2, false, "foam"));
+      ring(Math.round(r * 2), [0.85, 1], (x, z) =>
+        sprite(TIDE_FOAM, 0.6 + Math.random() * 0.4, x, z, -0.2, false, "foam"),
+      );
   } else if (style === "grove") {
     ring(Math.round(r * 2.2), [0.1, 0.95], (x, z) => {
       const f = crossQuad(cm(FLOWER), 0.35 + Math.random() * 0.15, 0.35);

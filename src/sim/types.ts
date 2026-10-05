@@ -433,7 +433,15 @@ export interface Missile {
   arrow?: boolean;
   knockback?: number;
   /** Brindle's harpoon: stepped by hero/harpooner.ts (ricochets left/done, last bounce point, Reel In, ring bounces). */
-  harpoon?: { bounces: number; bounced: number; reel?: boolean; ring?: number; bx?: number; bz?: number };
+  harpoon?: {
+    bounces: number;
+    bounced: number;
+    reel?: boolean;
+    ring?: number;
+    bx?: number;
+    bz?: number;
+    pierced?: number;
+  };
 }
 
 export interface Boomerang {

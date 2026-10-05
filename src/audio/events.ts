@@ -17,6 +17,7 @@ const WEAPON: Record<string, { swing: string; hit: string; rate?: number }> = {
   herald: { swing: "swing.light", hit: "hit.flesh" },
   summoner: { swing: "swing.light", hit: "magic.bolt" },
   marksman: { swing: "swing.light", hit: "arrow.hit" },
+  harpooner: { swing: "swing.light", hit: "arrow.hit", rate: 0.85 },
 };
 const ARMORED = new Set(["warlord", "herald", "engineer"]);
 
@@ -469,6 +470,22 @@ function act(a: Audio, ev: Extract<SimEvent, { type: "act" }>, w: World): void {
     case "zone":
       shout(0.5);
       break;
+    case "riptide":
+      shout(0.9);
+      a.play("tide.wave", 0.7, { dur: span });
+      a.play("bubble", 0.5);
+      break;
+    case "tonguelash":
+      a.play("slap", 0.6, { rate: 0.7 });
+      a.play("spring", 0.5, { rate: 1.3, at: 0.05 });
+      break;
+    case "reel":
+      a.play("wren.draw", 0.5, { rate: 0.75, dur: span });
+      if (Math.random() < 0.5) a.vocal(hero, "attack", 0.6, { id: ev.src });
+      break;
+    case "harpoon":
+      if (Math.random() < 0.25) a.vocal(hero, "attack", 0.5, { id: ev.src });
+      break;
     case "keg":
     case "powderkeg":
     case "pip":
@@ -535,6 +552,14 @@ function shot(a: Audio, ev: Extract<SimEvent, { type: "shot" }>): void {
       return;
     case "throw":
       a.play("swing.light", 0.5, { rate: 0.8 });
+      return;
+    case "harpoon":
+      a.play("twang", 0.6, { rate: 0.75 });
+      a.play("arrow.loose", 0.6, { rate: 0.7 });
+      return;
+    case "reel":
+      a.play("twang", 0.6, { rate: 0.6 });
+      a.play("chain.rattle", 0.35, { rate: 1.4, dur: 0.5 });
       return;
     default:
       a.play("magic.bolt", 0.4);
@@ -623,6 +648,36 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       return;
     case "plenty":
       if (Math.random() < 0.5) a.play("burp", 0.35);
+      return;
+    // Brindle (harpooner).
+    case "wet":
+      if (a.allow("wet", 2)) a.play("splash", 0.45, { rate: 1.3 });
+      return;
+    case "harpoonStick":
+      a.play("wood.thud", 0.7);
+      a.play("metal.clank", 0.35, { rate: 1.2 });
+      return;
+    case "harpoonDrop":
+      a.play("step.water", 0.4);
+      return;
+    case "reel":
+      a.play("ratchet", 0.7, { rate: 1.3 });
+      a.play("splash", 0.5, { at: 0.05 });
+      return;
+    case "tongue":
+      a.play("slap", 0.7, { at: 0.12 });
+      a.play("gulp", 0.4, { rate: 1.4, at: 0.3 });
+      return;
+    case "riptide":
+      a.play("splash.big", 0.9, { priority: true });
+      a.play("tide.wave", 0.8, { at: 0.05 });
+      return;
+    case "puddle":
+      a.play("step.water", 0.5);
+      return;
+    case "slip":
+      a.play("splash", 0.7);
+      a.play("body.land", 0.6, { at: 0.08 });
       return;
     case "kegRocket":
       a.play("cork", 0.8);
