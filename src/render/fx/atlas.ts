@@ -27,6 +27,7 @@ import duelistUrl from "../../../assets/fx/duelist.png?url";
 import heraldUrl from "../../../assets/fx/herald.png?url";
 import wrenUrl from "../../../assets/fx/wren.png?url";
 import friarUrl from "../../../assets/fx/friar.png?url";
+import riderUrl from "../../../assets/fx/rider.png?url";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 
 // ── Sheets and cells ──
@@ -521,6 +522,25 @@ export const FRIAR = atlas("friar", friarUrl, [
   "spark",
   "blast",
   "hopRing",
+] as const);
+
+export const RIDER = atlas("rider", riderUrl, [
+  "drop",
+  "blob",
+  "splash",
+  "pool",
+  "comb",
+  "bee",
+  "pollen",
+  "petal",
+  "clover",
+  "heal",
+  "jelly",
+  "crown",
+  "wing",
+  "shard",
+  "gust",
+  "ring",
 ] as const);
 
 /** Resolves once every base sheet has loaded; composites paint and base HQ paintings start loading then. */

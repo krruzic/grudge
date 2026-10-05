@@ -1079,8 +1079,7 @@
           "comboWindow": 0.4,
           "anim": "attack_a",
           "bot": "fight",
-          "variance": 0.15,
-          "callout": "HOLD A \u00b7 FLING HONEY"
+          "variance": 0.15
         },
         "b": {
           "kind": "honeypot",

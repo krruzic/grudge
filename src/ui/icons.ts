@@ -523,6 +523,46 @@ const FILLS: Record<string, Draw> = {
     c.arc(0.3, -0.62, 0.22, Math.PI, 0);
     c.closePath();
   },
+  honeypot: (c) => {
+    c.moveTo(-0.45, -0.55);
+    c.lineTo(0.45, -0.55);
+    c.lineTo(0.35, -0.35);
+    c.quadraticCurveTo(0.9, -0.1, 0.75, 0.4);
+    c.quadraticCurveTo(0.55, 0.85, 0, 0.85);
+    c.quadraticCurveTo(-0.55, 0.85, -0.75, 0.4);
+    c.quadraticCurveTo(-0.9, -0.1, -0.35, -0.35);
+    c.closePath();
+    c.moveTo(-0.55, -0.6);
+    c.quadraticCurveTo(0, -0.95, 0.55, -0.6);
+    c.lineTo(0.5, -0.5);
+    c.lineTo(-0.5, -0.5);
+    c.closePath();
+  },
+  takewing: (c) => {
+    c.ellipse(0, 0.35, 0.42, 0.32, 0, 0, Math.PI * 2);
+    c.moveTo(-0.1, 0.1);
+    c.quadraticCurveTo(-0.95, -0.95, -0.75, -0.1);
+    c.quadraticCurveTo(-0.6, 0.15, -0.1, 0.1);
+    c.moveTo(0.1, 0.1);
+    c.quadraticCurveTo(0.95, -0.95, 0.75, -0.1);
+    c.quadraticCurveTo(0.6, 0.15, 0.1, 0.1);
+  },
+  royaljelly: (c) => {
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      if (k === 0) c.moveTo(Math.cos(a) * 0.7, 0.15 + Math.sin(a) * 0.7);
+      else c.lineTo(Math.cos(a) * 0.7, 0.15 + Math.sin(a) * 0.7);
+    }
+    c.closePath();
+    c.moveTo(-0.45, -0.55);
+    c.lineTo(-0.45, -0.95);
+    c.lineTo(-0.22, -0.75);
+    c.lineTo(0, -0.98);
+    c.lineTo(0.22, -0.75);
+    c.lineTo(0.45, -0.95);
+    c.lineTo(0.45, -0.55);
+    c.closePath();
+  },
 };
 
 const TINT: Record<string, string> = {
@@ -540,6 +580,9 @@ const TINT: Record<string, string> = {
   keg: "#c88a48",
   powderkeg: "#7a4a28",
   brewfest: "#ffc848",
+  honeypot: "#e8a040",
+  takewing: "#ffe070",
+  royaljelly: "#fff0c0",
 };
 
 export function engravedIcon(
