@@ -115,8 +115,8 @@
     "commitSeconds": 0.35,
     "commitMul": 0.6,
     "outpostReach": 8,
-    "restRegenFrac": 0.02,
-    "restSeconds": 5,
+    "restRegenFrac": 0.03,
+    "restSeconds": 4,
     "restClear": 10
   },
   "positional": {

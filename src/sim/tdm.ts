@@ -59,8 +59,8 @@ export interface TdmConfig {
   chaos: { firstSeconds: number; everySeconds: number; bloodMul: number; seconds: number; rain: number };
 }
 
-/** Spread order for sampled spots: mostly fight-changers, two potions in ten. */
-const KINDS: PowerKind[] = ["might", "haste", "rush", "potion", "shield", "might", "haste", "rush", "potion", "shield"];
+/** Spread order for sampled spots: fight-changers and potions about half and half (4 potions in 10). */
+const KINDS: PowerKind[] = ["potion", "might", "haste", "potion", "rush", "potion", "shield", "might", "potion", "haste"];
 const CHAOS: ChaosKind[] = ["cannon", "ogre", "bloodmoon", "potions", "winds"];
 const CHAOS_TEXT: Record<ChaosKind, string> = {
   cannon: "CHAOS · CANNON BARRAGE",

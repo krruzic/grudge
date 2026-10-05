@@ -110,6 +110,8 @@ half = [
     {"x": 15.0, "z": 4.5, "kind": "haste"},
     {"x": 11.0, "z": 25.0, "kind": "shield"},
     {"x": 24.5, "z": 21.5, "kind": "potion"},
+    {"x": 11.5, "z": 17.0, "kind": "potion"},
+    {"x": 30.0, "z": 12.0, "kind": "potion"},
 ]
 powerups = half + [dict(p, x=rot(p["x"], p["z"])[0], z=rot(p["x"], p["z"])[1]) for p in half]
 
