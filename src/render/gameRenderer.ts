@@ -452,10 +452,22 @@ export class GameRenderer {
 
   private splitViews: {
     cam: THREE.PerspectiveCamera;
-    st: { focus: THREE.Vector3; width: number; init: boolean };
+    /** yaw eases toward yawTo (rotateView; deathmatch d-pad). */
+    st: { focus: THREE.Vector3; width: number; init: boolean; yaw: number; yawTo: number };
     heroIds: number[];
     player: number;
   }[] = [];
+
+  /** Deathmatch: turn this player's view 45 degrees left (-1) or right (+1). Only per-player (split) views turn. */
+  rotateView(player: number, dir: number): void {
+    const sv = this.splitViews.find((v) => v.player === player);
+    if (sv) sv.st.yawTo += dir * (Math.PI / 4);
+  }
+
+  /** The current (eased) yaw of this player's view, 0 when it has none; input is turned by it. */
+  viewYaw(player: number): number {
+    return this.splitViews.find((v) => v.player === player)?.st.yaw ?? 0;
+  }
 
   /** Manual zoom widths (metres across); players start at index 2. */
   private zoomSteps = [14, 18, 22, 28, 36, 48, 64, 90, 120, 150];
@@ -531,7 +543,7 @@ export class GameRenderer {
       const old = prev.find((v) => v.heroIds.includes(g.ids[0]));
       return {
         cam: old?.cam ?? new THREE.PerspectiveCamera(this.cfg.fovDeg, 1, this.camera.near, this.camera.far),
-        st: old?.st ?? { focus: new THREE.Vector3(), width: this.cfg.splitViewWidth, init: false },
+        st: old?.st ?? { focus: new THREE.Vector3(), width: this.cfg.splitViewWidth, init: false, yaw: 0, yawTo: 0 },
         heroIds: g.ids,
         player: g.player,
       };
@@ -937,6 +949,7 @@ export class GameRenderer {
         cam = sv.cam;
         cam.aspect = w / h;
         cam.updateProjectionMatrix();
+        sv.st.yaw += (sv.st.yawTo - sv.st.yaw) * (1 - Math.exp(-dt * 9));
         const f = this.frameView(sv);
         const own = f.pts.slice(0, Math.max(sv.heroIds.length, f.own ?? 0));
         aimCamera(

@@ -310,6 +310,32 @@ export class Hud {
       return;
     }
 
+    // Deathmatch: no army - the C-stick calls the house's CPUs, the d-pad turns the camera.
+    if (w.tdm) {
+      const pickerP = w.players.find((p) => p.team === t && !!ui[p.player]);
+      // FFA deathmatch: nobody to call.
+      if (!pickerP || w.players.filter((p) => p.team === t).length < 2) return;
+      const pu = ui[pickerP.player]!;
+      const [cx, cy] = crossOf(pickerP.player);
+      const fresh = now - pu.lastOrderAt < 1.6;
+      if (this.dense && !fresh) return;
+      const items: [string, string][] = [
+        ["PUSH", ""],
+        ["PUSH", ""],
+        ["PUSH", ""],
+        ["PUSH", ""],
+      ];
+      drawCross(
+        ctx,
+        this.memo,
+        `cross${this.crossN++}`,
+        cx,
+        cy,
+        { title: "CALL YOUR CPUS", items, lit: -1 },
+        fresh ? 1 : 0.5,
+      );
+      return;
+    }
     // Army: the orders panel, plus the order cross for whoever commands (the commander first in 2v2).
     const o = this.orders[t];
     const team = w.players.filter((p) => p.team === t).sort((a, b) => Number(b.commander) - Number(a.commander));

@@ -65,11 +65,16 @@ const CHAOS_TEXT: Record<ChaosKind, string> = {
   winds: "CHAOS · SWIFT WINDS",
 };
 
+/** How long a callout steers the house's CPUs. */
+const CALLOUT_SECONDS = 12;
+
 export class Tdm {
   readonly cfg: TdmConfig;
   /** Kills per team (the score), and per champion entity id. */
   readonly score: number[];
   readonly kills = new Map<number, number>();
+  /** Per team: the spot a human called its CPUs to push (callout()), until `until`. */
+  readonly callouts = new Map<number, { x: number; z: number; until: number }>();
   readonly deaths = new Map<number, number>();
   readonly powerups: PowerUp[] = [];
   /** Scoreboard extras per team: seconds the Grudge was carried, power-ups taken. */
@@ -100,6 +105,34 @@ export class Tdm {
 
   get limit(): number {
     return this.cfg.killLimit;
+  }
+
+  // ── Callouts ──
+
+  /**
+   * A human flicked the C-stick: their house's CPUs push toward a point 18 m that way (clamped to the field) for
+   * CALLOUT_SECONDS, picking fights near it (bot/think.ts tdmPrey / tdmRoam).
+   */
+  callout(e: Entity, dx: number, dz: number): void {
+    const w = this.w;
+    const l = Math.hypot(dx, dz);
+    if (l < 0.1 || w.players.filter((p) => p.team === e.team).length < 2) return;
+    const t = w.terrain;
+    const x = Math.max(2, Math.min(t.width - 2, e.transform.pos.x + (dx / l) * 18));
+    const z = Math.max(2, Math.min(t.depth - 2, e.transform.pos.z + (dz / l) * 18));
+    this.callouts.set(e.team, { x, z, until: w.time + CALLOUT_SECONDS });
+    const p = e.hero ? `P${e.hero.player + 1}` : "";
+    const dir = ["EAST", "SOUTH-EAST", "SOUTH", "SOUTH-WEST", "WEST", "NORTH-WEST", "NORTH", "NORTH-EAST"][
+      (Math.round(Math.atan2(dz, dx) / (Math.PI / 4)) + 8) % 8
+    ];
+    w.emit({ type: "notice", team: e.team, text: `${p}: PUSH ${dir}!` });
+    w.emit({ type: "ping", team: e.team, x, y: w.groundY(x, z), z });
+  }
+
+  /** The team's active callout point, if any. */
+  calloutOf(team: number): Vec2 | null {
+    const c = this.callouts.get(team);
+    return c && this.w.time < c.until ? { x: c.x, z: c.z } : null;
   }
 
   // ── Power-ups ──

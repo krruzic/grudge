@@ -88,6 +88,11 @@ export class CommandMapper {
     };
   }
 
+  /** Deathmatch: no army, so the d-pad turns the camera (app) and C-stick flicks become callouts to CPUs. */
+  dm = false;
+  /** This player's camera yaw (radians), so callouts point where the flick points on screen. */
+  yaw = 0;
+
   private flick(p: PadState): Flick | null {
     const m = Math.hypot(p.cX, p.cY);
     if (m < 0.35) {
@@ -228,7 +233,7 @@ export class CommandMapper {
       if (p.held.block && now - this.restAt <= this.smash.within) c.dodge = true;
     }
 
-    if (p.pressed.right || p.pressed.left) {
+    if (!this.dm && (p.pressed.right || p.pressed.left)) {
       this.groupIndex = (this.groupIndex + (p.pressed.right ? 1 : GROUPS.length - 1)) % GROUPS.length;
       this.ui.group = GROUPS[this.groupIndex];
       this.ui.groupAt = now;
@@ -293,6 +298,14 @@ export class CommandMapper {
         this.ui.buildMenu = "closed";
       } else if (canLearn && (f === "left" || f === "right")) {
         c.learn = f === "left" ? 0 : 1;
+      } else if (this.dm) {
+        // Screen direction of the flick -> world direction under this player's camera yaw.
+        const sx = f === "left" ? -1 : f === "right" ? 1 : 0;
+        const sz = f === "up" ? -1 : f === "down" ? 1 : 0;
+        const cs = Math.cos(this.yaw);
+        const sn = Math.sin(this.yaw);
+        c.callout = { x: Math.round((cs * sx + sn * sz) * 100) / 100, z: Math.round((-sn * sx + cs * sz) * 100) / 100 };
+        this.ui.lastOrderAt = now;
       } else {
         c.directive = { type: this.ui.group, dir: DIRECTIVE_BY_FLICK[f] };
         this.ui.lastOrderAt = now;

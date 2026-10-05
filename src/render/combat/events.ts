@@ -90,6 +90,14 @@ export function handleEvent(cfx: CombatFx, ev: SimEvent): void {
       cfx.shake = Math.max(cfx.shake, 0.15);
       break;
     }
+    case "ping": {
+      // Deathmatch callout: where a human told their house's CPUs to push.
+      const c = cfx.teamColors[ev.team];
+      cfx.ring(ev.x, ev.y + 0.1, ev.z, c, 3, 0.9);
+      cfx.ring(ev.x, ev.y + 0.1, ev.z, c, 1.6, 0.6);
+      cfx.flash(ev.x, ev.y + 1, ev.z, glowTex, 0xffffff, 3, 0.4);
+      break;
+    }
     case "rally": {
       cfx.decal(emblemTex, ev.x, ev.y, ev.z, ev.radius, 1.4, 0.25, 0.6);
       cfx.flash(ev.x, ev.y + 2, ev.z, glowTex, 0xffe8a0, 5, 0.6);

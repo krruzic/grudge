@@ -198,6 +198,21 @@ export function tdmStyle(me: Entity): number {
 
 function tdmPrey(bot: Bot, w: World, me: Entity): Entity | undefined {
   const style = tdmStyle(me);
+  // A teammate's callout: fight whoever is around the called spot.
+  const call = w.tdm?.calloutOf(me.team);
+  if (call) {
+    let pick: Entity | undefined;
+    let pd = Infinity;
+    for (const e of enemyHeroes(bot, w, me)) {
+      if (!e.alive || !ok(bot, w, me, e)) continue;
+      const d = Math.hypot(e.transform.pos.x - call.x, e.transform.pos.z - call.z);
+      if (d < 16 && d < pd) {
+        pd = d;
+        pick = e;
+      }
+    }
+    if (pick) return pick;
+  }
   const carrier = w.arena.relic.state === "carried" ? w.arena.relic.carrier : 0;
   let best: Entity | undefined;
   let bs = Infinity;
@@ -254,6 +269,12 @@ function tdmRoam(bot: Bot, w: World, s: Senses): void {
   const pw = pot ?? nearPowerup(w, me, 7);
   if (pw) {
     bot.goal = pw;
+    return;
+  }
+  // A teammate called a push: head there (tdmPrey already picks fights around it).
+  const call = w.tdm?.calloutOf(me.team);
+  if (call && Math.hypot(call.x - me.transform.pos.x, call.z - me.transform.pos.z) > 4) {
+    bot.goal = call;
     return;
   }
   const r = w.arena.relic;

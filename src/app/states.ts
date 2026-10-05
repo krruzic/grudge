@@ -99,8 +99,19 @@ export function updateMatchInput(app: App, now: number): void {
     const pad = h?.alive ? padNear(w, h) : null;
     const padStructure = pad?.structureId ? w.get(pad.structureId) : undefined;
     m.specReady = !!padStructure && padStructure.team === h!.team && canSpec(w, padStructure);
+    // Deathmatch: the d-pad turns this player's camera (45 degrees a press) and the stick is read relative to it.
+    m.dm = !!w.tdm;
+    if (m.dm && !m.ui.commander) {
+      if (p.pressed.left) view.rotateView(i, -1);
+      if (p.pressed.right) view.rotateView(i, 1);
+    }
+    const yaw = m.dm ? view.viewYaw(i) : 0;
+    m.yaw = yaw;
+    const cs = Math.cos(yaw);
+    const sn = Math.sin(yaw);
+    const turned = yaw ? { ...p, stickX: cs * p.stickX + sn * p.stickY, stickY: -sn * p.stickX + cs * p.stickY } : p;
     m.update(
-      p,
+      turned,
       now,
       alive && !!padNear(w, h!),
       alive && w.arena.inShop(h!),

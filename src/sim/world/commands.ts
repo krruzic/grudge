@@ -27,6 +27,7 @@ export function applyPlayerCommand(w: World, slot: PlayerSlot, e: Entity, cmd: C
     w.emit({ type: "notice", team: slot.team, text: `FORMATION · ${FORMATION_LABEL[next]}` });
   }
   if (cmd.say) w.emit({ type: "notice", team: slot.team, text: cmd.say.slice(0, 48) });
+  if (cmd.callout && w.tdm && e.alive) w.tdm.callout(e, cmd.callout.x, cmd.callout.z);
   if (e.alive) gainXp(w, e, w.data.talents?.xp.passive * dt);
   if (cmd.directive) {
     // Commander orders always apply; a teammate's order only after the commander has been quiet for a while.

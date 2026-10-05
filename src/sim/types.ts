@@ -545,6 +545,8 @@ export interface Command {
   place?: { dx: number; dz: number };
   morph?: boolean;
   formation?: boolean;
+  /** Deathmatch: a C-stick callout to the team's CPUs - push this way (world direction, unit length). */
+  callout?: { x: number; z: number };
 }
 
 /** Events emitted during a tick for presentation (fx, audio, notices). The sim never reads them back. */
@@ -633,6 +635,7 @@ export type SimEvent =
       src?: number;
     }
   | { type: "warcry"; x: number; y: number; z: number; radius: number; team: number; src?: number; style?: string }
+  | { type: "ping"; team: number; x: number; y: number; z: number }
   | { type: "pulse"; x: number; y: number; z: number; radius: number; team: number; style?: string }
   | { type: "heal"; x: number; y: number; z: number; team: number; src?: number }
   | { type: "banner"; team: number; x: number; y: number; z: number; until: number; src?: number }

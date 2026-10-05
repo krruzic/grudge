@@ -4,13 +4,25 @@ import * as THREE from "three";
 import type { Terrain } from "../sim/terrain";
 import type { RenderConfig } from "./gameRenderer";
 
-/** Places `cam` so `width` metres span the screen at `focus` (looking slightly ahead of it); returns the distance. */
-export function placeCam(cfg: RenderConfig, cam: THREE.PerspectiveCamera, focus: THREE.Vector3, width: number): number {
+/**
+ * Places `cam` so `width` metres span the screen at `focus` (looking slightly ahead of it); returns the distance.
+ * `yaw` turns the camera about the focus (0 = looking north, the default; deathmatch players can turn their view).
+ */
+export function placeCam(
+  cfg: RenderConfig,
+  cam: THREE.PerspectiveCamera,
+  focus: THREE.Vector3,
+  width: number,
+  yaw = 0,
+): number {
   const pitch = THREE.MathUtils.degToRad(cfg.pitchDeg);
   const hHalf = Math.atan(Math.tan(THREE.MathUtils.degToRad(cfg.fovDeg) / 2) * cam.aspect);
   const dist = width / (2 * Math.tan(hHalf));
-  const look = new THREE.Vector3(focus.x, focus.y, focus.z - width * 0.06);
-  cam.position.set(look.x, look.y + Math.sin(pitch) * dist, look.z + Math.cos(pitch) * dist);
+  const sy = Math.sin(yaw);
+  const cy = Math.cos(yaw);
+  const look = new THREE.Vector3(focus.x - sy * width * 0.06, focus.y, focus.z - cy * width * 0.06);
+  const back = Math.cos(pitch) * dist;
+  cam.position.set(look.x + sy * back, look.y + Math.sin(pitch) * dist, look.z + cy * back);
   cam.lookAt(look);
   cam.updateMatrixWorld(true);
   return dist;
@@ -24,6 +36,7 @@ function keepInView(
   width: number,
   keep: THREE.Vector3[],
   tight = false,
+  yaw = 0,
 ): void {
   if (!keep.length) return;
   const pitch = THREE.MathUtils.degToRad(cfg.pitchDeg);
@@ -31,7 +44,7 @@ function keepInView(
   const [X0, X1, Y0, Y1] = tight ? [-0.45, 0.45, -0.3, 0.3] : [-0.8, 0.8, -0.66, 0.5];
   const v = new THREE.Vector3();
   for (let it = 0; it < 4; it++) {
-    placeCam(cfg, cam, focus, width);
+    placeCam(cfg, cam, focus, width, yaw);
     let dx = 0;
     let dy = 0;
     for (const p of keep) {
@@ -42,8 +55,11 @@ function keepInView(
       if (v.y > Y1) dy = Math.max(dy, v.y - Y1);
     }
     if (!dx && !dy) return;
-    focus.x += dx * width * 0.55;
-    focus.z -= dy * (width / depthToWidth) * 0.6;
+    // Screen right / up on the ground under this yaw.
+    const sx = dx * width * 0.55;
+    const sz = dy * (width / depthToWidth) * 0.6;
+    focus.x += Math.cos(yaw) * sx - Math.sin(yaw) * sz;
+    focus.z += -Math.sin(yaw) * sx - Math.cos(yaw) * sz;
   }
 }
 
@@ -57,7 +73,7 @@ export function aimCamera(
   cfg: RenderConfig,
   t: Terrain,
   cam: THREE.PerspectiveCamera,
-  st: { focus: THREE.Vector3; width: number; init: boolean },
+  st: { focus: THREE.Vector3; width: number; init: boolean; yaw?: number },
   points: THREE.Vector3[],
   dt: number,
   minWidth: number,
@@ -93,12 +109,12 @@ export function aimCamera(
     for (const p of keep) c.add(p);
     c.multiplyScalar(1 / keep.length);
     focus.lerp(c, 0.85);
-    keepInView(cfg, cam, focus, width, keep, true);
+    keepInView(cfg, cam, focus, width, keep, true, st.yaw ?? 0);
     const k = st.init ? 1 - Math.exp(-dt * 6) : 1;
     st.init = true;
     st.focus.lerp(focus, k);
     st.width += (width - st.width) * k;
-    const dist = placeCam(cfg, cam, st.focus, st.width);
+    const dist = placeCam(cfg, cam, st.focus, st.width, st.yaw ?? 0);
     cam.userData.fogNear = dist * cfg.fogNearFactor;
     cam.userData.fogFar = dist * cfg.fogFarFactor;
     return;
