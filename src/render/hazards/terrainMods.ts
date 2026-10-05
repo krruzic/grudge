@@ -131,7 +131,7 @@ function lookoutMesh(hz: HazardViews, m: TerrainMod, costume: string): THREE.Obj
   let base = Infinity;
   for (const c of m.cells) base = Math.min(base, hz.world.terrain.groundHeight((c % W) + 0.5, Math.floor(c / W) + 0.5));
   if (!Number.isFinite(base)) base = top - 2;
-  const art = propParts("lookout", costume);
+  const art = propParts("lookout", costume, "architect");
   if (art) {
     const piece = new THREE.Mesh(art.geo, art.mat);
     // The prop is 2 x 2 m with its flat platform 1.9 m up; sink it a little so uneven ground never shows a gap.
@@ -168,7 +168,7 @@ export function modMesh(hz: HazardViews, id: number): THREE.Object3D | null {
       const y = hz.world.terrain.groundHeight(x, z);
       const cell = new THREE.Group();
       cell.position.set(x, y, z);
-      const art = propParts("snowfort", modCostume);
+      const art = propParts("snowfort", modCostume, "architect");
       if (art) {
         const piece = new THREE.Mesh(art.geo, art.mat);
         piece.rotation.y = yaw + (Math.random() - 0.5) * 0.12;
@@ -217,8 +217,8 @@ export function modMesh(hz: HazardViews, id: number): THREE.Object3D | null {
       const y = hz.world.terrain.groundHeight(x, z);
       const cell = new THREE.Group();
       cell.position.set(x, y, z);
-      const pal = m.style === "wood" ? propParts("palisade", modCostume) : null;
-      const stone = m.style === "wood" ? null : propParts("wallstone", modCostume);
+      const pal = m.style === "wood" ? propParts("palisade", modCostume, "engineer") : null;
+      const stone = m.style === "wood" ? null : propParts("wallstone", modCostume, "warden");
       const art = pal ?? stone;
       if (art) {
         const piece = new THREE.Mesh(art.geo, art.mat);

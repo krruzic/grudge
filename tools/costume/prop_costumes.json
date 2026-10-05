@@ -1,0 +1,61 @@
+{
+  "architect": {
+    "costumes": ["clockwork", "snowy", "temple"],
+    "rows": [
+      ["px_architect_square", ["architect_square"], "his giant wooden carpenter's square, held as a weapon"],
+      ["px_prop_architect_square", ["prop_architect_square"], "the same carpenter's square as a thrown model"],
+      ["px_snowfort", ["snowfort"], "a curved snow-fort wall block of packed snow and ice he raises"],
+      ["px_lookout", ["lookout"], "an ice lookout tower he raises from the ground"]
+    ]
+  },
+  "harpooner": {
+    "costumes": ["bogtoad", "deepglow", "tideadmiral"],
+    "rows": [
+      ["px_harpooner_bow", ["harpooner_bow"], "his big harpoon crossbow / bow"],
+      ["px_harpooner_harpoons", ["harpooner_harpoon0", "harpooner_harpoon1"], "a pair of harpoons on his back"],
+      ["px_harpoon", ["harpoon"], "a single fired harpoon with a rope"]
+    ]
+  },
+  "rider": {
+    "costumes": ["lavenderfield", "queencourier", "warhornet"],
+    "rows": [
+      ["px_rider_ladle", ["rider_ladle"], "her big honey ladle / dipper, held as a weapon"],
+      ["px_honeypot", ["honeypot"], "a thrown clay honey pot"]
+    ]
+  },
+  "scribe": {
+    "costumes": ["queenbee", "redink", "vigil"],
+    "rows": [["px_scribe_quill", ["scribe_quill"], "her giant quill pen, held like a staff"]]
+  },
+  "vintner": {
+    "costumes": ["forgemaster", "harvestking", "icewine"],
+    "rows": [["px_vintner_anvil", ["vintner_anvil"], "his anvil, carried and swung"]]
+  },
+  "wreckwitch": {
+    "costumes": ["bogqueen", "frostwreck", "siren"],
+    "rows": [
+      ["px_wreckwitch_anchor", ["wreckwitch_anchor"], "her ship's anchor on a chain, held as a weapon"],
+      ["px_wreckanchor", ["wreckanchor"], "the same anchor as a thrown model"],
+      ["px_drownedhand", ["drownedhand"], "a huge drowned hand of seaweed and barnacles rising from the water, her summon"]
+    ]
+  },
+  "summoner": {
+    "costumes": ["crimson", "lich", "plague"],
+    "rows": [
+      ["px_hexidol", ["hexidol"], "a horned-skull hex idol that erupts from the ground"],
+      ["px_tomb", ["tomb"], "a graveyard tombstone his bone field grows"]
+    ]
+  },
+  "warden": {
+    "costumes": ["autumn", "blossom", "winterbark"],
+    "rows": [["px_wallstone", ["wallstone"], "a mossy standing stone, one block of the stone wall he raises"]]
+  },
+  "engineer": {
+    "costumes": ["clock", "ember", "frost"],
+    "rows": [["px_palisade", ["palisade"], "a three-stake wooden palisade section, one piece of the wall he builds"]]
+  },
+  "warlord": {
+    "costumes": ["bloodmoon", "gilded", "swamp"],
+    "rows": [["px_spike", ["spike"], "a layered rock spire that erupts from the ground when he quakes"]]
+  }
+}

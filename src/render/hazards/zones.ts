@@ -504,7 +504,7 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       sp.name = "rise";
     });
     sprite(SUMMONER.skull, 0.9, 0, 0, 0.1);
-    const tomb = propParts("tomb", costume);
+    const tomb = propParts("tomb", costume, "summoner");
     if (tomb) {
       ring(Math.max(2, Math.round(r * 0.9)), [0.35, 0.85], (x, z) => {
         const t = new THREE.Mesh(tomb.geo, tomb.mat);

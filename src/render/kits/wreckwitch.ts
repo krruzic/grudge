@@ -3,7 +3,7 @@
 // of drowned hands, real drowned-hand props bursting up round the ring and under every victim), the chain swing
 // and the Tide Rising wave. The bilge zone decal is drawn by hazards/zones.ts ("bilge" style).
 import * as THREE from "three";
-import { FX, WITCH } from "../fx/atlas";
+import { activeCostume, FX, WITCH } from "../fx/atlas";
 import { type FxHost, emit } from "../fx/parts";
 import { decal } from "../fx/decals";
 import { shockwave } from "../fx/shockwave";
@@ -81,7 +81,7 @@ function follow(
 
 /** One drowned hand bursting up out of the ground at (x, z), holding for `hold` seconds then sinking back. */
 function drownedHand(h: FxHost, x: number, gy: number, z: number, scale: number, hold: number, yaw: number): void {
-  const o = prop("drownedhand");
+  const o = prop("drownedhand", undefined, { hero: "wreckwitch", costume: activeCostume() });
   const g = new THREE.Group();
   if (o) g.add(o);
   else {
@@ -153,7 +153,7 @@ function chain(h: FxHost, dur: number, a: () => THREE.Vector3 | null, b: () => T
 
 /** The thrown anchor (runtime prop, flies upright and tumbles a little). */
 function anchorObj(): THREE.Object3D {
-  const o = prop("wreckanchor");
+  const o = prop("wreckanchor", undefined, { hero: "wreckwitch", costume: activeCostume() });
   if (o) {
     const g = new THREE.Group();
     o.position.y = -0.55;

@@ -1,5 +1,7 @@
 // Runtime props (assets/props/*.glb): prop() clones a prop as an object tree, propParts() returns merged
-// geometry+material for instancing. Both prefer the costume version (<name>@<costume>.glb) when it exists.
+// geometry+material for instancing. Both prefer the costume version (<name>@<costume>.glb) when it exists, else
+// repaint the prop with the owner's costume texture (assets/costumes/<hero>/<costume>/<material>.jpg; a
+// prop_<material>.jpg wins when the runtime prop shares a material name with a held weapon of different UVs).
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { dyeColor, toLambert } from "./heroModels";
@@ -58,7 +60,7 @@ export function prop(
   if (owner?.costume) {
     o.traverse((m) => {
       if (!(m instanceof THREE.Mesh) || Array.isArray(m.material)) return;
-      const ct = costumeTexture(owner.hero, owner.costume, m.material.name);
+      const ct = propTexture(owner.hero, owner.costume, m.material.name);
       if (!ct) return;
       const key = `${m.material.uuid}:${owner.hero}/${owner.costume}`;
       let c = dyed.get(key);
@@ -96,8 +98,36 @@ export function hasCostumeProp(name: string, costume?: string): boolean {
   return !!costume && scenes.has(`${name}@${costume}`);
 }
 
-export function propParts(name: string, costume?: string): { geo: THREE.BufferGeometry; mat: THREE.Material } | null {
+/** A costume repaint for a runtime prop's material: prop_<material> first, then <material>. */
+function propTexture(hero: string, costume: string | undefined, mat: string): THREE.Texture | null {
+  return costumeTexture(hero, costume, `prop_${mat}`) ?? costumeTexture(hero, costume, mat);
+}
+
+/**
+ * Merged geometry + material of prop `name` for instancing: the <name>@<costume> model if there is one, else the
+ * base prop repainted with `hero`'s costume texture when given and present.
+ */
+export function propParts(
+  name: string,
+  costume?: string,
+  hero?: string,
+): { geo: THREE.BufferGeometry; mat: THREE.Material } | null {
   if (hasCostumeProp(name, costume)) name = `${name}@${costume}`;
+  else if (hero && costume) {
+    const key = `${name}|${hero}/${costume}`;
+    if (parts.has(key)) return parts.get(key)!;
+    const base = propParts(name);
+    const ct = base ? propTexture(hero, costume, base.mat.name) : null;
+    let out = base;
+    if (base && ct) {
+      const m = base.mat.clone() as THREE.MeshLambertMaterial;
+      m.map = ct;
+      m.userData.keep = true;
+      out = { geo: base.geo, mat: m };
+    }
+    parts.set(key, out);
+    return out;
+  }
   if (parts.has(name)) return parts.get(name)!;
   const s = scenes.get(name);
   if (!s) return null;

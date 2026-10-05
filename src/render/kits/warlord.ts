@@ -11,7 +11,7 @@ import { emit, type FxHost } from "../fx/parts";
 import { shockwave } from "../fx/shockwave";
 import { FxBatch, fxBatch } from "../fx/instances";
 import { KITS } from "./registry";
-import { hasCostumeProp, propParts } from "../props";
+import { propParts } from "../props";
 import { costumeOfPlayer } from "../costumes";
 import { dirOf, ground, UP } from "./shared";
 
@@ -48,9 +48,10 @@ function slabs(h: FxHost, x: number, z: number, r: number, n: number, up: number
 }
 
 export function spikeBatch(root: THREE.Object3D, costume?: string): FxBatch {
-  const c = hasCostumeProp("spike", costume) ? costume : undefined;
+  // A costume spike model, or the base spike in the costume's repaint (one batch per costume either way).
+  const c = costume || undefined;
   return fxBatch(root, c ? `spike@${c}` : "spike", () => {
-    const p = propParts("spike", c);
+    const p = propParts("spike", c, "warlord");
     return p ? new FxBatch(p.geo, p.mat.clone()) : new FxBatch(spikeGeo, spikeMat.clone());
   });
 }
