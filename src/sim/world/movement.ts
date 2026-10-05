@@ -418,7 +418,8 @@ export function applyKnockback(w: World, dt: number): void {
     w.knocked = false;
     if (w.time < (s.shovedUntil ?? 0) && wallSplat(w, e, x0, z0, s.kvx * dt, s.kvz * dt)) continue;
     const drop = y0 - e.transform.y;
-    if (drop >= pos.fallMin) {
+    // Featherfall (hooks.featherFall, Hoot): wings break the fall - no fall damage or stun.
+    if (drop >= pos.fallMin && !(e.hero && w.heroDef(e.hero.type).hooks.featherFall)) {
       e.transform.prevY = y0;
       w.emit({ type: "fall", x: e.transform.pos.x, y: e.transform.y, z: e.transform.pos.z });
       w.damage(null, e, e.maxHp * pos.fallDamageFrac * Math.min(2, drop / pos.fallMin), {

@@ -368,6 +368,7 @@ export class Audio {
       harpooner: ["twang", 0.75],
       scribe: ["ui.page", 1],
       wreckwitch: ["chain.rattle", 0.9],
+      architect: ["stig.wrench", 0.85],
       herald: ["cloth.flap", 1],
     };
     const [id, rate] = cue[hero] ?? ["swing.light", 1];

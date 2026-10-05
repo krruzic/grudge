@@ -31,6 +31,7 @@ kits/       per-hero visual kits registered in KITS (registry.ts); index.ts impo
 heroProps/  persistent hero props outside the hero model: Wren's Pip + vantage, Maddock's kegs/cask/keg rocket,
             Hollin's ink bolts, runes and ambient bees
             herald, marksman, friar, wreckwitch; shared.ts (common helpers/materials), desert.ts (Sun Totem cactus)
+            herald, marksman, friar, architect; shared.ts (common helpers/materials), desert.ts (Sun Totem cactus)
 heroProps/  persistent hero props outside the hero model: Wren's Pip + vantage, Maddock's kegs/cask/keg rocket
 hazards/    HazardViews: traps (snares.ts), zones (zones.ts), terrain mods (terrainMods.ts: ramps, walls),
             grow.ts (grow-in batching shader), tesla.ts, materials.ts; owns MapFx

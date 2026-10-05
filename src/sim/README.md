@@ -16,6 +16,7 @@ hero/               update.ts (hero controller), start.ts (begin an ability), fi
                     kinds/* (per ability kind), strikes.ts (hit shapes), combos.ts, gravewalk.ts, placement.ts,
                     boomerangs.ts, marksman.ts + friar.ts + scribe.ts (per-hero mechanics)
                     boomerangs.ts, marksman.ts + friar.ts + wreckwitch.ts (per-hero mechanics)
+                    boomerangs.ts, marksman.ts + friar.ts + architect.ts (per-hero mechanics)
 talents.ts          talent trees, xp/levels, effective abilities (hero.ab); talents/ effects, missiles, triggers
 units.ts            soldier AI                       structures.ts  pads/build/upgrade/spawnUnit
 structures/towers.ts tower behaviour                 arena.ts + arena/  relic, waves, shop/bombs, cannon, ogre
@@ -56,6 +57,7 @@ can be dropped or intercepted freely (the client and most tools clear `w.events`
 `talents.recompute` caches the result in `hero.ab`, and gameplay code only ever calls `abilities(w, e)`. An
 ability's `kind` picks its implementation (`hero/kinds/*`, `marksman.ts`, `friar.ts`, `scribe.ts`); `hooks` on the hero def
 ability's `kind` picks its implementation (`hero/kinds/*`, `marksman.ts`, `friar.ts`, `wreckwitch.ts`); `hooks` on the hero def
+ability's `kind` picks its implementation (`hero/kinds/*`, `marksman.ts`, `friar.ts`, `architect.ts`); `hooks` on the hero def
 are passive per-hero modifiers. Costumes/skins are purely client-side: the sim only knows hero types.
 
 ## Determinism (lockstep) rules

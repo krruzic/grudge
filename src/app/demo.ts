@@ -33,7 +33,7 @@ const demoData = {
 } as GameData;
 
 /** Ability kinds that help allies (the demo adds friendly soldiers for them to affect). */
-const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner", "keg", "brewfest"]);
+const ALLY_KINDS = new Set(["warcry", "zone", "repair", "rally", "banner", "keg", "brewfest", "dome"]);
 /** Big area abilities: wider camera, longer loop. */
 const BIG = new Set([
   "quake",
@@ -55,6 +55,8 @@ const BIG = new Set([
   "brewfest",
   "heartseeker",
   "manuscript",
+  "lookout",
+  "dome",
 ]);
 /** Long-reach abilities: the target soldiers stand further away. */
 const FAR = new Set(["leap", "dash", "hex", "reach", "shoot", "flurry", "pip", "keg", "powderkeg", "inkbolt", "swarm"]);

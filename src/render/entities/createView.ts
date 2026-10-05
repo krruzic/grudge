@@ -163,6 +163,8 @@ function heroParts(ents: EntityViews, e: Entity, team: THREE.Color, root: THREE.
       o.name.startsWith(`${hero.type}_anchor`)
     )
       pipNodes.push(o);
+    if (o.name.startsWith(`${hero.type}_wrench`) || o.name.startsWith(`${hero.type}_square`)) held.push(o);
+    if (o.name.startsWith(`${hero.type}_pip`) || o.name.startsWith(`${hero.type}_keg`)) pipNodes.push(o);
   });
   if (held.length) view.held = held;
   if (pipNodes.length) view.pipNodes = pipNodes;

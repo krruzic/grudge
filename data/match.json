@@ -297,6 +297,10 @@
       },
       "warlord": {
         "damage": 0.92
+      },
+      "architect": {
+        "hp": 1.1,
+        "damage": 1.15
       }
     },
     "speedMul": 1.2,

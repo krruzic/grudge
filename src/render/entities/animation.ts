@@ -19,6 +19,7 @@ export const ONE_SHOT = new Set([
   "heartseeker",
   "gust",
   "swing",
+  "build",
 ]);
 /** Substitute clip when a rig lacks one (followed up to 3 times). */
 export const ANIM_FALLBACK: Record<string, string> = {
@@ -29,6 +30,7 @@ export const ANIM_FALLBACK: Record<string, string> = {
   gust: "dodge",
   swing: "dodge",
   whirl: "attack_c",
+  build: "slam",
 };
 /** Ability kind -> clip; unlisted kinds play "cast". */
 export const KIND_ANIM: Record<string, string> = {
@@ -44,6 +46,10 @@ export const KIND_ANIM: Record<string, string> = {
   riptide: "slam",
   powderkeg: "throw",
   brewfest: "slam",
+  fort: "build",
+  lookout: "build",
+  dome: "cast",
+  squarethrow: "throw",
   kegrocket: "block",
   inkbolt: "shoot",
   swarm: "cast",

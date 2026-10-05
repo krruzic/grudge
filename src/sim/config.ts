@@ -106,6 +106,14 @@ export interface TalentFx {
   dredgeNoHeal?: number;
   /** Wreck Witch Dredge: Tide stacks gained for every champion caught. */
   tideOnCatch?: number;
+  /** Architect: Snow Fort rises with a frost burst around it. */
+  frostBurst?: { radius: number; damage: number; slowMul: number; slowSeconds: number; stun?: number };
+  /** Architect: forts burst into shards when they fall. */
+  shatter?: { radius: number; damage: number; slowMul?: number; slowSeconds?: number; stun?: number };
+  /** Architect: the Lookout collapses into an ice burst when it ends; R again topples it early. */
+  collapse?: { radius: number; damage: number; slowMul?: number; slowSeconds?: number; stun?: number };
+  /** Architect: the Lookout shoots icicles at the nearest foe while it stands. */
+  icicles?: { damage: number; range: number; cooldown: number };
 }
 
 export interface TalentWith {
@@ -285,6 +293,18 @@ export interface AbilityDef {
   runeDamage?: number;
   /** Davy's Grip: extra damage per Tide Rising stack. */
   stackDamage?: number;
+  /** Architect: thrown square range / return speed multipliers, Snow Fort cooldown cut per champion hit. */
+  throwRangeMul?: number;
+  throwSpeedMul?: number;
+  throwCdr?: number;
+  /** Architect: champions hit by the thrown square are dazed this long. */
+  throwStun?: number;
+  /** Architect Frostbite: combo hits and the square slow to chillSlow for chillSeconds; slowed foes take chillMul. */
+  chillSlow?: number;
+  chillSeconds?: number;
+  chillMul?: number;
+  /** Architect: ranged damage taken behind a Snow Fort. */
+  coverMul?: number;
 }
 
 export interface BotPlan {
@@ -327,6 +347,7 @@ export interface HeroDef {
    *   reelTo    - Reel In drags a champion this share of the way to a partner of that class (Brindle + tank);
    *   swarmAlly - multiplier on a partner's next hit on a foe in this champion's bee swarm (Abbess Hollin);
    *   dredgeStack - Tide stacks Mother Kelp gains when Dredge catches a foe already slowed or rooted;
+   *   lookout     - Professor Hoot's Lookout footprint (cells per side) with a partner of that class;
    *   (each new champion documents its own entries in its hero module).
    */
   synergy?: Partial<Record<string, Partial<Record<HeroClass, number>>>>;

@@ -362,6 +362,8 @@ export interface StructureState {
   graveHaste?: number;
   graveRank?: number;
   cask?: boolean;
+  /** Projectile style for a hero-built siege shooter (default "ballista"; Hoot's lookout fires "icicle"). */
+  shotStyle?: string;
 }
 
 /** Anything with a body: exactly one of hero / unit / structure is set (matching `kind`). */
@@ -425,6 +427,8 @@ export interface Zone {
   follow?: number;
   /** Enemies inside can't heal for this many seconds (Wreck Witch Bilge). */
   noHeal?: number;
+  /** Architect's Avalanche Dome: no hit from more than 3.2 m away crosses its rim (world/damage.ts). */
+  dome?: boolean;
 }
 
 export interface Delayed {
@@ -512,6 +516,13 @@ export interface Boomerang {
   hit: number[];
   damage: number;
   range: number;
+  /** Architect's square (render style) and its talent riders; absent for Stig's wrench. */
+  style?: string;
+  speedMul?: number;
+  slowMul?: number;
+  slowSeconds?: number;
+  cdrB?: number;
+  stun?: number;
 }
 
 /** Homing or point-targeted projectile with flight time `dur`; t goes 0..1 (world/projectiles.ts). */

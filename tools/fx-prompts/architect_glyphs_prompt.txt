@@ -1,0 +1,7 @@
+The image shows the existing ability glyph set of a fantasy game (white vector glyphs on black). Design FOUR more minimal ICON GLYPHS in EXACTLY this clean flat VECTOR style: SOLID FILLED pure WHITE silhouettes on a pure BLACK background, like the club, fist, cloud and tombstone in the reference: big solid white shapes with only a few thin black cut lines for key details, NOT outline drawings, no gradients, no shading, no texture, like a polished icon font. Arrange them as a single horizontal row of 4 equal SQUARE cells on one continuous pure black background (no white gaps, no borders, no grid lines), each glyph centred in its cell with generous padding. NO TEXT, NO LETTERS, NO NUMBERS.
+
+Left to right:
+1. a big solid carpenter's SQUARE (an L-shaped ruler with a few thin black tick-mark cuts along its edges) spinning like a boomerang, with two curved motion swoosh arcs around it.
+2. a short curved SNOW FORT wall: a solid crenellated wall of stacked bricks (thin black brick cuts) bending in a gentle arc, with a small snowflake above it.
+3. a tall solid square ICE WATCHTOWER with a crenellated top and thin black block cuts, standing on short crossed wooden legs, with a small upward arrow above its top.
+4. a big solid DOME (half sphere) made of ice blocks (thin black block cuts) sitting on the ground, with a big bold six-pointed snowflake on its front and small ice sparkles around it.

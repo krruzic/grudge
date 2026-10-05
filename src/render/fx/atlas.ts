@@ -30,6 +30,7 @@ import friarUrl from "../../../assets/fx/friar.png?url";
 import harpoonerUrl from "../../../assets/fx/harpooner.png?url";
 import scribeUrl from "../../../assets/fx/scribe.png?url";
 import wreckwitchUrl from "../../../assets/fx/wreckwitch.png?url";
+import architectUrl from "../../../assets/fx/architect.png?url";
 import { cacheCanvas } from "../../ui/cacheCanvas";
 
 // ── Sheets and cells ──
@@ -583,6 +584,24 @@ export const WITCH = atlas("wreckwitch", wreckwitchUrl, [
   "puddle",
 ] as const);
 
+export const ARCHITECT = atlas("architect", architectUrl, [
+  "flake",
+  "shard",
+  "snow",
+  "spray",
+  "frostRing",
+  "icicle",
+  "iceBlock",
+  "chalk",
+  "blueprint",
+  "swoosh",
+  "frostBurst",
+  "twinkle",
+  "brick",
+  "feather",
+  "drafting",
+  "iceCrack",
+] as const);
 /** Resolves once every base sheet has loaded; composites paint and base HQ paintings start loading then. */
 const fxReady = Promise.all(waits).then(() => {
   baseReady = true;

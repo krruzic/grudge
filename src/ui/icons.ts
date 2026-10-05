@@ -574,6 +574,49 @@ const FILLS: Record<string, Draw> = {
     c.quadraticCurveTo(0.45, -0.85, 0, -0.55);
     c.closePath();
   },
+  fort: (c) => {
+    // A short curved crenellated wall.
+    c.moveTo(-0.9, 0.75);
+    c.lineTo(-0.9, -0.2);
+    for (const x of [-0.9, -0.3, 0.3]) {
+      c.lineTo(x, -0.55);
+      c.lineTo(x + 0.3, -0.55);
+      c.lineTo(x + 0.3, -0.25);
+      c.lineTo(x + 0.6, -0.25);
+    }
+    c.lineTo(0.9, -0.55);
+    c.lineTo(0.9, 0.75);
+    c.quadraticCurveTo(0, 0.45, -0.9, 0.75);
+    c.closePath();
+  },
+  lookout: (c) => {
+    c.moveTo(-0.55, -0.95);
+    c.lineTo(-0.3, -0.95);
+    c.lineTo(-0.3, -0.75);
+    c.lineTo(-0.1, -0.75);
+    c.lineTo(-0.1, -0.95);
+    c.lineTo(0.1, -0.95);
+    c.lineTo(0.1, -0.75);
+    c.lineTo(0.3, -0.75);
+    c.lineTo(0.3, -0.95);
+    c.lineTo(0.55, -0.95);
+    c.lineTo(0.5, 0.35);
+    c.lineTo(0.75, 0.95);
+    c.lineTo(0.5, 0.95);
+    c.lineTo(0.3, 0.5);
+    c.lineTo(-0.3, 0.5);
+    c.lineTo(-0.5, 0.95);
+    c.lineTo(-0.75, 0.95);
+    c.lineTo(-0.5, 0.35);
+    c.closePath();
+  },
+  dome: (c) => {
+    c.moveTo(-0.95, 0.6);
+    c.arc(0, 0.6, 0.95, Math.PI, 0);
+    c.lineTo(0.95, 0.8);
+    c.lineTo(-0.95, 0.8);
+    c.closePath();
+  },
 };
 
 const TINT: Record<string, string> = {
@@ -599,6 +642,9 @@ const TINT: Record<string, string> = {
   swarm: "#f0c030",
   erratum: "#f0e0b0",
   manuscript: "#ffd060",
+  fort: "#d8f4ff",
+  lookout: "#a8e0ff",
+  dome: "#c8f0ff",
 };
 // Brindle's kinds reuse the closest engravings until the painted glyph strip loads.
 STROKES.harpoon = STROKES.shoot;

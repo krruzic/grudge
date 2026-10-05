@@ -27,6 +27,8 @@ const PLACEABLE: Record<string, number> = {
   swarm: 0,
   erratum: 0,
   bilge: 0,
+  fort: 8,
+  dome: 0,
 };
 
 export function placeRange(def: AbilityDef): number | undefined {

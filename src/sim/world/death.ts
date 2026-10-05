@@ -149,7 +149,9 @@ function killStructure(w: World, target: Entity, killer: TeamTally, killerTeam: 
     const m = w.mods.find((k) => k.id === st.works);
     if (m && m.until > w.time) {
       m.until = w.time;
-      w.emit({ type: "notice", team: target.team, text: "RAMP DESTROYED" });
+      const text =
+        m.style === "ice" ? "SNOW FORT BROKEN" : m.style === "lookout" ? "LOOKOUT TOPPLED" : "RAMP DESTROYED";
+      w.emit({ type: "notice", team: target.team, text });
     }
     return;
   }

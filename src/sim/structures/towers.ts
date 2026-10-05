@@ -183,7 +183,7 @@ function damageTower(w: World, e: Entity, f: Firing): void {
     st.damage * boost.damage * vs,
     siege ? 30 : (def.projectile?.speed ?? 20),
     false,
-    siege ? "ballista" : "bolt",
+    siege ? (st.shotStyle ?? "ballista") : "bolt",
     siege ? 1.2 : 3.2,
     true,
     undefined,

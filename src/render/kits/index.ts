@@ -12,4 +12,5 @@ import "./friar";
 import "./harpooner";
 import "./scribe";
 import "./wreckwitch";
+import "./architect";
 import "../fx/costumeSkins";

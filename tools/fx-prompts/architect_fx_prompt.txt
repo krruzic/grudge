@@ -1,0 +1,18 @@
+Images 1-3 are finished visual-effect sprite sheets from our fantasy action game (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Paint a NEW sheet of 16 effect sprites for PROFESSOR HOOT, a round owl-folk snow architect who raises snow forts and ice towers, throws a giant carpenter's square like a boomerang and freezes ice domes over the battlefield, in EXACTLY the same hand-painted style, brushwork, lighting, saturation and sprite scale as images 1-3. Same 4x4 grid, each sprite centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a big six-pointed snowflake, white with pale cyan edges
+2. a single sharp clear-cyan ice crystal shard
+3. a soft round puff of white powder snow, lumpy
+4. a splash crown of white snow spray with ice glints, side view
+5. a thin icy frost shockwave ring seen face-on, pale cyan and white, broken like a brush circle
+6. a long clear-cyan icicle lying horizontally, pointing right, sharp tip
+7. a translucent pale-cyan ice block cube with frosted edges
+8. a smudgy puff of white chalk dust with a few chalk flecks
+9. a curled scrap of blueprint paper with white drafting lines on blue
+10. a thick white-and-cyan crescent swoosh arc with small ruler tick marks along its outer edge, like a spinning carpenter's square trail
+11. a bright cyan-white frost impact starburst with sharp crystal spikes
+12. a cyan four-pointed ice twinkle sparkle with a white centre
+13. a chunky packed-snow brick lump
+14. a single tawny-brown owl feather with cream bars
+15. a glowing pale-blue drafting circle seen from directly above: a compass circle with ruler ticks, angle marks and small geometric construction lines
+16. a pattern of cracked frosty ice seen from directly above, white cracks on pale blue, round
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

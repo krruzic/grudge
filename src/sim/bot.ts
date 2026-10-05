@@ -76,6 +76,8 @@ export class Bot {
   chargeAimId = 0;
   /** Only let go while the aim target is within this distance (keeps holding at full power until in reach). */
   chargeRange = Infinity;
+  /** Charge fraction at which to let go (1 = full power; think() resets it each time). */
+  chargeAt = 1;
   holdSlot: "a" | "b" | null = null;
   /** Last enemy swing the per-tick reflex rolled for (bot/tactics.ts). */
   reflexKey = 0;
@@ -285,7 +287,7 @@ export class Bot {
     // Holding a button means it can't be tapped meanwhile.
     if (slot === "a") this.wantAttack = false;
     else this.wantB = false;
-    if (want === slot && !(k >= 1 && ready)) {
+    if (want === slot && !(k >= this.chargeAt && ready)) {
       if (held > CHARGE_TAP) cmd.charging = slot;
       return;
     }

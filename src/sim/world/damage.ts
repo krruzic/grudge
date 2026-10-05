@@ -7,6 +7,7 @@ import type { Entity } from "../types.ts";
 import { abilities, addShield, allFx, mark as markOne, xpForDamage } from "../talents.ts";
 import { pipMarkMul, vantageMul } from "../hero/marksman.ts";
 import { tideArmor, tideLeech, tideMul } from "../hero/wreckwitch.ts";
+import { chillMul, domeBlocks, fortCoverMul, highGroundMul } from "../hero/architect.ts";
 
 export interface DamageOpts {
   knockback?: number;
@@ -68,6 +69,11 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
     w.emit({ type: "miss", ...ev });
     return false;
   }
+  // Avalanche Dome: nothing shoots across its rim (no rng used, so other matches are unaffected).
+  if (!opts.tick && domeBlocks(w, src, target)) {
+    w.emit({ type: "miss", ...ev });
+    return false;
+  }
   if (tryParry(w, src, target, ev)) return false;
   noteCombat(w, src, target);
   if (rollMiss(w, src, target, opts)) {
@@ -79,6 +85,8 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
   amount *= synergyMul(w, src, target, opts);
   if (src?.hero && !opts.tick) amount *= vantageMul(w, src, target);
   if (src) amount *= pipMarkMul(w, src, target);
+  if (src?.hero && !opts.tick) amount *= highGroundMul(w, src, target) * chillMul(w, src, target);
+  if (w.mods.length) amount *= fortCoverMul(w, src, target);
   let crit: boolean;
   [amount, crit] = rollVariance(w, src, amount, opts);
   amount = defenderScaling(w, src, target, amount);

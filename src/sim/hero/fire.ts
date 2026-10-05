@@ -1,6 +1,6 @@
 // Ability "fire" dispatch: called by the hero controller (hero/update.ts) on the tick an action reaches its hitAt.
 // Emits the "act fire" event, computes the hero's damage multiplier once, and routes on the action kind to the
-// per-kind implementation in hero/kinds/* (or a per-hero module such as marksman.ts / friar.ts).
+// per-kind implementation in hero/kinds/* (or a per-hero module such as marksman.ts / friar.ts / architect.ts).
 import type { World } from "../world.ts";
 import type { Entity, HeroAction } from "../types.ts";
 import { abilities, afterMelee, meleeMods } from "../talents.ts";
@@ -11,6 +11,7 @@ import { brewfest, throwKeg } from "./friar.ts";
 import { fireHarpoon, riptide, tongueLash } from "./harpooner.ts";
 import { fireErratum, fireInk, fireManuscript, fireSwarm } from "./scribe.ts";
 import { fireBilge, fireDavyGrip, fireDredge, tideOnHit } from "./wreckwitch.ts";
+import { chillTargets, fireDome, fireFort, fireLookout, throwSquare } from "./architect.ts";
 import { fireLeap, fireQuake, fireSlam } from "./kinds/melee.ts";
 import { fireBanner, fireRally, fireWarcry } from "./kinds/command.ts";
 import { fireBlink, fireHex, fireReach, fireRootcage, fireShoot, fireStealth, fireSummon } from "./kinds/spells.ts";
@@ -73,6 +74,10 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
   }
   if (a.kind === "throw") {
     fireBombThrow(w, e, a);
+    return;
+  }
+  if (a.kind === "squarethrow") {
+    throwSquare(w, e, a);
     return;
   }
   if (a.name === "dodge" || a.name === "hit") return;
@@ -138,6 +143,13 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return fireBilge(w, e, a, def, mul);
     case "davygrip":
       return fireDavyGrip(w, e, a, def, mul);
+    // architect
+    case "fort":
+      return fireFort(w, e, a, def, mul);
+    case "lookout":
+      return fireLookout(w, e, a, def);
+    case "dome":
+      return fireDome(w, e, a, def, mul);
     // spells / mobility
     case "shoot":
       return fireShoot(w, e, a, def, mul);
@@ -195,6 +207,7 @@ function fireComboHit(w: World, e: Entity, a: HeroAction, mul: number): void {
   const targets = arcHit(w, e, a.dirX, a.dirZ, range, arc, dmg, knockback, big);
   afterMelee(w, e, targets, dmg * targets.length, fin, a.dirX, a.dirZ, hit.range, !!a.jab);
   if (ab.a.fx?.tideOnHit) tideOnHit(w, e, targets);
+  if (ab.a.chillSlow) chillTargets(w, e, targets);
 }
 
 /** Engineer standing on his own works: A throws a returning wrench (see hero/boomerangs.ts). */
