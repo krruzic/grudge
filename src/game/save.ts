@@ -14,6 +14,8 @@ export interface Rules {
   mercy: number;
   partners: number;
   pausing: number;
+  /** Team deathmatch: kills to win. */
+  killLimit: number;
 }
 
 export interface Options {
@@ -46,7 +48,7 @@ export interface HeroStats extends Record3 {
   picks: number;
 }
 
-export type MatchMode = "1v1" | "2v2" | "ffa";
+export type MatchMode = "1v1" | "2v2" | "ffa" | "tdm";
 
 export interface MatchLog {
   at: number;
@@ -162,6 +164,13 @@ export const RULE_ROWS: Row<Rules>[] = [
   },
   { key: "mercy", label: "MERCY", values: [1, 0], fmt: onOff, blurb: "THE LOSING HOUSE EARNS AND BUILDS FASTER." },
   {
+    key: "killLimit",
+    label: "DEATHMATCH KILLS",
+    values: [10, 20, 30, 50],
+    fmt: (v) => `${v} KILLS`,
+    blurb: "TEAM DEATHMATCH: THE FIRST HOUSE TO THIS MANY CHAMPION KILLS WINS.",
+  },
+  {
     key: "pausing",
     label: "PAUSING",
     values: [1, 0],
@@ -241,6 +250,7 @@ export const DEFAULT_RULES: Rules = {
   mercy: 1,
   partners: 1,
   pausing: 1,
+  killLimit: 20,
 };
 export const DEFAULT_OPTIONS: Options = {
   music: 7,
@@ -384,6 +394,10 @@ export function applyRules(base: GameData, r: Rules): GameData {
   if (gr)
     d.match.economy.grain = { ...gr, base: gr.base * r.goldRate, perLevel: gr.perLevel.map((v) => v * r.goldRate) };
   d.heroes.baseline.respawnSeconds = r.respawn;
+  if (d.match.tdm) {
+    d.match.tdm.killLimit = r.killLimit || d.match.tdm.killLimit;
+    d.match.tdm.matchSeconds = r.minutes * 60;
+  }
   const troops = r.troops || 1;
   d.units.waves.everySeconds = base.units.waves.everySeconds / troops;
   d.units.waves.rateMul = (base.units.waves.rateMul ?? 1) * troops;

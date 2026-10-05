@@ -687,7 +687,8 @@ export class GameRenderer {
         ev.type === "jumppad" ||
         ev.type === "horn" ||
         ev.type === "geyser" ||
-        ev.type === "serpent"
+        ev.type === "serpent" ||
+        ev.type === "powerup"
       )
         this.hazards.handle(ev);
       if (ev.type === "hit" && ev.id !== undefined && !ev.blocked) {

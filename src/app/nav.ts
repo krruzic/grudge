@@ -2,13 +2,13 @@
 // connected devices for the PLAYERS page.
 import type { PadState } from "../input/gamepads";
 import type { Nav } from "../ui/menus";
-import { MAX_PLAYERS } from "./assets";
+import { MAX_LOCAL } from "./assets";
 
 /** First repeat after holding a direction, then the repeat interval (seconds). */
 const REPEAT_DELAY = 0.38;
 const REPEAT_EVERY = 0.1;
 
-const repeat = Array.from({ length: MAX_PLAYERS }, () => ({ dir: "", t: 0 }));
+const repeat = Array.from({ length: MAX_LOCAL }, () => ({ dir: "", t: 0 }));
 
 /** Dominant 4-way direction of stick + d-pad ("" inside the dead zone). */
 function navDir(p: PadState): string {

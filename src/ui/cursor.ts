@@ -86,7 +86,7 @@ export function cleanHand(v: unknown): HandWire | null {
   ];
 }
 
-const CHIP_COLORS = ["#6a8cff", "#ff5a4a", "#ffd040", "#50d050"];
+const CHIP_COLORS = ["#6a8cff", "#ff5a4a", "#ffd040", "#50d050", "#a060e8", "#ff9a30", "#30c8b8", "#ff5ab4"];
 
 export class MenuCursors {
   readonly cursors: Cursor[];
@@ -152,7 +152,8 @@ export class MenuCursors {
     }
   }
 
-  constructor(n: number) {
+  /** `n` cursors (local pads) and `seats` chips (one per match seat). */
+  constructor(n: number, seats = n) {
     this.cursors = Array.from({ length: n }, (_, i) => ({
       x: 60 + i * 90,
       y: 150,
@@ -161,7 +162,7 @@ export class MenuCursors {
       hover: "",
       pressedAt: -1,
     }));
-    this.chips = Array.from({ length: n }, () => ({ hero: null, x: 0, y: 0 }));
+    this.chips = Array.from({ length: seats }, () => ({ hero: null, x: 0, y: 0 }));
     window.addEventListener("mousemove", (e) => {
       this.mouse.x = (e.clientX / window.innerWidth) * this.scale.w;
       this.mouse.y = (e.clientY / window.innerHeight) * this.scale.h;
@@ -407,7 +408,7 @@ function chip(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number,
   sprite(ctx, im, x - w / 2, y - h / 2 - (lifted ? 1 : 0), CHIP_K);
 }
 
-const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030"];
+const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030", "#8a40e0", "#ff8a10", "#18b8a8", "#ff3aa8"];
 const MID: Record<string, [number, number]> = {
   glove_point: [0.6, 0.6],
   glove_grab: [0.52, 0.55],

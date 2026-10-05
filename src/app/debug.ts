@@ -12,7 +12,7 @@ import { CommandMapper } from "../input/commands";
 import { setPlayerCostumes, setPlayerNames } from "../render/costumes";
 import type { Page } from "../ui/menus";
 import type { App } from "./app";
-import { houses, roster } from "./assets";
+import { houses, roster, seatsFor } from "./assets";
 import { enterSelect } from "./select";
 import { beginAttract, fastForward, resetAttractWorld, setPaused, setupControl, toMenu } from "./match";
 
@@ -68,13 +68,13 @@ function beginBotMatch(app: App): void {
   setPlayerNames((p.get("names") ?? "").split(","));
   if (houses(app.mapIndex) === 4 && p.has("map")) app.mode = "ffa";
   if (!app.fields().includes(app.mapIndex)) app.mapIndex = app.fields()[0] ?? app.mapIndex;
-  app.players = app.mode === "1v1" ? 2 : 4;
+  app.players = seatsFor(app.mode);
   setupControl(app, Array(app.players).fill(false));
   // Missing heroes are random (in seat order); FFA fills every house.
   const first = hs[0] ?? app.randomHero();
   const second = hs[1] ?? hs[0] ?? app.randomHero();
   const extraFfa =
-    app.mode === "ffa"
+    app.mode === "ffa" || app.mode === "tdm"
       ? Array.from({ length: Math.max(0, app.players - Math.max(2, hs.length)) }, () => app.randomHero())
       : [];
   app.show(app.newWorld([first, second, ...hs.slice(2), ...extraFfa], app.players, false, p.has("partners")));

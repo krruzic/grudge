@@ -28,8 +28,20 @@ import { beachDebris } from "../render/beachDebris";
 import { UnitModels } from "../render/unitModels";
 import { loadFont } from "../ui/font";
 
-/** Local seats (controllers / keyboard) and match player slots. */
-export const MAX_PLAYERS = 4;
+/** Match player slots (team deathmatch fields eight champions). */
+export const MAX_PLAYERS = 8;
+/** Local seats: controllers / keyboard (and their menu cursors). */
+export const MAX_LOCAL = 4;
+
+/** Seats a mode plays with. */
+export function seatsFor(mode: string): number {
+  return mode === "1v1" ? 2 : mode === "tdm" ? MAX_PLAYERS : 4;
+}
+
+/** Team of seat i in a mode: FFA gives everyone a house; otherwise even seats vs odd seats. */
+export function teamOfSeat(mode: string, i: number): number {
+  return mode === "ffa" ? i : i % 2;
+}
 
 export const data = {
   talents: talentData,

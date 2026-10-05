@@ -31,7 +31,9 @@ export function drawRelic(
     text =
       r.channel > 0
         ? `ENSHRINING · ${Math.ceil(cfg.enshrineSeconds - r.channel)}`
-        : `${playerLabel(c?.hero?.player ?? 0)} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
+        : w.tdm
+          ? `${playerLabel(c?.hero?.player ?? 0)} CARRIES THE GRUDGE`
+          : `${playerLabel(c?.hero?.player ?? 0)} CARRIES THE GRUDGE · TO A TOWER, OUTPOST OR KEEP`;
   } else if (r.state === "shrined") {
     const s = w.get(r.shrineId);
     const type = s?.structure?.type;

@@ -4,6 +4,7 @@
 // long-lived subsystem: renderer, UI canvas + HUD + screens + menus, input, audio, save data and the net session.
 // Controllers are plain functions over this object (select.ts, lobby.ts, match.ts, states.ts, net.ts, loop.ts)
 // so that state which used to be closure `let`s inside one giant start() lives in exactly one place.
+import { tdmMap } from "../sim/tdm";
 import { padCounts } from "../ui/screens/field";
 import * as THREE from "three";
 import { World } from "../sim/world";
@@ -28,7 +29,9 @@ import {
   heroNames,
   houses,
   maps,
+  MAX_LOCAL,
   MAX_PLAYERS,
+  seatsFor,
   renderConfig,
   roster,
   type Assets,
@@ -121,7 +124,7 @@ export class App {
   readonly screens: Screens;
   readonly menus: Menus;
   readonly audio = new Audio();
-  readonly cursors = new MenuCursors(MAX_PLAYERS);
+  readonly cursors = new MenuCursors(MAX_LOCAL, MAX_PLAYERS);
   readonly net = new NetSession();
   readonly padsEl: HTMLElement;
 
@@ -133,7 +136,8 @@ export class App {
       maps.findIndex((m) => m.id === p.get("map")),
     );
     this.forceJoin = Number(p.get("join") ?? 0);
-    this.mode = p.get("mode") === "2v2" ? "2v2" : p.get("mode") === "ffa" ? "ffa" : "1v1";
+    const pm = p.get("mode");
+    this.mode = pm === "2v2" || pm === "ffa" || pm === "tdm" ? pm : "1v1";
     this.training = p.has("training");
     this.pickIndex =
       p.get("map") === "random" ? this.fields().length : Math.max(0, this.fields().indexOf(this.mapIndex));
@@ -144,7 +148,7 @@ export class App {
     const dbgZoom = p.get("zoom");
     if (dbgZoom) Object.assign(renderConfig, { minViewWidth: Number(dbgZoom), viewMargin: 0 });
 
-    this.pads = new Gamepads(inputData as InputConfig, MAX_PLAYERS);
+    this.pads = new Gamepads(inputData as InputConfig, MAX_LOCAL);
     this.view = new GameRenderer(
       renderConfig,
       this.world,
@@ -220,23 +224,28 @@ export class App {
     return maps.map((_, i) => i).filter((i) => (houses(i) === 4) === (m === "ffa"));
   }
 
+  /** The map data a match on map i plays: team deathmatch strips the bases (sim/tdm.ts tdmMap). */
+  mapData(i: number, mode: MatchMode = this.mode) {
+    return mode === "tdm" ? tdmMap(maps[i].data) : maps[i].data;
+  }
+
   fields(): number[] {
     return this.fieldsFor(this.mode);
   }
 
   /** A person sits at seat i: a connected local pad, a `?join` test seat, or a remote guest. */
   present(i: number): boolean {
-    return this.pads.players[i].connected || i < this.forceJoin || this.net.remoteAt(i) >= 0;
+    return !!this.pads.players[i]?.connected || i < this.forceJoin || this.net.remoteAt(i) >= 0;
   }
 
-  /** Seats 2/3 only exist outside 1v1. */
+  /** Seats in play for the mode: 2 in 1v1, 4 in 2v2 / FFA, all 8 in team deathmatch. */
   slotActive(i: number): boolean {
-    return i < 2 || this.mode !== "1v1";
+    return i < seatsFor(this.mode);
   }
 
   /** Seats 2/3 in 2v2 play the commander (Herald) unless the "partners" rule gives them champions. */
   commanderSlot(i: number): boolean {
-    return i >= 2 && this.mode !== "ffa" && this.save.data.rules.partners === 0;
+    return i >= 2 && this.mode === "2v2" && this.save.data.rules.partners === 0;
   }
 
   /** Index of the cursor holding this seat's chip, or -1. */
@@ -293,9 +302,14 @@ export class App {
    * commander in team modes unless `partners` (or the partners rule with `rules`) is set.
    */
   newWorld(heroes: string[], count = 2, rules = false, partners = false): World {
-    const w = new World(maps[this.mapIndex].data, rules ? applyRules(data, this.save.data.rules) : data, this.seed++);
+    const tdm = this.mode === "tdm" && houses(this.mapIndex) === 2;
+    const w = new World(
+      tdm ? tdmMap(maps[this.mapIndex].data) : maps[this.mapIndex].data,
+      rules ? applyRules(data, this.save.data.rules) : data,
+      this.seed++,
+    );
     const ffa = w.ffa;
-    const champions = (p: number) => ffa || p < 2 || partners || (rules && this.save.data.rules.partners === 1);
+    const champions = (p: number) => ffa || tdm || p < 2 || partners || (rules && this.save.data.rules.partners === 1);
     for (let p = 0; p < count; p++)
       w.spawnHero(champions(p) ? (heroes[p] ?? roster[0]) : commanderType, p, ffa ? p : p % 2);
     return w;

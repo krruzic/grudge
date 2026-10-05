@@ -14,6 +14,7 @@ import { buildSerpent, onSerpent, syncSerpent, type SerpentView } from "./serpen
 import { onMorph, syncMorphs } from "./morphs";
 import { syncMist } from "./mist";
 import { syncFountain } from "./fountain";
+import { onPowerup, syncPowerups, type PowerView } from "./powerups";
 import {
   buildGates,
   buildLockGates,
@@ -46,6 +47,9 @@ export class MapFx {
     acc: number;
   } | null = null;
   ring = 0;
+
+  // Team deathmatch power-ups (powerups.ts), by power-up id.
+  powerViews = new Map<number, PowerView>();
 
   // Fountain (fountain.ts).
   fountain?: FountainDef;
@@ -115,6 +119,7 @@ export class MapFx {
     if (ev.type === "avalanche") onAvalanche(this, ev);
     if (ev.type === "geyser") onGeyser(this, ev);
     if (ev.type === "serpent") onSerpent(this, ev);
+    if (ev.type === "powerup") onPowerup(this, ev);
   }
 
   sync(time: number, dt: number): void {
@@ -131,6 +136,7 @@ export class MapFx {
     syncRuns(this, time, dt);
     syncAvas(this, time, dt);
     syncSerpent(this, dt);
+    syncPowerups(this, time);
   }
 
   dispose(): void {

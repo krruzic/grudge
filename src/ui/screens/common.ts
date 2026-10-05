@@ -9,7 +9,12 @@ export const TEAM_CLOTH = ["#3a58e0", "#d83828", "#d8a818", "#2a9a40"];
 export const TEAM_TEXT = ["#1c3aa8", "#a81c1c", "#8a6000", "#1a6a24"];
 export const TEAM_BRIGHT = ["#4a74ff", "#ff4a3a", "#3ac85a", "#ffcf2a"];
 export const TEAM_FIELD = ["#4a64d8", "#c83a2a", "#c8a020", "#2a9a40"];
-export const MODE_NAME: Record<MatchMode, string> = { "1v1": "1 VS 1", "2v2": "2 VS 2", ffa: "FREE FOR ALL" };
+export const MODE_NAME: Record<MatchMode, string> = {
+  "1v1": "1 VS 1",
+  "2v2": "2 VS 2",
+  ffa: "FREE FOR ALL",
+  tdm: "DEATHMATCH",
+};
 
 /** Outlined text centred horizontally on the screen. */
 export function center(ctx: CanvasRenderingContext2D, W: number, s: string, y: number, color: string, scale = 1): void {

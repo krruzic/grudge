@@ -43,6 +43,31 @@ function shakeOf(at: number | undefined, now: number, amp: number): [number, num
 
 // ── Team head ──
 
+/** Team deathmatch head: the house's kills against the limit, with its gem (no keep, gold or army). */
+function drawTdmHead(
+  ctx: CanvasRenderingContext2D,
+  w: World,
+  t: number,
+  col: string,
+  x0: number,
+  y: number,
+  right: boolean,
+): number {
+  const ax = (dx: number, width = 0) => (right ? x0 + BLOCK_W - dx - width : x0 + dx);
+  const tdm = w.tdm!;
+  keepGem(ctx, ax(8), y + 10, 7.2, col, Math.min(1, tdm.score[t] / tdm.limit), 0, 0);
+  const n = String(tdm.score[t]);
+  const of = `/${tdm.limit}`;
+  const nw = textWidth(n, 1.6, true);
+  const ow = textWidth(of, 0.8, true);
+  const x = right ? ax(20, nw + ow + 2) : ax(20);
+  drawNum(ctx, n, x, y + 1, "#ffffff", 1.6);
+  drawNum(ctx, of, x + nw + 2, y + 9, "#d8d0c0", 0.8);
+  const lab = `${TEAM_NAMES[t] ?? ""} KILLS`;
+  drawText(ctx, lab, right ? ax(24 + nw + ow, textWidth(lab, 0.55)) : ax(24 + nw + ow), y + 11, col, 0.55);
+  return y + 24;
+}
+
 export interface TeamHeadState {
   /** Displayed gold / grain ease toward the real value. */
   shownCoin: number[];
@@ -64,6 +89,7 @@ export function drawTeamHead(
   right: boolean,
   now: number,
 ): number {
+  if (w.tdm) return drawTdmHead(ctx, w, t, col, x0, y00, right);
   const ax = (dx: number, width = 0) => (right ? x0 + BLOCK_W - dx - width : x0 + dx);
   const ts = w.teams[t];
   const core = w.core(t);

@@ -14,7 +14,8 @@ import { applyRules } from "../game/save";
 import { mergeCommands, packCommand, type MatchSpec } from "../net/session";
 import { perf } from "../perf";
 import type { App } from "./app";
-import { commanderType, data, houses, maps, matchData, roster } from "./assets";
+import { commanderType, data, houses, maps, matchData, roster, seatsFor, teamOfSeat } from "./assets";
+import { tdmMap } from "../sim/tdm";
 import { afterHostTick, flushHostFrames, leaveNet, recordHostTick, stepPeer } from "./net";
 
 /** CPU difficulty (level 1-3) -> bot skill. */
@@ -132,13 +133,15 @@ export function toMenu(app: App, why?: string): void {
 function buildWorld(app: App, spec: MatchSpec): World {
   const mi = maps.findIndex((m) => m.id === spec.map);
   app.mapIndex = mi < 0 ? 0 : mi;
-  const w = new World(maps[app.mapIndex].data, applyRules(data, spec.rules), spec.seed);
-  const ffa = spec.mode === "ffa";
+  const mode = spec.mode ?? "1v1";
+  const map = mode === "tdm" ? tdmMap(maps[app.mapIndex].data) : maps[app.mapIndex].data;
+  const w = new World(map, applyRules(data, spec.rules), spec.seed);
+  const all = mode === "ffa" || mode === "tdm";
   for (let p = 0; p < spec.players; p++)
     w.spawnHero(
-      ffa || p < 2 || spec.rules.partners === 1 ? (spec.heroes[p] ?? roster[0]) : commanderType,
+      all || p < 2 || spec.rules.partners === 1 ? (spec.heroes[p] ?? roster[0]) : commanderType,
       p,
-      ffa ? p : p % 2,
+      teamOfSeat(mode, p),
     );
   if (spec.training) w.makeTraining();
   return w;
@@ -160,7 +163,7 @@ export function startNetMatch(app: App, spec: MatchSpec, local: boolean[], remot
     tag: spec.names[i] ?? null,
     tagId: spec.tagIds?.[i] ?? null,
     hero,
-    team: app.mode === "ffa" ? i : i % 2,
+    team: teamOfSeat(app.mode, i),
     cpu: !spec.humans[i],
   }));
   app.recorded = false;
@@ -177,7 +180,7 @@ export function startNetMatch(app: App, spec: MatchSpec, local: boolean[], remot
 
 /** Field select confirmed: fill open seats with CPUs, build the spec, tell guests, start. */
 export function beginMatch(app: App): void {
-  const players = app.mode === "1v1" ? 2 : 4;
+  const players = seatsFor(app.mode);
   app.players = players;
   const seats = app.slots.slice(0, players);
   const humans = seats.map((s) => s.joined && !s.cpu);

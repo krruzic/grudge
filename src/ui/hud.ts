@@ -324,7 +324,7 @@ export class Hud {
       split: this.split,
       laneCount: this.laneCount,
     };
-    drawOrders(ctx, env, W, H, w, t, right, now, o, picker ? group : null, F);
+    if (!w.tdm) drawOrders(ctx, env, W, H, w, t, right, now, o, picker ? group : null, F);
     const crossId = () => `cross${this.crossN++}`;
     if (!picker) {
       // Nobody local commands this team: flash its last order briefly.

@@ -72,7 +72,8 @@ export class HazardViews {
       ev.type === "jumppad" ||
       ev.type === "horn" ||
       ev.type === "geyser" ||
-      ev.type === "serpent"
+      ev.type === "serpent" ||
+      ev.type === "powerup"
     ) {
       this.mapFx.handle(ev);
       return;
