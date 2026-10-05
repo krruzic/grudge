@@ -48,6 +48,9 @@ PROPS = {
     "keg@celadon": {"static": True, "src": "keg_celadon", "height": 0.55, "tex": 512},
     "powderkeg@celadon": {"static": True, "src": "powderkeg_celadon", "height": 0.62, "tex": 512},
     "bigkeg@celadon": {"static": True, "src": "bigkeg_celadon", "height": 2.3, "tex": 1024},
+    # Mother Kelp: the drowned hands of Davy's Grip and the anchor she hurls on Dredge (flies upright, ring up).
+    "drownedhand": {"static": True, "height": 1.7, "tex": 256, "tris": 1400},
+    "wreckanchor": {"static": True, "src": "wreckwitch_anchor", "rot": ("Y", 32), "height": 1.15, "tex": 256, "tris": 1200},
     "ballista@calliope": {"build": "cannon", "src": "ballista_calliope", "length": 2.3, "tex": 512},
     "spike@colossus": {"static": True, "src": "spike_colossus", "size": (1.05, 1.05, 1.6), "center": True, "tex": 512, "tris": 1500},
     "hexidol@shadowplay": {"static": True, "src": "hexidol_shadowplay", "height": 2.1, "tex": 512, "tris": 2400},
@@ -444,6 +447,8 @@ def build_static(name, cfg):
     me = src.data
     me.transform(src.matrix_world)
     src.matrix_world = Matrix.Identity(4)
+    if cfg.get("rot"):
+        me.transform(Matrix.Rotation(math.radians(cfg["rot"][1]), 4, cfg["rot"][0]))
     if cfg.get("keep"):
         keep_side(src, *cfg["keep"])
     if cfg.get("barrel"):
