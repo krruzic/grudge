@@ -85,6 +85,26 @@ export function pickDirective(bot: Bot, w: World, me: Entity): Directive {
   return "follow";
 }
 
+/**
+ * Solo bot orders per soldier type, by the champion's class (the base directive from pickDirective covers threats,
+ * leads and big armies; this shapes the ordinary game around how the champion fights):
+ *   marksman / caster - everyone follows: the grunts and brutes screen in front of a ranged champion (units.ts)
+ *   assassin          - grunts and brutes push as a second front from 4 soldiers while the champion roams; archers
+ *                       follow and cover them
+ *   builder           - archers defend the towers he builds; grunts and brutes follow
+ *   tank / bruiser / support - one body: everyone follows until the army is big enough to push
+ */
+export function classDirectives(bot: Bot, w: World, me: Entity): Record<"grunt" | "ranged" | "heavy", Directive> {
+  const base = pickDirective(bot, w, me);
+  const all = { grunt: base, ranged: base, heavy: base };
+  if (base !== "follow") return all;
+  const cls = w.heroDef(me.hero!.type).class;
+  const t = w.teams[me.team];
+  if (cls === "assassin" && t.unitCount >= 4) return { grunt: "push", heavy: "push", ranged: "follow" };
+  if (cls === "builder" && w.time > 60) return { grunt: "follow", heavy: "follow", ranged: "defend" };
+  return all;
+}
+
 /** Pick attack vs support from where the mate tends to be (home -> we attack, field -> we support). */
 export function updateRole(bot: Bot, w: World, me: Entity): void {
   if (bot.mate === null) {

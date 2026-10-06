@@ -3,6 +3,16 @@
 //   2. keeps or re-picks a target (every ~0.4s): the hero's last target when following, else the best-scored
 //      visible enemy within aggro range and leash of the anchor; defenders also chase base intruders
 //   3. attacks if in range with line of sight, else chases the target or walks to the goal (moveToward)
+// Squad tactics on top (all armies, ordered by a human or a CPU):
+//   - target spreading: a target already taken by several of its friends scores worse, so a group splits its
+//     attention over the enemies in reach instead of all piling onto one (towers and champions tolerate more)
+//   - archers kite: an archer with an enemy melee soldier or champion in its face steps back toward its friends
+//     before shooting again
+//   - packs: a marching soldier that has got ahead of its friends (none within 5 m, some behind within 25 m)
+//     waits for them, so a push arrives as packs rather than a trickle
+//   - flanking: in a push of 8+ soldiers with no lane ordered, every third one takes another lane, so the enemy
+//     has to answer two groups
+//   - screen: following a ranged champion, melee soldiers stand a few metres toward the enemy, in front of them
 // The neutral ogre is routed to its own AI (arena/ogre.ts).
 import type { World } from "./world.ts";
 import type { Directive, Entity, Vec2 } from "./types.ts";
@@ -33,6 +43,7 @@ export function updateUnit(w: World, e: Entity): void {
   const vet = w.data.units.veterancy;
   if (u.rank >= vet.names.length && vet.heroicRegen > 0) w.heal(e, e.maxHp * vet.heroicRegen * w.dt);
   if (w.time < e.status.stunUntil) return;
+  const takers = targetCounts(w, e.team);
 
   const { anchor, leash, goal } = directiveGoal(w, e, directive, hero, heroAlive);
   const laneMarch = directive === "push" && !w.ffa && (team.lane ?? -1) >= 0 && u.lanePassed !== team.laneGen;
@@ -80,6 +91,10 @@ export function updateUnit(w: World, e: Entity): void {
           continue;
         const vs = def.vs[w.classOf(o)] ?? 1;
         let score = d - vs * 1.5 + (o.structure ? 2 : 0) + (o.id === u.targetId ? -1 : 0);
+        // Target spreading: friends already on it (beyond what it takes) push this soldier elsewhere.
+        const on = takers.get(o.id) ?? 0;
+        const room = o.structure ? 6 : o.hero ? 4 : 2;
+        if (on > room && o.id !== u.targetId) score += (on - room) * 1.2;
         if (o.hero) {
           // Finish off a hurt champion, and punish one that's hitting our buildings.
           score -= (1 - o.hp / o.maxHp) * 6;
@@ -115,6 +130,18 @@ export function updateUnit(w: World, e: Entity): void {
     u.targetId = target ? target.id : 0;
   }
 
+  // Archers kite: a melee enemy in its face - step back toward friends (or away from it), then shoot again.
+  if (def.projectile && w.time >= (u.waitUntil ?? 0)) {
+    const near = w.enemiesNear(e, 2.2, (o) => (!!o.unit && o.unit.type !== "ranged") || (!!o.hero && !o.hero.dead));
+    if (near.length && w.time < u.nextAttack) {
+      const o = near[0];
+      const ax = e.transform.pos.x - o.transform.pos.x;
+      const az = e.transform.pos.z - o.transform.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      moveToward(w, e, { x: e.transform.pos.x + (ax / al) * 2.5, z: e.transform.pos.z + (az / al) * 2.5 }, 0.3);
+      return;
+    }
+  }
   if (target) {
     const d = w.dist(e, target) - target.radius - e.radius;
     const range = u.range * w.rangeMul(e, target);
@@ -135,6 +162,13 @@ export function updateUnit(w: World, e: Entity): void {
       return;
     }
     moveToward(w, e, { x: target.transform.pos.x, z: target.transform.pos.z }, target.radius + e.radius + range * 0.8);
+    return;
+  }
+  // Ahead of the pack: wait for friends (re-checked each tick; one wait lasts at most 4 s, then it goes anyway).
+  const freshWait = u.waitUntil === undefined || w.time > u.waitUntil + 1;
+  if (goal && directive === "push" && (freshWait || w.time - (u.waitSince ?? 0) < 4) && packAhead(w, e)) {
+    if (freshWait) u.waitSince = w.time;
+    u.waitUntil = w.time + 0.6;
     return;
   }
   if (goal) {
@@ -189,6 +223,31 @@ function directiveGoal(
       const pick = at >= 0 && w.standing(at) ? w.core(at) : undefined;
       const core = pick?.alive ? pick : w.foeCore(e.team, e.transform.pos.x, e.transform.pos.z);
       if (core) goal = { x: core.transform.pos.x, z: core.transform.pos.z };
+      // Flanking: a big push with no lane ordered sends every third soldier down another lane.
+      const lanes = w.terrain.lanes;
+      if (!w.ffa && (team.lane ?? -1) < 0 && lanes.length >= 2 && core && !u.flankPassed) {
+        if (team.unitCount >= 8 && u.slot % 3 === 0) {
+          if (u.flankLane === undefined) {
+            const p = e.transform.pos;
+            // The lane farthest from the one it's nearest to: the far side of the map from the main body.
+            const near = lanes.reduce(
+              (b, l, i) => (Math.hypot(l.x - p.x, l.z - p.z) < Math.hypot(lanes[b].x - p.x, lanes[b].z - p.z) ? i : b),
+              0,
+            );
+            u.flankLane = lanes.reduce(
+              (b, l, i) =>
+                Math.hypot(l.x - lanes[near].x, l.z - lanes[near].z) >
+                Math.hypot(lanes[b].x - lanes[near].x, lanes[b].z - lanes[near].z)
+                  ? i
+                  : b,
+              0,
+            );
+          }
+          const fl = lanes[u.flankLane];
+          if (Math.hypot(fl.x - e.transform.pos.x, fl.z - e.transform.pos.z) < 4) u.flankPassed = true;
+          else goal = { x: fl.x, z: fl.z };
+        }
+      }
       const lane = !w.ffa && (team.lane ?? -1) >= 0 ? w.terrain.lanes[team.lane!] : undefined;
       if (lane && core && u.lanePassed !== team.laneGen) {
         const p = e.transform.pos;
@@ -232,6 +291,16 @@ function directiveGoal(
         const fo = w.formationOffset(e, anchor);
         const off = fo ?? slotOffset(u.slot, 2.2);
         goal = { x: anchor.x + off.x, z: anchor.z + off.z };
+        // Screen: a ranged champion's melee soldiers stand 3.5 m toward the nearest threat, in front of them.
+        if (!fo && u.type !== "ranged" && (w.heroDef(hero!.hero!.type).botRange ?? 1.8) > 3) {
+          const th = nearestThreat(w, hero!);
+          if (th) {
+            const tx = th.x - anchor.x;
+            const tz = th.z - anchor.z;
+            const tl = Math.hypot(tx, tz) || 1;
+            goal = { x: goal.x + (tx / tl) * 3.5, z: goal.z + (tz / tl) * 3.5 };
+          }
+        }
         leash = dirs.followLeash * (fo?.leash ?? 1);
       } else {
         goal = u.pathGoal;
@@ -378,6 +447,63 @@ function attackedBuilding(w: World, team: number): Entity | undefined {
     if (!foe?.alive || foe.team === team) continue;
     at = t;
     best = s;
+  }
+  return best;
+}
+
+/** How many of `team`'s soldiers are on each target this tick (target spreading), built once per tick. */
+const takerCache = new WeakMap<World, { tick: number; by: Map<number, number>[] }>();
+function targetCounts(w: World, team: number): Map<number, number> {
+  let c = takerCache.get(w);
+  if (!c || c.tick !== w.tick) {
+    c = { tick: w.tick, by: [] };
+    takerCache.set(w, c);
+  }
+  let m = c.by[team];
+  if (!m) {
+    m = new Map();
+    for (const o of w.entities)
+      if (o.alive && o.unit && o.team === team && o.unit.targetId)
+        m.set(o.unit.targetId, (m.get(o.unit.targetId) ?? 0) + 1);
+    c.by[team] = m;
+  }
+  return m;
+}
+
+/** A marching soldier ahead of its pack: no friend within 5 m, but some within 25 m nearer home (to wait for). */
+function packAhead(w: World, e: Entity): boolean {
+  const own = w.core(e.team);
+  if (!own) return false;
+  const p = e.transform.pos;
+  const myHome = Math.hypot(own.transform.pos.x - p.x, own.transform.pos.z - p.z);
+  let close = 0;
+  let behind = 0;
+  for (const o of w.entities) {
+    if (o === e || !o.alive || !o.unit || o.team !== e.team || o.unit.guard) continue;
+    if (w.teams[e.team].directives[o.unit.type] !== "push") continue;
+    const d = Math.hypot(o.transform.pos.x - p.x, o.transform.pos.z - p.z);
+    if (d < 5) close++;
+    else if (
+      d < 25 &&
+      Math.hypot(own.transform.pos.x - o.transform.pos.x, own.transform.pos.z - o.transform.pos.z) < myHome - 3
+    )
+      behind++;
+  }
+  return close === 0 && behind >= 2;
+}
+
+/** The nearest enemy champion or soldier within 15 m of `h` (where a screen should face). */
+function nearestThreat(w: World, h: Entity): Vec2 | null {
+  let best: Vec2 | null = null;
+  let bd = 15;
+  for (const o of w.entities) {
+    if (!o.alive || o.team === h.team || o.team < 0 || o.structure || (o.hero && o.hero.dead)) continue;
+    if (!o.unit && !o.hero) continue;
+    const d = w.dist(h, o);
+    if (d < bd) {
+      bd = d;
+      best = { x: o.transform.pos.x, z: o.transform.pos.z };
+    }
   }
   return best;
 }

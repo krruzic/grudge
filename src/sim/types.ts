@@ -344,6 +344,12 @@ export interface UnitState {
   lost?: boolean;
   lanePassed?: number;
   from?: number;
+  /** Squad tactics (units.ts): a flanker of a big push takes its own lane; passed it at this lane generation. */
+  flankLane?: number;
+  flankPassed?: boolean;
+  /** Squad tactics: holding for the pack to catch up until then. */
+  waitUntil?: number;
+  waitSince?: number;
 }
 
 export interface StructureState {

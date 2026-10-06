@@ -9,7 +9,7 @@ import type { World } from "./world.ts";
 import type { Command, Directive, Entity, Pad, StructureType, Vec2 } from "./types.ts";
 import { learned as learnedOf, options } from "./talents.ts";
 import { meleeReflex, think } from "./bot/think.ts";
-import { pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
+import { classDirectives, pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
 import { duelistReflex } from "./bot/tactics.ts";
@@ -35,6 +35,8 @@ export class Bot {
   // Decision timers & memory
   thinkAt = 0;
   directiveAt = 0;
+  /** Per-type orders still to send (one per tick). */
+  orderQueue: { type: "grunt" | "ranged" | "heavy"; dir: Directive }[] = [];
   lastDirective: Directive | null = null;
   healing = false;
   /** Pressing a lead into the enemy base (bot/think.ts siege), with hysteresis. */
@@ -188,17 +190,23 @@ export class Bot {
       const cur = w.teams[me.team].directives.grunt;
       if (this.lastDirective && cur !== this.lastDirective) this.humanOrderAt = w.time;
       this.lastDirective = cur;
-      const d =
-        this.role === "solo"
-          ? pickDirective(this, w, me)
-          : this.role === "support" && w.time - this.humanOrderAt > 90
-            ? supportDirective(this, w, me)
-            : cur;
-      if (d !== this.lastDirective) {
-        cmd.directive = { type: "all", dir: d };
-        this.lastDirective = d;
+      if (this.role === "solo") {
+        // Per soldier type by class (strategy.ts classDirectives); one order per tick, the rest queue.
+        const want = classDirectives(this, w, me);
+        const dirs = w.teams[me.team].directives;
+        this.orderQueue = (["grunt", "ranged", "heavy"] as const)
+          .filter((k) => dirs[k] !== want[k])
+          .map((k) => ({ type: k, dir: want[k] }));
+        this.lastDirective = want.grunt;
+      } else {
+        const d = this.role === "support" && w.time - this.humanOrderAt > 90 ? supportDirective(this, w, me) : cur;
+        if (d !== this.lastDirective) {
+          cmd.directive = { type: "all", dir: d };
+          this.lastDirective = d;
+        }
       }
     }
+    if (!cmd.directive && this.orderQueue.length) cmd.directive = this.orderQueue.shift()!;
     const horn = w.mapEvents.horns.find(
       (hn) =>
         w.time >= hn.readyAt &&
