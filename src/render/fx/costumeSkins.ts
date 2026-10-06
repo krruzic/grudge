@@ -74,6 +74,8 @@ const TINTS: Record<string, Record<number, number>> = {
   tideadmiral: { 0xb8f4ff: 0xffe08a },
   bogtoad: { 0xb8f4ff: 0xc8d090 },
   deepglow: { 0xb8f4ff: 0xc890ff },
+  // The Lily King: his sea-water flashes become warm stained-glass gold.
+  rosewindow: { 0xb8f4ff: 0xffd070 },
   // Hollin: blue-black ink and gold runes become crayon-bright, antique gold and green, or neon cyan; the
   // Beekeeper's honey.
   beekeeper: { 0xa0b0ff: 0xffd070, 0x303868: 0x8a5a10, 0xc8d0ff: 0xffe0a0 },
@@ -216,6 +218,7 @@ const TRAILS: Record<string, number> = {
   tideadmiral: 0xffd060,
   bogtoad: 0xa8b060,
   deepglow: 0xb070ff,
+  rosewindow: 0xffc850,
   beekeeper: 0xffc840,
   childrens: 0xff7a9a,
   mystery: 0xc8a050,

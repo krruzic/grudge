@@ -1,0 +1,18 @@
+Image 1 is the finished visual-effect sprite sheet of our fantasy action game hero BRINDLE (4 columns x 4 rows, each sprite centred in its own cell on a flat magenta background). Image 2 shows his alternate model THE STAINED-GLASS LILY KING: a frog made of leaded stained glass (deep bottle green, amber-gold and cobalt blue panes held by black lead lines, a warm inner glow), with a rose-window chest, a gothic amber crown and a red bell-pull rope. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme: his sea water becomes holy STAINED-GLASS LIGHT and shattered coloured glass. Keep the same 4x4 grid and each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, lighting and saturation as image 1. Left to right, top to bottom:
+1. a single faceted droplet of glowing amber stained glass with a black lead rim and a white highlight
+2. a crown splash of shattered stained glass shards (green, amber, cobalt) flying up, side view
+3. a thin round ring of golden light with tiny glass glints, seen from directly above
+4. a soft fluffy blob of warm golden light motes
+5. a single small round cobalt glass bead with a white highlight
+6. a fan-shaped burst of small coloured glass shards and light rays flying outward
+7. a round pool of coloured light seen from directly above, like light falling through a rose window onto stone: petal-shaped panes of green, amber and cobalt light with black lead lines
+8. a swirling ring of coloured glass shards and golden light streaks seen from directly above, a ring with an empty centre
+9. a curling wave crest made of coloured glass panes with a golden glowing edge, side view
+10. a horizontal length of twisted red velvet bell-pull rope with gold thread, spanning the whole cell width
+11. a bright white and gold ricochet spark star with sharp rays
+12. a small brass chapel bell
+13. a curling strand of green leaded glass ivy leaves
+14. a bright white four-pointed glint star with a warm amber centre
+15. a glossy pink frog tongue tip, round and sticky, with a little shine
+16. an impact burst of shattered stained glass shards and golden light radiating out
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

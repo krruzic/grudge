@@ -24,7 +24,7 @@ const ROWS = ["first", "second", "third", "fourth"];
 const prompt = (hero, cid, rows) =>
   `The first image is a texture-reference sheet: ${rows.length} prop${rows.length > 1 ? "s" : ""}, one per row, each seen from four sides ` +
   `(${rows.map(([, , d], i) => `${ROWS[i]} row: ${d}`).join("; ")}). The second image shows their owner wearing the ` +
-  `"${cid.toUpperCase()}" costume, front and back. Repaint every prop so it clearly belongs to that costume - the same ` +
+  `"${cid.toUpperCase()}" costume${cid === "rosewindow" ? " (a frog made of leaded stained glass: deep green, amber and cobalt panes held by black lead lines, with a warm inner glow, brass fittings and red bell-pull rope)" : ", front and back"}. Repaint every prop so it clearly belongs to that costume - the same ` +
   "colour scheme, materials, metals, trims and motifs as the costume (wood, metal, cloth, stone, ice or bone recoloured " +
   "and re-detailed to match its theme) - in the same hand-painted game texture style. KEEP EVERY SHAPE, EDGE, POSITION AND " +
   `SILHOUETTE EXACTLY THE SAME in all ${rows.length * 4} views; only change colours, materials and painted surface detail, ` +

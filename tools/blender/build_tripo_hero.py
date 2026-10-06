@@ -763,7 +763,9 @@ def build(key, preview=None):
         charkit.bake_ao([gobj], samples=16)
         objs.append(gobj)
     for f, srcf in cfg.get("attach", []):
-        objs.append(fn(cfg, f)(name, arm, os.path.join(ROOT, "assets", "source", srcf)))
+        o = fn(cfg, f)(name, arm, os.path.join(ROOT, "assets", "source", srcf))
+        if o is not None:
+            objs.append(o)
     # After the attachments: several heroes' attach step re-skins the body from the source mesh.
     orient_palms(src, arm, cfg)
     snap_grips(src, objs[2:], cfg)
