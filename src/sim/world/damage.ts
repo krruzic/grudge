@@ -420,6 +420,22 @@ function matchupArmour(w: World, src: Entity | null, target: Entity, amount: num
 
 /** Side effects of hp actually lost: leech, jump cancel, xp, super meter, last-target memory, core damage stat. */
 function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number): void {
+  // Wounded: a ranged champion's hit (botRange > 3: Wren, Remnil, Hollin, Brindle) cuts a champion's healing for a
+  // few seconds - the shooters' answer to Maddock and Bramble out-healing their damage.
+  if (src?.hero && target.hero && amount > 0 && (w.heroDef(src.hero.type).botRange ?? 1.8) > 3) {
+    const was = target.status.woundUntil ?? -1;
+    target.status.woundUntil = w.time + (w.data.match.wound?.seconds ?? 2.5);
+    if (was < w.time)
+      w.emit({
+        type: "heroFx",
+        name: "wounded",
+        src: target.id,
+        team: target.team,
+        x: target.transform.pos.x,
+        y: target.transform.y,
+        z: target.transform.pos.z,
+      });
+  }
   // Bloodthirst (Grim): a share of what he deals to champions heals him, wherever he is.
   if (src?.hero && src.alive && target.hero) {
     const lh = w.heroDef(src.hero.type).hooks.heroLeech;
@@ -550,5 +566,8 @@ export function outnumbered(w: World, e: Entity): boolean {
 export function heal(w: World, target: Entity, amount: number): void {
   if (!target.alive || target.hp >= target.maxHp) return;
   if (target.status.noHealUntil !== undefined && w.time < target.status.noHealUntil) return;
+  // Wounded (hit by a ranged champion lately): healing is cut.
+  if (target.status.woundUntil !== undefined && w.time < target.status.woundUntil)
+    amount *= w.data.match.wound?.healMul ?? 0.6;
   target.hp = Math.min(target.maxHp, target.hp + amount);
 }

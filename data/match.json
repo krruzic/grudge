@@ -328,5 +328,9 @@
     "slowSeconds": 2,
     "unitKnockback": 9,
     "outside": 4
+  },
+  "wound": {
+    "healMul": 0.6,
+    "seconds": 2.5
   }
 }

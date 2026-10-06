@@ -110,6 +110,12 @@ export function handleEvent(cfx: CombatFx, ev: SimEvent): void {
       cfx.burst(ev.x, ev.y + 0.4, ev.z, starTex, 0xbfe8ff, 8, 0.4, 0.5, ev.radius * 0.8, true, 0.6);
       break;
     case "heroFx":
+      // Wounded (healing cut): a dark red flash and a few falling red specks over the hit champion.
+      if (ev.name === "wounded") {
+        cfx.flash(ev.x, ev.y + 1.6, ev.z, glowTex, 0xb01818, 1.4, 0.3);
+        cfx.burst(ev.x, ev.y + 1.8, ev.z, glowTex, 0xd02020, 5, 0.18, 0.5, 0.8, false, 0.6);
+        break;
+      }
       if (ev.name === "healNum" && ev.radius) {
         cfx.number(ev.x, ev.y, ev.z, ev.radius, "#7dff7a", true);
         emit(cfx, {

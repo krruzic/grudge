@@ -557,6 +557,8 @@ export interface MatchData {
   matchSeconds: number;
   suddenDeathSeconds: number;
   /** rampFrom: seconds after which these phase in toward full by the end of regulation (World.surge). */
+  /** Wounded: a ranged champion's hit cuts healing (world/damage.ts). */
+  wound?: { healMul: number; seconds: number };
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number; rampFrom?: number };
   lockdown?: { seconds: number; warnSeconds?: number };
   /** Team deathmatch rules (sim/tdm.ts). */

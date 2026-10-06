@@ -871,7 +871,7 @@
         "plentyUnit": 0.012,
         "lowHealMul": 1.25,
         "lowHealBelow": 0.5,
-        "selfRegen": 0.006
+        "selfRegen": 0.003
       },
       "abilities": {
         "a": {
@@ -997,8 +997,7 @@
         "squareDamage": 38,
         "squareRange": 9,
         "squareCooldown": 2.2,
-        "heroDamageMul": 1.12,
-        "watchMul": 1.2,
+        "watchMul": 1.1,
         "watchRadius": 9
       },
       "abilities": {

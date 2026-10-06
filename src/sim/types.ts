@@ -105,6 +105,8 @@ export interface Status {
   swarmOwner?: number;
   /** Wreck Witch Bilge: no healing of any kind until this time. */
   noHealUntil?: number;
+  /** Wounded by a ranged champion: healing x match.wound.healMul until then. */
+  woundUntil?: number;
   /** Stuck in Bramble's honey (rider pool): no dodging until then. */
   stickyUntil?: number;
 }
