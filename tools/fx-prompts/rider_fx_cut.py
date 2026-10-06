@@ -45,7 +45,9 @@ def fit(a, al, rect, m=3):
 
 
 raw, name = sys.argv[1], sys.argv[2]
-a, al = keyed(raw, "@" in name)
+# Costumes with no purple in them get the full magenta-spill strip (edge-only leaves pink halos round warm glows).
+NO_PURPLE = {"rider@tinker"}
+a, al = keyed(raw, "@" in name and name not in NO_PURPLE)
 H, W = al.shape
 out = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
 for i in range(16):

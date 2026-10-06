@@ -12,7 +12,11 @@ a = np.asarray(Image.open(raw).convert("RGB").resize((2048, 2048), Image.LANCZOS
 bg = np.median(np.concatenate([a[:8, :8].reshape(-1, 3), a[-8:, -8:].reshape(-1, 3), a[:8, -8:].reshape(-1, 3)]), 0)
 d = np.sqrt(((a - bg) ** 2).sum(-1))
 al = np.clip((d - 26) / 80, 0, 1)
-spill = np.clip(np.minimum(a[..., 0], a[..., 2]) - a[..., 1] - 30, 0, None) * (1 - al) ** 0.5
+# Costumes with no purple get the full magenta-spill strip (edge-only leaves pink halos on warm glows and sheens).
+if suf in ("@tinker",):
+    spill = np.clip(np.minimum(a[..., 0], a[..., 2]) - a[..., 1], 0, None)
+else:
+    spill = np.clip(np.minimum(a[..., 0], a[..., 2]) - a[..., 1] - 30, 0, None) * (1 - al) ** 0.5
 a[..., 0] -= spill
 a[..., 2] -= spill
 a = np.clip(a, 0, 255)
