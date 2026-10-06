@@ -84,8 +84,8 @@ export class Screens {
   mode: MatchMode = "1v1";
   /** 2v2 "partners" rule: seats 2/3 pick champions instead of playing the commander. */
   private heroPartners = false;
-  /** Where each hero's card wants placed chips (filled while drawing the roster row). */
-  readonly shieldAt = new Map<string, { x: number; y: number }>();
+  /** Each hero's roster tile (centre and size), where its placed chips go (filled while drawing the roster). */
+  readonly shieldAt = new Map<string, { x: number; y: number; w: number; h: number }>();
   readyBanner = false;
   /** Everyone else is ready but seats are still OPEN. */
   openHint = false;
@@ -235,18 +235,34 @@ export class Screens {
     drawText(ctx, lab, x + r + 6, y - 3.5, "#ffd0b0", 0.7);
   }
 
-  /** Placed chips sit on their hero's card: odd seats right of centre, seats 2/3 a row lower. */
+  /**
+   * Placed chips sit inside their hero's tile: one in the middle, several spread across it in seat order (two rows
+   * past four). Offsetting by seat number alone pushed seats 4-7 below the tile, onto the row or cards beneath.
+   */
   private drawChips(cursors: MenuCursors, ctx: CanvasRenderingContext2D): void {
     const labels = this.slots.map((sl, i) =>
       !this.championSeat(i) || (!this.twoVtwo && i >= 2) ? "" : sl.cpu ? "CPU" : `${i + 1}`,
     );
+    const onTile = new Map<string, number[]>();
     this.slots.forEach((_, i) => {
-      const c = cursors.chips[i];
-      const p = c.hero ? this.shieldAt.get(c.hero) : undefined;
-      if (!p) return;
-      c.x = p.x + (i % 2 === 0 ? -9 : 9);
-      c.y = p.y + Math.floor(i / 2) * (this.mode === "tdm" ? 6 : 9);
+      const hero = cursors.chips[i].hero;
+      if (hero && labels[i]) onTile.set(hero, [...(onTile.get(hero) ?? []), i]);
     });
+    for (const [hero, seats] of onTile) {
+      const p = this.shieldAt.get(hero);
+      if (!p) continue;
+      const rows = seats.length > 4 ? 2 : 1;
+      const per = Math.ceil(seats.length / rows);
+      seats.forEach((i, k) => {
+        const row = Math.floor(k / per);
+        const inRow = Math.min(per, seats.length - row * per);
+        const col = k - row * per;
+        const dx = inRow > 1 ? Math.min(12, (p.w - 14) / (inRow - 1)) : 0;
+        const c = cursors.chips[i];
+        c.x = p.x + (col - (inRow - 1) / 2) * dx;
+        c.y = p.y + (rows > 1 ? (row - 0.5) * Math.min(12, p.h * 0.36) : 0);
+      });
+    }
     cursors.drawChips(
       ctx,
       labels,

@@ -133,8 +133,8 @@ function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): nu
     const y = top + row * (th + gap);
     const hot = hovered(s, `hero:${type}`);
     s.hit(`hero:${type}`, x, y, tw, th);
-    // Chips placed on this hero sit around this point (see Screens.draw).
-    s.shieldAt.set(type, { x: x + tw / 2, y: y + th * 0.62 });
+    // Chips placed on this hero are laid out inside this tile (Screens.drawChips).
+    s.shieldAt.set(type, { x: x + tw / 2, y: y + th / 2, w: tw, h: th });
     const sealed = s.slots.flatMap((sl, i) =>
       sl?.ready && !sl.open && sl.hero === type && (i < 2 || (s.twoVtwo && s.championSeat(i)))
         ? [chipColor(i, sl.cpu)]
