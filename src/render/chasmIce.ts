@@ -119,8 +119,8 @@ export function chasmIce(t: Terrain): THREE.Group | null {
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
-  // One candidate per jittered 2.1 m grid cell keeps clusters apart.
-  const STEP = 2.1;
+  // One candidate per jittered 1.3 m grid cell: crowded, but never two in one spot.
+  const STEP = 1.3;
   for (let gz = 0; gz * STEP < D; gz++) {
     for (let gx = 0; gx * STEP < W; gx++) {
       const rnd = seeded((gx * 73856093) ^ (gz * 19349663) ^ 0x5bd1e995);
@@ -133,7 +133,7 @@ export function chasmIce(t: Terrain): THREE.Group | null {
       if (!(g < below)) continue;
       const pit = !Number.isFinite(t.heightAt(x, z));
       if (pit && t.styles[t.index(cx, cz)] !== "rim") continue;
-      if (rnd() > (pit ? 0.6 : 0.9)) continue;
+      if (rnd() > (pit ? 0.85 : 0.97)) continue;
       // Lean out from the wall: tilt part way toward the downhill direction.
       const gxp = t.groundHeight(x + 0.8, z) - t.groundHeight(x - 0.8, z);
       const gzp = t.groundHeight(x, z + 0.8) - t.groundHeight(x, z - 0.8);
