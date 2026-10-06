@@ -557,6 +557,56 @@ def attach_wrench(name, arm, src_path):
     return w
 
 
+def snap_grips(src, held, cfg):
+    """Seat each long held weapon (staff, sword, hammer, bow: principal axis >= 2.5x its next) in the palm: shift
+    it sideways - perpendicular to its own long axis, so where along its length it's held is kept - until that axis
+    passes through the centre of the hand (the mean of the hand-weighted body verts). Short or bulky props (a
+    tankard held by its handle, a square) are left as placed. CFG["snap"] = False turns it off; CFG["snap_max"]
+    caps the shift (m)."""
+    if cfg.get("snap") is False:
+        return
+    gi = {g.name: g.index for g in src.vertex_groups}
+    for o in held:
+        if o.type != "MESH":
+            continue
+        # Per hand the prop is bound to (Grim's knife pair is one mesh, a knife per hand): the verts rigid on
+        # that hand bone. Props with other bones too (a bow's string) are left alone.
+        used = {}
+        for i, v in enumerate(o.data.vertices):
+            for e in v.groups:
+                if e.weight > 0.5:
+                    used.setdefault(e.group, []).append(i)
+        names = {o.vertex_groups[k].name: vs for k, vs in used.items()}
+        if any(n not in ("hand_R", "hand_L") for n in names):
+            print("SNAPSKIP", o.name, "groups", list(names))
+            continue
+        for bone, idx in names.items():
+            side = bone[-1]
+            if bone not in gi:
+                continue
+            g = gi[bone]
+            hv = [v.co for v in src.data.vertices if any(e.group == g and e.weight > 0.6 for e in v.groups)]
+            if len(hv) < 20:
+                continue
+            palm = np.array([sum(c[k] for c in hv) / len(hv) for k in range(3)])
+            co = np.array([o.data.vertices[i].co[:] for i in idx])
+            c = co.mean(0)
+            _, sv, vt = np.linalg.svd(co - c, full_matrices=False)
+            if sv[0] < 2.2 * sv[1]:
+                print("SNAPSKIP", o.name, bone, "not long", round(sv[0] / sv[1], 2))
+                continue
+            ax = vt[0]
+            rel = palm - c
+            off = rel - ax * rel.dot(ax)
+            n = float(np.linalg.norm(off))
+            cap = cfg.get("snap_max", 0.12)
+            if n > cap:
+                off *= cap / n
+            for i in idx:
+                o.data.vertices[i].co += Vector(off.tolist())
+            print("SNAP", o.name, side, round(n, 3))
+
+
 def curl_grip_fingers(src, arm, held, cfg):
     """Tripo hands are one rigid bone with straight fingers, so held weapons float in a flat palm. For each hand
     that holds something (an attached object bound to hand_R / hand_L, or CFG["grip"]), bend the finger half of
@@ -565,9 +615,11 @@ def curl_grip_fingers(src, arm, held, cfg):
     the wrist blend stays smooth. CFG["curl"] overrides the angle (0 = leave the hand open)."""
     sides = set(cfg.get("grip", []))
     for o in held:
-        names = {g.name for g in o.vertex_groups}
+        if o.type != "MESH":
+            continue
+        used = {e.group for v in o.data.vertices for e in v.groups if e.weight > 0.5}
         for s in ("R", "L"):
-            if f"hand_{s}" in names:
+            if any(o.vertex_groups[i].name == f"hand_{s}" for i in used):
                 sides.add(s)
     deg = cfg.get("curl", 52)
     if not sides or not deg:
@@ -658,6 +710,7 @@ def build(key, preview=None):
         objs.append(gobj)
     for f, srcf in cfg.get("attach", []):
         objs.append(fn(cfg, f)(name, arm, os.path.join(ROOT, "assets", "source", srcf)))
+    snap_grips(src, objs[2:], cfg)
     curl_grip_fingers(src, arm, objs[2:], cfg)
     clips = anims.hero_clips(cfg.get("weight", 1.0))
     if cfg.get("clips"):
