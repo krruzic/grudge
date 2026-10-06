@@ -33,7 +33,12 @@
       "perSecond": 0.06
     },
     "noBombs": false,
-    "noTowerLoss": true
+    "noTowerLoss": true,
+    "respawn": {
+      "seconds": 20,
+      "perMinute": 3,
+      "max": 35
+    }
   },
   "economy": {
     "start": 200,

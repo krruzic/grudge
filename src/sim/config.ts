@@ -613,6 +613,8 @@ export interface MatchData {
     noBombs?: boolean;
     /** Losing a tower costs no gold. */
     noTowerLoss?: boolean;
+    /** Champion respawn: seconds + perMinute x match minutes, capped at max (replaces the baseline timer). */
+    respawn?: { seconds: number; perMinute: number; max: number };
   };
   economy: {
     start: number;
