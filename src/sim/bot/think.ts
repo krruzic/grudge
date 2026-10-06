@@ -26,6 +26,7 @@ import { foesDown, pressing, realThreat } from "./strategy.ts";
 import {
   duelistFight,
   engineerFight,
+  friarAdvance,
   friarEscape,
   harpoonerFight,
   friarPowder,
@@ -736,8 +737,10 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   if (rdy("r") && ab.r.bot !== "fight" && ab.r.kind !== "parry" && useHint("r", dHero)) bot.wantR = true;
   if (rdy("b") && (ab.b.bot === "repair" || ab.b.bot === "banner" || ab.b.bot === "heal") && useHint("b", 0))
     bot.wantB = true;
-  if (ab.r.kind === "powderkeg") friarPowder(bot, w, me, ehAlive ? enemyHero : undefined, clumpScore(w, me));
-  else if (plan.healer && rdy("r") && ab.r.bot === "fight" && clumpScore(w, me) >= 3 && bot.rand() < 0.5)
+  if (ab.r.kind === "powderkeg") {
+    friarPowder(bot, w, me, ehAlive ? enemyHero : undefined, clumpScore(w, me));
+    if (!bot.wantR) friarAdvance(bot, w, me, ehAlive ? enemyHero : undefined);
+  } else if (plan.healer && rdy("r") && ab.r.bot === "fight" && clumpScore(w, me) >= 3 && bot.rand() < 0.5)
     bot.wantR = true;
   return hootPerched;
 }

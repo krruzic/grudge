@@ -290,6 +290,26 @@ export function friarEscape(bot: Bot, w: World, me: Entity, home: Vec2): boolean
 }
 
 /**
+ * Maddock on the attack: standing in his own puddle with a champion 3.5-10 m away and in sight, KEG ROCKET straight
+ * through them (10 m cc-immune dash, 45 + knockback + a short stun on the way) instead of waddling in at 0.82 speed -
+ * the rocket used to be an escape only. Not into a crowd of their soldiers, and not below 40% health.
+ */
+export function friarAdvance(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  const h = me.hero!;
+  if (!target?.alive || !target.hero || target.hero.dead || h.action || bot.wantDodge) return;
+  if ((h.cooldowns.dodge ?? 0) > w.time || me.hp < me.maxHp * 0.4 || !inOwnPuddle(w, me)) return;
+  const d = w.dist(me, target);
+  if (d < 3.5 || d > 10 || !w.canSee(me, target)) return;
+  if (w.enemiesNear(me, d + 4, (o) => !!o.unit && w.dist(o, target) < 4).length >= 4) return;
+  const p = me.transform.pos;
+  const dx = target.transform.pos.x - p.x;
+  const dz = target.transform.pos.z - p.z;
+  const l = Math.hypot(dx, dz) || 1;
+  bot.wantDodge = true;
+  bot.wantFace = { x: dx / l, z: dz / l };
+}
+
+/**
  * Maddock's Powder Keg (1.35 s from throw to blast) only where it will land: on a champion that is stunned, slowed,
  * mid-swing or toe to toe with him, else on a clump of soldiers. Replaces the generic "throw it at whoever" rule.
  */
