@@ -155,7 +155,7 @@ glowing through the weave at the eyes, horns of bent willow for tusks, and corn 
 - **Build notes:** a Tripo wicker-boar body (open weave modelled in, gourds inside) plus a threshing mallet prop on
   hand_R; the millstone replaces the back anvil. The inner lantern glow is an emissive mask whose intensity tracks
   Grit and Dig In.
-- **Costume name:** `vintner@harvest`. Announcer: "Gristle of the HARVEST!"
+- **Costume name:** `vintner@wicker`. Announcer: "Gristle of the HARVEST!"
 
 ---
 

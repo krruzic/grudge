@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero's alternate model THE HARVEST WICKER BOAR: a huge boar woven from dark weathered willow wicker and bound golden straw, glowing amber lantern eyes, red and green festival ribbons, corn dollies, a wooden threshing mallet and a millstone. Repaint EVERY one of the 16 sprites of image 1 in this theme: STRAW, CHAFF, GRAIN, WICKER, RIBBONS and LANTERN EMBERS (no grapes, no wine, no vine leaves). Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single small red festival apple with a white highlight
+2. a bundle of golden straw tied with a red ribbon
+3. a single curled red-and-green festival ribbon
+4. a crown-shaped burst of golden straw and chaff flying up, side view
+5. a single golden grain of wheat
+6. a round scatter of spilled golden grain and straw bits seen from directly above
+7. a burst of warm amber lantern embers and sparks
+8. a single golden wheat ear
+9. a short curly strand of dark willow withy
+10. a small woven corn dolly figure
+11. a round ground crater seen from above, cracked brown earth with straw and grain scattered in the cracks
+12. a ring of golden chaff and dust seen from directly above, a circle
+13. a round woven wicker shield emblem with a golden straw rim
+14. two curved red-and-green ribbons chasing each other in a circle, a swap symbol
+15. a ring of tiny straw birds circling like dizzy stars, seen at an angle
+16. a big star-shaped burst of golden straw, chaff and grain seen from directly above
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.

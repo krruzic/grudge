@@ -32,7 +32,7 @@ def fit(a, al, rect, m=3):
 # Gristle (vintner) base atlas and costume atlases: python3 tools/fx-prompts/vintner_fx_cut.py [costume...]
 import os
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-DESPILL = {"vintner@harvestking": 0.9, "vintner@forgemaster": 0.9}
+DESPILL = {"vintner@harvestking": 0.9, "vintner@forgemaster": 0.9, "vintner@wicker": 0.9}
 names = ["vintner" + ("@" + c if c else "") for c in (sys.argv[1:] or [""])]
 for name in names:
     a, al = keyed(os.path.join(ROOT, "assets/generated/fx", name + ".png"), DESPILL.get(name, 0.0))

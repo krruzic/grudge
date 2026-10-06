@@ -105,6 +105,7 @@ const TINTS: Record<string, Record<number, number>> = {
   // Gristle (vintner): the wine-pink hit flashes become harvest gold, forge orange and frost blue.
   harvestking: { 0xb0305a: 0xe0a020, 0xffd8e0: 0xfff0b0, 0xffd0e0: 0xfff0c0 },
   forgemaster: { 0xb0305a: 0xff6a10, 0xffd8e0: 0xffc080, 0xffd0e0: 0xffd090, 0xfff0e0: 0xffd8b0, 0xffe080: 0xff9a40 },
+  wicker: { 0xb0305a: 0xd8a040, 0xffd8e0: 0xfff0c0, 0xffd0e0: 0xffe8b0, 0xfff0e0: 0xfff4d8, 0xffe080: 0xffb848 },
   icewine: { 0xb0305a: 0x80c8ff, 0xffd8e0: 0xe0f0ff, 0xffd0e0: 0xe8f4ff, 0xffe080: 0xc8e8ff, 0xffe8a0: 0xd0f0ff },
   // Bramble & Mead: the kit's honey golds become each costume's honey.
   warhornet: {
@@ -232,6 +233,7 @@ const TRAILS: Record<string, number> = {
   harvestking: 0xe0a020,
   forgemaster: 0xff6a10,
   icewine: 0x80c8ff,
+  wicker: 0xffb040,
   warhornet: 0xff4a3a,
   tinker: 0xff3a20,
   lavenderfield: 0xd8a8ff,
