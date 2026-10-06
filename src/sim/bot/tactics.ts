@@ -478,8 +478,9 @@ export function scribeFight(bot: Bot, w: World, me: Entity, target: Entity | und
     return;
   }
   const ab = abilities(w, me);
-  // Charge only when nobody is hitting her: holding A slows her to a crawl.
-  const calm = w.time - (me.status.hurtAt ?? -99) > 2 && w.enemiesNear(me, 6).length === 0;
+  // Charge when nothing melee is close (holding A slows her to a crawl): in a shootout with another ranged champion
+  // the charged bolt is the whole point - its blot blinds them (half their shots miss) and writes a rune.
+  const calm = !w.enemiesNear(me, 6, (o) => (!!o.unit && o.unit.type !== "ranged") || (!!o.hero && isMelee(w, o))).length;
   if (calm && !diver && d > 6 && d < (ab.a.range ?? 11) * 1.1 && w.canSee(me, target)) {
     bot.wantCharge = "a";
     bot.chargeAimId = target.id;
