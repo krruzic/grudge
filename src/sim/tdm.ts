@@ -40,6 +40,8 @@ export interface TdmConfig {
   /** Every champion's speed in deathmatch (smaller fights, more chasing for power-ups). */
   speedMul?: number;
   ffaHeroMods?: Record<string, { hp?: number; speed?: number; damage?: number }>;
+  /** FFA deathmatch ability overrides per champion and slot (e.g. Hoot keeps one Lookout), merged over the base. */
+  ffaAbilityMods?: Record<string, Partial<Record<"a" | "b" | "r" | "z", Record<string, unknown>>>>;
   /** Seconds a champion may carry the Grudge before it returns to the middle (asleep relicRewakeSeconds). */
   relicCarrySeconds?: number;
   relicRewakeSeconds?: number;

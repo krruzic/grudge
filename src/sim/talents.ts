@@ -34,7 +34,25 @@ function treeOf(w: World, type: string): Partial<Record<TSlot, TalentDef[]>> | u
 
 /** The hero's effective abilities: base definitions with learned talents applied (cached in hero.ab). */
 export function abilities(w: World, e: Entity): Record<TSlot, AbilityDef> {
-  return e.hero!.ab ?? w.heroDef(e.hero!.type).abilities;
+  return e.hero!.ab ?? baseAbilities(w, e.hero!.type);
+}
+
+const modded = new WeakMap<World, Map<string, Record<TSlot, AbilityDef>>>();
+
+/** A champion's untalented abilities, with the FFA deathmatch overrides (tdm.ffaAbilityMods) in that mode. */
+export function baseAbilities(w: World, type: string): Record<TSlot, AbilityDef> {
+  const base = w.heroDef(type).abilities as Record<TSlot, AbilityDef>;
+  const mods = w.tdm && w.ffa ? w.tdm.cfg.ffaAbilityMods?.[type] : undefined;
+  if (!mods) return base;
+  let cache = modded.get(w);
+  if (!cache) modded.set(w, (cache = new Map()));
+  let out = cache.get(type);
+  if (!out) {
+    out = { ...base };
+    for (const s of TSLOTS) if (mods[s]) out[s] = { ...base[s], ...mods[s] } as AbilityDef;
+    cache.set(type, out);
+  }
+  return out;
 }
 
 /** Talents learned in a slot (a path holds at most one pick per slot). */
@@ -85,7 +103,7 @@ function apply(
 /** Rebuild hero.ab from the base abilities: each learned talent, then synergy (`with`) bonuses. */
 export function recompute(w: World, e: Entity): void {
   const h = e.hero!;
-  const base = w.heroDef(h.type).abilities;
+  const base = baseAbilities(w, h.type);
   const out = { ...base } as Record<TSlot, AbilityDef>;
   const got = new Set(allLearned(w, e).map((t) => t.id));
   for (const s of TSLOTS) for (const t of learned(w, e, s)) out[s] = apply(out[s], t);
