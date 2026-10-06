@@ -28,6 +28,8 @@ _sc["CFG"] = CFG
 # below and the chest (head / shoulders) above.
 COPE = (("hips", 0.0), ("spine", 0.6), ("chest", 1.04))
 BAND = 0.16
+# The body (not the cope) continues up: chest to the neck, then the whole head and crown rigid on "head".
+BODY_BANDS = COPE + (("head", 1.2),)
 
 
 def skin_glass(src, arm):
@@ -106,12 +108,13 @@ def skin_glass(src, arm):
         if v.index in cs:
             continue
         x, z = abs(v.co.x), v.co.z
-        if z > 1.12 or x > 0.28 or not (z > 0.5 or (x < 0.13 and z > 0.4)):
+        # Head and crown too (above the shoulders the arms are outside x 0.3): automatic weights tore it on a stride.
+        if x > (0.3 if z > 1.04 else 0.28) or not (z > 0.5 or (x < 0.13 and z > 0.4)):
             continue
         w = {}
-        for j, (n, z0) in enumerate(COPE):
+        for j, (n, z0) in enumerate(BODY_BANDS):
             lo = 1.0 if j == 0 else min(1.0, max(0.0, (z - z0 + BAND / 2) / BAND))
-            hi = 1.0 if j == len(COPE) - 1 else 1.0 - min(1.0, max(0.0, (z - COPE[j + 1][1] + BAND / 2) / BAND))
+            hi = 1.0 if j == len(BODY_BANDS) - 1 else 1.0 - min(1.0, max(0.0, (z - BODY_BANDS[j + 1][1] + BAND / 2) / BAND))
             if lo * hi > 0:
                 w[n] = lo * hi
         set_w(v.index, w)
