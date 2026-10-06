@@ -128,26 +128,33 @@ export function setDirective(w: World, team: number, type: UnitType | "all", dir
   w.emit({ type: "directive", team, unitType: type, dir });
 }
 
-/** Training mode: no match clock, enemy heroes/cores become self-healing dummies, team 0 has unlimited funds. */
-export function makeTraining(w: World): void {
+/**
+ * Training mode: no match clock; the trainees' teams (`teams`: those with a human seat - team 0 if none given) have
+ * unlimited funds, every other team's heroes and cores become self-healing dummies.
+ */
+export function makeTraining(w: World, teams: number[] = [0]): void {
   w.training = true;
+  w.trainees = teams.length ? [...new Set(teams)] : [0];
   w.match.time = 0;
   for (const p of w.players)
-    if (p.team !== 0) {
+    if (!w.trainees.includes(p.team)) {
       const d = w.getAny(p.heroId);
       if (d) d.dummy = true;
     }
-  for (let t = 1; t < w.teamCount; t++) {
+  for (let t = 0; t < w.teamCount; t++) {
     const c = w.core(t);
-    if (c) c.dummy = true;
+    if (c && !w.trainees.includes(t)) c.dummy = true;
   }
   w.mapEvents.endLockdown(false);
 }
 
 export function trainingStep(w: World): void {
-  const t = w.teams[0];
-  t.resource = Math.max(t.resource, 9999);
-  t.grain = Math.max(t.grain, 9999);
+  for (const k of w.trainees) {
+    const t = w.teams[k];
+    if (!t) continue;
+    t.resource = Math.max(t.resource, 9999);
+    t.grain = Math.max(t.grain, 9999);
+  }
   for (const e of w.entities) {
     if (!e.dummy || !e.alive) continue;
     // Dummies regenerate 60% max hp per second after 3s without being hit.

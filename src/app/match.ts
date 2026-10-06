@@ -150,7 +150,12 @@ function buildWorld(app: App, spec: MatchSpec): World {
       p,
       teamOfSeat(mode, p),
     );
-  if (spec.training) w.makeTraining();
+  if (spec.training)
+    w.makeTraining(
+      Array.from({ length: spec.players }, (_, p) => p)
+        .filter((p) => spec.humans[p])
+        .map((p) => teamOfSeat(mode, p)),
+    );
   return w;
 }
 

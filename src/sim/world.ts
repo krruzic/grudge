@@ -107,6 +107,8 @@ export class World {
   tick = 0;
   time = 0;
   training = false;
+  /** Training: the teams with a human seat (unlimited funds; everyone else is a dummy). */
+  trainees: number[] = [0];
   tideHigh = false;
 
   jumpPads: JumpPad[] = [];
@@ -641,8 +643,8 @@ export class World {
     match.endMatch(this, winner, reason);
   }
 
-  makeTraining(): void {
-    match.makeTraining(this);
+  makeTraining(teams?: number[]): void {
+    match.makeTraining(this, teams);
   }
 
   // ---------------------------------------------------------------------------------------------------------------

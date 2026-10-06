@@ -174,6 +174,8 @@ export function updatePaused(app: App, now: number): void {
       const e = w.heroForPlayer(pl.player);
       if (!e?.hero || e.dummy) continue;
       for (const k of Object.keys(e.hero.cooldowns)) e.hero.cooldowns[k] = 0;
+      // Charged abilities (Lookouts, kegs, Smoke...) bank their charges separately: refill those too.
+      for (const st of Object.values(e.hero.stock ?? {})) st?.fill(0);
       e.hero.meter = w.data.heroes.baseline.superMax;
     }
     setPaused(app, false);
