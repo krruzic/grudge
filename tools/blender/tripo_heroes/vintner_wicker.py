@@ -23,15 +23,15 @@ CFG = {
     "attach": [("attach_wicker", "vintner_wicker_millstone_tripo.glb"), ("attach_backanvil", "")],
 }
 _sc["CFG"] = CFG
-STONE_TRIS = 1400
-STONE_DIAM = 0.9
+STONE_DIAM = 0.78
+# Centre of the stone: high on his back, just behind the shoulder blades.
+STONE_AT = (0.0, 0.3, 1.4)
 
 
 def attach_wicker(name, arm, src_path):
     """attach_anvil's weapon placement for the mallet, then the millstone (its thin axis against his back)."""
     reskin(name, arm)
     stone = th.import_prop(name + "_backanvil", src_path, tex=512)
-    decimate(stone, STONE_TRIS)
     w = th.import_prop(name + "_anvil", os.path.join(os.path.dirname(src_path), CFG["hammer"]), tex=512)
     decimate(w, WEAPON_TRIS)
     co = np.array([v.co[:] for v in w.data.vertices])
@@ -57,14 +57,30 @@ def attach_wicker(name, arm, src_path):
     rigid(w, arm, "hand_R")
     w.name = name + "_anvil"
 
-    # Millstone: the disc's thin axis (smallest PCA spread) -> world -Y (out of his back), centred on the old anvil spot.
-    co = np.array([v.co[:] for v in stone.data.vertices])
-    c = co.mean(0)
-    _, s, vt = np.linalg.svd(co - c, full_matrices=False)
-    a0, a1, thin = vt[0], vt[1], vt[2]
-    diam = np.ptp((co - c) @ a0)
-    R = frame([Vector(a0), Vector(a1), Vector(thin)], [Vector((1, 0, 0)), Vector((0, 0, 1)), Vector((0, 1, 0))])
-    stone.data.transform(Matrix.Translation(Vector(BACK_AT)) @ R @ Matrix.Scale(STONE_DIAM / diam, 4) @ Matrix.Translation(-Vector(c)))
+    # Millstone: the disc's face normal from the surface (area-weighted normal tensor - the two flat faces dominate;
+    # the dangling rope loop threw a plain PCA off and turned the stone on edge), the hanging loop trimmed, laid flat
+    # against his upper back.
+    me = stone.data
+    T = np.zeros((3, 3))
+    for p in me.polygons:
+        n = np.array(p.normal[:])
+        T += p.area * np.outer(n, n)
+    ev, evec = np.linalg.eigh(T)
+    nrm = evec[:, -1]
+    co = np.array([v.co[:] for v in me.vertices])
+    c = np.median(co, 0)
+    inplane = (co - c) - np.outer((co - c) @ nrm, nrm)
+    rad = np.percentile(np.linalg.norm(inplane, axis=1), 85)
+    keep_faces(stone, lambda f: np.linalg.norm((np.array(f[:]) - c) - ((np.array(f[:]) - c) @ nrm) * nrm) < rad * 1.12)
+    co = np.array([v.co[:] for v in me.vertices])
+    c = (co.min(0) + co.max(0)) / 2
+    e1 = np.cross(nrm, [0, 0, 1.0])
+    if np.linalg.norm(e1) < 0.1:
+        e1 = np.cross(nrm, [1.0, 0, 0])
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(nrm, e1)
+    R = frame([Vector(e1), Vector(e2), Vector(nrm)], [Vector((1, 0, 0)), Vector((0, 0, 1)), Vector((0, 1, 0))])
+    stone.data.transform(Matrix.Translation(Vector(STONE_AT)) @ R @ Matrix.Scale(STONE_DIAM / (2 * rad), 4) @ Matrix.Translation(-Vector(c)))
     rigid(stone, arm, "chest")
     stone.name = name + "_backanvil"
     _BACK.append(stone)
