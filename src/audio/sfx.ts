@@ -39,11 +39,11 @@ const GLOBAL = new Set(["gates", "horn", "avalanche", "tide", "mist", "notice", 
 const LEAN = new Set(["relic"]);
 /** Longest a voice line runs, per line. */
 const VOICE_DUR: Record<string, number> = { attack: 0.55, big: 0.95, hurt: 0.6, death: 1.7, taunt: 1.3, order: 0.9 };
-/** Champions voiced at runtime from another champion's lines: [source hero, playback rate, line length mul]. */
-const VOICE_CAST: Record<string, [string, number, number]> = {};
-/** Champions whose voices run slower and need their lines cut a little longer (Gristle pitched to 0.7, Granny
- * Hollin's own quavering lines from tools/sfx/granny.sh). */
-const VOICE_LEN: Record<string, number> = { vintner: 1.2, scribe: 1.12 };
+/** Champions voiced at runtime from another champion's lines, pitch-cast (rate) and with longer lines (Hollin is
+ * Wren's voice pack an older, lower register; her own vo.* files can replace this once the CC0 packs are fetched). */
+const VOICE_CAST: Record<string, [string, number, number]> = { scribe: ["marksman", 0.84, 1.15] };
+/** Champions whose voices are pitched down far enough that their lines need a little longer (Gristle at 0.7). */
+const VOICE_LEN: Record<string, number> = { vintner: 1.2 };
 /** Most sample voices at once; past this only priority sounds start. */
 const MAX_VOICES = 56;
 

@@ -190,8 +190,6 @@ voice("architect", ADV, ADV_L, 1.12)  # a fussy little professor: the adventurer
 voice("vintner", ORC, ORC_L, 0.7, lp=3800)  # Gristle: the orc pack a notch deeper and duller, a boar's grunts
 voice("marksman", FEM, {"attack": ["attack*.wav"], "big": ["jump*.wav"], "hurt": ["damaged*.wav"],
                         "death": ["damaged3.wav"], "taunt": ["healed*.wav"]}, 1.0)
-# Granny Hollin (scribe): no raw pack of her own - after a rebuild, run tools/sfx/granny.sh to make vo.scribe.* from
-# vo.marksman.* (pitch 0.8 with formants kept, tempo 0.92, 6.5 Hz vibrato / tremolo, 170-5200 Hz band).
 voice("summoner", ZOM, {"attack": ["humanYell[1-3].wav"], "big": ["humanYell[4-5].wav"], "hurt": ["humanYell*.wav"],
                         "death": ["humanDeath*.wav"], "taunt": ["zombieYell[1-3].wav"]}, 0.9)
 voice("wreckwitch", FEM, {"attack": ["attack*.wav"], "big": ["jump*.wav"], "hurt": ["damaged[12].wav"],
