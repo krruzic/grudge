@@ -60,7 +60,7 @@ def attach_wicker(name, arm, src_path):
     w.name = name + "_anvil"
 
     # Millstone: the disc's face normal from the surface (area-weighted normal tensor - the two flat faces dominate;
-    # the dangling rope loop threw a plain PCA off and turned the stone on edge), the hanging loop trimmed, laid flat
+    # the dangling rope loop threw a plain PCA off and turned the stone on edge), laid flat
     # against his upper back.
     me = stone.data
     T = np.zeros((3, 3))
@@ -72,8 +72,8 @@ def attach_wicker(name, arm, src_path):
     co = np.array([v.co[:] for v in me.vertices])
     c = np.median(co, 0)
     inplane = (co - c) - np.outer((co - c) @ nrm, nrm)
-    rad = np.percentile(np.linalg.norm(inplane, axis=1), 85)
-    keep_faces(stone, lambda f: np.linalg.norm((np.array(f[:]) - c) - ((np.array(f[:]) - c) @ nrm) * nrm) < rad * 1.12)
+    # Nothing is trimmed: a radius cut that dropped the rope loop also bit a hole in the rim.
+    rad = np.percentile(np.linalg.norm(inplane, axis=1), 98)
     co = np.array([v.co[:] for v in me.vertices])
     c = (co.min(0) + co.max(0)) / 2
     e1 = np.cross(nrm, [0, 0, 1.0])
