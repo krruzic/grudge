@@ -742,6 +742,9 @@ def build(key, preview=None):
     src.parent = None
     fill_unweighted(src, arm)
     rigid_parts(src, cfg, cols)
+    # Optional hand weighting on the A-pose mesh, before the arms are swung down (cfg "preskin": fn(src, arm)).
+    if cfg.get("preskin"):
+        fn(cfg, cfg["preskin"])(src, arm)
     if not any(m.type == "ARMATURE" for m in src.modifiers):
         m = src.modifiers.new("Armature", "ARMATURE")
         m.object = arm

@@ -19,17 +19,21 @@ CFG = {
     "rigid": [],
     # Team dye: the cobalt panes of the cope.
     "team_hue": (210, 240),
-    "attach": [("attach_cope", "")] + _sc["CFG"]["attach"],
+    "preskin": "skin_glass",
+    "attach": _sc["CFG"]["attach"],
 }
 _sc["CFG"] = CFG
 
-COPE = (("hips", 0.0), ("spine", 0.75), ("chest", 0.95))
+# One bone carries most of the glass torso (panes don't bend): the spine from 0.6 to 1.04 m, wide blends to the hips
+# below and the chest (head / shoulders) above.
+COPE = (("hips", 0.0), ("spine", 0.6), ("chest", 1.04))
+BAND = 0.16
 
 
-def attach_cope(name, arm, _path):
-    """Re-weight the cope island (the big piece that reaches well behind the body) to hips / spine / chest by
-    height, blended over 8 cm. Returns nothing to export (the body object already carries it)."""
-    src = bpy.data.objects[name]
+def skin_glass(src, arm):
+    """On the A-pose mesh, before the arms are swung down (automatic arm weights crushed the rose window and tore
+    the cope when they swung): the cope island (the big piece reaching well behind the body), the gold border
+    islands lying on it, and the glass torso are weighted hips / spine / chest by height only."""
     me = src.data
     par = list(range(len(me.vertices)))
 
@@ -59,22 +63,58 @@ def attach_cope(name, arm, _path):
             cope = i
     if not cope:
         print("cope: not found")
-        return None
+        return
+    # The cope's gold lead border (and any trim) are separate islands: those lying against the cope move with it.
+    from mathutils import kdtree
+
+    kd = kdtree.KDTree(len(cope))
+    for k in cope:
+        kd.insert(me.vertices[k].co, k)
+    kd.balance()
+    cs = set(cope)
+    frame = []
+    for i in isl.values():
+        if i[0] in cs or len(i) > 3000:
+            continue
+        near = sum(1 for k in i if kd.find(me.vertices[k].co)[2] < 0.03)
+        if near > 0.3 * len(i):
+            frame += i
     groups = {g.name: g for g in src.vertex_groups}
     for n in ("hips", "spine", "chest"):
         groups.setdefault(n, src.vertex_groups.new(name=n))
-    for k in cope:
-        v = me.vertices[k]
-        for g in list(v.groups):
+
+    def set_w(k, w):
+        for g in list(me.vertices[k].groups):
             src.vertex_groups[g.group].remove([k])
-        z = v.co.z
-        w = {}
-        for j, (n, z0) in enumerate(COPE):
-            lo = 1.0 if j == 0 else min(1.0, max(0.0, (z - z0 + 0.04) / 0.08))
-            hi = 1.0 if j == len(COPE) - 1 else 1.0 - min(1.0, max(0.0, (z - COPE[j + 1][1] + 0.04) / 0.08))
-            if lo * hi > 0:
-                w[n] = lo * hi
         for n, x in w.items():
             groups[n].add([k], x, "REPLACE")
+
+    for k in cope + frame:
+        z = me.vertices[k].co.z
+        w = {}
+        for j, (n, z0) in enumerate(COPE):
+            lo = 1.0 if j == 0 else min(1.0, max(0.0, (z - z0 + BAND / 2) / BAND))
+            hi = 1.0 if j == len(COPE) - 1 else 1.0 - min(1.0, max(0.0, (z - COPE[j + 1][1] + BAND / 2) / BAND))
+            if lo * hi > 0:
+                w[n] = lo * hi
+        set_w(k, w)
+    # Body / shirt: automatic weights mixed the thighs and arms into his glass torso and tore it on every stride.
+    # The torso (between the hips and the neck, inside the shoulders) is banded hips / spine / chest by height like
+    # the cope; legs, arms and head keep their automatic weights. The middle of the belly hangs a little lower.
+    fixed = 0
+    for v in me.vertices:
+        if v.index in cs:
+            continue
+        x, z = abs(v.co.x), v.co.z
+        if z > 1.12 or x > 0.28 or not (z > 0.5 or (x < 0.13 and z > 0.4)):
+            continue
+        w = {}
+        for j, (n, z0) in enumerate(COPE):
+            lo = 1.0 if j == 0 else min(1.0, max(0.0, (z - z0 + BAND / 2) / BAND))
+            hi = 1.0 if j == len(COPE) - 1 else 1.0 - min(1.0, max(0.0, (z - COPE[j + 1][1] + BAND / 2) / BAND))
+            if lo * hi > 0:
+                w[n] = lo * hi
+        set_w(v.index, w)
+        fixed += 1
+    print("cope: frame", len(frame), "torso banded", fixed)
     print("cope: re-weighted", len(cope))
-    return None
