@@ -96,6 +96,10 @@ export function think(bot: Bot, w: World, me: Entity): void {
     retreat(bot, w, s, swarm, graveReady);
     return;
   }
+  if (regroup(bot, w, s)) {
+    bot.why = "regroup";
+    return;
+  }
   reactToCasts(bot, w, s);
   if (h.recallAt !== undefined) {
     bot.goal = null;
@@ -473,11 +477,43 @@ function objectives(bot: Bot, w: World, s: Senses): boolean {
   return false;
 }
 
+/**
+ * Caught alone by both enemy champions (within 10 m, partner dead or 14+ m away, and the local fight not in our
+ * favour): back off toward the partner (or home) instead of taking the 2v1. A nearly dead foe within reach is still
+ * finished. Tanks hold (they're what the partner rallies to; backing off cost Thorn 50% -> 36%). Returns true when it
+ * set the goal.
+ */
+function regroup(bot: Bot, w: World, s: Senses): boolean {
+  const { me, edge } = s;
+  if (bot.mate === null || w.tdm || w.heroDef(me.hero!.type).class === "tank") return false;
+  const mate = mateHero(bot, w);
+  const mateAway = !mate || mate.hero!.dead || w.dist(me, mate) > 14;
+  if (!mateAway || edge >= 0) return false;
+  const foes = enemyHeroes(bot, w, me).filter((e) => !e.hero!.dead && w.dist(me, e) < 10 && w.canSee(me, e));
+  if (foes.length < 2) return false;
+  if (foes.some((e) => w.dist(me, e) < 4 && e.hp < e.maxHp * 0.25)) return false;
+  const to = mate && !mate.hero!.dead ? mate.transform.pos : w.spawnPoint(me.team);
+  bot.goal = { x: to.x, z: to.z };
+  if (foes.some((e) => w.dist(me, e) < 2.5)) bot.wantAttack = true;
+  return true;
+}
+
 /** Low hp: gravewalk home, recall, use the plan's escape ability, heal, hide in grass, fight only if cornered. */
 function retreat(bot: Bot, w: World, s: Senses, swarm: number, graveReady: boolean): void {
   const { me, p, h, enemyHero, ehAlive, dHero, plan } = s;
   // Team deathmatch has no home: run for a potion, else somewhere the enemy isn't.
-  const sp = w.tdm ? (nearPowerup(w, me, 30, true) ?? w.tdm.safeFrom(me)) : w.spawnPoint(me.team);
+  let sp = w.tdm ? (nearPowerup(w, me, 30, true) ?? w.tdm.safeFrom(me)) : w.spawnPoint(me.team);
+  // Run to a healthy partner close by rather than all the way home, if that isn't back through the chaser: they
+  // peel (assistTarget), and two on one the chase usually ends.
+  const mate = mateHero(bot, w);
+  if (mate && !mate.hero!.dead && mate.hp > mate.maxHp * 0.5 && ehAlive && dHero < 10 && w.dist(me, mate) < 20) {
+    const mx = mate.transform.pos.x - p.x;
+    const mz = mate.transform.pos.z - p.z;
+    const cx = enemyHero!.transform.pos.x - p.x;
+    const cz = enemyHero!.transform.pos.z - p.z;
+    const toward = (mx * cx + mz * cz) / ((Math.hypot(mx, mz) || 1) * (Math.hypot(cx, cz) || 1));
+    if (toward < 0.3 && w.dist(me, mate) > 3) sp = { x: mate.transform.pos.x, z: mate.transform.pos.z };
+  }
   bot.goal = sp;
   if (h.recallAt !== undefined) {
     bot.goal = null;
@@ -1109,6 +1145,10 @@ function macro(bot: Bot, w: World, s: Senses): void {
       (e) => w.canSee(me, e) && w.dist(me, e) < 20 && e.hp < me.hp * 1.2 && ok(bot, w, me, e),
     );
     bot.goal = prey ? { x: prey.transform.pos.x, z: prey.transform.pos.z } : frontTarget(bot, w, me);
+    // Nothing to hunt and the partner out in the field far off: join them rather than push a lane alone.
+    const own = w.core(me.team);
+    if (!prey && mate && !mate.hero!.dead && w.dist(me, mate) > 16 && (!own || w.dist(mate, own) > 20))
+      bot.goal = { x: mate.transform.pos.x, z: mate.transform.pos.z };
     return;
   }
   if (bot.role === "support" && mate) {

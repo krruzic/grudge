@@ -48,7 +48,8 @@ export function baseThreat(bot: Bot, w: World, me: Entity): Entity | undefined {
 export function assistTarget(bot: Bot, w: World, me: Entity): Entity | undefined {
   const mate = mateHero(bot, w);
   if (!mate || bot.role === "solo") return undefined;
-  const reach = bot.role === "support" ? 45 : 22;
+  // A hurt partner is worth crossing more of the map for (peel).
+  const reach = bot.role === "support" ? 45 : mate.hp < mate.maxHp * 0.55 ? 32 : 22;
   if (w.dist(me, mate) > reach) return undefined;
   const foes = enemyHeroes(bot, w, me).filter((e) => w.dist(mate, e) < 9 && w.canSee(me, e));
   if (!foes.length) return undefined;
