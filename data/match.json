@@ -318,7 +318,7 @@
       "vintner": {
         "hp": 1.15,
         "speed": 1.08,
-        "damage": 1.28
+        "damage": 1.15
       },
       "rider": {
         "hp": 1.2,
@@ -344,6 +344,12 @@
         "r": {
           "charges": 1,
           "max": 1
+        }
+      },
+      "vintner": {
+        "r": {
+          "digSeconds": 2,
+          "digMul": 1.3
         }
       }
     }

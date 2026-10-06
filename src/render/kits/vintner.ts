@@ -1,7 +1,8 @@
 // Gristle (vintner) kit: wine-and-forge-spark anvil hits, the anvil ground slams (Anvil Pound, Crush Season: a
 // cracked wine-soaked crater, a dust ring and flying clods; the third slam leaves a big crushed-grape splat),
 // Headbutt (dust kick, a pinned champion gets grapes-and-stars circling his head), Switcheroo (golden swap ring under
-// the partner, then at both ends of the swap), the Anvil Curl and Grit-full stone shield pops.
+// the partner, then at both ends of the swap), Dig In (a stamped-hoof crater, red sparks and flare; a red shock when
+// the banked blow lands), the Anvil Curl and Grit-full stone shield pops.
 import * as THREE from "three";
 import { FX, tint, VINTNER } from "../fx/atlas";
 import { type FxHost, emit } from "../fx/parts";
@@ -329,6 +330,66 @@ KITS.vintner = {
           speed: [0, 0],
           order: 6,
         });
+        return true;
+      case "digIn": {
+        // DIG IN: one hoof stamped down - a small cracked crater and dust ring under him, clods and red-hot sparks,
+        // and a red flare over him (the red hull glow itself is heroSync's syncDig).
+        h.after(0.02, () => {
+          decal(h, VINTNER.crater, ev.x, gy + 0.03, ev.z, 1.5, 3.2, { opacity: 0.85 });
+          decal(h, VINTNER.dustRing, ev.x, gy + 0.05, ev.z, 1.2, 0.5, { grow: 1.8, opacity: 0.9 });
+          shockwave(h, FX.shock, ev.x, gy + 0.2, ev.z, UP, 0.3, 2.6, 0.32, 0xff5030, 0.85);
+          chunks(h, 6, ev.x, gy + 0.3, ev.z, { size: [0.12, 0.24], speed: [2, 4], up: [3, 5] });
+          emit(h, {
+            tex: VINTNER.sparks,
+            n: 10,
+            x: ev.x,
+            y: gy + 0.3,
+            z: ev.z,
+            color: 0xff6030,
+            size: [0.18, 0.32],
+            life: [0.35, 0.6],
+            speed: [2.5, 5],
+            up: [2, 4],
+            gravity: 12,
+            floor: gy + 0.05,
+            additive: true,
+          });
+          emit(h, {
+            tex: FX.burst,
+            n: 1,
+            x: ev.x,
+            y: ev.y + 1.4,
+            z: ev.z,
+            color: 0xff4020,
+            size: [2.6, 2.6],
+            grow: 1.25,
+            life: [0.2, 0.2],
+            speed: [0, 0],
+            additive: true,
+            order: 6,
+          });
+          h.shake = Math.max(h.shake, 0.18);
+        });
+        return true;
+      }
+      case "digInHit":
+        // The banked Dig In blow lands: a red shock and sparks on the victim.
+        shockwave(h, FX.shock, ev.x, ev.y + 1, ev.z, UP, 0.2, 2.2, 0.25, 0xff4020, 0.9);
+        emit(h, {
+          tex: VINTNER.sparks,
+          n: 12,
+          x: ev.x,
+          y: ev.y + 1.1,
+          z: ev.z,
+          color: 0xff7040,
+          size: [0.2, 0.36],
+          life: [0.3, 0.5],
+          speed: [3, 6],
+          up: [1, 3],
+          gravity: 10,
+          additive: true,
+        });
+        h.shake = Math.max(h.shake, 0.22);
         return true;
       case "gritFull":
         emit(h, {

@@ -56,7 +56,8 @@ export function startAbility(w: World, e: Entity, slot: Slot, cmd: Command): voi
   if (wren || def.kind === "erratum") a.stick = mag > 0.3;
   a.fromX2 = e.transform.pos.x;
   a.fromZ2 = e.transform.pos.z;
-  if (def.callout)
+  // Switcheroo calls its own name when it lands (SWITCHEROO, or DIG IN with nobody to guard).
+  if (def.callout && def.kind !== "switcheroo")
     w.emit({
       type: "callout",
       x: e.transform.pos.x,

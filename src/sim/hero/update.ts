@@ -12,6 +12,7 @@ import { gustTick, manuscriptRecast, recallSwarm, scribeTick } from "./scribe.ts
 import { chainSwingTick, tideTick, whirlTick } from "./wreckwitch.ts";
 import { squareInput, toppleLookout } from "./architect.ts";
 import { crushTick, curlTick, gritTick, headbuttTick, startPound } from "./vintner.ts";
+import { cleanse } from "../world/status.ts";
 import { buzzTick, honeyPartners, maybeFling, stuckInHoney, sweetToothTick, tickWing } from "./rider.ts";
 import { aim, begin, callout, chaining, ready, refillCharge, spendCharge } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
@@ -66,6 +67,7 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
     return;
   }
   if (tickRecall(w, e, cmd)) return;
+  if (w.time < (e.status.steadfastUntil ?? 0)) cleanse(w, e);
 
   if (w.time < e.status.stunUntil) {
     h.vel.x = h.vel.z = 0;

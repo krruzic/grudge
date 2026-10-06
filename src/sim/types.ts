@@ -109,6 +109,8 @@ export interface Status {
   woundUntil?: number;
   /** Stuck in Bramble's honey (rider pool): no dodging until then. */
   stickyUntil?: number;
+  /** Gristle's Dig In: until then nothing moves, stuns, slows or debuffs him (cleansed every tick). */
+  steadfastUntil?: number;
 }
 
 /** Marksman's hawk (hero/marksman.ts). */
@@ -313,6 +315,8 @@ export interface HeroState {
   whirlN?: number;
   /** Gristle's Thick Skin (hero/vintner.ts): 0..1 of his max damage reduction. */
   grit?: number;
+  /** Dig In: the next hit he lands (anything but a tick) does this many times its damage. */
+  digPower?: number;
   /** Gristle's Anvil Curl: hits from behind are blocked until then. */
   curlUntil?: number;
   /** Rider's Take Wing flight (hero/rider.ts): steered until `until`, R lands after minUntil; y = flight height. */

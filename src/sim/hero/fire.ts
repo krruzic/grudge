@@ -12,7 +12,7 @@ import { fireHarpoon, riptide, tongueLash } from "./harpooner.ts";
 import { fireErratum, fireInk, fireManuscript, fireSwarm } from "./scribe.ts";
 import { fireBilge, fireDavyGrip, fireDredge, tideOnHit } from "./wreckwitch.ts";
 import { chillTargets, fireDome, fireFort, fireLookout, throwSquare } from "./architect.ts";
-import { crushSlam, fireHeadbutt, firePound, fireSwitch } from "./vintner.ts";
+import { crushSlam, fireDigIn, fireHeadbutt, firePound, fireSwitch } from "./vintner.ts";
 import { honeyFling, royalJelly, takeWing, throwHoneyPot } from "./rider.ts";
 import { fireLeap, fireQuake, fireSlam } from "./kinds/melee.ts";
 import { fireBanner, fireRally, fireWarcry } from "./kinds/command.ts";
@@ -166,6 +166,8 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return fireHeadbutt(w, e, a, def);
     case "switcheroo":
       return fireSwitch(w, e, a, def);
+    case "digin":
+      return fireDigIn(w, e, def);
     case "crush":
       return crushSlam(w, e, a, def, 0);
     // rider

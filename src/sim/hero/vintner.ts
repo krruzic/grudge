@@ -1,7 +1,8 @@
 // Gristle, the Cellar Boar (vintner): Thick Skin passive (Grit builds while he stands still or blocks, up to 25%
 // damage reduction, and drains while he moves), the charged Anvil Pound on A, Headbutt (B: a short charge that
 // carries the first champion along and stuns both against a wall), Switcheroo (R: swap places with an ally, who gets
-// a shield - with no ally in reach, with an enemy champion), Crush Season (Z: three ever bigger anvil slams) and the
+// a shield - with no ally in reach he Digs In instead: a stomp, full Grit, nothing moves or debuffs him for a few
+// seconds and his next hit lands harder), Crush Season (Z: three ever bigger anvil slams) and the
 // Anvil Curl dodge (he tucks behind the anvil on his back: from behind he blocks almost everything for a moment).
 import type { World } from "../world.ts";
 import type { AbilityDef } from "../config.ts";
@@ -237,26 +238,17 @@ export function switchTarget(w: World, e: Entity): Entity | undefined {
   return switchAlly(w, e, abilities(w, e).r.range ?? 8, null);
 }
 
-/** No ally in reach: the nearest visible enemy champion in reach (a juke). */
-function switchFoe(w: World, e: Entity, range: number): Entity | undefined {
-  let best: Entity | undefined;
-  let bd = Infinity;
-  for (const o of w.entities) {
-    if (!o.alive || !o.hero || o.hero.dead || o.team === e.team || o.hero.jump || !w.canSee(e, o)) continue;
-    const d = w.dist(e, o);
-    if (d > range || d >= bd) continue;
-    bd = d;
-    best = o;
-  }
-  return best;
-}
-
 /** R start: lock the partner now (so the cast reads), swap at the hit frame. */
 export function startSwitch(w: World, e: Entity, a: HeroAction, cmd: Command): void {
   const def = abilities(w, e).r;
-  const ally = switchAlly(w, e, def.range ?? 8, cmd);
-  const o = ally ?? switchFoe(w, e, (def.range ?? 8) * 0.75);
-  if (!o) return;
+  const o = switchAlly(w, e, def.range ?? 8, cmd);
+  if (!o) {
+    // Nobody to guard: Dig In (a firm stomp, his own clip and timing).
+    a.kind = "digin";
+    a.dur = def.digDur ?? 0.55;
+    a.hitAt = def.digHitAt ?? 0.3;
+    return;
+  }
   a.targetId = o.id;
   const dx = o.transform.pos.x - e.transform.pos.x;
   const dz = o.transform.pos.z - e.transform.pos.z;
@@ -290,30 +282,27 @@ export function fireSwitch(w: World, e: Entity, a: HeroAction, def: AbilityDef):
   w.teleport(o, ax, az);
   e.status.kvx = e.status.kvz = o.status.kvx = o.status.kvz = 0;
   e.transform.facing = Math.atan2(ax - bx, az - bz);
-  if (o.team === e.team) {
-    // The ally is pulled out of the fight with a shield; marksman / caster partners also get a bigger shield and a
-    // burst of speed (synergy).
-    const cls = o.hero ? w.heroDef(o.hero.type).class : undefined;
-    const syn = (cls && w.heroDef(e.hero!.type).synergy?.switchAlly?.[cls]) ?? 1;
-    const amt = (def.heal ?? 120) * syn;
-    addShield(o, amt, amt, def.seconds ?? 3, w.time);
-    if (syn > 1) {
-      const st = o.status;
-      if (w.time >= st.buffUntil) st.buffDamageMul = 1;
-      st.buffSpeedMul = Math.max(w.time < st.buffUntil ? st.buffSpeedMul : 1, def.speedMul ?? 1.3);
-      st.buffUntil = Math.max(st.buffUntil, w.time + (def.slowSeconds ?? 2));
-    }
-    if (o.hero?.action?.name === "hit") o.hero.action = null;
-    callout(w, e, syn > 1 ? "SWITCHEROO · BIG SHIELD" : "SWITCHEROO");
-  } else {
-    o.status.stunUntil = Math.max(o.status.stunUntil, w.time + (def.stunSeconds ?? 0.45));
-    if (o.hero) o.hero.action = null;
-    addShield(e, (def.heal ?? 120) * 0.5, (def.heal ?? 120) * 0.5, def.seconds ?? 3, w.time);
-    callout(w, e, "SWITCHEROO · JUKED");
+  // The ally is pulled out of the fight with a shield; marksman / caster partners also get a bigger shield and a
+  // burst of speed (synergy).
+  const cls = o.hero ? w.heroDef(o.hero.type).class : undefined;
+  const syn = (cls && w.heroDef(e.hero!.type).synergy?.switchAlly?.[cls]) ?? 1;
+  const amt = (def.heal ?? 120) * syn;
+  addShield(o, amt, amt, def.seconds ?? 3, w.time);
+  if (syn > 1) {
+    const st = o.status;
+    if (w.time >= st.buffUntil) st.buffDamageMul = 1;
+    st.buffSpeedMul = Math.max(w.time < st.buffUntil ? st.buffSpeedMul : 1, def.speedMul ?? 1.3);
+    st.buffUntil = Math.max(st.buffUntil, w.time + (def.slowSeconds ?? 2));
   }
+  if (o.hero?.action?.name === "hit") o.hero.action = null;
+  callout(w, e, syn > 1 ? "SWITCHEROO · BIG SHIELD" : "SWITCHEROO");
+  switchStomp(w, e, def, bx, bz);
+}
+
+/** Talent (switchSlam): a stomp where he lands - where the partner stood, or under him when he Digs In. */
+function switchStomp(w: World, e: Entity, def: AbilityDef, bx: number, bz: number): void {
   const sf = def.fx?.switchSlam;
   if (sf) {
-    // Talent: he lands with a stomp where the partner stood.
     const sdef: AbilityDef = {
       kind: "slam",
       anim: "slam",
@@ -325,6 +314,26 @@ export function fireSwitch(w: World, e: Entity, a: HeroAction, def: AbilityDef):
     fx(w, "pound", e.id, e.team, bx, w.groundY(bx, bz), bz, { radius: sf.radius });
     aoe(w, e, bx, bz, sf.radius, sdef, w.damageMulOf(e));
   }
+}
+
+/**
+ * R with no ally in reach - DIG IN: he stomps one hoof down. For digSeconds nothing moves him, stuns, slows, roots or
+ * debuffs him (cleansed every tick, see hero/update.ts and world/damage.ts), his Grit is full at once, and his next
+ * hit (whatever it is, whenever it lands) does digMul times its damage.
+ */
+export function fireDigIn(w: World, e: Entity, def: AbilityDef): void {
+  const t = e.transform;
+  const h = e.hero!;
+  const secs = def.digSeconds ?? 3;
+  e.status.steadfastUntil = w.time + secs;
+  e.status.ccImmuneUntil = Math.max(e.status.ccImmuneUntil, w.time + secs);
+  h.grit = 1;
+  e.status.kvx = e.status.kvz = 0;
+  fx(w, "digIn", e.id, e.team, t.pos.x, t.y, t.pos.z, { seconds: secs });
+  callout(w, e, "DIG IN");
+  switchStomp(w, e, def, t.pos.x, t.pos.z);
+  // Banked after the (talent) stomp, so the stomp itself doesn't spend it.
+  h.digPower = def.digMul ?? 1.6;
 }
 
 /** Crush Season: slam k (0..2) at its time; the last one flattens. */

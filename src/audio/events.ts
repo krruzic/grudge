@@ -840,6 +840,16 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
     case "gritFull":
       a.play("hit.armor", 0.25, { rate: 0.6 });
       return;
+    case "digIn":
+      // A hoof stamped down hard, the anvil on his back clanging with it, a low growl of armour.
+      a.play("hammer", 0.75, { rate: 0.5, priority: true });
+      a.play("metal.clank", 0.5, { rate: 0.55, at: 0.01 });
+      a.play("hit.armor", 0.5, { rate: 0.5, at: 0.04 });
+      return;
+    case "digInHit":
+      a.play("hammer", 0.7, { rate: 0.7, priority: true });
+      a.play("metal.clank", 0.55, { rate: 0.8 });
+      return;
     case "kegRocket":
       a.play("cork", 0.8);
       a.play("firecracker", 0.5, { at: 0.05 });

@@ -39,11 +39,13 @@ export const ANIM_FALLBACK: Record<string, string> = {
   crush: "slam",
   pound: "slam",
   fling: "throw",
+  stomp: "slam",
 };
 /** Ability kind -> clip; unlisted kinds play "cast". */
 export const KIND_ANIM: Record<string, string> = {
   pip: "cast",
   rake: "cast",
+  digin: "stomp",
   heave: "heave",
   volley: "volley",
   heartseeker: "heartseeker",

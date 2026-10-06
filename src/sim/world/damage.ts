@@ -82,6 +82,22 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
     return false;
   }
 
+  // Dig In's banked blow: the next real hit he lands, whatever it is.
+  const dig = src?.hero?.digPower;
+  if (dig && !opts.tick && target.team !== src!.team && target.team >= 0) {
+    amount *= dig;
+    opts = { ...opts, big: true };
+    src!.hero!.digPower = undefined;
+    w.emit({
+      type: "heroFx",
+      name: "digInHit",
+      src: src!.id,
+      team: src!.team,
+      x: target.transform.pos.x,
+      y: target.transform.y,
+      z: target.transform.pos.z,
+    });
+  }
   amount = attackerScaling(w, src, target, amount, opts);
   amount *= synergyMul(w, src, target, opts);
   if (src?.hero && !opts.tick) amount *= vantageMul(w, src, target);
@@ -95,6 +111,9 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
   if (w.time < target.status.ccImmuneUntil) {
     opts = { ...opts, stun: undefined, knockback: 0 };
   }
+  // Dig In: no pulls, slows or roots either.
+  if (w.time < (target.status.steadfastUntil ?? 0))
+    opts = { ...opts, pull: 0, slowMul: undefined, slowSeconds: undefined };
   // Frontal block: a blocking hero facing within ~78 degrees of the hit origin takes reduced damage, no knockback.
   let blocked = false;
   const fx = opts.fromX ?? src?.transform.pos.x;
@@ -494,7 +513,14 @@ function applyImpact(w: World, target: Entity, amount: number, opts: DamageOpts,
     target.status.slowMul = opts.slowMul;
     target.status.slowUntil = w.time + opts.slowSeconds;
   }
-  if (target.hero && !target.hero.blocking && amount >= 25 && !target.hero.action && !opts.noFlinch) {
+  if (
+    target.hero &&
+    !target.hero.blocking &&
+    amount >= 25 &&
+    !target.hero.action &&
+    !opts.noFlinch &&
+    w.time >= (target.status.steadfastUntil ?? 0)
+  ) {
     target.hero.action = {
       name: "hit",
       kind: "hit",

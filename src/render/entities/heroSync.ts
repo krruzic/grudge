@@ -39,6 +39,7 @@ export function syncHero(ents: EntityViews, e: Entity, v: View, facing: number, 
   }
   v.root.visible = true;
   syncWard(ents, e, v, dt, time);
+  syncDig(ents, e, v, dt, time);
   v.body.rotation.y = facing;
   const a = h.action;
   syncActionAnim(ents, e, v, facing, dt);
@@ -117,6 +118,35 @@ function syncWard(ents: EntityViews, e: Entity, v: View, dt: number, time: numbe
       W.glow.mat.color.setRGB(1, 0.75, 0.25).multiplyScalar(v.wardK * (0.35 + pulse * 0.25));
     }
   }
+}
+
+/**
+ * Red hull outline while Gristle is Dug In (like the gold invulnerable glow, in his blood-red), then a fainter
+ * throbbing one while the powered-up blow is still banked.
+ */
+function syncDig(ents: EntityViews, e: Entity, v: View, dt: number, time: number): void {
+  const w = ents.world;
+  const dug = w.time < (e.status.steadfastUntil ?? 0) && !e.hero!.dead;
+  const banked = !!e.hero!.digPower && !e.hero!.dead;
+  const want = dug ? 1 : banked ? 0.45 : 0;
+  const k = v.digK ?? 0;
+  v.digK = Math.max(0, Math.min(1, k + Math.sign(want - k) * Math.min(Math.abs(want - k), dt * (want > k ? 8 : 4))));
+  if (v.digK <= 0 && !v.dig) return;
+  if (!v.dig) {
+    const line = hullMaterial(0xff4030, false);
+    const glow = hullMaterial(0xff2010, true);
+    const body = v.body ?? v.root;
+    v.dig = { hulls: [...buildHulls(body, line.mat, 0), ...buildHulls(body, glow.mat, 4)], line, glow };
+  }
+  const D = v.dig;
+  const on = v.digK > 0;
+  for (const hl of D.hulls) hl.visible = on;
+  if (!on) return;
+  const pulse = 0.5 + 0.5 * Math.sin(time * (dug ? 7 : 4));
+  D.line.mat.color.setRGB(1, 0.14 + pulse * 0.1, 0.08);
+  D.line.thick.value = 0.04 * v.digK + 0.01;
+  D.glow.thick.value = (0.08 + 0.05 * pulse) * Math.max(0.5, v.digK);
+  D.glow.mat.color.setRGB(1, 0.08, 0.04).multiplyScalar(v.digK * (0.45 + pulse * 0.3));
 }
 
 /**

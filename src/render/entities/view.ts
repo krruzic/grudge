@@ -38,6 +38,9 @@ export interface View {
   wasDead?: boolean;
   ward?: { hulls: THREE.Mesh[]; line: ReturnType<typeof hullMaterial>; glow: ReturnType<typeof hullMaterial> };
   wardK?: number;
+  /** Gristle's Dig In: red hull outline (dig) and its fade (digK). */
+  dig?: { hulls: THREE.Mesh[]; line: ReturnType<typeof hullMaterial>; glow: ReturnType<typeof hullMaterial> };
+  digK?: number;
   /** Wreck Witch: eased Tide Rising stacks driving her size. */
   tideK?: number;
   stealthed?: boolean;

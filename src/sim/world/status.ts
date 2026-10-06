@@ -1,6 +1,7 @@
 // Default per-entity Status block. Every timed effect is stored as an absolute `...Until` sim time, so expiring
 // an effect is just `w.time >= until`; the paired multipliers only apply while that time is in the future.
-import type { Status } from "../types.ts";
+import type { Entity, Status } from "../types.ts";
+import type { World } from "../world.ts";
 
 export function newStatus(): Status {
   return {
@@ -46,4 +47,36 @@ export function newStatus(): Status {
     markAll: false,
     markWeaken: 1,
   };
+}
+
+/**
+ * Clear every debuff (stun, slow / root, knockback drift, hex, mark, blind, poison, bleed, no-heal, wounds, sticky
+ * honey, cowed, Pip, Wet, swarm, haunt). Gristle's Dig In runs it every tick while it lasts.
+ */
+export function cleanse(w: World, e: Entity): void {
+  const s = e.status;
+  const t = w.time;
+  if (s.stunUntil > t) s.stunUntil = t;
+  if (s.slowUntil > t) s.slowUntil = t;
+  s.slowMul = 1;
+  s.kvx = s.kvz = 0;
+  s.hexUntil = Math.min(s.hexUntil, t);
+  if (s.markTeam !== e.team) s.markUntil = Math.min(s.markUntil, t);
+  s.cowedUntil = Math.min(s.cowedUntil, t);
+  s.bleedUntil = Math.min(s.bleedUntil, t);
+  s.bleedStacks = 0;
+  for (const k of [
+    "blindUntil",
+    "poisonUntil",
+    "noHealUntil",
+    "woundUntil",
+    "stickyUntil",
+    "pipUntil",
+    "wetUntil",
+    "swarmUntil",
+    "hauntUntil",
+    "shovedUntil",
+  ] as const)
+    if ((s[k] ?? 0) > t) s[k] = t;
+  if (s.armorMul > 1 && s.armorUntil > t) s.armorUntil = t;
 }

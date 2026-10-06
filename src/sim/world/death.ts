@@ -62,6 +62,7 @@ function killHero(
   hh.action = null;
   hh.bomb = false;
   hh.aim = null;
+  hh.digPower = undefined;
   const big = w.ffa || w.players.length > 2 ? (w.data.match.economy.respawnBigMul ?? 1) : 1;
   const catchUpCut = (w.ffa ? (victim?.catchUp ?? 0) : 0) * w.data.match.catchUp.respawnCut;
   const bl = w.data.heroes.baseline;

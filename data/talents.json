@@ -1520,7 +1520,7 @@
         {
           "id": "stompin",
           "name": "STOMP IN",
-          "desc": "YOU LAND FROM THE SWAP WITH A STOMP: 60 TO FOES WITHIN 2.6M OF YOUR PARTNER'S OLD SPOT, KNOCKING THEM BACK AND STUNNING 0.4S.",
+          "desc": "YOU LAND FROM THE SWAP WITH A STOMP: 60 TO FOES WITHIN 2.6M OF YOUR PARTNER'S OLD SPOT, KNOCKING THEM BACK AND STUNNING 0.4S. DIG IN STOMPS THE SAME AT YOUR FEET.",
           "fx": {
             "switchSlam": {
               "radius": 2.6,

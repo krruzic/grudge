@@ -286,6 +286,11 @@ export interface AbilityDef {
   puddleSeconds?: number;
   puddleHeal?: number;
   rootSeconds?: number;
+  /** Gristle's Dig In (Switcheroo with no ally in reach): how long, next-hit multiplier, action timing. */
+  digSeconds?: number;
+  digMul?: number;
+  digDur?: number;
+  digHitAt?: number;
   eruptRadius?: number;
   puddleLinger?: number;
   puddlePoison?: number;

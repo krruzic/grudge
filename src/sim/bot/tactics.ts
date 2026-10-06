@@ -738,8 +738,8 @@ function wallBehind(w: World, o: Entity, dx: number, dz: number, reach: number):
 /**
  * Gristle: stands his ground in melee (Grit), Headbutts champions with a wall close behind them (or that are
  * running away low), pounds with a charged A when a champion or a crowd is at his feet, Switcheroos a hurt partner
- * out of trouble (or, alone and winning, jukes a fleeing champion back past him), and curls behind his anvil when a
- * champion is about to hit him from range.
+ * out of trouble (or, with no partner in reach, Digs In for a brawl), and curls behind his anvil when a champion is
+ * about to hit him from range.
  */
 export function vintnerFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
   const h = me.hero!;
@@ -779,15 +779,18 @@ export function vintnerFight(bot: Bot, w: World, me: Entity, target: Entity | un
       aimAt(bot, me, target);
       return;
     }
-    // Alone: swap places with a champion he can't reach (a kiter out of Headbutt range, or a fleeing one) - it pulls
-    // them into his reach, dazed.
+    // Nobody to guard: Dig In for the brawl - a champion at his feet who is winding up a big move, has him below
+    // 70%, or can be finished by the banked blow - then swing.
+    const ta0 = target.hero.action;
     if (
       !ally &&
       rdy("r") &&
       !h.action &&
-      d > 3 &&
-      d < (ab.r.range ?? 8) * 0.9 &&
-      (target.hp < target.maxHp * 0.35 || (kiter && !rdy("b")))
+      d < 3 &&
+      ((ta0 && (ta0.name === "b" || ta0.name === "z") && !ta0.fired) ||
+        me.hp < me.maxHp * 0.7 ||
+        target.hp < target.maxHp * 0.35) &&
+      bot.rand() < 0.5 * bot.skill + 0.3
     ) {
       bot.wantR = true;
       aimAt(bot, me, target);
