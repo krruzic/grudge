@@ -345,6 +345,11 @@ export interface BotPlan {
   escape?: "b" | "r";
   gateB?: "opening";
   hitAndRun?: number;
+  /**
+   * Don't turn and run from a champion already within 3 m who has no more health than us, while the escape ability
+   * is on cooldown: fleeing just shows them our back (Grim, whose hits also leech).
+   */
+  stand?: boolean;
   hunt?: number;
   huntRatio?: number;
   picks?: number[];

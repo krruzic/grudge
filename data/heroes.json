@@ -320,7 +320,7 @@
           "hits": [
             {
               "damage": 24,
-              "range": 2.4,
+              "range": 2.8,
               "arcDeg": 60,
               "dur": 0.16,
               "hitAt": 0.03,
@@ -329,7 +329,7 @@
             },
             {
               "damage": 24,
-              "range": 2.4,
+              "range": 2.8,
               "arcDeg": 60,
               "dur": 0.16,
               "hitAt": 0.03,
@@ -338,7 +338,7 @@
             },
             {
               "damage": 24,
-              "range": 2.4,
+              "range": 2.8,
               "arcDeg": 60,
               "dur": 0.16,
               "hitAt": 0.03,
@@ -347,7 +347,7 @@
             },
             {
               "damage": 40,
-              "range": 2.6,
+              "range": 3.0,
               "arcDeg": 90,
               "dur": 0.26,
               "hitAt": 0.05,
@@ -428,7 +428,8 @@
         "clearFirst": true,
         "escape2": "r",
         "huntRatio": 0.9,
-        "hitAndRun": 2
+        "hitAndRun": 2,
+        "stand": true
       },
       "class": "assassin"
     },

@@ -96,7 +96,7 @@ export function think(bot: Bot, w: World, me: Entity): void {
     retreat(bot, w, s, swarm, graveReady);
     return;
   }
-  reactToCasts(bot, s);
+  reactToCasts(bot, w, s);
   if (h.recallAt !== undefined) {
     bot.goal = null;
     return;
@@ -378,7 +378,14 @@ function sense(bot: Bot, w: World, me: Entity): Senses {
   if (hpf < leaveAt && !(enemyWorse && st.edge >= 0)) bot.healing = true;
   else if (hpf > 0.8 || (st.threat === 0 && hpf > 0.55) || (st.edge > 0.25 && hpf > 0.45) || (down && hpf > 0.25))
     bot.healing = false;
-  const lowHp = bot.healing && !finish;
+  const cornered =
+    !!plan.stand &&
+    !!ehAlive &&
+    dHero < 3 &&
+    enemyHero!.hp <= me.hp &&
+    !!plan.escape &&
+    (h.cooldowns[plan.escape] ?? 0) > w.time;
+  const lowHp = bot.healing && !finish && !cornered;
   const smoked = w.time < me.status.stealthUntil;
   return { me, p: me.transform.pos, h, assist, enemyHero, ehAlive, dHero, plan, lowHp, smoked, edge: st.edge };
 }
@@ -524,11 +531,13 @@ function retreat(bot: Bot, w: World, s: Senses, swarm: number, graveReady: boole
   if (dHero < 2.6) bot.wantAttack = true;
 }
 
-/** Dodge (skill-scaled) or block when the enemy hero starts a B or super close by. */
-function reactToCasts(bot: Bot, s: Senses): void {
+/** Dodge (skill-scaled) or block when the enemy hero starts a B or super close by - one we can see (a smoked Grim's
+ * Leap windup is invisible to a human, so the CPU doesn't read it either). */
+function reactToCasts(bot: Bot, w: World, s: Senses): void {
   const eh = s.enemyHero;
   if (
     s.ehAlive &&
+    w.canSee(s.me, eh!) &&
     eh!.hero!.action &&
     (eh!.hero!.action.name === "b" || eh!.hero!.action.name === "z") &&
     s.dHero < 4.5
