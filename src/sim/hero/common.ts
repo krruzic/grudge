@@ -21,7 +21,8 @@ export function spendCharge(w: World, e: Entity, slot: "b" | "r", cd: number): v
   let i = stock.findIndex((t) => t <= w.time);
   if (i < 0) i = stock.indexOf(Math.min(...stock));
   stock[i] = w.time + cd;
-  h.cooldowns[slot] = Math.min(...stock);
+  // chargeGap: even with a charge banked, the next use waits this long (Maddock's second keg).
+  h.cooldowns[slot] = Math.max(Math.min(...stock), w.time + (abilities(w, e)[slot].chargeGap ?? 0));
 }
 
 /** Give back one charge now (a reset: kills, Shadow Step); for a normal ability, ready it now. */

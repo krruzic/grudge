@@ -408,8 +408,13 @@ function startFromInput(
     startAbility(w, e, "z", cmd);
     h.meter = 0;
     e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + (ab.z.hitAt ?? 0.5));
-  } else if (cmd.special && ab.r.kind === "powderkeg" && !ready(e, "r", w.time) && detonateKegs(w, e)) {
-    // Kegs out and no charge left to throw another: R blows them now.
+  } else if (
+    cmd.special &&
+    ab.r.kind === "powderkeg" &&
+    !(h.stock?.r ?? [w.time + 1]).some((t) => t <= w.time) &&
+    detonateKegs(w, e)
+  ) {
+    // Kegs out and no charge banked (a charge waiting out the 2 s gap still counts as banked): R blows them now.
   } else if (cmd.special && ab.r.kind === "lookout" && !act && toppleLookout(w, e)) {
     // Collapse talent: R with a lookout standing topples it.
   } else if (cmd.special && ready(e, "r", w.time) && !act && ab.r.kind === "gravewalk") {

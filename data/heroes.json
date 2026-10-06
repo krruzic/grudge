@@ -947,7 +947,8 @@
           "botRange": 8,
           "callout": "POWDER KEG",
           "variance": 0.15,
-          "charges": 2
+          "charges": 2,
+          "chargeGap": 2
         },
         "z": {
           "kind": "brewfest",

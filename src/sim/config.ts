@@ -244,6 +244,8 @@ export interface AbilityDef {
   cowSeconds?: number;
   /** Uses that recharge independently (Hoot's forts / lookouts): fire them back to back, each on its own cooldown. */
   charges?: number;
+  /** With charges: minimum seconds between two uses, even with another charge banked. */
+  chargeGap?: number;
   /** Bramble's Take Wing: A drops a honey bomb every bombEvery s (bombDamage within bombRadius). */
   bombEvery?: number;
   bombDamage?: number;
