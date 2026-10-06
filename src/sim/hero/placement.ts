@@ -1,6 +1,6 @@
 // Placeable abilities: which ability kinds can be aimed at a ground point (hold the button to show a reticle), and
 // their max placement range. Read by the client (reticle/aim UI via placeRanges) and by startAbility.
-import { chainSwingPlan, swingPivots } from "./wreckwitch.ts";
+import { chainSwingPlan, sameAsLast, swingPivots } from "./wreckwitch.ts";
 import type { World } from "../world.ts";
 import type { Entity } from "../types.ts";
 import type { AbilityDef } from "../config.ts";
@@ -73,7 +73,7 @@ export function placeRanges(
       (ready(e, "dodge", w.time) || w.time <= (h.swingChainUntil ?? -1)) &&
       !h.action
         ? swingPivots(w, e)
-            .filter((s) => chainSwingPlan(w, e, 0, 0, s))
+            .filter((s) => !sameAsLast(w, e, s) && chainSwingPlan(w, e, 0, 0, s))
             .map((s) => ({ x: s.x, z: s.z }))
         : undefined,
     ready: {

@@ -476,10 +476,13 @@ export function chainSwingPlan(
  */
 export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
   if (!cmd.swing) return false;
+  if (sameAsLast(w, e, cmd.swing)) return false;
   const hk = w.heroDef(e.hero!.type).hooks;
   const plan = chainSwingPlan(w, e, cmd.moveX, cmd.moveZ, cmd.swing);
   if (!plan) return false;
   const { pv, x, z, rr, base, deg, sign, sx, sz } = plan;
+  if (sameAsLast(w, e, pv)) return false;
+  e.hero!.swingFrom = { x: pv.x, z: pv.z };
   const t = e.transform;
   const h = e.hero!;
   const dur = hk.swingSeconds ?? 0.5;
@@ -557,4 +560,11 @@ export function chainSwingTick(w: World, e: Entity, a: HeroAction): void {
     t.pos.z = tz;
     t.y = w.groundY(tx, tz);
   }
+}
+
+/** Mid-chain, the anchor she just swung round (it can't be hooked again straight away). */
+export function sameAsLast(w: World, e: Entity, q: { x: number; z: number }): boolean {
+  const h = e.hero!;
+  const last = h.swingFrom;
+  return !!last && w.time <= (h.swingChainUntil ?? -1) && Math.hypot(last.x - q.x, last.z - q.z) < 0.6;
 }

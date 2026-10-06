@@ -303,6 +303,8 @@ export interface HeroState {
   /** Mother Kelp's chain swing: swings in the current chain, and until when another one continues it. */
   swingChain?: number;
   swingChainUntil?: number;
+  /** The anchor of her last swing: never hooked twice in a row within a chain. */
+  swingFrom?: { x: number; z: number };
   tideT?: number;
   tideNearAt?: number;
   tideEbbAt?: number;

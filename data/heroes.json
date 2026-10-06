@@ -6,7 +6,8 @@
       "mid": 800,
       "high": 1000,
       "sturdy": 980,
-      "stout": 900
+      "stout": 900,
+      "lean": 700
     },
     "speed": {
       "low": 4.0,
@@ -296,7 +297,7 @@
     "raider": {
       "name": "Grim",
       "blurb": "Hunter. Ambush from stealth, leap in, and dash to execute the wounded. Bloodthirst: heals for 20% of the damage he deals to champions. Vanish: a champion kill heals him 30% and readies Leap and Smoke. Soldiers hit him 10% harder.",
-      "health": "low",
+      "health": "lean",
       "speed": "swift",
       "damage": "high",
       "defaultBuild": "barracks",
@@ -440,8 +441,8 @@
       "defaultBuild": "range",
       "botRange": 8,
       "hooks": {
-        "hexMinionMul": 1.3,
-        "raiseMax": 5,
+        "hexMinionMul": 1.0,
+        "raiseMax": 3,
         "raiseSeconds": 15,
         "heroDamageMul": 0.92
       },
@@ -916,10 +917,10 @@
           "anim": "throw",
           "range": 8,
           "radius": 3,
-          "heal": 110,
+          "heal": 85,
           "flight": 0.35,
           "puddleSeconds": 5,
-          "puddleHeal": 22,
+          "puddleHeal": 14,
           "puddleLinger": 3,
           "puddlePoison": 18,
           "poisonSeconds": 3,
@@ -974,7 +975,7 @@
         }
       },
       "botPlan": {
-        "retreatHp": 0.3,
+        "retreatHp": 0.45,
         "healer": true,
         "picks": [
           0,
@@ -1285,9 +1286,9 @@
         "a": {
           "kind": "inkbolt",
           "anim": "shoot",
-          "damage": 56,
+          "damage": 62,
           "range": 12.5,
-          "speed": 22,
+          "speed": 28,
           "dur": 0.5,
           "hitAt": 0.2,
           "cooldown": 0.6,
@@ -1664,7 +1665,7 @@
           "damage": 45,
           "unitMul": 2,
           "heal": 80,
-          "slowMul": 0.55,
+          "slowMul": 0.45,
           "seconds": 4,
           "puddleHeal": 30,
           "flight": 0.35,
@@ -1712,7 +1713,7 @@
         }
       },
       "botPlan": {
-        "retreatHp": 0.32,
+        "retreatHp": 0.3,
         "healer": true,
         "escape": "r",
         "picks": [

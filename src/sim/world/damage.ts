@@ -121,7 +121,7 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
 
   amount = matchupArmour(w, src, target, amount);
   target.hp -= amount;
-  onDamageDealt(w, src, target, amount);
+  onDamageDealt(w, src, target, amount, !!opts.big);
   w.emit({
     type: "hit",
     ...ev,
@@ -419,10 +419,11 @@ function matchupArmour(w: World, src: Entity | null, target: Entity, amount: num
 }
 
 /** Side effects of hp actually lost: leech, jump cancel, xp, super meter, last-target memory, core damage stat. */
-function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number): void {
-  // Wounded: a ranged champion's hit (botRange > 3: Wren, Remnil, Hollin, Brindle) cuts a champion's healing for a
-  // few seconds - the shooters' answer to Maddock and Bramble out-healing their damage.
-  if (src?.hero && target.hero && amount > 0 && (w.heroDef(src.hero.type).botRange ?? 1.8) > 3) {
+function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number, big = false): void {
+  // Wounded: a ranged champion's hit (botRange > 3: Wren, Remnil, Hollin, Brindle), or any champion's big hit
+  // (finishers, slams, dashes), cuts a champion's healing for a few seconds - the answer to Maddock and Bramble
+  // out-healing the damage.
+  if (src?.hero && target.hero && amount > 0 && (big || (w.heroDef(src.hero.type).botRange ?? 1.8) > 3)) {
     const was = target.status.woundUntil ?? -1;
     target.status.woundUntil = w.time + (w.data.match.wound?.seconds ?? 2.5);
     if (was < w.time)
