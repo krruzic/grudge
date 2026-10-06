@@ -557,6 +557,52 @@ def attach_wrench(name, arm, src_path):
     return w
 
 
+def curl_grip_fingers(src, arm, held, cfg):
+    """Tripo hands are one rigid bone with straight fingers, so held weapons float in a flat palm. For each hand
+    that holds something (an attached object bound to hand_R / hand_L, or CFG["grip"]), bend the finger half of
+    the hand mesh round the grip in the rest pose - two knuckles (KNUCKLES, fraction along the hand bone), each
+    CURL degrees toward the palm (which faces the body once the arms hang). Weighted by the vertex's hand weight so
+    the wrist blend stays smooth. CFG["curl"] overrides the angle (0 = leave the hand open)."""
+    sides = set(cfg.get("grip", []))
+    for o in held:
+        names = {g.name for g in o.vertex_groups}
+        for s in ("R", "L"):
+            if f"hand_{s}" in names:
+                sides.add(s)
+    deg = cfg.get("curl", 52)
+    if not sides or not deg:
+        return
+    me = src.data
+    gi = {g.name: g.index for g in src.vertex_groups}
+    for s in sides:
+        b = arm.data.bones.get(f"hand_{s}")
+        if not b or f"hand_{s}" not in gi:
+            continue
+        h, t = b.head_local.copy(), b.tail_local.copy()
+        L = (t - h).length
+        d = (t - h).normalized()
+        # Palm normal: toward the body's centre line, perpendicular to the hand bone.
+        n = Vector((-h.x, 0, 0))
+        n = (n - d * n.dot(d)).normalized()
+        axis = d.cross(n).normalized()
+        knuckles = cfg.get("knuckles", (0.42, 0.7))
+        g = gi[f"hand_{s}"]
+        for v in me.vertices:
+            w = next((e.weight for e in v.groups if e.group == g), 0.0)
+            if w < 0.05:
+                continue
+            p = v.co.copy()
+            # Apply the outer knuckle first, then the inner one (rotating the already-bent point with it).
+            for k in sorted(knuckles, reverse=True):
+                kp = h + d * (L * k)
+                if (p - kp).dot(d) <= 0:
+                    continue
+                R = Matrix.Rotation(math.radians(deg * w), 4, axis)
+                p = kp + (R @ (p - kp).to_4d()).to_3d()
+            v.co = p
+    me.update()
+
+
 def preview_clip(src, arm, path, clip, frames, extra=(), angles=(0, 45, 90)):
     act = bpy.data.actions.get(clip + "_" + arm.name)
     for t in arm.animation_data.nla_tracks:
@@ -612,6 +658,7 @@ def build(key, preview=None):
         objs.append(gobj)
     for f, srcf in cfg.get("attach", []):
         objs.append(fn(cfg, f)(name, arm, os.path.join(ROOT, "assets", "source", srcf)))
+    curl_grip_fingers(src, arm, objs[2:], cfg)
     clips = anims.hero_clips(cfg.get("weight", 1.0))
     if cfg.get("clips"):
         clips = fn(cfg, cfg["clips"])(clips)
