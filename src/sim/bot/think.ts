@@ -394,6 +394,20 @@ function sense(bot: Bot, w: World, me: Entity): Senses {
   if (hpf < leaveAt && !(enemyWorse && st.edge >= 0)) bot.healing = true;
   else if (hpf > 0.8 || (st.threat === 0 && hpf > 0.55) || (st.edge > 0.25 && hpf > 0.45) || (down && hpf > 0.25))
     bot.healing = false;
+  // Deathmatch: no resting in a corner - a hurt CPU heads for a potion (even a far one) or stays in the fight.
+  if (w.tdm && bot.healing && !nearPowerup(w, me, 40, true)) bot.healing = false;
+  // ...and on the way it doesn't turn its back on a champion that's on it: fight back while engaged.
+  const engaged =
+    !!w.tdm &&
+    w.entities.some(
+      (o) =>
+        o.alive &&
+        o.hero &&
+        !o.hero.dead &&
+        o.team !== me.team &&
+        (w.dist(me, o) < 4 ||
+          (w.dist(me, o) < 7 && me.status.hurtBy === o.id && w.time - (me.status.hurtAt ?? -99) < 1)),
+    );
   const cornered =
     !!plan.stand &&
     !!ehAlive &&
@@ -401,7 +415,7 @@ function sense(bot: Bot, w: World, me: Entity): Senses {
     enemyHero!.hp <= me.hp &&
     !!plan.escape &&
     (h.cooldowns[plan.escape] ?? 0) > w.time;
-  const lowHp = bot.healing && !finish && !cornered;
+  const lowHp = bot.healing && !finish && !cornered && !engaged;
   const smoked = w.time < me.status.stealthUntil;
   return { me, p: me.transform.pos, h, assist, enemyHero, ehAlive, dHero, plan, lowHp, smoked, edge: st.edge };
 }
