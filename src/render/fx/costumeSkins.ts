@@ -114,6 +114,16 @@ const TINTS: Record<string, Record<number, number>> = {
     0xfff0c0: 0xffa090,
     0xffc040: 0xff4030,
   },
+  // Tinker's Hive: honey becomes hot brass solder and machine oil.
+  tinker: {
+    0xffd060: 0xc8902c,
+    0xffe080: 0xe0aa48,
+    0xfff0b0: 0xf0d8a0,
+    0xffe8a0: 0xd8b070,
+    0xfff4d0: 0xe8e0d0,
+    0xfff0c0: 0xd8ccb0,
+    0xffc040: 0x9a6418,
+  },
   lavenderfield: {
     0xffd060: 0xd0a0ff,
     0xffe080: 0xe0b8ff,
@@ -220,6 +230,7 @@ const TRAILS: Record<string, number> = {
   forgemaster: 0xff6a10,
   icewine: 0x80c8ff,
   warhornet: 0xff4a3a,
+  tinker: 0xff3a20,
   lavenderfield: 0xd8a8ff,
   queencourier: 0xb070ff,
 };
