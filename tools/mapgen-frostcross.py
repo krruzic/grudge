@@ -2,7 +2,7 @@ import json
 
 SEED = "ec88083c7a43bda059eac222c12dd1f89f4788e50b940c8d07b29e7d64d8b081"
 
-W = D = 112
+W = D = 72
 C = W / 2
 ops = []
 props = []
@@ -20,85 +20,87 @@ def prop(t, x, z, **kw):
     props.append({"type": t, "x": x, "z": z, **kw})
 
 
+# 72 x 72 (was 112): keep castle 15 x 18 (x 1-16, z 27-45), arm z 26-46 out to the summit plaza (r 12), corner
+# cirque crossed by a rock-causeway trail from the castle's north gate to the next arm.
 ops.append({"op": "noise", "amp": 0.35, "scale": 0.11, "seed": int(SEED[:6], 16) % 997})
 
 shape("rect", x=-12, z=-12, w=W + 24, h=D + 24, y=-4.0, mode="set")
-shape("rect", x=-12, z=30, w=21, h=14, y=2.2, edge=9, mode="max", wobble=1.5)
-shape("rect", x=-12, z=42, w=58, h=28, y=4.4, edge=3.0, mode="set", wobble=1.6)
-shape("rect", x=26, z=43, w=14, h=26, y=5.4, edge=6, mode="max", wobble=0.8)
-shape("rect", x=34, z=43, w=10, h=26, y=6.4, edge=6, mode="max", wobble=0.8)
-shape("circle", x=C, z=C, r=19, y=7.4, edge=3.0, mode="set", wobble=1.6)
-shape("circle", x=C, z=C, r=6.5, y=8.3, edge=2.2, mode="set", wobble=0.4)
-shape("circle", x=C, z=C, r=3.2, y=8.6, edge=1.0, mode="set")
+shape("rect", x=-12, z=19, w=14, h=9, y=2.2, edge=6, mode="max", wobble=1.2)
+shape("rect", x=-12, z=26, w=40, h=20, y=4.4, edge=2.5, mode="set", wobble=1.2)
+shape("rect", x=18, z=27, w=9, h=18, y=5.4, edge=4, mode="max", wobble=0.6)
+shape("rect", x=23, z=27, w=6, h=18, y=6.4, edge=4, mode="max", wobble=0.6)
+shape("circle", x=C, z=C, r=12, y=7.4, edge=2.5, mode="set", wobble=1.2)
+shape("circle", x=C, z=C, r=4.2, y=8.3, edge=1.6, mode="set", wobble=0.3)
+shape("circle", x=C, z=C, r=2.2, y=8.6, edge=0.8, mode="set")
 
-shape("rect", x=1, z=45, w=19, h=22, y=3.9, edge=0, mode="set")
-shape("rect", x=20, z=53, w=5, h=6, y=3.9, edge=3.5, mode="set")
-shape("rect", x=8, z=40, w=4, h=5, y=3.9, edge=3.0, mode="set")
+shape("rect", x=1, z=27, w=15, h=18, y=3.9, edge=0, mode="set")
+shape("rect", x=16, z=33, w=4, h=6, y=3.9, edge=2.5, mode="set")
+shape("rect", x=6, z=23, w=4, h=4, y=3.9, edge=2.5, mode="set")
 
-trail = [(9.5, 41.5), (11, 35), (14, 29), (19, 23), (25, 19), (31, 15), (35, 12.5)]
+trail = [(8, 24), (8.5, 20.5), (10, 17), (12.5, 14), (16, 11.5), (19.5, 9.5), (22.5, 8.5)]
 for i, (x, z) in enumerate(trail):
     t = i / (len(trail) - 1)
     y = 3.9 - 2.4 * (1 - abs(t * 2 - 1) ** 1.4)
-    shape("circle", x=x, z=z, r=2.4, y=y, edge=3.2, mode="max", wobble=0.6)
-shape("circle", x=22, z=21, r=3.6, y=1.5, edge=3.2, mode="max", wobble=0.6)
+    shape("circle", x=x, z=z, r=1.9, y=y, edge=2.4, mode="max", wobble=0.4)
+shape("circle", x=14, z=14, r=2.6, y=1.5, edge=2.4, mode="max", wobble=0.4)
 
-for (x, z, r, y) in [(30, 31, 3.5, -3.5), (7, 7, 4, -4.5), (24, 5, 3, -5), (5, 24, 3, -5)]:
-    shape("circle", x=x, z=z, r=r, y=y, edge=4, mode="max", wobble=1.0)
+for (x, z, r, y) in [(19.5, 19.5, 2.5, -3.5), (4.5, 4.5, 3, -4.5), (15, 3.5, 2, -5), (3.5, 15, 2, -5)]:
+    shape("circle", x=x, z=z, r=r, y=y, edge=3, mode="max", wobble=0.8)
 
-shape("circle", x=31, z=46, r=2.2, y=5.6, edge=2.2, mode="max", wobble=0.6)
-shape("circle", x=34, z=67, r=2.6, y=5.8, edge=2.0, mode="max", wobble=0.6)
-shape("circle", x=43.5, z=43.5, r=2.4, y=8.6, edge=2.0, mode="max", wobble=0.5)
+shape("circle", x=20, z=27.5, r=1.6, y=5.6, edge=1.6, mode="max", wobble=0.4)
+shape("circle", x=22, z=44.5, r=1.8, y=5.8, edge=1.5, mode="max", wobble=0.4)
+shape("circle", x=28.5, z=28.5, r=1.7, y=8.6, edge=1.5, mode="max", wobble=0.4)
 
 cell("wall", style="rim", x=0, z=0, w=W, h=1)
-for (x, z, w, h) in [(1, 1, 7, 40), (1, 1, 40, 8), (12, 1, 21, 11), (26, 1, 15, 9), (17, 26, 21, 13), (26, 17, 13, 9), (12, 9, 4, 4)]:
+for (x, z, w, h) in [(1, 1, 4, 18), (1, 1, 25, 4), (8, 1, 9, 5), (17, 1, 9, 4), (13, 18, 13, 8), (18, 12, 8, 6), (7, 6, 2, 2)]:
     cell("wall", style="rim", x=x, z=z, w=w, h=h)
 
-cell("paving", x=1, z=45, w=19, h=22)
-cell("wall", style="castle", x=1, z=45, w=7, h=1)
-cell("wall", style="castle", x=12, z=45, w=9, h=1)
-cell("wall", style="castle", x=1, z=66, w=20, h=1)
-cell("wall", style="castle", x=20, z=45, w=1, h=8)
-cell("wall", style="castle", x=20, z=59, w=1, h=8)
+cell("paving", x=1, z=27, w=15, h=18)
+cell("wall", style="castle", x=1, z=27, w=5, h=1)
+cell("wall", style="castle", x=10, z=27, w=7, h=1)
+cell("wall", style="castle", x=1, z=44, w=16, h=1)
+cell("wall", style="castle", x=16, z=27, w=1, h=6)
+cell("wall", style="castle", x=16, z=39, w=1, h=6)
 
-for i, x in enumerate(range(21, 40, 2)):
-    zz = 54 + [0, 1, 1, 0, -1, 0, 1, 1, 0, 0][i]
-    cell("dirt", x=x, z=zz, w=3, h=3 + (i % 2))
-cell("dirt", x=9, z=36, w=3, h=9)
-for z in range(50, 56):
-    for x in range(50, 56):
-        if (x + 0.5 - C) ** 2 + (z + 0.5 - C) ** 2 <= 6.2 ** 2:
+for i, x in enumerate(range(17, 27, 2)):
+    zz = 35 + [0, 1, 0, -1, 0][i]
+    cell("dirt", x=x, z=zz, w=3, h=2 + (i % 2))
+cell("dirt", x=7, z=22, w=2, h=5)
+for z in range(31, 41):
+    for x in range(31, 41):
+        if (x + 0.5 - C) ** 2 + (z + 0.5 - C) ** 2 <= 4.2 ** 2:
             cell("paving", x=x, z=z, w=1, h=1)
 
-prop("banner", 2.5, 46.5)
-prop("banner", 19.5, 46.5)
-prop("torch", 21.5, 52.5)
-prop("torch", 21.5, 59.5)
-prop("tower", 3, 46.5, solid=True)
-prop("tower", 18.5, 64.5, solid=True)
-prop("arch", 20.5, 56.0, rot=90)
-prop("arch", 10.0, 45.5, rot=0)
-prop("statue", 42, 56)
-prop("torch", 50.5, 50.5)
-prop("rock", 31, 46, scale=1.2, solid=True)
-prop("rock", 34, 67, scale=1.3, solid=True)
-prop("rock", 26, 70.5, scale=1.1)
-prop("pine", 24, 43.5, scale=1.2)
-prop("pine", 37, 43.2, scale=1.0)
-prop("pine", 38, 69, scale=1.3)
-prop("pine", 27, 69.5, scale=1.1)
-prop("pine", 16, 33, scale=1.1)
-prop("pine", 28, 16, scale=1.2)
-prop("rock", 20, 24.5, scale=0.9)
-prop("crate", 14.5, 63)
-prop("crate", 5, 63.5)
+prop("banner", 2.5, 28.5)
+prop("banner", 15.5, 28.5)
+prop("torch", 17.5, 32.5)
+prop("torch", 17.5, 39.5)
+prop("tower", 2.5, 28.5, solid=True)
+prop("tower", 15.5, 43.5, solid=True)
+prop("arch", 16.5, 36.0, rot=90)
+prop("arch", 8.0, 27.5, rot=0)
+prop("statue", 27, 36)
+prop("torch", 32.5, 32.5)
+prop("rock", 20.5, 27.5, scale=1.0, solid=True)
+prop("rock", 22.5, 44.5, scale=1.1, solid=True)
+prop("rock", 18, 46.5, scale=0.9)
+prop("pine", 17, 27, scale=1.0)
+prop("pine", 24.5, 26.8, scale=0.9)
+prop("pine", 25, 45.5, scale=1.1)
+prop("pine", 18.5, 45.5, scale=1.0)
+prop("pine", 10.5, 21, scale=1.0)
+prop("pine", 21, 10.5, scale=1.0)
+prop("rock", 12, 15.5, scale=0.8)
+prop("crate", 11.5, 42.5)
+prop("crate", 3.5, 37.5)
 
 pads = [
-    {"zone": "home", "x": 5.5, "z": 50.5},
-    {"zone": "home", "x": 15.5, "z": 50.5},
-    {"zone": "home", "x": 15.5, "z": 62.0},
-    {"zone": "neutral", "x": 29.5, "z": 50.0},
-    {"zone": "neutral", "x": 29.5, "z": 62.0},
-    {"zone": "neutral", "x": 46.5, "z": 46.5},
+    {"zone": "home", "x": 5, "z": 31},
+    {"zone": "home", "x": 12, "z": 31},
+    {"zone": "home", "x": 12, "z": 41},
+    {"zone": "neutral", "x": 21.5, "z": 31.5},
+    {"zone": "neutral", "x": 21.5, "z": 40.5},
+    {"zone": "neutral", "x": 29, "z": 29},
 ]
 
 data = {
@@ -115,18 +117,18 @@ data = {
     "waterLevel": -12.0,
     "chasm": -2.2,
     "avalanche": {"firstSeconds": 50, "everySeconds": 38, "warnSeconds": 6, "sweepSeconds": 1.6, "driftSeconds": 14,
-                  "lane": {"x": 22, "z": 42, "w": 18, "h": 28}, "from": "e",
+                  "lane": {"x": 16, "z": 26, "w": 10, "h": 20}, "from": "e",
                   "heroDamage": 140, "unitDamage": 0.75, "knock": 4.0},
     "notes": "Generated by tools/mapgen-frostcross.py. Four-fold rotation about the centre (mirror quad): author the west arm, its keep (team 0) and the north-west corner; every op, prop and pad is copied at 90 degree steps and teams advance by one per step. Ridge trails cross each mountain corner between neighbouring arms. The cross is a set of ridgelines: the summit plaza is the high point and each arm slopes down to its keep; the corners are deep cirques (blocked with rim walls) crossed by narrow rock causeways. Avalanches break off the summit and roll down one arm at a time toward its keep (lane rect in team 0's arm, rotated per arm; 'from' is the side the slide starts on).",
     "ops": ops,
     "props": props,
-    "cores": [{"team": 0, "x": 8, "z": 56}],
+    "cores": [{"team": 0, "x": 6, "z": 36}],
     "pads": pads,
-    "spawns": [{"team": 0, "x": 13.5, "z": 59}],
-    "horns": [{"x": 22.5, "z": 21.5, "arms": [0, 1]}],
-    "jumppads": [{"a": {"x": 47, "z": 51}, "b": {"x": 11.5, "z": 61}}, {"a": {"x": 4.5, "z": 63}, "b": {"x": 50, "z": 62}}, {"a": {"x": 34, "z": 63}, "b": {"x": 63, "z": 30}}],
-    "patrols": [{"a": {"x": 12, "z": 33.5}, "b": {"x": 31.5, "z": 15}}],
-    "dens": [{"x": 22.5, "z": 25.5}],
+    "spawns": [{"team": 0, "x": 10, "z": 38}],
+    "horns": [{"x": 14, "z": 14, "arms": [0, 1]}],
+    "jumppads": [{"a": {"x": 30.5, "z": 33.5}, "b": {"x": 8.5, "z": 40}}, {"a": {"x": 3.5, "z": 41}, "b": {"x": 32, "z": 40}}, {"a": {"x": 25, "z": 43.5}, "b": {"x": 41, "z": 22}}],
+    "patrols": [{"a": {"x": 8.5, "z": 20.5}, "b": {"x": 19.5, "z": 9.5}}],
+    "dens": [{"x": 16, "z": 16}],
 }
 
 with open("data/maps/frostcross.json", "w") as f:
