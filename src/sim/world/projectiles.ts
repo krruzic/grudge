@@ -130,6 +130,8 @@ export function updateProjectiles(w: World, dt: number): void {
             radius: sp.radius,
             team: p.team,
             seconds: 0.05,
+            src: p.sourceId,
+            style: "splash",
           });
         for (const o of w.entities.slice()) {
           if (!o.alive || o.team === p.team || o === target || o.kind === "structure") continue;

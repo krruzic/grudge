@@ -208,7 +208,17 @@ export function onKill(w: World, src: Entity | null, target: Entity): void {
       u.expiresAt = w.time + fx.summonOnKill.seconds;
       u.owner = hero.id;
       u.unit!.raised = true;
-      w.emit({ type: "telegraph", x: p.x, y: w.groundY(p.x, p.z), z: p.z, radius: 1.4, team: hero.team, seconds: 0.2 });
+      w.emit({
+        type: "telegraph",
+        x: p.x,
+        y: w.groundY(p.x, p.z),
+        z: p.z,
+        radius: 1.4,
+        team: hero.team,
+        seconds: 0.2,
+        src: hero.id,
+        style: "raise",
+      });
     }
   }
 }

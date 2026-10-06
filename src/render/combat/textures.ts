@@ -150,44 +150,6 @@ export const gearTex = canvasTex(
   },
   512,
 );
-export const runeTex = canvasTex(
-  128,
-  (ctx, s) => {
-    const c = s / 2;
-    ctx.fillStyle = "rgba(60,10,80,0.45)";
-    ctx.beginPath();
-    ctx.arc(c, c, c - 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = "rgba(10,0,16,0.9)";
-    ctx.stroke();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#c070ff";
-    ctx.stroke();
-    ctx.beginPath();
-    for (let k = 0; k < 5; k++) {
-      const a = (k * 4 * Math.PI) / 5 - Math.PI / 2;
-      ctx.lineTo(c + Math.cos(a) * (c - 12), c + Math.sin(a) * (c - 12));
-    }
-    ctx.closePath();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#e0b0ff";
-    ctx.stroke();
-    ctx.fillStyle = "#e8d8f0";
-    ctx.beginPath();
-    ctx.arc(c, c - 4, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(c - 7, c + 4, 14, 8);
-    ctx.fillStyle = "#1a0826";
-    ctx.beginPath();
-    ctx.arc(c - 5, c - 5, 3.5, 0, Math.PI * 2);
-    ctx.arc(c + 5, c - 5, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(c - 4, c + 6, 2, 6);
-    ctx.fillRect(c + 2, c + 6, 2, 6);
-  },
-  512,
-);
 export const crackTex = canvasTex(
   128,
   (ctx, s) => {

@@ -2,7 +2,7 @@
 // Gravewalk (summoning circle at the start, tombs rising at the destination; costume props for Shadow Play).
 import * as THREE from "three";
 import { costumeOfPlayer } from "../costumes";
-import { SUMMONER, FX, tint } from "../fx/atlas";
+import { SUMMONER, FX, activeCostume, tint, trailOf } from "../fx/atlas";
 import { emit } from "../fx/parts";
 import { decal } from "../fx/decals";
 import { shockwave } from "../fx/shockwave";
@@ -94,6 +94,49 @@ KITS.summoner = {
       });
   },
   event(h, ev, src) {
+    if (ev.type === "telegraph" && ev.style === "splash") {
+      // Charged orb landing: his own (costume-themed) orb burst, smoke and sparkles - no curse circle.
+      const r = ev.radius;
+      const col = trailOf(activeCostume()) ?? 0xd0a0ff;
+      emit(h, {
+        tex: SUMMONER.burst,
+        n: 1,
+        x: ev.x,
+        y: ev.y + 0.8,
+        z: ev.z,
+        size: [r * 1.5, r * 1.5],
+        grow: 1.3,
+        life: [0.22, 0.22],
+        speed: [0, 0],
+      });
+      shockwave(h, FX.shock, ev.x, ev.y + 0.2, ev.z, UP, 0.3, r * 1.15, 0.32, col, 0.85);
+      emit(h, {
+        tex: SUMMONER.smoke,
+        n: 4,
+        x: ev.x,
+        y: ev.y + 0.5,
+        z: ev.z,
+        size: [0.6, 0.9],
+        grow: 1.6,
+        life: [0.4, 0.6],
+        speed: [0.6, 1.4],
+        flatSpread: true,
+        opacity: 0.7,
+      });
+      emit(h, {
+        tex: SUMMONER.sparkle,
+        n: 6,
+        x: ev.x,
+        y: ev.y + 0.6,
+        z: ev.z,
+        size: [0.25, 0.4],
+        life: [0.35, 0.55],
+        speed: [1.5, 3],
+        up: [1, 2.5],
+        additive: true,
+      });
+      return true;
+    }
     if (ev.type === "telegraph") {
       const r = ev.radius;
       const summon = ev.seconds < 0.6;

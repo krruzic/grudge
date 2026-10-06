@@ -5,7 +5,8 @@ import * as THREE from "three";
 import type { SimEvent } from "../../sim/types";
 import { trailOf, activeCostume, FX, HERALD } from "../fx/atlas";
 import { fxBatch, FxBatch } from "../fx/instances";
-import { emit } from "../fx/parts";
+import { emit, UP } from "../fx/parts";
+import { shockwave } from "../fx/shockwave";
 import { KITS } from "../kits/registry";
 import { wardenSlap } from "../kits/wardenParts";
 import type { CombatFx } from "./combatFx";
@@ -28,7 +29,6 @@ import {
   emblemTex,
   plusTex,
   frostTex,
-  runeTex,
   talentTexture,
   swirlTex,
   crackTex,
@@ -149,7 +149,7 @@ export function handleEvent(cfx: CombatFx, ev: SimEvent): void {
     case "build":
       break;
     case "telegraph":
-      telegraphFx(cfx, ev);
+      telegraphFx(cfx, ev, trailOf(activeCostume()) ?? sk?.trail ?? 0xfff0b0);
       break;
     case "parry":
       cfx.flash(ev.x, ev.y + 0.3, ev.z, glowTex, 0xfff4b0, 3, 0.25);
@@ -488,26 +488,31 @@ function deathFx(cfx: CombatFx, ev: Ev<"death">): void {
   }
 }
 
-// Delayed blast warning: a rune that spins under the target, then a purple flash when it goes off.
-function telegraphFx(cfx: CombatFx, ev: Ev<"telegraph">): void {
-  const m = cfx.decalInst(runeTex, 0.9);
-  m.rotation.x = -Math.PI / 2;
-  m.position.set(ev.x, ev.y + 0.14, ev.z);
+/**
+ * Fallback for a delayed or splash blast whose champion's kit doesn't draw its own (kits claim "telegraph" in event()):
+ * a warning ring for a delayed one, then a ring, flash and puff, all in the source's costume trail colour. Deliberately
+ * plain - there is no shared rune, so no two champions' blasts look alike.
+ */
+function telegraphFx(cfx: CombatFx, ev: Ev<"telegraph">, color: number): void {
   const r = ev.radius;
-  cfx.items.push({
-    obj: m,
-    t: 0,
-    dur: ev.seconds + 0.25,
-    tick: (k) => {
-      const u = Math.min(1, (k * (ev.seconds + 0.25)) / 0.2);
-      m.scale.setScalar(r * u);
-      m.rotation.z = -k * 2;
-      m.opacity = k > 0.85 ? (1 - k) / 0.15 : 0.95;
-    },
-  });
+  const col = new THREE.Color(color);
+  if (ev.seconds > 0.1) shockwave(cfx, FX.shock, ev.x, ev.y + 0.12, ev.z, UP, r * 0.95, r, ev.seconds, color, 0.55);
   cfx.after(ev.seconds, () => {
-    cfx.flash(ev.x, ev.y + 1, ev.z, glowTex, 0xc060ff, r * 2.2, 0.35);
-    cfx.burst(ev.x, ev.y + 0.5, ev.z, puffTex, 0x6a2a8a, 12, 1.2, 0.8, r, false, 1.4);
+    shockwave(cfx, FX.shock, ev.x, ev.y + 0.2, ev.z, UP, 0.3, r * 1.15, 0.35, color, 0.85);
+    cfx.flash(ev.x, ev.y + 0.8, ev.z, glowTex, color, r * 1.6, 0.25);
+    cfx.burst(
+      ev.x,
+      ev.y + 0.4,
+      ev.z,
+      puffTex,
+      col.clone().multiplyScalar(0.55).getHex(),
+      8,
+      1,
+      0.7,
+      r * 0.8,
+      false,
+      1.2,
+    );
   });
 }
 
