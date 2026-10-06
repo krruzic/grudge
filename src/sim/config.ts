@@ -372,7 +372,7 @@ export interface HeroDef {
    *   edge      - multiplier on a partner's damage while within 9 m of this champion;
    *   guard     - multiplier on damage a partner takes while within 9 m of this champion;
    *   reelTo    - Reel In drags a champion this share of the way to a partner of that class (Brindle + tank);
-   *   swarmAlly - multiplier on a partner's next hit on a foe in this champion's bee swarm (Abbess Hollin);
+   *   swarmAlly - multiplier on a partner's next hit on a foe in this champion's bee swarm (Hollin's Paper Storm);
    *   dredgeStack - Tide stacks Mother Kelp gains when Dredge catches a foe already slowed or rooted;
    *   lookout     - Professor Hoot's Lookout footprint (cells per side) with a partner of that class;
    *   switchAlly - multiplier on the shield Gristle's Switcheroo gives a partner (> 1 also adds a speed burst).

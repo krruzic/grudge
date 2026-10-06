@@ -18,6 +18,7 @@ HQ = {
     "warden": ["warden.natureBurst", "warden.rune", "warden.wisp", "zone.bramble"],
     "marksman": ["wren.arrowRing", "wren.spiral"],
     "friar": ["friar.blast", "friar.hopRing", "friar.puddle", "friar.splash"],
+    "scribe": ["scribe.hiveRing", "scribe.ring", "scribe.rune", "scribe.splat"],
 }
 MAG = (255, 0, 255)
 GRN = (0, 255, 0)
@@ -108,7 +109,8 @@ def cut(only):
             for i in range(16):
                 cx, cy = i % 4, i // 4
                 out.paste(g["fit"](a, al, (cx * Wd // 4, cy * H // 4, (cx + 1) * Wd // 4, (cy + 1) * H // 4)), (cx * 128, cy * 128))
-            out.save(os.path.join(ROOT, "assets/fx", f"{ATLAS.get(h, h)}@{c}.png"), optimize=True)
+            suf = "" if c == "base" else f"@{c}"
+            out.save(os.path.join(ROOT, "assets/fx", f"{ATLAS.get(h, h)}{suf}.png"), optimize=True)
         else:
             rgb, al = key(np.asarray(Image.open(W + "out/" + f).convert("RGB").resize((2048, 2048), Image.LANCZOS)))
             for q, hid in enumerate(HQ[h]):
@@ -128,12 +130,14 @@ def cut(only):
                         lo, hi = max(0, -bx0), min(side, 1024 - bx0)
                         sq[yy, lo:hi, :3] = rgb[y0 + sy, x0 + bx0 + lo:x0 + bx0 + hi]
                         sq[yy, lo:hi, 3] = al[y0 + sy, x0 + bx0 + lo:x0 + bx0 + hi] * 255
-                size = Image.open(os.path.join(ROOT, "assets/fx/hq", f"{hid}.png")).size[0]
+                base = os.path.join(ROOT, "assets/fx/hq", f"{hid}.png")
+                size = Image.open(base if os.path.exists(base) else base.replace(".png", "@beekeeper.png")).size[0]
                 pre = sq.copy(); pre[..., :3] *= pre[..., 3:4] / 255
                 sm = np.asarray(Image.fromarray(np.clip(pre, 0, 255).astype(np.uint8), "RGBA").resize((size, size), Image.LANCZOS)).astype(np.float32)
                 a2 = sm[..., 3:4]
                 sm[..., :3] = np.where(a2 > 0, sm[..., :3] * 255 / np.maximum(a2, 1), 0)
-                Image.fromarray(np.clip(sm, 0, 255).astype(np.uint8), "RGBA").save(os.path.join(ROOT, "assets/fx/hq", f"{hid}@{c}.png"), optimize=True)
+                suf = "" if c == "base" else f"@{c}"
+                Image.fromarray(np.clip(sm, 0, 255).astype(np.uint8), "RGBA").save(os.path.join(ROOT, "assets/fx/hq", f"{hid}{suf}.png"), optimize=True)
         print("cut", f)
 
 if __name__ == "__main__":

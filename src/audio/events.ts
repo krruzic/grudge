@@ -5,6 +5,7 @@
 import type { SimEvent, Entity } from "../sim/types";
 import type { World } from "../sim/world";
 import type { Audio } from "./sfx";
+import { costumeOfEntity } from "../render/costumes";
 
 /** What a champion's basic attacks sound like: swing whoosh and impact. */
 const WEAPON: Record<string, { swing: string; hit: string; rate?: number }> = {
@@ -28,6 +29,8 @@ const ARMORED = new Set(["warlord", "herald", "engineer", "vintner"]);
 
 const ent = (w: World, id: number | undefined): Entity | undefined => (id === undefined ? undefined : w.getAny(id));
 const heroType = (w: World, id: number | undefined): string | undefined => ent(w, id)?.hero?.type;
+/** Hollin in her Beekeeper costume (bees and buzzing rather than paper). */
+const beekeeper = (w: World, id: number | undefined): boolean => costumeOfEntity(w, ent(w, id)) === "beekeeper";
 
 export function playEvent(a: Audio, ev: SimEvent, w: World): void {
   switch (ev.type) {
@@ -873,14 +876,21 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
         a.play("explode.small", 0.35, { rate: 1.5, at: 0.03 });
       }
       return;
+    // Hollin's swarm: bees for the Beekeeper, a flurry of paper (Paper Storm) otherwise.
     case "swarm":
     case "greatSwarm":
-      a.play("bed.insects", ev.name === "greatSwarm" ? 0.8 : 0.6, { rate: 1.7, dur: Math.min(1.6, ev.seconds ?? 1) });
-      a.play("bubble", 0.3, { rate: 0.7 });
+      if (beekeeper(w, ev.src)) {
+        a.play("bed.insects", ev.name === "greatSwarm" ? 0.8 : 0.6, { rate: 1.7, dur: Math.min(1.6, ev.seconds ?? 1) });
+        a.play("bubble", 0.3, { rate: 0.7 });
+      } else {
+        [0, 0.06, 0.13, 0.21, 0.3].forEach((t, k) => a.play("ui.page", 0.5, { at: t, rate: 1.1 + k * 0.08 }));
+        a.play("whistle.wind", 0.35, { rate: 1.3 });
+      }
       if (ev.name === "greatSwarm") a.play("bell.small", 0.4, { rate: 1.1 });
       return;
     case "swarmCall":
-      a.play("bed.insects", 0.6, { rate: 2, dur: 0.9 });
+      if (beekeeper(w, ev.src)) a.play("bed.insects", 0.6, { rate: 2, dur: 0.9 });
+      else [0, 0.08, 0.17].forEach((t) => a.play("ui.page", 0.45, { at: t, rate: 1.3 }));
       a.play("whistle.wind", 0.3, { rate: 1.6 });
       return;
     case "erratum":

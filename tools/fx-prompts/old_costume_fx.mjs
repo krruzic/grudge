@@ -54,9 +54,9 @@ async function falRun(model, input) {
   return (await fetch(response_url, { headers: { Authorization: `Key ${KEY}` } })).json();
 }
 // Green screen for the HQ paintings unless the costume itself is green (then magenta, like the atlas).
-const GREEN_THEMES = new Set(["friar/hopmaster", "summoner/plague", "warlord/swamp"]);
+const GREEN_THEMES = new Set(["friar/hopmaster", "summoner/plague", "warlord/swamp", "scribe/mystery"]);
 const uri = (f, mime) => `data:${mime};base64,${readFileSync(f).toString("base64")}`;
-const HQN = { warlord: 2, raider: 2, summoner: 3, warden: 4, marksman: 2, friar: 4 };
+const HQN = { warlord: 2, raider: 2, summoner: 3, warden: 4, marksman: 2, friar: 4, scribe: 4 };
 
 const jobs = [];
 for (const [k, theme] of Object.entries(THEMES)) {

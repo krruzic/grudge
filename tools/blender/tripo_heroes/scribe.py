@@ -96,7 +96,7 @@ def reskin(name, arm):
     """Auto weights glue the robe to the legs and the bell sleeves to the robe, so skin the A-pose by hand and redo the arm swing."""
     src = bpy.data.objects[name]
     before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", f"{name}_tripo.glb"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT, "assets", "source", CFG.get("src", f"{name}_tripo.glb")))
     new = [o for o in bpy.data.objects if o not in before]
     ref = next(o for o in new if o.type == "MESH")
     me = ref.data

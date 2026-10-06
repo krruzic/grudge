@@ -1,0 +1,9 @@
+The FIRST image shows four existing costume select icons of our hero HOLLIN (Super Smash Bros. Ultimate stock-icon style: simplified bold flat-shaded cartoon head with a small collar, front-facing, thick dark outline around the whole silhouette, strong colours). The SECOND image shows rough 3D renders of her in her five costumes, for the outfit colours only (do not copy the render style).
+
+Paint ONE consistent set of FIVE COSTUME SELECT ICONS of HOLLIN in a single row, evenly spaced, same size, in EXACTLY the style, face, expression, outline thickness and framing of the first image's icons (same kindly rosy old face, long nose, round brass spectacles, wry knowing smile). The whole head and collar fit fully inside each cell with empty space around them. Left to right, matching the second image:
+1. CLASSIC NOVELIST: no hat, silver-white hair in a big round bun with two pencils and a feather stuck through it, spectacles on a beaded chain, a plum cable-knit collar with a little gold star.
+2. CHILDREN'S AUTHOR: the same bun but with a red and a blue crayon stuck through it, a buttercup-yellow knit collar with a red polka-dot ruffle and a big red button.
+3. MYSTERY: the same bun with two pencils and a feather, a charcoal-and-burgundy houndstooth collar with a black cameo brooch.
+4. SCI-FI: the same bun with two little chrome antennae through it, a silver high metallic collar with a glowing cyan line.
+5. BEEKEEPER: exactly like the first icon of the first image (wide tan straw hat, cream veil pinned up around her face, honey-amber collar, a little bee brooch).
+Each icon is a complete clean cartoon head with its collar, crisp thick outline, fully opaque, nothing faded or blended. Plain flat light grey background, no text, no frames.

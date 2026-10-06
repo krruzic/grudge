@@ -74,27 +74,12 @@ const TINTS: Record<string, Record<number, number>> = {
   tideadmiral: { 0xb8f4ff: 0xffe08a },
   bogtoad: { 0xb8f4ff: 0xc8d090 },
   deepglow: { 0xb8f4ff: 0xc890ff },
-  // Hollin: blue-black ink and gold runes become honey, moonlight or red correction ink.
-  queenbee: { 0xa0b0ff: 0xffd070, 0x303868: 0x8a5a10, 0xc8d0ff: 0xffe0a0 },
-  vigil: {
-    0xffd060: 0xc8b8ff,
-    0xffd870: 0xd0c4ff,
-    0xffe090: 0xe4dcff,
-    0xffe6a0: 0xe8e0ff,
-    0xffc840: 0xb0a0ff,
-    0xa0b0ff: 0xc0a8ff,
-    0x303868: 0x403080,
-  },
-  redink: {
-    0xffd060: 0xff5a48,
-    0xffd870: 0xff6a58,
-    0xffe090: 0xff8a78,
-    0xffe6a0: 0xff9888,
-    0xffc840: 0xff4838,
-    0xa0b0ff: 0xff7060,
-    0x303868: 0x701818,
-    0xc8d0ff: 0xffb0a0,
-  },
+  // Hollin: blue-black ink and gold runes become crayon-bright, antique gold and green, or neon cyan; the
+  // Beekeeper's honey.
+  beekeeper: { 0xa0b0ff: 0xffd070, 0x303868: 0x8a5a10, 0xc8d0ff: 0xffe0a0 },
+  childrens: { 0xa0b0ff: 0xff7a9a, 0x303868: 0x3a5ad0, 0xc8d0ff: 0xffe080, 0xffd060: 0xffb030 },
+  mystery: { 0xa0b0ff: 0xc8b070, 0x303868: 0x1a2a1a, 0xc8d0ff: 0xe0d0a0, 0xffd060: 0xd0a040 },
+  scifi: { 0xa0b0ff: 0x60f0ff, 0x303868: 0x0a3a50, 0xc8d0ff: 0xa0f8ff, 0xffd060: 0x60e8ff, 0xffd870: 0x80f0ff },
   // Mother Kelp (wreckwitch): her shock rings and splash tints follow the costume's sea.
   siren: { 0xc0fff0: 0xffd0e8, 0xb0fff0: 0xffc0dc, 0xa0ffe8: 0xffa8d0 },
   bogqueen: { 0xc0fff0: 0xe8e8a0, 0xb0fff0: 0xd8e090, 0xa0ffe8: 0xc8d870 },
@@ -221,9 +206,10 @@ const TRAILS: Record<string, number> = {
   tideadmiral: 0xffd060,
   bogtoad: 0xa8b060,
   deepglow: 0xb070ff,
-  queenbee: 0xffc840,
-  vigil: 0xb0a0ff,
-  redink: 0xd02828,
+  beekeeper: 0xffc840,
+  childrens: 0xff7a9a,
+  mystery: 0xc8a050,
+  scifi: 0x60f0ff,
   siren: 0xff8fb8,
   bogqueen: 0x9ab040,
   frostwreck: 0xc8f0ff,
@@ -274,15 +260,19 @@ const SWAPS: Record<string, [THREE.Texture, THREE.Texture][]> = {
     [FX.smoke, WREN.gust],
     [FX.twinkle, WREN.glint],
   ],
-  queenbee: [
+  beekeeper: [
     [FX.dust, SCRIBE.inkCloud],
     [FX.twinkle, SCRIBE.star],
   ],
-  vigil: [
+  childrens: [
     [FX.dust, SCRIBE.inkCloud],
     [FX.twinkle, SCRIBE.star],
   ],
-  redink: [
+  mystery: [
+    [FX.dust, SCRIBE.inkCloud],
+    [FX.twinkle, SCRIBE.star],
+  ],
+  scifi: [
     [FX.dust, SCRIBE.inkCloud],
     [FX.twinkle, SCRIBE.star],
   ],

@@ -1192,9 +1192,9 @@
       "b": [
         {
           "id": "royalhive",
-          "name": "ROYAL HIVE",
-          "desc": "THE SWARM LASTS 2S LONGER AND IS 0.6M WIDER.",
-          "combo": "WITH MARGIN NOTE: ERRATUM LEAVES A SMALL SWARM TOO.",
+          "name": "EPIC LENGTH",
+          "desc": "THE PAPER STORM LASTS 2S LONGER AND IS 0.6M WIDER.",
+          "combo": "WITH MARGIN NOTE: ERRATUM LEAVES A SMALL STORM TOO.",
           "add": {
             "seconds": 2,
             "radius": 0.6
@@ -1215,8 +1215,8 @@
         {
           "id": "stingingprose",
           "name": "STINGING PROSE",
-          "desc": "THE SWARM STINGS 50% HARDER AND SLOWS FOES 50% INSTEAD OF 35%.",
-          "combo": "WITH DOG-EARED PAGES: A CALLED SWARM STAYS 3S LONGER.",
+          "desc": "THE PAPER STORM CUTS 50% HARDER AND SLOWS FOES 50% INSTEAD OF 35%.",
+          "combo": "WITH DOG-EARED PAGES: A CALLED STORM STAYS 3S LONGER.",
           "mul": {
             "dps": 1.5
           },

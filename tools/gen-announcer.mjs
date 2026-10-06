@@ -31,7 +31,7 @@ const LINES = {
   marksman: "[sharp crisp announcer] WREN!",
   friar: "[very deep jolly announcer] Brother MADDOOOCK!",
   harpooner: "[playful bouncy announcer] Brindle TADWIIICK!",
-  scribe: "[warm grand announcer] Abbess HOLLIN!",
+  scribe: "[warm grand announcer] Granny HOLLIN!",
   wreckwitch: "[creepy raspy announcer] Mother KELP!",
   architect: "[proud scholarly announcer] Professor HOOOT!",
   vintner: "[gruff deep announcer] GRISTLE!",

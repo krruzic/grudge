@@ -1268,7 +1268,7 @@
     },
     "scribe": {
       "name": "Hollin",
-      "blurb": "Beekeeping scribe. Annotations: her charged bolts and swarms write runes; recast onto a rune to empower the spell, or Erratum to swap places with it.",
+      "blurb": "Novelist. Annotations: her charged bolts and paper storms write runes; recast onto a rune to empower the spell, or Erratum to swap places with it.",
       "health": "mid",
       "speed": "mid",
       "damage": "mid",
@@ -1315,7 +1315,7 @@
           "cooldown": 9,
           "bot": "fight",
           "botRange": 9,
-          "callout": "SWARM \u00b7 B AGAIN CALLS IT TO YOU"
+          "callout": "PAPER STORM \u00b7 B AGAIN CALLS IT TO YOU"
         },
         "r": {
           "kind": "erratum",

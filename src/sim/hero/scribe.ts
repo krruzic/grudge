@@ -1,4 +1,4 @@
-// Scribe (Abbess Hollin): Annotations passive (charged bolts and swarms write runes on the ground; a spell landing
+// Scribe (Granny Hollin, the novelist): Annotations passive (charged bolts and swarms write runes on the ground; a spell landing
 // on one of her runes consumes it and is empowered), Ink Bolt (A, a straight bolt that ricochets once off walls or
 // on to the next foe; charged it blots and blinds), Swarm (B, a bee zone; B again calls it to follow her), Erratum
 // (R, swap places with one of her runes; with none in reach she writes one at her feet), Illuminated Manuscript (Z,
@@ -276,7 +276,7 @@ function swarmOf(w: World, e: Entity): Zone | undefined {
   return w.zones.find((z) => z.ownerId === e.id && z.style === "swarm" && w.time < z.until && z.radius > 1.6);
 }
 
-/** B: a bee swarm at the placed point / the target / ahead; on one of her runes it is a great swarm. */
+/** B: Paper Storm (a bee swarm for the Beekeeper costume) at the placed point / the target / ahead; on one of her runes it is a great swarm. */
 export function fireSwarm(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   const t = e.transform;
   const range = def.range ?? 9;
@@ -303,7 +303,7 @@ export function fireSwarm(w: World, e: Entity, a: HeroAction, def: AbilityDef): 
     style: "swarm",
   });
   fx(w, great ? "greatSwarm" : "swarm", e.id, e.team, x, w.groundY(x, z), z, { radius, seconds });
-  if (great) callout(w, e, "GREAT SWARM");
+  if (great) callout(w, e, "GREAT STORM");
   writeRune(w, e, x, z);
 }
 

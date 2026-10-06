@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game, a 4x4 grid, each sprite centred in its own cell on a flat magenta background, for HOLLIN the old spellcaster. Image 2 shows her new look: GRANNY HOLLIN THE NOVELIST, a granny writer of fantasy novels in a plum cable-knit coat with gold stars, moons and little dragons. Redraw the sheet for her, keeping the same 4x4 grid, the same hand-painted style, brushwork, soft lighting and saturation, every sprite centred in its own cell, filling most of it, wide empty gaps, never touching. Remove EVERYTHING to do with bees, honey and honeycomb. Left to right, top to bottom:
+1. a round glossy bead of dark blue-black ink (keep as is)
+2. a single drop of dark blue-black ink (keep as is)
+3. a splat of dark blue-black ink (keep as is)
+4. a horizontal brush stroke of dark blue-black ink (keep as is)
+5. a little PAPER BIRD folded from a handwritten manuscript page, wings spread, sharp paper edges, a few lines of handwriting visible on it
+6. a flurry of THREE small paper birds folded from handwritten pages, flying together
+7. an OPEN SPELLBOOK seen from the front, old leather cover, its pages glowing soft violet-gold with a few rising sparkles
+8. a ring of WHIRLING LOOSE HANDWRITTEN PAGES seen from directly above, the centre empty
+9. a rolled parchment scroll with handwriting (keep as is)
+10. a few loose handwritten pages (keep as is)
+11. a writing quill, cream feather with plum and gold bars, ink-dark tip
+12. a glowing violet-gold circular rune seal seen from above, with star and crescent-moon glyphs around its edge
+13. a glowing gold flourish of handwriting curling into a little dragon shape (no bee)
+14. a four-point glowing gold star sparkle (keep as is)
+15. a puff of dark blue-black ink cloud (keep as is)
+16. an illuminated-manuscript border ring seen from above: cream parchment with gold and plum vines, tiny stars and crescent moons, the centre empty (no bees)
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. The background must be plain flat pure saturated magenta (#FF00FF) everywhere exactly like image 1, one uniform colour, no gradient, no checkerboard.
