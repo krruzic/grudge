@@ -35,9 +35,9 @@
     "noBombs": false,
     "noTowerLoss": true,
     "respawn": {
-      "seconds": 20,
-      "perMinute": 3,
-      "max": 35
+      "seconds": 18,
+      "perMinute": 2.5,
+      "max": 32
     }
   },
   "economy": {
