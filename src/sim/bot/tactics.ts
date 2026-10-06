@@ -868,6 +868,20 @@ export function riderFight(bot: Bot, w: World, me: Entity, target: Entity | unde
       );
     if (hurt) bot.wantZ = true;
   }
+  // Honey Pot on a hurt partner in a fight: heals them and sticks whoever is on them. Thrown at her own melee
+  // target, most of its healing went to herself (2v2: she healed herself ~2.5x more than her partner).
+  if (
+    mate?.alive &&
+    !mate.hero?.dead &&
+    rdy("b") &&
+    mate.hp < mate.maxHp * 0.75 &&
+    w.dist(me, mate) < (ab.b.range ?? 8) - 0.5 &&
+    foesNear(w, mate, 3.5).length
+  ) {
+    bot.wantB = true;
+    bot.wantPlace = { x: mate.transform.pos.x - me.transform.pos.x, z: mate.transform.pos.z - me.transform.pos.z };
+    return;
+  }
   if (!target?.alive || !target.hero || !w.canSee(me, target)) return;
   const d = w.dist(me, target) - target.radius;
   if (rdy("b") && d < (ab.b.range ?? 8) - 0.5 && (d < 3.5 || target.hero.action) && bot.rand() < 0.6) {

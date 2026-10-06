@@ -310,6 +310,13 @@ export class World {
     return this.data.heroes;
   }
 
+  /** The team fields two or more champions (2v2): `match.duo` tuning applies. */
+  duo(team: number): boolean {
+    let n = 0;
+    for (const e of this.entities) if (e.hero && e.team === team && ++n >= 2) return true;
+    return false;
+  }
+
   heroDef(type: string): HeroDef {
     return this.data.heroes.heroes[type] ?? Object.values(this.data.heroes.heroes)[0];
   }

@@ -332,5 +332,19 @@
   "wound": {
     "healMul": 0.6,
     "seconds": 2.5
+  },
+  "duo": {
+    "heroDamage": {
+      "scribe": 0.8
+    },
+    "heroDamageTaken": {
+      "engineer": 0.88
+    },
+    "allyHeal": {
+      "rider": 1.4
+    },
+    "towerHp": {
+      "engineer": 1.35
+    }
   }
 }

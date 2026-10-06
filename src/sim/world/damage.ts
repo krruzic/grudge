@@ -237,6 +237,8 @@ function attackerScaling(w: World, src: Entity | null, target: Entity, amount: n
       }
     }
     if (hk.heroDamageMul && target.hero && src.hero) amount *= hk.heroDamageMul;
+    const duoMul = target.hero && src.hero ? w.data.match.duo?.heroDamage?.[src.hero.type] : undefined;
+    if (duoMul && w.duo(src.team)) amount *= duoMul;
     if (hk.structureMul && target.structure && opts.structureDamage === undefined) amount *= hk.structureMul;
     if (hk.heroStructureMul && target.structure && src.hero) amount *= hk.heroStructureMul;
     if (!target.structure) {
@@ -316,6 +318,8 @@ function bastionMul(w: World, e: Entity): number {
 function defenderScaling(w: World, src: Entity | null, target: Entity, amount: number, opts: DamageOpts): number {
   if (w.time < target.status.guardUntil) amount *= target.status.guardMul;
   if (target.hero) amount *= partnerMul(w, target, "guard") * bastionMul(w, target);
+  const duoTaken = target.hero ? w.data.match.duo?.heroDamageTaken?.[target.hero.type] : undefined;
+  if (duoTaken && w.duo(target.team)) amount *= duoTaken;
   if (src?.hero) amount *= partnerMul(w, src, "edge");
   if (src && src.kind !== "structure") {
     if (w.time < src.status.stealthUntil) {

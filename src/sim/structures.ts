@@ -170,7 +170,11 @@ export function createStructure(w: World, team: number, pad: Pad, type: Structur
   const sd = w.data.structures;
   const def = sd.types[type];
   const lane = def.class === "tower" ? sd.laneTower[pad.zone] : undefined;
-  const hp = def.hp * (lane?.hp ?? 1);
+  let hp = def.hp * (lane?.hp ?? 1);
+  // 2v2: towers on a builder's team (Stig) are sturdier - two champions hit them at once.
+  const duoHp = w.data.match.duo?.towerHp;
+  if (duoHp && def.class === "tower" && w.duo(team))
+    for (const o of w.entities) if (o.hero && o.team === team && duoHp[o.hero.type]) hp *= duoHp[o.hero.type];
   const e = w.addEntity(team, "structure", sd.structureRadius, pad.x, pad.z, hp);
   e.hp = hp * sd.buildStartHpFrac;
   const core = w.foeCore(team, pad.x, pad.z);

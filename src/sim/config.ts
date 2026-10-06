@@ -564,6 +564,16 @@ export interface MatchData {
   /** rampFrom: seconds after which these phase in toward full by the end of regulation (World.surge). */
   /** Wounded: a ranged champion's hit cuts healing (world/damage.ts). */
   wound?: { healMul: number; seconds: number };
+  /**
+   * 2v2-only tuning (a team fielding two or more champions; World.duo): per-champion multipliers on champion damage
+   * dealt and taken, healing given to allies, and the health of the towers on that champion's team.
+   */
+  duo?: {
+    heroDamage?: Record<string, number>;
+    heroDamageTaken?: Record<string, number>;
+    allyHeal?: Record<string, number>;
+    towerHp?: Record<string, number>;
+  };
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number; rampFrom?: number };
   lockdown?: { seconds: number; warnSeconds?: number };
   /** Team deathmatch rules (sim/tdm.ts). */

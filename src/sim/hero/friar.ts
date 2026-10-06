@@ -23,6 +23,8 @@ export function healFrom(w: World, src: Entity | null | undefined, o: Entity, am
   if (!o.alive || o.structure || o.hp >= o.maxHp || amount <= 0) return 0;
   const hk = src?.hero ? w.heroDef(src.hero.type).hooks : undefined;
   if (hk?.lowHealMul && o.hp < o.maxHp * (hk.lowHealBelow ?? 0.5)) amount *= hk.lowHealMul;
+  const allyMul = src?.hero && o !== src ? w.data.match.duo?.allyHeal?.[src.hero.type] : undefined;
+  if (allyMul && w.duo(src!.team)) amount *= allyMul;
   const before = o.hp;
   w.heal(o, amount);
   return o.hp - before;

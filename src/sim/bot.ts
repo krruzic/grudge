@@ -13,7 +13,7 @@ import { classDirectives, pickDirective, supportDirective, updateRole } from "./
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
 import { duelistReflex } from "./bot/tactics.ts";
-import { swingPivots } from "./hero/wreckwitch.ts";
+import { chainSwingPlan, sameAsLast, swingPivots } from "./hero/wreckwitch.ts";
 
 /** Pad hold timing (mirrors src/input/commands.ts): a hold counts as charging after TAP, full power after +FULL. */
 const CHARGE_TAP = 0.2;
@@ -272,7 +272,7 @@ export class Bot {
     cmd.dodge = this.wantDodge;
     // CPU Kelp: a dodge next to something hookable is a chain swing round the nearest one (humans hold to pick).
     if (cmd.dodge && w.heroDef(me.hero!.type).hooks.swingReach) {
-      const pv = swingPivots(w, me)[0];
+      const pv = this.healing ? this.escapeSwing(w, me, cmd) : swingPivots(w, me)[0];
       if (pv) cmd.swing = { x: pv.x, z: pv.z };
     }
     cmd.recall = this.wantRecall;
@@ -282,6 +282,32 @@ export class Bot {
     this.wantPlace = null;
     if (this.wantBlock && this.rand() < 0.1) this.wantBlock = false;
     return cmd;
+  }
+
+  /**
+   * Kelp running for it: the anchor whose swing lands her farthest from the nearest enemy champion (at least 2 m
+   * farther than now), or none - a plain roll toward home (the nearest anchor used to fling her back at them).
+   */
+  private escapeSwing(w: World, me: Entity, cmd: Command): { x: number; z: number } | null {
+    let chaser: Entity | undefined;
+    for (const o of w.entities)
+      if (o.alive && o.hero && !o.hero.dead && o.team !== me.team && (!chaser || w.dist(me, o) < w.dist(me, chaser)))
+        chaser = o;
+    if (!chaser) return swingPivots(w, me)[0] ?? null;
+    const cp = chaser.transform.pos;
+    let best: { x: number; z: number } | null = null;
+    let bestD = Math.hypot(me.transform.pos.x - cp.x, me.transform.pos.z - cp.z) + 2;
+    for (const pv of swingPivots(w, me)) {
+      if (sameAsLast(w, me, pv)) continue;
+      const plan = chainSwingPlan(w, me, cmd.moveX, cmd.moveZ, pv);
+      if (!plan || Math.hypot(plan.pv.x - pv.x, plan.pv.z - pv.z) > 0.01) continue;
+      const d = Math.hypot(plan.x - cp.x, plan.z - cp.z);
+      if (d > bestD) {
+        bestD = d;
+        best = pv;
+      }
+    }
+    return best;
   }
 
   /**
