@@ -750,7 +750,8 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
       );
     const eh = enemyHero;
     const alone = ehAlive && !w.entities.some((o) => o.alive && o.unit && o.team === eh!.team && w.dist(o, eh!) < 6);
-    const dive = ehAlive && dHero < 9 && (alone || eh!.hp < eh!.maxHp * 0.4) && w.canSee(me, eh!);
+    // A champion already on him (within 4 m) is fought, not turned away from to chop soldiers.
+    const dive = ehAlive && dHero < 9 && (alone || eh!.hp < eh!.maxHp * 0.4 || dHero < 4) && w.canSee(me, eh!);
     if (army.length && !dive) {
       target = army[0];
       bot.fightId = target.id;

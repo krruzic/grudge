@@ -132,7 +132,25 @@ function chargeB(bot: Bot, w: World, me: Entity, target: Entity, reach: number, 
  * holding Quake for a slowed/stunned target (x1.3, +0.6 s stun) tested worse than using it on sight.
  */
 export function warlordFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
-  if (target?.alive) chargeB(bot, w, me, target, 2.8 + target.radius, 6);
+  if (!target?.alive) return;
+  chargeB(bot, w, me, target, 2.8 + target.radius, 6);
+  // A shooter kiting him (Wren, Remnil...): War Cry is his only burst of speed, so it's spent running them down
+  // rather than saved for the brawl he never reached.
+  const h = me.hero!;
+  const d = w.dist(me, target);
+  if (
+    target.hero &&
+    !target.hero.dead &&
+    !isMelee(w, target) &&
+    !h.action &&
+    (h.cooldowns.r ?? 0) <= w.time &&
+    d > 4 &&
+    d < 12 &&
+    w.canSee(me, target)
+  ) {
+    bot.wantR = true;
+    bot.goal = { x: target.transform.pos.x, z: target.transform.pos.z };
+  }
 }
 
 /**
@@ -148,16 +166,19 @@ export function engineerFight(bot: Bot, w: World, me: Entity, target: Entity | u
 /**
  * Grim: Leap is always held to full power (x1.6; his swings are actions, so the hold is free mid-combo) and let go
  * inside its 8 m reach. Execute Dash fires early when the target is below 40% (x1.4) or it kills; otherwise the
- * generic Z rule. The dash doesn't take the Smoke ambush, so out of Smoke he opens with Leap or a stab instead.
- * Returns false: the generic Z rule still applies.
+ * dash never fires otherwise. It doesn't take the Smoke ambush, so out of Smoke he opens with Leap or a stab instead.
+ * Returns true: the generic Z rule never applies to him.
  */
 export function raiderFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): boolean {
   const h = me.hero!;
   const ab = abilities(w, me);
-  if (!target?.alive || !target.hero) return false;
+  // The dash is his only execute: never spend it on soldiers or with no living champion to aim at (the generic Z
+  // rule used to fire it into a crowd, or after the target had died). Returning true keeps that rule off.
+  if (!target?.alive || !target.hero || target.hero.dead) return true;
   const d = w.dist(me, target);
   const full = h.meter >= w.data.heroes.baseline.superMax && !h.action;
-  const zRange = (ab.z.range ?? 10) * 0.85;
+  // Fired from the edge of its 10 m reach it missed two times in three (the target moves first): 7 m at most.
+  const zRange = Math.min(7, (ab.z.range ?? 10) * 0.7);
   if (full && d < zRange && w.canSee(me, target)) {
     const exec = target.hp < target.maxHp * (ab.z.executeBelow ?? 0.4);
     const kill = target.hp < (ab.z.damage ?? 180) * w.damageMulOf(me) * 0.9;
@@ -170,7 +191,7 @@ export function raiderFight(bot: Bot, w: World, me: Entity, target: Entity | und
     const leap = ab.b.range ?? 8;
     chargeB(bot, w, me, target, leap - 0.5, leap + 3.5);
   }
-  return false;
+  return true;
 }
 
 /**
@@ -480,7 +501,8 @@ export function scribeFight(bot: Bot, w: World, me: Entity, target: Entity | und
   const ab = abilities(w, me);
   // Charge when nothing melee is close (holding A slows her to a crawl): in a shootout with another ranged champion
   // the charged bolt is the whole point - its blot blinds them (half their shots miss) and writes a rune.
-  const calm = !w.enemiesNear(me, 6, (o) => (!!o.unit && o.unit.type !== "ranged") || (!!o.hero && isMelee(w, o))).length;
+  const calm = !w.enemiesNear(me, 6, (o) => (!!o.unit && o.unit.type !== "ranged") || (!!o.hero && isMelee(w, o)))
+    .length;
   if (calm && !diver && d > 6 && d < (ab.a.range ?? 11) * 1.1 && w.canSee(me, target)) {
     bot.wantCharge = "a";
     bot.chargeAimId = target.id;
@@ -854,8 +876,27 @@ export function riderFight(bot: Bot, w: World, me: Entity, target: Entity | unde
     return;
   }
   const hk = w.heroDef(h.type).hooks;
-  if (rdy("a") && d > 3.2 && d < (hk.flingRange ?? 8) - 0.5 && bot.rand() < 0.5 * bot.skill) {
+  // A melee champion stuck in honey (or slowed by a fling) is kited, not traded with: back out to ~6 m and fling
+  // until the slow wears off. Toe to toe she lost every melee duel.
+  const stuck = isMelee(w, target) && w.time < target.status.slowUntil && me.hp < target.hp * 1.5;
+  if (stuck && d < 6) {
+    const p = me.transform.pos;
+    const tp = target.transform.pos;
+    const l = Math.hypot(p.x - tp.x, p.z - tp.z) || 1;
+    bot.goal = { x: tp.x + ((p.x - tp.x) / l) * 6.5, z: tp.z + ((p.z - tp.z) / l) * 6.5 };
+    bot.wantAttack = false;
+  }
+  // A fling needs only a short hold: release at flingCharge (not the full second), and once a hold has started keep
+  // it going rather than re-rolling every think (that dropped most holds early as a plain swing).
+  const holding = bot.holdSlot === "a";
+  if (
+    rdy("a") &&
+    d > (stuck ? 2.2 : 3.2) &&
+    d < (hk.flingRange ?? 8) - 0.5 &&
+    (holding || bot.rand() < 0.5 * bot.skill)
+  ) {
     bot.wantCharge = "a";
+    bot.chargeAt = (hk.flingCharge ?? 0.3) + 0.05;
     bot.chargeAimId = target.id;
     bot.chargeRange = (hk.flingRange ?? 8) - 0.3;
     bot.wantAttack = false;

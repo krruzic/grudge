@@ -72,7 +72,7 @@
         "marchSpeed": 1.35,
         "marchAfter": 2.5,
         "outnumberedArmor": 0.4,
-        "heroDamageMul": 1.33,
+        "heroDamageMul": 1.42,
         "heaveRange": 2.6,
         "heaveCooldown": 6,
         "superGainMul": 0.9,
@@ -115,7 +115,7 @@
           "offset": 1.4,
           "dur": 0.7,
           "hitAt": 0.42,
-          "cooldown": 7,
+          "cooldown": 6,
           "stunSeconds": 0.5,
           "knockback": 7,
           "slowMul": 0.5,
@@ -131,7 +131,7 @@
           "kind": "warcry",
           "radius": 10,
           "damageMul": 1.12,
-          "speedMul": 1.12,
+          "speedMul": 1.2,
           "seconds": 6,
           "cooldown": 16,
           "dm": {
@@ -633,7 +633,7 @@
           "anim": "attack_a",
           "count": 7,
           "interval": 0.14,
-          "damage": 45,
+          "damage": 38,
           "range": 3.2,
           "arcDeg": 160,
           "dur": 1.2,
@@ -1612,7 +1612,7 @@
         "sweetHero": 0.007,
         "sweetUnit": 0.02,
         "sweetSelf": 0.009,
-        "flingDamage": 55,
+        "flingDamage": 70,
         "flingRange": 8.5,
         "flingSlow": 0.6,
         "flingSlowSeconds": 2,
@@ -1634,7 +1634,7 @@
           "kind": "combo",
           "hits": [
             {
-              "damage": 50,
+              "damage": 56,
               "range": 2.5,
               "arcDeg": 140,
               "dur": 0.38,
@@ -1643,7 +1643,7 @@
               "knockback": 1.2
             },
             {
-              "damage": 72,
+              "damage": 80,
               "range": 2.7,
               "arcDeg": 200,
               "dur": 0.56,
