@@ -1,5 +1,5 @@
 // Mother Kelp, the Wreck Witch: Tide Rising (passive stacks from fighting near enemy champions: +damage, +size),
-// the held-A anchor whirl, Dredge (B: anchor on a chain, swaps places with the first enemy it catches), Bilge (R:
+// the held-A anchor whirl, Dredge (B: anchor on a chain, reels in the first enemy it catches), Bilge (R:
 // brine cloud, no healing inside), Davy's Grip (Z: drowned hands root everyone around her, damage scales with
 // stacks) and the chain swing dodge (L+X next to a structure or tree: an arc around it).
 import { Kind } from "../terrain.ts";
@@ -138,7 +138,7 @@ export function whirlTick(w: World, e: Entity): void {
   fx(w, "whirl", e.id, e.team, t.pos.x, t.y, t.pos.z, { radius: range });
 }
 
-/** B: hurl the anchor down the aim line; the first enemy it catches swaps places with her. */
+/** B: hurl the anchor down the aim line; the first enemy it catches is reeled in to her feet. */
 export function fireDredge(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
   const t = e.transform;
   const reach = def.range ?? 9;
@@ -182,6 +182,48 @@ export function fireDredge(w: World, e: Entity, a: HeroAction, def: AbilityDef, 
   w.later(flight, () => dredgeCatch(w, e, o, def, mul));
 }
 
+/** Hauling speed of the Dredge reel (m/s): a full 9 m chain comes in in under half a second. */
+const REEL_SPEED = 22;
+
+/**
+ * Reel the catch in along the chain to land 1.6 m in front of her, dragged a tick at a time (walls stop it) and
+ * held stunned the whole way. She turns to face them. Emits "dredgeReel" so the anchor stays latched on them.
+ */
+function reel(
+  w: World,
+  e: Entity,
+  o: Entity,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): { x: number; z: number } {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const l = Math.hypot(dx, dz) || 1;
+  let lx = ax + (dx / l) * 1.6;
+  let lz = az + (dz / l) * 1.6;
+  const i = w.nav.nearestOpen(lx, lz, 2);
+  if (i >= 0) {
+    lx = (i % w.nav.w) + 0.5;
+    lz = Math.floor(i / w.nav.w) + 0.5;
+  }
+  const dist = Math.hypot(lx - bx, lz - bz);
+  if (dist < 0.3) return { x: bx, z: bz };
+  const secs = Math.min(0.45, Math.max(0.15, dist / REEL_SPEED));
+  const n = Math.max(1, Math.round(secs / w.dt));
+  o.status.stunUntil = Math.max(o.status.stunUntil, w.time + secs + 0.1);
+  e.transform.facing = e.transform.prevFacing = Math.atan2(dx, dz);
+  for (let k = 1; k <= n; k++)
+    w.later(k * w.dt, () => {
+      if (!o.alive || o.hero?.dead || o.hero?.jump) return;
+      const left = n - k + 1;
+      w.moveBy(o, (lx - o.transform.pos.x) / left, (lz - o.transform.pos.z) / left);
+    });
+  fx(w, "dredgeReel", e.id, e.team, bx, o.transform.y, bz, { tx: lx, tz: lz, id: o.id, seconds: secs });
+  return { x: lx, z: lz };
+}
+
 function dredgeCatch(w: World, e: Entity, o: Entity, def: AbilityDef, mul: number): void {
   if (!e.alive || e.hero!.dead || !o.alive || o.hero?.dead || o.hero?.jump || e.hero!.jump) return;
   const ab = abilities(w, e).b;
@@ -201,28 +243,12 @@ function dredgeCatch(w: World, e: Entity, o: Entity, def: AbilityDef, mul: numbe
   const az = e.transform.pos.z;
   const bx = o.transform.pos.x;
   const bz = o.transform.pos.z;
-  const swap =
+  const canReel =
     w.time >= st.ccImmuneUntil &&
     !w.mapEvents.sealed(ax, az, bx, bz) &&
     Number.isFinite(w.terrain.heightAt(bx, bz)) &&
     Number.isFinite(w.terrain.heightAt(ax, az));
-  if (swap) {
-    w.teleport(e, bx, bz);
-    // The victim lands beside her old spot (not on it), on the side she threw from.
-    const dx = bx - ax;
-    const dz = bz - az;
-    const l = Math.hypot(dx, dz) || 1;
-    let vx = ax + (dx / l) * 0.9;
-    let vz = az + (dz / l) * 0.9;
-    const i = w.nav.nearestOpen(vx, vz, 2);
-    if (i >= 0) {
-      vx = (i % w.nav.w) + 0.5;
-      vz = Math.floor(i / w.nav.w) + 0.5;
-    }
-    w.teleport(o, vx, vz);
-    e.transform.facing = e.transform.prevFacing = Math.atan2(vx - bx, vz - bz);
-    e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.2);
-  }
+  const land = canReel ? reel(w, e, o, ax, az, bx, bz) : { x: bx, z: bz };
   if (ab.fx?.tideOnCatch && o.hero) addTide(w, e, ab.fx.tideOnCatch);
   if (ab.fx?.dredgeNoHeal) st.noHealUntil = Math.max(st.noHealUntil ?? 0, w.time + ab.fx.dredgeNoHeal);
   if (ab.fx?.zoneAfter) {
@@ -231,8 +257,8 @@ function dredgeCatch(w: World, e: Entity, o: Entity, def: AbilityDef, mul: numbe
       id: w.newId(),
       team: e.team,
       ownerId: e.id,
-      x: o.transform.pos.x,
-      z: o.transform.pos.z,
+      x: land.x,
+      z: land.z,
       radius: z.radius ?? 2.2,
       until: w.time + z.seconds,
       dps: z.dps * w.damageMulOf(e),
@@ -241,7 +267,6 @@ function dredgeCatch(w: World, e: Entity, o: Entity, def: AbilityDef, mul: numbe
       noHeal: 3,
     });
   }
-  fx(w, "dredgeSwap", e.id, e.team, ax, e.transform.y, az, { tx: bx, tz: bz, id: o.id, seconds: swap ? 1 : 0 });
   // Undertow (team synergy): dragging a foe a partner already slowed or rooted feeds the tide.
   if (held && o.hero) {
     const bonus = synergyStacks(w, e);

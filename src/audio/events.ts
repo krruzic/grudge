@@ -922,10 +922,13 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       a.play("whoosh.big", 0.6, { rate: 0.8 });
       if (ev.name === "dredgeMiss") a.play("splash", 0.5, { at: ev.seconds ?? 0.2 });
       return;
-    case "dredgeSwap":
+    case "dredgeReel":
+      // Hooked, the chain hauled taut and rattling in, then the thud and splash where they land.
       a.play("kelp.anchor", 0.9, { priority: true });
-      a.play("splash", 0.8, { at: 0.02 });
-      a.play("bubble", 0.5, { at: 0.1 });
+      a.play("chain.rattle", 0.9, { rate: 0.85 });
+      a.play("splash", 0.6, { at: 0.02 });
+      a.play("splash", 0.8, { at: ev.seconds ?? 0.3 });
+      a.play("bubble", 0.5, { at: (ev.seconds ?? 0.3) + 0.05 });
       return;
     case "bilge":
       a.play("kelp.spit", 0.8, { priority: true });

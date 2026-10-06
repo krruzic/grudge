@@ -1366,7 +1366,7 @@
     },
     "wreckwitch": {
       "name": "Mother Kelp",
-      "blurb": "Wreck Witch. Tide Rising: every second near an enemy champion adds a stack (max 10). Each stack: +5% damage, 2% tougher, 1.5% life drained from her hits, and she grows. Swaps places with her prey.",
+      "blurb": "Wreck Witch. Tide Rising: every second near an enemy champion adds a stack (max 10). Each stack: +5% damage, 2% tougher, 1.5% life drained from her hits, and she grows. Reels her prey in on the anchor chain.",
       "health": "high",
       "speed": "mid",
       "damage": "mid",

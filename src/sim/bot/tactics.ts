@@ -571,8 +571,8 @@ export function witchFight(bot: Bot, w: World, me: Entity, target: Entity | unde
       acted = true;
     }
   }
-  // Dredge: pull the enemy marksman / caster out (when healthy enough to fight on their side), else close the gap
-  // on the target once committed.
+  // Dredge: reel the enemy marksman / caster out of their line, else reel the target in once committed (or when it
+  // stands off out of her reach).
   if (rdy("b") && !h.action && !bot.wantR) {
     const reach = (ab.b.range ?? 9) - 0.6;
     const back = foes.find((o) => {
@@ -581,25 +581,12 @@ export function witchFight(bot: Bot, w: World, me: Entity, target: Entity | unde
     });
     const commit = !!target?.hero && (tide >= 4 || target.hp < target.maxHp * 0.4);
     const pick =
-      back && me.hp > me.maxHp * 0.45
+      back && me.hp > me.maxHp * 0.3
         ? back
         : target?.hero && (commit || w.dist(me, target) > 3.5) && w.dist(me, target) < reach && w.dist(me, target) > 2
           ? target
           : undefined;
-    // The swap drops her where the target stood: not into the middle of their partner and towers.
-    const guarded =
-      !!pick &&
-      pick.hp > pick.maxHp * 0.3 &&
-      (foes.some((o) => o !== pick && w.dist(o, pick) < 5) ||
-        w.entities.some(
-          (o) =>
-            o.alive &&
-            o.team !== me.team &&
-            o.structure?.type === "damage" &&
-            o.structure.ready &&
-            w.dist(o, pick) < o.structure.range,
-        ));
-    if (pick && !guarded && bot.rand() < 0.5 * bot.skill + 0.25) {
+    if (pick && bot.rand() < 0.5 * bot.skill + 0.25) {
       bot.wantB = true;
       face(pick);
       acted = true;

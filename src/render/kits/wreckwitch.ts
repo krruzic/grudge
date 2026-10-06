@@ -1,5 +1,5 @@
-// Mother Kelp (wreckwitch) kit: brine-splash hits, the anchor whirl, Dredge (a flying anchor on a chain of links,
-// whirlpools where the two swap), Bilge (spit stream, gas cloud, no-heal marks over victims), Davy's Grip (HQ ring
+// Mother Kelp (wreckwitch) kit: brine-splash hits, the anchor whirl, Dredge (a flying anchor on a chain of links
+// that latches onto the catch and rides it in as she reels them to her feet, with a brine wake), Bilge (spit stream, gas cloud, no-heal marks over victims), Davy's Grip (HQ ring
 // of drowned hands, real drowned-hand props bursting up round the ring and under every victim), the chain swing
 // and the Tide Rising wave. The bilge zone decal is drawn by hazards/zones.ts ("bilge" style).
 import * as THREE from "three";
@@ -172,6 +172,14 @@ function heroPos(h: FxHost, id: number, lift = HAND_Y): THREE.Vector3 | null {
   return new THREE.Vector3(t.pos.x + Math.sin(t.facing) * 0.45, t.y + lift, t.pos.z + Math.cos(t.facing) * 0.45);
 }
 
+/** Anchors in flight that caught someone, by victim id: the reel event latches them onto the victim. */
+const latched = new Map<number, (secs: number) => void>();
+
+/**
+ * Dredge: the anchor is hurled out on its chain (tumbling, a swoosh at her hand). A miss splashes down and is hauled
+ * back. A catch hooks the victim; when the reel starts ("dredgeReel") the anchor stays latched on them while they
+ * are dragged in, the chain shortening, then swings back to her hand.
+ */
 function dredge(
   h: FxHost,
   src: number,
@@ -188,32 +196,62 @@ function dredge(
   const gy = ground(h, tx, tz, y);
   const to = new THREE.Vector3(tx, gy + 1.1, tz);
   const anchor = anchorObj();
-  const back = hit ? 0.12 : Math.max(0.18, sec * 0.8);
-  const dur = sec + back;
+  const back = hit ? 0.2 : Math.max(0.18, sec * 0.8);
+  // A catch keeps the anchor alive long enough for the longest reel; it's cut short if no reel comes.
+  let hold = hit ? 0.5 : 0;
+  let reeled = false;
+  let reelAt = 0;
+  const dur = sec + hold + 0.15 + back;
   const pos = new THREE.Vector3();
   const yaw = Math.atan2(tx - x, tz - z);
+  const latchAt = new THREE.Vector3().copy(to);
+  if (hit && target !== undefined)
+    latched.set(target, (secs) => {
+      reeled = true;
+      reelAt = Math.max(sec, clock);
+      hold = Math.min(0.5, secs + 0.05);
+    });
+  let returnFrom: THREE.Vector3 | null = null;
+  let clock = 0;
+  // The reel event can land a frame after the anchor arrives: a catch waits this long on the victim for it.
+  const GRACE = 0.15;
   h.add(anchor, dur, (k) => {
     const t = k * dur;
+    clock = t;
     const hand = heroPos(h, src) ?? from;
     if (t <= sec) {
       const f = t / sec;
       const tgt = hit && target !== undefined ? (heroPos(h, target, 1.1) ?? to) : to;
       pos.lerpVectors(hand, tgt, f);
-      pos.y += Math.sin(f * Math.PI) * 0.5;
+      pos.y += Math.sin(f * Math.PI) * 0.6;
+      anchor.rotation.set(-1.2, yaw, 0);
+      anchor.rotateZ(t * 16);
+      latchAt.copy(tgt);
+    } else if (hit && (reeled ? t <= reelAt + hold : t <= sec + GRACE)) {
+      // Latched: ride the victim in, flukes forward, shaking with the drag.
+      const v = target !== undefined ? heroPos(h, target, 1.1) : null;
+      if (v) latchAt.copy(v);
+      pos.copy(latchAt);
+      pos.y += Math.sin(t * 40) * 0.04;
+      anchor.rotation.set(-0.5, Math.atan2(hand.x - pos.x, hand.z - pos.z), Math.sin(t * 30) * 0.15);
     } else {
-      const f = (t - sec) / back;
-      pos.lerpVectors(to, hand, f);
-      pos.y += Math.sin(f * Math.PI) * 0.3;
+      // Hauled back to her hand (a miss from the splash point, a catch from where the victim landed).
+      returnFrom ??= latchAt.clone();
+      if (hit && !reeled) latched.delete(target ?? -1);
+      const f = Math.min(1, (t - (hit && reeled ? reelAt + hold : hit ? sec + GRACE : sec)) / back);
+      pos.lerpVectors(returnFrom, hand, f);
+      pos.y += Math.sin(f * Math.PI) * 0.4;
+      anchor.rotation.set(-1.2, yaw, 0);
+      anchor.rotateZ(t * 12);
+      anchor.visible = f < 0.98;
     }
     anchor.position.copy(pos);
-    anchor.rotation.set(-1.2, yaw, 0);
-    anchor.rotateZ(t * 14);
   });
   chain(
     h,
     dur,
     () => heroPos(h, src) ?? from,
-    () => anchor.position.clone(),
+    () => (anchor.visible ? anchor.position.clone() : null),
   );
   emit(h, {
     tex: WITCH.swoosh,
@@ -221,12 +259,29 @@ function dredge(
     x,
     y: y + HAND_Y,
     z,
-    size: [1.4, 1.4],
-    grow: 1.3,
-    life: [0.18, 0.18],
+    size: [1.6, 1.6],
+    grow: 1.4,
+    life: [0.2, 0.2],
     speed: [0, 0],
-    opacity: 0.85,
+    opacity: 0.9,
   });
+  // Spray off the anchor as it flies.
+  for (let k = 1; k <= 3; k++)
+    h.after((sec * k) / 4, () =>
+      emit(h, {
+        tex: WITCH.drop,
+        n: 2,
+        x: anchor.position.x,
+        y: anchor.position.y,
+        z: anchor.position.z,
+        size: [0.12, 0.2],
+        life: [0.3, 0.5],
+        speed: [0.5, 1.5],
+        up: [0.5, 1.5],
+        gravity: 12,
+        floor: gy + 0.05,
+      }),
+    );
   if (!hit)
     h.after(sec, () => {
       splash(h, tx, gy, tz, 1);
@@ -247,10 +302,55 @@ function dredge(
     });
 }
 
-function swirl(h: FxHost, x: number, gy: number, z: number, r: number): void {
-  decal(h, WITCH.whirlpool, x, gy + 0.03, z, r, 0.9, { grow: 0.2, spin: -6, opacity: 0.9 });
-  splash(h, x, gy, z, r * 0.8);
-  shockwave(h, FX.shock, x, gy + 0.2, z, UP, 0.3, r * 1.3, 0.35, 0xb0fff0, 0.8);
+/**
+ * The reel: a hooked splash where they were caught, a brine wake (spray, little waves, whirls) behind them as they're
+ * dragged in, and a
+ * splash + small shock where they land at her feet.
+ */
+function dredgeReel(h: FxHost, victim: number, x: number, gy: number, z: number, lx: number, lz: number, secs: number) {
+  latched.get(victim)?.(secs);
+  latched.delete(victim);
+  splash(h, x, gy, z, 0.9);
+  const steps = Math.max(2, Math.round(secs / 0.05));
+  for (let k = 0; k < steps; k++)
+    h.after((k * secs) / steps, () => {
+      const v = h.world?.getAny(victim);
+      if (!v) return;
+      const p = v.transform.pos;
+      const vy = ground(h, p.x, p.z, v.transform.y);
+      emit(h, {
+        tex: WITCH.drop,
+        n: 3,
+        x: p.x,
+        y: vy + 0.25,
+        z: p.z,
+        size: [0.12, 0.22],
+        life: [0.35, 0.55],
+        speed: [0.6, 1.6],
+        up: [1, 2.5],
+        gravity: 14,
+        floor: vy + 0.05,
+      });
+      emit(h, {
+        tex: WITCH.wave,
+        n: 1,
+        x: p.x,
+        y: vy + 0.3,
+        z: p.z,
+        size: [0.7, 1],
+        grow: 1.3,
+        life: [0.25, 0.35],
+        speed: [0, 0.2],
+        opacity: 0.8,
+      });
+      decal(h, WITCH.whirlpool, p.x, vy + 0.03, p.z, 0.45, 0.35, { grow: 0.3, opacity: 0.55 });
+    });
+  h.after(secs, () => {
+    const ly = ground(h, lx, lz, gy);
+    splash(h, lx, ly, lz, 1.1);
+    shockwave(h, FX.shock, lx, ly + 0.2, lz, UP, 0.2, 1.4, 0.25, 0xb0fff0, 0.7);
+    h.shake = Math.max(h.shake, 0.22);
+  });
 }
 
 KITS.wreckwitch = {
@@ -344,14 +444,9 @@ KITS.wreckwitch = {
           ev.id,
         );
         return true;
-      case "dredgeSwap": {
-        const tx = ev.tx ?? ev.x;
-        const tz = ev.tz ?? ev.z;
-        swirl(h, ev.x, gy, ev.z, 1.6);
-        swirl(h, tx, ground(h, tx, tz, ev.y), tz, 1.6);
-        h.shake = Math.max(h.shake, 0.25);
+      case "dredgeReel":
+        dredgeReel(h, ev.id ?? -1, ev.x, gy, ev.z, ev.tx ?? ev.x, ev.tz ?? ev.z, ev.seconds ?? 0.3);
         return true;
-      }
       case "bilge": {
         const r = ev.radius ?? 3;
         const sx = ev.tx ?? ev.x;
