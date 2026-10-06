@@ -118,35 +118,44 @@ a folded game board, chequered on the inside. He carries a dice cup.
 
 ---
 
-## 4. Gristle: THE POT-BELLY STOVE
+## 4. Gristle: THE HARVEST WICKER BOAR
 
-**Seed:** `19fd 7fc8 34c2 9532 f6db 4ac2 dba9 0a70`
+**Seed:** `8dbd 582d 2eaa c85f c154 98df f5ed 210a`
 
-**Reading:** `fd` is fire, like a fire brigade number painted on a door. `c2` comes up twice, a pipe elbow. `f6db`
-looks like an iron grate. `0a70` is a damper turned to seven, running hot, and `19` is an old number cast into
-iron. Fire, pipes, cast iron, and a boar that won't move: a stove.
+(A reroll. The first reading, a cast-iron stove boar, was too close to the Warlord's Iron Colossus steam automaton,
+so this one steers clear of metal and machines.)
 
-**Concept:** Gristle is a **walking cast-iron pot-belly stove shaped like a boar.** His belly is the firebox with a
-grated door glowing orange, his tusks are bent iron poker hooks, and his stovepipe rises from his back where the
-anvil used to sit, puffing smoke. Little cast-iron legs end in lion's-claw stove feet. His "19" maker's plate is
-riveted to his chest.
+**Reading:** `dbd` is a weave, over-under-over, the same shape mirrored. `eaa` is a farmyard bray, and `f5ed` says
+*fed*, a table laid. `210` is a countdown: the last days before the festival. `98df` looks like a bonfire stacked
+high, and `aa` / `ff` come in pairs like sheaves bound in twos. A harvest festival, a woven figure, a feast, and the
+night the fires are lit.
 
-- **Silhouette:** the same 2.1 m bulk, but rounder and heavier, with the stovepipe as a tall back element. The anvil
-  becomes a **cast-iron skillet** for his combo, Pound and Crush Season. The anvil-curl dodge becomes him slamming
-  his firebox door shut and turning his iron back.
-- **Grit:** the firebox glows brighter as Grit builds, white-hot at full. It ties straight to his passive.
-- **Dig In:** this costume makes it feel native. The stomp rattles the stove, the stovepipe belches a black plume,
-  and the red steadfast glow becomes the iron itself glowing red-hot.
-- **Headbutt:** a charging stove trailing smoke and sparks. A pinned victim sees cinders circling instead of stars.
-- **Switcheroo (bodyguard):** he leaves a little ring of warm hearth-glow and soot under the ally's old spot.
-- **Effects:** embers, cinders, soot puffs, iron sparks, skillet clangs, and scorched-ring ground decals.
-- **Sounds:** iron clanks, fire crackle as an idle bed on him, an oven-door slam for the curl, a sizzle on hits.
-- **Palette:** black iron and soot, with orange-to-white firebox light as the accent. One dark costume with one hot
-  glow, which matches the art rules.
-- **Build notes:** Tripo stove-boar body with a skillet prop on hand_R. The firebox glow is an emissive mask whose
-  intensity uniform tracks Grit (and Dig In). The stovepipe smoke is a small looping particle emitter on a chest
-  socket.
-- **Costume name:** `vintner@hearth`. Announcer: "Gristle, stoked!"
+**Concept:** every autumn the cellar village weaves a great boar of willow and straw for the harvest feast, stuffed
+with sheaves, gourds and apples, garlanded in ribbons. This year it walked off the green before they could light it.
+Gristle is the **wicker harvest effigy**: woven willow ribs over a straw-stuffed body, a carved turnip-lantern face
+glowing through the weave at the eyes, horns of bent willow for tusks, and corn dollies and ribbons tied all over.
+
+- **Silhouette:** the same 2.1 m bulk, open and woven, so you see straw and gourds through the ribs. Bristling straw
+  ends make the outline shaggy and readable.
+- **Anvil → millstone and mallet.** He swings a huge wooden threshing mallet for his combo, Pound and Crush Season.
+  The stone he carried on his back becomes a millstone strapped there, which is what the Anvil Curl turns toward
+  hits from behind.
+- **Grit:** lanterns inside the wicker glow brighter as he stands his ground. Full Grit is a warm bonfire light
+  through every gap in the weave.
+- **Dig In:** his woven legs root down. Willow withies sprout into the ground and straw bristles stand on end, with
+  the red steadfast glow showing as embers inside him. When the banked blow lands it bursts in a flurry of chaff.
+- **Headbutt:** a charging effigy shedding straw. A pinned victim gets little straw birds circling their head.
+- **Switcheroo (bodyguard):** a ring of scattered grain and a ribbon twist under the ally's old spot.
+- **Effects:** straw, chaff, grain, apple and gourd chunks, ribbons, and woven-willow ground decals, with warm
+  lantern light as the accent.
+- **Sounds:** creaking wicker, rustling straw, a thump of packed sheaves on hits, a hollow wooden clonk from the
+  mallet, a festival drum on Crush Season's last slam.
+- **Palette:** dark weathered willow and wet straw, with red and green ribbons. Accent: the amber lantern glow
+  inside. Darker weave keeps it from reading as a pale haystack.
+- **Build notes:** a Tripo wicker-boar body (open weave modelled in, gourds inside) plus a threshing mallet prop on
+  hand_R; the millstone replaces the back anvil. The inner lantern glow is an emissive mask whose intensity tracks
+  Grit and Dig In.
+- **Costume name:** `vintner@harvest`. Announcer: "Gristle of the HARVEST!"
 
 ---
 
@@ -193,7 +202,7 @@ collars:
 
 ## Pipeline and order
 
-Order: **Gristle** (one body, one prop, and its glow ties to Grit and Dig In), then **Hoot** (adds a costume structure),
+Order: **Gristle** (one body, a mallet and a millstone, and its inner glow ties to Grit and Dig In), then **Hoot** (adds a costume structure),
 then **Brindle**, **Bramble** (the parts-built bee is the most Blender work), and **Kelp** last (the glass shell and
 the water line need new shader work).
 
@@ -210,8 +219,8 @@ For each remodel:
    `honeypot@tinker`, etc.); prop repaints where a prop is shared.
 5. **Effects:** a themed effects atlas through `tools/fx-prompts/` plus HQ paintings, portrait, select-screen stage,
    costume icon and splash card.
-6. **Sounds:** costume sound overrides where the theme demands (stove crackle, glass chime, dice, motor buzz).
-7. **Code-driven looks:** Gristle's firebox glow tracks Grit and Dig In; Kelp's water line tracks Tide stacks;
+6. **Sounds:** costume sound overrides where the theme demands (creaking wicker, glass chime, dice, motor buzz).
+7. **Code-driven looks:** Gristle's lantern glow inside the wicker tracks Grit and Dig In; Kelp's water line tracks Tide stacks;
    Bramble's abdomen rings telescope. Each is a small render-side hook in that champion's kit file, active only for
    the costume.
 8. **Checks:** a headless shot at gameplay zoom in every clip, the weight paint checked in the stomp, curl and crush
