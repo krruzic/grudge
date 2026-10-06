@@ -25,15 +25,17 @@ const models = Object.keys(modelUrls).map((p) => p.split("/").pop()!.replace(".g
 const loaded = new Map<string, THREE.Texture>();
 const loader = new THREE.TextureLoader();
 
+/** Classic, then the recolours, then the model costumes (a model costume may also have a texture folder for its
+ * prop repaints - it still goes last). */
 export function costumesOf(hero: string): string[] {
-  const tex = [...files.keys()]
-    .filter((k) => k.startsWith(`${hero}/`))
-    .map((k) => k.slice(hero.length + 1))
-    .sort();
   const mod = models
     .filter((m) => m.startsWith(`${hero}@`))
     .map((m) => m.slice(hero.length + 1))
-    .filter((c) => !tex.includes(c))
+    .sort();
+  const tex = [...files.keys()]
+    .filter((k) => k.startsWith(`${hero}/`))
+    .map((k) => k.slice(hero.length + 1))
+    .filter((c) => !mod.includes(c))
     .sort();
   return ["", ...tex, ...mod];
 }
