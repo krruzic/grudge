@@ -192,6 +192,8 @@ export function think(bot: Bot, w: World, me: Entity): void {
  *   2 hunter (Francois)               the weakest enemy in reach (the Grudge carrier first)
  *   3 skirmisher (Wren, Remnil, Hoot) the nearest enemy, come at from the side
  *   4 support (Maddock, Herald)       the enemy closest to a hurt friend; otherwise sticks with the house
+ *   5 scavenger (Hoot, Maddock in FFA) with no house to support: the hurt enemy already brawling someone else -
+ *                                      come in late for the killing blow (they survived but never scored)
  */
 const TDM_STYLE: Record<string, number> = {
   warlord: 0,
@@ -233,6 +235,8 @@ function tdmPrey(bot: Bot, w: World, me: Entity): Entity | undefined {
     if (pick) return pick;
   }
   const carrier = w.arena.relic.state === "carried" ? w.arena.relic.carrier : 0;
+  const alone = !w.entities.some((o) => o !== me && o.hero && o.team === me.team);
+  const scavenger = alone && (me.hero!.type === "architect" || me.hero!.type === "friar");
   let best: Entity | undefined;
   let bs = Infinity;
   for (const e of enemyHeroes(bot, w, me)) {
@@ -240,7 +244,14 @@ function tdmPrey(bot: Bot, w: World, me: Entity): Entity | undefined {
     const d = w.dist(me, e);
     if (d > 40) continue;
     let score = d;
-    if (style === 1) {
+    if (scavenger) {
+      // Brawling: another champion (not us) within 6 m of them, or hit in the last 1.5 s by someone else.
+      let brawl = w.time - (e.status.hurtAt ?? -99) < 1.5;
+      for (const o of w.entities)
+        if (o !== me && o !== e && o.alive && o.hero && !o.hero.dead && o.team !== e.team && w.dist(o, e) < 6)
+          brawl = true;
+      score = d * 0.35 + (e.hp / e.maxHp) * 30 - (brawl ? 14 : 0);
+    } else if (style === 1) {
       let friends = 0;
       for (const o of w.entities) if (o !== e && o.alive && o.hero && o.team === e.team && w.dist(o, e) < 8) friends++;
       score = d * 0.4 + friends * 10;
