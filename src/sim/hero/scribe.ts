@@ -8,7 +8,7 @@ import type { World } from "../world.ts";
 import type { AbilityDef } from "../config.ts";
 import type { Command, Entity, HeroAction, InkBolt, Rune, Zone } from "../types.ts";
 import { abilities } from "../talents.ts";
-import { aimTarget, callout } from "./common.ts";
+import { aimFor, aimTarget, callout } from "./common.ts";
 
 const fx = (
   w: World,
@@ -134,7 +134,7 @@ export function fireInk(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul
       : undefined,
     rune: charged || manuscript,
     slowMul: slow?.mul,
-    targetId: aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, (def.range ?? 11) + 1)?.id,
+    targetId: aimFor(w, e, a, (def.range ?? 11) + 1)?.id,
   };
   w.inkBolts.push(b);
   fx(w, charged ? "inkCharged" : "inkShot", e.id, e.team, b.x, b.y, b.z, { id: b.id });
@@ -280,7 +280,7 @@ function swarmOf(w: World, e: Entity): Zone | undefined {
 export function fireSwarm(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   const t = e.transform;
   const range = def.range ?? 9;
-  const target = a.placed ? null : aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range);
+  const target = a.placed ? null : aimFor(w, e, a, range);
   let x = a.placed ? a.toX! : target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.7;
   let z = a.placed ? a.toZ! : target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.7;
   x = Math.max(1, Math.min(w.terrain.width - 1, x));

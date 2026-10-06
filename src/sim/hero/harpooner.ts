@@ -334,26 +334,33 @@ function reel(w: World, src: Entity, o: Entity, m: Missile, def: AbilityDef): vo
     });
 }
 
-/** Aimed direction toward the best target for a straight shot (heroes first, Wet foes next). */
-function harpoonAim(w: World, e: Entity, a: HeroAction, reach: number): [number, number] {
+/**
+ * Aimed direction toward the best target for a straight shot (a CPU's locked target first, then heroes, Wet foes),
+ * plus the flight height: a target standing well above him (on a lookout or a ledge) is shot at its own height
+ * rather than into the side of what it stands on.
+ */
+function harpoonAim(w: World, e: Entity, a: HeroAction, reach: number): [number, number, number | undefined] {
   const t = e.transform;
   let best: Entity | null = null;
   let bs = Infinity;
-  for (const o of w.entities) {
-    if (!o.alive || o.team === e.team || o.neutral || !w.canSee(e, o)) continue;
-    const dx = o.transform.pos.x - t.pos.x;
-    const dz = o.transform.pos.z - t.pos.z;
-    const d = Math.hypot(dx, dz);
-    if (d - o.radius > reach || d < 0.1) continue;
-    const along = (dx * a.dirX + dz * a.dirZ) / d;
-    if (along < (a.stick ? 0.6 : 0.3)) continue;
-    const sc = d * 0.5 + (o.hero ? -5 : 0) + (isWet(w, o) ? -1.5 : 0) + (o.structure ? 4 : 0) - along * 3;
-    if (sc < bs) {
-      bs = sc;
-      best = o;
+  const locked = a.aimId !== undefined ? w.getAny(a.aimId) : undefined;
+  if (locked?.alive && w.canSee(e, locked) && w.dist(e, locked) - locked.radius <= reach) best = locked;
+  else
+    for (const o of w.entities) {
+      if (!o.alive || o.team === e.team || o.neutral || !w.canSee(e, o)) continue;
+      const dx = o.transform.pos.x - t.pos.x;
+      const dz = o.transform.pos.z - t.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d - o.radius > reach || d < 0.1) continue;
+      const along = (dx * a.dirX + dz * a.dirZ) / d;
+      if (along < (a.stick ? 0.6 : 0.3)) continue;
+      const sc = d * 0.5 + (o.hero ? -5 : 0) + (isWet(w, o) ? -1.5 : 0) + (o.structure ? 4 : 0) - along * 3;
+      if (sc < bs) {
+        bs = sc;
+        best = o;
+      }
     }
-  }
-  if (!best) return [a.dirX, a.dirZ];
+  if (!best) return [a.dirX, a.dirZ, undefined];
   // Lead a moving target a little (the harpoon is fast but not instant).
   const flight = Math.hypot(best.transform.pos.x - t.pos.x, best.transform.pos.z - t.pos.z) / 30;
   const vx = (best.transform.pos.x - best.transform.prevPos.x) / w.dt;
@@ -361,7 +368,8 @@ function harpoonAim(w: World, e: Entity, a: HeroAction, reach: number): [number,
   const dx = best.transform.pos.x + vx * flight * 0.8 - t.pos.x;
   const dz = best.transform.pos.z + vz * flight * 0.8 - t.pos.z;
   const l = Math.hypot(dx, dz) || 1;
-  return [dx / l, dz / l];
+  const high = best.transform.y - t.y > 1 ? best.transform.y + 1 : undefined;
+  return [dx / l, dz / l, high];
 }
 
 /** A: a harpoon (full power: an extra ricochet and a heavier hit). */
@@ -369,7 +377,7 @@ export function fireHarpoon(w: World, e: Entity, a: HeroAction, def: AbilityDef,
   const t = e.transform;
   const hk = w.heroDef(e.hero!.type).hooks;
   const range = def.range ?? 9;
-  const [dx, dz] = harpoonAim(w, e, a, range + 0.5);
+  const [dx, dz, high] = harpoonAim(w, e, a, range + 0.5);
   t.facing = Math.atan2(dx, dz);
   const full = !reelShot && (a.power ?? 1) >= 1.4;
   const bounces = (hk.ricochets ?? 1) + (def.ricochets ?? 0) + (full ? (def.chargeRicochets ?? 1) : 0);
@@ -380,7 +388,7 @@ export function fireHarpoon(w: World, e: Entity, a: HeroAction, def: AbilityDef,
     team: e.team,
     x: t.pos.x + dx * 0.6,
     z: t.pos.z + dz * 0.6,
-    y: t.y + 1.2,
+    y: high ?? t.y + 1.2,
     dirX: dx,
     dirZ: dz,
     speed: def.speed ?? 30,

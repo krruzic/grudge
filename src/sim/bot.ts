@@ -232,6 +232,11 @@ export class Bot {
       cmd.buy = this.wantBuy.item;
       cmd.aimAt = this.wantBuy.at;
       this.wantBuy = null;
+    } else if (this.fightId) {
+      // Aim at the chosen target: shots and targeted abilities go at it (aimTarget) rather than at whatever
+      // soldier happens to stand nearer in front.
+      const t = w.getAny(this.fightId);
+      if (t?.alive && !t.hero?.dead) cmd.aimAt = { x: t.transform.pos.x, z: t.transform.pos.z };
     }
     if (this.sayText) {
       cmd.say = this.sayText;

@@ -7,7 +7,7 @@ import type { World } from "../world.ts";
 import type { AbilityDef } from "../config.ts";
 import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, addShield } from "../talents.ts";
-import { aimTarget, begin, callout } from "./common.ts";
+import { aimFor, aimTarget, begin, callout } from "./common.ts";
 import { healFrom } from "./friar.ts";
 
 const fx = (
@@ -85,7 +85,7 @@ export function honeyFling(w: World, e: Entity, a: HeroAction): void {
   const dmg = (hk.flingDamage ?? 40) * mul;
   const slow = { slowMul: hk.flingSlow ?? 0.6, slowSeconds: hk.flingSlowSeconds ?? 2 };
   const splash = { radius: hk.flingSplash ?? 1.3, damage: dmg * 0.5, ...slow };
-  const target = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range);
+  const target = aimFor(w, e, a, range);
   if (target) w.fireProjectile(e, target, dmg, 15, true, "honey", 1.6, false, splash, slow);
   else w.fireAtPoint(e, t.pos.x + a.dirX * range, t.pos.z + a.dirZ * range, 15, "honey", 1.6, splash, true);
 }
@@ -98,7 +98,7 @@ export function honeyFling(w: World, e: Entity, a: HeroAction): void {
 function potSpot(w: World, e: Entity, a: HeroAction, range: number): { x: number; z: number } {
   const t = e.transform;
   if (a.placed && a.toX !== undefined && a.toZ !== undefined) return { x: a.toX, z: a.toZ };
-  const tg = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range);
+  const tg = aimFor(w, e, a, range);
   if (tg) {
     const d = Math.hypot(tg.transform.pos.x - t.pos.x, tg.transform.pos.z - t.pos.z);
     // Lead a little toward Bramble so the pool covers both her side and the target.

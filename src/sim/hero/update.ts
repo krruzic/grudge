@@ -108,6 +108,15 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   // A finished combo swing can be chained into the next one before its recovery ends.
   const canChainCombo = act?.name === "a" && act.kind === "combo" && act.fired && w.time < h.comboUntil;
   if (!act || canChainCombo) startFromInput(w, e, cmd, ab, act, canChainCombo);
+  // A CPU's chosen target (Command.aimAt) is locked onto the action that just started, so the shot / spell goes
+  // at it when it fires rather than at whatever stands first in that direction (hero/common.ts aimFor).
+  if (h.action && h.action !== act && cmd.aimAt && !cmd.buy) {
+    const at = cmd.aimAt;
+    const o = w.entities.find(
+      (q) => q.alive && q.team !== e.team && Math.hypot(q.transform.pos.x - at.x, q.transform.pos.z - at.z) < 0.6,
+    );
+    if (o) h.action.aimId = o.id;
+  }
 
   // Released charge: scales the power of the action that just started this tick.
   if (
@@ -397,7 +406,7 @@ function startFromInput(
     const [dx, dz] = aim(w, e, cmd, sv.range + 1);
     begin(e, "shove", "shove", sv.dur, sv.hitAt, dx, dz);
     h.cooldowns.shove = w.time + sv.cooldown;
-  } else if (cmd.dodge && ready(e, "dodge", w.time) && !act) {
+  } else if (cmd.dodge && !(cmd.swing && ab.b.kind === "dredge") && ready(e, "dodge", w.time) && !act) {
     const mag = Math.hypot(cmd.moveX, cmd.moveZ);
     const dx = mag > 0.2 ? cmd.moveX / mag : Math.sin(t.facing);
     const dz = mag > 0.2 ? cmd.moveZ / mag : Math.cos(t.facing);

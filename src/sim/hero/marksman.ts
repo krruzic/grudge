@@ -7,7 +7,7 @@ import type { World } from "../world.ts";
 import type { AbilityDef } from "../config.ts";
 import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, applyBleed, fireMissile, mark, zoneAt } from "../talents.ts";
-import { aimTarget } from "./common.ts";
+import { aimFor, aimTarget } from "./common.ts";
 
 const fx = (
   w: World,
@@ -200,7 +200,7 @@ export function sendPip(w: World, e: Entity, a: HeroAction, def: AbilityDef): vo
       }
     }
   }
-  target ??= aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range);
+  target ??= aimFor(w, e, a, range);
   if (target?.structure) target = null;
   if (!target) {
     w.emit({ type: "notice", team: e.team, text: "PIP FINDS NO PREY" });
@@ -488,7 +488,7 @@ export function volley(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul:
     x = a.toX;
     z = a.toZ;
   } else {
-    const tg = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range + 1);
+    const tg = aimFor(w, e, a, range + 1);
     x = tg ? tg.transform.pos.x : t.pos.x + a.dirX * range * 0.7;
     z = tg ? tg.transform.pos.z : t.pos.z + a.dirZ * range * 0.7;
   }

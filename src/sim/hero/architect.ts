@@ -555,6 +555,17 @@ export function fireDome(w: World, e: Entity, a: HeroAction, def: AbilityDef, mu
 }
 
 /** True when an active dome's rim lies between source and target (a shot from more than 3.2 m away). */
+/** Would a dome stop a shot from src at target? Pure (no spark) - for the bots. */
+export function domeShields(w: World, src: Entity, target: Entity): boolean {
+  for (const zn of w.zones) {
+    if (!zn.dome || w.time >= zn.until || src.team === zn.team) continue;
+    const inS = Math.hypot(src.transform.pos.x - zn.x, src.transform.pos.z - zn.z) <= zn.radius;
+    const inT = Math.hypot(target.transform.pos.x - zn.x, target.transform.pos.z - zn.z) <= zn.radius;
+    if (inS !== inT && w.dist(src, target) > 3.2) return true;
+  }
+  return false;
+}
+
 export function domeBlocks(w: World, src: Entity | null, target: Entity): boolean {
   if (!src || !w.zones.length) return false;
   const sx = src.transform.pos.x;

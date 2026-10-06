@@ -61,6 +61,15 @@ export function ready(e: Entity, key: string, time: number): boolean {
  */
 export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Entity | null {
   const t = e.transform;
+  // A CPU's chosen target (Command.aimAt without a purchase): take it when it's in reach and visible.
+  const at = !cmd.buy ? cmd.aimAt : undefined;
+  if (at) {
+    for (const o of w.entities) {
+      if (!o.alive || o.team === e.team || Math.hypot(o.transform.pos.x - at.x, o.transform.pos.z - at.z) > 0.6)
+        continue;
+      if (w.dist(e, o) - o.radius <= reach && w.canSee(e, o)) return o;
+    }
+  }
   const mag = Math.hypot(cmd.moveX, cmd.moveZ);
   let best: Entity | null = null;
   let bestScore = Infinity;
@@ -86,6 +95,16 @@ export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Ent
     }
   }
   return best;
+}
+
+/**
+ * The target of an action as it fires: its locked target (HeroAction.aimId, a CPU's choice) when that is still
+ * alive, visible and in reach, else whatever aimTarget finds along the action's direction.
+ */
+export function aimFor(w: World, e: Entity, a: HeroAction, reach: number): Entity | null {
+  const o = a.aimId !== undefined ? w.getAny(a.aimId) : undefined;
+  if (o?.alive && !o.hero?.dead && w.dist(e, o) - o.radius <= reach && w.canSee(e, o)) return o;
+  return aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, reach);
 }
 
 /** Unit aim direction: toward aimTarget, else the stick, else the current facing. */

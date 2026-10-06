@@ -3,6 +3,7 @@
 //   shop errands -> objectives (relic, shrine, assist a mate) -> retreat when low -> react to enemy casts ->
 //   recall -> ability usage -> map lantern -> fight / kite -> gravewalk -> raid / hunt -> macro (build, army).
 // Bots must be deterministic: their only randomness is Bot.rand(), so the order of rand() calls matters.
+import { domeShields, fortCoverMul } from "../hero/architect.ts";
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Entity, HeroState, Vec2 } from "../types.ts";
@@ -349,8 +350,10 @@ function sense(bot: Bot, w: World, me: Entity): Senses {
   let enemyHero = assist ?? (w.tdm ? tdmPrey(bot, w, me) : undefined);
   if (!enemyHero) {
     let bd = Infinity;
+    // A ranged champion takes one it can't walk to (on Hoot's lookout, across water) if it can see and shoot it.
+    const reach = w.heroDef(h.type).botRange ?? 1.8;
     for (const e of enemyHeroes(bot, w, me)) {
-      if (!ok(bot, w, me, e)) continue;
+      if (!ok(bot, w, me, e) && !(reach > 3 && w.dist(me, e) < reach + 5 && w.canSee(me, e))) continue;
       const d = w.dist(me, e);
       if (d < bd) {
         bd = d;
@@ -829,6 +832,35 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
       if (rdy("b") && ab.b.bot === "fight" && bot.rand() < 0.5 * bot.skill) bot.wantB = true;
       if (enemyAttacking && d < 3 && bot.rand() < 0.3 * bot.skill) bot.wantDodge = true;
     }
+    // Soldier kiting: melee soldiers (grunts, brutes) closing on a ranged champion - step back from them, toward
+    // our side, and keep shooting. They used to walk straight up and cut the archer down mid-duel.
+    const closeIn = w.enemiesNear(me, 3.2, (o) => !!o.unit && o.unit.type !== "ranged");
+    if (closeIn.length && !(melee && d < 4.5)) {
+      let cx = 0;
+      let cz = 0;
+      for (const o of closeIn) {
+        cx += o.transform.pos.x;
+        cz += o.transform.pos.z;
+      }
+      cx = p.x - cx / closeIn.length;
+      cz = p.z - cz / closeIn.length;
+      const cl = Math.hypot(cx, cz) || 1;
+      bot.goal = { x: p.x + (cx / cl) * 4, z: p.z + (cz / cl) * 4 };
+      if (closeIn.length >= 2 && (me.hero!.cooldowns.dodge ?? 0) <= w.time && bot.rand() < 0.15 * bot.skill) {
+        bot.wantDodge = true;
+        bot.wantFace = { x: cx / cl, z: cz / cl };
+      }
+    }
+    // Hoot's cover: a champion inside his dome can't be shot from outside (wait it out on something else), and one
+    // behind a snow fort takes 40% less - walk round to the open side (90 degrees round the target).
+    if (target.hero && domeShields(w, me, target)) {
+      bot.wantAttack = false;
+      const other = nearby.find((o) => o.unit && !domeShields(w, me, o) && w.dist(me, o) < 10);
+      if (other) bot.fightId = other.id;
+    } else if (target.hero && fortCoverMul(w, me, target) < 1) {
+      const side = me.id % 2 ? 1 : -1;
+      bot.goal = { x: fx - (tz / tl) * prefer * side, z: fz + (tx / tl) * prefer * side };
+    }
     if ((bot.wantAttack || bot.wantB || bot.wantR) && !bot.wantDodge) bot.wantFace = { x: tx / tl, z: tz / tl };
     // Marksman: charged Vantage power shots instead of tapping A (bot/tactics.ts).
     if (ab.b.kind === "pip") wrenShoot(bot, w, me, target);
@@ -1114,6 +1146,14 @@ function macro(bot: Bot, w: World, s: Senses): void {
  */
 export function meleeReflex(bot: Bot, w: World, me: Entity): void {
   const h = me.hero;
+  // Never swing into Francois' open parry (it negates the hit and stuns the swinger): hold, wait it out.
+  if (bot.wantAttack) {
+    const ft = bot.fightId ? w.getAny(bot.fightId) : undefined;
+    const par = (ft?.hero ? [ft] : w.enemiesNear(me, 3.5, (o) => !!o.hero)).some(
+      (o) => o.hero?.action?.kind === "parry" && o.hero.action.t < (o.hero.action.dur ?? 0.6) - 0.05,
+    );
+    if (par && bot.rand() < 0.8 * bot.skill) bot.wantAttack = false;
+  }
   if (!h || h.action || bot.healing) return;
   if (bot.wantAttack || bot.wantB || bot.wantR || bot.wantZ || bot.wantCharge || bot.wantDodge) return;
   const def = w.heroDef(h.type);

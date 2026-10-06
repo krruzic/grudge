@@ -8,7 +8,7 @@ import type { AbilityDef } from "../config.ts";
 import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities } from "../talents.ts";
 import { arcHit } from "./strikes.ts";
-import { aimTarget, callout } from "./common.ts";
+import { aimFor, aimTarget, callout } from "./common.ts";
 
 const fx = (
   w: World,
@@ -276,7 +276,7 @@ export function fireBilge(w: World, e: Entity, a: HeroAction, def: AbilityDef, m
     x = a.toX;
     z = a.toZ!;
   } else {
-    const tg = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range + 1);
+    const tg = aimFor(w, e, a, range + 1);
     const d = tg ? Math.min(range, Math.max(1.5, w.dist(e, tg))) : range * 0.7;
     x = t.pos.x + a.dirX * d;
     z = t.pos.z + a.dirZ * d;
@@ -443,27 +443,29 @@ export function chainSwingPlan(
   const mag = Math.hypot(moveX, moveZ);
   const sx = mag > 0.2 ? moveX / mag : Math.sin(t.facing);
   const sz = mag > 0.2 ? moveZ / mag : Math.cos(t.facing);
-  const sign = rx * sz - rz * sx >= 0 ? 1 : -1;
+  const pref = rx * sz - rz * sx >= 0 ? 1 : -1;
   const base = Math.atan2(rz, rx);
-  for (const [deg, rr] of [
-    [150, rad],
-    [120, rad],
-    [150, rad + 0.8],
-    [175, rad],
-    [95, rad],
-    [120, rad + 0.8],
-  ]) {
-    const ang = base + sign * ((deg * Math.PI) / 180);
-    const x = pv.x + Math.cos(ang) * rr;
-    const z = pv.z + Math.sin(ang) * rr;
-    if (
-      !Number.isFinite(w.terrain.heightAt(x, z)) ||
-      !w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) ||
-      w.mapEvents.sealed(t.pos.x, t.pos.z, x, z)
-    )
-      continue;
-    return { pv, x, z, rr, base, deg, sign, sx, sz };
-  }
+  // The stick's way round first; if nothing lands that way, the other way round.
+  for (const sign of [pref, -pref])
+    for (const [deg, rr] of [
+      [150, rad],
+      [120, rad],
+      [150, rad + 0.8],
+      [175, rad],
+      [95, rad],
+      [120, rad + 0.8],
+    ]) {
+      const ang = base + sign * ((deg * Math.PI) / 180);
+      const x = pv.x + Math.cos(ang) * rr;
+      const z = pv.z + Math.sin(ang) * rr;
+      if (
+        !Number.isFinite(w.terrain.heightAt(x, z)) ||
+        !w.nav.open(w.nav.index(Math.floor(x), Math.floor(z))) ||
+        w.mapEvents.sealed(t.pos.x, t.pos.z, x, z)
+      )
+        continue;
+      return { pv, x, z, rr, base, deg, sign, sx, sz };
+    }
   return null;
 }
 
@@ -508,7 +510,9 @@ export function startChainSwing(w: World, e: Entity, cmd: Command): boolean {
   const max = hk.swingChain ?? 5;
   h.swingChain = w.time <= (h.swingChainUntil ?? -1) ? (h.swingChain ?? 0) + 1 : 1;
   h.swingChainUntil = h.swingChain < max ? w.time + dur + (hk.swingChainWindow ?? 0.9) : -1;
-  h.cooldowns.dodge = w.time + dur + w.data.heroes.baseline.dodgeCooldown + 0.3;
+  // A full chain rests the dodge longer (swingChainCooldown) so she can't swing laps of the map non-stop.
+  h.cooldowns.dodge =
+    w.time + dur + (h.swingChain >= max ? (hk.swingChainCooldown ?? 4) : w.data.heroes.baseline.dodgeCooldown + 0.3);
   callout(w, e, h.swingChain > 1 ? `CHAIN SWING x${h.swingChain}` : "CHAIN SWING");
   fx(w, "chainSwing", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: pv.x, tz: pv.z, seconds: dur, radius: rr });
   return true;

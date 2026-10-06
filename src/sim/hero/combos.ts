@@ -105,6 +105,8 @@ export function combo(w: World, e: Entity, cmd: Command): boolean {
     if (ab.b.kind === "reel" && bellySlide(w, e, cmd)) return true;
     if (ab.r.kind === "erratum" && startGust(w, e, cmd)) return true;
     if (ab.b.kind === "dredge" && startChainSwing(w, e, cmd)) return true;
+    // A held swing that can't go (nowhere to land) is not a roll.
+    if (ab.b.kind === "dredge" && cmd.swing) return false;
     if (ab.b.kind === "fort" && owlHop(w, e, cmd)) return true;
     if (ab.b.kind === "headbutt" && startCurl(w, e, cmd)) return true;
     if (startBuzz(w, e, cmd)) return true;

@@ -117,7 +117,6 @@ export class CommandMapper {
   morphHold = 0.6;
   private xHeldFor = -1;
   private swingHeld = -1;
-  private swingSel: { x: number; z: number } | null = null;
   private swingDir: { x: number; z: number } | null = null;
 
   update(p: PadState, now: number, atPad = false, atHome = false, canLearn = false, aim: AimInfo | null = null): void {
@@ -230,8 +229,9 @@ export class CommandMapper {
       if (held > TAP && range) c.place = { ...this.place };
     }
     const blockDodge = p.pressed.x && p.held.block && p.profile !== "keyboard";
-    // Mother Kelp next to something hookable: a TAP of dodge is a plain roll (on release); HOLDING it shows the
-    // swing, the stick picks which pivot, and releasing swings round it.
+    // Mother Kelp next to something hookable: a TAP of dodge is a plain roll (on release). HOLDING it swings round
+    // the pivot that lies most the way the stick points (or she faces), and keeps hopping - pivot to pivot, toward
+    // the stick, up to 5 swings - for as long as it's held (the sim continues the chain on each landing).
     const swingAt = aim?.swing;
     this.ui.swing = null;
     if ((p.pressed.dodge || blockDodge) && swingAt?.length) this.swingHeld = now;
@@ -239,38 +239,36 @@ export class CommandMapper {
     if (this.swingHeld >= 0) {
       const down = p.held.dodge || (p.held.x && p.held.block);
       const held = now - this.swingHeld;
-      if (down && swingAt?.length) {
-        if (held > TAP) {
+      if (down) {
+        const mag = Math.hypot(p.stickX, p.stickY);
+        if (mag > 0.45) this.swingDir = { x: p.stickX / mag, z: p.stickY / mag };
+        if (held > TAP && swingAt?.length) {
           const hx = aim!.hx ?? 0;
           const hz = aim!.hz ?? 0;
-          const mag = Math.hypot(p.stickX, p.stickY);
-          if (!this.swingSel || mag > 0.45) {
-            const sa = mag > 0.45 ? Math.atan2(p.stickX, p.stickY) : aim!.facing;
-            let bd = Infinity;
-            for (const q of swingAt) {
-              let d = Math.abs(Math.atan2(q.x - hx, q.z - hz) - sa);
-              if (d > Math.PI) d = Math.PI * 2 - d;
-              if (d < bd) {
-                bd = d;
-                this.swingSel = q;
-              }
+          const sa = this.swingDir ? Math.atan2(this.swingDir.x, this.swingDir.z) : aim!.facing;
+          let bd = Infinity;
+          let sel: { x: number; z: number } | null = null;
+          for (const q of swingAt) {
+            let d = Math.abs(Math.atan2(q.x - hx, q.z - hz) - sa);
+            if (d > Math.PI) d = Math.PI * 2 - d;
+            if (d < bd) {
+              bd = d;
+              sel = q;
             }
           }
-          this.swingDir = mag > 0.45 ? { x: p.stickX / mag, z: p.stickY / mag } : this.swingDir;
-          c.moveX = c.moveZ = 0;
-          this.ui.swing = { at: this.swingSel!, dirX: this.swingDir?.x ?? 0, dirZ: this.swingDir?.z ?? 0 };
-        }
-      } else {
-        c.dodge = true;
-        if (held > TAP && this.swingSel) {
-          c.swing = { ...this.swingSel };
-          if (this.swingDir) {
-            c.moveX = this.swingDir.x;
-            c.moveZ = this.swingDir.z;
+          if (sel) {
+            c.dodge = true;
+            c.swing = { ...sel };
+            const dx = this.swingDir?.x ?? Math.sin(aim!.facing);
+            const dz = this.swingDir?.z ?? Math.cos(aim!.facing);
+            c.moveX = dx;
+            c.moveZ = dz;
+            this.ui.swing = { at: sel, dirX: dx, dirZ: dz };
           }
         }
+      } else {
+        if (held <= TAP) c.dodge = true;
         this.swingHeld = -1;
-        this.swingSel = null;
         this.swingDir = null;
       }
     }

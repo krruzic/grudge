@@ -178,7 +178,7 @@
     "engineer": {
       "name": "Stig",
       "blurb": "Cheaper structures and upgrades. Repairs. Raises siege works and a ballista to perch on them.",
-      "health": "sturdy",
+      "health": "mid",
       "speed": "mid",
       "damage": "high",
       "defaultBuild": "damage",
@@ -255,8 +255,8 @@
         "z": {
           "kind": "ballista",
           "anim": "attack_a",
-          "hp": 520,
-          "damage": 95,
+          "hp": 380,
+          "damage": 75,
           "range": 11,
           "cooldown": 1.8,
           "seconds": 20,
@@ -1380,14 +1380,15 @@
         "whirlRange": 2.9,
         "whirlEvery": 0.35,
         "whirlMax": 3,
-        "swingReach": 3.5,
+        "swingReach": 5.5,
         "swingSeconds": 0.5,
         "tideArmor": 0.02,
         "tideLeech": 0.015,
         "swingDamage": 30,
         "swingKnockback": 7,
         "swingChain": 5,
-        "swingChainWindow": 0.9
+        "swingChainWindow": 0.6,
+        "swingChainCooldown": 4
       },
       "abilities": {
         "a": {

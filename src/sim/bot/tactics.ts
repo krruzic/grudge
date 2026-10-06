@@ -215,8 +215,8 @@ export function duelistFight(bot: Bot, w: World, me: Entity, target: Entity | un
 
 /**
  * Francois' parry read, checked every tick (bot.ts) with a human-like 0.15 s reaction: a champion's swing that started
- * at least 0.15 s ago and lands within 0.35 s gets parried (counter 85, 0.8 s stun, Lunge reset, next hit x1.5).
- * Swings faster than that can't be read. One skill roll per swing.
+ * at least 0.15 s ago and lands within 0.35 s may be parried (counter 85, 0.8 s stun, Lunge reset, next hit x1.5):
+ * one 0.5 x skill roll per swing. Swings faster than that can't be read.
  */
 export function duelistReflex(bot: Bot, w: World, me: Entity): void {
   const h = me.hero!;
@@ -227,7 +227,8 @@ export function duelistReflex(bot: Bot, w: World, me: Entity): void {
     const key = o.id * 100000 + Math.round((w.time - a.t) * 30);
     if (key === bot.reflexKey) return;
     bot.reflexKey = key;
-    if (bot.rand() < 0.9 * bot.skill) bot.wantR = true;
+    // A human reads some swings, not all: about 40% at the default CPU skill (was 72%).
+    if (bot.rand() < 0.5 * bot.skill) bot.wantR = true;
     return;
   }
 }

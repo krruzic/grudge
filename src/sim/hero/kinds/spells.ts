@@ -5,7 +5,7 @@ import type { Entity, HeroAction, UnitType } from "../../types.ts";
 import type { AbilityDef } from "../../config.ts";
 import { spawnUnit } from "../../structures.ts";
 import { zoneAt } from "../../talents.ts";
-import { aimTarget } from "../common.ts";
+import { aimFor, aimTarget } from "../common.ts";
 import { hexLand } from "../strikes.ts";
 import { isMarksman, marksmanShot } from "../marksman.ts";
 
@@ -16,7 +16,7 @@ export function fireShoot(w: World, e: Entity, a: HeroAction, def: AbilityDef, m
     marksmanShot(w, e, a, def, mul);
     return;
   }
-  const target = aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, def.range ?? 8);
+  const target = aimFor(w, e, a, def.range ?? 8);
   const sh = a.name === "a" && def.shots ? def.shots[a.combo] : undefined;
   const dmg = (sh?.damage ?? def.damage ?? 30) * mul;
   const splash = sh?.splash
@@ -47,7 +47,7 @@ export function fireShoot(w: World, e: Entity, a: HeroAction, def: AbilityDef, m
 /** Telegraphed delayed curse at the target/placed point; echo talents add later casts further along. */
 export function fireHex(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
   const t = e.transform;
-  const target = a.placed ? null : aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, def.range ?? 8);
+  const target = a.placed ? null : aimFor(w, e, a, def.range ?? 8);
   const range = def.range ?? 8;
   const x = a.placed ? a.toX! : target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.7;
   const z = a.placed ? a.toZ! : target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.7;
@@ -202,7 +202,7 @@ export function fireBlink(w: World, e: Entity, a: HeroAction, def: AbilityDef): 
 export function fireRootcage(w: World, e: Entity, a: HeroAction, def: AbilityDef, mul: number): void {
   const t = e.transform;
   const range = def.range ?? 9;
-  const target = a.placed ? null : aimTarget(w, e, { moveX: a.dirX, moveZ: a.dirZ }, range);
+  const target = a.placed ? null : aimFor(w, e, a, range);
   const x = a.placed ? a.toX! : target ? target.transform.pos.x : t.pos.x + a.dirX * range * 0.6;
   const z = a.placed ? a.toZ! : target ? target.transform.pos.z : t.pos.z + a.dirZ * range * 0.6;
   const r = def.radius ?? 2.4;

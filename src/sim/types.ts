@@ -185,6 +185,8 @@ export interface InkBolt {
  * the input slot that started it. Optional fields are kind-specific scratch state.
  */
 export interface HeroAction {
+  /** A CPU's locked target for this action (hero/common.ts aimFor). */
+  aimId?: number;
   name: "a" | "b" | "r" | "z" | "dodge" | "hit" | "shove";
   t: number;
   dur: number;
