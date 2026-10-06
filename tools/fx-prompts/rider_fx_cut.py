@@ -52,7 +52,7 @@ for i in range(16):
     cx, cy = i % 4, i // 4
     out.paste(fit(a, al, (cx * W // 4, cy * H // 4, (cx + 1) * W // 4, (cy + 1) * H // 4)), (cx * CELL, cy * CELL))
 # Glow cells (soft halos) pick up magenta spill: pull pinkish texels to warm cream. Cells listed per sheet name.
-GLOW = {"rider": [6], "rider@warhornet": [6], "rider@queencourier": [6]}
+GLOW = {"rider": [6], "rider@warhornet": [6], "rider@queencourier": [6], "rider@tinker": [6]}
 o = np.asarray(out).astype(np.float32)
 for i in GLOW.get(name, []):
     cx, cy = i % 4, i // 4

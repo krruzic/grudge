@@ -1,0 +1,18 @@
+Image 1 is a finished sheet of 16 visual-effect sprites from our hand-painted fantasy action game: a 4x4 grid, each sprite centred in its own cell on a flat magenta background. Image 2 shows the hero costume TINKER'S HIVE: a wind-up tin-toy badger riding an evil scrap-metal wasp of gunmetal and rusted iron with glowing red eyes, threaded-rod legs and perforated steel wings. Repaint EVERY one of the 16 sprites of image 1 in this costume's theme: machine oil, molten brass solder, rust, bolts and welding sparks instead of honey and flowers. Keep the same 4x4 grid, and keep each sprite's role, size, silhouette scale and position inside its cell, in exactly the same hand-painted style, brushwork, soft lighting and saturation as image 1. Every sprite stays centred in its own cell filling most of it, wide empty gaps, never touching. Left to right, top to bottom:
+1. a single glossy black machine-oil droplet with a rainbow sheen and a white highlight
+2. a thick wobbly glowing blob of molten brass solder flying, with a short drippy tail
+3. a splash crown of thick glossy black oil with fat drops, side view
+4. a round puddle of glossy black machine oil seen from directly above, with a rainbow sheen, a few loose bolts and washers in it
+5. a small rusty hex nut on a bolt
+6. a small mean scrap-metal wasp in flight, gunmetal and rust, glowing red eye
+7. a glowing orange welding-spark puff with tiny bright sparks
+8. a small bent rusty steel washer
+9. a small sharp steel rivet spike
+10. a chunky brass heal plus symbol made of riveted brass plates with a little oil dripping off its arms
+11. a glossy blob of hot red-orange molten metal with a red sparkle
+12. a small brass cog gear with a red twinkle
+13. a horizontal smoky gunmetal grey motion blur streak with a few orange sparks, thick on the left tapering to the right
+14. a broken curved shard of rusty sheet metal with a row of rivets
+15. a swirling round dark grey smoke and soot whirl with orange ember sparks, seen from above
+16. a ring of interlocking brass and steel cog teeth with oil drips, seen from directly above, forming a circle
+No text, no letters, no numbers, no frames, no borders, no grid lines, no drop shadows, no black outlines, no pixel art, do not draw the character. Plain flat pure magenta background (#FF00FF) everywhere, one uniform colour, no checkerboard.
