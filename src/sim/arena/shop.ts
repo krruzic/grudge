@@ -32,6 +32,10 @@ export function buy(arena: Arena, hero: Entity, item: ShopItem, aimAt?: Vec2): b
     return true;
   };
   if (item === "bomb") {
+    if (w.ffaHouses?.noBombs) {
+      w.emit({ type: "notice", team, text: "NO BOMBS IN FREE FOR ALL" });
+      return false;
+    }
     if (h.bomb) {
       w.emit({ type: "notice", team, text: "ALREADY CARRYING A BOMB" });
       return false;

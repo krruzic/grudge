@@ -508,6 +508,11 @@ export class World {
     return this.teamCount > 2;
   }
 
+  /** Free-for-all rules that don't apply to deathmatch (FFA on a four-house field). */
+  get ffaHouses() {
+    return this.ffa && !this.tdm ? this.data.match.ffa : undefined;
+  }
+
   get ffaCfg() {
     return this.ffa ? this.data.match.ffa : undefined;
   }

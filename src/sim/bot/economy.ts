@@ -72,6 +72,7 @@ export function shop(bot: Bot, w: World, me: Entity, threatened: boolean): boole
     wardOk && ward < (bot.role === "attack" ? 0.15 : bot.role === "support" ? 0.55 : 0.4) && gold >= sh.ward.cost;
   const myArmy = w.teams[me.team].unitCount;
   const wantBomb =
+    !w.ffaHouses?.noBombs &&
     !h.bomb &&
     w.time >= (ts.bombReadyAt ?? 0) &&
     w.time >= bot.bombAt &&

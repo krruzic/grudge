@@ -23,8 +23,12 @@ export function updateStructure(w: World, e: Entity): void {
   const st = e.structure!;
   if (st.type === "core") return;
   if (advanceConstruction(w, e)) return;
-  if (w.time < st.nextAction) return;
   const def = w.data.structures.types[st.type];
+  // Free for all: towers left alone a few seconds patch themselves up fast (houses get hit from every side).
+  const regen = def.class === "tower" ? w.ffaHouses?.towerRegen : undefined;
+  if (regen && e.hp < e.maxHp && w.time - (e.status.hurtAt ?? -99) >= regen.after)
+    e.hp = Math.min(e.maxHp, e.hp + e.maxHp * regen.perSecond * w.dt);
+  if (w.time < st.nextAction) return;
   if (def.class === "production") {
     st.nextAction = w.time + 1;
     return;

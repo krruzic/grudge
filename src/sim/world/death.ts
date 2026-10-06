@@ -73,7 +73,7 @@ function killHero(
   // Cooldowns are stored as absolute times; freeze the remaining durations so they resume on respawn.
   hh.frozenCd = Object.fromEntries(Object.entries(hh.cooldowns).map(([k, v]) => [k, Math.max(0, (v ?? 0) - w.time)]));
   if (hh.meter < w.data.heroes.baseline.superMax) hh.meter = 0;
-  killer.resource += w.data.match.economy.bounty.hero * cut;
+  killer.resource += w.data.match.economy.bounty.hero * cut * (w.ffaHouses?.heroBountyMul ?? 1);
   killer.heroKills++;
   if (w.tdm) {
     w.tdm.onHeroKill(target, src);
@@ -167,7 +167,7 @@ function killStructure(w: World, target: Entity, killer: TeamTally, killerTeam: 
   killer.resource += w.data.match.economy.bounty.structure * cut;
   w.teams[target.team].structuresLost++;
   if (w.data.structures.types[st.type as "damage"]?.class === "tower") {
-    w.loseGold(target.team, w.data.match.economy.loss.tower, "TOWER LOST");
+    if (!w.ffaHouses?.noTowerLoss) w.loseGold(target.team, w.data.match.economy.loss.tower, "TOWER LOST");
     if (killerTeam >= 0) w.rally(killerTeam);
   }
   pad.rubbleUntil = w.time + rubbleSeconds(w, pad.zone);

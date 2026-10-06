@@ -54,7 +54,7 @@ export function buildCross(w: World, team: number, heroId: number, mui: MapperUi
     const wardWait = Math.ceil(ts.wardReadyAt - w.time);
     return cross(
       "KEEP SHOP",
-      ["BOMB", price(sh.bomb.cost)],
+      w.ffaHouses?.noBombs ? ["BOMB", "NONE"] : ["BOMB", price(sh.bomb.cost)],
       ["SHIELD", wardWait > 0 ? `${wardWait}S` : price(sh.ward.cost)],
       ["CANNON", price(sh.cannon.cost)],
       CANCEL,

@@ -605,6 +605,14 @@ export interface MatchData {
     grainMul?: number;
     productionCostMul: number;
     guard: { count: number; respawnSeconds: number; hpMul: number };
+    /** Champion kill gold x this (free for all, not deathmatch). */
+    heroBountyMul?: number;
+    /** Towers out of combat for `after` seconds heal `perSecond` of their max hp a second. */
+    towerRegen?: { after: number; perSecond: number };
+    /** The keep shop sells no bombs. */
+    noBombs?: boolean;
+    /** Losing a tower costs no gold. */
+    noTowerLoss?: boolean;
   };
   economy: {
     start: number;
