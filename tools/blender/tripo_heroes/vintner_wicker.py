@@ -20,6 +20,8 @@ CFG = {
     "hammer": "vintner_wicker_mallet_tripo.glb",
     # Team dye on the ribbons only would be too little to read: the festival sash's green stripe.
     "team_hue": (95, 150),
+    # The dark wicker and straw baked dull and murky in game: lift the browns / golds (hue kept).
+    "vivid": {"hue": (0, 60), "pull": 0.0, "sat": 1.45, "val": 1.45, "min_sat": 0.05},
     "attach": [("attach_wicker", "vintner_wicker_millstone_tripo.glb"), ("attach_backanvil", "")],
 }
 _sc["CFG"] = CFG
@@ -79,7 +81,8 @@ def attach_wicker(name, arm, src_path):
         e1 = np.cross(nrm, [1.0, 0, 0])
     e1 /= np.linalg.norm(e1)
     e2 = np.cross(nrm, e1)
-    R = frame([Vector(e1), Vector(e2), Vector(nrm)], [Vector((1, 0, 0)), Vector((0, 0, 1)), Vector((0, 1, 0))])
+    # Target axes must stay right-handed (X, -Z, Y): (X, Z, Y) mirrored the stone and turned it inside out.
+    R = frame([Vector(e1), Vector(e2), Vector(nrm)], [Vector((1, 0, 0)), Vector((0, 0, -1)), Vector((0, 1, 0))])
     stone.data.transform(Matrix.Translation(Vector(STONE_AT)) @ R @ Matrix.Scale(STONE_DIAM / (2 * rad), 4) @ Matrix.Translation(-Vector(c)))
     rigid(stone, arm, "chest")
     stone.name = name + "_backanvil"
