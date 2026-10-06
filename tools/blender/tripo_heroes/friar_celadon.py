@@ -4,6 +4,7 @@ _fr = dict(globals())
 exec(open(os.path.join(ROOT, "tools", "blender", "tripo_heroes", "friar.py")).read(), _fr)
 
 CFG = {
+    "palm_twist": {"L": 70},  # open palm faced out (hand review renders)
     **_fr["CFG"],
     "name": "friar",
     "src": "friar_celadon_tripo.glb",

@@ -4,6 +4,7 @@ ice-block pack rigid on the chest, satchel and slate rigid on the hips. Own clip
 sidearm boomerang throw, a stamping build (forts / lookout), a two-armed dome raise and a flapping hop dodge."""
 
 CFG = {
+    "palm_twist": {"L": 60},  # open palm faced out (hand review renders)
     "yaw": -90,
     "height": 1.85,
     "weight": 0.95,

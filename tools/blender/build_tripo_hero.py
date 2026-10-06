@@ -6,6 +6,7 @@ the arms are then swung down so the clips from anims.py play the same as on the 
 """
 import colorsys
 import importlib
+import json
 import math
 import os
 import sys
@@ -557,6 +558,55 @@ def attach_wrench(name, arm, src_path):
     return w
 
 
+def palm_normal(src, arm, s):
+    """(bone head, bone dir, unit palm normal) of hand_<s> in the rest pose, or None. The palm normal is the
+    flattest direction of the hand's verts across the bone; its sign is the side the fingertips curl toward."""
+    b = arm.data.bones.get(f"hand_{s}")
+    g = src.vertex_groups.get(f"hand_{s}")
+    if not b or not g:
+        return None
+    h = np.array(b.head_local[:])
+    d = np.array((b.tail_local - b.head_local).normalized()[:])
+    co = np.array([v.co[:] for v in src.data.vertices if any(e.group == g.index and e.weight > 0.6 for e in v.groups)])
+    if len(co) < 30:
+        return None
+    rel = co - h
+    along = rel @ d
+    perp = rel - np.outer(along, d)
+    # perp lies in the plane across the bone (rank 2): its thin direction there is the palm normal.
+    _, sv, vt = np.linalg.svd(perp - perp.mean(0), full_matrices=False)
+    n = vt[1]
+    L = along.max()
+    tip, mid = along > L * 0.7, (along > L * 0.2) & (along < L * 0.5)
+    if not tip.any() or not mid.any():
+        return None
+    if (perp[tip].mean(0) - perp[mid].mean(0)) @ n < 0:
+        n = -n
+    return h, d, n, sv[1] / max(sv[0], 1e-9)
+
+
+def orient_palms(src, arm, cfg):
+    """Twist hand meshes about their own bone (CFG["palm_twist"] = {"L": deg, "R": deg}, picked by eye on the
+    hand review renders) so open palms that face out / forward turn toward the body. Weighted by the hand weight
+    so the wrist blends. PALM_TWIST (json) in the environment overrides it, for trying values."""
+    tw = json.loads(os.environ["PALM_TWIST"]) if os.environ.get("PALM_TWIST") else cfg.get("palm_twist", {})
+    me = src.data
+    for s, ang in tw.items():
+        b = arm.data.bones.get(f"hand_{s}")
+        g = src.vertex_groups.get(f"hand_{s}")
+        if not b or not g or not ang:
+            continue
+        axis = (b.tail_local - b.head_local).normalized()
+        hv = b.head_local.copy()
+        for v in me.vertices:
+            w = next((e.weight for e in v.groups if e.group == g.index), 0.0)
+            if w < 0.02:
+                continue
+            R = Matrix.Rotation(math.radians(ang * w), 4, axis)
+            v.co = hv + (R @ (v.co - hv).to_4d()).to_3d()
+    me.update()
+
+
 def snap_grips(src, held, cfg):
     """Seat each long held weapon (staff, sword, hammer, bow: principal axis >= 2.5x its next) in the palm: shift
     it sideways - perpendicular to its own long axis, so where along its length it's held is kept - until that axis
@@ -633,9 +683,13 @@ def curl_grip_fingers(src, arm, held, cfg):
         h, t = b.head_local.copy(), b.tail_local.copy()
         L = (t - h).length
         d = (t - h).normalized()
-        # Palm normal: toward the body's centre line, perpendicular to the hand bone.
-        n = Vector((-h.x, 0, 0))
-        n = (n - d * n.dot(d)).normalized()
+        # Palm normal: measured from the hand's shape (fingers curl toward it), else toward the body's centre line.
+        pn = palm_normal(src, arm, s)
+        if pn:
+            n = Vector(pn[2].tolist())
+        else:
+            n = Vector((-h.x, 0, 0))
+            n = (n - d * n.dot(d)).normalized()
         axis = d.cross(n).normalized()
         knuckles = cfg.get("knuckles", (0.42, 0.7))
         g = gi[f"hand_{s}"]
@@ -710,6 +764,8 @@ def build(key, preview=None):
         objs.append(gobj)
     for f, srcf in cfg.get("attach", []):
         objs.append(fn(cfg, f)(name, arm, os.path.join(ROOT, "assets", "source", srcf)))
+    # After the attachments: several heroes' attach step re-skins the body from the source mesh.
+    orient_palms(src, arm, cfg)
     snap_grips(src, objs[2:], cfg)
     curl_grip_fingers(src, arm, objs[2:], cfg)
     clips = anims.hero_clips(cfg.get("weight", 1.0))

@@ -1,6 +1,7 @@
 """Brother Maddock (friar): Tripo body skinned by hand (robe on the hips), Tripo tankard in hand_R, the thrown ale keg (assets/props/keg.glb, shares its costume texture) slung on his back."""
 
 CFG = {
+    "palm_twist": {"L": 70},  # open palm faced out (hand review renders)
     "yaw": -90,
     "height": 1.95,
     "weight": 1.1,

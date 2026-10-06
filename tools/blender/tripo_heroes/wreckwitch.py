@@ -4,6 +4,7 @@ chest), Tripo anchor flail rigid in hand_R. Clips are reworked for a heavy two-h
 (throw), Bilge spit (cast) and Davy's Grip (slam)."""
 
 CFG = {
+    "palm_twist": {"L": 60},  # open palm faced out (hand review renders)
     "yaw": -90,
     "height": 2.05,
     "weight": 1.05,

@@ -6,6 +6,7 @@ exec(open(os.path.join(ROOT, "tools", "blender", "tripo_heroes", "warden.py")).r
 TEAM = (200, 250)
 
 CFG = {
+    "palm_twist": {"L": 60, "R": -60},  # open palm faced out (hand review renders)
     **_wd["CFG"],
     "name": "warden",
     "src": "warden_suntotem_tripo.glb",
