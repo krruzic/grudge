@@ -5,7 +5,8 @@
       "low": 600,
       "mid": 800,
       "high": 1000,
-      "sturdy": 980
+      "sturdy": 980,
+      "stout": 900
     },
     "speed": {
       "low": 4.0,
@@ -178,7 +179,7 @@
     "engineer": {
       "name": "Stig",
       "blurb": "Cheaper structures and upgrades. Repairs. Raises siege works and a ballista to perch on them.",
-      "health": "mid",
+      "health": "stout",
       "speed": "mid",
       "damage": "high",
       "defaultBuild": "damage",

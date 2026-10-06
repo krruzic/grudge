@@ -17,6 +17,8 @@ const DIR_NAME: Record<Directive, string> = {
   nearest: "HUNT",
   focus: "SIEGE",
   defend: "DEFEND",
+  screen: "GUARD",
+  split: "SPLIT",
 };
 const TYPE_NAME: Record<UnitType | "all", string> = {
   grunt: "GRUNTS",
@@ -25,7 +27,7 @@ const TYPE_NAME: Record<UnitType | "all", string> = {
   all: "ARMY",
 };
 /** C-stick up / left / right / down. */
-const CROSS_ORDERS: Directive[] = ["push", "follow", "defend", "hold"];
+const CROSS_ORDERS: Directive[] = ["push", "screen", "split", "defend"];
 
 /** The last order a team gave (from the sim's "directive" event), flashed on the panel for a moment. */
 export interface LastOrder {

@@ -57,6 +57,17 @@ export function endMatch(w: World, winner: number, reason: string): void {
  */
 export function setDirective(w: World, team: number, type: UnitType | "all", dir: Directive, hero: Entity): void {
   const d = w.teams[team].directives;
+  // SPLIT (an order, not a state): on the whole army, grunts and brutes attack as a second front while the
+  // archers guard their champion; on one group, that group attacks.
+  if (dir === "split") {
+    if (type === "all") {
+      setDirective(w, team, "grunt", "push", hero);
+      setDirective(w, team, "heavy", "push", hero);
+      setDirective(w, team, "ranged", "screen", hero);
+      w.emit({ type: "notice", team, text: "SPLIT · GRUNTS AND BRUTES ATTACK, ARCHERS GUARD" });
+    } else setDirective(w, team, type, "push", hero);
+    return;
+  }
   const types = type === "all" ? UNIT_TYPES : [type];
   if (w.ffa && dir === "push" && hero.hero) {
     const ts = w.teams[team];

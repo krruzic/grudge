@@ -12,7 +12,7 @@ import type { Command, Directive, ShopItem, StructureType, UnitType } from "../s
 
 type Flick = "up" | "down" | "left" | "right";
 
-const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "hold", left: "follow", right: "defend" };
+const DIRECTIVE_BY_FLICK: Record<Flick, Directive> = { up: "push", down: "defend", left: "screen", right: "split" };
 const TOWER_BY_FLICK: Partial<Record<Flick, StructureType>> = { up: "damage", left: "control" };
 const PROD_BY_FLICK: Partial<Record<Flick, StructureType>> = { left: "barracks", up: "range", right: "foundry" };
 const SPEC_BY_FLICK: Partial<Record<Flick, number>> = { up: 0, left: 1, right: 2 };

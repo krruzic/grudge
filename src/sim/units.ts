@@ -12,7 +12,8 @@
 //     waits for them, so a push arrives as packs rather than a trickle
 //   - flanking: in a push of 8+ soldiers with no lane ordered, every third one takes another lane, so the enemy
 //     has to answer two groups
-//   - screen: following a ranged champion, melee soldiers stand a few metres toward the enemy, in front of them
+//   - screen (GUARD order, or following a ranged champion): melee soldiers stand a few metres toward the nearest
+//     threat, in front of their champion; on GUARD the archers keep just behind them
 // The neutral ogre is routed to its own AI (arena/ogre.ts).
 import type { World } from "./world.ts";
 import type { Directive, Entity, Vec2 } from "./types.ts";
@@ -77,7 +78,12 @@ export function updateUnit(w: World, e: Entity): void {
     u.retargetAt = w.time + 0.4 + (e.id % 5) * 0.03;
     let best: Entity | undefined;
     let bestScore = Infinity;
-    if (directive === "follow" && heroAlive && hero!.hero!.lastTargetId && w.time - hero!.hero!.lastTargetAt < 3) {
+    if (
+      (directive === "follow" || directive === "screen") &&
+      heroAlive &&
+      hero!.hero!.lastTargetId &&
+      w.time - hero!.hero!.lastTargetAt < 3
+    ) {
       const ht = w.get(hero!.hero!.lastTargetId);
       if (ht && ht.alive && w.dist(hero!, ht) <= dirs.followEngage) best = ht;
     }
@@ -172,7 +178,7 @@ export function updateUnit(w: World, e: Entity): void {
     return;
   }
   if (goal) {
-    if (directive !== "follow" || heroAlive) u.pathGoal = goal;
+    if ((directive !== "follow" && directive !== "screen") || heroAlive) u.pathGoal = goal;
     const onLane = directive === "push" && !w.ffa && (team.lane ?? -1) >= 0 && u.lanePassed !== team.laneGen;
     moveToward(w, e, goal, directive === "push" && !onLane ? 3 : 0.6);
   }
@@ -278,7 +284,7 @@ function directiveGoal(
       anchor = hp;
       leash = dirs.holdLeash * (fo?.leash ?? 1);
       goal = { x: hp.x + off.x, z: hp.z + off.z };
-    } else if (directive === "follow") {
+    } else if (directive === "follow" || directive === "screen") {
       const rp = w.rallyPoint(e.team);
       if (rp) {
         const fo = w.formationOffset(e, rp);
@@ -291,14 +297,17 @@ function directiveGoal(
         const fo = w.formationOffset(e, anchor);
         const off = fo ?? slotOffset(u.slot, 2.2);
         goal = { x: anchor.x + off.x, z: anchor.z + off.z };
-        // Screen: a ranged champion's melee soldiers stand 3.5 m toward the nearest threat, in front of them.
-        if (!fo && u.type !== "ranged" && (w.heroDef(hero!.hero!.type).botRange ?? 1.8) > 3) {
+        // Screen (the GUARD order, or following a ranged champion): melee soldiers stand 3.5 m toward the nearest
+        // threat, in front of their champion; on GUARD the archers stay 1.5 m behind them.
+        const ranged = (w.heroDef(hero!.hero!.type).botRange ?? 1.8) > 3;
+        if (!fo && (directive === "screen" || (ranged && u.type !== "ranged"))) {
           const th = nearestThreat(w, hero!);
           if (th) {
             const tx = th.x - anchor.x;
             const tz = th.z - anchor.z;
             const tl = Math.hypot(tx, tz) || 1;
-            goal = { x: goal.x + (tx / tl) * 3.5, z: goal.z + (tz / tl) * 3.5 };
+            const k = u.type === "ranged" ? -1.5 : 3.5;
+            goal = { x: goal.x + (tx / tl) * k, z: goal.z + (tz / tl) * k };
           }
         }
         leash = dirs.followLeash * (fo?.leash ?? 1);
