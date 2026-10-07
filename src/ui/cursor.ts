@@ -45,8 +45,6 @@ export interface Chip {
   hero: string | null;
   x: number;
   y: number;
-  /** Drawn size while placed (shrunk when several seals share one tile); 1 = full size. */
-  scale?: number;
 }
 
 export type CursorAction =
@@ -220,13 +218,32 @@ export class MenuCursors {
     return undefined;
   }
 
-  chipAt(x: number, y: number, canTake: (slot: number) => boolean): number {
+  /** The seat whose seal hand i owns (its name tag's seat online, else its own index). */
+  private ownSeat(i: number): number {
+    const t = this.tagOf?.(i) ?? i;
+    return t >= 0 ? t : i;
+  }
+
+  /**
+   * The seal a hand at (x, y) would pick up: any within CHIP_GRAB (a bit wider than the seal itself), the hand's
+   * own seat's seal first when it's one of them, else the nearest. (An 8 px radius, smaller than the seal, and
+   * last-drawn-wins made seals hard to grab, and on a crowded tile you'd take someone else's.)
+   */
+  chipAt(x: number, y: number, canTake: (slot: number) => boolean, own = -1): number {
+    let best = -1;
+    let bd = CHIP_GRAB;
     for (let s = this.chips.length - 1; s >= 0; s--) {
       const c = this.chips[s];
       if (!c.hero || !canTake(s)) continue;
-      if (Math.hypot(c.x - x, c.y - y) < 8) return s;
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d >= CHIP_GRAB) continue;
+      if (s === own) return s;
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
     }
-    return -1;
+    return best;
   }
 
   update(pads: PadState[], dt: number, now: number, canTake: (slot: number, by: number) => boolean): CursorAction[] {
@@ -269,7 +286,8 @@ export class MenuCursors {
       const over = this.at(c.x, c.y);
       c.hover = over?.id ?? "";
       c.grabbable =
-        c.holding < 0 && (over?.id.startsWith("hero:") || this.chipAt(c.x, c.y, (slot) => canTake(slot, i)) >= 0);
+        c.holding < 0 &&
+        (over?.id.startsWith("hero:") || this.chipAt(c.x, c.y, (slot) => canTake(slot, i), this.ownSeat(i)) >= 0);
       if (c.holding >= 0) {
         const chip = this.chips[c.holding];
         chip.x = c.x + 3;
@@ -284,7 +302,7 @@ export class MenuCursors {
           chip.hero = over.id.slice(5);
           c.holding = -1;
         } else if (c.holding < 0) {
-          const s = this.chipAt(c.x, c.y, (slot) => canTake(slot, i));
+          const s = this.chipAt(c.x, c.y, (slot) => canTake(slot, i), this.ownSeat(i));
           if (s >= 0) {
             this.cursors.forEach((o) => {
               if (o.holding === s) o.holding = -1;
@@ -326,7 +344,7 @@ export class MenuCursors {
       const held = this.cursors.some((k) => k.active && k.holding === s) || this.ghosts.some((g) => g.wire[5] === s);
       if (held) return;
       if (!c.hero) return;
-      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held, c.scale ?? 1);
+      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held);
     });
   }
 
@@ -399,34 +417,21 @@ function tint(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
 }
 
 const CHIP_K = 0.31;
+/** Grab radius round a placed seal's centre, a little wider than the seal (~20 px across). */
+const CHIP_GRAB = 13;
 const GLOVE_K = 0.37;
 
-/** Full-size width of a placed seal on the select screen, in UI pixels. */
-export function chipSize(): number {
-  const im = IMG.chip_1;
-  return im?.naturalWidth ? im.naturalWidth * CHIP_K : 20;
-}
-
-function chip(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  slot: number,
-  cpu: boolean,
-  lifted: boolean,
-  scale = 1,
-): void {
+function chip(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number, cpu: boolean, lifted: boolean): void {
   const im = cpu ? IMG.chip_cp : IMG[`chip_${slot + 1}`];
-  const k = CHIP_K * scale;
-  const w = im.naturalWidth * k;
-  const h = im.naturalHeight * k;
+  const w = im.naturalWidth * CHIP_K;
+  const h = im.naturalHeight * CHIP_K;
   if (lifted) {
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath();
     ctx.ellipse(x + 3, y + 5, w / 2, h * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  sprite(ctx, im, x - w / 2, y - h / 2 - (lifted ? 1 : 0), k);
+  sprite(ctx, im, x - w / 2, y - h / 2 - (lifted ? 1 : 0), CHIP_K);
 }
 
 const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030", "#8a40e0", "#ff8a10", "#18b8a8", "#ff3aa8"];

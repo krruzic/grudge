@@ -13,7 +13,7 @@ import { drawPlain, drawText, textWidth } from "./font";
 import { prompt, promptWidth } from "./prompts";
 import { boardBg, card, drawLogo, waxSeal, windowCut, woodFloor } from "./uiPaint";
 import type { Portraits } from "./portraits";
-import { chipColor, chipSize, type MenuCursors } from "./cursor";
+import { chipColor, type MenuCursors } from "./cursor";
 import type { NameEntry } from "./nameEntry";
 import { center } from "./screens/common";
 import { drawReadyBanner, drawSelect } from "./screens/select";
@@ -253,19 +253,14 @@ export class Screens {
       if (!p) continue;
       const rows = seats.length > 4 ? 2 : 1;
       const per = Math.ceil(seats.length / rows);
-      // Seals shrink so a crowded tile still shows every one side by side (7 full-size seals buried each other).
-      const full = chipSize();
-      const scale = Math.max(0.45, Math.min(1, (p.w - 2) / (per * full * 0.92), (p.h - 2) / (rows * full * 0.92)));
-      const step = full * scale * 0.92;
       seats.forEach((i, k) => {
         const row = Math.floor(k / per);
         const inRow = Math.min(per, seats.length - row * per);
         const col = k - row * per;
-        const dx = inRow > 1 ? Math.min(12, step) : 0;
+        const dx = inRow > 1 ? Math.min(12, (p.w - 14) / (inRow - 1)) : 0;
         const c = cursors.chips[i];
         c.x = p.x + (col - (inRow - 1) / 2) * dx;
-        c.y = p.y + (rows > 1 ? (row - 0.5) * Math.min(12, step) : 0);
-        c.scale = scale;
+        c.y = p.y + (rows > 1 ? (row - 0.5) * Math.min(12, p.h * 0.36) : 0);
       });
     }
     cursors.drawChips(
