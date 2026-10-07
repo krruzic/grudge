@@ -15,7 +15,7 @@ import { boardBg, card, drawLogo, waxSeal, windowCut, woodFloor } from "./uiPain
 import type { Portraits } from "./portraits";
 import { chipColor, chipSize, type MenuCursors } from "./cursor";
 import type { NameEntry } from "./nameEntry";
-import { center, TEAM_BRIGHT } from "./screens/common";
+import { center } from "./screens/common";
 import { drawReadyBanner, drawSelect } from "./screens/select";
 import { drawField } from "./screens/field";
 import { drawResults, placing, type ResultPlayer } from "./screens/results";
@@ -272,7 +272,6 @@ export class Screens {
       ctx,
       labels,
       this.slots.map((sl, i) => chipColor(i, sl.cpu)),
-      this.slots.map((sl, i) => (sl?.cpu && labels[i] ? (TEAM_BRIGHT[this.teamOf(i)] ?? null) : null)),
     );
   }
 

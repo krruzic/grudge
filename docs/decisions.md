@@ -1187,3 +1187,4 @@ Per hero: what a top player would exploit, taught to the CPUs (`src/sim/bot/tact
 - CPU seals: brighter house colour - the grey wax recoloured with a 'color' blend (house hue on the seal's own shading) plus a 35% screen lift, drawn at 85% over the plain seal (the multiply tint came out muddy).
 - CPU seals: house-colour layer at 40% (85% was too close to the player seals, the 55% multiply was muddy): a dusty house colour, greyer than the 1P-8P wax.
 - CPU seals: plain grey again, with a small house-colour badge (seat number 1-8, white) on the lower right; badges drawn after all seals so a crowded tile never covers one, sized to the UI font's smallest digit so the number fits. (Tinting the wax was either muddy or too close to the player seals.)
+- CPU seal house colours (ring, tint, badge) all undone: src/ui/cursor.ts and screens.ts back to 5804d1a (plain grey CPU seals). The crowded-tile fix (split border, seals shrink to fit) stays.
