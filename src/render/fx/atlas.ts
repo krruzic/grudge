@@ -642,19 +642,8 @@ export const RIDER = atlas("rider", riderUrl, [
   "ring",
 ] as const);
 
-// The base HQ paintings are a large download that nothing waits on: held until the boot's background download
-// (models, costumes) is done so they don't compete with it.
-let hqGo = (): void => {};
-const hqHeld = new Promise<void>((r) => (hqGo = r));
-/** Lets the base HQ paintings start loading. */
-export function releaseHq(): void {
-  hqGo();
-}
-
-/** Resolves once every base sheet has loaded; composites paint then, and base HQ paintings start once released. */
+/** Resolves once every base sheet has loaded; composites paint and base HQ paintings start loading then. */
 const fxReady = Promise.all(waits).then(() => {
   baseReady = true;
-  void hqHeld.then(() => {
-    for (const { id } of HQ_ID.values()) hqTex(id);
-  });
+  for (const { id } of HQ_ID.values()) hqTex(id);
 });

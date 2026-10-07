@@ -15,12 +15,6 @@ import { leaveNet } from "./net";
 export function updateTitle(app: App): void {
   if (app.anyPressed("start") || app.anyPressed("a") || app.cursors.takeClick()) {
     app.audio.ui("ok");
-    app.wantMenu = true;
-  }
-  // Everything past the title needs the full download (loadRest); a press while it runs waits for it.
-  app.screens.loading = app.loaded;
-  if (app.wantMenu && app.loaded >= 1) {
-    app.wantMenu = false;
     toMenu(app);
   }
 }

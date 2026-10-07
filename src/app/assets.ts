@@ -1,8 +1,7 @@
 // Static game data and boot-time asset loading for the browser client.
 // Everything here is read-only after boot: the GameData tables the sim runs on, the list of playable maps, the
-// roster, and the two-step asset load: loadAssets() fetches what the title screen needs (the UI font, structure /
-// unit / prop models, the starting map and a few champions) behind the #boot overlay in index.html, and loadRest()
-// then streams in the other maps, champions and costumes while the title screen shows (it waits on them).
+// roster, and loadAssets(), which fetches every map / hero / structure / unit model and the UI font in parallel
+// before the first frame (the #boot overlay in index.html stays up until then).
 import heroData from "../../data/heroes.json";
 import talentData from "../../data/talents.json";
 import unitData from "../../data/units.json";
@@ -113,76 +112,46 @@ function fileId(path: string, ext: string): string {
 export type MapView = Awaited<ReturnType<typeof loadMap>>;
 
 export interface Assets {
-  /** Indexed like `maps`; maps not loaded yet are holes until loadRest() fills them. */
   mapViews: MapView[];
   heroes: HeroModels;
   structures: StructureModels;
   unitModels: UnitModels;
 }
 
-/** Map index a session starts on (`?map=`, else the first in menu order). */
-export function startMap(params: URLSearchParams): number {
-  return Math.max(
-    0,
-    maps.findIndex((m) => m.id === params.get("map")),
-  );
-}
-
-const textures = {
-  grass: grassTex,
-  dirt: dirtTex,
-  rock: cliffTex,
-  cobble: pavingTex,
-  water: waterTex,
-  sand: sandTex,
-};
-
-/** A map's scenery plus its procedural dressing that depends on the terrain grid (frozen chasm edges, driftwood). */
-async function loadMapView(i: number): Promise<MapView> {
-  const terrain = new Terrain(maps[i].data);
-  const mv = await loadMap(maps[i].url, terrain, textures, {
-    ...renderConfig,
-    ...(terrain.atmosphere ?? {}),
-  } as typeof renderConfig);
-  const ice = chasmIce(terrain);
-  if (ice) mv.root.add(ice);
-  const beach = beachDebris(terrain);
-  if (beach) mv.root.add(beach);
-  return mv;
-}
-
-const allHeroUrls = globUrls(heroUrls as Record<string, string>);
-
-/**
- * Boot load: everything the title screen's attract match draws - the UI font, structure / unit / prop models, map
- * `first` and the champions `heroes` (base models).
- */
-export async function loadAssets(first: number, heroes: string[]): Promise<Assets> {
+/** Loads every map view and model the client needs, plus props, costumes and the UI font. */
+export async function loadAssets(): Promise<Assets> {
   const structures = new StructureModels();
   const unitModels = new UnitModels();
-  const heroModels = new HeroModels();
-  const mapViews: MapView[] = [];
-  await Promise.all([
-    loadMapView(first).then((mv) => (mapViews[first] = mv)),
-    heroModels.load(Object.fromEntries(heroes.map((h) => [h, allHeroUrls[h]]).filter(([, u]) => u))),
+  const heroes = new HeroModels();
+  const textures = {
+    grass: grassTex,
+    dirt: dirtTex,
+    rock: cliffTex,
+    cobble: pavingTex,
+    water: waterTex,
+    sand: sandTex,
+  };
+  const [mapViews] = await Promise.all([
+    Promise.all(
+      maps.map((m) => {
+        const t = new Terrain(m.data);
+        return loadMap(m.url, t, textures, { ...renderConfig, ...(t.atmosphere ?? {}) } as typeof renderConfig);
+      }),
+    ),
+    heroes.load(globUrls(heroUrls as Record<string, string>)),
     structures.load({ core: coreUrl, ...globUrls(structureUrls as Record<string, string>) }),
     loadProps(),
+    preloadCostumes(),
     unitModels.load(globUrls(unitUrls as Record<string, string>)),
     loadFont(),
   ]);
-  return { mapViews, heroes: heroModels, structures, unitModels };
-}
-
-/**
- * The rest of the download, after the title screen is up: every other map and champion model (costume models
- * included) and the costume textures. Resolves with the indices of the maps it added.
- */
-export async function loadRest(assets: Assets): Promise<number[]> {
-  const todo = maps.map((_, i) => i).filter((i) => !assets.mapViews[i]);
-  await Promise.all([
-    ...todo.map((i) => loadMapView(i).then((mv) => (assets.mapViews[i] = mv))),
-    assets.heroes.load(Object.fromEntries(Object.entries(allHeroUrls).filter(([k]) => !assets.heroes.has(k)))),
-    preloadCostumes(),
-  ]);
-  return todo;
+  // Procedural map dressing that depends on the terrain grid (frozen chasm edges, beach driftwood).
+  mapViews.forEach((mv, i) => {
+    const terrain = new Terrain(maps[i].data);
+    const ice = chasmIce(terrain);
+    if (ice) mv.root.add(ice);
+    const beach = beachDebris(terrain);
+    if (beach) mv.root.add(beach);
+  });
+  return { mapViews, heroes, structures, unitModels };
 }

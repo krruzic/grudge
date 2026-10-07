@@ -8,8 +8,7 @@
 // See docs/architecture.md for how they fit together.
 import * as THREE from "three";
 import { App } from "./app/app";
-import { loadAssets, loadRest, roster, startMap } from "./app/assets";
-import { releaseHq } from "./render/fx/atlas";
+import { loadAssets } from "./app/assets";
 import { installDebugApi, startFromUrl } from "./app/debug";
 import { startLoop } from "./app/loop";
 import { installKeyboardNaming } from "./app/select";
@@ -31,22 +30,17 @@ function progress(f: number): void {
 const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
 async function start(): Promise<void> {
-  // Boot loads what the title screen's attract match draws (assets.ts loadAssets); the rest streams in behind the
-  // title screen (loadRest), which holds START until it is done. Asset files (every three.js loader goes through
-  // the default manager) are the first 85% of the boot bar; building the game and its warm-up rehearsal the rest.
+  // Asset files (every three.js loader goes through the default manager) are the first 85%; building the game
+  // and its warm-up rehearsal the rest.
   // The file count grows while loading (models pull in textures), so measure against last boot's final count.
   const KEY = "grudge.bootFiles";
-  const expect = Number(localStorage.getItem(KEY)) || 150;
+  const expect = Number(localStorage.getItem(KEY)) || 600;
   let files = 0;
   THREE.DefaultLoadingManager.onProgress = (_url, loaded, total) => {
     files = total;
     progress((loaded / Math.max(expect, total)) * 0.85);
   };
-  const params = new URLSearchParams(location.search);
-  const first = startMap(params);
-  // The attract match's champions: the first in the roster (the App's placeholder world) and three at random.
-  const pool = roster.slice(1).sort(() => Math.random() - 0.5);
-  const assets = await loadAssets(first, [roster[0], ...pool.slice(0, 3)]);
+  const assets = await loadAssets();
   localStorage.setItem(KEY, String(files));
   progress(0.9);
   await frame();
@@ -56,23 +50,6 @@ async function start(): Promise<void> {
   app.rehearse();
   progress(1);
   installKeyboardNaming(app);
-
-  // Background download. The default manager's counts restart from where the boot left off.
-  const REST = "grudge.restFiles";
-  const restExpect = Number(localStorage.getItem(REST)) || 400;
-  let restFiles = 0;
-  THREE.DefaultLoadingManager.onProgress = (_url, loaded, total) => {
-    restFiles = total - files;
-    app.loaded = Math.min(0.99, Math.max(app.loaded, (loaded - files) / Math.max(restExpect, total - files)));
-  };
-  app.loaded = 0;
-  const rest = loadRest(assets).then((added) => {
-    localStorage.setItem(REST, String(restFiles));
-    app.finishLoading(added);
-    releaseHq();
-  });
-  // Deep links (?screen=, ?bots, online invites...) skip the title, so they wait for everything behind the boot bar.
-  if ([...params.keys()].some((k) => !["map", "seed", "debug"].includes(k))) await rest;
   startFromUrl(app);
   installDebugApi(app);
   startLoop(app, endBoot);

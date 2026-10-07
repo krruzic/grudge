@@ -122,8 +122,6 @@ export class Screens {
 
   // ── Title ──
   adapterStatus = "";
-  /** Title screen: fraction of the background download done (1 = PRESS START). */
-  loading = 1;
   adapterDebug = "";
 
   // ── Results ──
@@ -284,15 +282,7 @@ export class Screens {
       drawLogo(ctx, cw / 2, 18, 84);
       const t = "A FEUD TOURNAMENT. THE FALLEN RISE AGAIN.";
       drawPlain(ctx, t, cw / 2 - textWidth(t, 0.7) / 2, ih + 20, "#4a3018", 0.7);
-      if (this.loading < 1) {
-        // Background download still running (src/main.ts): a bar instead of PRESS START.
-        const t = `LOADING ${Math.floor(this.loading * 100)}%`;
-        drawPlain(ctx, t, cw / 2 - textWidth(t, 0.8) / 2, ih + 36, "#4a3018", 0.8);
-        ctx.fillStyle = "#4a3018";
-        ctx.fillRect(cw / 2 - 60, ih + 46, 120, 3);
-        ctx.fillStyle = "#c81818";
-        ctx.fillRect(cw / 2 - 59, ih + 46.5, 118 * this.loading, 2);
-      } else if (blink) {
+      if (blink) {
         const it: [string, string][] = [["S", "PRESS START"]];
         prompt(ctx, Math.round(cw / 2 - promptWidth(it, 1) / 2), ih + 36, it, 1, "#4a3018");
       }
