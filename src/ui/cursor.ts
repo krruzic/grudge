@@ -385,6 +385,32 @@ function sprite(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, 
   ctx.imageSmoothingEnabled = smooth;
 }
 
+const waxed = new Map<string, HTMLCanvasElement>();
+/** The sprite recoloured to `color`: its hue and saturation on the sprite's own shading ("color" blend), then
+ * brightened with a screen pass so dark grey wax doesn't come out muddy. Cached per sprite and colour. */
+function houseWax(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
+  if (!im.complete || !im.naturalWidth) return null;
+  const key = `${im.src}|${color}`;
+  let c = waxed.get(key);
+  if (c) return c;
+  c = cacheCanvas();
+  c.width = im.naturalWidth;
+  c.height = im.naturalHeight;
+  const g = c.getContext("2d")!;
+  g.drawImage(im, 0, 0);
+  g.globalCompositeOperation = "color";
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = "screen";
+  g.globalAlpha = 0.35;
+  g.fillRect(0, 0, c.width, c.height);
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = "destination-in";
+  g.drawImage(im, 0, 0);
+  waxed.set(key, c);
+  return c;
+}
+
 const tinted = new Map<string, HTMLCanvasElement>();
 function tint(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
   if (!im.complete || !im.naturalWidth) return null;
@@ -436,13 +462,13 @@ function chip(
   }
   const cy = y - (lifted ? 1 : 0);
   sprite(ctx, im, x - w / 2, cy - h / 2, k);
-  // House colour: the grey wax blended part way toward a tinted copy, so a CPU seal reads as its side's colour
-  // without looking like a player's seal.
-  const tc = ring ? tint(im, ring) : null;
+  // House colour: the grey wax recoloured in the house's hue (shading kept) and lifted toward it, blended over the
+  // plain seal so it reads as that colour but stays a little greyer than a player's seal.
+  const tc = ring ? houseWax(im, ring) : null;
   if (tc) {
     const a = ctx.globalAlpha;
     const smooth = ctx.imageSmoothingEnabled;
-    ctx.globalAlpha = a * 0.55;
+    ctx.globalAlpha = a * 0.85;
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(tc, x - w / 2, cy - h / 2, w, h);
     ctx.globalAlpha = a;
