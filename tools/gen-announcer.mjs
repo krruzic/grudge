@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Announcer name calls for champion select (ElevenLabs eleven-v3 through fal): one voice actor, a different
-// delivery per champion via v3 audio tags, drawn-out Smash-style. Writes assets/sfx/name.<hero>.0.ogg (trimmed,
+// Announcer name calls for champion select (ElevenLabs Eleven v4 through fal): one voice actor, a different
+// delivery per champion via audio tags, drawn-out Smash-style. Writes assets/sfx/name.<hero>.0.ogg (trimmed,
 // loudness-normalised with ffmpeg); the game plays it when a seal is placed (Sfx.heroCue).
 //
 //   node tools/gen-announcer.mjs [hero ...]
@@ -30,11 +30,11 @@ const LINES = {
   warden: "[slow rumbling deep announcer] THOOORN!",
   marksman: "[sharp crisp announcer] WREN!",
   friar: "[very deep jolly announcer] Brother MADDOOOCK!",
-  harpooner: "[playful bouncy announcer] Brindle TADWIIICK!",
+  harpooner: "[playful bouncy announcer] TAAADWICK!",
   scribe: "[warm grand announcer] Granny HOLLIN!",
   wreckwitch: "[creepy raspy announcer] Mother KELP!",
   architect: "[proud scholarly announcer] Professor HOOOT!",
-  vintner: "[gruff deep announcer] GRISTLE!",
+  vintner: "[gruff deep announcer] HOGS-HEEEAD!",
   rider: "[bright cheerful announcer] /ˈbræmbəl/ and MEAD!",
   herald: "[regal commanding announcer] The HERALD!",
 };

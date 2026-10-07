@@ -5,7 +5,7 @@
 //   wrenShoot      fully charged Vantage power shots from max range, standing still (high ground when close by)
 //   architectFight Hoot: Lookout under him when a champion closes in, hop back up onto it, charged square throws at
 //                  range, Snow Forts across a ranged champion's line of fire (or between him and a chaser)
-//   vintnerFight   Gristle: grit stance, wall headbutts, pounds, Switcheroo rescues, anvil curl vs shots
+//   vintnerFight   Hogshead: grit stance, wall headbutts, pounds, Switcheroo rescues, anvil curl vs shots
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
@@ -485,7 +485,7 @@ export function wrenShoot(bot: Bot, w: World, me: Entity, target: Entity): boole
 }
 
 /**
- * Brindle once he has a target: Reel In a champion standing by a wall, prop or structure (wall splat), one that is
+ * Tadwick once he has a target: Reel In a champion standing by a wall, prop or structure (wall splat), one that is
  * low, or (with a tank partner close) anyone in reach; Tongue Lash away from a melee champion on top of him; charged
  * harpoons (extra ricochet) when nobody is diving him, plain shots otherwise.
  */
@@ -791,7 +791,7 @@ function wallBehind(w: World, o: Entity, dx: number, dz: number, reach: number):
 }
 
 /**
- * Gristle: stands his ground in melee (Grit), Headbutts champions with a wall close behind them (or that are
+ * Hogshead: stands his ground in melee (Grit), Headbutts champions with a wall close behind them (or that are
  * running away low), pounds with a charged A when a champion or a crowd is at his feet, Switcheroos a hurt partner
  * out of trouble (or, with no partner in reach, Digs In for a brawl), and curls behind his anvil when a champion is
  * about to hit him from range.

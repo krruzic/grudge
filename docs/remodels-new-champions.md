@@ -1,7 +1,7 @@
 # Remodels for the newer champions
 
 Full model costumes (a new body on the existing rig and clips, like Brother Celadon's teapot friar or Grim's
-Sporeblight toadstool) for the five newer champions that only have recolours: Brindle, Mother Kelp, Hoot, Gristle and
+Sporeblight toadstool) for the five newer champions that only have recolours: Tadwick, Mother Kelp, Hoot, Hogshead and
 Bramble & Mead. Hollin already has one (the Beekeeper).
 
 Each idea came from reading a random seed (`openssl rand -hex 16`), palm-reader style: looking at the shapes, words
@@ -22,7 +22,7 @@ Ground rules for all five, same as the existing remodels:
 
 ---
 
-## 1. Brindle: THE STAINED-GLASS LILY KING
+## 1. Tadwick: THE STAINED-GLASS LILY KING
 
 **Seed:** `982e 950d 3cd5 2909 d9f9 504f 101b ad23`
 
@@ -32,7 +32,7 @@ lily pad, a rose window). `2909 d9f9` is ripples: nines spreading outward. `101`
 old and sacred that sank.
 
 **Concept:** the old chapel by the millpond flooded centuries ago. Its great rose window sank and settled on the
-pond floor, and one spring it climbed out as a frog. Brindle is a **leaded stained-glass frog**: his body is panes of
+pond floor, and one spring it climbed out as a frog. Tadwick is a **leaded stained-glass frog**: his body is panes of
 deep green, amber and cobalt held in black lead lines, lit faintly from inside like a window at evensong. His throat
 sac is a round rose window that glows when he croaks.
 
@@ -118,7 +118,7 @@ a folded game board, chequered on the inside. He carries a dice cup.
 
 ---
 
-## 4. Gristle: THE HARVEST WICKER BOAR
+## 4. Hogshead: THE HARVEST WICKER BOAR
 
 **Seed:** `8dbd 582d 2eaa c85f c154 98df f5ed 210a`
 
@@ -132,7 +132,7 @@ night the fires are lit.
 
 **Concept:** every autumn the cellar village weaves a great boar of willow and straw for the harvest feast, stuffed
 with sheaves, gourds and apples, garlanded in ribbons. This year it walked off the green before they could light it.
-Gristle is the **wicker harvest effigy**: woven willow ribs over a straw-stuffed body, a carved turnip-lantern face
+Hogshead is the **wicker harvest effigy**: woven willow ribs over a straw-stuffed body, a carved turnip-lantern face
 glowing through the weave at the eyes, horns of bent willow for tusks, and corn dollies and ribbons tied all over.
 
 - **Silhouette:** the same 2.1 m bulk, open and woven, so you see straw and gourds through the ribs. Bristling straw
@@ -155,7 +155,7 @@ glowing through the weave at the eyes, horns of bent willow for tusks, and corn 
 - **Build notes:** a Tripo wicker-boar body (open weave modelled in, gourds inside) plus a threshing mallet prop on
   hand_R; the millstone replaces the back anvil. The inner lantern glow is an emissive mask whose intensity tracks
   Grit and Dig In.
-- **Costume name:** `vintner@wicker`. Announcer: "Gristle of the HARVEST!"
+- **Costume name:** `vintner@wicker`. Announcer: "Hogshead of the HARVEST!"
 
 ---
 
@@ -202,8 +202,8 @@ collars:
 
 ## Pipeline and order
 
-Order: **Gristle** (one body, a mallet and a millstone, and its inner glow ties to Grit and Dig In), then **Hoot** (adds a costume structure),
-then **Brindle**, **Bramble** (the parts-built bee is the most Blender work), and **Kelp** last (the glass shell and
+Order: **Hogshead** (one body, a mallet and a millstone, and its inner glow ties to Grit and Dig In), then **Hoot** (adds a costume structure),
+then **Tadwick**, **Bramble** (the parts-built bee is the most Blender work), and **Kelp** last (the glass shell and
 the water line need new shader work).
 
 For each remodel:
@@ -220,7 +220,7 @@ For each remodel:
 5. **Effects:** a themed effects atlas through `tools/fx-prompts/` plus HQ paintings, portrait, select-screen stage,
    costume icon and splash card.
 6. **Sounds:** costume sound overrides where the theme demands (creaking wicker, glass chime, dice, motor buzz).
-7. **Code-driven looks:** Gristle's lantern glow inside the wicker tracks Grit and Dig In; Kelp's water line tracks Tide stacks;
+7. **Code-driven looks:** Hogshead's lantern glow inside the wicker tracks Grit and Dig In; Kelp's water line tracks Tide stacks;
    Bramble's abdomen rings telescope. Each is a small render-side hook in that champion's kit file, active only for
    the costume.
 8. **Checks:** a headless shot at gameplay zoom in every clip, the weight paint checked in the stomp, curl and crush

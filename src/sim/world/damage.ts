@@ -127,7 +127,7 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
       amount *= w.data.heroes.baseline.blockFrontalMul;
     }
   } else if (target.hero?.curlUntil && fx !== undefined && fz !== undefined && curlBlocks(w, target, fx, fz)) {
-    // Gristle's Anvil Curl: the anvil on his back stops a hit from behind.
+    // Hogshead's Anvil Curl: the anvil on his back stops a hit from behind.
     blocked = true;
     amount *= w.heroDef(target.hero.type).hooks.curlMul ?? 0.15;
   }
@@ -447,7 +447,7 @@ function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: num
     const ch = w.creditHero(src);
     if (ch && ch.team !== target.team) w.statsOf(ch.id).dmg += amount;
   }
-  // Wounded: a ranged champion's hit (botRange > 3: Wren, Remnil, Hollin, Brindle), or any champion's big hit
+  // Wounded: a ranged champion's hit (botRange > 3: Wren, Remnil, Hollin, Tadwick), or any champion's big hit
   // (finishers, slams, dashes), cuts a champion's healing for a few seconds - the answer to Maddock and Bramble
   // out-healing the damage.
   if (src?.hero && target.hero && amount > 0 && (big || (w.heroDef(src.hero.type).botRange ?? 1.8) > 3)) {

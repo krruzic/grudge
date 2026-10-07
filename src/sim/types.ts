@@ -96,7 +96,7 @@ export interface Status {
   blindMiss?: number;
   brewUntil?: number;
   brewMul?: number;
-  /** Brindle's Wet (hero/harpooner.ts): dripping until wetUntil; slipAt = last puddle slip. */
+  /** Tadwick's Wet (hero/harpooner.ts): dripping until wetUntil; slipAt = last puddle slip. */
   wetUntil?: number;
   wetOwner?: number;
   slipAt?: number;
@@ -109,7 +109,7 @@ export interface Status {
   woundUntil?: number;
   /** Stuck in Bramble's honey (rider pool): no dodging until then. */
   stickyUntil?: number;
-  /** Gristle's Dig In: until then nothing moves, stuns, slows or debuffs him (cleansed every tick). */
+  /** Hogshead's Dig In: until then nothing moves, stuns, slows or debuffs him (cleansed every tick). */
   steadfastUntil?: number;
 }
 
@@ -313,11 +313,11 @@ export interface HeroState {
   tideHitAt?: number;
   /** Index of the last anchor-whirl sweep of the current hold. */
   whirlN?: number;
-  /** Gristle's Thick Skin (hero/vintner.ts): 0..1 of his max damage reduction. */
+  /** Hogshead's Thick Skin (hero/vintner.ts): 0..1 of his max damage reduction. */
   grit?: number;
   /** Dig In: the next hit he lands (anything but a tick) does this many times its damage. */
   digPower?: number;
-  /** Gristle's Anvil Curl: hits from behind are blocked until then. */
+  /** Hogshead's Anvil Curl: hits from behind are blocked until then. */
   curlUntil?: number;
   /** Rider's Take Wing flight (hero/rider.ts): steered until `until`, R lands after minUntil; y = flight height. */
   wing?: { until: number; minUntil: number; y: number; dirX: number; dirZ: number; bombAt?: number };
@@ -521,7 +521,7 @@ export interface Missile {
   endBurst?: { radius: number; damage: number };
   arrow?: boolean;
   knockback?: number;
-  /** Brindle's harpoon: stepped by hero/harpooner.ts (ricochets left/done, last bounce point, Reel In, ring bounces). */
+  /** Tadwick's harpoon: stepped by hero/harpooner.ts (ricochets left/done, last bounce point, Reel In, ring bounces). */
   harpoon?: {
     bounces: number;
     bounced: number;

@@ -1173,7 +1173,7 @@
       "class": "support"
     },
     "harpooner": {
-      "name": "Brindle",
+      "name": "Tadwick",
       "blurb": "Harpoon bow. Wet: his hits leave foes dripping for 3s. Harpoons skewer through soldiers and ricochet off walls and structures; a banked harpoon hits a Wet foe 35% harder.",
       "health": "mid",
       "speed": "mid",
@@ -1484,7 +1484,7 @@
       }
     },
     "vintner": {
-      "name": "Gristle",
+      "name": "Hogshead",
       "blurb": "Cellar Boar. Thick Skin: standing his ground (or blocking) builds Grit, up to 25% less damage taken; moving drains it.",
       "health": "high",
       "speed": "mid",

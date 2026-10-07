@@ -121,7 +121,7 @@ function syncWard(ents: EntityViews, e: Entity, v: View, dt: number, time: numbe
 }
 
 /**
- * Red hull outline while Gristle is Dug In (like the gold invulnerable glow, in his blood-red), then a fainter
+ * Red hull outline while Hogshead is Dug In (like the gold invulnerable glow, in his blood-red), then a fainter
  * throbbing one while the powered-up blow is still banked.
  */
 function syncDig(ents: EntityViews, e: Entity, v: View, dt: number, time: number): void {

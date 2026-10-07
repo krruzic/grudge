@@ -1,4 +1,4 @@
-// Gristle (vintner) kit: wine-and-forge-spark anvil hits, the anvil ground slams (Anvil Pound, Crush Season: a
+// Hogshead (vintner) kit: wine-and-forge-spark anvil hits, the anvil ground slams (Anvil Pound, Crush Season: a
 // cracked wine-soaked crater, a dust ring and flying clods; the third slam leaves a big crushed-grape splat),
 // Headbutt (dust kick, a pinned champion gets grapes-and-stars circling his head), Switcheroo (golden swap ring under
 // the partner, then at both ends of the swap), Dig In (a stamped-hoof crater, red sparks and flare; a red shock when

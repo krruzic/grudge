@@ -621,7 +621,7 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
       sprite(FX.fire, 0.6 + Math.random() * 0.3, x, z, -0.1, true, "glow"),
     );
   } else if (style === "wine") {
-    // Gristle's Vintage Year: crushed grapes and spilled wine where the last Crush Season slam landed.
+    // Hogshead's Vintage Year: crushed grapes and spilled wine where the last Crush Season slam landed.
     decal.material = new THREE.MeshBasicMaterial({
       map: hd(VINTNER.puddle),
       transparent: true,
@@ -648,7 +648,7 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
     );
     ring(Math.round(r * 1.2), [0.3, 0.95], (x, z) => sprite(HERALD.star, 0.35, x, z, 0.8, true, "wisp"));
   } else if (style === "riptide" || style === "puddle") {
-    // Brindle: the Riptide whirlpool ring (spins) and his slide puddles.
+    // Tadwick: the Riptide whirlpool ring (spins) and his slide puddles.
     const rip = style === "riptide";
     const disc = new THREE.Mesh(
       new THREE.PlaneGeometry(r * 2.15, r * 2.15),

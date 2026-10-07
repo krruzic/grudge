@@ -1,4 +1,4 @@
-// Harpooner (Brindle Tadwick): harpoons are straight missiles that ricochet off walls, props and structures
+// Harpooner (Tadwick): harpoons are straight missiles that ricochet off walls, props and structures
 // (bending toward a foe after the bounce), Wet (his hits leave foes dripping; a ricochet hits a Wet foe harder),
 // Reel In (B: roped harpoon that drags soldiers to him and champions halfway - toward the bounce point if it banked -
 // with a wall splat if something stops them), Tongue Lash (R: grapple jump to a ledge/prop/structure away from
@@ -284,7 +284,7 @@ function kvFor(w: World, d: number): number {
 
 /**
  * Reel In: drag a soldier all the way, a champion `heroPull` of the way (a tank partner nearby: to the partner's
- * feet), toward Brindle - or toward the wall the rope banked off. Something solid in the way: wall splat (stun).
+ * feet), toward Tadwick - or toward the wall the rope banked off. Something solid in the way: wall splat (stun).
  */
 function reel(w: World, src: Entity, o: Entity, m: Missile, def: AbilityDef): void {
   if (o.hero?.jump || w.time < o.status.ccImmuneUntil) return;

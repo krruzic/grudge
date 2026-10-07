@@ -85,7 +85,7 @@ export interface TalentFx {
   puddleHaste?: number;
   puddleSlow?: number;
   kegShield?: { amount: number; seconds: number };
-  /** Brindle's Tongue Lash: leave a puddle where he lands. */
+  /** Tadwick's Tongue Lash: leave a puddle where he lands. */
   landPuddle?: boolean;
   /** Hollin: Erratum leaves an ink blot where she stood. */
   erratumBlot?: { damage: number; radius: number; blind: number };
@@ -114,9 +114,9 @@ export interface TalentFx {
   collapse?: { radius: number; damage: number; slowMul?: number; slowSeconds?: number; stun?: number };
   /** Architect: the Lookout shoots icicles at the nearest foe while it stands. */
   icicles?: { damage: number; range: number; cooldown: number };
-  /** Gristle's Thick Skin talent: faster, bigger Grit. */
+  /** Hogshead's Thick Skin talent: faster, bigger Grit. */
   grit?: { max: number; seconds: number };
-  /** Gristle's Switcheroo: he lands with a stomp where the partner stood. */
+  /** Hogshead's Switcheroo: he lands with a stomp where the partner stood. */
   switchSlam?: { radius: number; damage: number; knockback: number; stun: number };
   /** Rider: Take Wing landing slams foes around her. */
   wingSlam?: { damage: number; radius: number; stun?: number };
@@ -286,7 +286,7 @@ export interface AbilityDef {
   puddleSeconds?: number;
   puddleHeal?: number;
   rootSeconds?: number;
-  /** Gristle's Dig In (Switcheroo with no ally in reach): how long, next-hit multiplier, action timing. */
+  /** Hogshead's Dig In (Switcheroo with no ally in reach): how long, next-hit multiplier, action timing. */
   digSeconds?: number;
   digMul?: number;
   digDur?: number;
@@ -303,7 +303,7 @@ export interface AbilityDef {
   splash?: number;
   splashDamage?: number;
   pierceRange?: number;
-  /** Brindle (hero/harpooner.ts): Wet seconds from this ability, extra ricochets (always / on a full-power shot),
+  /** Tadwick (hero/harpooner.ts): Wet seconds from this ability, extra ricochets (always / on a full-power shot),
    * share of the distance Reel In drags a champion, Riptide's drag speed (m/s). */
   wetSeconds?: number;
   ricochets?: number;
@@ -383,11 +383,11 @@ export interface HeroDef {
    *   hexAlly   - multiplier on a partner's champion hits against foes this champion has hexed (Remnil);
    *   edge      - multiplier on a partner's damage while within 9 m of this champion;
    *   guard     - multiplier on damage a partner takes while within 9 m of this champion;
-   *   reelTo    - Reel In drags a champion this share of the way to a partner of that class (Brindle + tank);
+   *   reelTo    - Reel In drags a champion this share of the way to a partner of that class (Tadwick + tank);
    *   swarmAlly - multiplier on a partner's next hit on a foe in this champion's bee swarm (Hollin's Paper Storm);
    *   dredgeStack - Tide stacks Mother Kelp gains when Dredge catches a foe already slowed or rooted;
    *   lookout     - Professor Hoot's Lookout footprint (cells per side) with a partner of that class;
-   *   switchAlly - multiplier on the shield Gristle's Switcheroo gives a partner (> 1 also adds a speed burst).
+   *   switchAlly - multiplier on the shield Hogshead's Switcheroo gives a partner (> 1 also adds a speed burst).
    *   honeyAlly - damage multiplier for a partner standing in this champion's honey pool.
    *   (each new champion documents its own entries in its hero module).
    */

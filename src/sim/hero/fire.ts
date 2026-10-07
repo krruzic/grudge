@@ -129,7 +129,7 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return throwKeg(w, e, a, def, "powder", mul);
     case "brewfest":
       return brewfest(w, e, a, def);
-    // harpooner (Brindle)
+    // harpooner (Tadwick)
     case "harpoon":
       return fireHarpoon(w, e, a, def, mul);
     case "reel":
@@ -161,7 +161,7 @@ export function fire(w: World, e: Entity, a: HeroAction): void {
       return fireLookout(w, e, a, def);
     case "dome":
       return fireDome(w, e, a, def, mul);
-    // vintner (Gristle)
+    // vintner (Hogshead)
     case "headbutt":
       return fireHeadbutt(w, e, a, def);
     case "switcheroo":

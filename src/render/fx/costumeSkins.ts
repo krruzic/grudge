@@ -70,7 +70,7 @@ const TINTS: Record<string, Record<number, number>> = {
     0xe0ffb0: 0xe8d0ff,
   },
   celadon: { 0xffc860: 0x9fe0b0, 0xffe6a0: 0xd8f0ff, 0xffd070: 0xa8d8ff, 0xfff0c0: 0xe8f4ff, 0xffe0a0: 0xe0f0ff },
-  // Brindle (harpooner): his sea-water shockwaves and glints.
+  // Tadwick (harpooner): his sea-water shockwaves and glints.
   tideadmiral: { 0xb8f4ff: 0xffe08a },
   bogtoad: { 0xb8f4ff: 0xc8d090 },
   deepglow: { 0xb8f4ff: 0xc890ff },
@@ -102,7 +102,7 @@ const TINTS: Record<string, Record<number, number>> = {
     0xe8fbff: 0xfff0c8,
     0xe8f6ff: 0xd8d0c8,
   },
-  // Gristle (vintner): the wine-pink hit flashes become harvest gold, forge orange and frost blue.
+  // Hogshead (vintner): the wine-pink hit flashes become harvest gold, forge orange and frost blue.
   harvestking: { 0xb0305a: 0xe0a020, 0xffd8e0: 0xfff0b0, 0xffd0e0: 0xfff0c0 },
   forgemaster: { 0xb0305a: 0xff6a10, 0xffd8e0: 0xffc080, 0xffd0e0: 0xffd090, 0xfff0e0: 0xffd8b0, 0xffe080: 0xff9a40 },
   wicker: { 0xb0305a: 0xd8a040, 0xffd8e0: 0xfff0c0, 0xffd0e0: 0xffe8b0, 0xfff0e0: 0xfff4d8, 0xffe080: 0xffb848 },

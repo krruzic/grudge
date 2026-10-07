@@ -12,16 +12,16 @@ can be tuned without touching 1v1.
 
 | Class | Today | New |
 |---|---|---|
-| marksman | Wren | Brindle Tadwick |
+| marksman | Wren | Tadwick |
 | bruiser | Warlord | Mother Kelp |
-| tank | Thorn | Gristle |
+| tank | Thorn | Hogshead |
 | caster | Remnil | Abbess Hollin |
 | builder | Stig | Professor Hoot |
 | support | Maddock (+ Herald as commander) | Bramble & Mead |
 
 ---
 
-## Brindle Tadwick, the Tidehunter (marksman)
+## Tadwick, the Tidehunter (marksman)
 
 Seed `9280ffc330058fa7768967dfdec0bf54` -> frogfolk · tidal coast · longbow · pulls things toward itself ·
 ricochets off walls. *Adapted: the longbow is a harpoon bow so it doesn't double Wren's longbow.*
@@ -62,7 +62,7 @@ Seed `dfaccd84a2cf254947bd62b46f203a13` -> bog witch · shipwreck · flail · ch
 - **Synergy:** with a *caster* partner, Dredge swaps into the caster's slows and roots for a free stack.
 - **Bot:** commits once at 4+ stacks, Dredges the enemy marksman or caster, Bilge on healers.
 
-## Gristle, the Cellar Boar (tank)
+## Hogshead, the Cellar Boar (tank)
 
 Seed `8b5d3514b251e1ad035ec29889c2f532` -> boar-folk · moonlit vineyard · anvil · charges up over time · swaps
 places.

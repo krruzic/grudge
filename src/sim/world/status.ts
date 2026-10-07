@@ -51,7 +51,7 @@ export function newStatus(): Status {
 
 /**
  * Clear every debuff (stun, slow / root, knockback drift, hex, mark, blind, poison, bleed, no-heal, wounds, sticky
- * honey, cowed, Pip, Wet, swarm, haunt). Gristle's Dig In runs it every tick while it lasts.
+ * honey, cowed, Pip, Wet, swarm, haunt). Hogshead's Dig In runs it every tick while it lasts.
  */
 export function cleanse(w: World, e: Entity): void {
   const s = e.status;

@@ -445,7 +445,7 @@ function charges(w: World, e: Entity, k: "b" | "r"): number {
 
 /**
  * A champion's passive, for the HUD slot after the Z ring: kind, fill 0..1 (or lit), and an optional count.
- *   vantage (Wren): lit while it's on       grit (Gristle): Thick Skin fill
+ *   vantage (Wren): lit while it's on       grit (Hogshead): Thick Skin fill
  *   tide (Kelp): Tide Rising stacks          runes (Hollin): runes standing
  *   watch (Hoot): lit while on a lookout, count = lookouts standing
  */
@@ -495,7 +495,7 @@ function drawPassive(ctx: CanvasRenderingContext2D, x: number, y: number, p: Pas
   }
 }
 
-/** Gristle's Grit in quarters (0 = none). */
+/** Hogshead's Grit in quarters (0 = none). */
 function gritStep(e: Entity): number {
   const g = e.hero?.grit;
   return g ? Math.ceil(g * 4 - 0.01) : 0;

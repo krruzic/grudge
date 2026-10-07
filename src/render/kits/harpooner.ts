@@ -1,4 +1,4 @@
-// Brindle (harpooner) kit: sea-water hits, harpoon missiles (the Tripo harpoon prop, a towed rope for Reel In),
+// Tadwick (harpooner) kit: sea-water hits, harpoon missiles (the Tripo harpoon prop, a towed rope for Reel In),
 // ricochet sparks, harpoons stuck in walls, Wet drips on soaked targets, the Reel In rope yank, the Tongue Lash
 // tongue, Riptide's burst and the slip splash. The Riptide ring and his puddles are zone views (hazards/zones.ts,
 // RIPTIDE_DECAL / PUDDLE_DECAL below). Costume themes come from the harpooner@<costume> atlases + HQ paintings.

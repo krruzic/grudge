@@ -1,4 +1,4 @@
-// Gristle, the Cellar Boar (vintner): Thick Skin passive (Grit builds while he stands still or blocks, up to 25%
+// Hogshead, the Cellar Boar (vintner): Thick Skin passive (Grit builds while he stands still or blocks, up to 25%
 // damage reduction, and drains while he moves), the charged Anvil Pound on A, Headbutt (B: a short charge that
 // carries the first champion along and stuns both against a wall), Switcheroo (R: swap places with an ally, who gets
 // a shield - with no ally in reach he Digs In instead: a stomp, full Grit, nothing moves or debuffs him for a few
@@ -24,7 +24,7 @@ const fx = (
 
 const hooksOf = (w: World, e: Entity) => w.heroDef(e.hero!.type).hooks;
 
-/** Gristle's Grit: builds while he stands (or blocks), drains while he moves. Runs every tick from hero/update.ts. */
+/** Hogshead's Grit: builds while he stands (or blocks), drains while he moves. Runs every tick from hero/update.ts. */
 export function gritTick(w: World, e: Entity): void {
   const h = e.hero!;
   const hk = hooksOf(w, e);
@@ -107,7 +107,7 @@ export function startHeadbutt(w: World, e: Entity, a: HeroAction): void {
 
 /**
  * Headbutt rush (until hitAt): moves at range/hitAt; the first enemy champion touched is pinned in front of him and
- * pushed along. If the pushed champion (or Gristle) is stopped by a wall, a structure or a cliff, both stop: the
+ * pushed along. If the pushed champion (or Hogshead) is stopped by a wall, a structure or a cliff, both stop: the
  * champion takes the wall damage and is stunned. Soldiers in the way are bowled aside.
  */
 export function headbuttTick(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {

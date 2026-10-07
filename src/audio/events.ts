@@ -728,7 +728,7 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
     case "plenty":
       if (Math.random() < 0.5) a.play("burp", 0.35);
       return;
-    // Brindle (harpooner).
+    // Tadwick (harpooner).
     case "wet":
       if (a.allow("wet", 2)) a.play("splash", 0.45, { rate: 1.3 });
       return;
@@ -796,7 +796,7 @@ function heroFx(a: Audio, ev: Extract<SimEvent, { type: "heroFx" }>, w: World): 
       a.play("cloth.flap", 0.5, { rate: 1.5, at: 0.12 });
       if (Math.random() < 0.4) a.play("owl", 0.45, { rate: 1.2, dur: 0.6 });
       return;
-    // Gristle (vintner)
+    // Hogshead (vintner)
     case "pound":
     case "crush":
     case "crushFinal": {

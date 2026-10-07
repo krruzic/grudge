@@ -42,7 +42,7 @@ const VOICE_DUR: Record<string, number> = { attack: 0.55, big: 0.95, hurt: 0.6, 
 /** Champions voiced at runtime from another champion's lines, pitch-cast (rate) and with longer lines (Hollin is
  * Wren's voice pack an older, lower register; her own vo.* files can replace this once the CC0 packs are fetched). */
 const VOICE_CAST: Record<string, [string, number, number]> = { scribe: ["marksman", 0.84, 1.15] };
-/** Champions whose voices are pitched down far enough that their lines need a little longer (Gristle at 0.7). */
+/** Champions whose voices are pitched down far enough that their lines need a little longer (Hogshead at 0.7). */
 const VOICE_LEN: Record<string, number> = { vintner: 1.2 };
 /** Most sample voices at once; past this only priority sounds start. */
 const MAX_VOICES = 56;

@@ -704,7 +704,7 @@ const TINT: Record<string, string> = {
   takewing: "#ffe070",
   royaljelly: "#fff0c0",
 };
-// Brindle's kinds reuse the closest engravings until the painted glyph strip loads.
+// Tadwick's kinds reuse the closest engravings until the painted glyph strip loads.
 STROKES.harpoon = STROKES.shoot;
 STROKES.reel = STROKES.reach;
 STROKES.tonguelash = STROKES.leap;
