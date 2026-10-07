@@ -33,9 +33,11 @@ import {
   seatsFor,
   renderConfig,
   roster,
+  startMap,
   type Assets,
   type MapView,
 } from "./assets";
+import type { HeroModels } from "../render/heroModels";
 import { NetSession } from "./net";
 import { deviceName } from "./nav";
 
@@ -116,10 +118,18 @@ export class App {
   // ── Subsystems ──
   readonly save = new Save();
   readonly mapViews: MapView[];
+  readonly heroModels: HeroModels;
+  /**
+   * Fraction of the background download done (loadRest), 1 once it and its rehearsal finish. Until then the title
+   * screen shows the progress and holds START (queued in `wantMenu`).
+   */
+  loaded = 0;
+  wantMenu = false;
   readonly pads: Gamepads;
   readonly view: GameRenderer;
   readonly uiCanvas: UiCanvas;
   readonly hud: Hud;
+  private readonly portraits: Portraits;
   readonly screens: Screens;
   readonly menus: Menus;
   readonly audio = new Audio();
@@ -130,10 +140,7 @@ export class App {
   constructor(assets: Assets) {
     const p = this.params;
     this.seed = Number(p.get("seed") ?? Math.floor(Math.random() * 1e6));
-    this.mapIndex = Math.max(
-      0,
-      maps.findIndex((m) => m.id === p.get("map")),
-    );
+    this.mapIndex = startMap(p);
     this.forceJoin = Number(p.get("join") ?? 0);
     const pm = p.get("mode");
     this.mode = pm === "2v2" || pm === "ffa" || pm === "tdm" || pm === "ffadm" ? pm : "1v1";
@@ -142,6 +149,7 @@ export class App {
       p.get("map") === "random" ? this.fields().length : Math.max(0, this.fields().indexOf(this.mapIndex));
     this.world = this.newWorld([roster[0], roster[0]]);
     this.mapViews = assets.mapViews;
+    this.heroModels = assets.heroes;
 
     this.splitAll = p.has("split4") || import.meta.env.VITE_SPLIT4 === "1";
     const dbgZoom = p.get("zoom");
@@ -168,29 +176,10 @@ export class App {
     portraits.units = assets.unitModels;
     // Map previews: the static map plus its runtime set pieces (jump pads, timed gates), built from a throwaway
     // World of each map so the preview shows the field as it starts.
-    portraits.setMaps(
-      assets.mapViews.map((mv, i) => {
-        const g = new THREE.Group();
-        g.add(mv.root.clone(true));
-        const mw = new World(maps[i].data, data, 1);
-        padCounts.set(maps[i].data.name ?? "", mw.terrain.pads.length);
-        const mf = new MapFx(mw);
-        mf.sync(0, 1);
-        g.add(mf.root);
-        const a = maps[i].data.atmosphere as Record<string, string | number> | undefined;
-        const rc = renderConfig as unknown as Record<string, string | number>;
-        const pick = (k: string) => (a?.[k] ?? rc[k]) as string;
-        const light = a && {
-          sunColor: pick("sunColor"),
-          sunScale: Number(pick("sunIntensity")) / Number(rc.sunIntensity),
-          ambientSky: pick("ambientSky"),
-          ambientGround: pick("ambientGround"),
-          ambientScale: Number(pick("ambientIntensity")) / Number(rc.ambientIntensity),
-          sky: pick("skyHorizon"),
-        };
-        return { root: g, width: maps[i].data.width, depth: maps[i].data.depth, light };
-      }),
-    );
+    this.portraits = portraits;
+    // Pad counts for the field cards come from every map's data; previews only from the maps loaded so far.
+    maps.forEach((m, i) => padCounts.set(m.data.name ?? "", new World(m.data, data, 1).terrain.pads.length));
+    this.mapViews.forEach((_, i) => this.addMapPreview(i));
     this.screens.portraits = portraits;
     this.hud.portraits = portraits;
     this.hud.mapIndex = () => this.shownMap;
@@ -266,8 +255,11 @@ export class App {
     return this.pads.players.some((p) => p.pressed[k]);
   }
 
+  /** A random champion (of those loaded, while the title screen's background download runs). */
   randomHero(): string {
-    return roster[Math.floor(Math.random() * roster.length)];
+    const pool = roster.filter((h) => this.heroModels.has(h));
+    const from = pool.length ? pool : roster;
+    return from[Math.floor(Math.random() * from.length)];
   }
 
   // ── Worlds ──
@@ -277,14 +269,15 @@ export class App {
    * roster and draws a frame of each, so shader compiles, texture/geometry uploads and the reusable view caches
    * happen now instead of as a hitch the first time the menu backdrop swaps to a field.
    */
-  rehearse(): void {
+  rehearse(fields: number[] = this.mapViews.flatMap((mv, i) => (mv ? [i] : []))): void {
     const keep = { map: this.mapIndex, seed: this.seed, world: this.world };
+    const pool = roster.filter((h) => this.heroModels.has(h));
     let h = 0;
-    for (let k = 1; k <= maps.length; k++) {
-      this.mapIndex = (keep.map + k) % maps.length;
+    for (const i of fields) {
+      this.mapIndex = i;
       const n = houses(this.mapIndex) === 4 ? 4 : 2;
       const w = this.newWorld(
-        Array.from({ length: n }, () => roster[h++ % roster.length]),
+        Array.from({ length: n }, () => pool[h++ % pool.length]),
         n,
         false,
         true,
@@ -292,11 +285,11 @@ export class App {
       this.show(w);
       this.view.render(0, 1 / 60);
     }
-    while (h < roster.length) {
-      this.show(this.newWorld([roster[h++ % roster.length], roster[h++ % roster.length]]));
+    this.mapIndex = keep.map;
+    while (h < pool.length) {
+      this.show(this.newWorld([pool[h++ % pool.length], pool[h++ % pool.length]]));
       this.view.render(0, 1 / 60);
     }
-    this.mapIndex = keep.map;
     this.seed = keep.seed;
     this.show(keep.world);
   }
@@ -317,6 +310,37 @@ export class App {
     for (let p = 0; p < count; p++)
       w.spawnHero(champions(p) ? (heroes[p] ?? roster[0]) : commanderType, p, ffa ? p : p % 2);
     return w;
+  }
+
+  /**
+   * Map `i`'s preview for the field screen: the static map plus its runtime set pieces (jump pads, timed gates),
+   * built from a throwaway World of the map so the preview shows the field as it starts.
+   */
+  private addMapPreview(i: number): void {
+    const g = new THREE.Group();
+    g.add(this.mapViews[i].root.clone(true));
+    const mf = new MapFx(new World(maps[i].data, data, 1));
+    mf.sync(0, 1);
+    g.add(mf.root);
+    const a = maps[i].data.atmosphere as Record<string, string | number> | undefined;
+    const rc = renderConfig as unknown as Record<string, string | number>;
+    const pick = (k: string) => (a?.[k] ?? rc[k]) as string;
+    const light = a && {
+      sunColor: pick("sunColor"),
+      sunScale: Number(pick("sunIntensity")) / Number(rc.sunIntensity),
+      ambientSky: pick("ambientSky"),
+      ambientGround: pick("ambientGround"),
+      ambientScale: Number(pick("ambientIntensity")) / Number(rc.ambientIntensity),
+      sky: pick("skyHorizon"),
+    };
+    this.portraits.setMap(i, { root: g, width: maps[i].data.width, depth: maps[i].data.depth, light });
+  }
+
+  /** The background download landed (maps `added`): previews and a rehearsal of the new fields and champions. */
+  finishLoading(added: number[]): void {
+    for (const i of added) this.addMapPreview(i);
+    this.rehearse(added);
+    this.loaded = 1;
   }
 
   /** Makes `w` the current world and points the renderer at it (swapping map scenery if the map changed). */

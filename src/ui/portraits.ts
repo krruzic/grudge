@@ -316,18 +316,14 @@ export class Portraits {
     }
   }
 
-  setMaps(list: { root: THREE.Object3D; width: number; depth: number; light?: MapLight }[]): void {
-    this.maps = list.map((m) => ({ root: m.root.clone(true), w: m.width, d: m.depth, light: m.light }));
-    this.thumbs.clear();
-    this.tops?.clear();
-    // Warm-up: render every map once now (while loading) so shader compiles and texture uploads don't land as a
-    // hitch the first time the field screen shows a map.
-    // The field-select card thumbs are shot here too (fixed size), so switching modes never reads back pixels.
-    const scratch = document.createElement("canvas");
-    for (let i = 0; i < this.maps.length; i++) {
-      this.shootMap(i, 16, 16, 0, 60, 1.05, scratch);
-      this.mapThumb(i, CARD_W, CARD_H);
-    }
+  /** Adds map `i`'s preview (maps arrive over the boot and the background load, in any order). */
+  setMap(i: number, m: { root: THREE.Object3D; width: number; depth: number; light?: MapLight }): void {
+    this.maps[i] = { root: m.root.clone(true), w: m.width, d: m.depth, light: m.light };
+    // Warm-up: render the map once now (while loading) so shader compiles and texture uploads don't land as a
+    // hitch the first time the field screen shows it.
+    // The field-select card thumb is shot here too (fixed size), so switching modes never reads back pixels.
+    this.shootMap(i, 16, 16, 0, 60, 1.05, document.createElement("canvas"));
+    this.mapThumb(i, CARD_W, CARD_H);
   }
 
   /** Field-select card thumb: one fixed-size shot per map (cropped to the card by the caller). */

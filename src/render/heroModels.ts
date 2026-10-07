@@ -204,6 +204,11 @@ function skinnedBounds(g: THREE.BufferGeometry): THREE.Sphere {
 export class HeroModels {
   private gltfs = new Map<string, GLTF>();
 
+  /** Whether `type`'s model has loaded. */
+  has(type: string): boolean {
+    return this.gltfs.has(type);
+  }
+
   async load(urls: Record<string, string>): Promise<void> {
     const loader = new GLTFLoader();
     await Promise.all(
