@@ -32,6 +32,7 @@ import quarryScrubUrl from "../../assets/textures/quarry_scrub.png?url";
 import cliffUrl from "../../assets/textures/cliff.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./map/terrainMesh";
+import { cachedTerrain, storeTerrain } from "./map/terrainCache";
 import { cacheCanvas } from "../ui/cacheCanvas";
 
 export interface MapView {
@@ -264,8 +265,9 @@ export async function loadMap(
   // A map palette swaps the ground textures (Russet Hollow: autumn grass, leaf-litter paths, russet clay banks).
   const palette = terrain.palette ? PALETTES[terrain.palette] : undefined;
   const urls = { ...textureUrls, ...palette };
-  const [gltf, ...texs] = await Promise.all([
+  const [gltf, cached, ...texs] = await Promise.all([
     new GLTFLoader().loadAsync(url),
+    cachedTerrain(url),
     ...(["grass", "dirt", "rock", "cobble", "water"] as const).map((k) => texLoader.loadAsync(urls[k] as string)),
   ]);
   const [grass, dirt, rock, cobble, water] = texs;
@@ -284,14 +286,15 @@ export async function loadMap(
     [palette?.grass2, palette?.rim].map((u) => (u ? texLoader.loadAsync(u) : Promise.resolve(undefined))),
   );
   for (const tx of [grass2, rim]) if (tx) tx.anisotropy = ANISO;
-  root.add(
-    buildTerrainMesh(
-      terrain,
-      { grass, dirt, rock, cobble, water, sand, pavId, ruin, lake, grass2, rim, cobbleM: palette?.cobbleM },
-      light,
-      sur,
-    ),
+  const terrainMesh = buildTerrainMesh(
+    terrain,
+    { grass, dirt, rock, cobble, water, sand, pavId, ruin, lake, grass2, rim, cobbleM: palette?.cobbleM },
+    light,
+    sur,
+    cached,
   );
+  if (!cached) storeTerrain(url, terrainMesh.geometry);
+  root.add(terrainMesh);
   for (const t of [grass, dirt, rock, cobble, sand, ...(ruined ? [crack] : [])]) t.anisotropy = ANISO;
   const waterMesh = buildWaterMesh(terrain, waterMaterial(water), sur);
   root.add(waterMesh);

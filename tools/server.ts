@@ -64,6 +64,13 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
     return;
   }
   const hashed = file.startsWith(join(ROOT, "assets") + sep);
+  // Unhashed files (index.html, the boot screen art) are revalidated on every visit: unchanged -> 304, no body.
+  const mtime = statSync(file).mtime;
+  const since = Date.parse(String(req.headers["if-modified-since"] ?? ""));
+  if (!hashed && since && Math.floor(mtime.getTime() / 1000) <= Math.floor(since / 1000)) {
+    res.writeHead(304, { "Cache-Control": "no-cache", "Last-Modified": mtime.toUTCString() }).end();
+    return;
+  }
   // Precompressed copies from tools/precompress.ts (.br / .gz next to the file), when the browser takes them.
   const accept = String(req.headers["accept-encoding"] ?? "");
   let body = file;

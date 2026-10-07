@@ -246,12 +246,13 @@ function locate(arr: number[], v: number): number {
   return v - arr[a] < arr[b] - v ? a : b;
 }
 
-export function buildTerrainMesh(
+/** Terrain geometry: grid positions and normals, splat weights and baked lighting as vertex attributes. */
+function terrainGeometry(
   t: Terrain,
   tex: TerrainTextures,
   light?: TerrainLight,
   sur: Surround | null = null,
-): THREE.Mesh {
+): THREE.BufferGeometry {
   const xs = axis(t.width, sur);
   const zs = axis(t.depth, sur);
   const nx = xs.length - 1;
@@ -613,6 +614,26 @@ export function buildTerrainMesh(
   if (hasSand) geo.setAttribute("aSand", new THREE.BufferAttribute(sandW, 1));
   if (ruinW) geo.setAttribute("aRuin", new THREE.BufferAttribute(ruinW, 4));
   const hasLake = !!lakeW && lakeW.some((v) => v > 0);
+  if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return geo;
+}
+
+/**
+ * Builds the terrain mesh; `cached` is the geometry of an earlier build of the same map (terrainCache.ts), which
+ * skips the per-vertex work (most of the boot's CPU time).
+ */
+export function buildTerrainMesh(
+  t: Terrain,
+  tex: TerrainTextures,
+  light?: TerrainLight,
+  sur: Surround | null = null,
+  cached: THREE.BufferGeometry | null = null,
+): THREE.Mesh {
+  const geo = cached ?? terrainGeometry(t, tex, light, sur);
+  const hasSand = !!geo.getAttribute("aSand");
+  const hasLake = !!geo.getAttribute("aLake");
+  const ruined = !!tex.ruin;
   // Alpine snow takes over every grass vertex (altFromGrass), so it covers as much ground as grass does elsewhere
   // and gets the same hex-tile + drift treatment. The grass branch never runs there, so the cost matches.
   const hexAlt = hasSand && sur?.style === "alpine";
@@ -620,8 +641,6 @@ export function buildTerrainMesh(
   // too, with a slow brightness drift, so they don't read as a grid.
   const hexDirt = !hexAlt && (t.palette === "quarry" || t.palette === "abbey");
   const arena = !!tex.grass2 || !!tex.rim;
-  if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
-  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
   // ── Material: splat shader injected into a basic (baked light) or Lambert material ──
   const mat = light
