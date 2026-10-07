@@ -13,6 +13,7 @@ import { chainSwingTick, tideTick, whirlTick } from "./wreckwitch.ts";
 import { squareInput, toppleLookout } from "./architect.ts";
 import { crushTick, curlTick, gritTick, headbuttTick, startPound } from "./vintner.ts";
 import { cleanse } from "../world/status.ts";
+import { breakRecall } from "../world/jumps.ts";
 import { buzzTick, honeyPartners, maybeFling, stuckInHoney, sweetToothTick, tickWing } from "./rider.ts";
 import { aim, begin, callout, chaining, ready, refillCharge, spendCharge } from "./common.ts";
 import { graveBegin, graveTick } from "./gravewalk.ts";
@@ -146,6 +147,7 @@ function respawn(w: World, e: Entity): void {
   h.morphAt = undefined;
   if (h.morphed) w.unmorph(e);
   const sp = w.tdm ? w.tdm.respawnSpot(e.team) : w.spawnPoint(e.team);
+  h.jump = undefined;
   w.teleport(e, sp.x, sp.z);
   e.hp = e.maxHp;
   e.alive = true;
@@ -302,6 +304,7 @@ function tryJumpPad(w: World, e: Entity, cmd: Command): boolean {
   const windup = w.jumpCharge;
   const dur = Math.min(2.6, Math.max(1.0, 0.5 + d / 22));
   h.jump = { fx: p.x, fz: p.z, tx: p.tx, tz: p.tz, start: w.time + windup, dur, peak: 3.5 + d * 0.14, pad: i };
+  breakRecall(w, e);
   p.chargeAt = w.time;
   h.padHold = true;
   w.teleport(e, p.x, p.z);

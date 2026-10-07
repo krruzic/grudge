@@ -66,6 +66,13 @@ function killHero(
   hh.bomb = false;
   hh.aim = null;
   hh.digPower = undefined;
+  // A jump in flight (cider well, keep-landing throw, hop) dies with them: left set, the arc was long over by the
+  // respawn, so the first tick back teleported them to its landing spot (mid-field, or the enemy's side).
+  // A pad still winding up goes on cooldown like any interrupted wind-up.
+  if (hh.jump) w.cancelJump(target);
+  hh.jump = undefined;
+  hh.padHold = undefined;
+  hh.recallAt = undefined;
   w.statsOf(target.id).deaths++;
   // Kill credit: the champion behind the blow, else the last enemy champion to hit them in the last 5 s.
   const last = target.status.hurtBy !== undefined ? w.getAny(target.status.hurtBy) : undefined;

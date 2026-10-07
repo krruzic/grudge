@@ -17,6 +17,7 @@ export function startJump(w: World, e: Entity, tx: number, tz: number, dur: numb
     return false;
   }
   e.hero.action = null;
+  breakRecall(w, e);
   e.hero.jump = { fx: p.x, fz: p.z, tx: x, tz: z, start: w.time, dur, peak, pad: -1, launched: true };
   e.transform.facing = e.transform.prevFacing = Math.atan2(x - p.x, z - p.z);
   w.emit({
@@ -31,6 +32,13 @@ export function startJump(w: World, e: Entity, tx: number, tz: number, dur: numb
     dur,
   });
   return true;
+}
+
+/** Any jump ends a recall channel: otherwise it ran out mid-flight and snapped the hero home on landing. */
+export function breakRecall(w: World, e: Entity): void {
+  if (e.hero?.recallAt === undefined) return;
+  e.hero.recallAt = undefined;
+  w.emit({ type: "notice", team: e.team, text: "RECALL BROKEN" });
 }
 
 /** Interrupt a jump-pad wind-up (before launch); the pad goes on cooldown. Launched jumps can't be cancelled. */
