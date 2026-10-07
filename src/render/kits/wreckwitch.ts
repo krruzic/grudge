@@ -3,7 +3,7 @@
 // of drowned hands, real drowned-hand props bursting up round the ring and under every victim), the chain swing
 // and the Tide Rising wave. The bilge zone decal is drawn by hazards/zones.ts ("bilge" style).
 import * as THREE from "three";
-import { activeCostume, FX, WITCH } from "../fx/atlas";
+import { activeCostume, FX, WITCH, hd } from "../fx/atlas";
 import { type FxHost, emit } from "../fx/parts";
 import { decal } from "../fx/decals";
 import { shockwave } from "../fx/shockwave";
@@ -85,7 +85,7 @@ function drownedHand(h: FxHost, x: number, gy: number, z: number, scale: number,
   const g = new THREE.Group();
   if (o) g.add(o);
   else {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: WITCH.hand, transparent: true, depthWrite: false }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: hd(WITCH.hand), transparent: true, depthWrite: false }));
     s.scale.set(1, 1.3, 1);
     s.position.y = 0.6;
     g.add(s);
@@ -122,7 +122,7 @@ function chain(h: FxHost, dur: number, a: () => THREE.Vector3 | null, b: () => T
   const g = new THREE.Group();
   const links: THREE.Sprite[] = [];
   for (let i = 0; i < 40; i++) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: WITCH.link, transparent: true, depthWrite: false }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: hd(WITCH.link), transparent: true, depthWrite: false }));
     s.scale.setScalar(0.42);
     s.visible = false;
     g.add(s);
@@ -160,7 +160,7 @@ function anchorObj(): THREE.Object3D {
     g.add(o);
     return g;
   }
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: WITCH.link, transparent: true, depthWrite: false }));
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: hd(WITCH.link), transparent: true, depthWrite: false }));
   s.scale.setScalar(0.9);
   return s;
 }
@@ -399,7 +399,7 @@ KITS.wreckwitch = {
         const ring = new THREE.Mesh(
           new THREE.PlaneGeometry(r * 2.2, r * 2.2),
           new THREE.MeshBasicMaterial({
-            map: WITCH.swoosh,
+            map: hd(WITCH.swoosh),
             transparent: true,
             depthWrite: false,
             side: THREE.DoubleSide,

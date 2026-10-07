@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import type { World } from "../../sim/world";
 import type { Missile } from "../../sim/types";
-import { activeCostume, FX, TIDE, tint } from "../fx/atlas";
+import { activeCostume, FX, TIDE, tint, hd } from "../fx/atlas";
 import { type FxHost, emit, tumblers } from "../fx/parts";
 import { decal } from "../fx/decals";
 import { shockwave } from "../fx/shockwave";
@@ -60,7 +60,7 @@ export function harpoonMissile(style: string, costume?: string): THREE.Group | n
   if (style === "harpoonfull") {
     const s = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: TIDE.glint,
+        map: hd(TIDE.glint),
         color: tint(WATER),
         transparent: true,
         depthWrite: false,
@@ -190,7 +190,7 @@ function tongue(h: FxHost, src: { id: number }, x: number, y: number, z: number,
   const w = h.world;
   const ty = ground(h, tx, tz, y) + 1.0;
   const m = new THREE.Mesh(tongueGeo, TONGUE);
-  const tip = new THREE.Sprite(new THREE.SpriteMaterial({ map: TIDE.tongue, color: 0xffb0c0, transparent: true }));
+  const tip = new THREE.Sprite(new THREE.SpriteMaterial({ map: hd(TIDE.tongue), color: 0xffb0c0, transparent: true }));
   tip.scale.setScalar(0.45);
   const g = new THREE.Group();
   g.add(m, tip);

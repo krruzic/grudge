@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import type { Entity } from "../../sim/types";
 import { costumeOfPlayer } from "../costumes";
-import { trailOf, FX } from "../fx/atlas";
+import { trailOf, FX, tint } from "../fx/atlas";
 import { hullMaterial, buildHulls } from "../heroModels";
 import { KITS } from "../kits/registry";
 import { KIND_ANIM, ANIM_FALLBACK } from "./animation";
@@ -120,6 +120,8 @@ function syncWard(ents: EntityViews, e: Entity, v: View, dt: number, time: numbe
   }
 }
 
+const DIG_COL = new THREE.Color();
+
 /**
  * Red hull outline while Hogshead is Dug In (like the gold invulnerable glow, in his blood-red), then a fainter
  * throbbing one while the powered-up blow is still banked.
@@ -143,10 +145,12 @@ function syncDig(ents: EntityViews, e: Entity, v: View, dt: number, time: number
   for (const hl of D.hulls) hl.visible = on;
   if (!on) return;
   const pulse = 0.5 + 0.5 * Math.sin(time * (dug ? 7 : 4));
-  D.line.mat.color.setRGB(1, 0.14 + pulse * 0.1, 0.08);
+  // Blood red, or the costume's Dig In colour (its remap of the kit's 0xff4020: Ice Wine blue, Harvest King gold...).
+  const col = DIG_COL.set(tint(0xff4020, costumeOfPlayer(e.hero!.player)));
+  D.line.mat.color.copy(col).offsetHSL(0, 0, pulse * 0.05);
   D.line.thick.value = 0.04 * v.digK + 0.01;
   D.glow.thick.value = (0.08 + 0.05 * pulse) * Math.max(0.5, v.digK);
-  D.glow.mat.color.setRGB(1, 0.08, 0.04).multiplyScalar(v.digK * (0.45 + pulse * 0.3));
+  D.glow.mat.color.copy(col).multiplyScalar(v.digK * (0.45 + pulse * 0.3));
 }
 
 /**

@@ -6,7 +6,7 @@ import * as THREE from "three";
 import type { World } from "../../sim/world";
 import type { Missile, Projectile } from "../../sim/types";
 import { costumeOfEntity } from "../costumes";
-import { activeCostume, useCostume, ENGINEER, RAIDER, DUELIST, WARLORD, FX, withCostume } from "../fx/atlas";
+import { activeCostume, useCostume, ENGINEER, RAIDER, DUELIST, WARLORD, FX, withCostume, hd } from "../fx/atlas";
 import { emit } from "../fx/parts";
 import { decal } from "../fx/decals";
 import { chunks } from "../fx/chunks";
@@ -75,7 +75,7 @@ function missileView(style: string): THREE.Group {
   const spr = (tex: THREE.Texture, size: number, additive = false, color: THREE.ColorRepresentation = 0xffffff) => {
     const sp = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: tex,
+        map: hd(tex),
         color,
         transparent: true,
         depthWrite: false,
@@ -96,7 +96,7 @@ function missileView(style: string): THREE.Group {
     const sp = new THREE.Mesh(
       new THREE.PlaneGeometry(2.6, 1.3),
       new THREE.MeshBasicMaterial({
-        map: DUELIST.crescent,
+        map: hd(DUELIST.crescent),
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,

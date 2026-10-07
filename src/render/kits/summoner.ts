@@ -2,7 +2,7 @@
 // Gravewalk (summoning circle at the start, tombs rising at the destination; costume props for Shadow Play).
 import * as THREE from "three";
 import { costumeOfPlayer } from "../costumes";
-import { SUMMONER, FX, activeCostume, tint, trailOf } from "../fx/atlas";
+import { SUMMONER, FX, activeCostume, tint, trailOf, hd } from "../fx/atlas";
 import { emit } from "../fx/parts";
 import { decal } from "../fx/decals";
 import { shockwave } from "../fx/shockwave";
@@ -45,11 +45,13 @@ KITS.summoner = {
   },
   projectile(h, style) {
     if (style !== "magic" && style !== "orb") return null;
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: SUMMONER.orb, transparent: true, depthWrite: false }));
+    const s = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: hd(SUMMONER.orb), transparent: true, depthWrite: false }),
+    );
     s.scale.setScalar(style === "orb" ? 1.5 : 0.9);
     const glow = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: SUMMONER.sparkle,
+        map: hd(SUMMONER.sparkle),
         color: tint(0xc080ff),
         transparent: true,
         depthWrite: false,

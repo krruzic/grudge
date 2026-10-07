@@ -2,7 +2,7 @@
 // Volley (instanced rain arrows; Starfall uses its silver arrow meshes), Power Shot, Heartseeker and ricochets.
 // Pip's persistent model and Wren's vantage glow are drawn by heroProps/marksman.ts.
 import * as THREE from "three";
-import { activeCostume, composite, tint, FX, WREN } from "../fx/atlas";
+import { activeCostume, composite, tint, FX, WREN, hd } from "../fx/atlas";
 import { FEATHER_MAT, ground, IRON, keep, model, UP, WOOD } from "./shared";
 import { decal } from "../fx/decals";
 import { emit, tumblers, type FxHost } from "../fx/parts";
@@ -46,7 +46,7 @@ function arrowMesh(scale: number, glow?: number): THREE.Group {
   if (glow !== undefined) {
     const s = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: FX.burst2,
+        map: hd(FX.burst2),
         color: tint(glow),
         transparent: true,
         depthWrite: false,

@@ -2,7 +2,7 @@
 // kit's colours), streak lines, and the plain prop materials (wood, iron, brass...) used by kegs, barrels, arrows
 // and Pip. Materials flagged with keep() / geometry with model() are shared and never disposed by effects.
 import * as THREE from "three";
-import { FX, tint } from "../fx/atlas";
+import { FX, tint, hd } from "../fx/atlas";
 import { type FxHost, emit } from "../fx/parts";
 import { shockwave } from "../fx/shockwave";
 import type { HitEvent } from "./registry";
@@ -110,7 +110,7 @@ export function streakLine(
     h.after(f * 0.12, () => {
       const s = new THREE.Sprite(
         new THREE.SpriteMaterial({
-          map: tex,
+          map: hd(tex),
           color: tint(color),
           transparent: true,
           depthWrite: false,

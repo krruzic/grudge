@@ -428,7 +428,7 @@ function brambleZone({ g, decal, gy, r, costume, grows }: ZoneBuild): void {
   for (let i = 0; i < 4; i++) {
     const w = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: WARDEN.wisp,
+        map: hd(WARDEN.wisp),
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -530,7 +530,7 @@ function styledZone({ g, decal, gy, r, style, costume, grows }: ZoneBuild): void
     );
     const arc = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: ENGINEER.arc,
+        map: hd(ENGINEER.arc),
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,

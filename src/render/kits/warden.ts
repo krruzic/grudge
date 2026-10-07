@@ -1,7 +1,7 @@
 // Thorn (warden) kit: thorn pricks, the Snap vines and the kit registration (hits, root slams, telegraphs).
 // His reusable growth pieces (hit leaves, reach arm, walls, sprouts, bramble cast) are in wardenParts.ts.
 import * as THREE from "three";
-import { activeCostume, FX, WARDEN } from "../fx/atlas";
+import { activeCostume, FX, WARDEN, hd } from "../fx/atlas";
 import { cactusMat, isDesert } from "./desert";
 import { decal } from "../fx/decals";
 import { emit, tumblers, type FxHost } from "../fx/parts";
@@ -14,7 +14,7 @@ function wardenPrick(h: FxHost, x: number, y: number, z: number): void {
   const gy = ground(h, x, z, y);
   const thorn = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshBasicMaterial({ map: WARDEN.thorn, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({ map: hd(WARDEN.thorn), transparent: true, alphaTest: 0.3, side: THREE.DoubleSide }),
   );
   const thorn2 = thorn.clone();
   thorn2.rotation.y = Math.PI / 2;

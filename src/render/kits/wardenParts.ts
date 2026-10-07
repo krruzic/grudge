@@ -10,7 +10,7 @@ import { emit, tumblers, type FxHost } from "../fx/parts";
 import { shockwave } from "../fx/shockwave";
 import barkUrl from "../../../assets/textures/moss_bark.png?url";
 import { dirOf, ground } from "./shared";
-import { activeCostume, WARDEN, FX } from "../fx/atlas";
+import { activeCostume, WARDEN, FX, hd } from "../fx/atlas";
 import { isDesert, cactusMat } from "./desert";
 
 export const barkTex = new THREE.TextureLoader().load(barkUrl);
@@ -124,7 +124,7 @@ export function wardenSlap(
   if (!realArm) arm.add(limb);
   const knots: THREE.Object3D[] = [];
   const tuftMat = new THREE.MeshBasicMaterial({
-    map: WARDEN.moss,
+    map: hd(WARDEN.moss),
     transparent: true,
     alphaTest: 0.4,
     side: THREE.DoubleSide,
@@ -135,7 +135,12 @@ export function wardenSlap(
       const p = new THREE.Mesh(
         new THREE.PlaneGeometry(0.62, 0.42),
         i === 1 && q
-          ? new THREE.MeshBasicMaterial({ map: WARDEN.leaf, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide })
+          ? new THREE.MeshBasicMaterial({
+              map: hd(WARDEN.leaf),
+              transparent: true,
+              alphaTest: 0.4,
+              side: THREE.DoubleSide,
+            })
           : tuftMat,
       );
       p.rotation.y = (q * Math.PI) / 2;
