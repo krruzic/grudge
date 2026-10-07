@@ -1328,11 +1328,11 @@
         {
           "id": "longchain",
           "name": "LONG CHAIN",
-          "desc": "DREDGE REACHES 13M, COMES BACK 2S SOONER, AND EVERY CHAMPION YOU CATCH RAISES THE TIDE BY TWO.",
+          "desc": "DREDGE REACHES 11M, COMES BACK 1.5S SOONER, AND EVERY CHAMPION YOU CATCH RAISES THE TIDE BY TWO.",
           "combo": "WITH SCURVY: WHATEVER YOU DREDGE CAN'T HEAL FOR 3S.",
           "add": {
-            "range": 4,
-            "cooldown": -2
+            "range": 3,
+            "cooldown": -1.5
           },
           "with": [
             {
