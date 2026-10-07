@@ -318,26 +318,33 @@ export class MenuCursors {
     c.y = p.y + (slot >= 2 ? 10 : 0);
   }
 
-  drawChips(ctx: CanvasRenderingContext2D, labels: string[], colors: string[]): void {
+  /**
+   * `rings`: per seat, a house colour to ring a CPU seal with (CPU seals are all the same grey wax, so the ring is
+   * what tells which side they're on); null for none.
+   */
+  drawChips(ctx: CanvasRenderingContext2D, labels: string[], colors: string[], rings: (string | null)[] = []): void {
     this.chipLabels = labels;
+    this.chipRings = rings;
     this.chipCpu = labels.map((l, s) => l === "CPU" || colors[s] === "#8a8a90");
     this.chips.forEach((c, s) => {
       if (!labels[s]) return;
       const held = this.cursors.some((k) => k.active && k.holding === s) || this.ghosts.some((g) => g.wire[5] === s);
       if (held) return;
       if (!c.hero) return;
-      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held, c.scale ?? 1);
+      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held, c.scale ?? 1, rings[s]);
     });
   }
 
   private chipLabels: string[] = [];
+  private chipRings: (string | null)[] = [];
   private chipCpu: boolean[] = [];
 
   drawCursors(ctx: CanvasRenderingContext2D, now: number): void {
     this.placeGhosts(now);
     for (const g of this.ghosts) {
       const hold = g.wire[5];
-      if (hold >= 0 && this.chipLabels[hold]) chip(ctx, g.x + 3, g.y - 4, hold, this.chipCpu[hold], false);
+      if (hold >= 0 && this.chipLabels[hold])
+        chip(ctx, g.x + 3, g.y - 4, hold, this.chipCpu[hold], false, 1, this.chipRings[hold]);
       glove(ctx, g.x, g.y, g.slot, POSES[g.wire[6]] ?? "glove_point", false);
     }
     this.cursors.forEach((c, i) => {
@@ -346,7 +353,7 @@ export class MenuCursors {
       const press = now - c.pressedAt < 0.12;
       if (c.holding >= 0 && this.chipLabels[c.holding]) {
         const ch = this.chips[c.holding];
-        chip(ctx, ch.x, ch.y, c.holding, this.chipCpu[c.holding], false);
+        chip(ctx, ch.x, ch.y, c.holding, this.chipCpu[c.holding], false, 1, this.chipRings[c.holding]);
       }
       const tg = this.tagOf?.(i) ?? i;
       glove(
@@ -415,6 +422,7 @@ function chip(
   cpu: boolean,
   lifted: boolean,
   scale = 1,
+  ring?: string | null,
 ): void {
   const im = cpu ? IMG.chip_cp : IMG[`chip_${slot + 1}`];
   const k = CHIP_K * scale;
@@ -426,7 +434,19 @@ function chip(
     ctx.ellipse(x + 3, y + 5, w / 2, h * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  sprite(ctx, im, x - w / 2, y - h / 2 - (lifted ? 1 : 0), k);
+  const cy = y - (lifted ? 1 : 0);
+  if (ring) {
+    // House colour: a dark rim and a bright band round the wax, under the seal so its scalloped edge sits on top.
+    ctx.beginPath();
+    ctx.arc(x, cy, w / 2 + 1.4 * scale, 0, Math.PI * 2);
+    ctx.fillStyle = "#120c08";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, cy, w / 2 + 0.6 * scale, 0, Math.PI * 2);
+    ctx.fillStyle = ring;
+    ctx.fill();
+  }
+  sprite(ctx, im, x - w / 2, cy - h / 2, k);
 }
 
 const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030", "#8a40e0", "#ff8a10", "#18b8a8", "#ff3aa8"];
