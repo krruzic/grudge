@@ -11,6 +11,7 @@
 // received one.
 import type { PadState } from "../input/gamepads";
 import { cacheCanvas } from "./cacheCanvas";
+import { drawPlain, textWidth } from "./font";
 const spriteUrls = import.meta.glob("../../assets/ui/{chip,glove,tag}_*.png", {
   eager: true,
   query: "?url",
@@ -319,8 +320,8 @@ export class MenuCursors {
   }
 
   /**
-   * `rings`: per seat, a house colour to tint a CPU seal with (CPU seals are all the same grey wax, so the tint is
-   * what tells which side they're on); null for none.
+   * `rings`: per seat, the house colour for a CPU seal's badge (CPU seals are all the same grey wax, so the badge
+   * tells which side and seat they are); null for none.
    */
   drawChips(ctx: CanvasRenderingContext2D, labels: string[], colors: string[], rings: (string | null)[] = []): void {
     this.chipLabels = labels;
@@ -331,7 +332,15 @@ export class MenuCursors {
       const held = this.cursors.some((k) => k.active && k.holding === s) || this.ghosts.some((g) => g.wire[5] === s);
       if (held) return;
       if (!c.hero) return;
-      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held, c.scale ?? 1, rings[s]);
+      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held, c.scale ?? 1);
+    });
+    // Badges after every seal, so a neighbouring seal on a crowded tile never covers one.
+    this.chips.forEach((c, s) => {
+      const ring = rings[s];
+      if (!labels[s] || !c.hero || !ring) return;
+      if (this.cursors.some((k) => k.active && k.holding === s) || this.ghosts.some((g) => g.wire[5] === s)) return;
+      const w = chipSize() * (c.scale ?? 1);
+      badge(ctx, c.x, c.y, w, w, s, ring);
     });
   }
 
@@ -385,32 +394,6 @@ function sprite(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, 
   ctx.imageSmoothingEnabled = smooth;
 }
 
-const waxed = new Map<string, HTMLCanvasElement>();
-/** The sprite recoloured to `color`: its hue and saturation on the sprite's own shading ("color" blend), then
- * brightened with a screen pass so dark grey wax doesn't come out muddy. Cached per sprite and colour. */
-function houseWax(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
-  if (!im.complete || !im.naturalWidth) return null;
-  const key = `${im.src}|${color}`;
-  let c = waxed.get(key);
-  if (c) return c;
-  c = cacheCanvas();
-  c.width = im.naturalWidth;
-  c.height = im.naturalHeight;
-  const g = c.getContext("2d")!;
-  g.drawImage(im, 0, 0);
-  g.globalCompositeOperation = "color";
-  g.fillStyle = color;
-  g.fillRect(0, 0, c.width, c.height);
-  g.globalCompositeOperation = "screen";
-  g.globalAlpha = 0.35;
-  g.fillRect(0, 0, c.width, c.height);
-  g.globalAlpha = 1;
-  g.globalCompositeOperation = "destination-in";
-  g.drawImage(im, 0, 0);
-  waxed.set(key, c);
-  return c;
-}
-
 const tinted = new Map<string, HTMLCanvasElement>();
 function tint(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
   if (!im.complete || !im.naturalWidth) return null;
@@ -440,6 +423,35 @@ export function chipSize(): number {
   return im?.naturalWidth ? im.naturalWidth * CHIP_K : 20;
 }
 
+/**
+ * House badge: a small circle in the house colour with the seat number, on a CPU seal's lower right, so CPUs (all
+ * the same grey wax) can be told apart and matched to their side. (x, y) is the seal's centre, w x h its size.
+ */
+function badge(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  slot: number,
+  color: string,
+): void {
+  // Sized to the digit (the UI font's smallest size), not the seal, so the number always fits inside.
+  const r = 3.6;
+  const bx = x + w * 0.34;
+  const by = y + h * 0.32;
+  ctx.beginPath();
+  ctx.arc(bx, by, r + 0.6, 0, Math.PI * 2);
+  ctx.fillStyle = "#120c08";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  const n = `${slot + 1}`;
+  drawPlain(ctx, n, bx - textWidth(n, 0.64) / 2 + 0.1, by - 3.1, "#ffffff", 0.64);
+}
+
 function chip(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -462,18 +474,7 @@ function chip(
   }
   const cy = y - (lifted ? 1 : 0);
   sprite(ctx, im, x - w / 2, cy - h / 2, k);
-  // House colour: the grey wax recoloured in the house's hue (shading kept) and lifted toward it, blended over the
-  // plain seal so it reads as that colour but stays a little greyer than a player's seal.
-  const tc = ring ? houseWax(im, ring) : null;
-  if (tc) {
-    const a = ctx.globalAlpha;
-    const smooth = ctx.imageSmoothingEnabled;
-    ctx.globalAlpha = a * 0.4;
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(tc, x - w / 2, cy - h / 2, w, h);
-    ctx.globalAlpha = a;
-    ctx.imageSmoothingEnabled = smooth;
-  }
+  if (ring) badge(ctx, x, cy, w, h, slot, ring);
 }
 
 const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030", "#8a40e0", "#ff8a10", "#18b8a8", "#ff3aa8"];
