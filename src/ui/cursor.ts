@@ -319,7 +319,7 @@ export class MenuCursors {
   }
 
   /**
-   * `rings`: per seat, a house colour to ring a CPU seal with (CPU seals are all the same grey wax, so the ring is
+   * `rings`: per seat, a house colour to tint a CPU seal with (CPU seals are all the same grey wax, so the tint is
    * what tells which side they're on); null for none.
    */
   drawChips(ctx: CanvasRenderingContext2D, labels: string[], colors: string[], rings: (string | null)[] = []): void {
@@ -435,18 +435,19 @@ function chip(
     ctx.fill();
   }
   const cy = y - (lifted ? 1 : 0);
-  if (ring) {
-    // House colour: a dark rim and a bright band round the wax, under the seal so its scalloped edge sits on top.
-    ctx.beginPath();
-    ctx.arc(x, cy, w / 2 + 1.4 * scale, 0, Math.PI * 2);
-    ctx.fillStyle = "#120c08";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x, cy, w / 2 + 0.6 * scale, 0, Math.PI * 2);
-    ctx.fillStyle = ring;
-    ctx.fill();
-  }
   sprite(ctx, im, x - w / 2, cy - h / 2, k);
+  // House colour: the grey wax blended part way toward a tinted copy, so a CPU seal reads as its side's colour
+  // without looking like a player's seal.
+  const tc = ring ? tint(im, ring) : null;
+  if (tc) {
+    const a = ctx.globalAlpha;
+    const smooth = ctx.imageSmoothingEnabled;
+    ctx.globalAlpha = a * 0.55;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(tc, x - w / 2, cy - h / 2, w, h);
+    ctx.globalAlpha = a;
+    ctx.imageSmoothingEnabled = smooth;
+  }
 }
 
 const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030", "#8a40e0", "#ff8a10", "#18b8a8", "#ff3aa8"];
