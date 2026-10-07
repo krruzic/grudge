@@ -443,6 +443,10 @@ function matchupArmour(w: World, src: Entity | null, target: Entity, amount: num
 
 /** Side effects of hp actually lost: leech, jump cancel, xp, super meter, last-target memory, core damage stat. */
 function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number, big = false): void {
+  if (target.hero && amount > 0) {
+    const ch = w.creditHero(src);
+    if (ch && ch.team !== target.team) w.statsOf(ch.id).dmg += amount;
+  }
   // Wounded: a ranged champion's hit (botRange > 3: Wren, Remnil, Hollin, Brindle), or any champion's big hit
   // (finishers, slams, dashes), cuts a champion's healing for a few seconds - the answer to Maddock and Bramble
   // out-healing the damage.

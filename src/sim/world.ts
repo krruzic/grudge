@@ -107,6 +107,23 @@ export class World {
   tick = 0;
   time = 0;
   training = false;
+  /** Per-champion match stats by hero id (results screen): kills, deaths, damage to champions, soldiers slain. */
+  readonly heroStats = new Map<number, { kills: number; deaths: number; dmg: number; cs: number }>();
+
+  /** The champion behind a hit: the hero itself, or the owner of its summon / turret / raised soldier. */
+  creditHero(src: Entity | null | undefined): Entity | undefined {
+    if (!src) return undefined;
+    if (src.hero) return src;
+    const o = src.owner !== undefined ? this.getAny(src.owner) : undefined;
+    return o?.hero ? o : undefined;
+  }
+
+  statsOf(heroId: number): { kills: number; deaths: number; dmg: number; cs: number } {
+    let s = this.heroStats.get(heroId);
+    if (!s) this.heroStats.set(heroId, (s = { kills: 0, deaths: 0, dmg: 0, cs: 0 }));
+    return s;
+  }
+
   /** Training: the teams with a human seat (unlimited funds; everyone else is a dummy). */
   trainees: number[] = [0];
   tideHigh = false;

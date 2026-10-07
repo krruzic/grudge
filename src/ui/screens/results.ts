@@ -65,8 +65,11 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
   const withSlot = listed.map((p, i) => ({ ...p, slot: i }));
   const tdm = w.tdm;
   const heroOf = (slot: number) => w.players.find((q) => q.player === slot)?.heroId ?? -1;
-  const kills = (slot: number) => tdm?.kills.get(heroOf(slot)) ?? 0;
-  const deaths = (slot: number) => tdm?.deaths.get(heroOf(slot)) ?? 0;
+  const stat = (slot: number) => w.heroStats.get(heroOf(slot));
+  const kills = (slot: number) => (tdm ? (tdm.kills.get(heroOf(slot)) ?? 0) : (stat(slot)?.kills ?? 0));
+  const deaths = (slot: number) => (tdm ? (tdm.deaths.get(heroOf(slot)) ?? 0) : (stat(slot)?.deaths ?? 0));
+  const short = (n: number) =>
+    n >= 10000 ? `${(n / 1000).toFixed(0)}K` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${Math.round(n)}`;
   // Deathmatch: the winning house first, each house by kills (a scoreboard).
   const ps = ffa
     ? withSlot.sort((a, b) => place(a.team) - place(b.team))
@@ -141,26 +144,45 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     if (icon) smoothImage(ctx, icon, 5, 5, chh - 8, chh - 8);
     const small = chh < 30;
     const nm = p.cpu ? "CPU" : (p.tag ?? `P${p.slot + 1}`);
-    const kd = tdm ? `${kills(p.slot)} / ${deaths(p.slot)}` : "";
+    const kd = `${kills(p.slot)} / ${deaths(p.slot)}`;
     const kdW = kd ? textWidth(kd, small ? 0.6 : 0.72, true) + 6 : 0;
-    const sealR = Math.min(8, chh / 2 - 1);
-    const nmRoom = cw - chh - 6 - (won ? sealR * 2 + 6 : ffa ? 30 : 4) - kdW;
+    const nmRoom = cw - chh - 6 - 4 - kdW;
     const nms = Math.min(small ? 0.55 : 0.72, nmRoom / Math.max(1, textWidth(nm, 1, true)));
-    drawPlain(ctx, nm, chh + 2, small ? 1 : chh / 2 - 9, TEAM_TEXT[p.team], nms, true);
+    // Room for a third line (damage / soldiers) on taller cards: name and champion move up a little.
+    const three = chh >= 36;
+    drawPlain(ctx, nm, chh + 2, small ? 1 : three ? 4 : chh / 2 - 9, TEAM_TEXT[p.team], nms, true);
     const hero = (s.heroes[p.hero]?.name ?? p.hero).toUpperCase();
-    drawPlain(ctx, hero, chh + 2, small ? chh / 2 + 1 : chh / 2 + 2, "#4a3018", small ? 0.42 : 0.55, true);
-    // Deathmatch: kills / deaths, right-aligned (left of the winner's seal).
-    if (kd) {
-      const kx = cw - (won ? sealR * 2 + 8 : 6) - kdW + 6;
+    drawPlain(ctx, hero, chh + 2, small ? chh / 2 + 1 : three ? 15 : chh / 2 + 2, "#4a3018", small ? 0.42 : 0.55, true);
+    if (three) {
+      const st = stat(p.slot);
+      const line = `DMG ${short(st?.dmg ?? 0)}${tdm ? "" : `  ·  SOLDIERS ${st?.cs ?? 0}`}`;
+      drawPlain(ctx, line, chh + 2, chh - 12, "#6a4424", 0.42, true);
+    }
+    // Kills / deaths, right-aligned.
+    {
+      const kx = cw - 6 - kdW + 6;
+      drawPlain(
+        ctx,
+        "K / D",
+        kx + kdW / 2 - 3 - textWidth("K / D", 0.4, true) / 2,
+        chh / 2 - (small ? 9 : 13),
+        "#8a6040",
+        0.4,
+        true,
+      );
       drawPlain(ctx, kd, kx, chh / 2 - (small ? 3.5 : 5), "#4a3018", small ? 0.6 : 0.72, true);
     }
-    if (won) waxSeal(ctx, cw - sealR - 4, chh / 2, sealR, TEAM_CLOTH[p.team], "combo");
-    else if (ffa) {
-      const pl = PLACE[place(p.team)] ?? "";
-      drawPlain(ctx, pl, cw - 6 - textWidth(pl, 0.62, true), chh / 2 - 9, "#6a4424", 0.62, true);
-      if (w.teams[p.team]?.out)
-        drawPlain(ctx, "FALLEN", cw - 6 - textWidth("FALLEN", 0.45, true), chh / 2 + 2, "#8a1810", 0.45, true);
+    // Place (1ST, 2ND...) in the house colour over the bottom of the portrait (the house seal is on the summary).
+    const pl = PLACE[ffa ? place(p.team) : win < 0 ? -1 : won ? 0 : 1] ?? "";
+    if (pl) {
+      const ps = small ? 0.6 : 0.85;
+      const bh = small ? 8 : 12;
+      ctx.fillStyle = "rgba(16, 10, 4, 0.72)";
+      ctx.fillRect(5, chh - 3 - bh + 1, chh - 8, bh);
+      shadowText(ctx, pl, 5 + (chh - 8) / 2 - textWidth(pl, ps) / 2, chh - 3 - bh + (small ? 1.5 : 3), TEAM_TEXT[p.team], ps);
     }
+    if (ffa && w.teams[p.team]?.out)
+      drawPlain(ctx, "FALLEN", cw - 6 - textWidth("FALLEN", 0.45, true), chh - 11, "#8a1810", 0.45, true);
     pin(ctx, cw / 2, 3, chipColor(p.slot, p.cpu));
     ctx.restore();
   });

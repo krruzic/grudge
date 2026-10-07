@@ -41,8 +41,11 @@ export function kill(w: World, target: Entity, src: Entity | null): void {
   target.alive = false;
   if (src?.unit && src.alive && src.team !== target.team)
     w.promote(src, target.unit ? 1 : w.data.units.veterancy.structureKillValue);
-  if (target.unit) killUnit(w, target, killer, killerTeam, cut);
-  else killStructure(w, target, killer, killerTeam, cut);
+  if (target.unit) {
+    const ch = w.creditHero(src);
+    if (ch && ch.team !== target.team) w.statsOf(ch.id).cs++;
+    killUnit(w, target, killer, killerTeam, cut);
+  } else killStructure(w, target, killer, killerTeam, cut);
 }
 
 /** Hero death: respawn timer (longer in big matches, shorter for trailing FFA teams), frozen cooldowns, bounty. */
@@ -63,6 +66,11 @@ function killHero(
   hh.bomb = false;
   hh.aim = null;
   hh.digPower = undefined;
+  w.statsOf(target.id).deaths++;
+  // Kill credit: the champion behind the blow, else the last enemy champion to hit them in the last 5 s.
+  const last = target.status.hurtBy !== undefined ? w.getAny(target.status.hurtBy) : undefined;
+  const credit = w.creditHero(src) ?? (w.time - (target.status.hurtAt ?? -99) < 5 ? w.creditHero(last) : undefined);
+  if (credit && credit.team !== target.team) w.statsOf(credit.id).kills++;
   const big = w.ffa || w.players.length > 2 ? (w.data.match.economy.respawnBigMul ?? 1) : 1;
   const catchUpCut = (w.ffa ? (victim?.catchUp ?? 0) : 0) * w.data.match.catchUp.respawnCut;
   const bl = w.data.heroes.baseline;
