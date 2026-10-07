@@ -165,21 +165,59 @@ function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): nu
     ctx.arc(x + gs / 2 + 1.5, y + th - gs / 2 - 1.5, gs * 0.62, 0, Math.PI * 2);
     ctx.fill();
     classGlyph(ctx, s.heroes[type]?.class, x + gs / 2 + 1.5, y + th - gs / 2 - 1.5, gs, "#f4e2b0");
-    // Border: one stripe per colour around the tile.
-    if (ring.length) {
-      ring.forEach((c, j) => {
-        ctx.strokeStyle = c;
-        ctx.lineWidth = 1.5;
-        const o = 0.75 + j * 1.5;
-        ctx.strokeRect(x - o + 1.5, y - o + 1.5, tw + 2 * o - 3, th + 2 * o - 3);
-      });
-    } else if (hot) {
+    // Border: one band round the tile, split into a run per colour (every CPU is the same grey, so it's one run).
+    // Stacking a stripe per seal grew the frame outward over the neighbouring tiles.
+    const cols = [...new Set(ring)];
+    if (cols.length) tileBorder(ctx, x, y, tw, th, cols);
+    else if (hot) {
       ctx.strokeStyle = "#f0d070";
       ctx.lineWidth = 1;
       ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, th - 1);
     }
   });
   return top + rows * (th + gap) + 2;
+}
+
+/** A 1.5 px frame just inside a tile, its perimeter shared out in equal runs, one per colour (clockwise from top-left). */
+function tileBorder(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cols: string[]): void {
+  const l = x + 0.75;
+  const t = y + 0.75;
+  const r = x + w - 0.75;
+  const b = y + h - 0.75;
+  const pts: [number, number][] = [
+    [l, t],
+    [r, t],
+    [r, b],
+    [l, b],
+    [l, t],
+  ];
+  const sides = [r - l, b - t, r - l, b - t];
+  const per = (2 * (r - l + b - t)) / cols.length;
+  // Point at distance d along the perimeter.
+  const at = (d: number): [number, number] => {
+    let k = 0;
+    while (k < 3 && d > sides[k]) d -= sides[k++];
+    const [ax, ay] = pts[k];
+    const [bx, by] = pts[k + 1];
+    const f = Math.min(1, d / sides[k]);
+    return [ax + (bx - ax) * f, ay + (by - ay) * f];
+  };
+  // Perimeter distances of the corners, so each run bends round them.
+  const corners = [sides[0], sides[0] + sides[1], sides[0] + sides[1] + sides[2]];
+  ctx.save();
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = "miter";
+  cols.forEach((c, i) => {
+    const d0 = i * per;
+    const d1 = (i + 1) * per;
+    ctx.strokeStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(...at(d0));
+    for (const cd of corners) if (cd > d0 && cd < d1) ctx.lineTo(...at(cd));
+    ctx.lineTo(...at(d1));
+    ctx.stroke();
+  });
+  ctx.restore();
 }
 
 /** 1v1: "+ ADD CPU" cards at the sides switch to 2v2 (not for online guests). */

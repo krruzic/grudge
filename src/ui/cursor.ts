@@ -45,6 +45,8 @@ export interface Chip {
   hero: string | null;
   x: number;
   y: number;
+  /** Drawn size while placed (shrunk when several seals share one tile); 1 = full size. */
+  scale?: number;
 }
 
 export type CursorAction =
@@ -324,7 +326,7 @@ export class MenuCursors {
       const held = this.cursors.some((k) => k.active && k.holding === s) || this.ghosts.some((g) => g.wire[5] === s);
       if (held) return;
       if (!c.hero) return;
-      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held);
+      chip(ctx, c.x, c.y, s, labels[s] === "CPU" || colors[s] === "#8a8a90", held, c.scale ?? 1);
     });
   }
 
@@ -399,17 +401,32 @@ function tint(im: HTMLImageElement, color: string): HTMLCanvasElement | null {
 const CHIP_K = 0.31;
 const GLOVE_K = 0.37;
 
-function chip(ctx: CanvasRenderingContext2D, x: number, y: number, slot: number, cpu: boolean, lifted: boolean): void {
+/** Full-size width of a placed seal on the select screen, in UI pixels. */
+export function chipSize(): number {
+  const im = IMG.chip_1;
+  return im?.naturalWidth ? im.naturalWidth * CHIP_K : 20;
+}
+
+function chip(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  slot: number,
+  cpu: boolean,
+  lifted: boolean,
+  scale = 1,
+): void {
   const im = cpu ? IMG.chip_cp : IMG[`chip_${slot + 1}`];
-  const w = im.naturalWidth * CHIP_K;
-  const h = im.naturalHeight * CHIP_K;
+  const k = CHIP_K * scale;
+  const w = im.naturalWidth * k;
+  const h = im.naturalHeight * k;
   if (lifted) {
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath();
     ctx.ellipse(x + 3, y + 5, w / 2, h * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  sprite(ctx, im, x - w / 2, y - h / 2 - (lifted ? 1 : 0), CHIP_K);
+  sprite(ctx, im, x - w / 2, y - h / 2 - (lifted ? 1 : 0), k);
 }
 
 const TAG_COLORS = ["#3a6cff", "#ff2a1a", "#ffc820", "#30c030", "#8a40e0", "#ff8a10", "#18b8a8", "#ff3aa8"];
