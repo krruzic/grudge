@@ -468,7 +468,7 @@ function chip(
   if (tc) {
     const a = ctx.globalAlpha;
     const smooth = ctx.imageSmoothingEnabled;
-    ctx.globalAlpha = a * 0.85;
+    ctx.globalAlpha = a * 0.4;
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(tc, x - w / 2, cy - h / 2, w, h);
     ctx.globalAlpha = a;
