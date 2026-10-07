@@ -12,6 +12,7 @@ import { meleeReflex, think } from "./bot/think.ts";
 import { classDirectives, pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
+import { padNear } from "./structures.ts";
 import { duelistReflex } from "./bot/tactics.ts";
 import { chainSwingPlan, sameAsLast, swingPivots } from "./hero/wreckwitch.ts";
 
@@ -58,6 +59,9 @@ export class Bot {
   buildSpec: number | null = null;
   /** Pad whose construction/upgrade the bot is waiting next to. */
   tend: Pad | null = null;
+  /** Died since the last command; set on respawn: until homeErrandUntil it upgrades / fills home pads first. */
+  wasDead = false;
+  homeErrandUntil = -1;
 
   // Intents for the next Command (consumed in command())
   wantAttack = false;
@@ -174,7 +178,14 @@ export class Bot {
     }
     if (!me || !me.alive || w.teams[me.team]?.out || (!w.core(me.team) && !w.tdm)) {
       this.holdSlot = this.wantCharge = null;
+      if (me?.hero?.dead) this.wasDead = true;
       return cmd;
+    }
+    if (this.wasDead) {
+      // Back at the keep: a few seconds to spend gold on the home buildings before heading out (think.ts).
+      this.wasDead = false;
+      this.homeErrandUntil = w.time + 10;
+      this.buildPad = this.tend = null;
     }
     if (w.time >= this.thinkAt) {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;
@@ -224,11 +235,9 @@ export class Bot {
     preferJumpPad(this, w, me);
     steer(this, w, me, cmd);
     if (w.tdm) this.unjam(w, me, cmd);
-    if (
-      this.buildPad &&
-      this.buildType &&
-      Math.hypot(this.buildPad.x - me.transform.pos.x, this.buildPad.z - me.transform.pos.z) < 2.2
-    ) {
+    // Build when a press here would land on the chosen pad (padNear, the same rule as a human's press): a raised
+    // pad is built from the ground beside it.
+    if (this.buildPad && this.buildType && padNear(w, me) === this.buildPad) {
       if (this.buildSpec !== null) cmd.spec = this.buildSpec;
       else cmd.build = this.buildType;
       this.buildSpec = null;

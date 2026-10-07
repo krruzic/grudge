@@ -116,6 +116,8 @@ export class App {
   // ── Subsystems ──
   readonly save = new Save();
   readonly mapViews: MapView[];
+  /** The backdrop is a random-mode title match (match.ts randomAttract), not the chosen mode and field. */
+  attractRandom = false;
   readonly pads: Gamepads;
   readonly view: GameRenderer;
   readonly uiCanvas: UiCanvas;

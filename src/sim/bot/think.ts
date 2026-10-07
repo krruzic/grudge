@@ -6,9 +6,9 @@
 import { domeShields, fortCoverMul } from "../hero/architect.ts";
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
-import type { Entity, HeroState, Vec2 } from "../types.ts";
+import type { Entity, HeroState, StructureType, Vec2 } from "../types.ts";
 import type { AbilityDef, BotPlan, HeroDef } from "../config.ts";
-import { buildCost } from "../structures.ts";
+import { buildCost, specCost } from "../structures.ts";
 import { graveSpots } from "../heroes.ts";
 import { clumpScore, healSpotScore } from "../hero/friar.ts";
 import {
@@ -21,7 +21,7 @@ import {
   mateHero,
   ok,
 } from "./awareness.ts";
-import { pickBuild, shop } from "./economy.ts";
+import { buildSpot, homeErrand, padSafe, pickBuild, shop, windowBuild } from "./economy.ts";
 import { foesDown, pressing, realThreat } from "./strategy.ts";
 import {
   duelistFight,
@@ -102,6 +102,14 @@ export function think(bot: Bot, w: World, me: Entity): void {
     bot.why = "regroup";
     return;
   }
+  // Just respawned: spend the gold on the home buildings before heading out.
+  if (w.time < bot.homeErrandUntil && !w.tdm && !(s.ehAlive && s.dHero < 12)) {
+    if ((bot.buildPad || homeErrand(bot, w, me)) && goBuild(bot, w, me)) {
+      bot.why = "home";
+      return;
+    }
+    bot.homeErrandUntil = -1;
+  }
   reactToCasts(bot, w, s);
   if (h.recallAt !== undefined) {
     bot.goal = null;
@@ -171,7 +179,14 @@ export function think(bot: Bot, w: World, me: Entity): void {
     s.plan.crowd !== undefined && !s.smoked && heroCrowd > s.plan.crowd && s.enemyHero!.hp > s.enemyHero!.maxHp * 0.35;
   // Every enemy champion is dead: the window is for breaking buildings, not trading with soldiers.
   bot.why = "siege";
-  if (foesDown(w, me.team) && siege(bot, w, s)) return;
+  if (foesDown(w, me.team)) {
+    // The window: a free, safe forward pad nearby gets a building on the way to the siege.
+    if (!w.tdm && (bot.buildPad || windowBuild(bot, w, me)) && goBuild(bot, w, me)) {
+      bot.why = "window build";
+      return;
+    }
+    if (siege(bot, w, s)) return;
+  }
   bot.why = "fight";
   if (fight(bot, w, s, k, crowded)) return;
   bot.fightId = 0;
@@ -1152,6 +1167,30 @@ function siege(bot: Bot, w: World, s: Senses): boolean {
  * Nothing to fight: defend the base (support role), tend/build structures, then position with the army according
  * to role and the current unit directive.
  */
+/**
+ * Walk to where the chosen build can be placed (buildSpot: the pad, or beside a raised one); bot.ts presses build
+ * there. Drops the order (false) if the pad was taken, the gold is gone, it can't be reached, or an away pad
+ * isn't safe to stand by.
+ */
+function goBuild(bot: Bot, w: World, me: Entity): boolean {
+  const pad = bot.buildPad;
+  if (!pad) return false;
+  const st = pad.structureId ? w.get(pad.structureId) : undefined;
+  const cost = bot.buildType
+    ? bot.buildSpec !== null && st
+      ? specCost(w, st.structure!.type as StructureType, me.team)
+      : buildCost(w, bot.buildType, !!st, me.team)
+    : 0;
+  const spot = buildSpot(bot, w, me, pad);
+  const away = pad.zone !== "home" || pad.side !== me.team;
+  if ((st && st.team !== me.team) || w.teams[me.team].resource < cost || !spot || (away && !padSafe(w, me.team, pad))) {
+    bot.buildPad = null;
+    return false;
+  }
+  bot.goal = spot;
+  return true;
+}
+
 function macro(bot: Bot, w: World, s: Senses): void {
   const { me, ehAlive, dHero } = s;
   const mate = mateHero(bot, w);
@@ -1170,12 +1209,14 @@ function macro(bot: Bot, w: World, s: Senses): void {
   if (bot.tend) {
     // Stand by a structure we just ordered until it finishes building/upgrading.
     const st = bot.tend.structureId ? w.get(bot.tend.structureId) : undefined;
+    // Only while it's safe: building creeps on unattended, so standing by an exposed site isn't worth a death.
     if (
       !st ||
       st.team !== me.team ||
       (st.structure!.ready && !st.structure!.upgrading) ||
       (ehAlive && dHero < 7) ||
-      pressing(w, me.team)
+      pressing(w, me.team) ||
+      !padSafe(w, me.team, bot.tend)
     )
       bot.tend = null;
     else {
@@ -1185,17 +1226,9 @@ function macro(bot: Bot, w: World, s: Senses): void {
     }
   }
   if (!bot.buildPad && maintain) pickBuild(bot, w, me);
-  if (bot.buildPad) {
-    const pad = bot.buildPad;
-    const st = pad.structureId ? w.get(pad.structureId) : undefined;
-    const cost = bot.buildType ? buildCost(w, bot.buildType, !!st, me.team) : 0;
-    if ((st && st.team !== me.team) || w.teams[me.team].resource < cost || !ok(bot, w, me, pad)) {
-      bot.buildPad = null;
-    } else {
-      bot.why = "build";
-      bot.goal = { x: pad.x, z: pad.z };
-      return;
-    }
+  if (bot.buildPad && goBuild(bot, w, me)) {
+    bot.why = "build";
+    return;
   }
 
   bot.why = "position";

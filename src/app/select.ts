@@ -182,6 +182,8 @@ export function enterSelect(app: App, keep = false): void {
     } else vacate(app, i);
   });
   app.readySince = -1;
+  // The title's random-mode backdrop gives way to a match on the chosen field.
+  if (app.attractRandom) resetAttractWorld(app);
 }
 
 /** Every active seat is sealed (no OPEN seats, no chip in anyone's hand). */

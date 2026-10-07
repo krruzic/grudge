@@ -10,7 +10,7 @@ import type { Command } from "../sim/types";
 import inputData from "../../data/input.json";
 import { CommandMapper } from "../input/commands";
 import { costumesOf, setPlayerCostumes, setPlayerNames, playerLabel } from "../render/costumes";
-import { applyRules } from "../game/save";
+import { applyRules, type MatchMode } from "../game/save";
 import { mergeCommands, packCommand, type MatchSpec } from "../net/session";
 import { perf } from "../perf";
 import type { App } from "./app";
@@ -99,6 +99,7 @@ export function fastForward(app: App, seconds: number): void {
 
 /** Replaces the backdrop world with a fresh CPU match on the current map (keeps the screen state). */
 export function resetAttractWorld(app: App): void {
+  app.attractRandom = false;
   app.players = houses(app.mapIndex) === 4 ? 4 : 2;
   setupControl(app, Array(app.players).fill(false));
   app.show(
@@ -109,9 +110,38 @@ export function resetAttractWorld(app: App): void {
   );
 }
 
+/**
+ * Title / main menu backdrop: a CPU match of a random mode on a random field for it (2v2 with four champions, the
+ * deathmatches with eight). The player's own mode and field choice are left as they were; select and field select
+ * show their own backdrop again (resetAttractWorld, see enterSelect).
+ */
+export function randomAttract(app: App): void {
+  const modes: MatchMode[] = ["1v1", "2v2", "ffa", "tdm", "ffadm"];
+  const mode = modes[Math.floor(Math.random() * modes.length)];
+  // Team deathmatch backdrops stay on the two-team arenas (newWorld only builds the four-house fields as FFA).
+  const fields = app.fieldsFor(mode).filter((i) => mode !== "tdm" || houses(i) === 2);
+  if (!fields.length) return resetAttractWorld(app);
+  const keep = { mode: app.mode, map: app.mapIndex };
+  app.mode = mode;
+  app.mapIndex = fields[Math.floor(Math.random() * fields.length)];
+  app.players = seatsFor(mode);
+  setupControl(app, Array(app.players).fill(false));
+  app.show(
+    app.newWorld(
+      Array.from({ length: app.players }, () => app.randomHero()),
+      app.players,
+      false,
+      true,
+    ),
+  );
+  app.mode = keep.mode;
+  app.mapIndex = keep.map;
+  app.attractRandom = true;
+}
+
 /** Back to the title screen over a fresh backdrop. */
 export function beginAttract(app: App): void {
-  resetAttractWorld(app);
+  randomAttract(app);
   app.state = "title";
   app.screens.set("title");
   app.hud.show(false);
@@ -312,8 +342,10 @@ export function stepWorld(app: App, dt: number, now: number): void {
 export function checkMatchOver(app: App, now: number): void {
   const w = app.world;
   const s = app.state;
-  if ((s === "title" || s === "menu" || s === "select" || s === "map") && w.match.phase === "over")
-    resetAttractWorld(app);
+  if ((s === "title" || s === "menu" || s === "select" || s === "map") && w.match.phase === "over") {
+    if (app.attractRandom) randomAttract(app);
+    else resetAttractWorld(app);
+  }
   if (s !== "match" || w.match.phase !== "over") return;
   if (app.overAt < 0) {
     app.overAt = now;
