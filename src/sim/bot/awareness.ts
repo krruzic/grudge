@@ -103,7 +103,8 @@ export function grassCover(bot: Bot, w: World, me: Entity, foe: Entity, dFoe: nu
   return best && ok(bot, w, me, best) ? best : null;
 }
 
-/** Summoner: distant own structure with enough enemies around it to be worth gravewalking to. */
+/** Summoner: distant own structure under fire (hit in the last 2 s) with enough enemies around it to be worth
+ * gravewalking to (her grave powers its tower and spawns). */
 export function graveTarget(bot: Bot, w: World, me: Entity): Vec2 | null {
   const p = me.transform.pos;
   let best: Vec2 | null = null;
@@ -111,7 +112,8 @@ export function graveTarget(bot: Bot, w: World, me: Entity): Vec2 | null {
   for (const s of graveSpots(w, me)) {
     if (s.keep || Math.hypot(s.x - p.x, s.z - p.z) < 28) continue;
     const st = w.get(s.id)?.structure;
-    if (!st || st.type === "core") continue;
+    const ent = w.get(s.id);
+    if (!st || st.type === "core" || !ent || w.time - (ent.status.hurtAt ?? -99) > 2) continue;
     let foes = 0;
     let heroes = 0;
     let mine = 0;

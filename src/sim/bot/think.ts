@@ -34,6 +34,7 @@ import {
   raiderFight,
   riderFight,
   summonerFight,
+  summonerZ,
   scribeFight,
   vintnerFight,
   wardenFight,
@@ -178,6 +179,8 @@ export function think(bot: Bot, w: World, me: Entity): void {
   if (siege(bot, w, s)) return;
   bot.why = "raid";
   if (gravewalk(bot, w, s, graveReady)) return;
+  bot.why = "support";
+  if (backLine(bot, w, s)) return;
   if (w.tdm) {
     tdmRoam(bot, w, s);
     return;
@@ -683,7 +686,9 @@ function useAbilities(bot: Bot, w: World, s: Senses, k: Kit): boolean {
   const zDecided =
     ab.b.kind === "pip"
       ? wrenAbilities(bot, w, me)
-      : ab.b.kind === "leap" && ab.z.kind === "dash" && raiderFight(bot, w, me, ehAlive ? enemyHero : undefined);
+      : ab.b.kind === "hex"
+        ? summonerZ(bot, w, me)
+        : ab.b.kind === "leap" && ab.z.kind === "dash" && raiderFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Warlord: charged slam (bot/tactics.ts).
   if (hk.heaveRange) warlordFight(bot, w, me, ehAlive ? enemyHero : undefined);
   // Engineer: charged Repair as a fight nuke.
@@ -849,9 +854,16 @@ function fight(bot: Bot, w: World, s: Senses, k: Kit, crowded: boolean): boolean
     target = close;
   } else if (!target && nearby.length) {
     nearby.sort((a, b) => w.dist(me, a) - w.dist(me, b));
+    // Remnil with a partner up only fights soldiers that are on her (she supports rather than farms).
+    const backLine = ab.b.kind === "hex" && !!mateHero(bot, w) && !mateHero(bot, w)!.hero!.dead;
     target =
-      nearby.find((o) => (o.kind !== "structure" || w.dist(me, o) < 5) && w.canSee(me, o) && ok(bot, w, me, o)) ??
-      undefined;
+      nearby.find(
+        (o) =>
+          (o.kind !== "structure" || w.dist(me, o) < 5) &&
+          !(backLine && o.unit && w.dist(me, o) > 5) &&
+          w.canSee(me, o) &&
+          ok(bot, w, me, o),
+      ) ?? undefined;
   }
   if (!target) return false;
 
@@ -995,6 +1007,25 @@ function gravewalk(bot: Bot, w: World, s: Senses, graveReady: boolean): boolean 
     }
   }
   return false;
+}
+
+/**
+ * Remnil with nothing to shoot: walk with the partner, a few metres behind them on our side, instead of farming
+ * soldiers or pushing a lane alone.
+ */
+function backLine(bot: Bot, w: World, s: Senses): boolean {
+  const { me } = s;
+  if (w.heroDef(me.hero!.type).abilities.b.kind !== "hex" || w.tdm) return false;
+  const mate = mateHero(bot, w);
+  if (!mate || mate.hero!.dead) return false;
+  const mp = mate.transform.pos;
+  const home = w.spawnPoint(me.team);
+  const dx = home.x - mp.x;
+  const dz = home.z - mp.z;
+  const l = Math.hypot(dx, dz) || 1;
+  const back = Math.min(4, l);
+  bot.goal = { x: mp.x + (dx / l) * back, z: mp.z + (dz / l) * back };
+  return true;
 }
 
 /** Raiders hit undefended enemy structures; hunters stalk a weaker enemy hero from behind. */

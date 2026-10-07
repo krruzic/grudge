@@ -15,6 +15,8 @@ import { nearWall } from "../hero/harpooner.ts";
 import { erratumSpots } from "../hero/scribe.ts";
 import { fortCount, myLookout, onLookout } from "../hero/architect.ts";
 import { switchTarget } from "../hero/vintner.ts";
+import { mateHero } from "./awareness.ts";
+import { foesDown } from "./strategy.ts";
 
 const isMelee = (w: World, o: Entity): boolean => !!o.hero && (w.heroDef(o.hero.type).botRange ?? 1.8) <= 3;
 
@@ -195,25 +197,78 @@ export function raiderFight(bot: Bot, w: World, me: Entity, target: Entity | und
 }
 
 /**
- * Remnil: Hex held to full power (x1.6) and dropped from just inside its 8 m reach; between hexes she kites at
- * ~10.5 m, inside her 13 m bolts and out of most reach, instead of the default 8.
+ * Remnil from the back line. Hex first goes to a weak champion (under half health) in reach, as a quick cast, then as
+ * a root on a champion diving her or her partner. Otherwise it's held to full power (x1.6) on the champion she's
+ * fighting, and she steps in to just inside its 8 m reach to drop it. Between hexes she kites at ~10.5 m, inside her
+ * 13 m bolts and out of most reach. (Saving hex only for weak champions gave up the slows and roots that keep her
+ * partner alive: 39% -> 31% in 2v2 sims.)
  */
 export function summonerFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
+  const h = me.hero!;
+  const range = abilities(w, me).b.range ?? 8;
+  const bReady = (h.cooldowns.b ?? 0) <= w.time && !h.action;
+  const p = me.transform.pos;
+  const inReach = (o: Entity) =>
+    o.alive && !!o.hero && !o.hero.dead && o.team !== me.team && w.dist(me, o) <= range + 0.3 && w.canSee(me, o);
+  if (bReady) {
+    let weak: Entity | undefined;
+    for (const o of w.entities)
+      if (inReach(o) && o.hp <= o.maxHp * 0.5 && (!weak || o.hp / o.maxHp < weak.hp / weak.maxHp)) weak = o;
+    const mate = mateHero(bot, w);
+    const peel =
+      foesNear(w, me, 4.5)[0] ??
+      (mate && !mate.hero!.dead ? w.entities.find((o) => inReach(o) && w.dist(o, mate) < 3.5) : undefined);
+    const quick = weak ?? peel;
+    if (quick) {
+      bot.fightId = quick.id;
+      bot.wantB = true;
+      const qp = quick.transform.pos;
+      const l = Math.hypot(qp.x - p.x, qp.z - p.z) || 1;
+      bot.wantFace = { x: (qp.x - p.x) / l, z: (qp.z - p.z) / l };
+      return;
+    }
+  }
   if (!target?.alive || !target.hero) return;
-  const ab = abilities(w, me);
-  const range = ab.b.range ?? 8;
   const d = w.dist(me, target);
   const charged = chargeB(bot, w, me, target, range - 0.8, 14) && bot.holdSlot === "b" && w.time - bot.holdAt > 1;
   if (d < 14 && w.canSee(me, target) && !foesNear(w, me, 4).length) {
     // Step in to drop a full-power hex, otherwise hold at bolt range.
-    const want = charged && (me.hero!.cooldowns.b ?? 0) <= w.time ? range - 1.5 : 10.5;
-    const p = me.transform.pos;
+    const want = charged && bReady ? range - 1.5 : 10.5;
     const tp = target.transform.pos;
     const l = Math.hypot(p.x - tp.x, p.z - tp.z) || 1;
     bot.goal = { x: tp.x + ((p.x - tp.x) / l) * want, z: tp.z + ((p.z - tp.z) / l) * want };
   }
 }
 
+/**
+ * Remnil's Raise an Army: only for a push - our soldiers on an enemy building, or theirs on ours, within 14 m of her -
+ * or when every enemy champion is down (the army is a siege tool, not a duel one). Returns true: Z is decided here.
+ */
+export function summonerZ(bot: Bot, w: World, me: Entity): boolean {
+  const h = me.hero!;
+  if (h.meter < w.data.heroes.baseline.superMax || h.action) return true;
+  if (
+    foesDown(w, me.team) &&
+    w.entities.some((o) => o.alive && o.structure && o.team !== me.team && w.dist(me, o) < 20)
+  ) {
+    bot.wantZ = true;
+    return true;
+  }
+  for (const s of w.entities) {
+    if (!s.alive || !s.structure || s.neutral || w.dist(me, s) > 14) continue;
+    let push = 0;
+    for (const o of w.entities) {
+      if (!o.alive || o.neutral || w.dist(o, s) > 10) continue;
+      // Attackers: units of the other side (champions count double).
+      if (o.team !== s.team && o.team >= 0 && (o.unit || o.hero)) push += o.hero ? 2 : 1;
+    }
+    if (push >= 3) {
+      bot.wantZ = true;
+      return true;
+    }
+  }
+  return true;
+}
 /**
  * Francois: Lunge held to full power (x1.6) through the exchange; Blade Flurry on a stunned champion (x1.4, e.g. right
  * after a parry) as soon as the meter allows. Z otherwise stays with the generic rule. Parries: duelistReflex.
