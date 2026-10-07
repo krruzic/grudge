@@ -222,7 +222,7 @@ export class PauseMenu {
     inset(ctx, x + 1, y, pic, pic, "#3a2a1c");
     const icon = this.host.portraits?.icon(p.heroType);
     if (icon) smoothImage(ctx, icon, x + 1, y, pic, pic);
-    teamFrame(ctx, x + 1, y, pic, pic, TEAM_FRAME[p.team] ?? "#c0a080");
+    teamFrame(ctx, x - 1, y - 2, pic + 4, pic + 4, TEAM_FRAME[p.team] ?? "#c0a080", 2);
     const nm = `${playerLabel(p.player)} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
     const lv = `LV ${e.hero.level ?? 1}`;
     const ls = ffa ? 0.48 : 0.5;
@@ -299,7 +299,7 @@ export class PauseMenu {
       inset(ctx, x + 1, y, 16, 16, "#3a2a1c");
       const icon = this.host.portraits?.icon(p.heroType);
       if (icon) smoothImage(ctx, icon, x + 1, y, 16, 16);
-      teamFrame(ctx, x + 1, y, 16, 16, TEAM_FRAME[p.team] ?? "#c0a080");
+      teamFrame(ctx, x - 1, y - 2, 20, 20, TEAM_FRAME[p.team] ?? "#c0a080", 2);
       const kd = `${tdm.kills.get(p.heroId) ?? 0} / ${tdm.deaths.get(p.heroId) ?? 0}`;
       const kw = textWidth(kd, 0.55, true);
       const nm = `${playerLabel(p.player)} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;
@@ -343,7 +343,7 @@ export class PauseMenu {
       inset(ctx, x + 1, y, 16, 16, TEAM_CLOTH[p.team] ?? "#3a2a1c");
       const icon = this.host.portraits?.icon(p.heroType);
       if (icon) smoothImage(ctx, icon, x + 1, y, 16, 16);
-      teamFrame(ctx, x + 1, y, 16, 16, TEAM_FRAME[p.team] ?? "#c0a080");
+      teamFrame(ctx, x - 1, y - 2, 20, 20, TEAM_FRAME[p.team] ?? "#c0a080", 2);
       const kd = `${tdm.kills.get(p.heroId) ?? 0} / ${tdm.deaths.get(p.heroId) ?? 0}`;
       const kw = textWidth(kd, 0.55, true);
       const nm = `${k + 1}. ${playerLabel(p.player)} ${(this.host.heroNames[p.heroType] ?? p.heroType).toUpperCase()}`;

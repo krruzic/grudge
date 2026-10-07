@@ -642,7 +642,10 @@ export function inset(
   }
 }
 
-/** A champion portrait's border in its house colour, like the champion-select tiles (drawn over the portrait). */
+/**
+ * A champion portrait's border in its house colour, like the champion-select tiles: a `t` thick band just inside
+ * (x, y, w, h). Pass the outer rect of an inset() slot with t = 2 to recolour its dark border instead of adding one.
+ */
 export function teamFrame(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -650,11 +653,12 @@ export function teamFrame(
   w: number,
   h: number,
   color: string,
+  t = 1.5,
 ): void {
   ctx.save();
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = t;
   ctx.strokeStyle = color;
-  ctx.strokeRect(x + 0.75, y + 0.75, w - 1.5, h - 1.5);
+  ctx.strokeRect(x + t / 2, y + t / 2, w - t, h - t);
   ctx.restore();
 }
 
