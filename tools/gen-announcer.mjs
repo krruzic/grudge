@@ -28,14 +28,14 @@ const LINES = {
   summoner: "[ominous low announcer] REEEMNIL!",
   duelist: "[flamboyant theatrical announcer] FRANÇOIIIS!",
   warden: "[slow rumbling deep announcer] THOOORN!",
-  marksman: "[sharp crisp announcer] WREN!",
+  marksman: "[hyped arena announcer, shouting with a big rising finish] WRENNN!",
   friar: "[very deep jolly announcer] Brother MADDOOOCK!",
   harpooner: "[playful bouncy announcer] TAAADWICK!",
   scribe: "[warm grand announcer] Granny HOLLIN!",
   wreckwitch: "[creepy raspy announcer] Mother KELP!",
-  architect: "[proud scholarly announcer] Professor HOOOT!",
+  architect: "[grandiose booming announcer, savouring every word] Professorrr /huːːt/!",
   vintner: "[gruff deep announcer] HOGS-HEEEAD!",
-  rider: "[bright cheerful announcer] /ˈbræmbəl/ and MEAD!",
+  rider: "[excited cheering announcer, bouncy and loud] /ˈbræmbəl/ and MEEEEAD!",
   herald: "[regal commanding announcer] The HERALD!",
 };
 const TAKES = 2;
