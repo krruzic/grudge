@@ -997,7 +997,7 @@ export function buildCodex(mapNames: string[]): CodexEntry[] {
         },
         {
           title: "LOSING IT",
-          text: `EVERY TIME YOUR HERO DIES YOUR TEAM LOSES ${e.loss.heroDeath} GOLD. EVERY TOWER YOU LOSE COSTS ${e.loss.tower}. AND WHEN THE ENEMY FELLS ONE OF YOUR TOWERS, THEIR WHOLE ARMY RALLIES: +${pct(e.rally.damageMul)} DAMAGE AND +${pct(e.rally.speedMul)} SPEED FOR ${e.rally.seconds} SECONDS.`,
+          text: `EVERY TIME YOUR HERO DIES YOUR TEAM LOSES ${e.loss.heroDeath} GOLD. EVERY TOWER YOU LOSE ON YOUR OWN SIDE COSTS ${e.loss.tower} (ONE ON A NEUTRAL PAD COSTS NOTHING). AND WHEN THE ENEMY FELLS ONE OF YOUR TOWERS, THEIR WHOLE ARMY RALLIES: +${pct(e.rally.damageMul)} DAMAGE AND +${pct(e.rally.speedMul)} SPEED FOR ${e.rally.seconds} SECONDS.`,
           tip: "THE SAME GOES FOR YOU. KNOCK A TOWER DOWN AND CHARGE WHILE THE RALLY LASTS.",
           art: { kind: "seal", glyph: "quake" },
         },

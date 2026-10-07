@@ -177,7 +177,9 @@ function killStructure(w: World, target: Entity, killer: TeamTally, killerTeam: 
   killer.resource += w.data.match.economy.bounty.structure * cut;
   w.teams[target.team].structuresLost++;
   if (w.data.structures.types[st.type as "damage"]?.class === "tower") {
-    if (!w.ffaHouses?.noTowerLoss) w.loseGold(target.team, w.data.match.economy.loss.tower, "TOWER LOST");
+    // Only a tower on the house's own ground (home / forward pads) costs gold: a neutral pad was never theirs to lose.
+    if (!w.ffaHouses?.noTowerLoss && pad.zone !== "neutral")
+      w.loseGold(target.team, w.data.match.economy.loss.tower, "TOWER LOST");
     if (killerTeam >= 0) w.rally(killerTeam);
   }
   pad.rubbleUntil = w.time + rubbleSeconds(w, pad.zone);
