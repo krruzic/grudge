@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:split4": "VITE_SPLIT4=1 vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node --experimental-transform-types --no-warnings tools/precompress.ts dist",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "bake-map": "node --experimental-transform-types --no-warnings tools/bake-map.ts",

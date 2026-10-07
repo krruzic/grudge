@@ -63,11 +63,32 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
     return;
   }
-  const st = statSync(file);
   const hashed = file.startsWith(join(ROOT, "assets") + sep);
+  // Precompressed copies from tools/precompress.ts (.br / .gz next to the file), when the browser takes them.
+  const accept = String(req.headers["accept-encoding"] ?? "");
+  let body = file;
+  let encoding: string | undefined;
+  for (const [enc, ext] of [
+    ["br", ".br"],
+    ["gzip", ".gz"],
+  ] as const) {
+    if (!accept.includes(enc)) continue;
+    try {
+      if (statSync(file + ext).isFile()) {
+        body = file + ext;
+        encoding = enc;
+        break;
+      }
+    } catch {
+      // no precompressed copy
+    }
+  }
+  const st = statSync(body);
   res.writeHead(200, {
     "Content-Type": TYPES[extname(file).toLowerCase()] ?? "application/octet-stream",
     "Content-Length": st.size,
+    ...(encoding ? { "Content-Encoding": encoding } : {}),
+    Vary: "Accept-Encoding",
     "Cache-Control": hashed ? "public, max-age=31536000, immutable" : "no-cache",
     "Last-Modified": st.mtime.toUTCString(),
     "X-Content-Type-Options": "nosniff",
@@ -76,7 +97,7 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
     res.end();
     return;
   }
-  createReadStream(file)
+  createReadStream(body)
     .on("error", () => res.destroy())
     .pipe(res);
 }
