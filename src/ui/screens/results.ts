@@ -16,9 +16,10 @@ import {
   texturedRect,
   waxSeal,
   woodFloor,
+  teamFrame,
 } from "../uiPaint";
 import type { Screens } from "../screens";
-import { TEAM_CLOTH, TEAM_TEXT } from "./common";
+import { TEAM_BRIGHT, TEAM_CLOTH, TEAM_TEXT } from "./common";
 import { chipColor } from "../cursor";
 
 const PLACE = ["1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH"];
@@ -142,6 +143,7 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     texturedRect(ctx, "cloth", 5, 5, chh - 8, chh - 8, TEAM_CLOTH[p.team], 0, 0.7);
     const icon = s.portraits?.icon(p.hero);
     if (icon) smoothImage(ctx, icon, 5, 5, chh - 8, chh - 8);
+    teamFrame(ctx, 5, 5, chh - 8, chh - 8, TEAM_BRIGHT[p.team] ?? "#c0a080");
     const small = chh < 30;
     const nm = p.cpu ? "CPU" : (p.tag ?? `P${p.slot + 1}`);
     const kd = `${kills(p.slot)} / ${deaths(p.slot)}`;
@@ -179,7 +181,14 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
       const bh = small ? 8 : 12;
       ctx.fillStyle = "rgba(16, 10, 4, 0.72)";
       ctx.fillRect(5, chh - 3 - bh + 1, chh - 8, bh);
-      shadowText(ctx, pl, 5 + (chh - 8) / 2 - textWidth(pl, ps) / 2, chh - 3 - bh + (small ? 1.5 : 3), TEAM_TEXT[p.team], ps);
+      shadowText(
+        ctx,
+        pl,
+        5 + (chh - 8) / 2 - textWidth(pl, ps) / 2,
+        chh - 3 - bh + (small ? 1.5 : 3),
+        TEAM_TEXT[p.team],
+        ps,
+      );
     }
     if (ffa && w.teams[p.team]?.out)
       drawPlain(ctx, "FALLEN", cw - 6 - textWidth("FALLEN", 0.45, true), chh - 11, "#8a1810", 0.45, true);

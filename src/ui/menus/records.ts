@@ -6,6 +6,7 @@ import { band, boardTitle, goldArrow, inset, smoothImage, texturedRect, waxSeal 
 import { winRate } from "../../game/save";
 import { BROWN, HOUSE, INK, TEAM_CLOTH, TEAM_TEXT, dateOf, num } from "./common";
 import { hintPrompt } from "./pages";
+import { MODE_NAME } from "../screens/common";
 import type { Menus } from "../menus";
 
 export const RECORD_TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
@@ -221,18 +222,23 @@ function drawChronicle(m: Menus, ctx: CanvasRenderingContext2D, B: Book, rowAt: 
     drawPlain(ctx, b, lx + pgw / 2 - textWidth(b, 0.5) / 2, pgy + pgh / 2 + 6, "#8a5a2a", 0.5);
   }
   const mapName = (id: string) => (m.mapNames[id] ?? id).toUpperCase();
+  const modeShort = (md: string) =>
+    ({ "1v1": "1V1", "2v2": "2V2", ffa: "FFA", tdm: "DM", ffadm: "FFA DM" })[md] ?? md.toUpperCase();
+  const modeLong = (md: string) => MODE_NAME[md as keyof typeof MODE_NAME] ?? md.toUpperCase();
   log.forEach((match, k) =>
     rowAt(k, (y, sel) => {
       drawPlain(ctx, dateOf(match.at), lx + 14, y, "#8a5a2a", 0.62, true);
       const map = mapName(match.map).replace(/^GRUDGE\w*\s*/, "");
       drawPlain(ctx, map.slice(0, 12), lx + 44, y, sel ? "#8a1810" : BROWN, 0.65, true);
+      const md = modeShort(match.mode);
+      drawPlain(ctx, md, lx + pgw - 46 - textWidth(md, 0.55, true), y + 1, "#8a5a2a", 0.55, true);
       const res = match.winner < 0 ? "DRAW" : (HOUSE[match.winner] ?? "-");
       num(ctx, res, lx + pgw - 10, y, match.winner < 0 ? BROWN : TEAM_TEXT[match.winner], 0.65);
     }),
   );
   const match = log[m.focus];
   if (!match) return;
-  pageHead(ctx, B, B.rx, `${dateOf(match.at)} · ${mapName(match.map)}`);
+  pageHead(ctx, B, B.rx, `${dateOf(match.at)} · ${modeLong(match.mode)} · ${mapName(match.map)}`);
   const mm = `${Math.floor(match.secs / 60)}:${String(Math.floor(match.secs % 60)).padStart(2, "0")}`;
   const who = (p: (typeof match.players)[number]) => `${p.cpu ? "CPU" : (p.tag ?? "-")} · ${heroName(m, p.hero)}`;
   let y = pgy + 22;

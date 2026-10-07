@@ -642,6 +642,22 @@ export function inset(
   }
 }
 
+/** A champion portrait's border in its house colour, like the champion-select tiles (drawn over the portrait). */
+export function teamFrame(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+): void {
+  ctx.save();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = color;
+  ctx.strokeRect(x + 0.75, y + 0.75, w - 1.5, h - 1.5);
+  ctx.restore();
+}
+
 export const liveWindow: { rect: [number, number, number, number] | null } = { rect: null };
 
 /** Records a framed rect (in layout units) where the 3D scene should render this frame; read by app/loop.ts. */
