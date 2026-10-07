@@ -143,7 +143,7 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     texturedRect(ctx, "cloth", 5, 5, chh - 8, chh - 8, TEAM_CLOTH[p.team], 0, 0.7);
     const icon = s.portraits?.icon(p.hero);
     if (icon) smoothImage(ctx, icon, 5, 5, chh - 8, chh - 8);
-    teamFrame(ctx, 5, 5, chh - 8, chh - 8, TEAM_BRIGHT[p.team] ?? "#c0a080");
+    teamFrame(ctx, 5, 5, chh - 8, chh - 8, TEAM_BRIGHT[p.team] ?? "#c0a080", chh < 30 ? 0.75 : 1.5);
     const small = chh < 30;
     const nm = p.cpu ? "CPU" : (p.tag ?? `P${p.slot + 1}`);
     const kd = `${kills(p.slot)} / ${deaths(p.slot)}`;
@@ -176,7 +176,8 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     }
     // Place (1ST, 2ND...) in the house colour over the bottom of the portrait (the house seal is on the summary).
     const pl = PLACE[ffa ? place(p.team) : win < 0 ? -1 : won ? 0 : 1] ?? "";
-    if (pl) {
+    // Short cards (8-player deathmatch) have no room on the portrait: the order of the cards is the placing.
+    if (pl && !small) {
       const ps = small ? 0.6 : 0.85;
       const bh = small ? 8 : 12;
       ctx.fillStyle = "rgba(16, 10, 4, 0.72)";

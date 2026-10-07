@@ -2,11 +2,11 @@
 // names or the match chronicle; the right page details the focused row. Names can be struck (Y twice).
 import { drawPlain, textWidth } from "../font";
 import { wrap } from "../prompts";
-import { band, boardTitle, goldArrow, inset, smoothImage, texturedRect, waxSeal } from "../uiPaint";
+import { band, boardTitle, goldArrow, inset, smoothImage, teamFrame, texturedRect, waxSeal } from "../uiPaint";
 import { winRate } from "../../game/save";
 import { BROWN, HOUSE, INK, TEAM_CLOTH, TEAM_TEXT, dateOf, num } from "./common";
 import { hintPrompt } from "./pages";
-import { MODE_NAME } from "../screens/common";
+import { MODE_NAME, TEAM_BRIGHT } from "../screens/common";
 import type { Menus } from "../menus";
 
 export const RECORD_TABS = ["CHAMPIONS", "NAMES", "CHRONICLE"];
@@ -240,14 +240,18 @@ function drawChronicle(m: Menus, ctx: CanvasRenderingContext2D, B: Book, rowAt: 
   if (!match) return;
   const mm = `${Math.floor(match.secs / 60)}:${String(Math.floor(match.secs % 60)).padStart(2, "0")}`;
   pageHead(ctx, B, B.rx, `${dateOf(match.at)} · ${modeLong(match.mode)} · ${mapName(match.map)} · ${mm}`);
-  const who = (p: (typeof match.players)[number]) => `${p.cpu ? "CPU" : (p.tag ?? "-")} · ${heroName(m, p.hero)}`;
+  // A human with no signed name shows their seat (P1, P2...).
+  const who = (p: (typeof match.players)[number]) =>
+    `${p.cpu ? "CPU" : (p.tag ?? `P${match.players.indexOf(p) + 1}`)} · ${heroName(m, p.hero)}`;
   const short = (n: number) =>
     n >= 10000 ? `${Math.round(n / 1000)}K` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`;
   const hasStats = match.players.some((p) => p.k !== undefined);
   const dm = match.mode === "tdm" || match.mode === "ffadm";
   // Columns at the right edge: K/D, DMG, and SOLDIERS outside deathmatch.
-  const cols = hasStats ? (dm ? ["K/D", "DMG"] : ["K/D", "DMG", "CS"]) : [];
-  const colX = (j: number) => R + RW - (cols.length - 1 - j) * 26;
+  const cols = hasStats ? (dm ? ["K/D", "DMG"] : ["K/D", "DMG", "SOLDIERS"]) : [];
+  // Right edges of the columns, right to left: SOLDIERS needs a wider column than the numbers under it.
+  const colW = [24, 24, 34];
+  const colX = (j: number) => R + RW - colW.slice(j + 1, cols.length).reduce((a, b) => a + b, 0);
   const cell = (p: (typeof match.players)[number], j: number) =>
     j === 0 ? `${p.k ?? 0}/${p.d ?? 0}` : j === 1 ? short(p.dmg ?? 0) : `${p.cs ?? 0}`;
   // Rows shrink to fit the page (8 deathmatch players used to push LASTED under the result).
@@ -264,8 +268,9 @@ function drawChronicle(m: Menus, ctx: CanvasRenderingContext2D, B: Book, rowAt: 
     cols.forEach((c, j) => drawPlain(ctx, c, colX(j) - textWidth(c, 0.45, true), y + 1, "#8a5a2a", 0.45, true));
     y += 11;
   };
-  const row = (p: (typeof match.players)[number], label = who(p), col = BROWN) => {
+  const row = (p: (typeof match.players)[number], label = who(p), col = BROWN, framed = false) => {
     heroIcon(m, ctx, p.hero, R, y - 3, ic);
+    if (framed) teamFrame(ctx, R - 1, y - 4, ic + 2, ic + 2, TEAM_BRIGHT[p.team] ?? "#c0a080", 1.5);
     drawPlain(ctx, label, R + ic + 3, y, col, ts, true);
     cols.forEach((_, j) => {
       const v = cell(p, j);
@@ -278,7 +283,7 @@ function drawChronicle(m: Menus, ctx: CanvasRenderingContext2D, B: Book, rowAt: 
     const won = (p: (typeof match.players)[number]) => Number(p.team === match.winner);
     header("PLACINGS", "#6a4424");
     for (const p of [...match.players].sort((a, b) => won(b) - won(a) || (b.k ?? 0) - (a.k ?? 0)))
-      row(p, `${HOUSE[p.team] ?? ""} · ${who(p)}`, TEAM_TEXT[p.team] ?? BROWN);
+      row(p, who(p), TEAM_TEXT[p.team] ?? BROWN, true);
   } else {
     for (const team of [0, 1]) {
       header(team ? "RED HOUSE" : "BLUE HOUSE", TEAM_TEXT[team]);
