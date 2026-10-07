@@ -223,7 +223,7 @@ function drawChronicle(m: Menus, ctx: CanvasRenderingContext2D, B: Book, rowAt: 
   }
   const mapName = (id: string) => (m.mapNames[id] ?? id).toUpperCase();
   const modeShort = (md: string) =>
-    ({ "1v1": "1V1", "2v2": "2V2", ffa: "FFA", tdm: "DM", ffadm: "FFA DM" })[md] ?? md.toUpperCase();
+    ({ "1v1": "1V1", "2v2": "2V2", ffa: "FFA", tdm: "TDM", ffadm: "FFA DM" })[md] ?? md.toUpperCase();
   const modeLong = (md: string) => MODE_NAME[md as keyof typeof MODE_NAME] ?? md.toUpperCase();
   log.forEach((match, k) =>
     rowAt(k, (y, sel) => {
@@ -238,33 +238,54 @@ function drawChronicle(m: Menus, ctx: CanvasRenderingContext2D, B: Book, rowAt: 
   );
   const match = log[m.focus];
   if (!match) return;
-  pageHead(ctx, B, B.rx, `${dateOf(match.at)} · ${modeLong(match.mode)} · ${mapName(match.map)}`);
   const mm = `${Math.floor(match.secs / 60)}:${String(Math.floor(match.secs % 60)).padStart(2, "0")}`;
+  pageHead(ctx, B, B.rx, `${dateOf(match.at)} · ${modeLong(match.mode)} · ${mapName(match.map)} · ${mm}`);
   const who = (p: (typeof match.players)[number]) => `${p.cpu ? "CPU" : (p.tag ?? "-")} · ${heroName(m, p.hero)}`;
-  let y = pgy + 22;
-  if (match.mode === "ffa") {
-    // FFA: winner first, house then player on two lines.
+  const short = (n: number) =>
+    n >= 10000 ? `${Math.round(n / 1000)}K` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`;
+  const hasStats = match.players.some((p) => p.k !== undefined);
+  const dm = match.mode === "tdm" || match.mode === "ffadm";
+  // Columns at the right edge: K/D, DMG, and SOLDIERS outside deathmatch.
+  const cols = hasStats ? (dm ? ["K/D", "DMG"] : ["K/D", "DMG", "CS"]) : [];
+  const colX = (j: number) => R + RW - (cols.length - 1 - j) * 26;
+  const cell = (p: (typeof match.players)[number], j: number) =>
+    j === 0 ? `${p.k ?? 0}/${p.d ?? 0}` : j === 1 ? short(p.dmg ?? 0) : `${p.cs ?? 0}`;
+  // Rows shrink to fit the page (8 deathmatch players used to push LASTED under the result).
+  const top = pgy + 22;
+  const bottom = pgy + pgh - 30;
+  const ffaLike = match.mode === "ffa" || match.mode === "ffadm";
+  const groups = ffaLike ? 1 : 2;
+  const rh = Math.min(13, (bottom - top - groups * 14 - 8) / Math.max(1, match.players.length));
+  const ic = Math.max(8, Math.min(14, rh - 1));
+  const ts = Math.min(0.6, 0.42 + rh * 0.014);
+  let y = top;
+  const header = (label: string, col: string) => {
+    drawPlain(ctx, label, R, y, col, 0.62, true);
+    cols.forEach((c, j) => drawPlain(ctx, c, colX(j) - textWidth(c, 0.45, true), y + 1, "#8a5a2a", 0.45, true));
+    y += 11;
+  };
+  const row = (p: (typeof match.players)[number], label = who(p), col = BROWN) => {
+    heroIcon(m, ctx, p.hero, R, y - 3, ic);
+    drawPlain(ctx, label, R + ic + 3, y, col, ts, true);
+    cols.forEach((_, j) => {
+      const v = cell(p, j);
+      drawPlain(ctx, v, colX(j) - textWidth(v, ts, true), y, BROWN, ts, true);
+    });
+    y += rh;
+  };
+  if (ffaLike) {
+    // FFA: winner first, best K/D after.
     const won = (p: (typeof match.players)[number]) => Number(p.team === match.winner);
-    for (const p of [...match.players].sort((a, b) => won(b) - won(a))) {
-      heroIcon(m, ctx, p.hero, R, y - 3, 14);
-      drawPlain(ctx, HOUSE[p.team] ?? "", R + 17, y, TEAM_TEXT[p.team], 0.55, true);
-      drawPlain(ctx, who(p), R + 17, y + 7, BROWN, 0.55, true);
-      y += 17;
-    }
-    y += 2;
+    header("PLACINGS", "#6a4424");
+    for (const p of [...match.players].sort((a, b) => won(b) - won(a) || (b.k ?? 0) - (a.k ?? 0)))
+      row(p, `${HOUSE[p.team] ?? ""} · ${who(p)}`, TEAM_TEXT[p.team] ?? BROWN);
   } else {
     for (const team of [0, 1]) {
-      drawPlain(ctx, team ? "RED HOUSE" : "BLUE HOUSE", R, y, TEAM_TEXT[team], 0.62, true);
-      y += 10;
-      for (const p of match.players.filter((q) => q.team === team)) {
-        heroIcon(m, ctx, p.hero, R, y - 3, 14);
-        drawPlain(ctx, who(p), R + 17, y, BROWN, 0.6, true);
-        y += 13;
-      }
-      y += 4;
+      header(team ? "RED HOUSE" : "BLUE HOUSE", TEAM_TEXT[team]);
+      for (const p of match.players.filter((q) => q.team === team)) row(p);
+      y += 3;
     }
   }
-  stat(ctx, B, "LASTED", mm, y + 2);
   const w = match.winner;
   const res = w < 0 ? "DRAW" : (HOUSE[w] ?? "-");
   const seal = w < 0 ? "#8a7a60" : w === 0 ? "#2a4ab8" : w === 1 ? "#a8141a" : TEAM_CLOTH[w];

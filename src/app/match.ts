@@ -337,7 +337,25 @@ function recordMatch(app: App): void {
   const w = app.world;
   const map = maps[app.mapIndex].id;
   app.save.record(
-    { at: Date.now(), mode: app.mode, map, winner: w.match.winner, secs: w.time, players: app.matchPlayers },
+    {
+      at: Date.now(),
+      mode: app.mode,
+      map,
+      winner: w.match.winner,
+      secs: w.time,
+      players: app.matchPlayers.map((p, i) => {
+        const id = w.players.find((q) => q.player === i)?.heroId ?? -1;
+        const st = w.heroStats.get(id);
+        const tdm = w.tdm;
+        return {
+          ...p,
+          k: tdm ? (tdm.kills.get(id) ?? 0) : (st?.kills ?? 0),
+          d: tdm ? (tdm.deaths.get(id) ?? 0) : (st?.deaths ?? 0),
+          dmg: Math.round(st?.dmg ?? 0),
+          cs: st?.cs ?? 0,
+        };
+      }),
+    },
     w.teams.map((t) => t.heroKills),
   );
   if (app.net.mode !== "host") return;

@@ -65,6 +65,11 @@ export interface MatchPlayer {
   hero: string;
   team: number;
   cpu: boolean;
+  /** Match stats (logged since the results cards got them; older entries have none). */
+  k?: number;
+  d?: number;
+  dmg?: number;
+  cs?: number;
 }
 
 export interface TagRef {
