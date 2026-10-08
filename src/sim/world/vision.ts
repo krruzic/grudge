@@ -157,7 +157,7 @@ export function losHeight(w: World, x: number, z: number): number {
  * What a physical shot (an arrow or harpoon) from `from` toward `to` hits first along the straight line at shot
  * height: null when the way is clear, "wall" for terrain standing above the shot (castle / ruin walls, cliffs,
  * props; Hoot's snow forts are cover, not a wall - fortCoverMul), else the first structure whose footprint the line
- * crosses (own or enemy; not `to` itself).
+ * crosses (not the shooter's own, nor `to` itself).
  */
 export function shotBlocker(w: World, from: Entity, to: Entity, y0: number, y1: number): Entity | "wall" | null {
   return lineBlocker(w, from.transform.pos, from.radius, to.transform.pos, to.radius, y0, y1, from, to);
@@ -196,7 +196,8 @@ export function lineBlocker(
   let best: Entity | null = null;
   let bd = Infinity;
   for (const o of w.entities) {
-    if (!o.alive || !o.structure || o === a || o === b) continue;
+    // The shooter's own buildings let its shots through (they're shooting over / past their own towers).
+    if (!o.alive || !o.structure || o === a || o === b || (a && o.team === a.team)) continue;
     const ox = o.transform.pos.x - ax;
     const oz = o.transform.pos.z - az;
     const along = ox * ux + oz * uz;

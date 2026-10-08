@@ -112,6 +112,7 @@ function arrowBlocked(w: World, p: Projectile, target: Entity): Entity | "wall" 
         o.alive &&
         o.structure &&
         o !== target &&
+        o.team !== p.team &&
         Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) < o.radius * 0.85
       )
         return o;
