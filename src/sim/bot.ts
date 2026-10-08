@@ -13,6 +13,7 @@ import { classDirectives, pickDirective, supportDirective, updateRole } from "./
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
 import { evade } from "./bot/evade.ts";
+import { takeCover } from "./bot/cover.ts";
 import { padNear } from "./structures.ts";
 import { duelistReflex } from "./bot/tactics.ts";
 import { chainSwingPlan, sameAsLast, swingPivots } from "./hero/wreckwitch.ts";
@@ -196,6 +197,7 @@ export class Bot {
     if (w.time >= this.thinkAt) {
       this.thinkAt = w.time + 0.2 + (1 - this.skill) * 0.3;
       think(this, w, me);
+      takeCover(this, w, me);
       meleeReflex(this, w, me);
     }
     evade(this, w, me);
