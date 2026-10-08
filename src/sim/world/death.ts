@@ -101,6 +101,40 @@ function killHero(
   const spill = w.data.match.economy.grain?.deathLoss ?? 0;
   if (victim && spill > 0) victim.grain *= 1 - spill;
   if (killerTeam >= 0 && killerTeam !== target.team) muster(w, killerTeam, cut);
+  rout(w, target.team, src);
+}
+
+/**
+ * 2v2 rout: every champion of a house dead at the same time (both champions, or champion and commander) costs
+ * their keep `match.rout.keepFrac` of its max health at once, straight through its ward and shield - a won
+ * teamfight turns into keep damage instead of a stalemate in the middle. Not in 1v1, free for all or deathmatch.
+ */
+function rout(w: World, team: number, src: Entity | null): void {
+  const r = w.data.match.rout;
+  // Only from `from` seconds in: an early wipe is a normal swing, a late one breaks the stalemate.
+  if (!r || w.ffa || w.tdm || w.time < (r.from ?? 0)) return;
+  let n = 0;
+  for (const e of w.entities) {
+    if (!e.hero || e.team !== team) continue;
+    if (!e.hero.dead) return;
+    n++;
+  }
+  const core = w.core(team);
+  if (n < 2 || !core?.alive) return;
+  const dmg = Math.round(core.maxHp * r.keepFrac);
+  // Credit the killing house (a neutral blow - ogre, hazard - credits the rival house).
+  const own = src && src.team !== team && src.team >= 0 && src.team < w.teamCount ? src.team : w.rival(team);
+  const by = own >= 0 && own < w.teamCount ? own : -1;
+  if (by >= 0) w.teams[by].coreDamageDealt += Math.min(dmg, core.hp);
+  core.hp -= dmg;
+  const p = core.transform.pos;
+  w.emit({ type: "slam", x: p.x, y: core.transform.y, z: p.z, radius: 6, team: by });
+  w.emit({
+    type: "notice",
+    team: -1,
+    text: `${w.teamName(team)} ROUTED · KEEP LOSES ${Math.round(r.keepFrac * 100)}%`,
+  });
+  if (core.hp <= 0) kill(w, core, src);
 }
 
 /**

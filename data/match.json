@@ -7,6 +7,10 @@
     "seconds": 15,
     "warnSeconds": 4
   },
+  "rout": {
+    "keepFrac": 0.12,
+    "from": 180
+  },
   "suddenDeath": {
     "productionMul": 1.6,
     "costMul": 0.6,

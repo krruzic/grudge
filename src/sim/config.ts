@@ -580,6 +580,8 @@ export interface MatchData {
     towerHp?: Record<string, number>;
   };
   suddenDeath: { productionMul: number; costMul: number; unitDamageMul: number; rampFrom?: number };
+  /** 2v2: a house with every champion dead at once loses this fraction of its keep's max health (world/death.ts). */
+  rout?: { keepFrac: number; from?: number };
   lockdown?: { seconds: number; warnSeconds?: number };
   /** Team deathmatch rules (sim/tdm.ts). */
   tdm?: import("./tdm.ts").TdmConfig;
