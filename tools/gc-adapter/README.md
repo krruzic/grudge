@@ -16,7 +16,7 @@ Chromium groups Linux gamepads by the sysfs path above each input node. The stoc
 ## Install on a new machine
 
 1. Install the prerequisites. On Arch: `sudo pacman -S dkms base-devel linux-headers`, using the headers package that matches your kernel (`linux-zen-headers`, `linux-lts-headers`, ...).
-2. Run `tools/gc-adapter/install.sh`. It re-runs itself with sudo and then:
+2. Run `npm run gcadapter:install` (or `tools/gc-adapter/install.sh`). It re-runs itself with sudo and then:
    - removes any other DKMS version of `hid-gamecube-adapter`, including the AUR one;
    - copies `src/` to `/usr/src/hid-gamecube-adapter-<version>` and runs `dkms install`;
    - installs the udev rules and reloads udev;
@@ -29,20 +29,20 @@ DKMS rebuilds the module automatically on kernel updates (`AUTOINSTALL="yes"`). 
 ## Check it's working
 
 ```sh
-dkms status hid-gamecube-adapter
-ls -d /sys/bus/hid/devices/*057E:0337*/gcport*
-grep -B1 -A1 -i "gamecube controller" /proc/bus/input/devices
+npm run gcadapter:status
 ```
+
+It shows the DKMS build, whether the module is loaded, the udev rules, the detected ports and each connected pad.
 
 In the game, the controller profile `gc_adapter_uinput` in `data/input.json` matches these devices.
 
 ## Uninstall
 
 ```sh
-sudo dkms remove hid-gamecube-adapter/r11.25387ab.grudge1 --all
-sudo rm -rf /usr/src/hid-gamecube-adapter-r11.25387ab.grudge1
-sudo rm /etc/udev/rules.d/51-gcadapter.rules /etc/udev/rules.d/51-gcadapter-hidraw.rules
+npm run gcadapter:uninstall
 ```
+
+It unloads the module, removes every DKMS version of it and deletes the udev rules.
 
 ## Updating to a newer upstream
 
