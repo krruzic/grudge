@@ -1,0 +1,2 @@
+# The Switch 2 Bluetooth bridge creates its virtual pads through /dev/uinput as the logged-in user.
+KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess"

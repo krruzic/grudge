@@ -1,0 +1,15 @@
+[Unit]
+Description=Switch 2 controllers over Bluetooth for Grudge (NSO GameCube / Pro Controller 2 -> virtual Xbox 360 pad)
+After=bluetooth.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+WorkingDirectory=@DIR@
+ExecStart=@DIR@/.venv/bin/python -m ngc run
+Restart=always
+RestartSec=3
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=default.target

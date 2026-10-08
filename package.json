@@ -14,6 +14,8 @@
     "release": "tsc --noEmit && vite build --outDir release --emptyOutDir && vite preview --outDir release --port 5200 --strictPort --host",
     "online": "node tools/online.mjs",
     "serve": "node --no-warnings tools/server.ts",
+    "switch2:install": "bash tools/switch2-bt/install.sh",
+    "switch2:pair": "bash tools/switch2-bt/pair.sh",
     "determinism": "node --experimental-transform-types --no-warnings tools/determinism.ts",
     "format": "prettier --write \"src/**/*.ts\" \"tools/**/*.{ts,mjs}\""
   },

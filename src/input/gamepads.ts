@@ -33,6 +33,8 @@ interface Profile {
   cstick: { x: AxisRef; y: AxisRef };
   buttons: Partial<Record<ButtonAction, number[]>>;
   axisButtons: Partial<Record<ButtonAction, AxisButton>>;
+  /** Analog buttons (triggers): held only once the button's value reaches this, instead of the browser's press. */
+  thresholds?: Partial<Record<ButtonAction, number>>;
 }
 
 type Dir4 = Record<"up" | "down" | "left" | "right", string[]>;
@@ -481,7 +483,8 @@ export class Gamepads {
       const held = emptyButtons();
       for (const a of ACTIONS) {
         const idxs = prof.buttons[a] ?? [];
-        let on = idxs.some((i) => pad.buttons[i]?.pressed);
+        const t = prof.thresholds?.[a];
+        let on = idxs.some((i) => (t === undefined ? pad.buttons[i]?.pressed : (pad.buttons[i]?.value ?? 0) >= t));
         const ab = prof.axisButtons[a];
         if (ab) {
           const v = ((pad.axes[ab.axis] ?? ab.min) - ab.min) / (ab.max - ab.min);
