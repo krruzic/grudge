@@ -210,7 +210,7 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     pin(ctx, cw / 2, 3, chipColor(p.slot, p.cpu));
     ctx.restore();
   });
-  tipLines.forEach((l, i) => shadowText(ctx, l, px + 3, py + ph + 5 + i * 7, i ? "#f0e4c8" : "#ffd870", 0.5));
+  tipLines.forEach((l, i) => shadowText(ctx, l, px + 3, py + ph + 5 + i * 7, "#ffd870", 0.5));
   if (s.resultsWait) {
     const t = "WAITING FOR THE HOST";
     if (blink) shadowText(ctx, t, W / 2 - textWidth(t, 0.7) / 2, H - 14, "#f0e4c8", 0.7);
