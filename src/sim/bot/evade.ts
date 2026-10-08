@@ -7,6 +7,7 @@
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
+import { chainSwingPlan, sameAsLast, swingPivots } from "../hero/wreckwitch.ts";
 
 /** Seconds the CPU needs to have seen a threat before reacting (a human's read). */
 const REACT = 0.12;
@@ -204,6 +205,52 @@ export function evade(bot: Bot, w: World, me: Entity): void {
   }
 
   if (w.mapEvents.iceDef) lake(bot, w, me, canRoll);
+  swingTravel(bot, w, me);
+}
+
+/**
+ * Mother Kelp getting away: retreating (or heading for cover), chain-swing anchor to anchor toward where she's going
+ * - each swing the one landing her nearest the goal, and never nearer the closest enemy champion - and keep the
+ * chain going while its window is open. She's slow on foot; swinging is how she gets home.
+ */
+function swingTravel(bot: Bot, w: World, me: Entity): void {
+  const h = me.hero!;
+  if (!w.heroDef(h.type).hooks.swingReach || h.action || bot.wantDodge) return;
+  const going = bot.healing || bot.why === "cover";
+  const chaining = w.time <= (h.swingChainUntil ?? -1);
+  if (!going || !(chaining || (h.cooldowns.dodge ?? 0) <= w.time)) return;
+  const goal = bot.healing && !w.tdm ? w.spawnPoint(me.team) : bot.goal;
+  if (!goal) return;
+  const p = me.transform.pos;
+  const now = Math.hypot(goal.x - p.x, goal.z - p.z);
+  if (now < 5) return;
+  let chaser: Entity | undefined;
+  for (const o of w.entities)
+    if (o.alive && o.hero && !o.hero.dead && o.team !== me.team && (!chaser || w.dist(me, o) < w.dist(me, chaser)))
+      chaser = o;
+  const cd = chaser ? Math.hypot(p.x - chaser.transform.pos.x, p.z - chaser.transform.pos.z) : Infinity;
+  const gx = (goal.x - p.x) / now;
+  const gz = (goal.z - p.z) / now;
+  let best: Vec2 | null = null;
+  let bd = now - 2.5;
+  for (const pv of swingPivots(w, me)) {
+    if (sameAsLast(w, me, pv)) continue;
+    const plan = chainSwingPlan(w, me, gx, gz, pv);
+    if (!plan || Math.hypot(plan.pv.x - pv.x, plan.pv.z - pv.z) > 0.01) continue;
+    if (badIce(w, plan.x, plan.z, 0)) continue;
+    const d = Math.hypot(goal.x - plan.x, goal.z - plan.z);
+    if (chaser && Math.hypot(plan.x - chaser.transform.pos.x, plan.z - chaser.transform.pos.z) < Math.min(cd, 6))
+      continue;
+    if (d < bd) {
+      bd = d;
+      best = pv;
+    }
+  }
+  if (!best) return;
+  bot.wantDodge = true;
+  bot.wantFace = { x: gx, z: gz };
+  bot.swingAt = best;
+  bot.wantAttack = bot.wantB = bot.wantR = bot.wantZ = false;
 }
 
 /**

@@ -4,6 +4,7 @@
 import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Command, Entity, Vec2 } from "../types.ts";
+import { Kind } from "../terrain.ts";
 
 /** Replace the goal with a jump pad when pad + flight is >= 12 cells shorter than walking (or the goal is walled off). */
 export function preferJumpPad(bot: Bot, w: World, me: Entity): void {
@@ -66,8 +67,18 @@ export function steer(bot: Bot, w: World, me: Entity, cmd: Command): void {
           bot.progress = { x: p.x, z: p.z, t: w.time };
         }
         if (bot.path.length) wp = bot.path[0];
-        if (bot.lost && (bot.path.length === 0 || (bot.path.length === 1 && Math.hypot(wp.x - p.x, wp.z - p.z) < 0.5)))
-          wp = p;
+        if (
+          bot.lost &&
+          (bot.path.length === 0 || (bot.path.length === 1 && Math.hypot(wp.x - p.x, wp.z - p.z) < 0.5))
+        ) {
+          // No walkable path: stranded up on a ledge, a lookout or a bank you can drop off but not walk down. Head
+          // for the nearest spot in the goal's area that a straight walk can reach without climbing (a drop).
+          if (w.time >= bot.dropAt) {
+            bot.dropAt = w.time + 1;
+            bot.drop = dropSpot(w, me, bot.goal);
+          }
+          wp = bot.drop ?? p;
+        }
       }
       const dx = wp.x - p.x;
       const dz = wp.z - p.z;
@@ -78,4 +89,48 @@ export function steer(bot: Bot, w: World, me: Entity, cmd: Command): void {
       }
     }
   }
+}
+
+/**
+ * Nearest cell (within 10 m) in the same nav region as `goal` that a straight walk from the hero reaches without
+ * ever stepping up more than the climb limit - i.e. by dropping off the edge it's stranded on. Null if none.
+ */
+function dropSpot(w: World, me: Entity, goal: Vec2): Vec2 | null {
+  const nav = w.nav;
+  const regions = nav.regions();
+  const gi = nav.nearestOpen(goal.x, goal.z, 3);
+  if (gi < 0) return null;
+  const want = regions[gi];
+  const p = me.transform.pos;
+  const step = (me.hero?.stepHeight ?? 0.6) + 0.05;
+  let best: Vec2 | null = null;
+  let bd = Infinity;
+  for (let r = 1; r <= 10; r++)
+    for (let k = 0; k < Math.max(8, r * 6); k++) {
+      const a = (k / Math.max(8, r * 6)) * Math.PI * 2;
+      const x = p.x + Math.cos(a) * r;
+      const z = p.z + Math.sin(a) * r;
+      const i = nav.index(Math.floor(x), Math.floor(z));
+      if (i < 0 || !nav.open(i) || regions[i] !== want) continue;
+      const d = r + Math.hypot(goal.x - x, goal.z - z) * 0.15;
+      if (d >= bd) continue;
+      // Walk the line: blocked by walls, and never up more than a step at a time.
+      let ok = true;
+      let y = me.transform.y;
+      for (let s = 1; s <= r * 3 && ok; s++) {
+        const f = s / (r * 3);
+        const cx = p.x + (x - p.x) * f;
+        const cz = p.z + (z - p.z) * f;
+        const ci = nav.index(Math.floor(cx), Math.floor(cz));
+        if (ci < 0 || w.terrain.kinds[ci] === Kind.Wall) ok = false;
+        const h = w.groundY(cx, cz);
+        if (h > y + step) ok = false;
+        y = h;
+      }
+      if (ok) {
+        bd = d;
+        best = { x, z };
+      }
+    }
+  return best;
 }

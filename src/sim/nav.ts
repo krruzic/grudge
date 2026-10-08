@@ -286,7 +286,7 @@ export class NavGrid {
 
   private region: Int32Array | null = null;
 
-  private regions(): Int32Array {
+  regions(): Int32Array {
     if (this.region) return this.region;
     const n = this.w * this.d;
     const r = new Int32Array(n).fill(-1);

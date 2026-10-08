@@ -34,6 +34,9 @@ export class Bot {
   progress = { x: 0, z: 0, t: 0 };
   /** Last path search failed (goal unreachable): stop at the end of the partial path. */
   lost = false;
+  /** Stranded (no walkable path to the goal): where it's dropping off toward, re-picked every second. */
+  drop: Vec2 | null = null;
+  dropAt = 0;
 
   // Decision timers & memory
   thinkAt = 0;
@@ -68,6 +71,8 @@ export class Bot {
   evadeSeen = new Map<string, number>();
   /** Telegraphed circles: whether this CPU read it in time (decided once per circle). */
   evadeRead = new Map<string, boolean>();
+  /** Kelp: the anchor a travel swing is aimed at this tick (bot/evade.ts swingTravel). */
+  swingAt: Vec2 | null = null;
   homeErrandUntil = -1;
 
   // Intents for the next Command (consumed in command())
@@ -290,7 +295,7 @@ export class Bot {
     cmd.dodge = this.wantDodge;
     // CPU Kelp: a dodge next to something hookable is a chain swing round the nearest one (humans hold to pick).
     if (cmd.dodge && w.heroDef(me.hero!.type).hooks.swingReach) {
-      const pv = this.healing ? this.escapeSwing(w, me, cmd) : swingPivots(w, me)[0];
+      const pv = this.swingAt ?? (this.healing ? this.escapeSwing(w, me, cmd) : swingPivots(w, me)[0]);
       if (pv) cmd.swing = { x: pv.x, z: pv.z };
     }
     cmd.recall = this.wantRecall;
@@ -298,6 +303,7 @@ export class Bot {
     cmd.block = this.wantBlock && !w.arena.carrying(me);
     this.wantAttack = this.wantB = this.wantR = this.wantZ = this.wantDodge = false;
     this.wantPlace = null;
+    this.swingAt = null;
     if (this.wantBlock && this.rand() < 0.1) this.wantBlock = false;
     return cmd;
   }
