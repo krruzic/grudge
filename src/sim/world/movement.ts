@@ -12,6 +12,7 @@ import { Kind } from "../terrain.ts";
 export function speedMul(w: World, e: Entity): number {
   const s = e.status;
   let m = w.ffa ? (w.data.match.ffa?.speedMul ?? 1) : 1;
+  if (e.unit && !e.unit.guard) m *= w.terrain.unitSpeedMul;
   if (w.time < s.slowUntil) m *= s.slowMul;
   if (w.time < s.buffUntil) m *= s.buffSpeedMul;
   if (s.powerSpeedMul !== undefined) m *= s.powerSpeedMul;

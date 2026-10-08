@@ -18,6 +18,7 @@
   ],
   "mirror": "x",
   "surround": "valley",
+  "unitSpeedMul": 1.35,
   "mist": {
     "firstSeconds": 60,
     "everySeconds": 75,

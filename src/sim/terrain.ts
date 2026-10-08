@@ -90,6 +90,8 @@ export interface MapData {
   geysers?: unknown;
   serpent?: unknown;
   palette?: string;
+  /** Soldier march speed multiplier for long fields (waves spend less time walking through the fight). */
+  unitSpeedMul?: number;
   atmosphere?: Record<string, unknown>;
   fountain?: unknown;
   mist?: unknown;
@@ -168,6 +170,8 @@ export class Terrain {
   readonly serpent?: unknown;
   /** Ground texture palette for the renderer ("autumn"); default by surround style. */
   readonly palette?: string;
+  /** MapData.unitSpeedMul (1 = normal). */
+  readonly unitSpeedMul: number;
   /** Render-only lighting/sky overrides for this map (see GameRenderer.applyAtmosphere). */
   readonly atmosphere?: Record<string, string | number | boolean>;
   readonly fountain?: unknown;
@@ -231,6 +235,7 @@ export class Terrain {
     this.geysers = data.geysers;
     this.serpent = data.serpent;
     this.palette = data.palette;
+    this.unitSpeedMul = data.unitSpeedMul ?? 1;
     this.atmosphere = data.atmosphere as Record<string, string | number | boolean> | undefined;
     this.fountain = data.fountain;
     this.mist = data.mist;
