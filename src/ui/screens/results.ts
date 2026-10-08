@@ -3,7 +3,8 @@
 // tilted). FFA placing: winner, then surviving houses by keep HP, then fallen houses, last to fall first.
 import type { World } from "../../sim/world";
 import { drawPlain, textWidth } from "../font";
-import { bottomPrompt } from "../prompts";
+import { bottomPrompt, wrap } from "../prompts";
+import { lossTip } from "./tips";
 import {
   artTitle,
   beam,
@@ -81,7 +82,20 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
       : withSlot;
   const t = w.teams;
   const pw = Math.min(250, Math.round(W * 0.6));
-  const ph = H - 52;
+  // A beaten human (1v1 / 2v2) gets a tip under the summary on what to pick next (screens/tips.ts).
+  const tipLines = (() => {
+    if (ffa || tdm || win < 0) return [];
+    const champ = (q: ResultPlayer) => q.hero !== "herald";
+    const loser = listed.find((q) => !q.cpu && q.team !== win)?.team;
+    if (loser === undefined) return [];
+    const tip = lossTip(
+      listed.filter((q) => q.team === loser && champ(q)).map((q) => q.hero),
+      listed.filter((q) => q.team !== loser && champ(q)).map((q) => q.hero),
+      s.heroes,
+    );
+    return tip ? wrap(tip, pw - 6, 0.5).slice(0, 3) : [];
+  })();
+  const ph = H - 52 - (tipLines.length ? tipLines.length * 7 + 6 : 0);
   const px = 16;
   const py = 26;
   const reason = w.match.reason.toUpperCase();
@@ -196,6 +210,7 @@ export function drawResults(s: Screens, ctx: CanvasRenderingContext2D, W: number
     pin(ctx, cw / 2, 3, chipColor(p.slot, p.cpu));
     ctx.restore();
   });
+  tipLines.forEach((l, i) => shadowText(ctx, l, px + 3, py + ph + 5 + i * 7, i ? "#f0e4c8" : "#ffd870", 0.5));
   if (s.resultsWait) {
     const t = "WAITING FOR THE HOST";
     if (blink) shadowText(ctx, t, W / 2 - textWidth(t, 0.7) / 2, H - 14, "#f0e4c8", 0.7);
