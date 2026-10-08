@@ -520,6 +520,18 @@ function selectButton(app: App, buttonId: string, by: number): void {
       app.net.lobbySentAt = 0;
       audio.ui("move");
     }
+  } else if (id === "model") {
+    // A on a champion's model: the next costume, round in a loop - your own seat, or any CPU's.
+    const commander = app.commanderSlot(i);
+    if ((by === i && !slots[i].cpu && !slots[i].open) || (slots[i].cpu && !commander)) {
+      const next = nextCostume(slots[i].hero, slots[i].costume, 1);
+      if (next !== null) {
+        slots[i].costume = next;
+        app.screens.costumeShownUntil[i] = performance.now() / 1000 + COSTUME_STRIP_SECONDS;
+        app.net.lobbySentAt = 0;
+        audio.ui("move");
+      }
+    }
   } else if (id === "pen" && !slots[i].cpu && !app.commanderSlot(i) && by === i && !app.screens.naming.has(i)) {
     // Only the card's owner signs its name.
     openNaming(app, i, slots[i].tag);

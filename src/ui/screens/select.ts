@@ -670,6 +670,8 @@ function drawStage(
   ghost = false,
 ): void {
   if (!s.portraits) return;
+  // A on the champion model cycles its costume (app/select.ts selectButton "model").
+  if (!ghost) s.hit(`model:${i}`, fx, fy, fw, ih);
   const cv = s.portraits.stage(i, sl.hero, team, sl.ready, sl.costume);
   const k = Math.min(fw / cv.width, (ih + 4) / cv.height);
   const dw = cv.width * k;

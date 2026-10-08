@@ -209,13 +209,17 @@ export class MenuCursors {
     return d;
   }
 
+  /** The topmost hit area under (x, y); "model:" areas (the big 3D frames) only when nothing else is there. */
   at(x: number, y: number, prefix?: string): Hit | undefined {
+    let under: Hit | undefined;
     for (let k = this.hits.length - 1; k >= 0; k--) {
       const h = this.hits[k];
       if (prefix && !h.id.startsWith(prefix)) continue;
-      if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h;
+      if (!(x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h)) continue;
+      if (!h.id.startsWith("model:")) return h;
+      under ??= h;
     }
-    return undefined;
+    return under;
   }
 
   /** The seat whose seal hand i owns (its name tag's seat online, else its own index). */
