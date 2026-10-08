@@ -7,7 +7,7 @@ import type { World } from "../world.ts";
 import type { AbilityDef } from "../config.ts";
 import type { Command, Entity, HeroAction } from "../types.ts";
 import { abilities, applyBleed, fireMissile, mark, zoneAt } from "../talents.ts";
-import { aimFor, aimTarget } from "./common.ts";
+import { aimFor, aimTarget, aimTier } from "./common.ts";
 
 const fx = (
   w: World,
@@ -394,7 +394,7 @@ export function wrenTarget(
     const along = (dx * dirX + dz * dirZ) / len;
     if (stick && along < cone) continue;
     const pip = o.status.pipOwner === e.id && w.time < (o.status.pipUntil ?? 0);
-    const sc = d * 0.5 + (o.hero ? -6 : 0) + (pip ? -4 : 0) + (o.structure ? 5 : 0) - along * (stick ? 6 : 2);
+    const sc = aimTier(o) + d * 0.5 + (pip ? -4 : 0) - along * (stick ? 6 : 2);
     if (sc < bs) {
       bs = sc;
       best = o;

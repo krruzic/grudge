@@ -12,6 +12,7 @@ import { meleeReflex, think } from "./bot/think.ts";
 import { classDirectives, pickDirective, supportDirective, updateRole } from "./bot/strategy.ts";
 import { preferJumpPad, steer } from "./bot/navigate.ts";
 import { ok } from "./bot/awareness.ts";
+import { evade } from "./bot/evade.ts";
 import { padNear } from "./structures.ts";
 import { duelistReflex } from "./bot/tactics.ts";
 import { chainSwingPlan, sameAsLast, swingPivots } from "./hero/wreckwitch.ts";
@@ -61,6 +62,11 @@ export class Bot {
   tend: Pad | null = null;
   /** Died since the last command; set on respawn: until homeErrandUntil it upgrades / fills home pads first. */
   wasDead = false;
+  /** Threats already reacted to, and when each was first seen (bot/evade.ts). */
+  evaded = new Set<string>();
+  evadeSeen = new Map<string, number>();
+  /** Telegraphed circles: whether this CPU read it in time (decided once per circle). */
+  evadeRead = new Map<string, boolean>();
   homeErrandUntil = -1;
 
   // Intents for the next Command (consumed in command())
@@ -192,6 +198,7 @@ export class Bot {
       think(this, w, me);
       meleeReflex(this, w, me);
     }
+    evade(this, w, me);
     if (w.time >= this.roleCheckAt && !w.tdm) {
       this.roleCheckAt = w.time + 1;
       updateRole(this, w, me);

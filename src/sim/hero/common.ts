@@ -59,6 +59,15 @@ export function ready(e: Entity, key: string, time: number): boolean {
  * without, ranged reaches use the facing cone. Score = distance, minus a bonus for heroes and alignment, plus a
  * penalty for structures.
  */
+/**
+ * Auto-aim priority: any champion in the aim cone beats any building, which beats any soldier (a soldier stepping
+ * nearer used to steal a shot meant for the champion in front of you). Added to a target score as tier x 1000, so
+ * distance and alignment only pick within a tier.
+ */
+export function aimTier(o: Entity): number {
+  return o.hero && !o.hero.dead ? 0 : o.structure ? 1000 : 2000;
+}
+
 export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Entity | null {
   const t = e.transform;
   // A CPU's chosen target (Command.aimAt without a purchase): take it when it's in reach and visible.
@@ -88,7 +97,7 @@ export function aimTarget(w: World, e: Entity, cmd: Command, reach: number): Ent
           : 1;
     if (mag > 0.3 && along < 0.3) continue;
     if (mag <= 0.3 && reach > 4 && along < 0.5) continue;
-    const score = d + (o.hero ? -1.5 : 0) + (o.structure ? 1 : 0) - along * 2;
+    const score = aimTier(o) + d - along * 2;
     if (score < bestScore) {
       bestScore = score;
       best = o;

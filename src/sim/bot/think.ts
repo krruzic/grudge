@@ -622,8 +622,8 @@ function reactToCasts(bot: Bot, w: World, s: Senses): void {
     (eh!.hero!.action.name === "b" || eh!.hero!.action.name === "z") &&
     s.dHero < 4.5
   ) {
-    if (bot.rand() < bot.skill * 0.6) bot.wantDodge = true;
-    else if (bot.rand() < 0.5) bot.wantBlock = true;
+    // (Rolls are timed and aimed in bot/evade.ts; here only the block.)
+    if (bot.rand() < 0.35) bot.wantBlock = true;
   }
 }
 

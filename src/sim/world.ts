@@ -90,6 +90,11 @@ export class World {
   readonly events: SimEvent[] = [];
   readonly traps: Trap[] = [];
   readonly zones: Zone[] = [];
+  /**
+   * Live danger circles for the CPU (bot/evade.ts): every telegraphed area (hexes, slams, splashes...) and map
+   * hazards about to go off (serpent breach), until they land. Read-only for the sim itself.
+   */
+  readonly dangers: { x: number; z: number; r: number; until: number; team: number }[] = [];
   readonly delayed: Delayed[] = [];
   /** Temporary terrain edits (walls, ramps, siege works); reverted when `until` passes. */
   readonly mods: TerrainMod[] = [];
@@ -235,6 +240,7 @@ export class World {
     }
     if (this.training) match.trainingStep(this);
     const dt = this.dt;
+    for (let i = this.dangers.length - 1; i >= 0; i--) if (this.dangers[i].until < this.time) this.dangers.splice(i, 1);
     // 1. Snapshot transforms so the renderer can interpolate prev -> current.
     for (const e of this.entities) {
       const t = e.transform;
@@ -319,6 +325,12 @@ export class World {
 
   emit(ev: SimEvent): void {
     this.events.push(ev);
+    if (ev.type === "telegraph" && ev.seconds > 0.15)
+      this.dangers.push({ x: ev.x, z: ev.z, r: ev.radius, until: this.time + ev.seconds, team: ev.team });
+    else if (ev.type === "serpent" && ev.stage === "warn") {
+      const r = (this.mapEvents.serpentDef?.breachRadius ?? 3) + 0.5;
+      this.dangers.push({ x: ev.x, z: ev.z, r, until: this.time + ev.seconds, team: -1 });
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------------------

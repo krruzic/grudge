@@ -37,7 +37,7 @@
     "blockFrontalMul": 0.25,
     "dodgeSpeed": 13,
     "dodgeSeconds": 0.32,
-    "dodgeCooldown": 0.7,
+    "dodgeCooldown": 1.3,
     "superMax": 100,
     "superPerDamageDealt": 0.06,
     "superPerDamageTaken": 0.04,

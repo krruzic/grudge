@@ -10,7 +10,7 @@ import type { AbilityDef } from "../config.ts";
 import type { Command, Entity, HeroAction, Missile, Zone } from "../types.ts";
 import { Kind } from "../terrain.ts";
 import { abilities, addShield, applyBleed } from "../talents.ts";
-import { begin, callout } from "./common.ts";
+import { aimTier, begin, callout } from "./common.ts";
 
 const fx = (
   w: World,
@@ -354,7 +354,7 @@ function harpoonAim(w: World, e: Entity, a: HeroAction, reach: number): [number,
       if (d - o.radius > reach || d < 0.1) continue;
       const along = (dx * a.dirX + dz * a.dirZ) / d;
       if (along < (a.stick ? 0.6 : 0.3)) continue;
-      const sc = d * 0.5 + (o.hero ? -5 : 0) + (isWet(w, o) ? -1.5 : 0) + (o.structure ? 4 : 0) - along * 3;
+      const sc = aimTier(o) + d * 0.5 + (isWet(w, o) ? -1.5 : 0) - along * 3;
       if (sc < bs) {
         bs = sc;
         best = o;

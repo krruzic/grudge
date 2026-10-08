@@ -8,7 +8,7 @@ import type { AbilityDef, HeroClass } from "../config.ts";
 import type { Command, Entity, HeroAction, TerrainMod, Zone } from "../types.ts";
 import { Kind } from "../terrain.ts";
 import { abilities } from "../talents.ts";
-import { callout, ready, refundCharge } from "./common.ts";
+import { aimTier, callout, ready, refundCharge } from "./common.ts";
 
 const fx = (
   w: World,
@@ -126,7 +126,7 @@ export function squareInput(w: World, e: Entity, cmd: Command): boolean {
     if (d > reach || d < 0.1) continue;
     const along = (ox * dx + oz * dz) / d;
     if (along < 0.55) continue;
-    const score = d + (o.hero ? -3 : 0) + (o.structure ? 2 : 0) - along * 2;
+    const score = aimTier(o) + d - along * 2;
     if (score < bs) {
       bs = score;
       best = o;

@@ -486,12 +486,12 @@ export function startGust(w: World, e: Entity, cmd: Command): boolean {
   h.blocking = false;
   t.facing = Math.atan2(-dx, -dz);
   e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.28);
-  h.cooldowns.dodge = w.time + b.dodgeSeconds + b.dodgeCooldown + 0.3;
+  h.cooldowns.dodge = w.time + b.dodgeSeconds + b.dodgeCooldown + 0.8;
   const mul = w.damageMulOf(e);
   for (const o of w.entities.slice()) {
     if (!o.alive || o.team === e.team || o.structure || o.neutral) continue;
     if (w.dist(e, o) - o.radius > 2.4) continue;
-    w.damage(e, o, 15 * mul, { fromX: t.pos.x, fromZ: t.pos.z, knockback: 9 });
+    w.damage(e, o, 15 * mul, { fromX: t.pos.x, fromZ: t.pos.z, knockback: 6 });
   }
   fx(w, "gust", e.id, e.team, t.pos.x, t.y, t.pos.z, { tx: t.pos.x + dx * 6, tz: t.pos.z + dz * 6, seconds: 0.42 });
   return true;
