@@ -1013,7 +1013,7 @@
           "kind": "combo",
           "hits": [
             {
-              "damage": 50,
+              "damage": 46,
               "range": 2.5,
               "arcDeg": 120,
               "dur": 0.34,
@@ -1022,7 +1022,7 @@
               "knockback": 1.2
             },
             {
-              "damage": 50,
+              "damage": 46,
               "range": 2.5,
               "arcDeg": 130,
               "dur": 0.34,
@@ -1031,7 +1031,7 @@
               "knockback": 1.4
             },
             {
-              "damage": 84,
+              "damage": 78,
               "range": 2.8,
               "arcDeg": 170,
               "dur": 0.55,
@@ -1057,7 +1057,7 @@
           "coverMul": 0.6,
           "dur": 0.6,
           "hitAt": 0.33,
-          "cooldown": 9,
+          "cooldown": 10,
           "bot": "never",
           "callout": "SNOW FORT",
           "stunSeconds": 0.5
@@ -1071,7 +1071,7 @@
           "hp": 300,
           "dur": 0.6,
           "hitAt": 0.33,
-          "cooldown": 12,
+          "cooldown": 14,
           "bot": "never",
           "callout": "LOOKOUT",
           "max": 2,

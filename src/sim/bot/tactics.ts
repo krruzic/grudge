@@ -210,15 +210,27 @@ export function summonerFight(bot: Bot, w: World, me: Entity, target: Entity | u
   const p = me.transform.pos;
   const inReach = (o: Entity) =>
     o.alive && !!o.hero && !o.hero.dead && o.team !== me.team && w.dist(me, o) <= range + 0.3 && w.canSee(me, o);
+  const mate = mateHero(bot, w);
+  if (hexSwap(bot, w, me, mate)) return;
   if (bReady) {
+    // Pinned first: a champion stunned (Kelp's Dredge reel, a trap, a slap, a wall splat...) for longer than the
+    // hex takes to land, or heavily slowed, eats the whole thing - the hex is how she cashes in her partner's catch.
+    const delay = abilities(w, me).b.delay ?? 0.55;
+    let pinned: Entity | undefined;
+    for (const o of w.entities)
+      if (
+        inReach(o) &&
+        (o.status.stunUntil > w.time + delay * 0.8 || (w.time < o.status.slowUntil && o.status.slowMul <= 0.55)) &&
+        (!pinned || o.hp < pinned.hp)
+      )
+        pinned = o;
     let weak: Entity | undefined;
     for (const o of w.entities)
       if (inReach(o) && o.hp <= o.maxHp * 0.5 && (!weak || o.hp / o.maxHp < weak.hp / weak.maxHp)) weak = o;
-    const mate = mateHero(bot, w);
     const peel =
       foesNear(w, me, 4.5)[0] ??
       (mate && !mate.hero!.dead ? w.entities.find((o) => inReach(o) && w.dist(o, mate) < 3.5) : undefined);
-    const quick = weak ?? peel;
+    const quick = pinned ?? weak ?? peel;
     if (quick) {
       bot.fightId = quick.id;
       bot.wantB = true;
@@ -238,6 +250,57 @@ export function summonerFight(bot: Bot, w: World, me: Entity, target: Entity | u
     const l = Math.hypot(p.x - tp.x, p.z - tp.z) || 1;
     bot.goal = { x: tp.x + ((p.x - tp.x) / l) * want, z: tp.z + ((p.z - tp.z) / l) * want };
   }
+}
+
+/**
+ * Remnil's hex swap (her dodge with a champion she hexed within 10 m: they trade places, the swapped foe is stunned
+ * 0.4 s). Two uses: (1) double team - she's by her partner and the hexed foe is off on its own: swap it into the
+ * partner's reach, as long as nobody else is waiting where she'll land; (2) escape - she's being dived and hurt, and
+ * the hexed foe stands somewhere quiet.
+ */
+function hexSwap(bot: Bot, w: World, me: Entity, mate: Entity | undefined): boolean {
+  const h = me.hero!;
+  if (h.action || (h.cooldowns.dodge ?? 0) > w.time) return false;
+  const p = me.transform.pos;
+  let hexed: Entity | undefined;
+  for (const o of w.entities)
+    if (
+      o.alive &&
+      o.hero &&
+      !o.hero.dead &&
+      o.team !== me.team &&
+      o.status.hexOwner === me.id &&
+      w.time < o.status.hexUntil &&
+      w.dist(me, o) < 9.5 &&
+      (!hexed || w.dist(me, o) < w.dist(me, hexed))
+    )
+      hexed = o;
+  if (!hexed) return false;
+  const hp = hexed.transform.pos;
+  const quiet = !w.entities.some(
+    (o) =>
+      o.alive &&
+      o.hero &&
+      !o.hero.dead &&
+      o.team !== me.team &&
+      o !== hexed &&
+      Math.hypot(o.transform.pos.x - hp.x, o.transform.pos.z - hp.z) < 6,
+  );
+  if (!quiet || w.mapEvents.sealed(p.x, p.z, hp.x, hp.z)) return false;
+  const dived = foesNear(w, me, 3.5).some((o) => o !== hexed) && me.hp < me.maxHp * 0.5;
+  const team =
+    !!mate &&
+    !mate.hero!.dead &&
+    w.dist(me, mate) < 4.5 &&
+    w.dist(me, hexed) > 5 &&
+    w.dist(mate, hexed) > 5 &&
+    me.hp > me.maxHp * 0.4;
+  if (!dived && !team) return false;
+  if (bot.rand() >= 0.6 * bot.skill + 0.2) return false;
+  bot.wantDodge = true;
+  bot.wantB = bot.wantR = bot.wantAttack = false;
+  bot.why = dived ? "hex swap out" : "hex swap in";
+  return true;
 }
 
 /**
@@ -317,6 +380,33 @@ export function duelistReflex(bot: Bot, w: World, me: Entity): void {
 export function wardenFight(bot: Bot, w: World, me: Entity, target: Entity | undefined): void {
   if (!target?.alive || !target.hero) return;
   chargeB(bot, w, me, target, (abilities(w, me).b.range ?? 8.5) - 0.8, 3.5);
+  wallOff(bot, w, me, target);
+}
+
+/**
+ * Thorn's Stone Wall across a hurt champion's escape: they're under 45%, running away from him (> 2 m/s) 3-8 m off,
+ * and he or his partner is close enough to make them pay. The wall goes 2.5 m ahead of them, square across their
+ * run (a placed wall lies perpendicular to the line from Thorn to the point). Walling off anyone moving away tested
+ * worse than keeping the wall for defence; a real escape is the exception.
+ */
+function wallOff(bot: Bot, w: World, me: Entity, target: Entity): void {
+  const h = me.hero!;
+  if ((h.cooldowns.r ?? 0) > w.time || h.action || bot.wantB || target.hp > target.maxHp * 0.45) return;
+  const v = target.hero!.vel;
+  const sp = Math.hypot(v.x, v.z);
+  if (sp < 2) return;
+  const p = me.transform.pos;
+  const tp = target.transform.pos;
+  const d = Math.hypot(tp.x - p.x, tp.z - p.z);
+  if (d < 3 || d > 8 || (v.x * (tp.x - p.x) + v.z * (tp.z - p.z)) / (sp * d) < 0.5) return;
+  const mate = mateHero(bot, w);
+  const follow = d < 6 || (mate && !mate.hero!.dead && w.dist(mate, target) < 7);
+  if (!follow || !w.canSee(me, target)) return;
+  const cx = tp.x + (v.x / sp) * 2.5;
+  const cz = tp.z + (v.z / sp) * 2.5;
+  if (Math.hypot(cx - p.x, cz - p.z) > 8.5) return;
+  bot.wantR = true;
+  bot.wantPlace = { x: cx - p.x, z: cz - p.z };
 }
 
 /**
