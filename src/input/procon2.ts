@@ -56,6 +56,12 @@ export const NSO_GC_PRODUCT = 0x2073;
 /** Analog trigger rest and full press (raw byte), from the controller's typical calibration. */
 const TRIG_REST = 36;
 const TRIG_FULL = 225;
+/**
+ * GameCube sticks travel less than the Pro's: each axis starts at GC_RANGE raw units to full and widens to what the
+ * stick has actually reached (full tilt = full speed; a gate notch reads as the edge, x 0.92 so it's reached
+ * without pressing hard into the gate).
+ */
+const GC_RANGE = 750;
 const RANGE = 1450;
 
 function emptyState(): Pro2State {
@@ -94,6 +100,8 @@ export class ProCon2 {
   readonly pads: Pro2State[] = [];
   private devices: HIDDeviceLike[] = [];
   private centers: ([number, number, number, number] | null)[] = [];
+  /** Furthest each stick axis has reached from centre (GameCube pads, see GC_RANGE). */
+  private reach: number[][] = [];
   status = "";
   reports = 0;
   last: string[] = [];
@@ -128,6 +136,7 @@ export class ProCon2 {
       this.devices.push(d);
       this.pads.push(emptyState());
       this.centers.push(null);
+      this.reach.push([0, 0, 0, 0]);
       d.addEventListener("inputreport", (e) => this.onReport(i, e as HIDInputReportEvent));
     }
     try {
@@ -188,7 +197,13 @@ export class ProCon2 {
     if (!this.centers[i])
       this.centers[i] = raw.map((x) => (Math.abs(x - 2048) < 500 ? x : 2048)) as [number, number, number, number];
     const c = this.centers[i]!;
-    const ax = (k: number) => Math.max(-1, Math.min(1, (raw[k] - c[k]) / RANGE));
+    const seen = this.reach[i];
+    const range = (k: number) => {
+      if (!p.gc) return RANGE;
+      seen[k] = Math.max(seen[k], Math.abs(raw[k] - c[k]));
+      return Math.max(GC_RANGE, Math.min(RANGE, seen[k] * 0.92));
+    };
+    const ax = (k: number) => Math.max(-1, Math.min(1, (raw[k] - c[k]) / range(k)));
     p.stickX = ax(0);
     p.stickY = -ax(1);
     p.cX = ax(2);
