@@ -49,6 +49,9 @@ export interface Prop {
   z: number;
   rot?: number;
   solid?: boolean;
+  /** Footprint (m) a solid prop blocks, along x and z before `rot`; default just the cell under its centre. */
+  w?: number;
+  d?: number;
   ruined?: boolean;
   scale?: number;
   side?: number;
@@ -426,8 +429,25 @@ export class Terrain {
 
     for (const p of this.props) {
       if (!p.solid) continue;
-      const i = this.index(Math.floor(p.x), Math.floor(p.z));
-      if (i >= 0 && this.kinds[i] === Kind.Ground) this.kinds[i] = Kind.Prop;
+      const block = (cx: number, cz: number) => {
+        const i = this.index(cx, cz);
+        if (i >= 0 && this.kinds[i] === Kind.Ground) this.kinds[i] = Kind.Prop;
+      };
+      block(Math.floor(p.x), Math.floor(p.z));
+      if (!p.w || !p.d) continue;
+      // Buildings and other big props: every cell whose centre lies inside the (rotated) footprint.
+      const a = ((p.rot ?? 0) * Math.PI) / 180;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      const R = Math.ceil(Math.hypot(p.w, p.d) / 2) + 1;
+      for (let cz = Math.floor(p.z) - R; cz <= Math.floor(p.z) + R; cz++)
+        for (let cx = Math.floor(p.x) - R; cx <= Math.floor(p.x) + R; cx++) {
+          const dx = cx + 0.5 - p.x;
+          const dz = cz + 0.5 - p.z;
+          const u = dx * c + dz * s;
+          const v = -dx * s + dz * c;
+          if (Math.abs(u) <= p.w / 2 && Math.abs(v) <= p.d / 2) block(cx, cz);
+        }
     }
   }
 

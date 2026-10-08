@@ -2352,14 +2352,18 @@
    "type": "cabin",
    "x": 29.5,
    "z": 10.6,
-   "solid": true
+   "solid": true,
+   "w": 4.6,
+   "d": 3.6
   },
   {
    "type": "cabin",
    "x": 29.5,
    "z": 33.4,
    "rot": 180,
-   "solid": true
+   "solid": true,
+   "w": 4.6,
+   "d": 3.6
   },
   {
    "type": "lantern",

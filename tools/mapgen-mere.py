@@ -85,8 +85,8 @@ for x, z in ((2.5, 3.0), (4.5, 1.8), (13.0, 2.2), (16.5, 2.0), (21.0, 1.8), (27.
     props.append({"type": "pine", "x": x, "z": z, "solid": True})
 props += [
     # On the shore between the path and the lake (further out they sat on the rim bank, hanging off the cliff).
-    {"type": "cabin", "x": 29.5, "z": 10.6, "solid": True},
-    {"type": "cabin", "x": 29.5, "z": D - 10.6, "rot": 180, "solid": True},
+    {"type": "cabin", "x": 29.5, "z": 10.6, "solid": True, "w": 4.6, "d": 3.6},
+    {"type": "cabin", "x": 29.5, "z": D - 10.6, "rot": 180, "solid": True, "w": 4.6, "d": 3.6},
     {"type": "lantern", "x": 15.5, "z": 6.8},
     {"type": "lantern", "x": 15.5, "z": D - 6.8},
     {"type": "lantern", "x": 30.5, "z": 6.8},
