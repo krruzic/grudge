@@ -25,9 +25,6 @@ export interface View {
   level3?: Map<string, THREE.Object3D>;
   mixer?: THREE.AnimationMixer;
   actions: Map<string, THREE.AnimationAction>;
-  /** Bow champions' charge draw (heroSync bowDraw): an upper-body-only copy of the shoot clip, and how far drawn. */
-  draw?: { mixer: THREE.AnimationMixer; action: THREE.AnimationAction; full: number };
-  drawK?: number;
   current?: string;
   bar: Bar;
   ring?: THREE.Mesh;
