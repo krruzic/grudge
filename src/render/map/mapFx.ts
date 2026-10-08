@@ -10,6 +10,7 @@ import { buildHorns, onHorn, syncHorns } from "./horns";
 import { buildJumpPads, onJumpPad, syncJumpPads } from "./jumpPads";
 import { onLantern, syncLantern } from "./lantern";
 import { onGeyser } from "./geysers";
+import { buildIce, onIce, syncIce, type IceOverlay } from "./ice";
 import { buildSerpent, onSerpent, syncSerpent, type SerpentView } from "./serpent";
 import { onMorph, syncMorphs } from "./morphs";
 import { syncMist } from "./mist";
@@ -101,6 +102,8 @@ export class MapFx {
   pendingBursts: { at: number; x: number; y: number; z: number }[] = [];
   // Dune serpent (serpent.ts)
   serpent: SerpentView | null = null;
+  // Frozen lake (ice.ts): water holes and cracks over the terrain-painted ice.
+  ice: IceOverlay | null = null;
 
   constructor(
     readonly world: World,
@@ -113,6 +116,7 @@ export class MapFx {
     buildJumpPads(this);
     buildHorns(this);
     buildSerpent(this);
+    buildIce(this);
     if (world.terrain.avalanche) prepLods();
     const m = world.mapEvents.mistMask;
     if (m) for (let i = 0; i < m.length; i++) if (m[i]) this.mistCells.push(i);
@@ -128,6 +132,7 @@ export class MapFx {
     if (ev.type === "avalanche") onAvalanche(this, ev);
     if (ev.type === "geyser") onGeyser(this, ev);
     if (ev.type === "serpent") onSerpent(this, ev);
+    if (ev.type === "ice") onIce(this, ev);
     if (ev.type === "powerup") onPowerup(this, ev);
   }
 
@@ -145,6 +150,7 @@ export class MapFx {
     syncRuns(this, time, dt);
     syncAvas(this, time, dt);
     syncSerpent(this, dt);
+    syncIce(this, dt);
     syncPowerups(this, time);
   }
 

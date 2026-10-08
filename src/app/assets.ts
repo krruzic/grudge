@@ -78,7 +78,7 @@ const mapGlbs = import.meta.glob("../../assets/maps/*.glb", {
   eager: true,
 }) as Record<string, string>;
 /** Menu order; maps not listed here sort after these. */
-const MAP_ORDER = ["crossing", "ruins", "shoals", "hollow"];
+const MAP_ORDER = ["crossing", "ruins", "shoals", "hollow", "mere"];
 const orderOf = (id: string) => (MAP_ORDER.indexOf(id) + 99) % 99;
 
 export const maps = Object.entries(mapJsons)

@@ -13,6 +13,9 @@ export function speedMul(w: World, e: Entity): number {
   const s = e.status;
   let m = w.ffa ? (w.data.match.ffa?.speedMul ?? 1) : 1;
   if (e.unit && !e.unit.guard) m *= w.terrain.unitSpeedMul;
+  // Emberglass Mere: wading through a broken patch of the lake.
+  const ice = w.mapEvents.iceDef;
+  if (ice && w.mapEvents.inIceWater(e.transform.pos.x, e.transform.pos.z)) m *= ice.waterSlow;
   if (w.time < s.slowUntil) m *= s.slowMul;
   if (w.time < s.buffUntil) m *= s.buffSpeedMul;
   if (s.powerSpeedMul !== undefined) m *= s.powerSpeedMul;
@@ -430,7 +433,12 @@ export function applyKnockback(w: World, dt: number): void {
       });
       if (!e.alive) continue;
     }
-    const decay = Math.exp(-dt * 8);
+    // On the frozen lake a knocked body skates: slower decay, and while it's still sliding fast it counts as
+    // shoved, so a wall it skates into is a wall splat.
+    const ice = w.mapEvents.iceDef;
+    const skating = !!ice && w.mapEvents.onIce(e.transform.pos.x, e.transform.pos.z);
+    if (skating && speed > 5) s.shovedUntil = Math.max(s.shovedUntil ?? 0, w.time + 0.05);
+    const decay = Math.exp(-dt * (skating ? ice!.knockDecay : 8));
     s.kvx *= decay;
     s.kvz *= decay;
   }

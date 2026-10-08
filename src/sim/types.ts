@@ -715,6 +715,15 @@ export type SimEvent =
   | { type: "geyser"; stage: "warn" | "erupt"; id: number; x: number; y: number; z: number; seconds: number }
   | { type: "serpent"; stage: "warn" | "breach"; x: number; y: number; z: number; seconds: number }
   | {
+      type: "ice";
+      stage: "crack" | "break" | "warn" | "refreeze";
+      id: number;
+      x: number;
+      y: number;
+      z: number;
+      seconds: number;
+    }
+  | {
       type: "powerup";
       stage: "spawn" | "take";
       id: number;

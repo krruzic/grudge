@@ -8,6 +8,7 @@
 //   fountain   a healing fountain
 //   geysers    cider wells that erupt in turn and fling whoever stands on them (russet hollow)
 //   serpent    a dune serpent circling the sand sea, breaching on a timer and hunting the Grudge carrier
+//   ice        a slick frozen lake that cracks under heavy hits into patches of icy water (emberglass mere)
 // Implementation per feature lives in src/sim/mapEvents/*; this class holds the state and delegates.
 import { Kind } from "./terrain.ts";
 import type { World } from "./world.ts";
@@ -20,6 +21,7 @@ import { updateMist, type MistDef } from "./mapEvents/mist.ts";
 import { findPits, updateLantern, type Lantern, type LanternDef } from "./mapEvents/lantern.ts";
 import { geyserWells, updateGeysers, type GeyserWell, type GeysersDef } from "./mapEvents/geysers.ts";
 import { makeSerpent, updateSerpent, type Serpent, type SerpentDef } from "./mapEvents/serpent.ts";
+import { buildIce, crackIce, patchAt, updateIce, type IceDef, type IcePatch } from "./mapEvents/ice.ts";
 import {
   avalancheLanes,
   updateAvalanche,
@@ -45,6 +47,7 @@ export interface FountainDef {
 
 export type { GeysersDef, GeyserWell } from "./mapEvents/geysers.ts";
 export type { Serpent, SerpentDef } from "./mapEvents/serpent.ts";
+export type { IceDef, IcePatch } from "./mapEvents/ice.ts";
 
 export class MapEvents {
   // Cider wells (mapEvents/geysers.ts): the group that erupts next and when
@@ -53,6 +56,10 @@ export class MapEvents {
   geyserGroup: "a" | "b" = "a";
   geyserAt = Infinity;
   geyserWarned = false;
+  // Frozen lake (mapEvents/ice.ts): its patches and which patch each cell belongs to (-1 = not ice)
+  iceDef?: IceDef;
+  icePatches: IcePatch[] = [];
+  icePatchOf = new Int16Array(0);
   // Dune serpent (mapEvents/serpent.ts)
   serpentDef?: SerpentDef;
   serpent: Serpent | null = null;
@@ -195,6 +202,8 @@ export class MapEvents {
       this.geyserWells = geyserWells(this, this.geysers);
       this.geyserAt = this.geysers.firstSeconds;
     }
+    this.iceDef = w.terrain.ice as IceDef | undefined;
+    if (this.iceDef) buildIce(this, this.iceDef);
     this.serpentDef = w.terrain.serpent as SerpentDef | undefined;
     if (this.serpentDef) this.serpent = makeSerpent(this, this.serpentDef);
     this.gates = w.terrain.gates as GatesDef | undefined;
@@ -263,6 +272,23 @@ export class MapEvents {
     return mists.mistBand(this, time);
   }
 
+  /** Standing on solid lake ice (slick). */
+  onIce(x: number, z: number): boolean {
+    const p = this.iceDef ? patchAt(this, x, z) : undefined;
+    return !!p && !p.broken;
+  }
+
+  /** Standing in a broken patch of icy water (slow, no dodging). */
+  inIceWater(x: number, z: number): boolean {
+    const p = this.iceDef ? patchAt(this, x, z) : undefined;
+    return !!p && p.broken;
+  }
+
+  /** A heavy blow or a landing on the lake: wears the patch under (x, z) toward breaking. */
+  crackIce(x: number, z: number, amount: number): void {
+    if (this.iceDef) crackIce(this, this.iceDef, x, z, amount);
+  }
+
   /** Lantern haunt buff multiplier for damage or speed. */
   hauntMul(e: { status: { hauntUntil?: number } }, kind: "damage" | "speed"): number {
     const d = this.lanternDef;
@@ -279,6 +305,7 @@ export class MapEvents {
     if (this.gates) updateGates(this, this.gates);
     if (this.geysers) updateGeysers(this, this.geysers);
     if (this.serpentDef) updateSerpent(this, this.serpentDef);
+    if (this.iceDef) updateIce(this, this.iceDef);
     if (this.fountain && this.w.tick % 6 === 0) this.updateFountain(this.fountain);
   }
 

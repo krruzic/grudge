@@ -233,6 +233,15 @@ export function playEvent(a: Audio, ev: SimEvent, w: World): void {
         a.play("whoosh.big", 0.6, { rate: 0.8 });
       }
       return;
+    case "ice":
+      // Emberglass Mere: a sharp crackle as the lake cracks, a shatter and a plunge when a patch gives way, a thin
+      // tinkle as it refreezes.
+      if (ev.stage === "crack") a.play("glass", 0.45, { rate: 1.5 });
+      else if (ev.stage === "break") {
+        a.play("glass", 0.8, { rate: 0.75, priority: true });
+        a.play("splash.big", 0.7);
+      } else if (ev.stage === "refreeze") a.play("glass", 0.25, { rate: 2 });
+      return;
     case "serpent":
       if (ev.stage === "warn") {
         a.play("rock.rumble", 0.8, { priority: true });

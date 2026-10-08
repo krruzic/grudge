@@ -50,6 +50,9 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   }
   if (h.wing && tickWing(w, e, cmd)) return;
   cmd = stuckInHoney(w, e, cmd);
+  // Wading in a broken patch of the frozen lake: no rolling out of it.
+  if (cmd.dodge && w.mapEvents.iceDef && w.mapEvents.inIceWater(e.transform.pos.x, e.transform.pos.z))
+    cmd = { ...cmd, dodge: false };
   if (h.jump) {
     tickJump(w, e);
     return;
@@ -266,6 +269,8 @@ function tickJump(w: World, e: Entity): void {
     h.jumpReadyAt = w.time + 1.2;
     e.status.invulnUntil = Math.max(e.status.invulnUntil, w.time + 0.3);
     w.emit({ type: "jumppad", stage: "land", pad: j.pad, id: e.id, x: j.tx, y: t.y, z: j.tz, windup: 0, dur: 0 });
+    // Landing hard on the frozen lake cracks it.
+    if (w.mapEvents.iceDef) w.mapEvents.crackIce(j.tx, j.tz, w.mapEvents.iceDef.landCrack);
     if (j.pad < 0) h.jumpReadyAt = w.time;
   }
 }
@@ -521,7 +526,10 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
   h.vel.x = h.vel.z = 0;
   const adef = a.name === "a" || a.name === "b" || a.name === "r" || a.name === "z" ? ab[a.name] : null;
   if (a.kind === "dodge") {
-    w.moveBy(e, a.dirX * b.dodgeSpeed * dt, a.dirZ * b.dodgeSpeed * dt);
+    // On the frozen lake the roll is a slide: faster, and it hands its speed on as momentum when it ends.
+    const ice = w.mapEvents.iceDef;
+    const boost = ice && w.mapEvents.onIce(t.pos.x, t.pos.z) ? (ice.rollMul ?? 1.25) : 1;
+    w.moveBy(e, a.dirX * b.dodgeSpeed * boost * dt, a.dirZ * b.dodgeSpeed * boost * dt);
   } else if (a.kind === "kegrocket") {
     kegRocketTick(w, e, a);
   } else if (a.kind === "slide") {
@@ -581,6 +589,12 @@ function tickAction(w: World, e: Entity, ab: Abilities): void {
     if (a.kind !== "dodge" && a.name !== "hit") h.actionEndAt = w.time;
     if (a.name === "b" && a.kind === "dash") endDash(w, e, a);
     h.action = null;
+    const ice = w.mapEvents.iceDef;
+    if (a.kind === "dodge" && ice && w.mapEvents.onIce(t.pos.x, t.pos.z)) {
+      const v = b.dodgeSpeed * (ice.rollCarry ?? 0.7);
+      h.vel.x = a.dirX * v;
+      h.vel.z = a.dirZ * v;
+    }
   }
   h.blocking = false;
 }
@@ -621,7 +635,9 @@ function freeMove(w: World, e: Entity, cmd: Command): void {
   const dvx = tx - h.vel.x;
   const dvz = tz - h.vel.z;
   const dv = Math.hypot(dvx, dvz);
-  const maxDv = b.accel * dt;
+  // Solid lake ice (Emberglass Mere): slow to start, slow to stop.
+  const ice = w.mapEvents.iceDef;
+  const maxDv = b.accel * dt * (ice && w.mapEvents.onIce(t.pos.x, t.pos.z) ? ice.accelMul : 1);
   if (dv > maxDv) {
     h.vel.x += (dvx / dv) * maxDv;
     h.vel.z += (dvz / dv) * maxDv;

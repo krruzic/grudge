@@ -8,7 +8,7 @@
 // (PROP_SHADOW footprints), sky/ground ambient and multi-radius ambient occlusion.
 import * as THREE from "three";
 import heroesData from "../../../data/heroes.json";
-import { FLAG_DIRT, FLAG_GRASS, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../../sim/terrain";
+import { FLAG_DIRT, FLAG_GRASS, FLAG_ICE, FLAG_PAVING, FLAG_TIDE, Kind, type Terrain } from "../../sim/terrain";
 import type { Surround } from "../../sim/surround";
 
 export interface TerrainTextures {
@@ -22,6 +22,8 @@ export interface TerrainTextures {
   pavId: THREE.Texture;
   ruin?: { crack: THREE.Texture };
   lake?: THREE.Texture;
+  /** Frozen lake sheet painted on FLAG_ICE cells (Emberglass Mere). */
+  ice?: THREE.Texture;
   /** Second grass blended in patches outside the field (deathmatch arenas), and natural rock for cliffs outside the
    * field when the palette's rock is a built wall. */
   grass2?: THREE.Texture;
@@ -31,6 +33,14 @@ export interface TerrainTextures {
 }
 
 const MARGIN = 48;
+
+/** Frozen lake (FLAG_ICE): the ice texture over everything else, at two scales so the tile doesn't repeat. */
+const ICE = `if (vIce > 0.0) {
+  vec3 ic = textureGrad(tIce, wuv / 9.0, dpx.xz / 9.0, dpy.xz / 9.0).rgb;
+  float big = textureGrad(tIce, wuv / 37.0 + 0.31, dpx.xz / 37.0, dpy.xz / 37.0).g;
+  ic *= 0.84 + big * 0.32;
+  tsum = mix(tsum, ic, vIce);
+}`;
 
 function hash(x: number, z: number): number {
   const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
@@ -312,6 +322,13 @@ function terrainGeometry(
   const splat = new Float32Array(count * 4);
   const sandW = new Float32Array(count);
   const lakeW = tex.lake ? new Float32Array(count) : null;
+  // Frozen lake: ice weight per vertex, full at the lake floor of the ICE cells and fading out up the bank.
+  const iceW = tex.ice ? new Float32Array(count) : null;
+  let iceFloor = Infinity;
+  if (iceW)
+    for (let i = 0; i < t.flags.length; i++)
+      if (t.flags[i] & FLAG_ICE)
+        iceFloor = Math.min(iceFloor, t.groundHeight((i % t.width) + 0.5, Math.floor(i / t.width) + 0.5));
   const altFromGrass = sur?.style === "sea" || sur?.style === "alpine";
   const altFromDirt = sur?.style === "garden";
   const col = new Float32Array(count * 3);
@@ -457,6 +474,12 @@ function terrainGeometry(
       const wob = (vnoise(x * 0.45, z * 0.45) - 0.5) * 0.7;
       if (lakeW)
         lakeW[k] = THREE.MathUtils.smoothstep(wet + wob * 0.4, 0.15, 0.6) * (h < t.waterLevel - 0.05 ? 0.4 : 1);
+      if (iceW && inside(x, z)) {
+        let near = false;
+        for (let dz = -2; dz <= 1 && !near; dz++)
+          for (let dx = -2; dx <= 1 && !near; dx++) near = cellFlag(x + dx, z + dz, FLAG_ICE) > 0;
+        if (near) iceW[k] = 1 - THREE.MathUtils.smoothstep(h, iceFloor + 0.05, iceFloor + 0.16);
+      }
       dirt = THREE.MathUtils.smoothstep(dirt + wob, 0.2, 0.75);
       paving = THREE.MathUtils.smoothstep(paving + wob * 0.3, 0.3, 0.7);
       if (h < t.waterLevel + 0.25) dirt = Math.max(dirt, 0.9);
@@ -615,6 +638,7 @@ function terrainGeometry(
   if (ruinW) geo.setAttribute("aRuin", new THREE.BufferAttribute(ruinW, 4));
   const hasLake = !!lakeW && lakeW.some((v) => v > 0);
   if (hasLake) geo.setAttribute("aLake", new THREE.BufferAttribute(lakeW!, 1));
+  if (iceW && iceW.some((v) => v > 0)) geo.setAttribute("aIce", new THREE.BufferAttribute(iceW, 1));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
   return geo;
 }
@@ -633,6 +657,7 @@ export function buildTerrainMesh(
   const geo = cached ?? terrainGeometry(t, tex, light, sur);
   const hasSand = !!geo.getAttribute("aSand");
   const hasLake = !!geo.getAttribute("aLake");
+  const hasIce = !!geo.getAttribute("aIce") && !!tex.ice;
   const ruined = !!tex.ruin;
   // Alpine snow takes over every grass vertex (altFromGrass), so it covers as much ground as grass does elsewhere
   // and gets the same hex-tile + drift treatment. The grass branch never runs there, so the cost matches.
@@ -655,6 +680,7 @@ export function buildTerrainMesh(
     tPavId: { value: rawData(tex.pavId) },
     tCrack: { value: tex.ruin ? prepare(tex.ruin.crack) : null },
     tLake: { value: hasLake ? prepare(tex.lake!) : null },
+    tIce: { value: hasIce ? prepare(tex.ice!) : null },
     tGrass2: { value: tex.grass2 ? prepare(tex.grass2) : null },
     tRim: { value: tex.rim ? prepare(tex.rim) : null },
     uField: { value: new THREE.Vector2(t.width, t.depth) },
@@ -664,18 +690,18 @@ export function buildTerrainMesh(
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
-        `#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;${hasSand ? "\nattribute float aSand;\nvarying float vSand;" : ""}${ruined ? "\nattribute vec4 aRuin;\nvarying vec4 vRuin;" : ""}${hasLake ? "\nattribute float aLake;\nvarying float vLake;" : ""}`,
+        `#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;${hasSand ? "\nattribute float aSand;\nvarying float vSand;" : ""}${ruined ? "\nattribute vec4 aRuin;\nvarying vec4 vRuin;" : ""}${hasLake ? "\nattribute float aLake;\nvarying float vLake;" : ""}${hasIce ? "\nattribute float aIce;\nvarying float vIce;" : ""}`,
       )
       .replace(
         "#include <worldpos_vertex>",
-        `#include <worldpos_vertex>${hasSand ? "\nvSand = aSand;" : ""}${ruined ? "\nvRuin = aRuin;" : ""}${hasLake ? "\nvLake = aLake;" : ""}\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);`,
+        `#include <worldpos_vertex>${hasSand ? "\nvSand = aSand;" : ""}${ruined ? "\nvRuin = aRuin;" : ""}${hasLake ? "\nvLake = aLake;" : ""}${hasIce ? "\nvIce = aIce;" : ""}\nvSplat = splat;\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * normal);`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
 ${tex.cobbleM ? `#define COBBLE_M ${tex.cobbleM.toFixed(1)}\n` : ""}uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tRock; uniform sampler2D tCobble;${arena ? "\nuniform sampler2D tGrass2; uniform sampler2D tRim; uniform vec2 uField;" : ""}
-varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${TERRAIN_HEAD}${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}${hasLake ? "\nuniform sampler2D tLake; varying float vLake;" : ""}`,
+varying vec4 vSplat; varying vec3 vWPos; varying vec3 vWNrm;${TERRAIN_HEAD}${hasSand ? "\nuniform sampler2D tSand; varying float vSand;" : ""}${ruined ? RUIN_HEAD : ""}${hasLake ? "\nuniform sampler2D tLake; varying float vLake;" : ""}${hasIce ? "\nuniform sampler2D tIce; varying float vIce;" : ""}`,
       )
       .replace(
         "#include <map_fragment>",
@@ -730,12 +756,13 @@ if (sw.z > 0.0) {
   tsum += cr * sw.z;
 }
 ${ruined ? RUIN_PAVING : PAVING}
+${hasIce ? ICE : ""}
 diffuseColor.rgb *= tsum;`,
       );
   };
 
   mat.customProgramCacheKey = () =>
-    `terrain${hasSand ? "-sand" : ""}${hexAlt ? "-snow" : ""}${hexDirt ? "-hexdirt" : ""}${tex.grass2 ? "-g2" : ""}${tex.rim ? "-rim" : ""}${tex.cobbleM ? `-cob${tex.cobbleM}` : ""}${ruined ? "-ruin" : ""}${hasLake ? "-lake" : ""}`;
+    `terrain${hasSand ? "-sand" : ""}${hexAlt ? "-snow" : ""}${hexDirt ? "-hexdirt" : ""}${tex.grass2 ? "-g2" : ""}${tex.rim ? "-rim" : ""}${tex.cobbleM ? `-cob${tex.cobbleM}` : ""}${ruined ? "-ruin" : ""}${hasLake ? "-lake" : ""}${hasIce ? "-ice" : ""}`;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = "Terrain";
   mesh.receiveShadow = true;

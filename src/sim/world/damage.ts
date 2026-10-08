@@ -156,6 +156,10 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
   });
   if (!blocked && target.kind !== "structure" && fx !== undefined && fz !== undefined)
     applyImpact(w, target, amount, opts, fx, fz);
+  // Emberglass Mere: a heavy blow taken on the frozen lake cracks the patch under the victim.
+  const ice = w.mapEvents.iceDef;
+  if (ice && target.kind !== "structure" && !opts.tick && (opts.big || (opts.knockback ?? 0) >= 8 || amount >= 70))
+    w.mapEvents.crackIce(tp.pos.x, tp.pos.z, Math.min(ice.hitMax, Math.max(ice.hitMin, amount * ice.hitMul)));
   if (target.dummy) {
     target.dummyHitAt = w.time;
     if (target.hp < 1) target.hp = 1;

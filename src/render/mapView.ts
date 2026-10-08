@@ -31,6 +31,7 @@ import abbeyLongGrassUrl from "../../assets/textures/abbey_longgrass.png?url";
 import quarryScrubUrl from "../../assets/textures/quarry_scrub.png?url";
 import cliffUrl from "../../assets/textures/cliff.png?url";
 import lakeUrl from "../../assets/textures/lakebed.png?url";
+import iceUrl from "../../assets/textures/ice.png?url";
 import { buildTerrainMesh, buildWaterMesh, type TerrainLight, type TerrainTextures } from "./map/terrainMesh";
 import { cachedTerrain, storeTerrain } from "./map/terrainCache";
 import { cacheCanvas } from "../ui/cacheCanvas";
@@ -258,7 +259,10 @@ const PALETTES: Record<
 export async function loadMap(
   url: string,
   terrain: Terrain,
-  textureUrls: Record<Exclude<keyof TerrainTextures, "ruin" | "lake" | "pavId" | "grass2" | "rim" | "cobbleM">, string>,
+  textureUrls: Record<
+    Exclude<keyof TerrainTextures, "ruin" | "lake" | "ice" | "pavId" | "grass2" | "rim" | "cobbleM">,
+    string
+  >,
   light?: TerrainLight,
 ): Promise<MapView> {
   const texLoader = new THREE.TextureLoader();
@@ -282,13 +286,15 @@ export async function loadMap(
   const ruin = ruined ? { crack } : undefined;
   const lake = terrain.tideCells.length ? await texLoader.loadAsync(lakeUrl) : undefined;
   if (lake) lake.anisotropy = ANISO;
+  const ice = terrain.ice ? await texLoader.loadAsync(iceUrl) : undefined;
+  if (ice) ice.anisotropy = ANISO;
   const [grass2, rim] = await Promise.all(
     [palette?.grass2, palette?.rim].map((u) => (u ? texLoader.loadAsync(u) : Promise.resolve(undefined))),
   );
   for (const tx of [grass2, rim]) if (tx) tx.anisotropy = ANISO;
   const terrainMesh = buildTerrainMesh(
     terrain,
-    { grass, dirt, rock, cobble, water, sand, pavId, ruin, lake, grass2, rim, cobbleM: palette?.cobbleM },
+    { grass, dirt, rock, cobble, water, sand, pavId, ruin, lake, ice, grass2, rim, cobbleM: palette?.cobbleM },
     light,
     sur,
     cached,

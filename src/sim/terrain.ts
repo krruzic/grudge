@@ -35,7 +35,7 @@ export interface NoiseOp {
 }
 
 export interface CellOp extends Rect {
-  op: "wall" | "water" | "ford" | "bridge" | "dirt" | "paving" | "grass" | "pit" | "tide";
+  op: "wall" | "water" | "ford" | "bridge" | "dirt" | "paving" | "grass" | "pit" | "tide" | "ice";
   style?: string;
   y?: number;
   deep?: boolean;
@@ -89,6 +89,7 @@ export interface MapData {
   gates?: unknown;
   geysers?: unknown;
   serpent?: unknown;
+  ice?: unknown;
   palette?: string;
   /** Soldier march speed multiplier for long fields (waves spend less time walking through the fight). */
   unitSpeedMul?: number;
@@ -116,6 +117,8 @@ export const FLAG_PAVING = 2;
 export const FLAG_GRASS = 4;
 export const FLAG_DEEP = 8;
 export const FLAG_TIDE = 16;
+/** Frozen lake sheet (map event "ice", mapEvents/ice.ts): slick, and cracks into patches of water. */
+export const FLAG_ICE = 32;
 
 function smooth(t: number): number {
   t = Math.min(1, Math.max(0, t));
@@ -168,6 +171,7 @@ export class Terrain {
   readonly gates?: unknown;
   readonly geysers?: unknown;
   readonly serpent?: unknown;
+  readonly ice?: unknown;
   /** Ground texture palette for the renderer ("autumn"); default by surround style. */
   readonly palette?: string;
   /** MapData.unitSpeedMul (1 = normal). */
@@ -234,6 +238,7 @@ export class Terrain {
     this.gates = data.gates;
     this.geysers = data.geysers;
     this.serpent = data.serpent;
+    this.ice = data.ice;
     this.palette = data.palette;
     this.unitSpeedMul = data.unitSpeedMul ?? 1;
     this.atmosphere = data.atmosphere as Record<string, string | number | boolean> | undefined;
@@ -336,6 +341,9 @@ export class Terrain {
               break;
             case "tide":
               this.flags[i] |= FLAG_TIDE;
+              break;
+            case "ice":
+              this.flags[i] |= FLAG_ICE;
               break;
           }
         });

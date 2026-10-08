@@ -228,6 +228,7 @@ AUTUMN = MAP_NAME == "hollow"
 DESERT = MAP_NAME == "spires"
 QUARRY = MAP_NAME == "quarry"
 ABBEY = MAP_NAME == "abbey"
+MERE = MAP_NAME == "mere"
 
 
 def autumn_image(name, img):
@@ -253,6 +254,23 @@ def autumn_image(name, img):
             lum = 0.3 * px[i] + 0.55 * px[i + 1] + 0.15 * px[i + 2]
             px[i], px[i + 1], px[i + 2] = lum * 0.72, lum * 1.0, lum * 0.86
         img.pixels.foreach_set(px)
+        return img
+    if MERE and name == "tallgrass" and img is not None:
+        # Frozen reeds: pale straw blades with snow settled on their upper half (rows run bottom to top).
+        img = img.copy()
+        img.name = "tallgrass_frost"
+        w, h = img.size
+        px = list(img.pixels)
+        for i in range(0, len(px), 4):
+            r, g, b = px[i], px[i + 1], px[i + 2]
+            lum = 0.3 * r + 0.55 * g + 0.15 * b
+            row = (i // 4) // w
+            snow = min(1.0, max(0.0, (row / h - 0.35) / 0.55)) ** 1.3 * 0.85
+            base = (min(1.0, lum * 1.15 + 0.12), lum * 1.0 + 0.08, lum * 0.78 + 0.04)
+            for k, sv in enumerate((0.95, 0.97, 1.0)):
+                px[i + k] = base[k] + (sv - base[k]) * snow
+        img.pixels.foreach_set(px)
+        img.pack()
         return img
     if (DESERT or QUARRY) and name == "tallgrass" and img is not None:
         # Dry pale desert / quarry scrub.

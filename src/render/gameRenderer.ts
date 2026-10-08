@@ -751,6 +751,7 @@ export class GameRenderer {
         ev.type === "jumppad" ||
         ev.type === "horn" ||
         ev.type === "geyser" ||
+        ev.type === "ice" ||
         ev.type === "serpent" ||
         ev.type === "powerup"
       )
