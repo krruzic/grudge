@@ -75,6 +75,7 @@ export function syncHero(ents: EntityViews, e: Entity, v: View, facing: number, 
   if (w.time < e.status.stunUntil) v.body.rotation.z = Math.sin(time * 20) * 0.08;
   else v.body.rotation.z = 0;
   v.mixer?.update(dt);
+  bowDraw(e, v, dt);
   applySlap(ents, e, v, dt);
   if (a && a.kind === "combo" && a.t > a.hitAt * 0.45 && a.t < a.hitAt + 0.07) swingTrail(ents, e, v);
 }
@@ -121,6 +122,46 @@ function syncWard(ents: EntityViews, e: Entity, v: View, dt: number, time: numbe
 }
 
 const DIG_COL = new THREE.Color();
+
+/** Champions who draw a bow back while charging (Wren's power shots, Tadwick's harpoons). */
+const BOW_HEROES = new Set(["marksman", "harpooner"]);
+/** Clips that open with the same grip / nock / draw as shoot (bow champions only). */
+const DRAW_CLIPS = new Set(["shoot", "attack_a", "attack_b", "attack_c", "throw", "heartseeker"]);
+/** Shoot-clip bones the draw poses; hips, legs and root stay with the walk / idle clip underneath. */
+const DRAW_BONES = /^(spine|chest|neck|head|arm_|forearm_|hand_|bow_)/;
+/** Fraction of the shoot clip at full draw (frame 9 of 18: anchored, just before the release). */
+const FULL_DRAW = 0.5;
+/** Seconds of charge to the full draw (a hold reaches full power at 1 s). */
+const DRAW_SECONDS = 0.9;
+
+/**
+ * Bow champions holding a charge (A or B): the upper body is posed from the shoot clip at a point that follows the
+ * charge - grip, nock, then the string drawn back to the anchor at full power - over whatever the legs are doing.
+ * A second mixer on the same skeleton, updated after the main one, so its bones win while it's applied.
+ */
+function bowDraw(e: Entity, v: View, dt: number): void {
+  const h = e.hero!;
+  if (!BOW_HEROES.has(h.type) || !v.mixer) return;
+  const charging = !!h.charging && !h.action && !h.dead;
+  if (!charging) {
+    if (!h.action) v.drawK = 0;
+    return;
+  }
+  if (!v.draw) {
+    const shoot = v.actions.get("shoot")?.getClip();
+    if (!shoot) return;
+    const tracks = shoot.tracks.filter((t) => DRAW_BONES.test(t.name.split(".")[0]));
+    const mixer = new THREE.AnimationMixer(v.mixer.getRoot() as THREE.Object3D);
+    const action = mixer.clipAction(new THREE.AnimationClip("draw", shoot.duration, tracks));
+    action.play();
+    v.draw = { mixer, action, full: shoot.duration * FULL_DRAW };
+  }
+  // Follows the charge, eased in so the grip comes quickly and the last of the pull is slow.
+  const want = 1 - (1 - Math.min(1, (h.chargeT ?? 0) / DRAW_SECONDS)) ** 2;
+  v.drawK = Math.min(want, (v.drawK ?? 0) + dt * 6);
+  v.draw.action.time = v.draw.full * v.drawK;
+  v.draw.mixer.update(0);
+}
 
 /**
  * Red hull outline while Hogshead is Dug In (like the gold invulnerable glow, in his blood-red), then a fainter
@@ -187,6 +228,13 @@ function syncActionAnim(ents: EntityViews, e: Entity, v: View, facing: number, d
     const len = ents.clipLen(v, anim);
     const scale = anim === "block" || anim === "idle" ? 1 : len / Math.max(0.15, Math.min(a.dur, 1.2));
     ents.play(v, anim, swing ? Math.min(scale, 2) : scale, true, swing && scale > 2 ? 0.04 : 0.1);
+    // A charged shot lets go from the drawn pose: the shoot clip picks up where the charge draw left it instead
+    // of snapping back to the stance and drawing again.
+    // (Every bow clip - shoot, the attack_* shots, Tadwick's heavy throw - reaches full draw at frame 9.)
+    const drawn = v.draw && (v.drawK ?? 0) > 0.2 ? v.draw.full * (v.drawK ?? 0) : 0;
+    const act = v.current ? v.actions.get(v.current) : undefined;
+    if (drawn > 0 && act && DRAW_CLIPS.has(v.current!)) act.time = Math.max(act.time, drawn);
+    v.drawK = 0;
   }
   v.lastAction = a;
   if (
