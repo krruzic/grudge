@@ -109,8 +109,10 @@ export function fireTurret(w: World, e: Entity, a: HeroAction, def: AbilityDef):
 
 /**
  * Siege works (engineer R): a raised size x size platform (as a bridge-deck terrain mod) plus a ramp leading up to
- * it from the hero's side, and a destructible anchor structure that ends the mod when killed. Only one works per
- * engineer; the mod is refused if it would cut any team off (applyModIfOpen).
+ * it (rampRun), and a destructible anchor structure that ends the mod when killed. Only one works per engineer.
+ * Placements are tried until one can be walked up onto from where the hero stands without cutting any team off
+ * (applyModIfOpen with a climb check): a pad, building or wall under the ramp used to leave a hole you couldn't
+ * climb.
  */
 export function fireWorks(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
   const t = e.transform;
@@ -120,67 +122,73 @@ export function fireWorks(w: World, e: Entity, a: HeroAction, def: AbilityDef): 
   const hi = lo + size - 1;
   const half = size / 2;
   const blockedCell = (i: number): boolean => worksBlocked(w, i);
-  // Platform: walk back from the target distance in 0.5 steps until a fully free size x size block is found.
-  let plat: number[] | null = null;
-  let pcx = 0;
-  let pcz = 0;
   const startDist = a.placed ? Math.max(2.5, Math.hypot(a.toX! - t.pos.x, a.toZ! - t.pos.z)) : (def.range ?? 5);
-  for (let dist = startDist; dist >= 2.5 && !plat; dist -= 0.5) {
-    pcx = Math.floor(t.pos.x + a.dirX * dist);
-    pcz = Math.floor(t.pos.z + a.dirZ * dist);
-    const cells: number[] = [];
+  // Every placement is tried for real - platform at decreasing distances, ramp toward the hero, then the sides and
+  // the back - and kept only if the hero can walk up onto it from where he stands (and no road is cut).
+  for (const m of w.mods) if (m.kind === "works" && m.owner === e.id) m.until = Math.min(m.until, w.time);
+  let placed: { m: TerrainMod; plat: number[]; base: number; top: number; cx: number; cz: number } | null = null;
+  let room = false;
+  for (let dist = startDist; dist >= 2.5 && !placed; dist -= 0.5) {
+    const pcx = Math.floor(t.pos.x + a.dirX * dist);
+    const pcz = Math.floor(t.pos.z + a.dirZ * dist);
+    const plat: number[] = [];
     let ok = true;
-    for (let dz = lo; dz <= hi && ok; dz++) {
+    for (let dz = lo; dz <= hi && ok; dz++)
       for (let dx = lo; dx <= hi; dx++) {
         const i = tr.index(pcx + dx, pcz + dz);
         if (i < 0 || blockedCell(i)) {
           ok = false;
           break;
         }
-        cells.push(i);
+        plat.push(i);
+      }
+    if (!ok) continue;
+    room = true;
+    // Deck height: `height` above the highest ground (or water surface) under the platform.
+    let base = -Infinity;
+    for (const i of plat)
+      base = Math.max(
+        base,
+        tr.kinds[i] === Kind.Ground
+          ? tr.groundHeight((i % tr.width) + 0.5, Math.floor(i / tr.width) + 0.5)
+          : tr.waterLevel,
+      );
+    const top = base + (def.height ?? 1.5);
+    const cx = pcx + 0.5 + (lo + hi) / 2;
+    const cz = pcz + 0.5 + (lo + hi) / 2;
+    for (const [dx, dz] of [
+      [a.dirX, a.dirZ],
+      [-a.dirZ, a.dirX],
+      [a.dirZ, -a.dirX],
+      [-a.dirX, -a.dirZ],
+    ]) {
+      const run = rampRun(w, def, plat, cx, cz, half, size, top, dx, dz);
+      const m: TerrainMod = {
+        id: w.newId(),
+        kind: "works",
+        team: e.team,
+        owner: e.id,
+        cells: [...plat, ...run.cells],
+        prevKind: [],
+        prevDeck: [],
+        deck: [...plat.map(() => top), ...run.deck],
+        until: w.time + (def.seconds ?? 25),
+        cx,
+        cz,
+        top,
+      };
+      if (w.applyModIfOpen(m, { from: { x: t.pos.x, z: t.pos.z }, to: { x: cx, z: cz } })) {
+        placed = { m, plat, base, top, cx, cz };
+        break;
       }
     }
-    if (ok) plat = cells;
   }
-  if (!plat) {
-    w.emit({ type: "notice", team: e.team, text: "NO ROOM TO BUILD" });
-    return;
-  }
-  // Deck height: `height` above the highest ground (or water surface) under the platform.
-  let base = -Infinity;
-  for (const i of plat)
-    base = Math.max(
-      base,
-      tr.kinds[i] === Kind.Ground
-        ? tr.groundHeight((i % tr.width) + 0.5, Math.floor(i / tr.width) + 0.5)
-        : tr.waterLevel,
-    );
-  const top = base + (def.height ?? 1.5);
-  const cells = plat.slice();
-  const deck = plat.map(() => top);
-  const cx = pcx + 0.5 + (lo + hi) / 2;
-  const cz = pcz + 0.5 + (lo + hi) / 2;
-  addWorksRamp(w, a, def, cells, deck, cx, cz, half, size, top);
-  for (const m of w.mods) if (m.kind === "works" && m.owner === e.id) m.until = Math.min(m.until, w.time);
-  const m: TerrainMod = {
-    id: w.newId(),
-    kind: "works",
-    team: e.team,
-    owner: e.id,
-    cells,
-    prevKind: [],
-    prevDeck: [],
-    deck,
-    until: w.time + (def.seconds ?? 25),
-    cx,
-    cz,
-    top,
-  };
-  if (!w.applyModIfOpen(m)) {
-    w.emit({ type: "notice", team: e.team, text: "WOULD BLOCK THE ROAD" });
+  if (!placed) {
+    w.emit({ type: "notice", team: e.team, text: room ? "NO WAY UP FROM HERE" : "NO ROOM TO BUILD" });
     e.hero!.cooldowns.r = w.time + 1;
     return;
   }
+  const { m, plat, base, top, cx, cz } = placed;
   // Lift anyone standing where the platform appeared.
   for (const o of w.entities) {
     if (!o.alive || o.kind === "structure") continue;
@@ -245,54 +253,60 @@ function worksBlocked(w: World, i: number): boolean {
   );
 }
 
-/**
- * Append ramp cells (and their deck heights) from the platform edge facing the hero back down to the ground.
- * The ramp starts at `length` and lengthens (up to 12) until its slope is <= 0.38.
- */
-function addWorksRamp(
+/** The ramp cells for one direction (dx, dz = from the ramp foot toward the platform); `whole` when every cell
+ * along its middle lane could be laid. */
+function rampRun(
   w: World,
-  a: HeroAction,
   def: AbilityDef,
-  cells: number[],
-  deck: number[],
+  plat: number[],
   cx: number,
   cz: number,
   half: number,
   size: number,
   top: number,
-): void {
+  dx: number,
+  dz: number,
+): { cells: number[]; deck: number[]; whole: boolean } {
   const tr = w.terrain;
   const shift = size % 2 === 0 ? 0.5 : 0;
-  const ex = cx - a.dirX * (half + 0.05) - a.dirZ * shift;
-  const ez = cz - a.dirZ * (half + 0.05) + a.dirX * shift;
+  const ex = cx - dx * (half + 0.05) - dz * shift;
+  const ez = cz - dz * (half + 0.05) + dx * shift;
   let len = def.length ?? 5;
-  let fx = ex - a.dirX * len;
-  let fz = ez - a.dirZ * len;
+  let fx = ex - dx * len;
+  let fz = ez - dz * len;
   let footY = w.groundY(fx, fz);
   while (len < 12 && (top - footY) / len > 0.38) {
     len += 1;
-    fx = ex - a.dirX * len;
-    fz = ez - a.dirZ * len;
+    fx = ex - dx * len;
+    fz = ez - dz * len;
     footY = w.groundY(fx, fz);
   }
+  const cells: number[] = [];
+  const deck: number[] = [];
+  let whole = true;
   const width = def.width ?? 2;
   const steps = Math.ceil(len * 3);
   for (let st = 0; st <= steps; st++) {
     const f = st / steps;
     for (let wv = -width / 2; wv <= width / 2; wv += 0.5) {
-      const x = fx + (ex - fx) * f - a.dirZ * wv;
-      const z = fz + (ez - fz) * f + a.dirX * wv;
+      const x = fx + (ex - fx) * f - dz * wv;
+      const z = fz + (ez - fz) * f + dx * wv;
       const i = tr.index(Math.floor(x), Math.floor(z));
-      if (i < 0 || cells.includes(i) || worksBlocked(w, i)) continue;
+      if (i < 0 || plat.includes(i) || cells.includes(i)) continue;
+      if (worksBlocked(w, i)) {
+        if (Math.abs(wv) < 0.3) whole = false;
+        continue;
+      }
       const ccx = (i % tr.width) + 0.5;
       const ccz = Math.floor(i / tr.width) + 0.5;
-      const along = Math.max(0, Math.min(1, ((ccx - fx) * a.dirX + (ccz - fz) * a.dirZ) / len));
+      const along = Math.max(0, Math.min(1, ((ccx - fx) * dx + (ccz - fz) * dz) / len));
       const dy = footY + (top - footY) * along;
       if (tr.kinds[i] === Kind.Ground && tr.groundHeight(ccx, ccz) > dy - 0.05) continue;
       cells.push(i);
       deck.push(dy);
     }
   }
+  return { cells, deck, whole };
 }
 
 /**

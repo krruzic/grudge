@@ -195,7 +195,12 @@
         "wrenchRange": 10,
         "wrenchCooldown": 1.1,
         "overhaulHeal": 120,
-        "overhaulSeconds": 6
+        "overhaulSeconds": 6,
+        "workshop": {
+          "regen": 0.02,
+          "speed": 1.1,
+          "radius": 7
+        }
       },
       "abilities": {
         "a": {
@@ -241,7 +246,7 @@
           "kind": "works",
           "anim": "attack_a",
           "size": 3,
-          "rampHp": 300,
+          "rampHp": 500,
           "height": 2.6,
           "length": 5,
           "width": 2,

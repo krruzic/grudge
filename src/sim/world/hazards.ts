@@ -1,6 +1,7 @@
 // Ground hazards and terrain changes: expiring summons, traps, zones (damage/slow/heal/brew), delayed blasts,
 // temporary terrain mods (walls/ramps/works), the tide cycle and chasm deaths.
 import type { World } from "../world.ts";
+import type { Vec2 } from "../types.ts";
 import type { TerrainMod } from "../types.ts";
 import { Kind } from "../terrain.ts";
 import { healFrom, onZoneEnd } from "../hero/friar.ts";
@@ -203,13 +204,15 @@ export function applyMod(w: World, m: TerrainMod): void {
 }
 
 /** Apply a mod only if every team spawn stays reachable from team 0's (gates treated as open); else undo it. */
-export function applyModIfOpen(w: World, m: TerrainMod): boolean {
+export function applyModIfOpen(w: World, m: TerrainMod, climb?: { from: Vec2; to: Vec2 }): boolean {
   w.applyMod(m);
   const a = w.spawnPoint(0);
-  let open = true;
-  w.mapEvents.withGatesOpen(() => {
-    for (let t = 1; t < w.teamCount && open; t++) if (!w.nav.findPath(a, w.spawnPoint(t))) open = false;
-  });
+  // Optionally the new deck must also be walkable onto from `from` (Stig's ramp: a platform you can't climb is no use).
+  let open = !climb || w.nav.reachable(climb.from, climb.to);
+  if (open)
+    w.mapEvents.withGatesOpen(() => {
+      for (let t = 1; t < w.teamCount && open; t++) if (!w.nav.findPath(a, w.spawnPoint(t))) open = false;
+    });
   if (open) return true;
   w.mods.splice(w.mods.indexOf(m), 1);
   const tr = w.terrain;

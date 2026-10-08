@@ -341,6 +341,25 @@ export class World {
     return this.data.heroes;
   }
 
+  /**
+   * Field Workshop (Stig, hooks.workshop): a champion of a house with an engineer partner, standing within
+   * `radius` m of one of that house's buildings, regenerates and moves faster. The engineer's own hooks hold the
+   * numbers; null when it doesn't apply (no such partner, out of range, deathmatch, or the engineer himself).
+   */
+  workshop(e: Entity): { regen: number; speed: number } | null {
+    if (!e.hero || this.tdm) return null;
+    let ws: { regen: number; speed: number; radius: number } | undefined;
+    for (const p of this.players) {
+      if (p.team !== e.team || p.heroId === e.id) continue;
+      const k = (this.heroDef(p.heroType).hooks as Record<string, unknown>).workshop as typeof ws;
+      if (k) ws = k;
+    }
+    if (!ws) return null;
+    for (const o of this.entities)
+      if (o.alive && o.structure && o.team === e.team && this.dist(o, e) - o.radius < ws.radius) return ws;
+    return null;
+  }
+
   /** The team fields two or more champions (2v2): `match.duo` tuning applies. */
   duo(team: number): boolean {
     let n = 0;
@@ -907,8 +926,8 @@ export class World {
     hazards.applyMod(this, m);
   }
 
-  applyModIfOpen(m: TerrainMod): boolean {
-    return hazards.applyModIfOpen(this, m);
+  applyModIfOpen(m: TerrainMod, climb?: { from: Vec2; to: Vec2 }): boolean {
+    return hazards.applyModIfOpen(this, m, climb);
   }
 
   tideLevel(time = this.time): number {

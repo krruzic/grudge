@@ -44,6 +44,11 @@ export function updateHero(w: World, e: Entity, cmd: Command): void {
   if (def.hooks.runeMax) scribeTick(w, e);
   if (def.hooks.tideMax) tideTick(w, e);
   if (def.hooks.gritMax) gritTick(w, e);
+  // Field Workshop: mending by the house's buildings while an engineer partner keeps them (World.workshop).
+  if (w.tick % 6 === 0 && e.hp < e.maxHp) {
+    const ws = w.workshop(e);
+    if (ws) w.heal(e, e.maxHp * ws.regen * w.dt * 6);
+  }
   if (def.hooks.sweetRadius) {
     sweetToothTick(w, e);
     honeyPartners(w, e);

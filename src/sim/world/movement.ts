@@ -13,6 +13,7 @@ export function speedMul(w: World, e: Entity): number {
   const s = e.status;
   let m = w.ffa ? (w.data.match.ffa?.speedMul ?? 1) : 1;
   if (e.unit && !e.unit.guard) m *= w.terrain.unitSpeedMul;
+  if (e.hero) m *= w.workshop(e)?.speed ?? 1;
   // Emberglass Mere: wading through a broken patch of the lake.
   const ice = w.mapEvents.iceDef;
   if (ice && w.mapEvents.inIceWater(e.transform.pos.x, e.transform.pos.z)) m *= ice.waterSlow;
