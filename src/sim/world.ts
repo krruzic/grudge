@@ -851,6 +851,10 @@ export class World {
     return vision.losHeight(this, x, z);
   }
 
+  shotBlocker(from: Entity, to: Entity, y0: number, y1: number): Entity | "wall" | null {
+    return vision.shotBlocker(this, from, to, y0, y1);
+  }
+
   los(a: Entity, b: Entity, tolerance: number, aHeight?: number): boolean {
     return vision.los(this, a, b, tolerance, aHeight);
   }

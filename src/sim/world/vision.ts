@@ -153,6 +153,48 @@ export function losHeight(w: World, x: number, z: number): number {
   return g;
 }
 
+/**
+ * What a physical shot (an arrow or harpoon) from `from` toward `to` hits first along the straight line at shot
+ * height: null when the way is clear, "wall" for terrain standing above the shot (castle / ruin walls, cliffs,
+ * props; Hoot's snow forts are cover, not a wall - fortCoverMul), else the first structure whose footprint the line
+ * crosses (own or enemy; not `to` itself).
+ */
+export function shotBlocker(w: World, from: Entity, to: Entity, y0: number, y1: number): Entity | "wall" | null {
+  const ax = from.transform.pos.x;
+  const az = from.transform.pos.z;
+  const bx = to.transform.pos.x;
+  const bz = to.transform.pos.z;
+  const len = Math.hypot(bx - ax, bz - az);
+  if (len < 0.01) return null;
+  const steps = Math.ceil(len / 0.5);
+  for (let s = 1; s < steps; s++) {
+    const f = s / steps;
+    const x = ax + (bx - ax) * f;
+    const z = az + (bz - az) * f;
+    if (Math.hypot(x - ax, z - az) < from.radius + 0.2 || Math.hypot(x - bx, z - bz) < to.radius + 0.2) continue;
+    const i = w.terrain.index(Math.floor(x), Math.floor(z));
+    if (i >= 0 && w.terrain.kinds[i] === Kind.Wall && w.terrain.styles[i] === "ice") continue;
+    if (w.losHeight(x, z) > y0 + (y1 - y0) * f + 0.2) return "wall";
+  }
+  const ux = (bx - ax) / len;
+  const uz = (bz - az) / len;
+  let best: Entity | null = null;
+  let bd = Infinity;
+  for (const o of w.entities) {
+    if (!o.alive || !o.structure || o === to || o === from) continue;
+    const ox = o.transform.pos.x - ax;
+    const oz = o.transform.pos.z - az;
+    const along = ox * ux + oz * uz;
+    if (along <= from.radius || along >= len - to.radius) continue;
+    if (Math.abs(ox * uz - oz * ux) > o.radius * 0.85) continue;
+    if (along < bd) {
+      bd = along;
+      best = o;
+    }
+  }
+  return best;
+}
+
 /** Ray-march between eye heights in 0.5-cell steps; blocked if any sample's losHeight exceeds the line + tolerance. */
 export function los(w: World, a: Entity, b: Entity, tolerance: number, aHeight?: number): boolean {
   const eye = w.data.match.terrain.eyeHeight;

@@ -354,6 +354,8 @@ function harpoonAim(w: World, e: Entity, a: HeroAction, reach: number): [number,
       if (d - o.radius > reach || d < 0.1) continue;
       const along = (dx * a.dirX + dz * a.dirZ) / d;
       if (along < (a.stick ? 0.6 : 0.3)) continue;
+      // Auto-aim only picks what the harpoon can fly straight at (bank shots off walls are aimed by hand).
+      if (!o.structure && w.shotBlocker(e, o, t.y + 1.4, o.transform.y + 1)) continue;
       const sc = aimTier(o) + d * 0.5 + (isWet(w, o) ? -1.5 : 0) - along * 3;
       if (sc < bs) {
         bs = sc;

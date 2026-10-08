@@ -393,6 +393,8 @@ export function wrenTarget(
     const len = Math.hypot(dx, dz) || 1;
     const along = (dx * dirX + dz * dirZ) / len;
     if (stick && along < cone) continue;
+    // An arrow doesn't go through walls or buildings: nothing behind cover is picked.
+    if (!o.structure && w.shotBlocker(e, o, t.y + 1.5, o.transform.y + 1)) continue;
     const pip = o.status.pipOwner === e.id && w.time < (o.status.pipUntil ?? 0);
     const sc = aimTier(o) + d * 0.5 + (pip ? -4 : 0) - along * (stick ? 6 : 2);
     if (sc < bs) {

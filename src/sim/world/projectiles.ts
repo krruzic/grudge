@@ -3,6 +3,7 @@
 import type { World } from "../world.ts";
 import type { Entity, Projectile } from "../types.ts";
 import { afterShot } from "../talents.ts";
+import { Kind } from "../terrain.ts";
 import { onArrowHit } from "../hero/marksman.ts";
 
 /** Homing projectile at a target entity; flight time = distance / speed (min 0.15s). */
@@ -81,6 +82,43 @@ export function fireAtPoint(
  * Step phase 5: advance projectiles (re-aiming homing ones at their live target) and resolve landings in reverse
  * array order. On landing: direct hit, talent/arrow on-hit hooks, splash to other enemies, then any burn zone.
  */
+/**
+ * An arrow's next stretch of flight (from where it is now to where it'll be next tick) crossing a wall taller than
+ * it, or a structure's footprint other than its target: what stopped it, else null.
+ */
+function arrowBlocked(w: World, p: Projectile, target: Entity): Entity | "wall" | null {
+  const k0 = Math.max(0, p.t - 0.08);
+  const at = (k: number) => ({
+    x: p.from.x + (p.to.x - p.from.x) * k,
+    y: p.from.y + (p.to.y - p.from.y) * k,
+    z: p.from.z + (p.to.z - p.from.z) * k,
+  });
+  const a = at(k0);
+  const b = at(Math.min(1, p.t));
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const steps = Math.max(1, Math.ceil(len / 0.4));
+  for (let s = 0; s <= steps; s++) {
+    const f = s / steps;
+    const x = a.x + (b.x - a.x) * f;
+    const z = a.z + (b.z - a.z) * f;
+    const y = a.y + (b.y - a.y) * f;
+    if (Math.hypot(x - target.transform.pos.x, z - target.transform.pos.z) < target.radius + 0.3) return null;
+    if (Math.hypot(x - p.from.x, z - p.from.z) < 1) continue;
+    const i = w.terrain.index(Math.floor(x), Math.floor(z));
+    const ice = i >= 0 && w.terrain.kinds[i] === Kind.Wall && w.terrain.styles[i] === "ice";
+    if (!ice && w.losHeight(x, z) > y - 0.3) return "wall";
+    for (const o of w.entities)
+      if (
+        o.alive &&
+        o.structure &&
+        o !== target &&
+        Math.hypot(o.transform.pos.x - x, o.transform.pos.z - z) < o.radius * 0.85
+      )
+        return o;
+  }
+  return null;
+}
+
 export function updateProjectiles(w: World, dt: number): void {
   for (let i = w.projectiles.length - 1; i >= 0; i--) {
     const p = w.projectiles[i];
@@ -91,6 +129,21 @@ export function updateProjectiles(w: World, dt: number): void {
       p.to.z = target.transform.pos.z;
     }
     p.t += dt / p.dur;
+    // Arrows are stopped by walls and buildings in their way (and hit an enemy building they fly into).
+    if (p.arrow && target && p.t < 1) {
+      const src0 = w.getAny(p.sourceId);
+      if (src0) {
+        const block = arrowBlocked(w, p, target);
+        if (block) {
+          w.projectiles.splice(i, 1);
+          const at = block === "wall" ? null : block;
+          if (at && at.team !== p.team && !at.neutral)
+            w.damage(src0.alive ? src0 : null, at, p.damage * 0.5, { structureDamage: p.damage * 0.5 });
+          else w.emit({ type: "miss", x: p.to.x, y: p.to.y, z: p.to.z });
+          continue;
+        }
+      }
+    }
     if (p.t >= 1) {
       w.projectiles.splice(i, 1);
       const src = w.getAny(p.sourceId) ?? null;
