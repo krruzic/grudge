@@ -1,5 +1,6 @@
-// Switch 2 Pro Controller over WebHID: decodes input reports (buttons, sticks with RANGE calibration) for each
-// opened controller. The controller only sends HID reports after the USB wake-up in procon2wake.ts.
+// Switch 2 Pro Controller and the NSO GameCube controller (Switch 2 family, same protocol) over WebHID: decodes
+// input reports (buttons, sticks with RANGE calibration, the GameCube pad's analog triggers) for each opened
+// controller. They only send these reports after the USB wake-up in procon2wake.ts.
 interface HIDInputReportEvent extends Event {
   reportId: number;
   data: DataView;
@@ -42,10 +43,19 @@ export interface Pro2State {
   stickY: number;
   cX: number;
   cY: number;
+  /** NSO GameCube controller: the GC button names apply (see onReport) and these are its analog triggers 0..1. */
+  gc: boolean;
+  lAnalog: number;
+  rAnalog: number;
 }
 
 export const PRO2_VENDOR = 0x057e;
 export const PRO2_PRODUCT = 0x2069;
+/** Nintendo Switch Online GameCube controller (Switch 2). */
+export const NSO_GC_PRODUCT = 0x2073;
+/** Analog trigger rest and full press (raw byte), from the controller's typical calibration. */
+const TRIG_REST = 36;
+const TRIG_FULL = 225;
 const RANGE = 1450;
 
 function emptyState(): Pro2State {
@@ -74,6 +84,9 @@ function emptyState(): Pro2State {
     stickY: 0,
     cX: 0,
     cY: 0,
+    gc: false,
+    lAnalog: 0,
+    rAnalog: 0,
   };
 }
 
@@ -101,7 +114,7 @@ export class ProCon2 {
   }
 
   static matches(d: HIDDeviceLike): boolean {
-    return d.vendorId === PRO2_VENDOR && d.productId === PRO2_PRODUCT;
+    return d.vendorId === PRO2_VENDOR && (d.productId === PRO2_PRODUCT || d.productId === NSO_GC_PRODUCT);
   }
 
   get count(): number {
@@ -119,7 +132,8 @@ export class ProCon2 {
     }
     try {
       if (!d.opened) await d.open();
-      this.status = `PRO CONTROLLER ${i + 1} READY`;
+      this.pads[i].gc = d.productId === NSO_GC_PRODUCT;
+      this.status = `${this.pads[i].gc ? "GAMECUBE CONTROLLER" : "PRO CONTROLLER"} ${i + 1} READY`;
     } catch (err) {
       this.status = "PRO CONTROLLER BLOCKED (CHECK HIDRAW PERMISSION)";
       console.warn("pro controller open failed", err);
@@ -155,9 +169,16 @@ export class ProCon2 {
     p.l = on(13);
     p.minus = on(14);
     p.ls = on(15);
+    // Same byte layout on the GameCube pad, under GC names: byte 3 B A Y X R Z Start, byte 4 Down Right Left Up
+    // L ZL - so here zr = R, r = Z, zl = L, l = ZL, plus = Start. Bytes 13 / 14 are its analog triggers.
     p.c = false;
     p.gl = false;
     p.gr = false;
+    if (p.gc && v.byteLength + off > 14) {
+      const trig = (k: number) => Math.max(0, Math.min(1, (b(k) - TRIG_REST) / (TRIG_FULL - TRIG_REST)));
+      p.lAnalog = trig(13);
+      p.rAnalog = trig(14);
+    }
     const raw: [number, number, number, number] = [
       b(6) | ((b(7) & 0x0f) << 8),
       (b(7) >> 4) | (b(8) << 4),

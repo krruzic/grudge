@@ -31,7 +31,9 @@ interface USBLike extends EventTarget {
 }
 
 const VENDOR = 0x057e;
-const PRODUCT = 0x2069;
+/** Switch 2 Pro Controller and the NSO GameCube controller: the same wake-up (its first command is the one the
+ * GameCube pad needs too). */
+const PRODUCTS = [0x2069, 0x2073];
 const ff = (n: number) => Array(n).fill(0xff);
 const zero = (n: number) => Array(n).fill(0);
 
@@ -83,14 +85,14 @@ export class ProCon2Waker {
   }
 
   static matches(d: USBDeviceLike): boolean {
-    return d.vendorId === VENDOR && d.productId === PRODUCT;
+    return d.vendorId === VENDOR && PRODUCTS.includes(d.productId);
   }
 
   async request(): Promise<boolean> {
     const usb = (navigator as unknown as { usb?: USBLike }).usb;
     if (!usb) return false;
     try {
-      const d = await usb.requestDevice({ filters: [{ vendorId: VENDOR, productId: PRODUCT }] });
+      const d = await usb.requestDevice({ filters: PRODUCTS.map((productId) => ({ vendorId: VENDOR, productId })) });
       await this.wake(d);
       return true;
     } catch (err) {
