@@ -1218,3 +1218,4 @@ Per hero: what a top player would exploit, taught to the CPUs (`src/sim/bot/tact
   - Outline normals (`withOutlineNormals`, first ward / dig outline of a hero, and load): numeric vertex keys instead of strings, 27 -> ~5 ms.
   - Team-head HUD shake steps at 20 Hz, halving its memo repaints while a keep / pad is under attack.
 - Result, vsync on, 4-way split (3 alternating runs): dropped frames in 20 s 8-31 (worst 67 ms) -> 0-2 (worst 33 ms); 2-way 15 -> 1-4. At 3x CPU throttle (a slower machine): 4-way 21 -> 35-37 fps, 2-way 29 -> 45-52 fps. The sim and CPU players cost ~0.27 ms per tick (p99 1.1 ms; only the first, JIT, tick is slow), so they were left alone (determinism unchanged).
+- Pause and results in split screen: the live window shows the one wide overview shot of the field (drawWindow) instead of every player's split view squeezed into it.

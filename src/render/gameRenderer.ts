@@ -720,7 +720,8 @@ export class GameRenderer {
     this.effects.update(this.time, dt);
     this.renderer.setRenderTarget(this.target);
     if (this.demoCam) this.drawDemo(this.demoCam);
-    else if (this.windowRect && !this.splitViews.length) this.drawWindow(this.windowRect, dt);
+    // Pause / results show one wide shot of the field, even in split screen.
+    else if (this.windowRect && (!this.splitViews.length || this.overview)) this.drawWindow(this.windowRect, dt);
     else if (!this.splitViews.length) this.drawFull(dt);
     else this.drawSplit(dt);
     // Grade pass: target → canvas, 1:1 pixels.
