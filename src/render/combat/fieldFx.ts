@@ -2,30 +2,50 @@
 // TeamState.banner), the shop cannon barrage (warning ring, incoming ball, impact) and structure repair (flying
 // planks and hammers).
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { dyeColor } from "../heroModels";
 import type { CombatFx } from "./combatFx";
-import { ballGeo, ballMat, hammerMesh, plankGeo, shadowGeo, woodMat } from "./assets";
+import { ballGeo, ballMat, hammerMesh, plankGeo, shadowGeo, SHARED_GEO, woodMat } from "./assets";
 import type { World } from "../../sim/world";
 import { targetTex, fillTex, puffTex, starTex, scorchTex, glowTex, plusTex, gearTex } from "./textures";
 import type { SimEvent } from "../../sim/types";
 
+/** Painted part of a banner: geometry moved into place, flat (non-indexed) and vertex coloured for merging. */
+function part(geo: THREE.BufferGeometry, color: number, at: THREE.Matrix4): THREE.BufferGeometry {
+  const g = (geo.index ? geo.toNonIndexed() : geo).applyMatrix4(at);
+  g.deleteAttribute("uv");
+  const c = new THREE.Color(color);
+  const col = new Float32Array(g.getAttribute("position").count * 3);
+  for (let i = 0; i < col.length; i += 3) c.toArray(col, i);
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+/** Banner wood, gold and stone parts in one mesh (one draw per view); only the waving flag is separate. */
+let bannerFrame: THREE.BufferGeometry | null = null;
+function frameGeo(): THREE.BufferGeometry {
+  if (bannerFrame) return bannerFrame;
+  const m = new THREE.Matrix4();
+  const at = (x: number, y: number, z: number, rz = 0) => m.clone().makeRotationZ(rz).setPosition(x, y, z);
+  bannerFrame = mergeGeometries([
+    part(new THREE.CylinderGeometry(0.07, 0.09, 3.4, 6), 0x6a4424, at(0, 1.7, 0)),
+    part(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 5), 0x6a4424, at(0, 3.05, 0, Math.PI / 2)),
+    part(new THREE.OctahedronGeometry(0.16, 0), 0xc8a040, at(0, 3.5, 0)),
+    part(new THREE.PlaneGeometry(1.2, 0.12), 0xd8c890, at(0, 2.88, 0.01)),
+    part(new THREE.CylinderGeometry(0.35, 0.45, 0.2, 7), 0x5a5048, at(0, 0.1, 0)),
+  ])!;
+  SHARED_GEO.add(bannerFrame);
+  return bannerFrame;
+}
+const frameMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, flatShading: true });
+
 function makeBanner(cfx: CombatFx, team: number): THREE.Group {
   const g = new THREE.Group();
-  const wood = new THREE.MeshLambertMaterial({ color: 0x6a4424, flatShading: true });
-  const gold = new THREE.MeshLambertMaterial({ color: 0xc8a040, flatShading: true });
   const cloth = new THREE.MeshLambertMaterial({
     color: dyeColor(cfx.teamColors[team]),
     side: THREE.DoubleSide,
     flatShading: true,
   });
-  const trim = new THREE.MeshLambertMaterial({ color: 0xd8c890, side: THREE.DoubleSide, flatShading: true });
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 3.4, 6), wood);
-  pole.position.y = 1.7;
-  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 5), wood);
-  bar.rotation.z = Math.PI / 2;
-  bar.position.y = 3.05;
-  const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), gold);
-  tip.position.y = 3.5;
   const shape = new THREE.Shape();
   shape.moveTo(-0.6, 0);
   shape.lineTo(0.6, 0);
@@ -36,14 +56,7 @@ function makeBanner(cfx: CombatFx, team: number): THREE.Group {
   const flag = new THREE.Mesh(new THREE.ShapeGeometry(shape), cloth);
   flag.position.y = 3.0;
   flag.name = "flag";
-  const band = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.12), trim);
-  band.position.set(0, 2.88, 0.01);
-  const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.35, 0.45, 0.2, 7),
-    new THREE.MeshLambertMaterial({ color: 0x5a5048, flatShading: true }),
-  );
-  base.position.y = 0.1;
-  g.add(pole, bar, tip, flag, band, base);
+  g.add(new THREE.Mesh(frameGeo(), frameMat), flag);
   g.visible = false;
   cfx.root.add(g);
   return g;
