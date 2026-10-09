@@ -25,10 +25,11 @@ logger = logging.getLogger(__name__)
 
 MIRRORED = {(0x057E, 0x2009), (0x20D6, 0xA711)}
 
-# hid-nintendo key codes -> Switch button names (protocol.SWITCH_BUTTONS).
+# hid-nintendo key codes -> Switch button names (protocol.SWITCH_BUTTONS). The driver maps by printed label
+# (A -> BTN_A / SOUTH, B -> BTN_B / EAST, X -> BTN_X / NORTH, Y -> BTN_Y / WEST), checked on hardware.
 KEYS = {
-    e.BTN_EAST: "A",
-    e.BTN_SOUTH: "B",
+    e.BTN_SOUTH: "A",
+    e.BTN_EAST: "B",
     e.BTN_NORTH: "X",
     e.BTN_WEST: "Y",
     e.BTN_TL: "L",
