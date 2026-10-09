@@ -9,7 +9,7 @@
 // using the mouse while no real pad is connected). A released device must let go of every button before it
 // can rejoin (waitRelease), so the press that freed it doesn't immediately take a seat again.
 import { GcAdapter } from "./gcadapter";
-import { NSO_GC_PRODUCT, PRO2_PRODUCT, PRO2_VENDOR, ProCon2 } from "./procon2";
+import { NSO_GC_PRODUCT, PRO2_PRODUCT, PRO2_VENDOR, ProCon2, SWITCH1_PRO_PRODUCT } from "./procon2";
 import { ProCon2Waker } from "./procon2wake";
 export type ButtonAction =
   "a" | "b" | "x" | "y" | "z" | "r" | "block" | "dodge" | "start" | "up" | "down" | "left" | "right";
@@ -187,6 +187,7 @@ export class Gamepads {
           { vendorId: 0x057e, productId: 0x0337 },
           { vendorId: PRO2_VENDOR, productId: PRO2_PRODUCT },
           { vendorId: PRO2_VENDOR, productId: NSO_GC_PRODUCT },
+          { vendorId: PRO2_VENDOR, productId: SWITCH1_PRO_PRODUCT },
         ],
       });
       for (const d of ds) {
@@ -325,7 +326,7 @@ export class Gamepads {
     st.pressed = pressed;
     st.connected = true;
     st.profile = "procon2";
-    st.padId = `Switch 2 Pro ${i + 1}`;
+    st.padId = g.s1 ? `Switch Pro ${i + 1}` : `Switch 2 Pro ${i + 1}`;
   }
 
   /** NSO GameCube controller: played like a GameCube pad on the adapter (pollGc), plus ZL as a dodge. */
@@ -436,8 +437,10 @@ export class Gamepads {
     }
     for (const pad of pads) {
       if (!pad?.connected || this.slots.includes(pad.index)) continue;
-      // A raw Switch 2 Pro pad is read over WebHID (procon2.ts), not through the gamepad API.
+      // A raw Switch 2 Pro pad is read over WebHID (procon2.ts), not through the gamepad API. So is a Switch 1 Pro
+      // once WebHID has it (Chrome sometimes exposes it over USB too: it must not join twice).
       if (/product: 20(69|73)/i.test(pad.id) && !/virtual/i.test(pad.id)) continue;
+      if (/product: 2009/i.test(pad.id) && this.pro.pads.some((p) => p.s1 && p.connected)) continue;
       const anyInput = pad.buttons.some((b) => b.pressed);
       if (this.held(pad.index, anyInput)) continue;
       const free = this.slots.indexOf(null);

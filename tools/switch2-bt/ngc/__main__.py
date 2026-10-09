@@ -178,7 +178,7 @@ def _run(cfg: Config) -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="ngc", description="Switch 2 controller bridge (GameCube / Pro Controller 2 / Joy-Con 2)")
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "pair", "rebond", "list", "remove", "swap"])
+                        choices=["run", "pair", "rebond", "list", "remove", "swap", "mirror"])
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--timeout", type=float, default=30.0, help="pairing scan timeout")
     parser.add_argument("--mac", help="controller MAC (for remove)")
@@ -186,6 +186,10 @@ def main(argv=None) -> int:
     parser.add_argument("--players", nargs=2, type=int, metavar=("A", "B"), help="player slots to swap")
     args = parser.parse_args(argv)
     _setup_logging(args.verbose)
+
+    if args.command == "mirror":
+        from .mirror import run as mirror_run
+        return mirror_run()
 
     cfg = Config.load()
 

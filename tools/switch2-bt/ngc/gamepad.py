@@ -327,12 +327,13 @@ class UhidGamepad:
         button_map=None,
         product: int = P.NSO_GAMECUBE_PID,
         mac: str = "",
+        label: str | None = None,
     ):
         import os
 
         self.button_map = {k: v for k, v in (button_map or DEFAULT_BUTTON_MAP).items() if v in XPAD_KEYS}
         self.trigger_bits = TRIGGER_BITS["gc" if product == P.NSO_GAMECUBE_PID else "pro"]
-        name = ("Switch 2 BT GC" if product == P.NSO_GAMECUBE_PID else "Switch 2 BT Pro") + (
+        name = label or ("Switch 2 BT GC" if product == P.NSO_GAMECUBE_PID else "Switch 2 BT Pro") + (
             name[name.rindex(" (P"):] if " (P" in name else ""
         )
         self.rumble_cb: Optional[Callable[[float, float], None]] = None

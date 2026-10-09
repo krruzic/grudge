@@ -1,0 +1,12 @@
+[Unit]
+Description=Switch 1 Pro Controller mirror for Chrome (hid-nintendo pad -> virtual Xbox 360 pad)
+
+[Service]
+Type=simple
+WorkingDirectory=@DIR@
+ExecStart=@DIR@/.venv/bin/python -m ngc mirror
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
