@@ -2,7 +2,7 @@
 # Installs the controller udev rules Chrome needs (asks for sudo once):
 #   - Switch 1 Pro / Joy-Con / 8BitDo-in-Switch-mode: hidraw access (Chrome reads them over hidraw, USB and Bluetooth)
 #   - Switch 2 Pro / NSO GameCube over USB: the WebUSB wake-up and WebHID input (tools/procon2)
-#   - GameCube adapter rules come with its driver (npm run gcadapter:install), Bluetooth Switch 2 with switch2:install.
+#   - GameCube adapter rules come with its driver (pnpm gcadapter:install), Bluetooth Switch 2 with switch2:install.
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 sudo install -m 0644 "$DIR/71-grudge-nintendo-hidraw.rules" /etc/udev/rules.d/71-grudge-nintendo-hidraw.rules

@@ -16,7 +16,7 @@ Chromium groups Linux gamepads by the sysfs path above each input node. The stoc
 ## Install on a new machine
 
 1. Install the prerequisites. On Arch: `sudo pacman -S dkms base-devel linux-headers`, using the headers package that matches your kernel (`linux-zen-headers`, `linux-lts-headers`, ...).
-2. Run `npm run gcadapter:install` (or `tools/gc-adapter/install.sh`). It re-runs itself with sudo and then:
+2. Run `pnpm gcadapter:install` (or `tools/gc-adapter/install.sh`). It re-runs itself with sudo and then:
    - removes any other DKMS version of `hid-gamecube-adapter`, including the AUR one;
    - copies `src/` to `/usr/src/hid-gamecube-adapter-<version>` and runs `dkms install`;
    - installs the udev rules and reloads udev;
@@ -29,7 +29,7 @@ DKMS rebuilds the module automatically on kernel updates (`AUTOINSTALL="yes"`). 
 ## Check it's working
 
 ```sh
-npm run gcadapter:status
+pnpm gcadapter:status
 ```
 
 It shows the DKMS build, whether the module is loaded, the udev rules, the detected ports and each connected pad.
@@ -39,7 +39,7 @@ In the game, the controller profile `gc_adapter_uinput` in `data/input.json` mat
 ## Uninstall
 
 ```sh
-npm run gcadapter:uninstall
+pnpm gcadapter:uninstall
 ```
 
 It unloads the module, removes every DKMS version of it and deletes the udev rules.

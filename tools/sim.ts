@@ -1,4 +1,4 @@
-// Headless bot-vs-bot balance runner (npm run sim -- --a <hero> --b <hero> [--matches N] [--map M] [--mode 2v2]
+// Headless bot-vs-bot balance runner (pnpm sim --a <hero> --b <hero> [--matches N] [--map M] [--mode 2v2]
 // [--partners heroes] [--pickA 0101] [--pickB ...] [--verbose]). Alternates sides per seed and reports win rates,
 // match length, end reasons and how often an early lead converts.
 import { World } from "../src/sim/world.ts";

@@ -93,7 +93,7 @@ reaches the sim. See `src/app/net.ts` and the determinism rules in `src/sim/READ
 
 ## Checks
 
-- `npx tsc --noEmit -p .` - typecheck.
-- `npm run determinism -- --check` - fixed bot matches must hash exactly like `tools/determinism.baseline.json`
+- `pnpm exec tsc --noEmit -p .` - typecheck.
+- `pnpm determinism --check` - fixed bot matches must hash exactly like `tools/determinism.baseline.json`
   (run after any sim change; never rebaseline for a refactor).
-- `npx prettier --write <files>` - formatting (120 columns).
+- `pnpm exec prettier --write <files>` - formatting (120 columns).

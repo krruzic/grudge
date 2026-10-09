@@ -65,7 +65,7 @@ are passive per-hero modifiers. Costumes/skins are purely client-side: the sim o
 
 ## Determinism (lockstep) rules
 
-Online play sends only Commands; every peer must compute bit-identical state. `npm run determinism -- --check`
+Online play sends only Commands; every peer must compute bit-identical state. `pnpm determinism --check`
 compares final world hashes of fixed bot matches with `tools/determinism.baseline.json` - run it after any sim
 change (and never update the baseline for a refactor).
 

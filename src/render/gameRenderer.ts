@@ -673,16 +673,17 @@ export class GameRenderer {
     };
   }
 
-  /** Viewports in target pixels (bottom-left origin): full, two halves, or quadrants. */
+  /** Viewports in target pixels (bottom-left origin): full, two stacked halves, or quadrants. */
   private splitRects(w: number, h: number): [number, number, number, number][] {
     const n = this.splitViews.length;
     const hw = Math.floor(w / 2);
     const hh = Math.floor(h / 2);
     if (n === 1) return [[0, 0, w, h]];
+    // Two players: stacked, the first on top.
     if (n === 2)
       return [
-        [0, 0, hw, h],
-        [hw, 0, w - hw, h],
+        [0, hh, w, h - hh],
+        [0, 0, w, hh],
       ];
     return [
       [0, hh, hw, h - hh],
@@ -978,6 +979,11 @@ export class GameRenderer {
         cam.updateProjectionMatrix();
         sv.st.yaw += (sv.st.yawTo - sv.st.yaw) * (1 - Math.exp(-dt * 9));
         const f = this.frameView(sv);
+        // A view wider than 16:9 (the stacked 2-player halves, ~32:9) frames proportionally more ground across:
+        // the same scale and depth as a 16:9 quadrant view, just twice as wide.
+        const ak = Math.max(1, cam.aspect / (16 / 9));
+        f.min *= ak;
+        f.max *= ak;
         const own = f.pts.slice(0, Math.max(sv.heroIds.length, f.own ?? 0));
         aimCamera(
           this.cfg,

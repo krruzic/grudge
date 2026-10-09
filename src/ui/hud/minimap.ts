@@ -1,4 +1,4 @@
-// Minimap (bottom centre, or screen centre in split screen) and the stock icons above it: one costume portrait
+// Minimap (bottom centre; screen centre in 3-4 player split screen, an end of the divider with 2 stacked views) and the stock icons above it: one costume portrait
 // per hero with an HP bar, greyed and crossed out while dead.
 //
 // The map image is the top-down render of the map's scenery (Portraits.mapTop); on top go the map-event
@@ -57,17 +57,20 @@ export class Minimap {
     w: World,
     now: number,
     ui: (MapperUi | null)[],
-    opts: { split: number; zoomOut: number; mapIndex: number; portraits: Portraits | null },
+    opts: { split: number; zoomOut: number; mapIndex: number; portraits: Portraits | null; side?: number },
   ): void {
     const t = w.terrain;
     const idx = opts.mapIndex;
     const solo = opts.split < 2;
     // Shared view: smaller, and smaller still as the camera zooms out (more of the map is already visible).
-    const k = solo ? 0.62 - 0.17 * opts.zoomOut : 1;
+    // Two stacked views: on the divider at one end (opts.side -1 left, 1 right); the screen centre is the middle
+    // of both views, where the cameras keep the heroes.
+    const stacked = opts.split === 2;
+    const k = solo ? 0.62 - 0.17 * opts.zoomOut : stacked ? 0.8 : 1;
     const s = Math.min(68 / t.width, 50 / t.depth) * k;
     const mw = t.width * s;
     const mh = t.depth * s;
-    const x0 = Math.round(W / 2 - mw / 2);
+    const x0 = Math.round(stacked && opts.side ? (opts.side < 0 ? 10 : W - mw - 10) : W / 2 - mw / 2);
     const y0 = Math.round(opts.split >= 2 ? H / 2 - mh / 2 : H - mh - 4);
     this.rect = { x: x0 - 4, y: y0 - 4, w: mw + 8, h: mh + 8 };
     const img = idx >= 0 ? opts.portraits?.mapTop(idx, Math.round(t.width * 6), Math.round(t.depth * 6)) : null;

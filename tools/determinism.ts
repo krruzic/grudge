@@ -1,7 +1,7 @@
 // Determinism check: runs a few fixed bot matches headless and prints the final world hash of each.
 // Refactors must not change these hashes (lockstep netplay depends on identical sim results).
-// Usage: npm run determinism            (prints hashes)
-//        npm run determinism -- --check (compares against tools/determinism.baseline.json)
+// Usage: pnpm determinism            (prints hashes)
+//        pnpm determinism --check (compares against tools/determinism.baseline.json)
 import { writeFileSync, existsSync } from "node:fs";
 import { World } from "../src/sim/world.ts";
 import { Bot } from "../src/sim/bot.ts";

@@ -41,5 +41,5 @@ if [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/nso-gc/config.json" ]; then
   systemctl --user restart "$SERVICE"
   echo "Done. The bridge is running; press a button on a paired controller to connect it."
 else
-  echo "Done. Now pair each controller once: npm run switch2:pair"
+  echo "Done. Now pair each controller once: pnpm switch2:pair"
 fi

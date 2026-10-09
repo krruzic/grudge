@@ -5,8 +5,8 @@ doesn't understand. `ngc/` is a small background bridge that talks to them and c
 for each. Grudge (and Steam, SDL, emulators) then sees an ordinary pad.
 
 ```sh
-npm run switch2:install   # once: Python env, uinput access (may ask for sudo), service that starts at login
-npm run switch2:pair      # once per controller: hold Sync until the LEDs chase (optional: -- <player 1-8>)
+pnpm switch2:install   # once: Python env, uinput access (may ask for sudo), service that starts at login
+pnpm switch2:pair      # once per controller: hold Sync until the LEDs chase (optional: <player 1-8>)
 ```
 
 After that, press any button on a paired controller and it connects; nothing to run. USB still works without any

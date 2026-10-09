@@ -166,7 +166,14 @@ export class Hud {
     if (smallBanner) C.drawBanner(ctx, W, now);
     this.mini.rect = null;
     if (this.minimap) {
-      const opts = { split: this.split, zoomOut: this.zoomOut, mapIndex: this.mapIndex?.() ?? -1 };
+      // Two stacked views: the minimap sits on the divider at the end away from the lower player's panel (its
+      // team's side; FFA panels are on the left).
+      let side = 0;
+      if (this.split === 2) {
+        const low = w.players.find((p) => (this.rectOf?.(p.player)?.y ?? 0) >= 0.4);
+        side = low && !w.ffa && low.team === 1 ? -1 : 1;
+      }
+      const opts = { split: this.split, zoomOut: this.zoomOut, mapIndex: this.mapIndex?.() ?? -1, side };
       this.mini.draw(ctx, W, H, w, now, ui, { ...opts, portraits: this.portraits });
     }
     if (this.mini.rect) this.mini.drawStocks(ctx, w, this.split);
@@ -197,8 +204,9 @@ export class Hud {
     ctx.fillStyle = INK;
     const pw = Math.round(W * m.a);
     const ph = Math.round(H * m.d);
-    ctx.fillRect(Math.floor(pw / 2), 0, 1, ph);
-    if (this.split >= 3) ctx.fillRect(0, Math.floor(ph / 2), pw, 1);
+    // Two views are stacked (one horizontal line); three or four are quadrants.
+    if (this.split >= 3) ctx.fillRect(Math.floor(pw / 2), 0, 1, ph);
+    ctx.fillRect(0, Math.floor(ph / 2), pw, 1);
     ctx.restore();
   }
 

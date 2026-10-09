@@ -9,8 +9,8 @@ one champion each, in separate git worktrees. Do the whole champion end to end s
 - Your worktree and branch are given in your task (e.g. `/home/krruzic/Projects/grudge-wt/<id>`, branch
   `hero/<id>`). Work and commit ONLY there (`git commit --no-gpg-sign` if signing blocks). Never push, never touch
   the main checkout `/home/krruzic/Projects/grudge` or other worktrees, never merge.
-- `node_modules` is symlinked from the main checkout. Typecheck: `npx tsc --noEmit -p .` (clean = no output).
-  Format: `npx prettier --write <files>` (120 cols).
+- `node_modules` is symlinked from the main checkout. Typecheck: `pnpm exec tsc --noEmit -p .` (clean = no output).
+  Format: `pnpm exec prettier --write <files>` (120 cols).
 - Determinism: `nice node --experimental-transform-types --no-warnings tools/determinism.ts --check` must pass
   (your hero isn't in the baseline scenarios, so existing heroes must be unaffected).
 
@@ -19,7 +19,7 @@ one champion each, in separate git worktrees. Do the whole champion end to end s
 - Prefix every heavy command with `nice` (node sims, blender, python image work). One heavy job at a time.
 - Never `pkill` / `pgrep` / kill processes you didn't start; never restart the dev server on port 5199.
 - If you need a browser check, run your own vite briefly with a hard timeout on YOUR port
-  (`timeout 900 nice npx vite --port <yourport> --strictPort` in the background) and drive it with the headless
+  (`timeout 900 nice pnpm exec vite --port <yourport> --strictPort` in the background) and drive it with the headless
   playwright helper in `/tmp/opencode/newheroes/lib.mjs` (headless swiftshader: fps is meaningless). Prefer
   Blender renders and headless node sims for verification.
 - Use `/tmp/opencode/<id>/` for scratch files.
