@@ -117,10 +117,12 @@ class Mirror:
 def run() -> int:
     """Watches for Switch 1 pads (every 2 s) and mirrors each one while it stays connected."""
     live: dict[str, threading.Thread] = {}
+    numbers: dict[str, int] = {}
     while True:
         for path in list(live):
             if not live[path].is_alive():
                 del live[path]
+                numbers.pop(path, None)
         for path in list_devices():
             if path in live:
                 continue
@@ -132,7 +134,10 @@ def run() -> int:
                 continue
             if not ok:
                 continue
-            m = Mirror(path, len(live) + 1)
+            # Lowest free player number, so a pad that reconnects doesn't duplicate another's label.
+            n = next(k for k in range(1, 99) if k not in numbers.values())
+            numbers[path] = n
+            m = Mirror(path, n)
             t = threading.Thread(target=m.run, name=f"mirror-{path}", daemon=True)
             t.start()
             live[path] = t
