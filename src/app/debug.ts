@@ -15,7 +15,7 @@ import type { App } from "./app";
 import { houses, roster, seatsFor } from "./assets";
 import { enterSelect, makeCpu, setMode } from "./select";
 import type { MatchMode } from "../game/save";
-import { beginAttract, fastForward, resetAttractWorld, setPaused, setupControl, toMenu } from "./match";
+import { beginAttract, beginMatch, fastForward, resetAttractWorld, setPaused, setupControl, toMenu } from "./match";
 
 const MENU_PAGES: Page[] = ["players", "network", "rules", "options", "records", "controls", "codex"];
 
@@ -157,6 +157,15 @@ export function installDebugApi(app: App): void {
       return allLearned(w, e).map((t) => t.id);
     },
     pause: () => setPaused(app, true),
+    /** Starts the match from champion / field select as confirming the field does. */
+    beginMatch: () => beginMatch(app),
+    /** Results -> champion select, as A on the results screen does (picks kept). */
+    backToSelect: () => {
+      app.state = "select";
+      enterSelect(app, true);
+      app.screens.set("select");
+      resetAttractWorld(app);
+    },
     endMatch: (winner = 0) => {
       const m = app.world.match;
       m.phase = "over";

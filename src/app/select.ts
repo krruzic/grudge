@@ -17,7 +17,7 @@ import type { PadState } from "../input/gamepads";
 import { NameEntry, type TagResult, type TagRow } from "../ui/nameEntry";
 import { MAX_TAG, cleanTag, type MatchMode, type TagRef } from "../game/save";
 import type { App } from "./app";
-import { MAX_PLAYERS, commanderType, data, roster } from "./assets";
+import { MAX_PLAYERS, commanderType, data, pickable, roster } from "./assets";
 import { beginMatch, resetAttractWorld, toMenu } from "./match";
 
 // ── Seats ──
@@ -32,7 +32,7 @@ function settleCpu(app: App, i: number): void {
     return;
   }
   if (app.heldBy(i) >= 0) return;
-  if (!sl.ready || sl.open || !roster.includes(sl.hero)) {
+  if (!sl.ready || sl.open || !pickable(sl.hero)) {
     sl.hero = app.randomHero();
     sl.costume = randomCostume(sl.hero);
   }
@@ -56,7 +56,7 @@ export function makeHuman(app: App, i: number): void {
     sl.ready = true;
     return;
   }
-  if (!roster.includes(sl.hero)) sl.hero = roster[0];
+  if (!pickable(sl.hero)) sl.hero = roster[0];
   const cursors = app.cursors.cursors;
   const holder = app.heldBy(i);
   if (holder >= 0 && holder !== i) cursors[holder].holding = -1;
@@ -68,7 +68,7 @@ export function makeHuman(app: App, i: number): void {
 /** Seat i becomes OPEN (online host: waiting for a guest). */
 export function makeOpen(app: App, i: number): void {
   const sl = app.slots[i];
-  if (!app.commanderSlot(i) && !roster.includes(sl.hero)) sl.hero = app.randomHero();
+  if (!app.commanderSlot(i) && !pickable(sl.hero)) sl.hero = app.randomHero();
   sl.cpu = false;
   sl.joined = false;
   sl.open = true;
@@ -135,12 +135,13 @@ export function setMode(app: App, v: MatchMode): void {
 
 /**
  * Enters champion select: re-decides every seat from who is present. With `keep` (back from a match) humans keep
- * their sealed champion and costume instead of starting with an empty card.
+ * their sealed champion and costume instead of starting with an empty card, and CPUs keep theirs (a seat on the
+ * RANDOM tile stays on it and rolls again next match).
  */
 export function enterSelect(app: App, keep = false): void {
   const slots = app.slots;
   const prev = slots.map((sl, i) =>
-    keep && sl.ready && !sl.cpu && !sl.open && roster.includes(sl.hero)
+    keep && sl.ready && !sl.cpu && !sl.open && pickable(sl.hero)
       ? { hero: sl.hero, costume: sl.costume }
       : (app.lastPicks[i] ?? null),
   );
@@ -164,6 +165,8 @@ export function enterSelect(app: App, keep = false): void {
   );
   slots.forEach((sl, i) => {
     const keepCpu = keptCpu(i);
+    // A CPU that played the match keeps its sealed pick: settleCpu only rolls a champion for unready seats.
+    const cpuPick = keep && sl.cpu && sl.ready && !sl.open && !app.commanderSlot(i) && pickable(sl.hero);
     sl.ready = false;
     if (app.present(i)) {
       sl.autoCpu = false;
@@ -177,9 +180,13 @@ export function enterSelect(app: App, keep = false): void {
         app.cursors.placeChip(i, pv.hero);
       }
     } else if (keepCpu) {
+      sl.ready = cpuPick;
       makeCpu(app, i);
       sl.autoCpu = false;
-    } else vacate(app, i);
+    } else {
+      sl.ready = cpuPick && app.net.mode !== "host";
+      vacate(app, i);
+    }
   });
   app.readySince = -1;
   // The title's random-mode backdrop gives way to a match on the chosen field.
@@ -567,7 +574,7 @@ function sitAt(app: App, from: number, i: number): void {
   vacate(app, from);
   slots[i].autoCpu = false;
   makeHuman(app, i);
-  if (roster.includes(hero)) slots[i].hero = hero;
+  if (pickable(hero)) slots[i].hero = hero;
   slots[i].tag = tag;
   slots[i].tagId = tagId;
   app.net.lobbySentAt = 0;

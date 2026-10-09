@@ -23,7 +23,7 @@ import { MAX_TAG, cleanTag } from "../game/save";
 import { NetLink, type NetMsg } from "../net/link";
 import { mathPrint, worldHash, type Frame, type MatchSpec } from "../net/session";
 import type { App } from "./app";
-import { MAX_PLAYERS, maps, roster, seatsFor } from "./assets";
+import { maps, MAX_PLAYERS, pickable, roster, seatsFor } from "./assets";
 import { enterSelect, freeLabel, makeHuman, makeOpen, setMode, stripSeat } from "./select";
 import { linkMates, resetAttractWorld, setPaused, startNetMatch, toMenu } from "./match";
 
@@ -334,7 +334,7 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
       if (costumesOf(sl.hero).includes(c)) sl.costume = c;
     } else {
       const hero = String(m.hero ?? "");
-      if (roster.includes(hero) && (!sl.ready || m.ready === true)) sl.hero = hero;
+      if (pickable(hero) && (!sl.ready || m.ready === true)) sl.hero = hero;
       if (typeof m.ready === "boolean") {
         sl.ready = m.ready;
         app.cursors.placeChip(to, m.ready ? sl.hero : null);
@@ -358,7 +358,7 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
     i >= 0 &&
     app.state === "select" &&
     !slots[i].ready &&
-    roster.includes(String(m.hero)) &&
+    pickable(String(m.hero)) &&
     !app.commanderSlot(i)
   ) {
     slots[i].hero = String(m.hero);

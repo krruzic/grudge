@@ -2,6 +2,7 @@
 // Everything here is read-only after boot: the GameData tables the sim runs on, the list of playable maps, the
 // roster, and loadAssets(), which fetches every map / hero / structure / unit model and the UI font in parallel
 // before the first frame (the #boot overlay in index.html stays up until then).
+import { RANDOM_PICK } from "../game/picks";
 import heroData from "../../data/heroes.json";
 import talentData from "../../data/talents.json";
 import unitData from "../../data/units.json";
@@ -60,6 +61,9 @@ export const renderConfig = renderData as RenderConfig;
 
 /** Playable champions (everything but the 2v2 commander, the Herald). */
 export const roster = Object.keys(data.heroes.heroes).filter((k) => data.heroes.heroes[k].role !== "commander");
+export { RANDOM_PICK };
+/** A champion a seat may seal on: one of the roster, or the RANDOM tile. */
+export const pickable = (hero: string): boolean => roster.includes(hero) || hero === RANDOM_PICK;
 /** Hero type of the commander seat (slots 2/3 in 2v2 unless the "partners" rule gives them champions). */
 export const commanderType =
   Object.keys(data.heroes.heroes).find((k) => data.heroes.heroes[k].role === "commander") ?? roster[0];

@@ -6,6 +6,7 @@
 // evolution tree and ability glyphs. A human seat that hasn't placed its seal shows "PICK A CHAMPION" instead.
 // Mouse targets ("hero:<id>", "kind:<i>", "lvl:<i>", "cam:<i>", "pen:<i>", "sit:<i>", "go", ...) go into the
 // cursors' hit list; app/select.ts turns cursor actions on them into seat changes.
+import { RANDOM_PICK } from "../../game/picks";
 import { CAMERA_NAMES } from "../../game/save";
 import { costumesOf } from "../../render/costumes";
 import { drawPlain, textWidth } from "../font";
@@ -20,6 +21,7 @@ import {
   card,
   inset,
   nameImage,
+  paintedText,
   ribbon,
   shadowText,
   smoothImage,
@@ -117,14 +119,16 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
  * pointing at it. Returns the y where the grid ends.
  */
 function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): number {
-  const all = s.roster.length;
+  // Every champion, then the RANDOM tile.
+  const tiles = [...s.roster, RANDOM_PICK];
+  const all = tiles.length;
   const rows = all > 9 ? 2 : 1;
   const per = Math.ceil(all / rows);
   const gap = 2;
   const tw = Math.max(22, Math.min(rows > 1 ? 40 : 46, Math.floor((W - 40 - (per - 1) * gap) / per)));
   const th = Math.round(tw * 0.82);
   const top = 23;
-  s.roster.forEach((type, k) => {
+  tiles.forEach((type, k) => {
     const row = Math.floor(k / per);
     const inRow = Math.min(per, all - row * per);
     const col = k - row * per;
@@ -144,6 +148,17 @@ function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): nu
     const ring = sealed.length ? sealed : hands;
     ctx.fillStyle = "#120c08";
     ctx.fillRect(x - 1, y - 1, tw + 2, th + 2);
+    if (type === RANDOM_PICK) {
+      randomTile(ctx, x, y, tw, th, sealed.length > 0 || hot);
+      const cols = [...new Set(ring)];
+      if (cols.length) tileBorder(ctx, x, y, tw, th, cols);
+      else if (hot) {
+        ctx.strokeStyle = "#f0d070";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, th - 1);
+      }
+      return;
+    }
     const icon = s.portraits?.icon(type);
     if (icon) {
       // Cover-crop the square portrait to the tile, biased toward the face.
@@ -176,6 +191,22 @@ function drawRosterRow(s: Screens, ctx: CanvasRenderingContext2D, W: number): nu
     }
   });
   return top + rows * (th + gap) + 2;
+}
+
+/** A seat's stage while it is on RANDOM: who it'll be is rolled when the match starts. */
+function randomStage(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  band(ctx, x, y, w, h, "#000000", 0.35);
+  const qs = Math.min(3, h / 22);
+  paintedText(ctx, "?", x + w / 2, y + h / 2 - 6 * qs, "#f0c030", qs);
+}
+
+/** The RANDOM tile: a big "?" on dark cloth. */
+function randomTile(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, lit: boolean): void {
+  texturedRect(ctx, "cloth", x, y, w, h, lit ? "#5a3a24" : "#3a281c", 0, 0.8);
+  const qs = h / 15;
+  paintedText(ctx, "?", x + w / 2, y + h / 2 - 5.5 * qs, lit ? "#ffd860" : "#e0b850", qs);
+  const ls = Math.min(0.42, (w - 4) / Math.max(1, textWidth("RANDOM", 1, true)));
+  drawPlain(ctx, "RANDOM", x + w / 2 - textWidth("RANDOM", ls, true) / 2, y + h - 7, "#f0e0b8", ls, true);
 }
 
 /** A 1.5 px frame just inside a tile, its perimeter shared out in equal runs, one per colour (clockwise from top-left). */
@@ -415,10 +446,12 @@ function drawCompactSeat(
   const preview = unsealed && previewing(s, i);
   const ps = h - 16;
   const showHero = !unsealed || preview;
+  const rnd = sl.hero === RANDOM_PICK;
   card(ctx, x, y, w, h, 0, chipColor(i, sl.cpu), () => {
     inset(ctx, 4, 4, ps, ps, "#2a2018");
     texturedRect(ctx, "cloth", 4, 4, ps, ps, TEAM_CLOTH[team], 0, 0.7);
-    if (!showHero) {
+    if (showHero && rnd) randomStage(ctx, 4, 4, ps, ps);
+    else if (!showHero) {
       band(ctx, 4, 4, ps, ps, "#000000", 0.35);
       drawPlain(ctx, "?", 4 + ps / 2 - textWidth("?", 1.2, true) / 2, 4 + ps / 2 - 6, "#e8d8b8", 1.2, true);
     }
@@ -451,7 +484,7 @@ function drawCompactSeat(
     return;
   }
   // The champion's live stage in the portrait frame, like the big cards.
-  if (showHero) drawStage(s, ctx, i, sl, team, x + 4, y + 4, ps, ps, preview);
+  if (showHero && !rnd) drawStage(s, ctx, i, sl, team, x + 4, y + 4, ps, ps, preview);
   else s.portraits?.drop(i);
   if (sl.ready && human) waxSeal(ctx, x + ps, y + ps - 2, 5, chipColor(i, false), "combo");
   // Costumes: small clickable icons under the name for a human's own card while their hand is over it, or for any
@@ -546,6 +579,7 @@ function drawSeatCard(
       );
       return;
     }
+    if (sl.hero === RANDOM_PICK) randomStage(ctx, 5, iy, w - 10, ih);
     // Name under the stage, with the class glyph in front of it.
     const name = (def?.name ?? sl.hero).toUpperCase();
     const cls = commander ? undefined : def?.class;
@@ -590,6 +624,12 @@ function drawSeatCard(
   const fx = x + 5;
   const fy = y + iy;
   const fw = w - 10;
+  // RANDOM: no model, talents, abilities or costumes to show (the "?" is in the card body) - just the seal.
+  if (sl.hero === RANDOM_PICK) {
+    s.portraits?.drop(i);
+    if (sl.ready && !commander && human) waxSeal(ctx, fx + fw - 7, fy + ih + 3, 6, chipColor(i, false), "combo");
+    return;
+  }
   drawStage(s, ctx, i, sl, team, fx, fy, fw, ih, preview);
   if (!commander && hasTree(sl.hero)) {
     const tw = w >= 100 ? 1 : 0.7;

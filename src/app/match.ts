@@ -14,7 +14,18 @@ import { applyRules, type MatchMode } from "../game/save";
 import { mergeCommands, packCommand, type MatchSpec } from "../net/session";
 import { perf } from "../perf";
 import type { App } from "./app";
-import { commanderType, data, houses, maps, matchData, roster, seatsFor, teamOfSeat } from "./assets";
+import {
+  commanderType,
+  data,
+  houses,
+  maps,
+  matchData,
+  pickable,
+  RANDOM_PICK,
+  roster,
+  seatsFor,
+  teamOfSeat,
+} from "./assets";
 import { tdmMap } from "../sim/tdm";
 import { afterHostTick, flushHostFrames, leaveNet, recordHostTick, stepPeer } from "./net";
 
@@ -229,7 +240,7 @@ export function beginMatch(app: App): void {
   const humans = seats.map((s) => s.joined && !s.cpu);
   // Remember each human's sealed pick so champion select restores it after this match, however you get back there.
   app.lastPicks = app.slots.map((s, i) =>
-    humans[i] && s.ready && roster.includes(s.hero) ? { hero: s.hero, costume: s.costume } : null,
+    humans[i] && s.ready && pickable(s.hero) ? { hero: s.hero, costume: s.costume } : null,
   );
   seats.forEach((sl, i) => {
     if (!sl.open) return;
@@ -242,12 +253,19 @@ export function beginMatch(app: App): void {
       sl.costume = cl[Math.floor(Math.random() * cl.length)] ?? "";
     }
   });
+  // Seats on the RANDOM tile get a champion and costume for this match only (the seat stays on RANDOM).
+  const picks = seats.map((s) => {
+    if (s.hero !== RANDOM_PICK) return { hero: s.hero, costume: s.costume ?? "" };
+    const hero = app.randomHero();
+    const cl = costumesOf(hero);
+    return { hero, costume: cl[Math.floor(Math.random() * cl.length)] ?? "" };
+  });
   const remote = seats.map((_, i) => app.net.remoteAt(i) >= 0);
   const spec: MatchSpec = {
     map: maps[app.mapIndex].id,
     seed: app.seed++,
     rules: { ...app.save.data.rules },
-    heroes: seats.map((s) => s.hero),
+    heroes: picks.map((p) => p.hero),
     players,
     levels: seats.map((s) => s.level),
     humans,
@@ -255,7 +273,7 @@ export function beginMatch(app: App): void {
     names: seats.map((s) => (s.cpu ? null : (s.tag ?? null))),
     tagIds: seats.map((s) => (s.cpu ? null : (s.tagId ?? null))),
     mode: app.mode,
-    costumes: seats.map((s) => (costumesOf(s.hero).includes(s.costume ?? "") ? (s.costume ?? "") : "")),
+    costumes: picks.map((p) => (costumesOf(p.hero).includes(p.costume) ? p.costume : "")),
   };
   for (const r of app.net.rseats) {
     r.queue = [];
