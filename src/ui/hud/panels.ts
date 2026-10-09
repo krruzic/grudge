@@ -34,6 +34,8 @@ import { INK, PAD, PLAYER_TAG, meter, padButton, ringMeter, times, timesWidth } 
 
 /** Width of a team / player panel block. */
 export const BLOCK_W = 104;
+/** How far a player panel may draw outside its block (see drawPlayerPanel). */
+const PANEL_SPILL = 80;
 
 /**
  * Screen-shake offset for a panel hit at `at` (fades over 0.7 s). It jumps 20 times a second, rounded to half
@@ -331,7 +333,9 @@ export function drawPlayerPanel(
   tag: string,
 ): number {
   const key = panelKey(w, e, x0, y0, right, now, local, tag);
-  return memo.draw(ctx, `pp${player}`, key, x0 - 10, y0 - 6, BLOCK_W + 20, 64, (c) =>
+  // The ability / talent row can run well past BLOCK_W (long name tag + passive box + level + 4 talents), so the
+  // memo canvas reaches PANEL_SPILL past the block on both sides (right-side panels grow leftward).
+  return memo.draw(ctx, `pp${player}`, key, x0 - PANEL_SPILL, y0 - 6, BLOCK_W + PANEL_SPILL * 2, 64, (c) =>
     paintPlayerPanel(c, w, e, x0, y0, right, now, tag),
   );
 }
