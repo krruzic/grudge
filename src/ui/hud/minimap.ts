@@ -66,7 +66,7 @@ export class Minimap {
     // Two stacked views: on the divider at one end (opts.side -1 left, 1 right); the screen centre is the middle
     // of both views, where the cameras keep the heroes.
     const stacked = opts.split === 2;
-    const k = solo ? 0.62 - 0.17 * opts.zoomOut : stacked ? 0.8 : 1;
+    const k = solo ? 0.62 - 0.17 * opts.zoomOut : stacked ? 0.8 : opts.split >= 3 ? 0.72 : 1;
     const s = Math.min(68 / t.width, 50 / t.depth) * k;
     const mw = t.width * s;
     const mh = t.depth * s;

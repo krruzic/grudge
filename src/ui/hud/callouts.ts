@@ -180,8 +180,8 @@ export class Callouts {
     const bw = Math.round(Math.max(textWidth(title, ts), textWidth(c.sub, ss)) + 34);
     const bh = c.sub ? 25 : 17;
     const x = Math.round(W / 2 - bw / 2);
-    const clockTall = w.match.phase === "sudden" || w.mapEvents.locked;
-    const y = Math.round(MARGIN_Y + (clockTall ? 52 : 46) + drop);
+    // Over the match clock (drawn after it), so it reads as the headline while it shows.
+    const y = Math.round(MARGIN_Y + 1 + drop);
     ctx.save();
     ctx.globalAlpha = Math.min(1, left * 4, age * 8);
     ctx.fillStyle = INK;
