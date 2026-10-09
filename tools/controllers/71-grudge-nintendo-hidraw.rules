@@ -1,0 +1,8 @@
+# Chromium reads Switch 1 controllers itself over hidraw (it drops their normal joystick device), so without access
+# to the hidraw node they don't show up in Chrome at all (Firefox and evtest use the joystick device and work).
+# Switch Pro Controller 2009 (and pads that copy it: 8BitDo in Switch mode, most knockoffs), Joy-Con L 2006 / R 2007,
+# charging grip 200e, and PowerA's licensed Pro pad (20d6:a711). USB matches the USB device; Bluetooth the HID id.
+KERNEL=="hidraw*", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2006|2007|2009|200e", MODE="0660", TAG+="uaccess"
+KERNEL=="hidraw*", KERNELS=="*057E:2006*|*057E:2007*|*057E:2009*|*057E:200E*", MODE="0660", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="20d6", ATTRS{idProduct}=="a711", MODE="0660", TAG+="uaccess"
+KERNEL=="hidraw*", KERNELS=="*20D6:A711*", MODE="0660", TAG+="uaccess"
