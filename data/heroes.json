@@ -820,7 +820,7 @@
         "r": {
           "kind": "volley",
           "anim": "volley",
-          "range": 11,
+          "range": 8,
           "radius": 3.5,
           "damage": 29,
           "unitMul": 1.35,
@@ -833,7 +833,7 @@
           "hitAt": 0.35,
           "cooldown": 13,
           "bot": "fight",
-          "botRange": 13,
+          "botRange": 10,
           "callout": "VOLLEY \u00b7 ARROW RAIN"
         },
         "z": {

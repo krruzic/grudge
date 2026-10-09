@@ -97,7 +97,7 @@ def button_map_for_product(product_id: int) -> dict:
     return PRO_BUTTON_MAP
 
 
-class SwitchGamepad:
+class UinputGamepad:
     def __init__(
         self,
         name: str = "NSO GameCube Controller",
@@ -278,6 +278,166 @@ class SwitchGamepad:
             self.ui.close()
         except Exception:  # noqa: BLE001
             pass
+
+
+# --------------------------------------------------------------------------- #
+# UHID pad (Grudge)                                                           #
+#                                                                             #
+# Chromium on Linux decides which input nodes belong to one gamepad by the    #
+# sysfs path of their parent cut at "input": every uinput device sits at      #
+# /sys/devices/virtual/input/inputN, so all of them look like ONE pad and     #
+# only one controller ever shows up in the browser. A uhid device gets its    #
+# own parent (/sys/devices/virtual/misc/uhid/0003:045E:028E.NNNN/), so each   #
+# controller is its own gamepad. The HID descriptor below gives hid-generic   #
+# exactly xpad's keys and axes (see XPAD_KEYS), so the browser's Xbox 360     #
+# standard mapping still applies. No force feedback (Grudge has no rumble).   #
+# --------------------------------------------------------------------------- #
+
+UHID_DESTROY = 1
+UHID_CREATE2 = 11
+UHID_INPUT2 = 12
+BUS_USB = 0x03
+
+# Button usages whose hid-input codes (BTN_GAMEPAD + usage - 1) are xpad's keys, in XPAD_KEYS order.
+_BUTTON_USAGES = [1, 2, 4, 5, 7, 8, 11, 12, 13, 14, 15]
+_REPORT_DESC = bytes(
+    [0x05, 0x01, 0x09, 0x05, 0xA1, 0x01]  # Generic Desktop / Gamepad / Application
+    + [0x05, 0x09]  # Buttons
+    + [b for u in _BUTTON_USAGES for b in (0x09, u)]
+    + [0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, len(_BUTTON_USAGES), 0x81, 0x02]
+    + [0x75, 16 - len(_BUTTON_USAGES), 0x95, 0x01, 0x81, 0x03]  # pad to 16 bits
+    + [0x05, 0x01, 0x09, 0x39, 0x15, 0x00, 0x25, 0x07, 0x35, 0x00, 0x46, 0x3B, 0x01, 0x65, 0x14]  # Hat 0-7
+    + [0x75, 0x04, 0x95, 0x01, 0x81, 0x42, 0x65, 0x00, 0x75, 0x04, 0x95, 0x01, 0x81, 0x03]
+    + [0x35, 0x00, 0x45, 0x00]  # physical range back to "same as logical" for the axes
+    + [0x09, 0x30, 0x09, 0x31, 0x09, 0x33, 0x09, 0x34]  # X Y Rx Ry
+    + [0x16, 0x00, 0x80, 0x26, 0xFF, 0x7F, 0x75, 0x10, 0x95, 0x04, 0x81, 0x02]
+    + [0x09, 0x32, 0x09, 0x35, 0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x02, 0x81, 0x02]  # Z Rz
+    + [0xC0]
+)
+# Hat value per (dx, dy) with dy -1 = up; 8 = centred (out of range = null).
+_HAT = {(0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3, (0, 1): 4, (-1, 1): 5, (-1, 0): 6, (-1, -1): 7}
+
+
+class UhidGamepad:
+    """Same interface as UinputGamepad (update / release_all / close / rumble_cb), backed by /dev/uhid."""
+
+    def __init__(
+        self,
+        name: str = "NSO GameCube Controller",
+        button_map=None,
+        product: int = P.NSO_GAMECUBE_PID,
+        mac: str = "",
+    ):
+        import os
+
+        self.button_map = {k: v for k, v in (button_map or DEFAULT_BUTTON_MAP).items() if v in XPAD_KEYS}
+        self.trigger_bits = TRIGGER_BITS["gc" if product == P.NSO_GAMECUBE_PID else "pro"]
+        name = ("Switch 2 BT GC" if product == P.NSO_GAMECUBE_PID else "Switch 2 BT Pro") + (
+            name[name.rindex(" (P"):] if " (P" in name else ""
+        )
+        self.rumble_cb: Optional[Callable[[float, float], None]] = None
+        self._fd = os.open("/dev/uhid", os.O_RDWR | os.O_CLOEXEC | os.O_NONBLOCK)
+        phys = (phys_for_mac(mac) if mac else "ngc/uhid").encode()[:63]
+        uniq = (mac or name).encode()[:63]
+        req = struct.pack(
+            "<I128s64s64sHHIIII4096s",
+            UHID_CREATE2,
+            name.encode()[:127],
+            phys,
+            uniq,
+            len(_REPORT_DESC),
+            BUS_USB,
+            XPAD_VENDOR,
+            XPAD_PRODUCT,
+            0x0110,
+            0,
+            _REPORT_DESC,
+        )
+        os.write(self._fd, req)
+        self._last: bytes = b""
+        logger.info("created virtual gamepad (uhid): %s", name)
+
+    def _drain(self) -> None:
+        """Discards the kernel's start / open / close notices so its event queue never fills."""
+        import os
+
+        try:
+            while os.read(self._fd, 4380):
+                pass
+        except (BlockingIOError, OSError):
+            pass
+
+    def _send(self, report: bytes) -> None:
+        import os
+
+        if report == self._last:
+            return
+        self._last = report
+        self._drain()
+        os.write(self._fd, struct.pack("<IH", UHID_INPUT2, len(report)) + report)
+
+    def update(
+        self,
+        buttons: int,
+        left_stick: tuple[float, float],
+        right_stick: tuple[float, float],
+        left_trigger: int,
+        right_trigger: int,
+    ) -> None:
+        bits = 0
+        for switch_name, key_code in self.button_map.items():
+            mask = P.SWITCH_BUTTONS.get(switch_name, 0)
+            if mask and (buttons & mask):
+                bits |= 1 << XPAD_KEYS.index(key_code)
+        dx = (1 if buttons & P.SWITCH_BUTTONS["RIGHT"] else 0) - (1 if buttons & P.SWITCH_BUTTONS["LEFT"] else 0)
+        dy = (1 if buttons & P.SWITCH_BUTTONS["DOWN"] else 0) - (1 if buttons & P.SWITCH_BUTTONS["UP"] else 0)
+        tl, tr = (P.SWITCH_BUTTONS.get(b, 0) for b in self.trigger_bits)
+        if tl and buttons & tl:
+            left_trigger = 255
+        if tr and buttons & tr:
+            right_trigger = 255
+        def s(v: float) -> int:
+            return max(-32767, min(32767, int(v * 32767)))
+
+        self._send(
+            struct.pack(
+                "<HBhhhhBB",
+                bits,
+                _HAT.get((dx, dy), 8),
+                s(left_stick[0]),
+                -s(left_stick[1]),
+                s(right_stick[0]),
+                -s(right_stick[1]),
+                max(0, min(255, left_trigger)),
+                max(0, min(255, right_trigger)),
+            )
+        )
+
+    def release_all(self) -> None:
+        self._send(struct.pack("<HBhhhhBB", 0, 8, 0, 0, 0, 0, 0, 0))
+
+    def close(self) -> None:
+        import os
+
+        try:
+            os.write(self._fd, struct.pack("<I", UHID_DESTROY))
+        except OSError:
+            pass
+        try:
+            os.close(self._fd)
+        except OSError:
+            pass
+
+
+class SwitchGamepad:
+    """A uhid pad (each controller its own gamepad in browsers), else uinput when /dev/uhid isn't usable."""
+
+    def __new__(cls, *args, **kwargs):  # type: ignore[misc]
+        try:
+            return UhidGamepad(*args, **kwargs)
+        except OSError as exc:
+            logger.warning("uhid unavailable (%s); using uinput - browsers will only see one controller", exc)
+            return UinputGamepad(*args, **kwargs)
 
 
 GameCubeGamepad = SwitchGamepad

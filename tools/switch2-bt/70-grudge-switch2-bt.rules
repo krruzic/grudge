@@ -1,2 +1,4 @@
-# The Switch 2 Bluetooth bridge creates its virtual pads through /dev/uinput as the logged-in user.
+# The Switch 2 Bluetooth bridge creates its virtual pads as the logged-in user: through /dev/uhid (each controller
+# its own gamepad in browsers), or /dev/uinput as a fallback.
+KERNEL=="uhid", SUBSYSTEM=="misc", OPTIONS+="static_node=uhid", TAG+="uaccess"
 KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess"

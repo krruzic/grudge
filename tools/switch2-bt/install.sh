@@ -19,12 +19,14 @@ uv python install 3.12
 [ -x "$DIR/.venv/bin/python" ] || uv venv -q --python 3.12 "$DIR/.venv"
 uv pip install -q --python "$DIR/.venv/bin/python" -r "$DIR/requirements.txt"
 
-if ! lsmod | grep -q '^uinput' || [ ! -w /dev/uinput ] || [ ! -f /etc/udev/rules.d/70-grudge-switch2-bt.rules ]; then
-  echo ">> uinput access (sudo)"
+if [ ! -w /dev/uhid ] || [ ! -w /dev/uinput ] || ! cmp -s "$DIR/70-grudge-switch2-bt.rules" /etc/udev/rules.d/70-grudge-switch2-bt.rules; then
+  echo ">> uhid / uinput access (sudo)"
   sudo install -m 0644 "$DIR/70-grudge-switch2-bt.rules" /etc/udev/rules.d/70-grudge-switch2-bt.rules
-  echo uinput | sudo tee /etc/modules-load.d/grudge-uinput.conf >/dev/null
+  printf 'uhid\nuinput\n' | sudo tee /etc/modules-load.d/grudge-uinput.conf >/dev/null
+  sudo modprobe uhid
   sudo modprobe uinput
   sudo udevadm control --reload-rules
+  sudo udevadm trigger --name-match=uhid || true
   sudo udevadm trigger --name-match=uinput || true
 fi
 
