@@ -54,6 +54,7 @@ export async function loadFont(): Promise<void> {
   lineMask = mask(data, 1);
   for (const b of cache.values()) b.c.width = b.c.height = 0;
   cache.clear();
+  families.clear();
   widths.clear();
   markReady();
 }
@@ -153,7 +154,14 @@ const PADY = 1;
 
 /** A tinted string, rasterised at `c.width / (w / HK)` device pixels per font pixel. `w`/`h` are atlas-scale size. */
 type Baked = { c: HTMLCanvasElement; w: number; h: number };
-const CACHE_MAX = 500;
+const CACHE_MAX = 1500;
+/** Every size baked recently per string + style ("family"), and when its last bake was (see render). */
+const families = new Map<string, { at: number; sizes: number[] }>();
+const BAKES_PER_FRAME = 8;
+let budgetAt = 0;
+let budgetLeft = BAKES_PER_FRAME;
+/** Which layers a bake holds: all of them (whole strings), or one (per-glyph number parts, see drawNum). */
+type Part = "all" | "shadow" | "edge" | "fill";
 
 // A lost 2D context empties every canvas; drop the cache and let text-texture owners repaint.
 const flushers: (() => void)[] = [];
@@ -162,15 +170,25 @@ export function onTextLost(fn: () => void): void {
 }
 function flushText(): void {
   cache.clear();
+  families.clear();
   for (const f of flushers) f();
 }
 
 /** `k` = font pixels → layout units; `ppu` = device pixels per layout unit of the target context. */
-function render(s: string, color: string, edge: boolean, shadow: boolean, k: number, ppu: number): Baked {
-  const kk = Math.round(k * 20);
+function render(
+  s: string,
+  color: string,
+  edge: boolean,
+  shadow: boolean,
+  k: number,
+  ppu: number,
+  part: Part = "all",
+): Baked {
   // Bake at the device size it will be drawn at (never above atlas resolution; larger draws upscale smoothly).
+  // The bake only depends on that size (px), not on the layout scale it is drawn at.
   const px = Math.min(HK, Math.round(k * ppu * 8) / 8);
-  const key = `${edge ? 1 : 0}${shadow ? 1 : 0}|${kk}|${px}|${color}|${s}`;
+  const fam = `${edge ? 1 : 0}${shadow ? 1 : 0}${part}|${color}|${s}`;
+  const key = `${px}|${fam}`;
   const soft = !edge && !shadow;
   const hit = cache.get(key);
   if (hit) {
@@ -178,13 +196,45 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
     cache.set(key, hit);
     return hit;
   }
+  // Text whose size is animating (pop-in banners, callouts) would bake again every frame: while its last bake is
+  // recent, or this frame already baked a lot, draw the nearest existing size scaled instead. Once it holds still
+  // it gets its exact bake.
+  const now = performance.now();
+  if (now - budgetAt > 12) {
+    budgetAt = now;
+    budgetLeft = BAKES_PER_FRAME;
+  }
+  const f = families.get(fam);
+  if (f && (now - f.at < 250 || budgetLeft <= 0)) {
+    let best: Baked | undefined;
+    let bestD = Infinity;
+    for (const p of f.sizes) {
+      const b = cache.get(`${p}|${fam}`);
+      // Prefer downscaling (sharper) over upscaling.
+      const d = p >= px ? p / px : (2 * px) / p;
+      if (b && d < bestD) {
+        best = b;
+        bestD = d;
+      }
+    }
+    if (best) return best;
+  }
+  budgetLeft--;
+  if (f) {
+    f.at = now;
+    if (!f.sizes.includes(px)) f.sizes.push(px);
+    if (f.sizes.length > 8) f.sizes.shift();
+  } else {
+    if (families.size > 4000) families.clear();
+    families.set(fam, { at: now, sizes: [px] });
+  }
   perf.stat("hud.text", 1);
   const w = (Math.ceil(rawWidth(s)) + PADX * 2 + 3) * HK;
   const h = (meta.h + PADY * 2 + 2) * HK;
   const g = scratchCtx(0, w, h);
   const c = scratch[0];
   const col = rgba(color);
-  if (shadow || soft) {
+  if ((shadow || soft) && (part === "all" || part === "shadow")) {
     g.globalAlpha = (soft ? 0.28 : 0.55) * col[3];
     g.drawImage(
       layer(w, h, edge ? lineMask! : fillMask!, s, PADX + (soft ? 1 : 2), PADY + (soft ? 1 : 2), INK),
@@ -199,12 +249,15 @@ function render(s: string, color: string, edge: boolean, shadow: boolean, k: num
     );
     g.globalAlpha = 1;
   }
-  if (edge) g.drawImage(layer(w, h, lineMask!, s, PADX, PADY, INK), 0, 0, w, h, 0, 0, w, h);
-  const grad = g.createLinearGradient(0, (PADY + 2) * HK, 0, (PADY + meta.base) * HK);
-  grad.addColorStop(0, shade(col, edge ? 0.35 : 0.12));
-  grad.addColorStop(0.55, shade(col, 0));
-  grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
-  g.drawImage(layer(w, h, fillMask!, s, PADX, PADY, grad), 0, 0, w, h, 0, 0, w, h);
+  if (edge && (part === "all" || part === "edge"))
+    g.drawImage(layer(w, h, lineMask!, s, PADX, PADY, INK), 0, 0, w, h, 0, 0, w, h);
+  if (part === "all" || part === "fill") {
+    const grad = g.createLinearGradient(0, (PADY + 2) * HK, 0, (PADY + meta.base) * HK);
+    grad.addColorStop(0, shade(col, edge ? 0.35 : 0.12));
+    grad.addColorStop(0.55, shade(col, 0));
+    grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
+    g.drawImage(layer(w, h, fillMask!, s, PADX, PADY, grad), 0, 0, w, h, 0, 0, w, h);
+  }
   const o = cacheCanvas();
   o.width = Math.max(1, Math.round((w / HK) * px));
   o.height = Math.max(1, Math.round((h / HK) * px));
@@ -240,6 +293,7 @@ function blit(
   shadow: boolean,
 ): void {
   if (!fillMask || !s) return;
+  if (s.length > 1 && HAS_DIGIT.test(s)) return glyphwise(ctx, s, x, y, color, scale, edge, shadow);
   scale = eff(scale);
   const k = (BASE * scale) / meta.px;
   const m = ctx.getTransform();
@@ -263,6 +317,65 @@ export function drawText(
   outline: string | boolean = false,
 ): void {
   blit(ctx, s, x, y, color, scale, !!outline, true);
+}
+
+/**
+ * Strings with numbers in them change all the time (gold, timers, damage, FPS), so instead of baking each new
+ * string they are drawn glyph by glyph from cached one-character bakes: every glyph's shadow, then every outline,
+ * then every fill, which stacks the layers the same way a whole-string bake does.
+ */
+const HAS_DIGIT = /\d/;
+function glyphwise(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  color: string,
+  scale: number,
+  edge: boolean,
+  shadow: boolean,
+  parts: readonly Part[] = NUM_PARTS,
+): void {
+  scale = eff(scale);
+  const k = (BASE * scale) / meta.px;
+  const m = ctx.getTransform();
+  const ppu = Math.hypot(m.a, m.b);
+  const smooth = ctx.imageSmoothingEnabled;
+  const q = ctx.imageSmoothingQuality;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  const y0 = y - PADY * k - 0.5 * scale;
+  for (const part of parts) {
+    if (part === "edge" && !edge) continue;
+    // Outlined text without a drop shadow has no shadow layer (plain text has a soft one).
+    if (part === "shadow" && edge && !shadow) continue;
+    let pen = 0;
+    for (const ch of s) {
+      if (ch === " ") {
+        pen += glyph(ch).adv + TRACK;
+        continue;
+      }
+      const b = render(ch, color, edge, shadow, k, ppu, part);
+      ctx.drawImage(b.c, x + (pen - PADX) * k, y0, (b.w / HK) * k, (b.h / HK) * k);
+      pen += glyph(ch).adv + TRACK;
+    }
+  }
+  ctx.imageSmoothingEnabled = smooth;
+  ctx.imageSmoothingQuality = q;
+}
+const NUM_PARTS: Part[] = ["shadow", "edge", "fill"];
+
+/** One layer ("shadow", "edge" or "fill") of drawNum's text, for callers that stack the layers themselves. */
+export function drawNumPart(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  color: string,
+  scale: number,
+  part: "shadow" | "edge" | "fill",
+): void {
+  if (fillMask && s) glyphwise(ctx, s, x, y, color, scale, true, true, [part]);
 }
 
 export function drawNum(

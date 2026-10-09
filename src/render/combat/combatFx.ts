@@ -24,7 +24,16 @@ import { SHARED_CHUNK_GEOS } from "../fx/chunks";
 import { FxBatch, fxBatch, flushFxBatches, FxInst } from "../fx/instances";
 import { chunkGeo, quadGeo, ringGeo, SHARED_GEO, SHARED_MAT, WHITE } from "./assets";
 import { glowTex, puffTex, streakTex } from "./textures";
-import { FloatBatch, type Floater, type Label, NUM_RANK, type NumState, numText, textAtlas } from "./floatText";
+import {
+  FloatBatch,
+  type Floater,
+  type Label,
+  NUM_RANK,
+  NUM_SCALE,
+  type NumState,
+  numText,
+  textAtlas,
+} from "./floatText";
 import { handleEvent } from "./events";
 import { syncBanners } from "./fieldFx";
 import { syncMissiles, syncProjectiles } from "./projectiles";
@@ -84,7 +93,7 @@ export class CombatFx implements FxHost {
   private ribbons = new Map<string, Ribbon>();
 
   constructor(readonly teamColors: THREE.Color[]) {
-    this.root.add(this.particles.root, this.floats.mesh);
+    this.root.add(this.particles.root, this.floats.mesh, this.floats.digitMesh);
   }
 
   // ── Frame entry points (called by GameRenderer) ──
@@ -571,15 +580,14 @@ export class CombatFx implements FxHost {
       prev.big ||= big;
       prev.mul = Math.max(prev.mul, mul);
       prev.last = this.clock;
-      textAtlas.release(prev.f.slot);
-      prev.f.slot = textAtlas.acquire(numText(prev.amount), prev.color, 2.6, 2);
+      this.setNumber(prev.f, numText(prev.amount), prev.color);
       prev.f.dur = prev.big ? 0.9 : 0.7;
       prev.f.t = Math.min(prev.f.t, prev.f.dur * 0.15 * 0.55);
       return;
     }
     const vx = (Math.random() - 0.5) * 1.2;
     const f: Floater = {
-      slot: textAtlas.acquire(numText(amount), color, 2.6, 2),
+      slot: -1,
       x,
       y: y + 1.6,
       z,
@@ -599,6 +607,7 @@ export class CombatFx implements FxHost {
         f.a = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
       },
     };
+    this.setNumber(f, numText(amount), color);
     const n: NumState = { f, amount, color, big, mul, born: this.clock, last: this.clock };
     if (key !== undefined) {
       this.numKeys.set(key, n);
@@ -607,6 +616,19 @@ export class CombatFx implements FxHost {
       };
     }
     this.floats.list.push(f);
+  }
+
+  /** Shows `text` on a number floater: digit quads for the number colours, else a text atlas slot. */
+  private setNumber(f: Floater, text: string, color: string): void {
+    if (f.slot >= 0) textAtlas.release(f.slot);
+    const c = this.floats.numColor(color);
+    if (c >= 0 && /^\d+$/.test(text)) {
+      f.slot = -1;
+      f.num = { text, color: c };
+    } else {
+      f.num = undefined;
+      f.slot = textAtlas.acquire(text, color, NUM_SCALE, 2);
+    }
   }
 
   label(x: number, y: number, z: number, [text, color]: Label): void {

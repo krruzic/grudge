@@ -83,23 +83,45 @@ function withOutlineNormals(geo: THREE.BufferGeometry): THREE.BufferGeometry {
   const starts = geo.userData.partStarts as number[] | undefined;
   const part = new Int32Array(pos.count);
   starts?.forEach((s, p) => part.fill(p, s));
-  const sums = new Map<string, THREE.Vector3>();
-  const key = (i: number) =>
-    `${Math.round(pos.getX(i) * 1000)},${Math.round(pos.getY(i) * 1000)},${Math.round(pos.getZ(i) * 1000)},${part[i]}`;
+  // Vertices at the same spot (mm) of the same part share one summed normal. The key packs the mm coordinates
+  // (each within +-8.191 m, 14 bits) and the part (6 bits) exactly into one number; string keys made the first
+  // ward / dig outline of a hero a 20 ms hitch.
+  const keys = new Float64Array(pos.count);
+  let packed = true;
+  for (let i = 0; i < pos.count && packed; i++) {
+    const x = Math.round(pos.getX(i) * 1000) + 8192;
+    const y = Math.round(pos.getY(i) * 1000) + 8192;
+    const z = Math.round(pos.getZ(i) * 1000) + 8192;
+    if (x < 0 || y < 0 || z < 0 || x > 16383 || y > 16383 || z > 16383 || part[i] > 63) packed = false;
+    keys[i] = ((x * 16384 + y) * 16384 + z) * 64 + part[i];
+  }
+  const keyOf = packed
+    ? (i: number) => keys[i]
+    : (i: number) =>
+        `${Math.round(pos.getX(i) * 1000)},${Math.round(pos.getY(i) * 1000)},${Math.round(pos.getZ(i) * 1000)},${part[i]}`;
+  const slot = new Map<number | string, number>();
+  const idx = new Int32Array(pos.count);
+  const sum: number[] = [];
   for (let i = 0; i < pos.count; i++) {
-    const k = key(i);
-    const v = sums.get(k) ?? new THREE.Vector3();
-    v.x += nor.getX(i);
-    v.y += nor.getY(i);
-    v.z += nor.getZ(i);
-    sums.set(k, v);
+    const k = keyOf(i);
+    let s = slot.get(k);
+    if (s === undefined) {
+      s = sum.length;
+      slot.set(k, s);
+      sum.push(0, 0, 0);
+    }
+    idx[i] = s;
+    sum[s] += nor.getX(i);
+    sum[s + 1] += nor.getY(i);
+    sum[s + 2] += nor.getZ(i);
   }
   const out = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
-    const v = sums.get(key(i))!.clone().normalize();
-    out[i * 3] = v.x;
-    out[i * 3 + 1] = v.y;
-    out[i * 3 + 2] = v.z;
+    const s = idx[i];
+    const l = Math.hypot(sum[s], sum[s + 1], sum[s + 2]) || 1;
+    out[i * 3] = sum[s] / l;
+    out[i * 3 + 1] = sum[s + 1] / l;
+    out[i * 3 + 2] = sum[s + 2] / l;
   }
   g.setAttribute("outlineNormal", new THREE.BufferAttribute(out, 3));
   g.userData.model = true;
@@ -186,8 +208,7 @@ export function buildHulls(root: THREE.Object3D, mat: THREE.Material, order: num
 }
 
 /**
- * Culling sphere for a skinned hero mesh: the bind-pose bounds, padded for animation, shared per geometry.
- * (Left unset, three.js skins every vertex on the CPU to compute it the first time a new hero is drawn.)
+ * Culling sphere for a skinned mesh: the bind-pose bounds, padded for animation, shared per geometry.
  */
 const skinSpheres = new WeakMap<THREE.BufferGeometry, THREE.Sphere>();
 function skinnedBounds(g: THREE.BufferGeometry): THREE.Sphere {
@@ -200,6 +221,11 @@ function skinnedBounds(g: THREE.BufferGeometry): THREE.Sphere {
   }
   return s;
 }
+// Every skinned mesh (soldier rigs, structure and prop rigs too, not only heroes) culls with that sphere: three's
+// own computeBoundingSphere skins every vertex on the CPU, a 10-40 ms hitch the first time each one is drawn.
+THREE.SkinnedMesh.prototype.computeBoundingSphere = function (this: THREE.SkinnedMesh) {
+  this.boundingSphere = skinnedBounds(this.geometry).clone();
+};
 
 export class HeroModels {
   private gltfs = new Map<string, GLTF>();

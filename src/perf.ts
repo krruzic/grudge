@@ -24,6 +24,10 @@ let active: WebGLQuery | null = null;
 let frameNo = 0;
 let lastShow = 0;
 let frameMax = 0;
+let lastFrameAt = 0;
+/** Frames whose JS took > SPIKE_MS or whose gap since the last frame did: their sections, for window.grudgeSpikes. */
+const SPIKE_MS = 14;
+const spikes: Record<string, number>[] = [];
 
 function add(m: Map<string, number>, k: string, v: number): void {
   m.set(k, (m.get(k) ?? 0) + v);
@@ -84,6 +88,17 @@ export const perf = {
       timer.pending = keep;
     }
     frameMax = Math.max(frameMax, cpu.get("frame") ?? 0);
+    const at = performance.now();
+    const gap = lastFrameAt ? at - lastFrameAt : 0;
+    lastFrameAt = at;
+    if ((cpu.get("frame") ?? 0) > SPIKE_MS || gap > SPIKE_MS * 2) {
+      const sp: Record<string, number> = { gap };
+      for (const [k, v] of cpu) if (v > 0.5) sp[k] = +v.toFixed(2);
+      for (const [k, v] of stat) sp[k] = v;
+      spikes.push(sp);
+      if (spikes.length > 300) spikes.shift();
+      (window as unknown as { grudgeSpikes: unknown }).grudgeSpikes = spikes;
+    }
     for (const [k, v] of cpu) add(sums, "cpu." + k, v);
     for (const [k, v] of stat) add(sums, k, v);
     cpu.clear();

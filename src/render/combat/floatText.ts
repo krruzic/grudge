@@ -2,7 +2,7 @@
 // fed from a text atlas; ability callouts and level-up/talent banners are cached canvas sprites.
 import * as THREE from "three";
 import { cacheCanvas } from "../../ui/cacheCanvas";
-import { fontReady, onTextLost, drawNum, textWidth, drawText } from "../../ui/font";
+import { fontReady, onTextLost, drawNum, drawNumPart, textWidth, drawText } from "../../ui/font";
 
 // ── Text atlas ──
 // Damage numbers and labels are baked once into fixed-size rows ("slots") of one tall DataTexture and drawn as
@@ -108,6 +108,63 @@ class TextAtlas {
 
 export const textAtlas = new TextAtlas();
 
+// ── Digit atlas ──
+// Damage numbers change constantly (merging hits count up), so they are not baked per value: every digit of every
+// number colour is baked once, one cell per layer (shadow, outline, fill), and a number is drawn as one quad per
+// digit and layer (FloatBatch's digit mesh), stacked shadows first like drawNum. No canvas, upload or mipmap work
+// per number.
+const PART_ORDER = ["shadow", "edge", "fill"] as const;
+const DIGITS = "0123456789";
+/** Cell size in slot layout units (a slot is SLOT_LW x SLOT_LH). */
+const CELL_LW = 32;
+const CELL_LH = SLOT_LH;
+const DIGIT_COLS = DIGITS.length;
+
+class DigitAtlas {
+  readonly colors: string[] = [];
+  readonly tex: THREE.CanvasTexture;
+  private canvas = cacheCanvas();
+  /** Layout width of each digit at NUM_SCALE. */
+  readonly width = new Float32Array(10);
+  rows = 0;
+
+  constructor(colors: string[]) {
+    this.colors = colors;
+    this.rows = colors.length * PART_ORDER.length;
+    this.canvas.width = DIGIT_COLS * CELL_LW * TK;
+    this.canvas.height = this.rows * CELL_LH * TK;
+    this.tex = new THREE.CanvasTexture(this.canvas);
+    this.tex.colorSpace = THREE.SRGBColorSpace;
+    this.tex.minFilter = THREE.LinearMipmapLinearFilter;
+    fontReady.then(() => this.draw());
+    onTextLost(() => this.draw());
+  }
+
+  /** Cell of digit d (0-9) in colour c, layer p. */
+  cell(c: number, p: number, d: number): number {
+    return (c * PART_ORDER.length + p) * DIGIT_COLS + d;
+  }
+
+  private draw(): void {
+    const ctx = this.canvas.getContext("2d")!;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    for (let d = 0; d < 10; d++) this.width[d] = textWidth(DIGITS[d], NUM_SCALE, true);
+    this.colors.forEach((color, c) =>
+      PART_ORDER.forEach((part, p) => {
+        for (let d = 0; d < 10; d++) {
+          const i = this.cell(c, p, d);
+          const x0 = (i % DIGIT_COLS) * CELL_LW;
+          const y0 = Math.floor(i / DIGIT_COLS) * CELL_LH;
+          ctx.setTransform(TK, 0, 0, TK, x0 * TK, y0 * TK);
+          drawNumPart(ctx, DIGITS[d], (CELL_LW - this.width[d]) / 2, 2, color, NUM_SCALE, part);
+        }
+      }),
+    );
+    this.tex.needsUpdate = true;
+  }
+}
+
 // ── Floating quads ──
 // One instanced quad per floater: iPos (world position, billboarded in view space), iSize (world size),
 // iTex = (slot row, alpha). The vertex shader maps the quad's uv into that slot's row of the atlas.
@@ -139,9 +196,34 @@ void main() {
   #include <colorspace_fragment>
   #include <fog_fragment>
 }`;
+let sharedDigits: DigitAtlas | undefined;
+
+const DIGIT_VERT = `
+attribute vec3 iPos;
+attribute vec4 iOff;
+attribute vec2 iTex;
+uniform vec2 grid;
+varying vec2 vUv;
+varying float vAlpha;
+#include <common>
+#include <fog_pars_vertex>
+void main() {
+  float col = mod(iTex.x, grid.x);
+  float row = floor(iTex.x / grid.x + 0.001);
+  vUv = vec2((col + uv.x) / grid.x, 1.0 - (row + 1.0 - uv.y) / grid.y);
+  vAlpha = iTex.y;
+  vec4 mvPosition = modelViewMatrix * vec4(iPos, 1.0);
+  mvPosition.xy += position.xy * iOff.zw + iOff.xy;
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+
 /** A live number or label; step(k, dt) animates position/size/alpha for k = 0..1 over `dur`. */
 export interface Floater {
+  /** Text atlas slot (labels), or -1 for a damage number drawn digit by digit from `num`. */
   slot: number;
+  /** Damage number: its digits and colour index in the digit atlas. */
+  num?: { text: string; color: number };
   x: number;
   y: number;
   z: number;
@@ -162,6 +244,14 @@ export class FloatBatch {
   private size = new Float32Array(0);
   private tex = new Float32Array(0);
   list: Floater[] = [];
+  /** Damage numbers: one instance per digit and layer (see DigitAtlas). */
+  readonly digitMesh: THREE.Mesh;
+  readonly digits = (sharedDigits ??= new DigitAtlas([...NUM_RANK, HEAL_COLOR]));
+  private dGeo = new THREE.InstancedBufferGeometry();
+  private dCap = 128;
+  private dPos = new Float32Array(0);
+  private dOff = new Float32Array(0);
+  private dTex = new Float32Array(0);
 
   constructor() {
     const base = new THREE.PlaneGeometry(1, 1);
@@ -184,6 +274,85 @@ export class FloatBatch {
     this.mesh.renderOrder = 31;
     this.mesh.visible = false;
     this.mesh.onBeforeRender = (r) => textAtlas.flush(r);
+
+    this.dGeo.index = base.index;
+    this.dGeo.setAttribute("position", base.getAttribute("position"));
+    this.dGeo.setAttribute("uv", base.getAttribute("uv"));
+    this.allocDigits();
+    const dMat = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge([
+        THREE.UniformsLib.fog,
+        { map: { value: null }, grid: { value: new THREE.Vector2(DIGIT_COLS, this.digits.rows) } },
+      ]),
+      vertexShader: DIGIT_VERT,
+      fragmentShader: FLOAT_FRAG,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      fog: true,
+    });
+    dMat.uniforms.map.value = this.digits.tex;
+    this.digitMesh = new THREE.Mesh(this.dGeo, dMat);
+    this.digitMesh.frustumCulled = false;
+    this.digitMesh.renderOrder = 32;
+    this.digitMesh.visible = false;
+  }
+
+  /** Digit atlas colour index of a number colour, or -1 (then the number uses a text slot). */
+  numColor(color: string): number {
+    return this.digits.colors.indexOf(color);
+  }
+
+  private allocDigits(): void {
+    this.dPos = new Float32Array(this.dCap * 3);
+    this.dOff = new Float32Array(this.dCap * 4);
+    this.dTex = new Float32Array(this.dCap * 2);
+    this.dGeo.setAttribute("iPos", new THREE.InstancedBufferAttribute(this.dPos, 3).setUsage(THREE.DynamicDrawUsage));
+    this.dGeo.setAttribute("iOff", new THREE.InstancedBufferAttribute(this.dOff, 4).setUsage(THREE.DynamicDrawUsage));
+    this.dGeo.setAttribute("iTex", new THREE.InstancedBufferAttribute(this.dTex, 2).setUsage(THREE.DynamicDrawUsage));
+  }
+
+  /** Writes every damage number's digit quads (each number: all shadows, then outlines, then fills). */
+  private updateDigits(): void {
+    let need = 0;
+    for (const f of this.list) if (f.num) need += f.num.text.length * PART_ORDER.length;
+    if (need > this.dCap) {
+      while (this.dCap < need) this.dCap *= 2;
+      this.allocDigits();
+    }
+    const W = this.digits.width;
+    let j = 0;
+    for (const f of this.list) {
+      const n = f.num;
+      if (!n) continue;
+      // World units per slot layout unit: the quad spans SLOT_LW x SLOT_LH at (sx, sy).
+      const ux = f.sx / SLOT_LW;
+      const uy = f.sy / SLOT_LH;
+      let total = 0;
+      for (let i = 0; i < n.text.length; i++) total += W[n.text.charCodeAt(i) - 48];
+      for (let p = 0; p < PART_ORDER.length; p++) {
+        let pen = -total / 2;
+        for (let i = 0; i < n.text.length; i++) {
+          const d = n.text.charCodeAt(i) - 48;
+          this.dPos[j * 3] = f.x;
+          this.dPos[j * 3 + 1] = f.y;
+          this.dPos[j * 3 + 2] = f.z;
+          this.dOff[j * 4] = (pen + W[d] / 2) * ux;
+          this.dOff[j * 4 + 1] = 0;
+          this.dOff[j * 4 + 2] = CELL_LW * ux;
+          this.dOff[j * 4 + 3] = CELL_LH * uy;
+          this.dTex[j * 2] = this.digits.cell(n.color, p, d);
+          this.dTex[j * 2 + 1] = f.a;
+          pen += W[d];
+          j++;
+        }
+      }
+    }
+    this.dGeo.instanceCount = j;
+    this.digitMesh.visible = j > 0;
+    (this.dGeo.getAttribute("iPos") as THREE.InstancedBufferAttribute).needsUpdate = true;
+    (this.dGeo.getAttribute("iOff") as THREE.InstancedBufferAttribute).needsUpdate = true;
+    (this.dGeo.getAttribute("iTex") as THREE.InstancedBufferAttribute).needsUpdate = true;
   }
 
   private alloc(): void {
@@ -197,14 +366,14 @@ export class FloatBatch {
 
   /** Steps every floater, drops finished ones, and rewrites the instance buffers (layer 0 labels under layer 1 numbers). */
   update(dt: number): void {
-    if (!this.list.length && !this.mesh.visible) return;
+    if (!this.list.length && !this.mesh.visible && !this.digitMesh.visible) return;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const f = this.list[i];
       f.t += dt;
       const k = Math.min(1, f.t / f.dur);
       f.step(k, dt);
       if (k >= 1) {
-        textAtlas.release(f.slot);
+        if (f.slot >= 0) textAtlas.release(f.slot);
         f.done?.();
         this.list.splice(i, 1);
       }
@@ -217,7 +386,7 @@ export class FloatBatch {
     let j = 0;
     for (let layer = 0; layer < 2; layer++) {
       for (const f of this.list) {
-        if (f.layer !== layer) continue;
+        if (f.layer !== layer || f.slot < 0) continue;
         this.pos[j * 3] = f.x;
         this.pos[j * 3 + 1] = f.y;
         this.pos[j * 3 + 2] = f.z;
@@ -233,12 +402,15 @@ export class FloatBatch {
     (this.geo.getAttribute("iPos") as THREE.InstancedBufferAttribute).needsUpdate = true;
     (this.geo.getAttribute("iSize") as THREE.InstancedBufferAttribute).needsUpdate = true;
     (this.geo.getAttribute("iTex") as THREE.InstancedBufferAttribute).needsUpdate = true;
+    this.updateDigits();
   }
 }
 
 // ── Damage numbers ──
 /** Number colours in priority order: merging hits keep the highest (white < big < hero damage < crit). */
 export const NUM_RANK = ["#ffffff", "#ffd84a", "#ff6a4a", "#ffe040"];
+export const HEAL_COLOR = "#7dff7a";
+export const NUM_SCALE = 2.6;
 export interface NumState {
   f: Floater;
   amount: number;

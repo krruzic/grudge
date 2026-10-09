@@ -55,7 +55,7 @@ export function setupControl(
   );
   app.people = humans.map((h, i) => h || !!remote[i]);
   linkMates(app);
-  app.view.setHumans(app.splitAll ? humans.map(() => true) : humans);
+  app.view.setHumans(app.splitAll ? humans.map((h, i) => h || i < app.splitAll) : humans);
 }
 
 /** One command per player slot for the next tick. */

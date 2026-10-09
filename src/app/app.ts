@@ -47,7 +47,8 @@ export class App {
   /** `?join=N`: treat the first N seats as if a controller were plugged in (testing select without pads). */
   readonly forceJoin: number;
   /** `?split4` / VITE_SPLIT4: every seat gets its own view, even CPU ones. */
-  readonly splitAll: boolean;
+  /** Debug: this many seats get a split-screen view even when CPUs play them (`?split4`, `?split=N`). */
+  readonly splitAll: number;
 
   state: AppState = "title";
 
@@ -145,7 +146,7 @@ export class App {
     this.world = this.newWorld([roster[0], roster[0]]);
     this.mapViews = assets.mapViews;
 
-    this.splitAll = p.has("split4") || import.meta.env.VITE_SPLIT4 === "1";
+    this.splitAll = p.has("split4") || import.meta.env.VITE_SPLIT4 === "1" ? 4 : Number(p.get("split") ?? 0);
     const dbgZoom = p.get("zoom");
     if (dbgZoom) Object.assign(renderConfig, { minViewWidth: Number(dbgZoom), viewMargin: 0 });
 

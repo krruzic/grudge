@@ -35,12 +35,16 @@ import { INK, PAD, PLAYER_TAG, meter, padButton, ringMeter, times, timesWidth } 
 /** Width of a team / player panel block. */
 export const BLOCK_W = 104;
 
-/** Screen-shake offset for a panel hit at `at` (fades over 0.7 s), rounded to half units so memos repaint rarely. */
+/**
+ * Screen-shake offset for a panel hit at `at` (fades over 0.7 s). It jumps 20 times a second, rounded to half
+ * units, so a panel under constant attack repaints its memo 20 times a second rather than every frame.
+ */
 function shakeOf(at: number | undefined, now: number, amp: number): [number, number] {
   const age = now - (at ?? -99);
   if (age > 0.7) return [0, 0];
   const k = amp * (1 - age / 0.7);
-  return [Math.round(Math.sin(now * 71) * k * 2) / 2, Math.round(Math.cos(now * 53) * k * 2) / 2];
+  const q = Math.floor(now * 20) / 20;
+  return [Math.round(Math.sin(q * 71) * k * 2) / 2, Math.round(Math.cos(q * 53) * k * 2) / 2];
 }
 
 // ── Team head ──

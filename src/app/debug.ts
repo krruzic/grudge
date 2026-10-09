@@ -145,6 +145,7 @@ export function installDebugApi(app: App): void {
     hud: app.hud,
     screens: app.screens,
     spawnUnit,
+    forceAbility,
     /** Max XP, then learn `picks` (option index per level), first options for the rest. Returns learned ids. */
     levelUp: (player: number, picks: number[]) => {
       const w = app.world;
