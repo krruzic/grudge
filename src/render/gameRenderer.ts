@@ -381,9 +381,9 @@ export class GameRenderer {
   }
 
   /**
-   * Reduced effects (graphics option, for weak / integrated GPUs): no see-through champion silhouettes (a second
-   * skinned draw of every champion per view), no map ambience, half-size particle bursts with a lower live cap,
-   * and no hit rings on soldier-only hits.
+   * Reduced effects (graphics option, for weak / integrated GPUs): no map ambience, half-size particle bursts with
+   * a lower live cap, and no hit rings on soldier-only hits. Champion silhouettes stay (you need them to find
+   * yourself behind walls).
    */
   lowFx = false;
   setLowFx(on: boolean): void {
@@ -855,8 +855,7 @@ export class GameRenderer {
     this.hazards?.fillView(cam);
     this.combatFx.fillView(cam);
     if (silScene.parent !== this.scene) this.scene.add(silScene);
-    silScene.visible = !this.lowFx;
-    if (!this.lowFx) syncSilhouettes(this.scene);
+    syncSilhouettes(this.scene);
     t0 = perf.cpu(key + ".prep", t0);
     const info = this.renderer.info.render;
     const c0 = info.calls;

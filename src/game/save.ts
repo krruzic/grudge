@@ -241,8 +241,7 @@ export const OPTION_ROWS: Row<Options>[] = [
     label: "EFFECTS",
     values: [1, 0],
     fmt: (v) => (v ? "FULL" : "REDUCED"),
-    blurb:
-      "REDUCED: FEWER SPARKS AND SMOKE, NO SEE-THROUGH OUTLINES OF CHAMPIONS BEHIND WALLS. FOR WEAK OR BUILT-IN GRAPHICS.",
+    blurb: "REDUCED: FEWER SPARKS AND SMOKE. FOR WEAK OR BUILT-IN GRAPHICS.",
   },
   {
     key: "fps",
