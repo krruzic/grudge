@@ -29,6 +29,8 @@ export interface Options {
   fps: number;
   /** 3D render resolution in percent of native (100 or 75). */
   renderScale: number;
+  /** 1 full effects, 0 reduced (GameRenderer.setLowFx). */
+  effects?: number;
 }
 
 export interface Record3 {
@@ -235,6 +237,14 @@ export const OPTION_ROWS: Row<Options>[] = [
       "HEIGHT THE 3D VIEW IS DRAWN AT (FULL SCREEN). LOWER IT FOR WEAK OR BUILT-IN GRAPHICS. MENUS AND HUD STAY SHARP.",
   },
   {
+    key: "effects",
+    label: "EFFECTS",
+    values: [1, 0],
+    fmt: (v) => (v ? "FULL" : "REDUCED"),
+    blurb:
+      "REDUCED: FEWER SPARKS AND SMOKE, NO SEE-THROUGH OUTLINES OF CHAMPIONS BEHIND WALLS. FOR WEAK OR BUILT-IN GRAPHICS.",
+  },
+  {
     key: "fps",
     label: "FPS COUNTER",
     values: [1, 0],
@@ -266,6 +276,7 @@ export const DEFAULT_OPTIONS: Options = {
   kbm: 1,
   fps: 1,
   renderScale: 0,
+  effects: 1,
 };
 
 const KEY = "grudge.save.v1";

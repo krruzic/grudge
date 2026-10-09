@@ -10,6 +10,7 @@
 // views), fieldFx.ts (war banners, shop cannon, repair), ambientFx.ts (per-frame hero/structure ambience),
 // towers.ts (tower projectiles, pulses and idle effects).
 import * as THREE from "three";
+import { SpriteBatches } from "../batch/spriteBatch";
 import type { World } from "../../sim/world";
 import type { SimEvent } from "../../sim/types";
 import { activeCostume, ENGINEER, FX, HERALD, RAIDER, WARDEN, WARLORD, withCostume } from "../fx/atlas";
@@ -72,6 +73,8 @@ export class CombatFx implements FxHost {
   shake = 0;
   /** Suppresses damage numbers and callouts (menu backdrops / previews). */
   quiet = false;
+  /** Reduced effects (graphics option): half-size particle bursts, no hit rings without a champion involved. */
+  lite = false;
   /** Set by EntityViews: swings Thorn's real arm for a reach slap; false when the hero isn't visible. */
   slapArm?: (src: number, tx: number, ty: number, tz: number) => boolean;
 
@@ -92,8 +95,26 @@ export class CombatFx implements FxHost {
   private matPool = new Map<string, THREE.Material[]>();
   private ribbons = new Map<string, Ribbon>();
 
+  /** Every plain sprite under root (projectile glows, flashes, kit sprites) drawn through instanced batches. */
+  private spriteBatches = new SpriteBatches();
+
   constructor(readonly teamColors: THREE.Color[]) {
-    this.root.add(this.particles.root, this.floats.mesh, this.floats.digitMesh);
+    this.root.add(this.particles.root, this.floats.mesh, this.floats.digitMesh, this.spriteBatches.root);
+  }
+
+  /**
+   * Per view, before drawing: new sprites join the batches (a busy fight has dozens of arrows and flashes in
+   * flight, each its own draw call per view otherwise), then the batches are filled for this camera.
+   */
+  fillView(cam: THREE.Camera): void {
+    const add = (o: THREE.Object3D) => {
+      if (o === this.spriteBatches.root || o === this.particles.root) return;
+      if (o instanceof THREE.Sprite && o.material instanceof THREE.SpriteMaterial && o.layers.mask === 1)
+        this.spriteBatches.add(o);
+      for (const c of o.children) add(c);
+    };
+    add(this.root);
+    this.spriteBatches.fill(cam);
   }
 
   // ── Frame entry points (called by GameRenderer) ──

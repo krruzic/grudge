@@ -332,6 +332,7 @@ export class GameRenderer {
     const bounds = new THREE.Box3(new THREE.Vector3(1, 0, 1), new THREE.Vector3(t.width - 1, 6, t.depth - 1));
     this.effects = new Effects(bounds, t.atmosphere?.leaves ? "leaves" : t.atmosphere?.sand ? "sand" : null);
     this.scene.add(this.effects.root);
+    this.effects.root.visible = !this.lowFx;
     for (const f of map.fx) {
       if (f.name === "fx_torch") this.effects.addTorch(f.position, true);
       else if (f.name === "fx_glow") this.effects.addGlow(f.position, 0x9fe8ff, 1.6);
@@ -350,6 +351,7 @@ export class GameRenderer {
     this.world = world;
     this.combatFx = new CombatFx(this.teamColors);
     this.combatFx.world = world;
+    this.setLowFx(this.lowFx);
     this.hazards = new HazardViews(world, this.teamColors, this.combatFx);
     this.scene.add(this.hazards.root);
     this.relicView.fx = this.combatFx;
@@ -376,6 +378,19 @@ export class GameRenderer {
   setHumans(h: boolean[]): void {
     this.humanList = h;
     this.entityViews.humans = h;
+  }
+
+  /**
+   * Reduced effects (graphics option, for weak / integrated GPUs): no see-through champion silhouettes (a second
+   * skinned draw of every champion per view), no map ambience, half-size particle bursts with a lower live cap,
+   * and no hit rings on soldier-only hits.
+   */
+  lowFx = false;
+  setLowFx(on: boolean): void {
+    this.lowFx = on;
+    this.combatFx.lite = on;
+    this.combatFx.particles.budget = on ? 900 : 2500;
+    this.effects.root.visible = !on;
   }
 
   setHints(on: boolean): void {
@@ -838,8 +853,10 @@ export class GameRenderer {
     this.sky.updateMatrixWorld(true);
     this.entityViews.fillView(cam);
     this.hazards?.fillView(cam);
+    this.combatFx.fillView(cam);
     if (silScene.parent !== this.scene) this.scene.add(silScene);
-    syncSilhouettes(this.scene);
+    silScene.visible = !this.lowFx;
+    if (!this.lowFx) syncSilhouettes(this.scene);
     t0 = perf.cpu(key + ".prep", t0);
     const info = this.renderer.info.render;
     const c0 = info.calls;

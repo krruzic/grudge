@@ -351,6 +351,7 @@ export class App {
     // renderScale holds a target height (0 = native); legacy saves stored 100 / 75 (%).
     const rh = o.renderScale;
     this.view.renderScale = rh === 75 ? 0.75 : rh > 0 && rh !== 100 ? Math.min(1, rh / nativeHeight()) : 1;
+    this.view.setLowFx(o.effects === 0);
   }
 
   /** Flips the manual-zoom camera flag of seat i in the save and applies it. Returns the new value. */

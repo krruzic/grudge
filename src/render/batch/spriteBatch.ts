@@ -223,6 +223,8 @@ class SpriteBatch {
         o = o.parent;
       }
       if (!(top as THREE.Scene).isScene) {
+        // Dropped: back on the default layer, so if it is ever shown again it draws (or is batched again).
+        s.layers.set(0);
         this.members.splice(i, 1);
         for (let k = 0; k < idx.length; k++) idx[k]--;
         continue;

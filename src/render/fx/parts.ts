@@ -14,6 +14,8 @@ export interface FxHost {
   particles?: Particles;
   world?: World;
   shake: number;
+  /** Reduced effects: bursts spawn half their particles. */
+  lite?: boolean;
   add(obj: THREE.Object3D, dur: number, tick: (k: number, dt: number) => void): void;
   after(seconds: number, run: () => void): void;
 }
@@ -74,7 +76,8 @@ export function emit(h: FxHost, o: EmitOpts): void {
   const dir = o.dir ? new THREE.Vector3(o.dir.x, o.dir.y, o.dir.z).normalize() : null;
   if (h.particles) {
     const P = h.particles;
-    for (let i = 0; i < o.n; i++) {
+    const n = h.lite && o.n > 1 ? Math.ceil(o.n / 2) : o.n;
+    for (let i = 0; i < n; i++) {
       const p = P.spawn(o.tex, o.color ?? 0xffffff, !!o.additive, o.depthTest ?? true, o.order ?? 0);
       if (!p) return;
       const j = o.jitter ?? 0;

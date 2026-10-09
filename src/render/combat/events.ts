@@ -420,7 +420,7 @@ function hitFx(cfx: CombatFx, ev: Ev<"hit">): void {
       cfx.shake = Math.max(cfx.shake, 0.22);
     } else if (ev.big) {
       cfx.burst(ev.x, ev.y, ev.z, starTex, 0xffd080, 5, 0.4, 0.3, 4, true, 1);
-      cfx.ring(ev.x, ev.y - 0.9, ev.z, new THREE.Color(1, 0.9, 0.7), 1.8, 0.25);
+      if (!cfx.lite || heroInvolved) cfx.ring(ev.x, ev.y - 0.9, ev.z, new THREE.Color(1, 0.9, 0.7), 1.8, 0.25);
       cfx.shake = Math.max(cfx.shake, 0.22);
     } else if (tgt?.hero) {
       cfx.shake = Math.max(cfx.shake, 0.08);
