@@ -72,6 +72,10 @@ class Mirror:
         self.hat = [0, 0]
         self.axes = {e.ABS_X: 0, e.ABS_Y: 0, e.ABS_RX: 0, e.ABS_RY: 0}
         self.rng = {c: max(1, ai.max) for c, ai in self.dev.capabilities(verbose=False).get(e.EV_ABS, [])}
+        # Furthest each axis has reached, per direction: worn or off-calibration sticks (and copies) often stop
+        # short of the driver's +-32767, so full tilt is scaled to what the stick actually reaches (from 75% of
+        # the range up), and full tilt is always full speed.
+        self.reach = {(c, s): 0.75 * self.rng.get(c, 32767) for c in self.axes for s in (-1, 1)}
 
     def push(self) -> None:
         bits = 0
@@ -85,7 +89,12 @@ class Mirror:
             bits |= P.SWITCH_BUTTONS["UP"]
         if self.hat[1] > 0:
             bits |= P.SWITCH_BUTTONS["DOWN"]
-        n = lambda c: max(-1.0, min(1.0, self.axes[c] / self.rng.get(c, 32767)))
+        def n(c: int) -> float:
+            v = self.axes[c]
+            k = (c, 1 if v >= 0 else -1)
+            self.reach[k] = max(self.reach[k], abs(v) * 0.97)
+            return max(-1.0, min(1.0, v / self.reach[k]))
+
         # evdev Y is down-positive; the pad API takes up-positive.
         self.out.update(bits, (n(e.ABS_X), -n(e.ABS_Y)), (n(e.ABS_RX), -n(e.ABS_RY)), 0, 0)
 
