@@ -1,15 +1,19 @@
-FROM node:22-alpine AS build
+# pnpm comes from corepack, pinned by package.json "packageManager"; the 7-day minimum release age is in
+# pnpm-workspace.yaml.
+FROM node:22-alpine AS base
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+FROM base AS build
+RUN pnpm install --frozen-lockfile
 COPY . .
-RUN npx tsc --noEmit && npx vite build --outDir release --emptyOutDir --logLevel warn \
+RUN pnpm exec tsc --noEmit && pnpm exec vite build --outDir release --emptyOutDir --logLevel warn \
  && node --experimental-transform-types --no-warnings tools/precompress.ts release
 
-FROM node:22-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+FROM base AS deps
+RUN pnpm install --frozen-lockfile --prod
 
 FROM node:22-alpine
 WORKDIR /app
