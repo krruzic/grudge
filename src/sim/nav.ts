@@ -211,7 +211,8 @@ export class NavGrid {
       const px = a.x + dx * f;
       const pz = a.z + dz * f;
       const i = this.index(Math.floor(px), Math.floor(pz));
-      if (!(this.t.slopeAt(px, pz) <= this.maxSlope * LINE_SLOPE)) return false;
+      // Cheap grid checks first, the slope sample (several terrain lookups) last: all are pure, so the
+      // answer is the same, but blocked lines stop sooner.
       if (i !== prev) {
         if (prev >= 0 && this.open(prev) && !this.passable(prev, i)) return false;
         if (!this.open(i)) return false;
@@ -221,6 +222,7 @@ export class NavGrid {
         const j = this.index(Math.floor(px + ox), Math.floor(pz + oz));
         if (!this.open(j) || Math.abs(this.h[j] - this.h[i]) > this.maxStep * 1.5) return false;
       }
+      if (!(this.t.slopeAt(px, pz) <= this.maxSlope * LINE_SLOPE)) return false;
     }
     return true;
   }

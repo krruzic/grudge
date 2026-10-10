@@ -183,8 +183,8 @@ function hitsStructure(w: World, e: Entity, x: number, z: number): boolean {
     const d = Math.hypot(ah.x - x, ah.z - z);
     if (d < 1.15 + e.radius * 0.8 && d < Math.hypot(ah.x - e.transform.pos.x, ah.z - e.transform.pos.z)) return true;
   }
-  for (const s of w.entities) {
-    if (!s.alive || s.kind !== "structure" || s === e || s.structure?.works !== undefined) continue;
+  for (const s of w.structureList()) {
+    if (!s.alive || s === e || s.structure?.works !== undefined) continue;
     const d = Math.hypot(s.transform.pos.x - x, s.transform.pos.z - z);
     const min = s.radius + e.radius * 0.8;
     if (d < min) {

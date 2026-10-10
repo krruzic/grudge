@@ -398,6 +398,20 @@ export class World {
     return h?.hero ? this.heroDef(h.hero.type).hooks : {};
   }
 
+  private structList: Entity[] = [];
+  private structListAt = -1;
+  /**
+   * Every structure entity (dead ones included; callers check `alive`), rebuilt only when an entity was added:
+   * movement checks ask this per step instead of scanning every soldier and projectile.
+   */
+  structureList(): Entity[] {
+    if (this.structListAt !== this.nextId) {
+      this.structListAt = this.nextId;
+      this.structList = this.entities.filter((e) => e.kind === "structure");
+    }
+    return this.structList;
+  }
+
   addEntity(team: number, kind: Entity["kind"], radius: number, x: number, z: number, hp: number): Entity {
     const y = this.groundY(x, z);
     // 2-team maps face across the x axis; FFA maps face the map centre.
