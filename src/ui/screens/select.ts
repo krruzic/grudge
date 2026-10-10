@@ -107,7 +107,9 @@ export function drawSelect(s: Screens, ctx: CanvasRenderingContext2D, W: number,
       lb.status ||
       (lb.phase === "match"
         ? "A MATCH IS UNDER WAY · YOU'LL JOIN THE NEXT ONE"
-        : `${lb.map} · ${r.minutes} MIN · ${r.popCap} SOLDIERS · GOLD X${r.goldRate} · WAITING FOR THE HOST`);
+        : lb.phase === "results"
+          ? "THE HOST IS ON THE RESULTS SCREEN · THE LOBBY OPENS WHEN THEY CONTINUE"
+          : `${lb.map} · ${r.minutes} MIN · ${r.popCap} SOLDIERS · GOLD X${r.goldRate} · WAITING FOR THE HOST`);
     if (blink || !lb.status) center(ctx, W, t, floorY - 10, "#fff0c0", 0.55);
   }
   if (s.openHint && !s.peer) drawOpenHint(s, ctx, W);

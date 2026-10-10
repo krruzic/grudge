@@ -203,6 +203,9 @@ export class StatsStore {
 
 const MAX_ROOMS = 32;
 
+/** Whether each connection answered the last heartbeat ping. */
+const alive = new WeakMap<WebSocket, boolean>();
+
 /**
  * Room relay. A host opens a room; peers join it. The relay never runs the game: peer messages ("up") are
  * forwarded to the host, host messages ("send") to one or all peers, and room meta is kept for the lobby list.
@@ -216,9 +219,28 @@ export class NetRelay {
   stats = new StatsStore();
 
   constructor() {
-    this.wss.on("connection", (ws, req: IncomingMessage) =>
-      this.accept(ws, Number((req.headers.host ?? "").split(":")[1] ?? 0) || this.port),
-    );
+    this.wss.on("connection", (ws, req: IncomingMessage) => {
+      alive.set(ws, true);
+      ws.on("pong", () => alive.set(ws, true));
+      this.accept(ws, Number((req.headers.host ?? "").split(":")[1] ?? 0) || this.port);
+    });
+    // Heartbeat: a connection that dies without a close (Wi-Fi drop, sleeping laptop) would otherwise keep its
+    // room open for minutes while guests wait on a host that is gone. Ping every 3 s; no pong by the next ping
+    // closes it, which runs the normal leave path (guests get "hostgone", the host gets "left").
+    setInterval(() => {
+      for (const ws of this.wss.clients) {
+        if (alive.get(ws) === false) {
+          ws.terminate();
+          continue;
+        }
+        alive.set(ws, false);
+        try {
+          ws.ping();
+        } catch {
+          ws.terminate();
+        }
+      }
+    }, 3000).unref();
   }
 
   attach(server: Server | null | undefined): void {

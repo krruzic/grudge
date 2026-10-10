@@ -157,6 +157,8 @@ export function installDebugApi(app: App): void {
       return allLearned(w, e).map((t) => t.id);
     },
     pause: () => setPaused(app, true),
+    /** Host: play and share a select-screen sound, as a seal / costume change does. */
+    debugSfx: (ui: string, seat = -1, hero = "") => net.sfx(app, ui, seat, hero),
     /** Starts the match from champion / field select as confirming the field does. */
     beginMatch: () => beginMatch(app),
     /** Results -> champion select, as A on the results screen does (picks kept). */
@@ -215,6 +217,7 @@ export function installDebugApi(app: App): void {
         mySlots: Object.fromEntries(net.mySlots),
         frames: net.netFrames.length,
         remotes: net.rseats.map((r) => [r.peer, r.k, r.slot]),
+        waitMsg: net.waitMsg,
       };
     },
   };

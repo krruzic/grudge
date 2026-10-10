@@ -207,7 +207,7 @@ function toMap(app: App): void {
   app.mapHover.fill("*");
   app.screens.readyBanner = false;
   app.readySince = -1;
-  app.audio.ui("ok");
+  app.net.sfx(app, "ok");
   app.state = "map";
   app.screens.set("map");
   app.votes.clear();
@@ -399,7 +399,7 @@ export function updateSelect(app: App, now: number, dt: number): void {
       if (next !== null) {
         slots[t].costume = next;
         app.net.lobbySentAt = 0;
-        app.audio.ui("move");
+        app.net.sfx(app, "move");
       }
     }
     app.costumeFlick[i] = dir;
@@ -416,19 +416,18 @@ export function updateSelect(app: App, now: number, dt: number): void {
       if (!slots[act.slot].ready && slots[act.slot].hero !== act.hero) {
         slots[act.slot].hero = act.hero;
         app.net.lobbySentAt = 0;
-        app.audio.ui("move");
+        app.net.sfx(app, "move");
       }
     } else if (act.type === "place") {
       slots[act.slot].hero = act.hero;
       slots[act.slot].ready = true;
       if (!costumesOf(act.hero).includes(slots[act.slot].costume ?? "")) slots[act.slot].costume = "";
       app.net.lobbySentAt = 0;
-      app.audio.ui("seal");
-      app.audio.heroCue(act.hero, true);
+      app.net.sfx(app, "seal", act.slot, act.hero);
     } else if (act.type === "pick") {
       slots[act.slot].ready = false;
       app.net.lobbySentAt = 0;
-      app.audio.ui("peel");
+      app.net.sfx(app, "peel");
     } else if (act.type === "button") selectButton(app, act.id, act.by);
     else if (act.type === "back") selectBack(app, act.by);
   }
@@ -461,7 +460,7 @@ export function updateSelect(app: App, now: number, dt: number): void {
   if (!allReady) app.readySince = -1;
   // No ready banner (and no start) while anyone is signing a name.
   const sworn = allReady && !screens.naming.size;
-  if (sworn && !screens.readyBanner) app.audio.ui("sworn");
+  if (sworn && !screens.readyBanner) app.net.sfx(app, "sworn");
   screens.readyBanner = sworn;
   screens.openHint =
     !allReady &&
@@ -473,51 +472,51 @@ export function updateSelect(app: App, now: number, dt: number): void {
 
 /** A cursor clicked a select-screen button ("<id>:<seat>"), `by` = the clicking pad. */
 function selectButton(app: App, buttonId: string, by: number): void {
-  const { slots, audio } = app;
+  const { slots } = app;
   const [id, arg] = buttonId.split(":");
   const i = Number(arg);
   if (id === "unplug") {
     app.pads.release(i);
-    audio.ui("back");
+    app.net.sfx(app, "back");
   } else if (id === "mode" && !app.training) {
     const cycle: MatchMode[] = ["1v1", "2v2", "ffa", "tdm", "ffadm"];
     setMode(app, cycle[(cycle.indexOf(app.mode) + 1) % cycle.length]);
-    audio.ui("ok");
+    app.net.sfx(app, "ok");
   } else if (id === "add") {
     if (app.mode === "1v1") setMode(app, "2v2");
-    audio.ui("ok");
+    app.net.sfx(app, "ok");
   } else if (id === "sit") {
     sitAt(app, by, i);
   } else if (id === "seatcpu") {
     makeCpu(app, i);
     slots[i].autoCpu = false;
-    audio.ui("ok");
+    app.net.sfx(app, "ok");
   } else if (id === "seatopen") {
     makeOpen(app, i);
-    audio.ui("back");
+    app.net.sfx(app, "back");
   } else if (id === "cam" && (app.net.remoteAt(i) >= 0 || (by !== i && !slots[i].cpu))) {
     // Only the card's owner flips its camera button.
-    audio.ui("back");
+    app.net.sfx(app, "back");
   } else if (id === "cam") {
     app.toggleZoom(i);
-    audio.ui("ok");
+    app.net.sfx(app, "ok");
   } else if (id === "camera") {
     const order = [1, 0];
     app.save.data.options.split = order[(order.indexOf(app.save.data.options.split) + 1) % order.length];
     app.save.write();
     app.applyOptions();
-    audio.ui("ok");
+    app.net.sfx(app, "ok");
   } else if (id === "kind") {
     if (slots[i].cpu && app.present(i)) makeHuman(app, i);
     else if (!slots[i].cpu) {
       makeCpu(app, i);
       slots[i].autoCpu = false;
     }
-    audio.ui("ok");
+    app.net.sfx(app, "ok");
   } else if (id === "lvl") {
     slots[i].level = (slots[i].level % 3) + 1;
     app.net.lobbySentAt = 0;
-    audio.ui("move");
+    app.net.sfx(app, "move");
   } else if (id === "cos") {
     // A costume icon on a compact card: the seat's owner (or anyone for a CPU) picks it.
     const k = Number(buttonId.split(":")[2]);
@@ -525,7 +524,7 @@ function selectButton(app: App, buttonId: string, by: number): void {
     if ((by === i || slots[i].cpu) && list[k] !== undefined && slots[i].costume !== list[k]) {
       slots[i].costume = list[k];
       app.net.lobbySentAt = 0;
-      audio.ui("move");
+      app.net.sfx(app, "move");
     }
   } else if (id === "model") {
     // A on a champion's model: the next costume, round in a loop - your own seat, or any CPU's.
@@ -536,7 +535,7 @@ function selectButton(app: App, buttonId: string, by: number): void {
         slots[i].costume = next;
         app.screens.costumeShownUntil[i] = performance.now() / 1000 + COSTUME_STRIP_SECONDS;
         app.net.lobbySentAt = 0;
-        audio.ui("move");
+        app.net.sfx(app, "move");
       }
     }
   } else if (id === "pen" && !slots[i].cpu && !app.commanderSlot(i) && by === i && !app.screens.naming.has(i)) {
@@ -560,7 +559,7 @@ function sitAt(app: App, from: number, i: number): void {
     !pads.players[i]?.connected &&
     (slots[i].open || slots[i].cpu);
   if (!ok || !pads.move(from, i)) {
-    app.audio.ui("back");
+    app.net.sfx(app, "back");
     return;
   }
   const { hero, tag, tagId } = slots[from];
@@ -578,7 +577,7 @@ function sitAt(app: App, from: number, i: number): void {
   slots[i].tag = tag;
   slots[i].tagId = tagId;
   app.net.lobbySentAt = 0;
-  app.audio.ui("ok");
+  app.net.sfx(app, "ok");
 }
 
 /** B on select: put back a CPU chip in hand, else take back your own seal, else leave to the menu. */
@@ -590,12 +589,12 @@ function selectBack(app: App, by: number): void {
     cursors.placeChip(c.holding, sl.hero);
     sl.ready = true;
     c.holding = -1;
-    app.audio.ui("back");
+    app.net.sfx(app, "back");
   } else if (c.holding < 0 && !slots[by].cpu && slots[by].ready && !app.commanderSlot(by)) {
     slots[by].ready = false;
     cursors.placeChip(by, null);
     c.holding = by;
-    app.audio.ui("back");
+    app.net.sfx(app, "back");
   }
   // Leaving the screen needs a held B instead: see holdToBack.
 }
@@ -644,7 +643,7 @@ export function updateFieldSelect(app: App, now: number, dt: number): void {
     if (app.votes.get(slot) === k) return;
     app.votes.set(slot, k);
     if (app.voteAt < 0) app.voteAt = now;
-    app.audio.ui("seal");
+    app.net.sfx(app, "seal");
   };
   if (voting)
     app.pads.players.forEach((p, i) => {
@@ -682,7 +681,7 @@ export function updateFieldSelect(app: App, now: number, dt: number): void {
     const k = Number(hov.hover.slice(4));
     if (k !== app.pickIndex) {
       app.pickIndex = k;
-      app.audio.ui("move");
+      app.net.sfx(app, "move");
       const fields = app.fields();
       if (app.pickIndex < fields.length && fields[app.pickIndex] !== app.mapIndex) {
         app.mapIndex = fields[app.pickIndex];
@@ -692,14 +691,14 @@ export function updateFieldSelect(app: App, now: number, dt: number): void {
   }
   back = holdToBack(app, dt, () => true);
   if (go) {
-    app.audio.ui("ok");
+    app.net.sfx(app, "ok");
     const pool = app.fields();
     if (app.pickIndex >= pool.length) app.mapIndex = pool[Math.floor(Math.random() * pool.length)] ?? app.mapIndex;
     else app.mapIndex = pool[app.pickIndex];
     beginMatch(app);
   } else if (back) {
     // Back to champion select with every human's seal back in hand.
-    app.audio.ui("back");
+    app.net.sfx(app, "back");
     app.state = "select";
     app.screens.set("select");
     for (let i = 0; i < MAX_PLAYERS; i++) {

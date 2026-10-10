@@ -47,6 +47,10 @@ const LOBBY_DT = 0.25;
 const HASH_EVERY = 30;
 /** Peer: catch up at most this many ticks per frame. */
 const MAX_CATCHUP = 12;
+/** Guest: silence from the host before "waiting for the host" shows, and before giving up (background host: longer). */
+const HOST_WAIT = 3;
+const HOST_GIVE_UP = 15;
+const HOST_GIVE_UP_HIDDEN = 90;
 
 const cleanName = (v: unknown): string =>
   String(v ?? "")
@@ -96,6 +100,25 @@ export class NetSession {
   readonly netHashes = new Map<number, number>();
   desync = false;
   mathWarned = false;
+  /** Guest: when the host was last heard from (any message), and whether its window said it was hidden. */
+  hostHeardAt = 0;
+  hostHidden = false;
+  /** Guest: shown over everything while the host is silent (empty = fine). */
+  waitMsg = "";
+  /** Host: 1 s heartbeat timer (setInterval keeps running when the host's tab is in the background). */
+  hbTimer: ReturnType<typeof setInterval> | null = null;
+  /** Host: select-screen sounds to share with guests this frame: [ui sound, seat (-1 none), hero cue]. */
+  sfxOut: [string, number, string][] = [];
+
+  /**
+   * Host: plays a select-screen sound and shares it with guests (they skip it if `seat` is theirs, having played
+   * it locally). `hero` also plays that champion's seal cue.
+   */
+  sfx(app: App, ui: string, seat = -1, hero = ""): void {
+    if (ui) app.audio.ui(ui as Parameters<App["audio"]["ui"]>[0]);
+    if (hero) app.audio.heroCue(hero, true);
+    if (this.mode === "host" && this.sfxOut.length < 24) this.sfxOut.push([ui, seat, hero]);
+  }
 
   // ── Menu ──
   /** A room-list fetch is in flight (browse page). */
@@ -142,6 +165,11 @@ export function leaveNet(app: App, why = ""): void {
   app.menus.netStatus = why;
   app.menus.netAddrs = [];
   app.screens.lobby = null;
+  if (n.hbTimer) clearInterval(n.hbTimer);
+  n.hbTimer = null;
+  n.waitMsg = "";
+  n.hostHidden = false;
+  n.sfxOut.length = 0;
   n.remoteHands.clear();
   n.remoteSigning.clear();
   n.presSent = "";
@@ -204,7 +232,7 @@ function freeSeat(app: App, r: RemoteSeat, now: number): void {
 }
 
 const inMatch = (app: App) => app.state === "match" || app.state === "paused";
-const matchPhase = (app: App) => (inMatch(app) || app.state === "results" ? "match" : "lobby");
+const matchPhase = (app: App) => (inMatch(app) ? "match" : app.state === "results" ? "results" : "lobby");
 
 function fieldName(app: App, random: string): string {
   const fields = app.fields();
@@ -294,7 +322,9 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
   const i = r.slot;
   if (m.t === "costume" && i >= 0) {
     const costume = String(m.id ?? "");
+    const was = slots[i].costume;
     slots[i].costume = costumesOf(slots[i].hero).includes(costume) ? costume : "";
+    if (slots[i].costume !== was) n.sfx(app, "move", i);
     n.lobbySentAt = 0;
     return;
   }
@@ -331,7 +361,10 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
     if (!sl?.cpu || sl.open || !app.slotActive(to) || app.commanderSlot(to) || app.heldBy(to) >= 0) return;
     if (m.t === "cpucos") {
       const c = String(m.id ?? "");
-      if (costumesOf(sl.hero).includes(c)) sl.costume = c;
+      if (costumesOf(sl.hero).includes(c) && c !== sl.costume) {
+        sl.costume = c;
+        n.sfx(app, "move", i);
+      }
     } else {
       const hero = String(m.hero ?? "");
       if (pickable(hero) && (!sl.ready || m.ready === true)) sl.hero = hero;
@@ -339,7 +372,7 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
         sl.ready = m.ready;
         app.cursors.placeChip(to, m.ready ? sl.hero : null);
         if (m.ready && !costumesOf(sl.hero).includes(sl.costume ?? "")) sl.costume = "";
-        app.audio.ui(m.ready ? "seal" : "peel");
+        n.sfx(app, m.ready ? "seal" : "peel", i, m.ready ? sl.hero : "");
       }
       n.cpuHeldAt.set(to, m.ready === true ? -99 : performance.now() / 1000);
     }
@@ -361,6 +394,7 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
     pickable(String(m.hero)) &&
     !app.commanderSlot(i)
   ) {
+    if (slots[i].hero !== String(m.hero)) n.sfx(app, "move", i);
     slots[i].hero = String(m.hero);
   } else if (m.t === "ready" && i >= 0 && app.state === "select" && !app.commanderSlot(i)) {
     // Ready = seal placed: the chip goes onto the hero; unready hands it back to the guest's cursor.
@@ -370,13 +404,14 @@ function fromPeer(app: App, id: number, m: NetMsg): void {
     const c = app.cursors.cursors[i];
     if (!ready && c.holding < 0) c.holding = i;
     if (ready && c.holding === i) c.holding = -1;
-    app.audio.ui(m.on ? "ok" : "back");
+    // The guest heard its own seal already; everyone else (host included) hears it now.
+    n.sfx(app, ready ? "seal" : "peel", i, ready ? slots[i].hero : "");
   } else if (m.t === "vote" && i >= 0 && app.state === "map") {
     const k = Number(m.pick);
     if (Number.isInteger(k) && k >= 0 && k <= app.fields().length) {
       if (app.voteAt < 0) app.voteAt = performance.now() / 1000;
       app.votes.set(i, k);
-      app.audio.ui("seal");
+      n.sfx(app, "seal", i);
     }
   } else if (m.t === "pause" && inMatch(app) && (app.pausing || app.state === "paused")) {
     setPaused(app, app.state === "match", r.slot >= 0 ? playerLabel(r.slot) : r.name);
@@ -511,6 +546,8 @@ export function pumpNet(app: App, now: number): void {
     }
     if (m.t === "hosting") {
       n.mode = "host";
+      if (n.hbTimer) clearInterval(n.hbTimer);
+      n.hbTimer = setInterval(() => n.link.toPeer("all", { t: "hb", hidden: document.hidden }), 1000);
       app.menus.netBusy = false;
       app.menus.netStatus = "";
       app.state = "select";
@@ -524,6 +561,10 @@ export function pumpNet(app: App, now: number): void {
       app.menus.netBusy = false;
       n.mySlots.clear();
       n.wantSent = "";
+      n.hostHeardAt = now;
+      n.hostHidden = false;
+      // Nothing from an earlier visit may show until this host's first lobby view arrives.
+      app.screens.lobby = null;
       app.state = "lobby";
       app.screens.set("lobby");
       continue;
@@ -554,6 +595,21 @@ export function pumpNet(app: App, now: number): void {
       continue;
     }
     if (n.mode === "peer") {
+      n.hostHeardAt = now;
+      if (m.t === "hb") {
+        n.hostHidden = m.hidden === true;
+        continue;
+      }
+      if (m.t === "sfx") {
+        const mine = new Set(n.mySlots.values());
+        for (const e of (Array.isArray(m.s) ? m.s : []) as unknown[][]) {
+          const [ui, seat, hero] = [String(e?.[0] ?? ""), Number(e?.[1]), String(e?.[2] ?? "")];
+          if (mine.has(seat)) continue;
+          if (ui) app.audio.ui(ui as Parameters<App["audio"]["ui"]>[0]);
+          if (hero && pickable(hero)) app.audio.heroCue(hero, true);
+        }
+        continue;
+      }
       if (m.t === "lobby") {
         if (!onLobby(app, m.view as LobbyWire, now)) continue;
       } else if (m.t === "start") {
@@ -584,9 +640,39 @@ export function pumpNet(app: App, now: number): void {
       }
     }
   }
+  if (n.mode === "peer") watchHost(app, now);
+  if (n.mode === "host" && n.sfxOut.length) {
+    n.link.toPeer("all", { t: "sfx", s: n.sfxOut });
+    n.sfxOut = [];
+  }
   if (n.mode === "peer" && n.link.open) sendGuestPresence(app, now);
   if (n.mode === "host") sendHostPresence(app, now);
   if (n.mode === "host" && now - n.lobbySentAt > LOBBY_DT) sendLobby(app, now);
+}
+
+/**
+ * Guest: the relay drops a host whose connection dies, but a host that is still connected and just not sending
+ * (frozen, very bad connection, window in the background) leaves guests waiting. Say so after HOST_WAIT seconds
+ * of silence, and go back to the menu after HOST_GIVE_UP (longer when its window reported being hidden).
+ */
+function watchHost(app: App, now: number): void {
+  const n = app.net;
+  const quiet = now - n.hostHeardAt;
+  const limit = n.hostHidden ? HOST_GIVE_UP_HIDDEN : HOST_GIVE_UP;
+  if (quiet > limit) {
+    toMenu(app, "LOST THE HOST · IT STOPPED RESPONDING");
+    app.state = "menu";
+    app.menus.open("network");
+    return;
+  }
+  // Heartbeats keep coming while the host's own game loop is stopped (hidden window): frames don't.
+  const stalled = n.hostHidden && quiet < 1.5;
+  n.waitMsg =
+    quiet > HOST_WAIT
+      ? `WAITING FOR THE HOST · ${Math.max(0, Math.ceil(limit - quiet))}S`
+      : stalled
+        ? "THE HOST'S GAME IS IN THE BACKGROUND · WAITING"
+        : "";
 }
 
 /** Guest -> host: which pads want seats (re-sent every 1.5 s), cursor hands and name entries of seated pads. */
@@ -689,7 +775,7 @@ function sendLobby(app: App, now: number): void {
     map: fieldName(app, "RANDOM"),
     humans: Math.max(1, localHumans + seated),
     seats: seatsFor(app.mode),
-    phase: matchPhase(app),
+    phase: matchPhase(app) === "lobby" ? "lobby" : "match",
   });
   if (app.state === "select") {
     // A local pad plugged into a remote guest's seat takes it back; then seat anyone still waiting.

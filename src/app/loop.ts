@@ -180,6 +180,15 @@ function drawUi(
   if (app.state === "menu") app.menus.draw(ctx, W, H, now);
   if (app.state === "paused") app.menus.drawPause(ctx, W, H, now, app.world);
 
+  if (net.mode === "peer" && net.waitMsg) {
+    // Host gone quiet (see net.ts watchHost): over everything, blinking.
+    const s = 0.9;
+    const w = textWidth(net.waitMsg, s);
+    ctx.fillStyle = "rgba(10,6,4,0.75)";
+    ctx.fillRect(Math.round(W / 2 - w / 2 - 8), Math.round(H * 0.42 - 4), Math.round(w + 16), 16);
+    if (Math.floor(now * 2) % 2 === 0 || !net.waitMsg.startsWith("WAITING"))
+      drawText(ctx, net.waitMsg, Math.round(W / 2 - w / 2), Math.round(H * 0.42), "#ffe0a0", s);
+  }
   if (net.mode !== "off" && (app.state === "match" || app.state === "paused")) {
     const t = net.desync ? "OUT OF SYNC" : net.mode === "host" ? "HOSTING" : "ONLINE";
     drawText(ctx, t, 4, H - 9, net.desync ? "#ff6040" : "#c8c0a8", 0.55);

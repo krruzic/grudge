@@ -194,6 +194,10 @@ export class Screens {
     const blink = Math.floor(now * 2) % 2 === 0;
     const cursors = select || this.which === "map" ? this.cursors : null;
     if (cursors) cursors.hits = [];
+    if (this.which === "lobby" && !this.lobby) {
+      boardBg(ctx, W, H);
+      center(ctx, W, "CONNECTING TO THE HOST...", H / 2 - 4, "#f0e4c8", 0.8);
+    }
     if (this.which === "title") this.drawTitle(ctx, W, H, blink);
     else if (select) drawSelect(this, ctx, W, H, blink);
     else if (this.which === "map") drawField(this, ctx, W, H);
