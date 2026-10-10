@@ -7,7 +7,8 @@
       "high": 1000,
       "sturdy": 980,
       "stout": 900,
-      "lean": 700
+      "lean": 700,
+      "massive": 1200
     },
     "speed": {
       "low": 4.0,
@@ -665,7 +666,7 @@
     "warden": {
       "name": "Thorn",
       "blurb": "Keeper. Walls come with snares at each end; snares inside the Thorn zone re-arm.",
-      "health": "high",
+      "health": "massive",
       "speed": "mid",
       "damage": "mid",
       "defaultBuild": "control",

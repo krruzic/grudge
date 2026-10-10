@@ -754,6 +754,7 @@ const STAT_WORD: Record<string, string> = {
   mid: "AVERAGE",
   high: "HIGH",
   sturdy: "STURDY",
+  massive: "MASSIVE",
   swift: "VERY FAST",
 };
 
