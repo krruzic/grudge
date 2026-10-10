@@ -22,16 +22,22 @@ let markReady: () => void = () => {};
 export const fontReady = new Promise<void>((r) => (markReady = r));
 let fillMask: HTMLCanvasElement | null = null;
 let lineMask: HTMLCanvasElement | null = null;
+/** The same masks already in INK: shadows and outlines stamp straight from these, no tint pass. */
+let fillInk: HTMLCanvasElement | null = null;
+let lineInk: HTMLCanvasElement | null = null;
 const cache = new Map<string, Baked>();
 const widths = new Map<string, number>();
 
-function mask(src: ImageData, channel: number): HTMLCanvasElement {
+/** One channel of the atlas as an alpha mask, in colour `rgb` (white for tinting, ink for shadows / outlines). */
+function mask(src: ImageData, channel: number, rgb = [255, 255, 255]): HTMLCanvasElement {
   const c = cacheCanvas();
   c.width = src.width;
   c.height = src.height;
   const out = new ImageData(src.width, src.height);
   for (let i = 0; i < src.data.length; i += 4) {
-    out.data[i] = out.data[i + 1] = out.data[i + 2] = 255;
+    out.data[i] = rgb[0];
+    out.data[i + 1] = rgb[1];
+    out.data[i + 2] = rgb[2];
     out.data[i + 3] = src.data[i + channel];
   }
   c.getContext("2d")!.putImageData(out, 0, 0);
@@ -52,6 +58,9 @@ export async function loadFont(): Promise<void> {
   const data = g.getImageData(0, 0, c.width, c.height);
   fillMask = mask(data, 0);
   lineMask = mask(data, 1);
+  const ink = [0x0b, 0x08, 0x06];
+  fillInk = mask(data, 0, ink);
+  lineInk = mask(data, 1, ink);
   for (const b of cache.values()) b.c.width = b.c.height = 0;
   cache.clear();
   families.clear();
@@ -124,7 +133,7 @@ function stamp(
   }
 }
 
-const scratch = [cacheCanvas(), cacheCanvas()];
+const scratch = [cacheCanvas()];
 /**
  * Scratch canvas i sized exactly w x h. Not grown-and-kept: the bake's final high-quality downsample processes
  * the whole source canvas, so after one long banner every later bake got ~4x slower (measured 1.7 -> 6.5 ms).
@@ -153,8 +162,8 @@ function layer(
   fill: string | CanvasGradient,
   S: number,
 ): HTMLCanvasElement {
-  const g = scratchCtx(1, w, h);
-  const c = scratch[1];
+  const g = scratchCtx(0, w, h);
+  const c = scratch[0];
   stamp(g, src, s, dx, dy, S);
   g.globalCompositeOperation = "source-in";
   g.fillStyle = fill;
@@ -244,47 +253,29 @@ function render(
     families.set(fam, { at: now, sizes: [px] });
   }
   perf.stat("hud.text", 1);
-  // Composite at S px per font px - about twice the final size, not the atlas's HK - then downsample: the same
-  // look for a fraction of the pixels (a bake was 1-3 ms at HK, several times that on slow CPUs).
-  const S = Math.min(HK, Math.max(2, Math.ceil(px * 2)));
+  // Drawn straight at its final size (px per font px): shadow and outline stamped from the ink masks, then the
+  // gradient fill - the only layer that needs a tint pass, done at the final size too. (Compositing three tinted
+  // layers at the atlas's 6x and downsampling cost 1-2 ms a bake, ~6 ms on a Ryzen 3400G.)
   const w0 = Math.ceil(rawWidth(s)) + PADX * 2 + 3;
   const h0 = meta.h + PADY * 2 + 2;
-  const w = w0 * S;
-  const h = h0 * S;
-  const g = scratchCtx(0, w, h);
-  const c = scratch[0];
-  const col = rgba(color);
-  if ((shadow || soft) && (part === "all" || part === "shadow")) {
-    g.globalAlpha = (soft ? 0.28 : 0.55) * col[3];
-    g.drawImage(
-      layer(w, h, edge ? lineMask! : fillMask!, s, PADX + (soft ? 1 : 2), PADY + (soft ? 1 : 2), INK, S),
-      0,
-      0,
-      w,
-      h,
-      0,
-      0,
-      w,
-      h,
-    );
-    g.globalAlpha = 1;
-  }
-  if (edge && (part === "all" || part === "edge"))
-    g.drawImage(layer(w, h, lineMask!, s, PADX, PADY, INK, S), 0, 0, w, h, 0, 0, w, h);
-  if (part === "all" || part === "fill") {
-    const grad = g.createLinearGradient(0, (PADY + 2) * S, 0, (PADY + meta.base) * S);
-    grad.addColorStop(0, shade(col, edge ? 0.35 : 0.12));
-    grad.addColorStop(0.55, shade(col, 0));
-    grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
-    g.drawImage(layer(w, h, fillMask!, s, PADX, PADY, grad, S), 0, 0, w, h, 0, 0, w, h);
-  }
   const o = cacheCanvas();
   o.width = Math.max(1, Math.round(w0 * px));
   o.height = Math.max(1, Math.round(h0 * px));
   const og = o.getContext("2d")!;
-  og.imageSmoothingEnabled = true;
-  og.imageSmoothingQuality = "high";
-  og.drawImage(c, 0, 0, w, h, 0, 0, o.width, o.height);
+  const col = rgba(color);
+  if ((shadow || soft) && (part === "all" || part === "shadow")) {
+    og.globalAlpha = (soft ? 0.28 : 0.55) * col[3];
+    stamp(og, edge ? lineInk! : fillInk!, s, PADX + (soft ? 1 : 2), PADY + (soft ? 1 : 2), px);
+    og.globalAlpha = 1;
+  }
+  if (edge && (part === "all" || part === "edge")) stamp(og, lineInk!, s, PADX, PADY, px);
+  if (part === "all" || part === "fill") {
+    const grad = og.createLinearGradient(0, (PADY + 2) * px, 0, (PADY + meta.base) * px);
+    grad.addColorStop(0, shade(col, edge ? 0.35 : 0.12));
+    grad.addColorStop(0.55, shade(col, 0));
+    grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
+    og.drawImage(layer(o.width, o.height, fillMask!, s, PADX, PADY, grad, px), 0, 0);
+  }
   o.addEventListener("contextlost", flushText);
   const baked = { c: o, w: w0 * HK, h: h0 * HK };
   cache.set(key, baked);
