@@ -12,6 +12,7 @@
 import * as THREE from "three";
 import { SpriteBatches } from "../batch/spriteBatch";
 import { FxMeshBatches } from "../batch/fxMeshBatch";
+import { FRAME } from "../heroModels";
 import type { World } from "../../sim/world";
 import type { SimEvent } from "../../sim/types";
 import { activeCostume, ENGINEER, FX, HERALD, RAIDER, WARDEN, WARLORD, withCostume } from "../fx/atlas";
@@ -101,6 +102,7 @@ export class CombatFx implements FxHost {
   /** Effect meshes sharing a geometry and look, drawn instanced per view (fxMeshBatch.ts). */
   private meshBatches = new FxMeshBatches();
   private batchSkip: Set<THREE.Object3D>;
+  private spriteFrame = -1;
 
   constructor(readonly teamColors: THREE.Color[]) {
     this.root.add(this.particles.root, this.floats.mesh, this.floats.digitMesh, this.spriteBatches.root);
@@ -119,9 +121,13 @@ export class CombatFx implements FxHost {
         this.spriteBatches.add(o);
       for (const c of o.children) add(c);
     };
-    add(this.root);
+    // New sprites join once per frame; the batches are filled (depth-sorted) per view.
+    if (this.spriteFrame !== FRAME.id) {
+      this.spriteFrame = FRAME.id;
+      add(this.root);
+    }
     this.spriteBatches.fill(cam);
-    this.meshBatches.fillView(this.root, this.batchSkip, cam);
+    this.meshBatches.fillView(this.root, this.batchSkip, cam, FRAME.id);
   }
 
   // ── Frame entry points (called by GameRenderer) ──

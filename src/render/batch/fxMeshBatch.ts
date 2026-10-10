@@ -100,12 +100,17 @@ class Batch {
     this.cap = cap;
   }
 
-  /** Writes this view's instances (back to front for transparent batches). */
+  /** Normal-blended transparent batches are depth-sorted per view; the rest draw in any order. */
+  get sorted(): boolean {
+    const m0 = this.list[0]?.material as Mat | undefined;
+    return !!m0 && m0.transparent && m0.blending !== THREE.AdditiveBlending && this.list.length > 1;
+  }
+
+  /** Writes the instances (back to front from `view` when sorted). */
   fill(view: THREE.Matrix4): void {
     const n = this.list.length;
     if (n > this.cap) this.grow(Math.max(n, this.cap * 2));
-    const m0 = this.list[0].material as Mat;
-    if (m0.transparent && n > 1) {
+    if (this.sorted) {
       const e = view.elements;
       const z = (o: THREE.Mesh) => {
         const w = o.matrixWorld.elements;
@@ -142,11 +147,19 @@ export class FxMeshBatches {
   private hidden: THREE.Mesh[] = [];
   private groups = new Map<string, THREE.Mesh[]>();
 
+  private frame = -1;
+
   /**
-   * Per view, before drawing: puts last view's originals back, then batches every group of two or more
-   * matching visible meshes under `under` (skipping `skip` subtrees: other batches, particles).
+   * Per view, before drawing. Once per frame (`frame` changed): puts last frame's originals back, then batches
+   * every group of two or more matching visible meshes under `under` (skipping `skip` subtrees: other batches,
+   * particles). Other views only re-sort the depth-sorted batches for their camera.
    */
-  fillView(under: THREE.Object3D, skip: Set<THREE.Object3D>, cam: THREE.Camera): void {
+  fillView(under: THREE.Object3D, skip: Set<THREE.Object3D>, cam: THREE.Camera, frame: number): void {
+    if (frame === this.frame) {
+      for (const b of this.batches.values()) if (b.mesh.visible && b.sorted) b.fill(cam.matrixWorldInverse);
+      return;
+    }
+    this.frame = frame;
     for (const o of this.hidden) o.layers.set(0);
     this.hidden.length = 0;
     for (const g of this.groups.values()) g.length = 0;

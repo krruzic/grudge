@@ -207,6 +207,10 @@ export class EntityViews {
     for (const v of held) v.root.visible = false;
     this.viewHidden.push(...held);
     this.structBatch.fillFrame(this.extras.parent ?? this.root);
+    // Building parts: once per frame, not per view (fog never hides buildings; the instances a view's
+    // frustum cull would drop are cheap for the GPU to discard, and refilling cost CPU four times in split).
+    this.statics.fill(this.extras.parent ?? this.root);
+    this.structBatch.fillView();
     this.padBatch.flush();
     if (this.spriteScan++ % 10 === 0) {
       this.root.traverse((o) => {
@@ -241,9 +245,7 @@ export class EntityViews {
       }
     }
     b.end();
-    this.statics.fill(this.extras.parent ?? this.root);
     this.batches.view();
-    this.structBatch.fillView();
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
     for (const hint of [...this.padHints, ...this.shopHints]) {

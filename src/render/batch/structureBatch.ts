@@ -118,6 +118,10 @@ export class StructureBatch {
     mat.customProgramCacheKey = () => `${key}|batched`;
     const mesh = new THREE.BatchedMesh(64, sh.verts, sh.index, mat);
     mesh.frustumCulled = false;
+    // No per-instance culling / sorting every view (that rebuilt and re-uploaded the draw list four times a frame
+    // in split screen); the GPU skips off-screen buildings cheaply.
+    mesh.sortObjects = false;
+    mesh.perObjectFrustumCulled = false;
     mesh.matrixAutoUpdate = false;
     const ids = new Map<THREE.BufferGeometry, number>();
     for (const [src, g] of sh.geos) ids.set(src, mesh.addGeometry(g));
