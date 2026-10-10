@@ -35,6 +35,8 @@ export interface CannonShot {
   warnAt: number;
   radius: number;
   team: number;
+  /** Champion who bought the barrage (kill / damage credit); none for the map's own cannon. */
+  by?: number;
 }
 
 export interface ThrownBomb {

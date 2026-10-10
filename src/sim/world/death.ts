@@ -1,5 +1,6 @@
 // Kills and their consequences: bounties, veterancy, hero respawn timers, structure rubble, core loss/elimination,
 // plus the gold-loss and tower-rally rules that fire on deaths.
+import { KILL_WINDOW } from "./damage.ts";
 import { refillCharge } from "../hero/common.ts";
 import type { World } from "../world.ts";
 import type { Entity, Pad } from "../types.ts";
@@ -48,6 +49,37 @@ export function kill(w: World, target: Entity, src: Entity | null): void {
   } else killStructure(w, target, killer, killerTeam, cut);
 }
 
+/**
+ * Who gets a champion kill (one champion at most):
+ *   1. an enemy champion who did more than half of the damage the victim took in the last KILL_WINDOW s (their
+ *      summons / turrets and a cannon barrage they bought count as theirs; towers and soldiers count for nobody);
+ *   2. else the champion behind the final blow (the cannon's caller included);
+ *   3. else the last enemy champion to hit them in the last 5 s.
+ * A kill by a tower or soldiers with no champion involved credits nobody.
+ */
+function killCredit(w: World, target: Entity, src: Entity | null): Entity | undefined {
+  const log = target.hero?.dmgLog ?? [];
+  let total = 0;
+  const by = new Map<number, number>();
+  for (const [t, id, amt] of log) {
+    if (w.time - t > KILL_WINDOW) continue;
+    total += amt;
+    if (id >= 0) by.set(id, (by.get(id) ?? 0) + amt);
+  }
+  for (const [id, amt] of by) {
+    const e = w.getAny(id);
+    if (e?.hero && e.team !== target.team && amt > total * 0.5) return e;
+  }
+  const lastEntry = log[log.length - 1];
+  const finalBy = lastEntry && lastEntry[0] === w.time && lastEntry[1] >= 0 ? w.getAny(lastEntry[1]) : undefined;
+  const last = target.status.hurtBy !== undefined ? w.getAny(target.status.hurtBy) : undefined;
+  return (
+    w.creditHero(src) ??
+    (finalBy?.hero ? finalBy : undefined) ??
+    (w.time - (target.status.hurtAt ?? -99) < 5 ? w.creditHero(last) : undefined)
+  );
+}
+
 /** Hero death: respawn timer (longer in big matches, shorter for trailing FFA teams), frozen cooldowns, bounty. */
 function killHero(
   w: World,
@@ -74,9 +106,8 @@ function killHero(
   hh.padHold = undefined;
   hh.recallAt = undefined;
   w.statsOf(target.id).deaths++;
-  // Kill credit: the champion behind the blow, else the last enemy champion to hit them in the last 5 s.
-  const last = target.status.hurtBy !== undefined ? w.getAny(target.status.hurtBy) : undefined;
-  const credit = w.creditHero(src) ?? (w.time - (target.status.hurtAt ?? -99) < 5 ? w.creditHero(last) : undefined);
+  const credit = killCredit(w, target, src);
+  hh.dmgLog = [];
   if (credit && credit.team !== target.team) w.statsOf(credit.id).kills++;
   const big = w.ffa || w.players.length > 2 ? (w.data.match.economy.respawnBigMul ?? 1) : 1;
   const catchUpCut = (w.ffa ? (victim?.catchUp ?? 0) : 0) * w.data.match.catchUp.respawnCut;

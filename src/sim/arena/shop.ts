@@ -113,7 +113,16 @@ export function fireStrike(arena: Arena, hero: Entity, x: number, z: number): bo
       Math.max(1, Math.min(w.terrain.depth - 1, z + Math.sin(a) * r)),
     );
     const at = w.time + warn + i * 0.3;
-    const shot = { x: p.x, z: p.z, y: w.groundY(p.x, p.z), at, warnAt: w.time, radius: sh.radius, team: hero.team };
+    const shot = {
+      x: p.x,
+      z: p.z,
+      y: w.groundY(p.x, p.z),
+      at,
+      warnAt: w.time,
+      radius: sh.radius,
+      team: hero.team,
+      by: hero.id,
+    };
     arena.shots.push(shot);
     w.emit({ type: "cannonWarn", x: shot.x, y: shot.y, z: shot.z, radius: shot.radius, seconds: at - w.time });
   }

@@ -218,6 +218,11 @@ export interface HeroAction {
 
 /** Hero-only state: input/action machine, cooldowns (absolute ready times), progression and per-hero mechanics. */
 export interface HeroState {
+  /**
+   * Damage taken recently, for kill credit: [time, credited enemy champion id (-1: a tower, soldier or the map),
+   * hp lost]. Pruned to KILL_WINDOW seconds; cleared on death.
+   */
+  dmgLog?: [number, number, number][];
   type: string;
   player: number;
   speed: number;

@@ -78,10 +78,11 @@ export function updateCannon(arena: Arena): void {
       if (d > s.radius) continue;
       const k = 1 - (Math.max(0, d) / s.radius) * 0.5;
       if (o.structure) {
-        if (o.structure.type !== "core") w.damage(null, o, cfg.structureDamage * k, { big: true });
+        if (o.structure.type !== "core") w.damage(null, o, cfg.structureDamage * k, { big: true, creditId: s.by });
         continue;
       }
       w.damage(null, o, cfg.damage * k, {
+        creditId: s.by,
         knockback: cfg.knockback * k,
         fromX: s.x,
         fromZ: s.z,

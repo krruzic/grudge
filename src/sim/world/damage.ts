@@ -11,6 +11,8 @@ import { chillMul, domeBlocks, fortCoverMul, highGroundMul } from "../hero/archi
 import { curlBlocks, gritMul } from "../hero/vintner.ts";
 
 export interface DamageOpts {
+  /** Champion credited for damage that has no source entity (a bought cannon barrage: whoever called it). */
+  creditId?: number;
   knockback?: number;
   /** Hit origin for knockback/block direction; defaults to the source's position. */
   fromX?: number;
@@ -33,6 +35,9 @@ export interface DamageOpts {
   pull?: number;
   crit?: boolean;
 }
+
+/** How far back a champion's damage taken counts toward who gets the kill (death.ts killCredit). */
+export const KILL_WINDOW = 15;
 
 export function damageMulOf(w: World, src: Entity): number {
   const s = src.status;
@@ -140,7 +145,7 @@ export function damage(w: World, src: Entity | null, target: Entity, amount: num
 
   amount = matchupArmour(w, src, target, amount);
   target.hp -= amount;
-  onDamageDealt(w, src, target, amount, !!opts.big);
+  onDamageDealt(w, src, target, amount, !!opts.big, opts.creditId);
   w.emit({
     type: "hit",
     ...ev,
@@ -446,10 +451,23 @@ function matchupArmour(w: World, src: Entity | null, target: Entity, amount: num
 }
 
 /** Side effects of hp actually lost: leech, jump cancel, xp, super meter, last-target memory, core damage stat. */
-function onDamageDealt(w: World, src: Entity | null, target: Entity, amount: number, big = false): void {
+function onDamageDealt(
+  w: World,
+  src: Entity | null,
+  target: Entity,
+  amount: number,
+  big = false,
+  creditId?: number,
+): void {
   if (target.hero && amount > 0) {
-    const ch = w.creditHero(src);
-    if (ch && ch.team !== target.team) w.statsOf(ch.id).dmg += amount;
+    const by = w.creditHero(src) ?? (!src && creditId !== undefined ? w.creditHero(w.getAny(creditId)) : undefined);
+    const enemy = by && by.team !== target.team ? by : undefined;
+    if (enemy) w.statsOf(enemy.id).dmg += amount;
+    // Kill credit log (death.ts killCredit): who took how much off this champion, for the last KILL_WINDOW s.
+    const log = (target.hero.dmgLog ??= []);
+    // Overkill doesn't count: only the hp this hit actually took off (hp is already reduced here).
+    log.push([w.time, enemy ? enemy.id : -1, Math.min(amount, Math.max(0, target.hp + amount))]);
+    while (log.length && w.time - log[0][0] > KILL_WINDOW) log.shift();
   }
   // Wounded: a ranged champion's hit (botRange > 3: Wren, Remnil, Hollin, Tadwick), or any champion's big hit
   // (finishers, slams, dashes), cuts a champion's healing for a few seconds - the answer to Maddock and Bramble
