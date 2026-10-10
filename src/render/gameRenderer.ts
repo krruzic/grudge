@@ -184,6 +184,8 @@ export class GameRenderer {
 
   /** 1 = native; 0.75 for weak GPUs (Options → Graphics → Render scale). */
   renderScale = 1;
+  /** 3D resolution option: draw at most this many lines tall (0 = full size); applied on every resize. */
+  renderHeight = 0;
 
   constructor(
     private cfg: RenderConfig,
@@ -417,12 +419,14 @@ export class GameRenderer {
 
   // ── Output size ──
   // Checked every frame (cheap string compare), never from resize events, so the canvas and target always
-  // match the window: CSS size × min(DPR, 2) × renderScale, in device pixels.
+  // match the window: CSS size × min(DPR, 2) × renderScale, in device pixels, at most renderHeight tall.
 
   private sizeKey = "";
 
   private fitTargets(): void {
-    const ratio = Math.min(window.devicePixelRatio || 1, MAX_DPR) * this.renderScale;
+    const full = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    const cap = this.renderHeight > 0 ? Math.min(1, this.renderHeight / Math.max(1, window.innerHeight * full)) : 1;
+    const ratio = full * this.renderScale * cap;
     const max = this.renderer.capabilities.maxTextureSize;
     const w = Math.max(1, Math.min(max, Math.round(window.innerWidth * ratio)));
     const h = Math.max(1, Math.min(max, Math.round(window.innerHeight * ratio)));

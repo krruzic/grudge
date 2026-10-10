@@ -186,10 +186,15 @@ export const RULE_ROWS: Row<Rules>[] = [
   },
 ];
 
-/** The screen's physical height in pixels (DPR capped at 2, like the renderer): the top of the resolution list. */
+/**
+ * Height in device pixels the 3D view is drawn at full size (window height x pixel ratio, capped at 2 - exactly
+ * what the renderer sizes its canvas by): the top of the resolution list. Not screen.height x devicePixelRatio:
+ * with fractional desktop scaling (GNOME on Wayland) or text scaling Chromium's pixel ratio doesn't match the
+ * screen's, so that read as a taller screen than it is, and picking "1080P" on a 1080p screen drew fewer lines.
+ */
 export function nativeHeight(): number {
   if (typeof window === "undefined") return 1080;
-  return Math.round(window.screen.height * Math.min(window.devicePixelRatio || 1, 2));
+  return Math.round(window.innerHeight * Math.min(window.devicePixelRatio || 1, 2));
 }
 
 /** 3D resolution choices: 0 = native, then common heights below the screen's, down to 540p. */
@@ -231,7 +236,10 @@ export const OPTION_ROWS: Row<Options>[] = [
   {
     key: "renderScale",
     label: "3D RESOLUTION",
-    values: renderHeights(),
+    // Recomputed each time: the window may have been resized or gone fullscreen since.
+    get values() {
+      return renderHeights();
+    },
     fmt: (v) => (v === 0 || v > nativeHeight() ? `NATIVE ${nativeHeight()}P` : `${v}P`),
     blurb:
       "HEIGHT THE 3D VIEW IS DRAWN AT (FULL SCREEN). LOWER IT FOR WEAK OR BUILT-IN GRAPHICS. MENUS AND HUD STAY SHARP.",

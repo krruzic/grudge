@@ -21,7 +21,7 @@ import { MenuCursors } from "../ui/cursor";
 import { Portraits } from "../ui/portraits";
 import { Menus } from "../ui/menus";
 import { Audio } from "../audio/sfx";
-import { applyRules, nativeHeight, Save, type MatchMode, type MatchPlayer } from "../game/save";
+import { applyRules, Save, type MatchMode, type MatchPlayer } from "../game/save";
 import { perf } from "../perf";
 import {
   commanderType,
@@ -350,7 +350,8 @@ export class App {
     this.pads.kbmEnabled = o.kbm !== 0;
     // renderScale holds a target height (0 = native); legacy saves stored 100 / 75 (%).
     const rh = o.renderScale;
-    this.view.renderScale = rh === 75 ? 0.75 : rh > 0 && rh !== 100 ? Math.min(1, rh / nativeHeight()) : 1;
+    this.view.renderScale = rh === 75 ? 0.75 : 1;
+    this.view.renderHeight = rh > 0 && rh !== 75 && rh !== 100 ? rh : 0;
     this.view.setLowFx(o.effects === 0);
   }
 
