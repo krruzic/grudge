@@ -353,6 +353,7 @@ export class App {
     this.view.renderScale = rh === 75 ? 0.75 : 1;
     this.view.renderHeight = rh > 0 && rh !== 75 && rh !== 100 ? rh : 0;
     this.view.setLowFx(o.effects === 0);
+    this.view.halfRateSplit = o.splitRate === 0;
   }
 
   /** Flips the manual-zoom camera flag of seat i in the save and applies it. Returns the new value. */

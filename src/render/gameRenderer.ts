@@ -388,6 +388,10 @@ export class GameRenderer {
    * yourself behind walls).
    */
   lowFx = false;
+  /** Graphics option: in 3-4 player split, draw half the views per frame (see drawSplit). */
+  halfRateSplit = false;
+  private halfKey = "";
+  private halfPhase = 0;
   setLowFx(on: boolean): void {
     this.lowFx = on;
     this.combatFx.lite = on;
@@ -971,9 +975,15 @@ export class GameRenderer {
     const th = this.target.height;
     const rects = this.splitRects(tw, th);
     const all = this.entityViews.heroPoints();
+    // Half-rate split (graphics option, 3-4 views): each frame redraws half the views, alternating, so every view
+    // updates at 30 Hz while the screen stays at 60 (the target keeps the other half from last frame). Cameras
+    // still move every frame; only the drawing is skipped. A size change redraws everything.
+    const half = this.halfRateSplit && rects.length >= 3 && this.halfKey === `${tw}x${th}x${rects.length}`;
+    this.halfKey = `${tw}x${th}x${rects.length}`;
+    this.halfPhase ^= 1;
     this.renderer.setScissor(0, 0, tw, th);
     this.renderer.setScissorTest(true);
-    this.renderer.clear();
+    if (!half) this.renderer.clear();
     rects.forEach(([x, y, w, h], i) => {
       const sv = this.splitViews[i];
       let cam: THREE.PerspectiveCamera;
@@ -1009,8 +1019,10 @@ export class GameRenderer {
         this.updateCamera(all, dt);
       }
       this.shake(cam);
+      if (half && i % 2 !== this.halfPhase) return;
       this.renderer.setViewport(x, y, w, h);
       this.renderer.setScissor(x, y, w, h);
+      if (half) this.renderer.clear();
       const vp = sv ? this.world.players.find((p) => p.player === sv.player) : undefined;
       const viewer = sv && sv.heroIds.length === 1 && vp ? vp.team : this.sharedViewer();
       this.drawScene(cam, viewer);

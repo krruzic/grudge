@@ -31,6 +31,8 @@ export interface Options {
   renderScale: number;
   /** 1 full effects, 0 reduced (GameRenderer.setLowFx). */
   effects?: number;
+  /** 3-4 player split: 1 every view every frame, 0 half the views per frame (GameRenderer.halfRateSplit). */
+  splitRate?: number;
 }
 
 export interface Record3 {
@@ -252,6 +254,14 @@ export const OPTION_ROWS: Row<Options>[] = [
     blurb: "REDUCED: FEWER SPARKS AND SMOKE. FOR WEAK OR BUILT-IN GRAPHICS.",
   },
   {
+    key: "splitRate",
+    label: "SPLIT SCREEN",
+    values: [1, 0],
+    fmt: (v) => (v ? "FULL RATE" : "HALF RATE"),
+    blurb:
+      "3-4 PLAYERS: HALF RATE REDRAWS EACH VIEW EVERY OTHER FRAME. SMOOTH 60 FPS ON WEAK MACHINES, EACH VIEW AT 30.",
+  },
+  {
     key: "fps",
     label: "FPS COUNTER",
     values: [1, 0],
@@ -284,6 +294,7 @@ export const DEFAULT_OPTIONS: Options = {
   fps: 1,
   renderScale: 0,
   effects: 1,
+  splitRate: 1,
 };
 
 const KEY = "grudge.save.v1";
