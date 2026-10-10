@@ -158,6 +158,19 @@ export function shareSkeletons(root: THREE.Object3D): void {
   });
 }
 
+/**
+ * Bones never draw, but the renderer walks every visible object once per view (four times a frame in 4-player
+ * split), and a rig is mostly bones. Hiding bone trees that hold nothing drawable skips them; skinning reads bone
+ * matrices whether they're visible or not.
+ */
+export function hideBones(root: THREE.Object3D): void {
+  const drawsBelow = (o: THREE.Object3D): boolean =>
+    o.children.some((c) => (c as THREE.Mesh).isMesh || (c as THREE.Sprite).isSprite || drawsBelow(c));
+  root.traverse((o) => {
+    if ((o as THREE.Bone).isBone && !(o.parent as THREE.Bone | null)?.isBone && !drawsBelow(o)) o.visible = false;
+  });
+}
+
 export function addOutline(root: THREE.Object3D): void {
   if (!outlineConfig.enabled) return;
   const meshes: THREE.Mesh[] = [];
@@ -262,6 +275,7 @@ export class HeroModels {
     if (gltf) {
       body = skeletonClone(gltf.scene);
       shareSkeletons(body);
+      hideBones(body);
       const teamMat = new Map<THREE.Material, THREE.Material>();
       body.traverse((o) => {
         if (!(o instanceof THREE.Mesh)) return;

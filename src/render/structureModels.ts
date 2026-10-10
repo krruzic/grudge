@@ -1,5 +1,6 @@
 // Structure models (keep, towers, outposts...): team-tinted Lambert copies, plus baked part lists and a texture-
 // array material used by the structure batch.
+import { hideBones } from "./heroModels";
 import { markModel } from "./models/markers";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -242,6 +243,7 @@ export class StructureModels {
     const gltf = this.gltfs.get(kind);
     if (!gltf) return new THREE.Group();
     const obj = gltf.scene.clone(true);
+    hideBones(obj);
     const baked = this.baked.get(kind);
     const merged = baked ? bakedMaterial(baked, team) : null;
     const mats = new Map<THREE.Material, THREE.Material>();

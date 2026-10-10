@@ -3,7 +3,7 @@ import { markModel } from "./models/markers";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { dyeColor, shareSkeletons, toLambert } from "./heroModels";
+import { dyeColor, hideBones, shareSkeletons, toLambert } from "./heroModels";
 import { mergedMaterial, mergeParts } from "./models/mergedModel";
 
 interface UnitInstance {
@@ -41,6 +41,7 @@ export class UnitModels {
     if (!gltf) return null;
     const body = skeletonClone(gltf.scene);
     shareSkeletons(body);
+    hideBones(body);
     body.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
       o.frustumCulled = false;

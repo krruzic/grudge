@@ -8,6 +8,8 @@ const FLASH = new THREE.Color(0.6, 0.58, 0.52);
 
 function instMaterial(src: THREE.Material): THREE.Material {
   const m = src.clone();
+  // Each instance's own colour comes through instanceColor (multiplied in), so the batch's base is white.
+  if ((m as THREE.MeshLambertMaterial).color) (m as THREE.MeshLambertMaterial).color.set(1, 1, 1);
   const inner = src.onBeforeCompile;
   m.onBeforeCompile = (shader, r) => {
     inner.call(m, shader, r);
@@ -52,6 +54,8 @@ class Batch {
     const mat = old ? (old.material as THREE.Material) : instMaterial(this.src.material as THREE.Material);
     const im = new THREE.InstancedMesh(geo, mat, cap);
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
+    im.instanceColor.setUsage(THREE.DynamicDrawUsage);
     im.count = 0;
     im.frustumCulled = false;
     im.matrixAutoUpdate = false;
@@ -87,6 +91,8 @@ class Batch {
       }
       if (!vis) continue;
       this.mesh.setMatrixAt(n, m.matrixWorld);
+      const col = (m.material as THREE.MeshLambertMaterial).color;
+      if (col) this.mesh.setColorAt(n, col);
       const e = flash() ? FLASH : (m.material as THREE.MeshLambertMaterial).emissive;
       arr[n * 3] = e ? e.r : 0;
       arr[n * 3 + 1] = e ? e.g : 0;
@@ -99,6 +105,10 @@ class Batch {
     im.clearUpdateRanges();
     im.addUpdateRange(0, n * 16);
     im.needsUpdate = true;
+    const ic = this.mesh.instanceColor!;
+    ic.clearUpdateRanges();
+    ic.addUpdateRange(0, n * 3);
+    ic.needsUpdate = true;
     this.emis.clearUpdateRanges();
     this.emis.addUpdateRange(0, n * 3);
     this.emis.needsUpdate = true;
@@ -115,8 +125,15 @@ export class MeshBatches {
   readonly root = new THREE.Group();
   private batches = new Map<string, Batch>();
 
+  /**
+   * Batches are per geometry and material look - texture, flat shading, transparency, blending - but not colour
+   * or emissive, which go per instance, so both teams' copies of a model share one batch (one draw per view
+   * instead of one per team). `key` is kept for callers whose meshes differ in other ways.
+   */
   add(mesh: THREE.Mesh, key: string, flash: () => boolean): void {
-    const k = `${mesh.geometry.uuid}|${key}`;
+    const mt = mesh.material as THREE.MeshLambertMaterial;
+    const look = `${mt.type}|${mt.map?.uuid ?? ""}|${mt.flatShading}|${mt.transparent}|${mt.opacity}|${mt.side}|${mt.vertexColors}|${mt.customProgramCacheKey?.() ?? ""}`;
+    const k = `${mesh.geometry.uuid}|${mt.color ? look : key}`;
     let b = this.batches.get(k);
     if (!b) {
       b = new Batch(mesh);
