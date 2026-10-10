@@ -165,18 +165,18 @@ body {{ margin: 0; font: 700 8pt/1.15 Barlow, sans-serif; color: #2a1c12; }}
   border: 2px solid #3a2414; box-shadow: inset 0 0 0 3px #e9d6aa, inset 0 0 0 4px #6b4526, inset 0 0 22px rgba(70,40,15,.45); }}
 header {{ display: flex; align-items: center; gap: 0.08in; padding-bottom: 0.05in; margin-bottom: 0.04in;
   border-bottom: 1.5px solid #6b4526; }}
-.face {{ width: 0.72in; height: 0.72in; border-radius: 50%; object-fit: cover;
+.face {{ width: 0.64in; height: 0.64in; border-radius: 50%; object-fit: cover;
   border: 2.5px solid #2a1c12; box-shadow: 0 0 0 1.5px #c79a4a; }}
 h1, h2 {{ font: 400 25pt/0.95 Pirata, serif; margin: 0; color: #1c110a; letter-spacing: .02em; }}
 h1 {{ font-size: 40pt; color: #7a1a12; text-align: center; }}
 header small {{ display: flex; align-items: center; gap: 3px; font-size: 7.5pt; text-transform: uppercase;
   letter-spacing: .08em; color: #6b4526; }}
 .glyph {{ width: 13px; height: 13px; filter: brightness(0) sepia(1) saturate(3) hue-rotate(-20deg) brightness(.45); }}
-h3 {{ margin: 0.1in 0 0.03in; font-size: 7.5pt; letter-spacing: .14em; text-transform: uppercase; color: #6b4526; }}
+h3 {{ margin: 0.07in 0 0.02in; font-size: 7.5pt; letter-spacing: .14em; text-transform: uppercase; color: #6b4526; }}
 h3.good {{ color: #2f5a1c; }} h3.bad {{ color: #8a1d14; }}
 .mu {{ display: flex; align-items: center; gap: 5px; margin: 2px 0; padding: 2px 4px 2px 2px; border-radius: 20px; }}
 .mu.good {{ background: rgba(70,120,40,.14); }} .mu.bad {{ background: rgba(150,30,20,.13); }}
-.mu {{ margin: 4px 0; padding: 3px 6px 3px 3px; gap: 7px; }}
+.mu {{ margin: 3px 0; padding: 2px 6px 2px 2px; gap: 7px; }}
 .mu b {{ font-size: 10.5pt; color: #1c110a; }}
 .mu i, .duo i {{ font-style: normal; font-size: 7pt; color: #6b4526; }}
 .mu span {{ display: block; font-size: 8pt; color: #3d2a1b; font-weight: 700; opacity: .9; }}
@@ -184,7 +184,7 @@ h3.good {{ color: #2f5a1c; }} h3.bad {{ color: #8a1d14; }}
   border: 1.5px solid #2a1c12; }}
 {''.join(f".p-{k} {{ background-image: url({img[k]}); }}" for k in ROSTER)}
 .mu.good .chip {{ box-shadow: 0 0 0 1.5px #5d8a33; }} .mu.bad .chip {{ box-shadow: 0 0 0 1.5px #b0362a; }}
-.pals {{ margin-top: auto; display: flex; align-items: center; gap: 4px;
+.pals {{ margin-top: auto; flex: none; display: flex; padding-bottom: 0.02in; align-items: center; gap: 4px;
   border-top: 1.5px solid #6b4526; padding-top: 0.05in; }}
 .pals h3 {{ margin: 0 4px 0 0; white-space: nowrap; }} .pals b {{ font-size: 9.5pt; margin-right: 6px; }}
 .pals .chip {{ width: 0.3in; height: 0.3in; box-shadow: 0 0 0 1.5px #c79a4a; }}
