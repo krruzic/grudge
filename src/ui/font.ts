@@ -95,8 +95,18 @@ function shade([r, g, b, a]: [number, number, number, number], k: number): strin
   return `rgba(${f(r)},${f(g)},${f(b)},${a})`;
 }
 
-function stamp(g: CanvasRenderingContext2D, src: HTMLCanvasElement, s: string, dx: number, dy: number): void {
+/** Stamps `s`'s glyphs from the atlas (HK px per font px) into `g` at `S` px per font px. */
+function stamp(
+  g: CanvasRenderingContext2D,
+  src: HTMLCanvasElement,
+  s: string,
+  dx: number,
+  dy: number,
+  S: number,
+): void {
   let pen = dx;
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = "high";
   for (const ch of s) {
     const gl = glyph(ch);
     g.drawImage(
@@ -105,10 +115,10 @@ function stamp(g: CanvasRenderingContext2D, src: HTMLCanvasElement, s: string, d
       gl.y * HK,
       gl.w * HK,
       meta.h * HK,
-      Math.round((pen - gl.ox) * HK),
-      dy * HK,
-      gl.w * HK,
-      meta.h * HK,
+      Math.round((pen - gl.ox) * S),
+      dy * S,
+      gl.w * S,
+      meta.h * S,
     );
     pen += gl.adv + TRACK;
   }
@@ -137,10 +147,11 @@ function layer(
   dx: number,
   dy: number,
   fill: string | CanvasGradient,
+  S: number,
 ): HTMLCanvasElement {
   const g = scratchCtx(1, w, h);
   const c = scratch[1];
-  stamp(g, src, s, dx, dy);
+  stamp(g, src, s, dx, dy, S);
   g.globalCompositeOperation = "source-in";
   g.fillStyle = fill;
   g.fillRect(0, 0, w, h);
@@ -229,15 +240,20 @@ function render(
     families.set(fam, { at: now, sizes: [px] });
   }
   perf.stat("hud.text", 1);
-  const w = (Math.ceil(rawWidth(s)) + PADX * 2 + 3) * HK;
-  const h = (meta.h + PADY * 2 + 2) * HK;
+  // Composite at S px per font px - about twice the final size, not the atlas's HK - then downsample: the same
+  // look for a fraction of the pixels (a bake was 1-3 ms at HK, several times that on slow CPUs).
+  const S = Math.min(HK, Math.max(2, Math.ceil(px * 2)));
+  const w0 = Math.ceil(rawWidth(s)) + PADX * 2 + 3;
+  const h0 = meta.h + PADY * 2 + 2;
+  const w = w0 * S;
+  const h = h0 * S;
   const g = scratchCtx(0, w, h);
   const c = scratch[0];
   const col = rgba(color);
   if ((shadow || soft) && (part === "all" || part === "shadow")) {
     g.globalAlpha = (soft ? 0.28 : 0.55) * col[3];
     g.drawImage(
-      layer(w, h, edge ? lineMask! : fillMask!, s, PADX + (soft ? 1 : 2), PADY + (soft ? 1 : 2), INK),
+      layer(w, h, edge ? lineMask! : fillMask!, s, PADX + (soft ? 1 : 2), PADY + (soft ? 1 : 2), INK, S),
       0,
       0,
       w,
@@ -250,23 +266,23 @@ function render(
     g.globalAlpha = 1;
   }
   if (edge && (part === "all" || part === "edge"))
-    g.drawImage(layer(w, h, lineMask!, s, PADX, PADY, INK), 0, 0, w, h, 0, 0, w, h);
+    g.drawImage(layer(w, h, lineMask!, s, PADX, PADY, INK, S), 0, 0, w, h, 0, 0, w, h);
   if (part === "all" || part === "fill") {
-    const grad = g.createLinearGradient(0, (PADY + 2) * HK, 0, (PADY + meta.base) * HK);
+    const grad = g.createLinearGradient(0, (PADY + 2) * S, 0, (PADY + meta.base) * S);
     grad.addColorStop(0, shade(col, edge ? 0.35 : 0.12));
     grad.addColorStop(0.55, shade(col, 0));
     grad.addColorStop(1, shade(col, edge ? -0.28 : -0.12));
-    g.drawImage(layer(w, h, fillMask!, s, PADX, PADY, grad), 0, 0, w, h, 0, 0, w, h);
+    g.drawImage(layer(w, h, fillMask!, s, PADX, PADY, grad, S), 0, 0, w, h, 0, 0, w, h);
   }
   const o = cacheCanvas();
-  o.width = Math.max(1, Math.round((w / HK) * px));
-  o.height = Math.max(1, Math.round((h / HK) * px));
+  o.width = Math.max(1, Math.round(w0 * px));
+  o.height = Math.max(1, Math.round(h0 * px));
   const og = o.getContext("2d")!;
   og.imageSmoothingEnabled = true;
   og.imageSmoothingQuality = "high";
   og.drawImage(c, 0, 0, w, h, 0, 0, o.width, o.height);
   o.addEventListener("contextlost", flushText);
-  const baked = { c: o, w, h };
+  const baked = { c: o, w: w0 * HK, h: h0 * HK };
   cache.set(key, baked);
   if (cache.size > CACHE_MAX) {
     const oldest = cache.keys().next().value!;
@@ -293,7 +309,7 @@ function blit(
   shadow: boolean,
 ): void {
   if (!fillMask || !s) return;
-  if (s.length > 1 && HAS_DIGIT.test(s)) return glyphwise(ctx, s, x, y, color, scale, edge, shadow);
+  if (s.length > 1 && numeric(s)) return glyphwise(ctx, s, x, y, color, scale, edge, shadow);
   scale = eff(scale);
   const k = (BASE * scale) / meta.px;
   const m = ctx.getTransform();
@@ -324,7 +340,20 @@ export function drawText(
  * string they are drawn glyph by glyph from cached one-character bakes: every glyph's shadow, then every outline,
  * then every fill, which stacks the layers the same way a whole-string bake does.
  */
-const HAS_DIGIT = /\d/;
+/**
+ * Number-like strings (digits with at most 3 letters: "1234", "+3.5/S", "2:31", "58 FPS") change all the time and
+ * reuse ~20 characters, so they go glyph by glyph. Wordy strings with a number in them ("NATIVE 1080P", "RESPAWN
+ * 7") bake whole: glyph by glyph they cost 3 bakes per new letter the first time they're seen.
+ */
+function numeric(s: string): boolean {
+  if (!/\d/.test(s)) return false;
+  let letters = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) letters++;
+  }
+  return letters <= 3;
+}
 function glyphwise(
   ctx: CanvasRenderingContext2D,
   s: string,
