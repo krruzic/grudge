@@ -11,6 +11,7 @@
 // towers.ts (tower projectiles, pulses and idle effects).
 import * as THREE from "three";
 import { SpriteBatches } from "../batch/spriteBatch";
+import { FxMeshBatches } from "../batch/fxMeshBatch";
 import type { World } from "../../sim/world";
 import type { SimEvent } from "../../sim/types";
 import { activeCostume, ENGINEER, FX, HERALD, RAIDER, WARDEN, WARLORD, withCostume } from "../fx/atlas";
@@ -97,9 +98,14 @@ export class CombatFx implements FxHost {
 
   /** Every plain sprite under root (projectile glows, flashes, kit sprites) drawn through instanced batches. */
   private spriteBatches = new SpriteBatches();
+  /** Effect meshes sharing a geometry and look, drawn instanced per view (fxMeshBatch.ts). */
+  private meshBatches = new FxMeshBatches();
+  private batchSkip: Set<THREE.Object3D>;
 
   constructor(readonly teamColors: THREE.Color[]) {
     this.root.add(this.particles.root, this.floats.mesh, this.floats.digitMesh, this.spriteBatches.root);
+    this.root.add(this.meshBatches.root);
+    this.batchSkip = new Set([this.particles.root, this.spriteBatches.root, this.meshBatches.root]);
   }
 
   /**
@@ -115,6 +121,7 @@ export class CombatFx implements FxHost {
     };
     add(this.root);
     this.spriteBatches.fill(cam);
+    this.meshBatches.fillView(this.root, this.batchSkip, cam);
   }
 
   // ── Frame entry points (called by GameRenderer) ──
