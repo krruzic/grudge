@@ -9,7 +9,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 FROM base AS build
 RUN pnpm install --frozen-lockfile
 COPY . .
+# docs/matchups.html (the printable matchup chart) is served at /docs/matchups.html.
 RUN pnpm exec tsc --noEmit && pnpm exec vite build --outDir release --emptyOutDir --logLevel warn \
+ && mkdir -p release/docs && cp docs/matchups.html release/docs/ \
  && node --experimental-transform-types --no-warnings tools/precompress.ts release
 
 FROM base AS deps

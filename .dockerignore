@@ -3,6 +3,7 @@ dist
 release
 .git
 .sudo
+.*sudo
 .env
 .venv-tripo
 .online-url
