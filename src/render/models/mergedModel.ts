@@ -21,13 +21,13 @@ interface Merged {
 const merged = new WeakMap<THREE.BufferGeometry, Merged>();
 const MAX = 16;
 
-export function layerTexture(maps: (THREE.Texture | null)[]): THREE.DataArrayTexture {
+export function layerTexture(maps: (THREE.Texture | null)[], cap = 256): THREE.DataArrayTexture {
   let size = 8;
   for (const m of maps) {
     const img = m?.image as { width?: number } | undefined;
     if (img?.width) size = Math.max(size, img.width);
   }
-  size = Math.min(256, size);
+  size = Math.min(cap, size);
   const cv = cacheCanvas();
   cv.width = cv.height = size;
   const ctx = cv.getContext("2d", { willReadFrequently: true })!;

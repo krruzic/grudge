@@ -71,6 +71,8 @@ export class EntityViews {
   private spriteSeen = new WeakSet<THREE.Sprite>();
   private spriteScan = 0;
   structBatch: StructureBatch;
+  /** Large-texture building pieces (one more batch per team, see StructureBatch `big`). */
+  structBigBatch: StructureBatch;
   private blobs = blobBatch(1024);
   private footRings = footRingBatch(16);
   private foam = foamBatch(128);
@@ -100,6 +102,7 @@ export class EntityViews {
     readonly playerColors: THREE.Color[] = [],
   ) {
     this.structBatch = new StructureBatch(structures, (t) => teamColors[t] ?? teamColors[0]);
+    this.structBigBatch = new StructureBatch(structures, (t) => teamColors[t] ?? teamColors[0], true);
     fx.slapArm = (src, tx, ty, tz) => this.slap(src, tx, ty, tz);
     setSilhouetteColors(teamColors);
     for (const p of world.pads) {
@@ -165,6 +168,7 @@ export class EntityViews {
     this.batches.dispose();
     this.statics.dispose();
     this.structBatch.dispose();
+    this.structBigBatch.dispose();
     this.sprites.dispose();
     this.padBatch.mesh.geometry.dispose();
     (this.padBatch.mesh.material as THREE.Material).dispose();
@@ -192,6 +196,7 @@ export class EntityViews {
         this.batches.root,
         this.statics.root,
         this.structBatch.root,
+        this.structBigBatch.root,
         this.bars.mesh,
         this.blobs,
         this.sprites.root,
@@ -207,10 +212,12 @@ export class EntityViews {
     for (const v of held) v.root.visible = false;
     this.viewHidden.push(...held);
     this.structBatch.fillFrame(this.extras.parent ?? this.root);
+    this.structBigBatch.fillFrame(this.extras.parent ?? this.root);
     // Building parts: once per frame, not per view (fog never hides buildings; the instances a view's
     // frustum cull would drop are cheap for the GPU to discard, and refilling cost CPU four times in split).
     this.statics.fill(this.extras.parent ?? this.root);
     this.structBatch.fillView();
+    this.structBigBatch.fillView();
     this.padBatch.flush();
     if (this.spriteScan++ % 10 === 0) {
       this.root.traverse((o) => {

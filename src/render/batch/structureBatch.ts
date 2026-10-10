@@ -35,17 +35,18 @@ interface Shared {
 }
 
 /** The texture array and remapped part geometries depend only on the models, so every batch shares them. */
-const sharedCache = new WeakMap<StructureModels, Shared | null>();
+const sharedCache = [new WeakMap<StructureModels, Shared | null>(), new WeakMap<StructureModels, Shared | null>()];
 
-function buildShared(models: StructureModels): Shared | null {
-  if (sharedCache.has(models)) return sharedCache.get(models)!;
-  const sh = makeShared(models);
-  sharedCache.set(models, sh);
+function buildShared(models: StructureModels, big: boolean): Shared | null {
+  const cache = sharedCache[big ? 1 : 0];
+  if (cache.has(models)) return cache.get(models)!;
+  const sh = makeShared(models, big);
+  cache.set(models, sh);
   return sh;
 }
 
-function makeShared(models: StructureModels): Shared | null {
-  const kinds = models.bakedKinds();
+function makeShared(models: StructureModels, big: boolean): Shared | null {
+  const kinds = models.bakedKinds(big);
   if (!kinds.length) return null;
   const maps: (THREE.Texture | null)[] = [];
   const parts: string[] = [];
@@ -67,7 +68,7 @@ function makeShared(models: StructureModels): Shared | null {
       index += g.index ? g.index.count : 0;
     }
   }
-  return { tex: layerTexture(maps), parts, geos, verts, index };
+  return { tex: layerTexture(maps, big ? 1024 : 256), parts, geos, verts, index };
 }
 
 type TeamBatch = { mesh: THREE.BatchedMesh; ids: Map<THREE.BufferGeometry, number>; color: string };
@@ -76,7 +77,10 @@ type TeamBatch = { mesh: THREE.BatchedMesh; ids: Map<THREE.BufferGeometry, numbe
  * Emptied team batches from disposed StructureBatches, by models and team colour: building one copies every
  * structure part into a BatchedMesh, so a new world (e.g. the menu backdrop swapping fields) reuses them.
  */
-const pool = new WeakMap<StructureModels, Map<string, TeamBatch[]>>();
+const pool = [
+  new WeakMap<StructureModels, Map<string, TeamBatch[]>>(),
+  new WeakMap<StructureModels, Map<string, TeamBatch[]>>(),
+];
 
 export class StructureBatch {
   readonly root = new THREE.Group();
@@ -85,21 +89,26 @@ export class StructureBatch {
   private members: Member[] = [];
   private tmp = new THREE.Color();
 
+  /**
+   * `big`: this batch draws the large-texture pieces (Tripo building bodies, StructureModels mergeBig), else the
+   * small baked parts. EntityViews keeps one of each.
+   */
   constructor(
     private models: StructureModels,
     private teamColor: (team: number) => THREE.Color,
+    private big = false,
   ) {}
 
   private team(t: number): TeamBatch | null {
     let b = this.teams.get(t);
     if (b) return b;
-    const reuse = pool.get(this.models)?.get(this.teamColor(t).getHexString())?.pop();
+    const reuse = pool[this.big ? 1 : 0].get(this.models)?.get(this.teamColor(t).getHexString())?.pop();
     if (reuse) {
       this.teams.set(t, reuse);
       this.root.add(reuse.mesh);
       return reuse;
     }
-    if (this.shared === undefined) this.shared = buildShared(this.models);
+    if (this.shared === undefined) this.shared = buildShared(this.models, this.big);
     const sh = this.shared;
     if (!sh) return null;
     const mat = partsMaterial(sh.tex, sh.parts, this.teamColor(t), sh.parts.length);
@@ -134,7 +143,7 @@ export class StructureBatch {
   add(body: THREE.Object3D, team: number, flash: () => boolean): THREE.Mesh[] {
     const out: THREE.Mesh[] = [];
     body.traverse((o) => {
-      if (!(o instanceof THREE.Mesh) || !o.userData.structKind) return;
+      if (!(o instanceof THREE.Mesh) || !o.userData.structKind || !!o.userData.structBig !== this.big) return;
       const b = this.team(team);
       const gid = b?.ids.get(o.geometry);
       if (!b || gid === undefined) return;
@@ -176,8 +185,9 @@ export class StructureBatch {
 
   dispose(): void {
     for (const m of this.members) this.teams.get(m.mesh.userData.batchTeam as number)?.mesh.deleteInstance(m.id);
-    let byColor = pool.get(this.models);
-    if (!byColor) pool.set(this.models, (byColor = new Map()));
+    const pl = pool[this.big ? 1 : 0];
+    let byColor = pl.get(this.models);
+    if (!byColor) pl.set(this.models, (byColor = new Map()));
     for (const b of this.teams.values()) {
       const list = byColor.get(b.color) ?? [];
       list.push(b);

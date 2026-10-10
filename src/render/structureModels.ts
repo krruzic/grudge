@@ -40,6 +40,8 @@ interface Baked {
 
 interface BakedKind {
   kind: string;
+  /** The large-texture set (Tripo building pieces, BIG_TEX array), else the small baked set. */
+  big?: boolean;
   parts: string[];
   maps: (THREE.Texture | null)[];
   geos: THREE.BufferGeometry[];
@@ -198,6 +200,40 @@ export function partsMaterial(
   return mat;
 }
 
+/** Texture size of the large-texture parts array (Tripo building pieces paint a 512-1024 px texture each). */
+const BIG_TEX = 1024;
+
+/**
+ * The pieces mergeStatic leaves out because their texture is too big for its 256 px array (every Tripo building
+ * piece) go into a second array at full size, one layer per texture, so StructureBatch can draw them too (one
+ * draw per team per view instead of one per piece and building kind). Each piece keeps its own mesh.
+ */
+function mergeBig(gltf: GLTF): Baked | null {
+  const mats: THREE.MeshStandardMaterial[] = [];
+  const list: THREE.Mesh[] = [];
+  gltf.scene.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) || o instanceof THREE.SkinnedMesh || o.userData.merged) return;
+    if (Array.isArray(o.material) || o.children.length) return;
+    const g = o.geometry as THREE.BufferGeometry;
+    if (!g.index || !ATTRS.every((n) => g.getAttribute(n)) || Object.keys(g.morphAttributes).length) return;
+    const m = o.material as THREE.MeshStandardMaterial;
+    const w = (m.map?.image as { width?: number } | undefined)?.width ?? 0;
+    if (!m.map || w <= 256 || !plainMap(m.map, BIG_TEX) || m.transparent) return;
+    if (!mats.includes(m)) {
+      if (mats.length >= MAX) return;
+      mats.push(m);
+    }
+    list.push(o);
+  });
+  if (!list.length) return null;
+  for (const o of list) {
+    o.geometry = bakeGeometry(o.geometry, mats.indexOf(o.material as THREE.MeshStandardMaterial), null);
+    o.userData.mergedBig = true;
+  }
+  const maps = mats.map((m) => m.map ?? null);
+  return { tex: layerTexture(maps, BIG_TEX), parts: mats.map((m) => m.name), maps };
+}
+
 function bakedMaterial(baked: Baked, team: THREE.Color): THREE.MeshLambertMaterial {
   return partsMaterial(baked.tex, baked.parts, team);
 }
@@ -205,6 +241,7 @@ function bakedMaterial(baked: Baked, team: THREE.Color): THREE.MeshLambertMateri
 export class StructureModels {
   private gltfs = new Map<string, GLTF>();
   private baked = new Map<string, Baked>();
+  private bigBaked = new Map<string, Baked>();
 
   async load(urls: Record<string, string>): Promise<void> {
     const loader = new GLTFLoader();
@@ -214,6 +251,8 @@ export class StructureModels {
           const g = await loader.loadAsync(url);
           const b = mergeStatic(g);
           if (b) this.baked.set(k, b);
+          const big = mergeBig(g);
+          if (big) this.bigBaked.set(k, big);
           markModel(g.scene);
           this.gltfs.set(k, g);
         } catch (err) {
@@ -227,14 +266,15 @@ export class StructureModels {
     return this.gltfs.has(kind);
   }
 
-  bakedKinds(): BakedKind[] {
+  bakedKinds(big = false): BakedKind[] {
     const out: BakedKind[] = [];
-    for (const [kind, b] of this.baked) {
+    const flag = big ? "mergedBig" : "merged";
+    for (const [kind, b] of big ? this.bigBaked : this.baked) {
       const geos: THREE.BufferGeometry[] = [];
       this.gltfs.get(kind)?.scene.traverse((o) => {
-        if (o instanceof THREE.Mesh && o.userData.merged && !geos.includes(o.geometry)) geos.push(o.geometry);
+        if (o instanceof THREE.Mesh && o.userData[flag] && !geos.includes(o.geometry)) geos.push(o.geometry);
       });
-      out.push({ kind, parts: b.parts, maps: b.maps, geos });
+      out.push({ kind, big, parts: b.parts, maps: b.maps, geos });
     }
     return out;
   }
@@ -246,6 +286,8 @@ export class StructureModels {
     hideBones(obj);
     const baked = this.baked.get(kind);
     const merged = baked ? bakedMaterial(baked, team) : null;
+    const bigB = this.bigBaked.get(kind);
+    const mergedBig = bigB ? bakedMaterial(bigB, team) : null;
     const mats = new Map<THREE.Material, THREE.Material>();
     obj.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
@@ -254,6 +296,12 @@ export class StructureModels {
       if (merged && o.userData.merged) {
         o.material = merged;
         o.userData.structKind = kind;
+        return;
+      }
+      if (mergedBig && o.userData.mergedBig) {
+        o.material = mergedBig;
+        o.userData.structKind = kind;
+        o.userData.structBig = true;
         return;
       }
       const conv = (m: THREE.Material) => {

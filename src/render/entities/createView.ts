@@ -89,6 +89,7 @@ export function createView(ents: EntityViews, e: Entity): View {
     const flash = () => v.flash > 0;
     const done = [
       ...ents.structBatch.add(body, e.team, flash),
+      ...ents.structBigBatch.add(body, e.team, flash),
       ...ents.statics.addTree(
         body,
         `${e.team}`,
