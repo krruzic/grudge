@@ -451,7 +451,8 @@
         "hexMinionMul": 1.0,
         "raiseMax": 3,
         "raiseSeconds": 15,
-        "heroDamageMul": 0.92
+        "heroDamageMul": 0.92,
+        "summonInvuln": 1
       },
       "abilities": {
         "a": {

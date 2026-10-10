@@ -3,7 +3,7 @@
 import type { World } from "../../world.ts";
 import type { Entity, HeroAction, UnitType } from "../../types.ts";
 import type { AbilityDef } from "../../config.ts";
-import { spawnUnit } from "../../structures.ts";
+import { spawnUnit, wardSummon } from "../../structures.ts";
 import { zoneAt } from "../../talents.ts";
 import { aimFor, aimTarget } from "../common.ts";
 import { hexLand } from "../strikes.ts";
@@ -89,6 +89,7 @@ export function fireSummon(w: World, e: Entity, a: HeroAction, def: AbilityDef):
       if (u) {
         u.expiresAt = w.time + (def.seconds ?? 20);
         u.owner = e.id;
+        wardSummon(w, u, e);
       }
     }
   }

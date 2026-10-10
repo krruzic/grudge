@@ -6,7 +6,7 @@ import type { Command, Entity, HeroAction } from "../types.ts";
 import type { AbilityDef } from "../config.ts";
 import { abilities, addShield } from "../talents.ts";
 import { begin } from "./common.ts";
-import { spawnUnit } from "../structures.ts";
+import { spawnUnit, wardSummon } from "../structures.ts";
 
 export interface GraveSpot {
   id: number;
@@ -193,6 +193,7 @@ export function graveArrive(w: World, e: Entity, a: HeroAction, def: AbilityDef)
       if (u) {
         u.expiresAt = w.time + 15;
         u.owner = e.id;
+        wardSummon(w, u, e);
       }
     }
   }

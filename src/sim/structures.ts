@@ -241,6 +241,15 @@ export function upgrade(w: World, e: Entity): void {
 }
 
 /** Spawn a unit at the nearest open cell (null if none within 5); statMul scales hp and damage. */
+/**
+ * A soldier a champion just brought in (summons, hex risings): untouchable for the champion's `summonInvuln`
+ * seconds (Remnil), so her raised dead get a moment to act before the fight they appear in kills them.
+ */
+export function wardSummon(w: World, u: Entity, owner: Entity): void {
+  const s = owner.hero ? w.heroDef(owner.hero.type).hooks.summonInvuln : undefined;
+  if (s) u.status.invulnUntil = Math.max(u.status.invulnUntil, w.time + s);
+}
+
 export function spawnUnit(
   w: World,
   team: number,

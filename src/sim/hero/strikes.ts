@@ -4,7 +4,7 @@
 import type { World } from "../world.ts";
 import type { Entity, HeroAction } from "../types.ts";
 import type { AbilityDef } from "../config.ts";
-import { spawnUnit } from "../structures.ts";
+import { spawnUnit, wardSummon } from "../structures.ts";
 import { abilities, markTargets, pullTo, zoneAt } from "../talents.ts";
 import { maxHits } from "./common.ts";
 
@@ -247,6 +247,7 @@ export function hexLand(w: World, e: Entity, x: number, z: number, def: AbilityD
         u.expiresAt = w.time + fx.summon.seconds;
         u.owner = e.id;
         u.unit!.raised = true;
+        wardSummon(w, u, e);
       }
     }
   }

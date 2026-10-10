@@ -4,7 +4,7 @@ import { refillCharge } from "../hero/common.ts";
 import type { World } from "../world.ts";
 import type { Entity, Pad } from "../types.ts";
 import { gainXp, onKill } from "../talents.ts";
-import { spawnUnit } from "../structures.ts";
+import { spawnUnit, wardSummon } from "../structures.ts";
 
 type TeamTally = { resource: number; heroKills: number; kills: number };
 
@@ -255,6 +255,7 @@ function onKillSynergy(w: World, target: Entity, src: Entity | null): void {
       u.expiresAt = t + (w.heroDef(owner.hero.type).hooks.raiseSeconds ?? 15);
       u.owner = owner.id;
       u.unit!.raised = true;
+      wardSummon(w, u, owner);
       w.emit({
         type: "warcry",
         x: target.transform.pos.x,

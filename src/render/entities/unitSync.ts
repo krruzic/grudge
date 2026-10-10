@@ -10,6 +10,8 @@ export function syncUnit(ents: EntityViews, e: Entity, v: View, facing: number, 
   const u = e.unit!;
   const w = ents.world;
   v.root.rotation.y = facing;
+  // Freshly raised dead (Remnil's summon ward): a quick white shimmer while nothing can hurt them.
+  if (w.time < e.status.invulnUntil && Math.floor(time * 10) % 2 === 0) v.flash = Math.max(v.flash, 0.05);
   v.bar.group.visible = e.hp < e.maxHp;
   if (u.rank !== (v.rank ?? 0)) {
     v.rank = u.rank;
