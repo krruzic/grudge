@@ -125,11 +125,15 @@ function stamp(
 }
 
 const scratch = [cacheCanvas(), cacheCanvas()];
+/**
+ * Scratch canvas i sized exactly w x h. Not grown-and-kept: the bake's final high-quality downsample processes
+ * the whole source canvas, so after one long banner every later bake got ~4x slower (measured 1.7 -> 6.5 ms).
+ */
 function scratchCtx(i: number, w: number, h: number): CanvasRenderingContext2D {
   const c = scratch[i];
-  if (c.width < w || c.height < h) {
-    c.width = Math.max(c.width, w);
-    c.height = Math.max(c.height, h);
+  if (c.width !== w || c.height !== h) {
+    c.width = w;
+    c.height = h;
   }
   const g = c.getContext("2d")!;
   g.setTransform(1, 0, 0, 1, 0, 0);
