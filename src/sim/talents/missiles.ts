@@ -32,7 +32,15 @@ export function updateMissiles(w: World): void {
     const step = m.speed * dt;
     const nx = m.x + m.dirX * step;
     const nz = m.z + m.dirZ * step;
-    let end = m.dist + step >= m.range || missileBlocked(w, m, nx, nz);
+    // Check the whole step, not just where it lands: a fast shot (Wren's power shot, 1.4 m a tick) would
+    // otherwise jump clean over a 1 m hedge or a wall corner.
+    let blocked = false;
+    if (m.style !== "rock") {
+      const n = Math.max(1, Math.ceil(step / 0.4));
+      for (let k = 1; k <= n && !blocked; k++)
+        blocked = missileBlocked(w, m, m.x + m.dirX * step * (k / n), m.z + m.dirZ * step * (k / n));
+    } else blocked = missileBlocked(w, m, nx, nz);
+    let end = m.dist + step >= m.range || blocked;
     if (!end) {
       m.x = nx;
       m.z = nz;

@@ -148,7 +148,7 @@ export function losHeight(w: World, x: number, z: number): number {
   const k = w.terrain.kindAt(cx, cz);
   const g = w.terrain.groundHeight(x, z);
   if (k === Kind.Wall) return g + w.data.match.terrain.wallHeight;
-  if (k === Kind.Prop) return g + 1.2;
+  if (k === Kind.Prop) return g + (w.terrain.propHeight[w.terrain.index(cx, cz)] || 1.2);
   if (k === Kind.Bridge) return Math.min(g, w.terrain.deck[w.terrain.index(cx, cz)]);
   return g;
 }

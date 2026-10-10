@@ -145,6 +145,31 @@ function valueNoise(x: number, z: number, seed: number): number {
   return (a + (b - a) * fx) * (1 - fz) + (c + (d - c) * fx) * fz;
 }
 
+/**
+ * Solid props that stand taller than a shot (buildings, towers, statues, trees): they block arrows and sight like
+ * walls. Every other solid prop (crates, barrels, rocks, graves) is waist-high: shots pass over it.
+ */
+const TALL_PROPS = new Set([
+  "cabin",
+  "shed",
+  "tower",
+  "spire",
+  "obelisk",
+  "statue",
+  "column",
+  "colossus",
+  "angel",
+  "crane",
+  "scaffold",
+  "shrine",
+  "pine",
+  "tree",
+  "appletree",
+  "yew",
+  "deadtree",
+  "cactus",
+]);
+
 export class Terrain {
   readonly width: number;
   readonly depth: number;
@@ -154,6 +179,8 @@ export class Terrain {
   readonly kinds: Uint8Array;
   readonly flags: Uint8Array;
   readonly deck: Float32Array;
+  /** Solid prop cells: how tall the prop stands for line of sight and arrows (vision.losHeight). */
+  readonly propHeight: Float32Array;
   readonly styles: string[];
   readonly props: Prop[] = [];
   readonly cores: MapPoint[] = [];
@@ -228,6 +255,7 @@ export class Terrain {
     this.kinds = new Uint8Array(n);
     this.flags = new Uint8Array(n);
     this.deck = new Float32Array(n);
+    this.propHeight = new Float32Array(n);
     this.styles = new Array<string>(n).fill("");
     this.mirror =
       data.mirror === "x" || data.mirror === "diag" || data.mirror === "rot" || data.mirror === "quad"
@@ -429,9 +457,11 @@ export class Terrain {
 
     for (const p of this.props) {
       if (!p.solid) continue;
+      const tall = TALL_PROPS.has(p.type) ? 3.5 : 1.2;
       const block = (cx: number, cz: number) => {
         const i = this.index(cx, cz);
         if (i >= 0 && this.kinds[i] === Kind.Ground) this.kinds[i] = Kind.Prop;
+        if (i >= 0 && this.kinds[i] === Kind.Prop) this.propHeight[i] = Math.max(this.propHeight[i], tall);
       };
       block(Math.floor(p.x), Math.floor(p.z));
       if (!p.w || !p.d) continue;

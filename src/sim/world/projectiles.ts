@@ -83,11 +83,12 @@ export function fireAtPoint(
  * array order. On landing: direct hit, talent/arrow on-hit hooks, splash to other enemies, then any burn zone.
  */
 /**
- * An arrow's next stretch of flight (from where it is now to where it'll be next tick) crossing a wall taller than
- * it, or a structure's footprint other than its target: what stopped it, else null.
+ * The stretch an arrow flew this tick (from last tick's point to now, the landing tick included) crossing a wall
+ * or prop taller than it, or a structure's footprint other than its target: what stopped it, else null. (It used
+ * to check only the last 8% of the flight per tick, so a fast or short shot skipped most of its path.)
  */
 function arrowBlocked(w: World, p: Projectile, target: Entity): Entity | "wall" | null {
-  const k0 = Math.max(0, p.t - 0.08);
+  const k0 = Math.max(0, p.prevT);
   const at = (k: number) => ({
     x: p.from.x + (p.to.x - p.from.x) * k,
     y: p.from.y + (p.to.y - p.from.y) * k,
@@ -131,7 +132,7 @@ export function updateProjectiles(w: World, dt: number): void {
     }
     p.t += dt / p.dur;
     // Arrows are stopped by walls and buildings in their way (and hit an enemy building they fly into).
-    if (p.arrow && target && p.t < 1) {
+    if (p.arrow && target && p.prevT < 1) {
       const src0 = w.getAny(p.sourceId);
       if (src0) {
         const block = arrowBlocked(w, p, target);
