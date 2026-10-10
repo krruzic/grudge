@@ -8,6 +8,7 @@ import type { Bot } from "../bot.ts";
 import type { World } from "../world.ts";
 import type { Entity, Vec2 } from "../types.ts";
 import { chainSwingPlan, sameAsLast, swingPivots } from "../hero/wreckwitch.ts";
+import { abilities } from "../talents.ts";
 
 /** Seconds the CPU needs to have seen a threat before reacting (a human's read). */
 const REACT = 0.12;
@@ -117,6 +118,40 @@ export function evade(bot: Bot, w: World, me: Entity): void {
       const [ax, az] = dist < 0.3 ? [Math.cos(me.id), Math.sin(me.id)] : [p.x - d.x, p.z - d.z];
       bot.goal = { x: d.x + ax * (dist < 0.3 ? d.r + 1.5 : out), z: d.z + az * (dist < 0.3 ? d.r + 1.5 : out) };
       return;
+    }
+  }
+
+  // 1b. Pip (Wren's hawk) latched on: roll him off as soon as he can be shaken (pipShakeAfter), after a
+  //     reaction delay, away from the nearest enemy champion. Read once per latch, on a skill roll.
+  if (canRoll && me.status.pipUntil !== undefined && w.time < me.status.pipUntil) {
+    const owner = w.getAny(me.status.pipOwner ?? -1);
+    const pip = owner?.hero?.pip;
+    if (owner && pip && pip.phase === "on" && pip.target === me.id) {
+      const def = abilities(w, owner).b;
+      const latchedFor = w.time - (pip.until - (def.seconds ?? 5));
+      const key = `pip${owner.id},${pip.until.toFixed(2)}`;
+      if (latchedFor >= (def.pipShakeAfter ?? 1.5) + 0.35 - skill * 0.2) {
+        let read = bot.evadeRead.get(key);
+        if (read === undefined) {
+          read = bot.rand() < 0.25 + skill * 0.7;
+          bot.evadeRead.set(key, read);
+          if (bot.evadeRead.size > 64) bot.evadeRead.delete(bot.evadeRead.keys().next().value!);
+        }
+        if (read) {
+          let near: Entity = owner;
+          let nd = Infinity;
+          for (const o of w.entities) {
+            if (!o.alive || !o.hero || o.hero.dead || o.team === me.team) continue;
+            const d = w.dist(me, o);
+            if (d < nd) {
+              nd = d;
+              near = o;
+            }
+          }
+          const dir = landing(w, me, awayDirs(me, near.transform.pos.x, near.transform.pos.z));
+          if (dir) return roll(bot, dir, key);
+        }
+      }
     }
   }
 
