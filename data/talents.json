@@ -1351,14 +1351,9 @@
         {
           "id": "barnacle",
           "name": "BARNACLE CRUST",
-          "desc": "SWINGS GROW A BARNACLE CRUST, +20 SHIELD A HIT UP TO 120, AND EVERY CHAMPION YOU HIT RAISES THE TIDE BY ONE (ONCE A SECOND).",
+          "desc": "SWINGS GROW A BARNACLE CRUST: EVERY CHAMPION YOU HIT RAISES THE TIDE BY ONE (ONCE A SECOND).",
           "fx": {
-            "tideOnHit": 1,
-            "shieldOnHit": {
-              "amount": 20,
-              "max": 120,
-              "seconds": 6
-            }
+            "tideOnHit": 1
           }
         },
         {
@@ -1632,10 +1627,10 @@
         {
           "id": "stingerdive",
           "name": "STINGER DIVE",
-          "desc": "TAKE WING LANDS AS A DIVE: FOES WITHIN 3M TAKE 70, ARE KNOCKED BACK AND STUNNED 0.5S.",
+          "desc": "TAKE WING LANDS AS A DIVE: FOES WITHIN 3M TAKE 55, ARE KNOCKED BACK AND STUNNED 0.5S.",
           "fx": {
             "wingSlam": {
-              "damage": 70,
+              "damage": 55,
               "radius": 3,
               "stun": 0.5
             }
@@ -1658,11 +1653,11 @@
         {
           "id": "beeswax",
           "name": "BEESWAX",
-          "desc": "THE HONEY POT ALSO GIVES EVERY ALLIED CHAMPION IT SPLASHES A 70 SHIELD FOR 4S.",
+          "desc": "THE HONEY POT ALSO GIVES EVERY ALLIED CHAMPION IT SPLASHES A 45 SHIELD FOR 4S.",
           "combo": "WITH STINGER DIVE: TAKE WING'S LANDING LEAVES A 2.5M HONEY POOL FOR 3S.",
           "fx": {
             "potShield": {
-              "amount": 70,
+              "amount": 45,
               "seconds": 4
             }
           },
@@ -1681,10 +1676,10 @@
         {
           "id": "swarmpot",
           "name": "SWARM POT",
-          "desc": "ANGRY BEES POUR OUT OF THE POT: FOES IN THE POOL TAKE 16 PER SECOND AND IT IS 0.5M WIDER.",
+          "desc": "ANGRY BEES POUR OUT OF THE POT: FOES IN THE POOL TAKE 12 PER SECOND AND IT IS 0.5M WIDER.",
           "combo": "WITH TAILWIND: THE POOL LASTS 2S LONGER.",
           "add": {
-            "dps": 16,
+            "dps": 12,
             "radius": 0.5
           },
           "with": [
@@ -1726,10 +1721,10 @@
         {
           "id": "queensfeast",
           "name": "QUEEN'S FEAST",
-          "desc": "ROYAL JELLY+: REACHES 13M, THE SHIELD IS 200 AND THE HASTE LASTS 7S.",
+          "desc": "ROYAL JELLY+: REACHES 13M, THE SHIELD IS 150 AND THE HASTE LASTS 7S.",
           "add": {
             "radius": 3,
-            "shield": 80,
+            "shield": 50,
             "seconds": 2
           }
         }

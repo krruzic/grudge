@@ -167,6 +167,9 @@ export interface TalentData {
 
 export interface AbilityDef {
   kind: string;
+  /** Headbutt: movement speed multiplier for afterSpeedSeconds once the charge ends. */
+  afterSpeedMul?: number;
+  afterSpeedSeconds?: number;
   variance?: number;
   crit?: number;
   fx?: TalentFx;

@@ -198,6 +198,13 @@ function wallSlam(w: World, e: Entity, a: HeroAction, def: AbilityDef, o: Entity
 
 /** B hit frame: the rush ends; a carried champion (no wall) is shoved off the front of the charge. */
 export function fireHeadbutt(w: World, e: Entity, a: HeroAction, def: AbilityDef): void {
+  // Momentum: the charge leaves him moving faster for a few seconds, to follow up or get back out.
+  if (def.afterSpeedMul) {
+    const s = e.status;
+    if (w.time >= s.buffUntil) s.buffDamageMul = 1;
+    s.buffSpeedMul = Math.max(w.time < s.buffUntil ? s.buffSpeedMul : 1, def.afterSpeedMul);
+    s.buffUntil = Math.max(s.buffUntil, w.time + (def.afterSpeedSeconds ?? 2.5));
+  }
   const o = a.targetId !== undefined ? w.get(a.targetId) : undefined;
   if (!o?.alive) return;
   const t = e.transform;
